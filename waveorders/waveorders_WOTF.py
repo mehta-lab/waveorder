@@ -150,7 +150,7 @@ def analyzer_output(Ein, alpha, beta):
 
 class waveorders_microscopy:
     
-    def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi):
+    def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi, LRHC, bg_option):
         
         '''
         
@@ -169,7 +169,9 @@ class waveorders_microscopy:
         self.NA_obj      = NA_obj
         self.NA_illu     = NA_illu
         self.N_defocus   = len(z_defocus)
-        self.chi = chi
+        self.chi         = chi
+        self.LRHC        = LRHC
+        self.bg_option   = bg_option
         
         # setup microscocpe variables
         self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
@@ -240,23 +242,79 @@ class waveorders_microscopy:
                           [1, 0, -np.sin(self.chi), -np.cos(self.chi)]])
         
         A_pinv = np.linalg.pinv(A_forward)
-        S_image_recon = np.zeros((self.N_defocus, 4, self.N, self.M))
-
-        for i in range(self.N_defocus):
-            S_image_recon[i] = (A_pinv.dot(I_meas[i].reshape((5, self.N*self.M)))).reshape((4, self.N, self.M))
+        
+        
+        if self.N_defocus == 1:
+            S_image_recon = (A_pinv.dot(I_meas.reshape((5, self.N*self.M)))).reshape((4, self.N, self.M))
+        else:
+            S_image_recon = np.zeros((self.N_defocus, 4, self.N, self.M))
+            for i in range(self.N_defocus):
+                S_image_recon[i] = (A_pinv.dot(I_meas[i].reshape((5, self.N*self.M)))).reshape((4, self.N, self.M))
             
             
         return S_image_recon
     
+    
+    def Stokes_transform(self, S_image_recon):
+        
+        
+        if self.N_defocus == 1:
+            S_transformed = np.zeros((5, self.N, self.M))
+            S_transformed[0] = S_image_recon[0]
+            S_transformed[1] = S_image_recon[1] / S_image_recon[3]
+            S_transformed[2] = S_image_recon[2] / S_image_recon[3]
+            S_transformed[3] = S_image_recon[3]
+            S_transformed[4] = (S_image_recon[1]**2 + S_image_recon[2]**2 + S_image_recon[3]**2)**(1/2) / S_image_recon[0] # DoP
+        else:
+            S_transformed = np.zeros((self.N_defocus, 5, self.N, self.M))
+            S_transformed[:,0] = S_image_recon[:,0]
+            S_transformed[:,1] = S_image_recon[:,1] / S_image_recon[:,3]
+            S_transformed[:,2] = S_image_recon[:,2] / S_image_recon[:,3]
+            S_transformed[:,3] = S_image_recon[:,3]
+            S_transformed[:,4] = (S_image_recon[:,1]**2 + S_image_recon[:,2]**2 + S_image_recon[:,3]**2)**(1/2) / S_image_recon[:,0] # DoP
+            
+        return S_transformed
+    
+    
+    def Polscope_bg_correction(self, S_image_tm, S_bg_tm):
+        
+        if self.N_defocus == 1:
+            S_image_tm[0] /= S_bg_tm[0]
+            S_image_tm[1] -= S_bg_tm[1]
+            S_image_tm[2] -= S_bg_tm[2]
+            S_image_tm[4] /= S_bg_tm[4]
+        else:
+            S_image_tm[:,0] /= S_bg_tm[:,0]
+            S_image_tm[:,1] -= S_bg_tm[:,1]
+            S_image_tm[:,2] -= S_bg_tm[:,2]
+            S_image_tm[:,4] /= S_bg_tm[:,4]
+        
+        return S_image_tm
+    
+    
     def Polarization_recon(self, S_image_recon):
         
-        Recon_para = np.zeros((self.N_defocus, 4, self.N, self.M))
+        if self.N_defocus == 1:
+            Recon_para = np.zeros((4, self.N, self.M))
+            Recon_para[0] = np.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * S_image_recon[3], S_image_recon[3])  # retardance
+            if self.LRHC == 'LHC':
+                Recon_para[1] = 0.5*np.arctan2(-S_image_recon[1], -S_image_recon[2])%np.pi # slow-axis
+            else:
+                Recon_para[1] = 0.5*np.arctan2(-S_image_recon[1], S_image_recon[2])%np.pi # slow-axis
+            Recon_para[2] = S_image_recon[0] # transmittance
+            Recon_para[3] = S_image_recon[4] # DoP
 
-        for i in range(self.N_defocus):
-            Recon_para[i,0] = np.arctan2((S_image_recon[i,1]**2 + S_image_recon[i,2]**2)**(1/2), S_image_recon[i,3])  # retardance
-            Recon_para[i,1] = 0.5*np.arctan2(-S_image_recon[i,1], S_image_recon[i,2])%np.pi # slow-axis
-            Recon_para[i,2] = S_image_recon[i,0] # transmittance
-            Recon_para[i,3] = (S_image_recon[i,1]**2 + S_image_recon[i,2]**2 + S_image_recon[i,3]**2)**(1/2) / S_image_recon[i,0] # DoP
+        else:
+        
+            Recon_para = np.zeros((self.N_defocus, 4, self.N, self.M))
+            for i in range(self.N_defocus):
+                Recon_para[i,0] = np.arctan2((S_image_recon[i,1]**2 + S_image_recon[i,2]**2)**(1/2) * S_image_recon[i,3], S_image_recon[i,3])  # retardance
+                if self.LRHC == 'LHC':
+                    Recon_para[i,1] = 0.5*np.arctan2(-S_image_recon[i,1], -S_image_recon[i,2])%np.pi # slow-axis
+                else:
+                    Recon_para[i,1] = 0.5*np.arctan2(-S_image_recon[i,1], S_image_recon[i,2])%np.pi # slow-axis
+                Recon_para[i,2] = S_image_recon[i,0] # transmittance
+                Recon_para[i,3] = S_image_recon[i,4] # DoP
 
         
         return Recon_para
