@@ -163,10 +163,10 @@ def plot_hsv(image_stack, max_val=1, size=5):
     N_channel = len(image_stack)
     
     if N_channel == 2:
-        I_hsv = np.transpose(np.stack([image_stack[0]/np.max(image_stack[0]), \
+        I_hsv = np.transpose(np.array([image_stack[0]/np.max(np.abs(image_stack[0])), \
                                        np.ones_like(image_stack[0]), \
                                        np.minimum(1, image_stack[1]/np.max(image_stack[1])/max_val)]), (1,2,0))
-        I_rgb = hsv_to_rgb(I_hsv)
+        I_rgb = hsv_to_rgb(I_hsv.copy())
         
         f1,ax = plt.subplots(1, 2, figsize=(size+size/2, size))
         ax[0].imshow(I_rgb)

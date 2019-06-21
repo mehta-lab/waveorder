@@ -1,6 +1,17 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.fft import fft2, ifft2, fftshift, ifftshift
+from PIL import Image
+from scipy.ndimage import uniform_filter
+
+import re
+numbers = re.compile(r'(\d+)')
+
+
+def numericalSort(value):
+    parts = numbers.split(value)
+    parts[1::2] = map(int, parts[1::2])
+    return parts
 
 
 def intensity_mapping(img_stack):
@@ -148,9 +159,40 @@ def analyzer_output(Ein, alpha, beta):
     return Eout
 
 
+def image_upsampling(Ic_image, upsamp_factor = 1, bg = 0, method=None):
+    F = lambda x: ifftshift(fft2(fftshift(x)))
+    iF = lambda x: ifftshift(ifft2(fftshift(x)))
+    
+    N_defocus, Nimg, Ncrop, Mcrop = Ic_image.shape
+
+    N = Ncrop*upsamp_factor
+    M = Mcrop*upsamp_factor
+
+    Ic_image_up = np.zeros((N_defocus,Nimg,N,M))
+    
+    for i in range(0,Nimg):
+        for j in range(0, N_defocus):
+            if method == 'BICUBIC':
+                Ic_image_up[j,i] = np.array(Image.fromarray(Ic_image[j,i]-bg).resize((M,N), Image.BICUBIC))
+            else:
+                Ic_image_up[j,i] = abs(iF(np.pad(F(np.maximum(0,Ic_image[j,i]-bg)),\
+                                      (((N-Ncrop)//2,),((M-Mcrop)//2,)),mode='constant')))
+            
+        
+    return Ic_image_up
+
+def softTreshold(x, threshold):
+    
+    magnitude = np.abs(x)
+    ratio = np.maximum(0, magnitude-threshold) / magnitude
+    
+    x_threshold = x*ratio
+    
+    return x_threshold
+
 class waveorders_microscopy:
     
-    def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi, LRHC, bg_option):
+    def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi, cali, bg_option):
         
         '''
         
@@ -170,7 +212,7 @@ class waveorders_microscopy:
         self.NA_illu     = NA_illu
         self.N_defocus   = len(z_defocus)
         self.chi         = chi
-        self.LRHC        = LRHC
+        self.cali        = cali
         self.bg_option   = bg_option
         
         # setup microscocpe variables
@@ -243,8 +285,9 @@ class waveorders_microscopy:
         
         A_pinv = np.linalg.pinv(A_forward)
         
+        dim = I_meas.ndim 
         
-        if self.N_defocus == 1:
+        if dim == 3:
             S_image_recon = (A_pinv.dot(I_meas.reshape((5, self.N*self.M)))).reshape((4, self.N, self.M))
         else:
             S_image_recon = np.zeros((self.N_defocus, 4, self.N, self.M))
@@ -257,8 +300,9 @@ class waveorders_microscopy:
     
     def Stokes_transform(self, S_image_recon):
         
+        dim = S_image_recon.ndim
         
-        if self.N_defocus == 1:
+        if dim == 3:
             S_transformed = np.zeros((5, self.N, self.M))
             S_transformed[0] = S_image_recon[0]
             S_transformed[1] = S_image_recon[1] / S_image_recon[3]
@@ -278,26 +322,43 @@ class waveorders_microscopy:
     
     def Polscope_bg_correction(self, S_image_tm, S_bg_tm):
         
-        if self.N_defocus == 1:
+        dim = S_image_tm.ndim
+        
+        if dim == 3:
             S_image_tm[0] /= S_bg_tm[0]
             S_image_tm[1] -= S_bg_tm[1]
             S_image_tm[2] -= S_bg_tm[2]
             S_image_tm[4] /= S_bg_tm[4]
         else:
-            S_image_tm[:,0] /= S_bg_tm[:,0]
-            S_image_tm[:,1] -= S_bg_tm[:,1]
-            S_image_tm[:,2] -= S_bg_tm[:,2]
-            S_image_tm[:,4] /= S_bg_tm[:,4]
+            S_image_tm[:,0] /= S_bg_tm[0]
+            S_image_tm[:,1] -= S_bg_tm[1]
+            S_image_tm[:,2] -= S_bg_tm[2]
+            S_image_tm[:,4] /= S_bg_tm[4]
+        
+        if self.bg_option == 'local':
+            if dim == 3:
+                S_image_tm[1] -= uniform_filter(S_image_tm[1], size=200)
+                S_image_tm[2] -= uniform_filter(S_image_tm[2], size=200)
+            else:
+                for i in range(self.N_defocus):
+                    S_image_tm[i,1] -= uniform_filter(S_image_tm[i,1], size=200)
+                    S_image_tm[i,2] -= uniform_filter(S_image_tm[i,2], size=200)
+        
         
         return S_image_tm
     
     
+    
+    
     def Polarization_recon(self, S_image_recon):
         
-        if self.N_defocus == 1:
+        
+        dim = S_image_recon.ndim
+        
+        if dim == 3:
             Recon_para = np.zeros((4, self.N, self.M))
             Recon_para[0] = np.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * S_image_recon[3], S_image_recon[3])  # retardance
-            if self.LRHC == 'LHC':
+            if self.cali == True:
                 Recon_para[1] = 0.5*np.arctan2(-S_image_recon[1], -S_image_recon[2])%np.pi # slow-axis
             else:
                 Recon_para[1] = 0.5*np.arctan2(-S_image_recon[1], S_image_recon[2])%np.pi # slow-axis
@@ -309,7 +370,7 @@ class waveorders_microscopy:
             Recon_para = np.zeros((self.N_defocus, 4, self.N, self.M))
             for i in range(self.N_defocus):
                 Recon_para[i,0] = np.arctan2((S_image_recon[i,1]**2 + S_image_recon[i,2]**2)**(1/2) * S_image_recon[i,3], S_image_recon[i,3])  # retardance
-                if self.LRHC == 'LHC':
+                if self.cali == True:
                     Recon_para[i,1] = 0.5*np.arctan2(-S_image_recon[i,1], -S_image_recon[i,2])%np.pi # slow-axis
                 else:
                     Recon_para[i,1] = 0.5*np.arctan2(-S_image_recon[i,1], S_image_recon[i,2])%np.pi # slow-axis
@@ -319,25 +380,92 @@ class waveorders_microscopy:
         
         return Recon_para
     
-    def Phase_recon(self, S0_stack, reg):
+    
+    def inten_normalization(self, S0_stack):
         
         for i in range(self.N_defocus):
+            S0_stack[i] /= uniform_filter(S0_stack[i], size=self.N//2)
             S0_stack[i] /= S0_stack[i].mean()
             S0_stack[i] -= 1
             
+        return S0_stack
         
-        # Construct AHA matrix
+    
+    def Phase_recon(self, S0_stack, method='Tikhonov', reg_u = 1e-3, reg_p = 1e-3, rho = 1e-5, lambda_u = 1e-3, lambda_p = 1e-3, itr = 20):
+        
+        self.inten_normalization(S0_stack)
+            
+        
+        if method == 'Tikhonov':
+            
+            # Deconvolution with Tikhonov regularization
 
-        AHA = [np.sum(np.abs(self.Hu)**2, axis=0) + reg, np.sum(np.conj(self.Hu)*self.Hp, axis=0),\
-               np.sum(np.conj(self.Hp)*self.Hu, axis=0), np.sum(np.abs(self.Hp)**2, axis=0) + reg]
+            AHA = [np.sum(np.abs(self.Hu)**2, axis=0) + reg_u, np.sum(np.conj(self.Hu)*self.Hp, axis=0),\
+                   np.sum(np.conj(self.Hp)*self.Hu, axis=0), np.sum(np.abs(self.Hp)**2, axis=0) + reg_p]
 
-        S0_stack_f = fft2(S0_stack)
-        b_vec = [np.sum(np.conj(self.Hu)*S0_stack_f, axis=0), \
-                 np.sum(np.conj(self.Hp)*S0_stack_f, axis=0)]
+            S0_stack_f = fft2(S0_stack)
+            b_vec = [np.sum(np.conj(self.Hu)*S0_stack_f, axis=0), \
+                     np.sum(np.conj(self.Hp)*S0_stack_f, axis=0)]
 
-        determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
+            determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
 
-        mu_sample = np.real(ifft2((b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant))
-        phi_sample = np.real(ifft2((b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant))
+            mu_sample = np.real(ifft2((b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant))
+            phi_sample = np.real(ifft2((b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant))
+            
+        elif method == 'TV':
+            
+            # ADMM deconvolution with anisotropic TV regularization
+            
+            Dx = np.zeros((self.N, self.M))
+            Dy = np.zeros((self.N, self.M))
+            Dx[0,0] = 1; Dx[0,-1] = -1; Dx = fft2(Dx);
+            Dy[0,0] = 1; Dy[-1,0] = -1; Dy = fft2(Dy);
+            
+            
+            rho_term = rho*(np.conj(Dx)*Dx + np.conj(Dy)*Dy)
+            AHA = [np.sum(np.abs(self.Hu)**2, axis=0) + rho_term, np.sum(np.conj(self.Hu)*self.Hp, axis=0),\
+                   np.sum(np.conj(self.Hp)*self.Hu, axis=0), np.sum(np.abs(self.Hp)**2, axis=0) + rho_term]
+            
+            determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
+            
+            S0_stack_f = fft2(S0_stack)
+            
+            b_vec = [np.sum(np.conj(self.Hu)*S0_stack_f, axis=0), \
+                     np.sum(np.conj(self.Hp)*S0_stack_f, axis=0)]
+            
+            z_para = np.zeros((4, self.N, self.M))
+            u_para = np.zeros((4, self.N, self.M))
+            D_vec = np.zeros((4, self.N, self.M))
+            
+            
+            
+            
+            for i in range(itr):
+                v_para = fft2(z_para - u_para)
+                b_vec_new = [b_vec[0] + np.conj(Dx)*v_para[0] + np.conj(Dy)*v_para[1],\
+                             b_vec[1] + np.conj(Dx)*v_para[2] + np.conj(Dy)*v_para[3]]
+                
+                
+                mu_sample = np.real(ifft2((b_vec_new[0]*AHA[3] - b_vec_new[1]*AHA[1]) / determinant))
+                phi_sample = np.real(ifft2((b_vec_new[1]*AHA[0] - b_vec_new[0]*AHA[2]) / determinant))
+                
+                D_vec[0] = mu_sample - np.roll(mu_sample, -1, axis=1)
+                D_vec[1] = mu_sample - np.roll(mu_sample, -1, axis=0)
+                D_vec[2] = phi_sample - np.roll(phi_sample, -1, axis=1)
+                D_vec[3] = phi_sample - np.roll(phi_sample, -1, axis=0)
+                
+                
+                z_para = D_vec + u_para
+                
+                z_para[:2,:,:] = softTreshold(z_para[:2,:,:], lambda_u/rho)
+                z_para[2:,:,:] = softTreshold(z_para[2:,:,:], lambda_p/rho)
+                
+                u_para += D_vec - z_para
+                
+                
+                print('Number of iteration computed (%d / %d)'%(i+1,itr))
+            
         
         return mu_sample, phi_sample
+    
+    
