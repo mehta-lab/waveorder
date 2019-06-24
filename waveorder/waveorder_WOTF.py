@@ -190,7 +190,7 @@ def softTreshold(x, threshold):
     
     return x_threshold
 
-class waveorders_microscopy:
+class waveorder_microscopy:
     
     def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi, cali, bg_option):
         
@@ -241,7 +241,7 @@ class waveorders_microscopy:
             self.Hu[i] = (H1 + H2)/I_norm
             self.Hp[i] = 1j*(H1-H2)/I_norm
             
-    def simulate_waveorders_measurements(self, t_eigen, sa_orientation):        
+    def simulate_waveorder_measurements(self, t_eigen, sa_orientation):        
         
         Stokes_out = np.zeros((self.N_defocus, 4, self.N, self.M))
         I_meas = np.zeros((self.N_defocus, self.N_channel, self.N, self.M))
