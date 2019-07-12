@@ -5,8 +5,7 @@ from ipywidgets import interact, interactive, fixed, interact_manual
 from matplotlib.colors import hsv_to_rgb
 
 
-
-def image_stack_viewer(image_stack,size=(10,10)):
+def image_stack_viewer(image_stack,size=(10,10), colormap='gray'):
     
     '''
     
@@ -23,12 +22,12 @@ def image_stack_viewer(image_stack,size=(10,10)):
     
     def interact_plot_3D(stack_idx):    
         plt.figure(figsize=size)
-        plt.imshow(image_stack[stack_idx],cmap='gray', vmin=min_val, vmax=max_val)
+        plt.imshow(image_stack[stack_idx],cmap=colormap, vmin=min_val, vmax=max_val)
         plt.colorbar()
 
     def interact_plot_4D(stack_idx_1, stack_idx_2):    
         plt.figure(figsize=size)
-        plt.imshow(image_stack[stack_idx_1,stack_idx_2],cmap='gray', vmin=min_val, vmax=max_val)
+        plt.imshow(image_stack[stack_idx_1,stack_idx_2],cmap=colormap, vmin=min_val, vmax=max_val)
         plt.colorbar()
     
     
@@ -117,7 +116,7 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10):
     return interact(interact_plot, stack_idx=widgets.IntSlider(value=0, min=0, max=N_stack-1, step=1))
 
 
-def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles=[]):
+def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles=[], colormap='gray'):
     
     '''
     
@@ -132,7 +131,7 @@ def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles
     
     '''
     
-    N_stack, _, _ = image_stack.shape
+    N_stack = len(image_stack)
     num_row = np.int(np.ceil(N_stack/num_col))
     figsize = (num_col*size, num_row*size)
     
@@ -142,7 +141,7 @@ def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles
     if num_row == 1:
         for i in range(N_stack):
             col_idx = np.mod(i, num_col)
-            ax1 = ax[col_idx].imshow(image_stack[i], cmap='gray')
+            ax1 = ax[col_idx].imshow(image_stack[i], cmap=colormap)
             plt.colorbar(ax1,ax=ax[col_idx])
             
             if set_title == True:
@@ -151,7 +150,7 @@ def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles
         for i in range(N_stack):
             row_idx = i//num_col
             col_idx = np.mod(i, num_col)
-            ax1 = ax[row_idx, col_idx].imshow(image_stack[i], cmap='gray')
+            ax1 = ax[row_idx, col_idx].imshow(image_stack[i], cmap=colormap)
             plt.colorbar(ax1,ax=ax[row_idx, col_idx])
             
             if set_title == True:
@@ -186,3 +185,6 @@ def plot_hsv(image_stack, max_val=1, size=5):
     
     else:
         raise("plot_hsv does not support N_channel >2 rendering")
+        
+        
+
