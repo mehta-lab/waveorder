@@ -88,21 +88,74 @@ class DPC_microscopy_2D:
             
         return I_norm_stack
     
-    def Phase_recon(self, I_meas, method='Tikhonov', reg_u = 1e-3, reg_p = 1e-3):
+    def Phase_recon(self, I_meas, method='Tikhonov', reg_u = 1e-3, reg_p = 1e-3, rho = 1e-5, lambda_u = 1e-3, lambda_p = 1e-3, itr = 20, verbose = True):
         
         I_norm_stack = self.inten_normalization(I_meas)
-        
-        AHA = [np.sum(np.abs(self.Hu)**2, axis=0) + reg_u, np.sum(np.conj(self.Hu)*self.Hp, axis=0),\
-               np.sum(np.conj(self.Hp)*self.Hu, axis=0), np.sum(np.abs(self.Hp)**2, axis=0) + reg_p]
-
         I_norm_stack_f = fft2(I_norm_stack)
         b_vec = [np.sum(np.conj(self.Hu)*I_norm_stack_f, axis=0), \
                  np.sum(np.conj(self.Hp)*I_norm_stack_f, axis=0)]
+        
+        
+        if method == 'Tikhonov':
+            AHA = [np.sum(np.abs(self.Hu)**2, axis=0) + reg_u, np.sum(np.conj(self.Hu)*self.Hp, axis=0),\
+                   np.sum(np.conj(self.Hp)*self.Hu, axis=0), np.sum(np.abs(self.Hp)**2, axis=0) + reg_p]
 
-        determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
 
-        mu_sample = np.real(ifft2((b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant))
-        phi_sample = np.real(ifft2((b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant))
+
+            determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
+
+            mu_sample = np.real(ifft2((b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant))
+            phi_sample = np.real(ifft2((b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant))
+            
+        elif method == 'TV':
+            # ADMM deconvolution with anisotropic TV regularization
+            
+            Dx = np.zeros((self.N, self.M))
+            Dy = np.zeros((self.N, self.M))
+            Dx[0,0] = 1; Dx[0,-1] = -1; Dx = fft2(Dx);
+            Dy[0,0] = 1; Dy[-1,0] = -1; Dy = fft2(Dy);
+            
+            
+            rho_term = rho*(np.conj(Dx)*Dx + np.conj(Dy)*Dy)
+            AHA = [np.sum(np.abs(self.Hu)**2, axis=0) + rho_term + reg_u, np.sum(np.conj(self.Hu)*self.Hp, axis=0),\
+                   np.sum(np.conj(self.Hp)*self.Hu, axis=0), np.sum(np.abs(self.Hp)**2, axis=0) + rho_term + reg_p]
+            
+            determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
+            
+            z_para = np.zeros((4, self.N, self.M))
+            u_para = np.zeros((4, self.N, self.M))
+            D_vec = np.zeros((4, self.N, self.M))
+            
+            
+            
+            
+            for i in range(itr):
+                v_para = fft2(z_para - u_para)
+                b_vec_new = [b_vec[0] + rho*(np.conj(Dx)*v_para[0] + np.conj(Dy)*v_para[1]),\
+                             b_vec[1] + rho*(np.conj(Dx)*v_para[2] + np.conj(Dy)*v_para[3])]
+                
+                
+                mu_sample = np.real(ifft2((b_vec_new[0]*AHA[3] - b_vec_new[1]*AHA[1]) / determinant))
+                phi_sample = np.real(ifft2((b_vec_new[1]*AHA[0] - b_vec_new[0]*AHA[2]) / determinant))
+                
+                D_vec[0] = mu_sample - np.roll(mu_sample, -1, axis=1)
+                D_vec[1] = mu_sample - np.roll(mu_sample, -1, axis=0)
+                D_vec[2] = phi_sample - np.roll(phi_sample, -1, axis=1)
+                D_vec[3] = phi_sample - np.roll(phi_sample, -1, axis=0)
+                
+                
+                z_para = D_vec + u_para
+                
+                z_para[:2,:,:] = softTreshold(z_para[:2,:,:], lambda_u/rho)
+                z_para[2:,:,:] = softTreshold(z_para[2:,:,:], lambda_p/rho)
+                
+                u_para += D_vec - z_para
+                
+                if verbose:
+                    print('Number of iteration computed (%d / %d)'%(i+1,itr))
+            
+        
+        phi_sample -= phi_sample.mean()
         
         
         return mu_sample, phi_sample
