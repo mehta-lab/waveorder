@@ -10,7 +10,7 @@ from .util import *
 class DPC_microscopy_2D:
     
     
-    def __init__(self, img_dim, lambda_illu, ps, NA_obj, rotation_angle):
+    def __init__(self, img_dim, lambda_illu, ps, NA_obj, rotation_angle, z_offset=np.array([0])):
         
         '''
         
@@ -26,10 +26,14 @@ class DPC_microscopy_2D:
         self.NA_obj         = NA_obj
         self.rotation_angle = rotation_angle
         self.N_source       = len(self.rotation_angle)
+        self.z_offset       = z_offset
         
         # setup microscocpe variables
         self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
-        self.Pupil_obj = gen_Pupil(self.fxx, self.fyy, self.NA_obj, self.lambda_illu)
+        self.Pupil_support = gen_Pupil(self.fxx, self.fyy, self.NA_obj, self.lambda_illu)
+        self.Pupil_obj,_ = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_offset)
+        self.Pupil_obj = np.squeeze(self.Pupil_obj)
+        
         self.gen_DPC_source()
         self.gen_WOTF()
         
@@ -42,7 +46,7 @@ class DPC_microscopy_2D:
             deg = self.rotation_angle[i]
             Source_temp = np.zeros((self.N,self.M))
             Source_temp[self.fyy * np.cos(np.deg2rad(deg)) - self.fxx*np.sin(np.deg2rad(deg)) > 1e-10] = 1
-            self.Source[i] = Source_temp * self.Pupil_obj
+            self.Source[i] = Source_temp * self.Pupil_support
 
 
     def gen_WOTF(self):
@@ -83,7 +87,7 @@ class DPC_microscopy_2D:
         I_norm_stack = np.zeros_like(I_meas)
         
         for i in range(self.N_source):
-            I_norm_stack[i] = I_meas[i]/I_meas[i].mean()
+            I_norm_stack[i] = I_meas[i]/(I_meas[i].mean())
             I_norm_stack[i] -= 1
             
         return I_norm_stack
