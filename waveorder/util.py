@@ -42,19 +42,23 @@ def genStarTarget(N, M, blur_px = 2):
     rho = np.sqrt(xx**2 + yy**2)
     theta = np.arctan2(yy, xx)
 
-    star = 1 + np.cos(40*theta)
-    star = np.pad(star[10:-10,10:-10],(10,),mode='constant')
-
+    # star = (1 + np.cos(40*theta))
+    # star = np.pad(star[10:-10,10:-10],(10,),mode='constant')
+    star = (1 + np.cos(16*theta))
+    star = np.pad(star[60:-60,60:-60],(60,),mode='constant')
+    star[star<1] = 0
+    
     # Filter to prevent aliasing
 
 
     Gaussian = np.exp(-rho**2/(2*blur_px**2))
-
+    
     star = np.maximum(0, np.real(ifft2(fft2(star) * fft2(ifftshift(Gaussian)))))
+    # star = np.maximum(0, np.real(ifft2(fft2(star) * fft2(ifftshift(Gaussian)))))*(2+np.sin(2*np.pi*(1/5)*rho))
     star /= np.max(star)
     
     
-    return star, theta
+    return star, theta, xx
 
 def gen_sphere_target(img_dim, ps, psz, radius, blur_size = 0.1):
     
@@ -113,37 +117,6 @@ def gen_coordinate(img_dim, ps):
     fxx, fyy = np.meshgrid(fx, fy)
 
     return (xx, yy, fxx, fyy)
-
-
-
-def gen_Pupil(fxx, fyy, NA, lambda_in):
-    
-    N, M = fxx.shape
-    
-    Pupil = np.zeros((N,M))
-    fr = (fxx**2 + fyy**2)**(1/2)
-    Pupil[ fr < NA/lambda_in] = 1
-    
-    return Pupil
-
-
-def gen_Hz_stack(fxx, fyy, Pupil_support, lambda_in, z_stack):
-    
-    N, M = fxx.shape
-    N_stack = len(z_stack)
-    N_defocus = len(z_stack)
-    
-    fr = (fxx**2 + fyy**2)**(1/2)
-    
-    oblique_factor = ((1 - lambda_in**2 * fr**2) *Pupil_support)**(1/2) / lambda_in
-    
-    Hz_stack = Pupil_support[:,:,np.newaxis] * np.exp(1j*2*np.pi*z_stack[np.newaxis,np.newaxis,:]*\
-                                                      oblique_factor[:,:,np.newaxis])
-    G_fun_z = -1j/4/np.pi* Pupil_support[:,:,np.newaxis] * np.exp(1j*2*np.pi*z_stack[np.newaxis,np.newaxis,:] * \
-                                                                 oblique_factor[:,:,np.newaxis]) /(oblique_factor[:,:,np.newaxis]+1e-15)
-
-    
-    return Hz_stack, G_fun_z
 
 
 def image_upsampling(Ic_image, upsamp_factor = 1, bg = 0, method=None):
