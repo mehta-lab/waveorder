@@ -158,11 +158,60 @@ def axial_upsampling(I_meas, upsamp_factor=1):
     
     return I_meas_up
 
-def softTreshold(x, threshold):
+def softTreshold(x, threshold, use_gpu=False):
     
-    magnitude = np.abs(x)
-    ratio = np.maximum(0, magnitude-threshold) / magnitude
-    
+    if use_gpu:
+        globals()['cp'] = __import__("cupy")
+        magnitude = cp.abs(x)
+        ratio = cp.maximum(0, magnitude-threshold) / magnitude
+    else:
+        magnitude = np.abs(x)
+        ratio = np.maximum(0, magnitude-threshold) / magnitude
+        
     x_threshold = x*ratio
     
     return x_threshold
+
+
+def uniform_filter_2D(image, size, use_gpu=False):
+    
+    N, M = image.shape
+    
+    if use_gpu:
+        globals()['cp'] = __import__("cupy")
+        
+        # filter in y direction
+        
+        image_cp = cp.array(image)
+    
+        kernel_y = cp.zeros((3*N,))
+        kernel_y[3*N//2-size//2:3*N//2+size//2] = 1
+        kernel_y /= cp.sum(kernel_y)
+        kernel_y = cp.fft.fft(cp.fft.ifftshift(kernel_y))
+
+        image_bound_y = cp.zeros((3*N,M))
+        image_bound_y[N:2*N,:] = image_cp.copy()
+        image_bound_y[0:N,:] = cp.flipud(image_cp)
+        image_bound_y[2*N:3*N,:] = cp.flipud(image_cp)
+        filtered_y = cp.real(cp.fft.ifft(cp.fft.fft(image_bound_y,axis=0)*kernel_y[:,cp.newaxis],axis=0))
+        filtered_y = filtered_y[N:2*N,:]
+        
+        # filter in x direction
+        
+        kernel_x = cp.zeros((3*M,))
+        kernel_x[3*M//2-size//2:3*M//2+size//2] = 1
+        kernel_x /= cp.sum(kernel_x)
+        kernel_x = cp.fft.fft(cp.fft.ifftshift(kernel_x))
+
+        image_bound_x = cp.zeros((N,3*M))
+        image_bound_x[:,M:2*M] = filtered_y.copy()
+        image_bound_x[:,0:M] = cp.fliplr(filtered_y)
+        image_bound_x[:,2*M:3*M] = cp.fliplr(filtered_y)
+
+        filtered_xy = cp.real(cp.fft.ifft(cp.fft.fft(image_bound_x,axis=1)*kernel_x[cp.newaxis,:],axis=1))
+        filtered_xy = filtered_xy[:,M:2*M]
+    else:
+        filtered_xy = uniform_filter(image, size=size)
+        
+        
+    return filtered_xy
