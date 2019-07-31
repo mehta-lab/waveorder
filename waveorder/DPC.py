@@ -4,7 +4,7 @@ from numpy.fft import fft2, ifft2, fftshift, ifftshift
 from PIL import Image
 from scipy.ndimage import uniform_filter
 from .util import *
-
+from .optics import *
 
 
 class DPC_microscopy_2D:
