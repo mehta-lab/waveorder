@@ -323,7 +323,7 @@ class waveorder_microscopy:
         return S_transformed
     
     
-    def Polscope_bg_correction(self, S_image_tm, S_bg_tm, kernel_size=200, poly_order=2, use_gpu=False, gpu_id=0):
+    def Polscope_bg_correction(self, S_image_tm, S_bg_tm, kernel_size=400, poly_order=2, use_gpu=False, gpu_id=0):
         
         if use_gpu:
             globals()['cp'] = __import__("cupy")
@@ -344,6 +344,8 @@ class waveorder_microscopy:
             S_image_tm[4] /= S_bg_tm[4,:,:,np.newaxis]
 
 
+ 
+        
         
         if self.bg_option == 'local':
             
@@ -351,22 +353,38 @@ class waveorder_microscopy:
                 S_image_tm[1] -= uniform_filter_2D(S_image_tm[1], size=kernel_size, use_gpu=use_gpu)
                 S_image_tm[2] -= uniform_filter_2D(S_image_tm[2], size=kernel_size, use_gpu=use_gpu)
             else:
+                if use_gpu:
+                    S1_bg = uniform_filter_2D(cp.mean(S_image_tm[1],axis=-1), size=kernel_size, use_gpu=use_gpu)
+                    S2_bg = uniform_filter_2D(cp.mean(S_image_tm[2],axis=-1), size=kernel_size, use_gpu=use_gpu)
+                else:
+                    S1_bg = uniform_filter_2D(np.mean(S_image_tm[1],axis=-1), size=kernel_size, use_gpu=use_gpu)
+                    S2_bg = uniform_filter_2D(np.mean(S_image_tm[2],axis=-1), size=kernel_size, use_gpu=use_gpu)
+                    
+                
                 for i in range(self.N_defocus):
-                    S_image_tm[1,:,:,i] -= uniform_filter_2D(S_image_tm[1,:,:,i], size=kernel_size, use_gpu=use_gpu)
+                    S_image_tm[1,:,:,i] -= S1_bg
                     S_image_tm[2,:,:,i] -= uniform_filter_2D(S_image_tm[2,:,:,i], size=kernel_size, use_gpu=use_gpu)
                     
         elif self.bg_option == 'local_fit':
             if use_gpu:
-                bg_estimator = BackgroundEstimator2D_GPU()
+                bg_estimator = BackgroundEstimator2D_GPU(gpu_id=gpu_id)
+                if dim != 3:
+                    S1_bg = bg_estimator.get_background(cp.mean(S_image_tm[1],axis=-1), order=poly_order, normalize=False)
+                    S2_bg = bg_estimator.get_background(cp.mean(S_image_tm[2],axis=-1), order=poly_order, normalize=False)
             else:
                 bg_estimator = BackgroundEstimator2D()
+                if dim != 3:
+                    S1_bg = bg_estimator.get_background(np.mean(S_image_tm[1],axis=-1), order=poly_order, normalize=False)
+                    S2_bg = bg_estimator.get_background(np.mean(S_image_tm[2],axis=-1), order=poly_order, normalize=False)
+                    
             if dim ==3:
                 S_image_tm[1] -= bg_estimator.get_background(S_image_tm[1], order=poly_order, normalize=False)
                 S_image_tm[2] -= bg_estimator.get_background(S_image_tm[2], order=poly_order, normalize=False)
             else:
+                
                 for i in range(self.N_defocus):
-                    S_image_tm[1,:,:,i] -= bg_estimator.get_background(S_image_tm[1,:,:,i], order=poly_order, normalize=False)
-                    S_image_tm[2,:,:,i] -= bg_estimator.get_background(S_image_tm[2,:,:,i], order=poly_order, normalize=False)
+                    S_image_tm[1,:,:,i] -= S1_bg
+                    S_image_tm[2,:,:,i] -= S2_bg
                 
         
         if use_gpu:
@@ -446,7 +464,7 @@ class waveorder_microscopy:
         return S0_stack_norm
         
     
-    def Phase_recon(self, S0_stack, method='Tikhonov', reg_u = 1e-3, reg_p = 1e-3, \
+    def Phase_recon(self, S0_stack, method='Tikhonov', reg_u = 1e-6, reg_p = 1e-6, \
                     rho = 1e-5, lambda_u = 1e-3, lambda_p = 1e-3, itr = 20, verbose=True, use_gpu=False, gpu_id=0):
         
         
@@ -504,8 +522,8 @@ class waveorder_microscopy:
                 Dy[0,0] = 1; Dy[-1,0] = -1; Dy = cp.fft.fft2(Dy);
                 
                 rho_term = rho*(cp.conj(Dx)*Dx + cp.conj(Dy)*Dy)
-                AHA = [cp.sum(cp.abs(Hu)**2, axis=2) + rho_term, cp.sum(cp.conj(Hu)*Hp, axis=2),\
-                       cp.sum(cp.conj(Hp)*Hu, axis=2), cp.sum(cp.abs(Hp)**2, axis=2) + rho_term]
+                AHA = [cp.sum(cp.abs(Hu)**2, axis=2) + reg_u + rho_term, cp.sum(cp.conj(Hu)*Hp, axis=2),\
+                       cp.sum(cp.conj(Hp)*Hu, axis=2), cp.sum(cp.abs(Hp)**2, axis=2) +reg_p+ rho_term]
                 
                 z_para = cp.zeros((4, self.N, self.M))
                 u_para = cp.zeros((4, self.N, self.M))
