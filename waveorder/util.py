@@ -167,7 +167,7 @@ def softTreshold(x, threshold, use_gpu=False):
     else:
         magnitude = np.abs(x)
         ratio = np.maximum(0, magnitude-threshold) / magnitude
-    
+        
     x_threshold = x*ratio
     
     return x_threshold
