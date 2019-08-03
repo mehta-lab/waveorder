@@ -11,11 +11,11 @@ from .background_estimator import *
 
 def intensity_mapping(img_stack):
     img_stack_out = np.zeros_like(img_stack)
-    img_stack_out[0] = img_stack[0]
-    img_stack_out[1] = img_stack[4]
-    img_stack_out[2] = img_stack[3]
-    img_stack_out[3] = img_stack[1]
-    img_stack_out[4] = img_stack[2]
+    img_stack_out[0] = img_stack[0].copy()
+    img_stack_out[1] = img_stack[4].copy()
+    img_stack_out[2] = img_stack[3].copy()
+    img_stack_out[3] = img_stack[1].copy()
+    img_stack_out[4] = img_stack[2].copy()
     
     return img_stack_out
 
@@ -23,13 +23,27 @@ def intensity_mapping(img_stack):
 class waveorder_microscopy:
     
     def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi,\
-                 n_media=1, cali=False, bg_option='global', phase_deconv='2D', illu_mode='BF', NA_illu_in=None, Source=None):
+                 n_media=1, cali=False, bg_option='global', phase_deconv='2D', 
+                 illu_mode='BF', NA_illu_in=None, Source=None, 
+                 use_gpu=False, gpu_id=0):
         
         '''
         
         initialize the system parameters for phase and orders microscopy            
         
         '''
+        
+        t0 = time.time()
+        
+        # GPU/CPU
+        
+        self.use_gpu = use_gpu
+        
+        if self.use_gpu:
+            self.gpu_id = gpu_id
+            globals()['cp'] = __import__("cupy")
+            cp.cuda.Device(self.gpu_id).use()
+            
         
         # Basic parameter 
         self.N, self.M   = img_dim
@@ -74,12 +88,26 @@ class waveorder_microscopy:
                 self.N_pattern = 1
             else:
                 self.N_pattern = len(Source)
+                
+        t_basic = time.time()
+        print('Finished constructing basic parameters, elapsed time %.2f'%(t_basic-t0))
 
         # select either 2D or 3D model for deconvolution
         
         if phase_deconv == '2D':
             self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_defocus)
+            t_kernel = time.time()
+            print('Finished constructing defocus kernel, elapsed time %.2f'%(t_kernel-t0))
+            
             self.gen_WOTF()
+            t_WOTF = time.time()
+            print('Finished constructing WOTF, elapsed time %.2f'%(t_WOTF-t0))
+        elif phase_deconv == 'semi-2D':
+            
+            self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_defocus)
+            self.G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_defocus)
+            self.gen_semi_2D_WOTF()
+            
         elif phase_deconv == '3D':
             z = ifftshift(self.z_defocus)
             self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
@@ -103,12 +131,33 @@ class waveorder_microscopy:
         
         if self.N_pattern == 1:
             for i in range(self.N_defocus):
-                self.Hu[:,:,i], self.Hp[:,:,i] = WOTF_2D_compute(self.Source, self.Pupil_obj * self.Hz_det[:,:,i])
+                self.Hu[:,:,i], self.Hp[:,:,i] = WOTF_2D_compute(self.Source, self.Pupil_obj * self.Hz_det[:,:,i], use_gpu=self.use_gpu, gpu_id=self.gpu_id)
         else:
             
             for i,j in itertools.product(range(self.N_defocus), range(self.N_pattern)):
                 idx = i*self.N_pattern+j
-                self.Hu[:,:,idx], self.Hp[:,:,idx] = WOTF_2D_compute(self.Source[j], self.Pupil_obj * self.Hz_det[:,:,i])
+                self.Hu[:,:,idx], self.Hp[:,:,idx] = WOTF_2D_compute(self.Source[j], self.Pupil_obj * self.Hz_det[:,:,i], use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+                
+    def gen_semi_2D_WOTF(self):
+        
+        self.Hu = np.zeros((self.N, self.M, self.N_defocus*self.N_pattern),complex)
+        self.Hp = np.zeros((self.N, self.M, self.N_defocus*self.N_pattern),complex)
+        
+        if self.N_pattern == 1:
+            
+            for i in range(self.N_defocus):
+                self.Hu[:,:,i], self.Hp[:,:,i] = WOTF_semi_2D_compute(self.Source, self.Pupil_obj, self.Hz_det[:,:,i], \
+                                                                      self.G_fun_z[:,:,i]*4*np.pi*1j/self.lambda_illu, \
+                                                                      use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+                
+        else:
+            
+            for i,j in itertools.product(range(self.N_defocus), range(self.N_pattern)):
+                idx = i*self.N_pattern+j
+                self.Hu[:,:,idx], self.Hp[:,:,idx] = WOTF_semi_2D_compute(self.Source[j], self.Pupil_obj, self.Hz_det[:,:,i], \
+                                                                          self.G_fun_z[:,:,i]*4*np.pi*1j/self.lambda_illu, \
+                                                                          use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+        
             
     def gen_3D_WOTF(self):
         
@@ -301,11 +350,9 @@ class waveorder_microscopy:
         return S_image_recon
     
     
-    def Stokes_transform(self, S_image_recon, use_gpu=False, gpu_id=0):
+    def Stokes_transform(self, S_image_recon):
         
-        if use_gpu:
-            globals()['cp'] = __import__("cupy")
-            cp.cuda.Device(gpu_id).use()
+        if self.use_gpu:
             S_image_recon = cp.array(S_image_recon)
             S_transformed = cp.zeros((5,)+S_image_recon.shape[1:])
         else:
@@ -317,17 +364,15 @@ class waveorder_microscopy:
         S_transformed[3] = S_image_recon[3]
         S_transformed[4] = (S_image_recon[1]**2 + S_image_recon[2]**2 + S_image_recon[3]**2)**(1/2) / S_image_recon[0] # DoP
         
-        if use_gpu:
+        if self.use_gpu:
             S_transformed = cp.asnumpy(S_transformed)
         
         return S_transformed
     
     
-    def Polscope_bg_correction(self, S_image_tm, S_bg_tm, kernel_size=400, poly_order=2, use_gpu=False, gpu_id=0):
+    def Polscope_bg_correction(self, S_image_tm, S_bg_tm, kernel_size=400, poly_order=2):
         
-        if use_gpu:
-            globals()['cp'] = __import__("cupy")
-            cp.cuda.Device(gpu_id).use()
+        if self.use_gpu:
             S_image_tm = cp.array(S_image_tm)
             S_bg_tm = cp.array(S_bg_tm)
         
@@ -350,24 +395,24 @@ class waveorder_microscopy:
         if self.bg_option == 'local':
             
             if dim == 3:
-                S_image_tm[1] -= uniform_filter_2D(S_image_tm[1], size=kernel_size, use_gpu=use_gpu)
-                S_image_tm[2] -= uniform_filter_2D(S_image_tm[2], size=kernel_size, use_gpu=use_gpu)
+                S_image_tm[1] -= uniform_filter_2D(S_image_tm[1], size=kernel_size, use_gpu=self.use_gpu)
+                S_image_tm[2] -= uniform_filter_2D(S_image_tm[2], size=kernel_size, use_gpu=self.use_gpu)
             else:
-                if use_gpu:
-                    S1_bg = uniform_filter_2D(cp.mean(S_image_tm[1],axis=-1), size=kernel_size, use_gpu=use_gpu)
-                    S2_bg = uniform_filter_2D(cp.mean(S_image_tm[2],axis=-1), size=kernel_size, use_gpu=use_gpu)
+                if self.use_gpu:
+                    S1_bg = uniform_filter_2D(cp.mean(S_image_tm[1],axis=-1), size=kernel_size, use_gpu=self.use_gpu)
+                    S2_bg = uniform_filter_2D(cp.mean(S_image_tm[2],axis=-1), size=kernel_size, use_gpu=self.use_gpu)
                 else:
-                    S1_bg = uniform_filter_2D(np.mean(S_image_tm[1],axis=-1), size=kernel_size, use_gpu=use_gpu)
-                    S2_bg = uniform_filter_2D(np.mean(S_image_tm[2],axis=-1), size=kernel_size, use_gpu=use_gpu)
+                    S1_bg = uniform_filter_2D(np.mean(S_image_tm[1],axis=-1), size=kernel_size, use_gpu=self.use_gpu)
+                    S2_bg = uniform_filter_2D(np.mean(S_image_tm[2],axis=-1), size=kernel_size, use_gpu=self.use_gpu)
                     
                 
                 for i in range(self.N_defocus):
                     S_image_tm[1,:,:,i] -= S1_bg
-                    S_image_tm[2,:,:,i] -= uniform_filter_2D(S_image_tm[2,:,:,i], size=kernel_size, use_gpu=use_gpu)
+                    S_image_tm[2,:,:,i] -= S2_bg
                     
         elif self.bg_option == 'local_fit':
-            if use_gpu:
-                bg_estimator = BackgroundEstimator2D_GPU(gpu_id=gpu_id)
+            if self.use_gpu:
+                bg_estimator = BackgroundEstimator2D_GPU(gpu_id=self.gpu_id)
                 if dim != 3:
                     S1_bg = bg_estimator.get_background(cp.mean(S_image_tm[1],axis=-1), order=poly_order, normalize=False)
                     S2_bg = bg_estimator.get_background(cp.mean(S_image_tm[2],axis=-1), order=poly_order, normalize=False)
@@ -387,7 +432,7 @@ class waveorder_microscopy:
                     S_image_tm[2,:,:,i] -= S2_bg
                 
         
-        if use_gpu:
+        if self.use_gpu:
             S_image_tm = cp.asnumpy(S_image_tm)
         
         return S_image_tm
@@ -395,18 +440,16 @@ class waveorder_microscopy:
     
     
     
-    def Polarization_recon(self, S_image_recon, use_gpu=False, gpu_id=0):
+    def Polarization_recon(self, S_image_recon):
         
-        if use_gpu:
-            globals()['cp'] = __import__("cupy")
-            cp.cuda.Device(gpu_id).use()
+        if self.use_gpu:
             S_image_recon = cp.array(S_image_recon)
             Recon_para = cp.zeros((4,)+S_image_recon.shape[1:])
         else:
             Recon_para = np.zeros((4,)+S_image_recon.shape[1:])
         
         
-        if use_gpu:
+        if self.use_gpu:
             Recon_para[0] = cp.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
                                    S_image_recon[3], S_image_recon[3])  # retardance
             if self.cali == True:
@@ -427,16 +470,16 @@ class waveorder_microscopy:
         Recon_para[3] = S_image_recon[4] # DoP
         
         
-        if use_gpu:
+        if self.use_gpu:
             Recon_para = cp.asnumpy(Recon_para)
         
         return Recon_para
     
     
     
-    def inten_normalization(self, S0_stack, use_gpu=False):
+    def inten_normalization(self, S0_stack):
         
-        if use_gpu:
+        if self.use_gpu:
             S0_norm_stack = cp.zeros_like(S0_stack)
             
             for i in range(self.N_defocus*self.N_pattern):
@@ -465,13 +508,11 @@ class waveorder_microscopy:
         
     
     def Phase_recon(self, S0_stack, method='Tikhonov', reg_u = 1e-6, reg_p = 1e-6, \
-                    rho = 1e-5, lambda_u = 1e-3, lambda_p = 1e-3, itr = 20, verbose=True, use_gpu=False, gpu_id=0):
+                    rho = 1e-5, lambda_u = 1e-3, lambda_p = 1e-3, itr = 20, verbose=True):
         
         
-        if use_gpu:
-            globals()['cp'] = __import__("cupy")
-            cp.cuda.Device(gpu_id).use()
-            S0_stack = self.inten_normalization(cp.array(S0_stack),use_gpu=True)
+        if self.use_gpu:
+            S0_stack = self.inten_normalization(cp.array(S0_stack))
             Hu = cp.array(self.Hu, copy=True)
             Hp = cp.array(self.Hp, copy=True)
             S0_stack_f = cp.fft.fft2(S0_stack, axes=(0,1))
@@ -491,7 +532,7 @@ class waveorder_microscopy:
             
             # Deconvolution with Tikhonov regularization
             
-            if use_gpu:
+            if self.use_gpu:
                 AHA = [cp.sum(cp.abs(Hu)**2, axis=2) + reg_u, cp.sum(cp.conj(Hu)*Hp, axis=2),\
                        cp.sum(cp.conj(Hp)*Hu, axis=2), cp.sum(cp.abs(Hp)**2, axis=2) + reg_p]
             else:
@@ -503,7 +544,7 @@ class waveorder_microscopy:
             determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
             
             
-            if use_gpu:
+            if self.use_gpu:
                 mu_sample = cp.asnumpy(cp.real(cp.fft.ifft2((b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant)))
                 phi_sample = cp.asnumpy(cp.real(cp.fft.ifft2((b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant)))
             else:
@@ -515,7 +556,7 @@ class waveorder_microscopy:
             # ADMM deconvolution with anisotropic TV regularization
             
             
-            if use_gpu:
+            if self.use_gpu:
                 Dx = cp.zeros((self.N, self.M))
                 Dy = cp.zeros((self.N, self.M))
                 Dx[0,0] = 1; Dx[0,-1] = -1; Dx = cp.fft.fft2(Dx);
@@ -551,7 +592,7 @@ class waveorder_microscopy:
             for i in range(itr):
                 
                 
-                if use_gpu:
+                if self.use_gpu:
                     
                     v_para = cp.fft.fft2(z_para - u_para)
                     b_vec_new = [b_vec[0] + rho*(cp.conj(Dx)*v_para[0] + cp.conj(Dy)*v_para[1]),\
