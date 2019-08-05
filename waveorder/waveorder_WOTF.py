@@ -23,7 +23,8 @@ def intensity_mapping(img_stack):
 class waveorder_microscopy:
     
     def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi,\
-                 n_media=1, cali=False, bg_option='global', phase_deconv='2D', 
+                 n_media=1, cali=False, bg_option='global', 
+                 phase_deconv='2D', ph_deconv_layer = 5,
                  illu_mode='BF', NA_illu_in=None, Source=None, 
                  use_gpu=False, gpu_id=0):
         
@@ -96,20 +97,19 @@ class waveorder_microscopy:
         
         if phase_deconv == '2D':
             self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_defocus)
-            t_kernel = time.time()
-            print('Finished constructing defocus kernel, elapsed time %.2f'%(t_kernel-t0))
-            
             self.gen_WOTF()
-            t_WOTF = time.time()
-            print('Finished constructing WOTF, elapsed time %.2f'%(t_WOTF-t0))
+            
         elif phase_deconv == 'semi-2D':
             
-            self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_defocus)
-            self.G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_defocus)
+            self.ph_deconv_layer = ph_deconv_layer
+            z_deconv = -(np.r_[:self.ph_deconv_layer]-self.ph_deconv_layer//2)*self.psz
+            
+            self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z_deconv)
+            self.G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z_deconv)
             self.gen_semi_2D_WOTF()
             
         elif phase_deconv == '3D':
-            z = ifftshift(self.z_defocus)
+            z = ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
             self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
             self.G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
             self.gen_3D_WOTF()
@@ -131,28 +131,30 @@ class waveorder_microscopy:
         
         if self.N_pattern == 1:
             for i in range(self.N_defocus):
-                self.Hu[:,:,i], self.Hp[:,:,i] = WOTF_2D_compute(self.Source, self.Pupil_obj * self.Hz_det[:,:,i], use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+                self.Hu[:,:,i], self.Hp[:,:,i] = WOTF_2D_compute(self.Source, self.Pupil_obj * self.Hz_det[:,:,i], \
+                                                                 use_gpu=self.use_gpu, gpu_id=self.gpu_id)
         else:
             
             for i,j in itertools.product(range(self.N_defocus), range(self.N_pattern)):
                 idx = i*self.N_pattern+j
-                self.Hu[:,:,idx], self.Hp[:,:,idx] = WOTF_2D_compute(self.Source[j], self.Pupil_obj * self.Hz_det[:,:,i], use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+                self.Hu[:,:,idx], self.Hp[:,:,idx] = WOTF_2D_compute(self.Source[j], self.Pupil_obj * self.Hz_det[:,:,i], \
+                                                                       use_gpu=self.use_gpu, gpu_id=self.gpu_id)
                 
     def gen_semi_2D_WOTF(self):
         
-        self.Hu = np.zeros((self.N, self.M, self.N_defocus*self.N_pattern),complex)
-        self.Hp = np.zeros((self.N, self.M, self.N_defocus*self.N_pattern),complex)
+        self.Hu = np.zeros((self.N, self.M, self.ph_deconv_layer*self.N_pattern),complex)
+        self.Hp = np.zeros((self.N, self.M, self.ph_deconv_layer*self.N_pattern),complex)
         
         if self.N_pattern == 1:
             
-            for i in range(self.N_defocus):
+            for i in range(self.ph_deconv_layer):
                 self.Hu[:,:,i], self.Hp[:,:,i] = WOTF_semi_2D_compute(self.Source, self.Pupil_obj, self.Hz_det[:,:,i], \
                                                                       self.G_fun_z[:,:,i]*4*np.pi*1j/self.lambda_illu, \
                                                                       use_gpu=self.use_gpu, gpu_id=self.gpu_id)
                 
         else:
             
-            for i,j in itertools.product(range(self.N_defocus), range(self.N_pattern)):
+            for i,j in itertools.product(range(self.ph_deconv_layer), range(self.N_pattern)):
                 idx = i*self.N_pattern+j
                 self.Hu[:,:,idx], self.Hp[:,:,idx] = WOTF_semi_2D_compute(self.Source[j], self.Pupil_obj, self.Hz_det[:,:,i], \
                                                                           self.G_fun_z[:,:,i]*4*np.pi*1j/self.lambda_illu, \
@@ -165,7 +167,9 @@ class waveorder_microscopy:
         self.H_im = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus),complex)
         
         for i in range(self.N_pattern):
-            self.H_re[i], self.H_im[i] = WOTF_3D_compute(self.Source, self.Pupil_obj, self.Hz_det, self.G_fun_z, self.psz)
+            self.H_re[i], self.H_im[i] = WOTF_3D_compute(self.Source, self.Pupil_obj, self.Hz_det, \
+                                                         self.G_fun_z, self.psz,\
+                                                         use_gpu=self.use_gpu, gpu_id=self.gpu_id)
         
         self.H_re = np.squeeze(self.H_re)
         self.H_im = np.squeeze(self.H_im)
@@ -479,10 +483,12 @@ class waveorder_microscopy:
     
     def inten_normalization(self, S0_stack):
         
+        _,_, Nimg = S0_stack.shape
+        
         if self.use_gpu:
             S0_norm_stack = cp.zeros_like(S0_stack)
             
-            for i in range(self.N_defocus*self.N_pattern):
+            for i in range(Nimg):
 
                 S0_norm_stack[:,:,i] = S0_stack[:,:,i]/uniform_filter_2D(S0_stack[:,:,i], size=self.N//2, use_gpu=True)
                 S0_norm_stack[:,:,i] /= S0_norm_stack[:,:,i].mean()
@@ -491,7 +497,7 @@ class waveorder_microscopy:
         else:
             S0_norm_stack = np.zeros_like(S0_stack)
         
-            for i in range(self.N_defocus*self.N_pattern):
+            for i in range(Nimg):
 
                 S0_norm_stack[:,:,i] = S0_stack[:,:,i]/uniform_filter(S0_stack[:,:,i], size=self.N//2)
                 S0_norm_stack[:,:,i] /= S0_norm_stack[:,:,i].mean()
@@ -500,11 +506,130 @@ class waveorder_microscopy:
         return S0_norm_stack
     
     def inten_normalization_3D(self, S0_stack):
+        
+        
+            
         S0_stack_norm = np.zeros_like(S0_stack)
         S0_stack_norm = S0_stack / S0_stack.mean()
         S0_stack_norm -= 1
         
         return S0_stack_norm
+    
+    def Tikhonov_deconv_2D(self, AHA, b_vec):
+        
+        determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
+            
+            
+        if self.use_gpu:
+            mu_sample = cp.asnumpy(cp.real(cp.fft.ifft2((b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant)))
+            phi_sample = cp.asnumpy(cp.real(cp.fft.ifft2((b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant)))
+        else:
+            mu_sample = np.real(ifft2((b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant))
+            phi_sample = np.real(ifft2((b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant))
+            
+        return mu_sample, phi_sample
+    
+    def ADMM_TV_deconv_2D(self, AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose):
+        
+        
+        # ADMM deconvolution with anisotropic TV regularization
+            
+            
+        if self.use_gpu:
+            Dx = cp.zeros((self.N, self.M))
+            Dy = cp.zeros((self.N, self.M))
+            Dx[0,0] = 1; Dx[0,-1] = -1; Dx = cp.fft.fft2(Dx);
+            Dy[0,0] = 1; Dy[-1,0] = -1; Dy = cp.fft.fft2(Dy);
+
+            rho_term = rho*(cp.conj(Dx)*Dx + cp.conj(Dy)*Dy)
+
+            z_para = cp.zeros((4, self.N, self.M))
+            u_para = cp.zeros((4, self.N, self.M))
+            D_vec = cp.zeros((4, self.N, self.M))
+
+
+        else:
+            Dx = np.zeros((self.N, self.M))
+            Dy = np.zeros((self.N, self.M))
+            Dx[0,0] = 1; Dx[0,-1] = -1; Dx = fft2(Dx);
+            Dy[0,0] = 1; Dy[-1,0] = -1; Dy = fft2(Dy);
+
+            rho_term = rho*(np.conj(Dx)*Dx + np.conj(Dy)*Dy)
+
+            z_para = np.zeros((4, self.N, self.M))
+            u_para = np.zeros((4, self.N, self.M))
+            D_vec = np.zeros((4, self.N, self.M))
+
+
+        AHA[0] = AHA[0] + rho_term
+        AHA[3] = AHA[3] + rho_term
+
+        determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
+
+
+        for i in range(itr):
+
+
+            if self.use_gpu:
+
+                v_para = cp.fft.fft2(z_para - u_para)
+                b_vec_new = [b_vec[0] + rho*(cp.conj(Dx)*v_para[0] + cp.conj(Dy)*v_para[1]),\
+                             b_vec[1] + rho*(cp.conj(Dx)*v_para[2] + cp.conj(Dy)*v_para[3])]
+
+
+                mu_sample = cp.real(cp.fft.ifft2((b_vec_new[0]*AHA[3] - b_vec_new[1]*AHA[1]) / determinant))
+                phi_sample = cp.real(cp.fft.ifft2((b_vec_new[1]*AHA[0] - b_vec_new[0]*AHA[2]) / determinant))
+
+                D_vec[0] = mu_sample - cp.roll(mu_sample, -1, axis=1)
+                D_vec[1] = mu_sample - cp.roll(mu_sample, -1, axis=0)
+                D_vec[2] = phi_sample - cp.roll(phi_sample, -1, axis=1)
+                D_vec[3] = phi_sample - cp.roll(phi_sample, -1, axis=0)
+
+
+                z_para = D_vec + u_para
+
+                z_para[:2,:,:] = softTreshold(z_para[:2,:,:], lambda_u/rho, use_gpu=True)
+                z_para[2:,:,:] = softTreshold(z_para[2:,:,:], lambda_p/rho, use_gpu=True)
+
+                u_para += D_vec - z_para
+
+                if i == itr-1:
+                    mu_sample  = cp.asnumpy(mu_sample)
+                    phi_sample = cp.asnumpy(phi_sample)
+
+
+
+
+            else:
+
+                v_para = fft2(z_para - u_para)
+                b_vec_new = [b_vec[0] + rho*(np.conj(Dx)*v_para[0] + np.conj(Dy)*v_para[1]),\
+                             b_vec[1] + rho*(np.conj(Dx)*v_para[2] + np.conj(Dy)*v_para[3])]
+
+
+                mu_sample = np.real(ifft2((b_vec_new[0]*AHA[3] - b_vec_new[1]*AHA[1]) / determinant))
+                phi_sample = np.real(ifft2((b_vec_new[1]*AHA[0] - b_vec_new[0]*AHA[2]) / determinant))
+
+                D_vec[0] = mu_sample - np.roll(mu_sample, -1, axis=1)
+                D_vec[1] = mu_sample - np.roll(mu_sample, -1, axis=0)
+                D_vec[2] = phi_sample - np.roll(phi_sample, -1, axis=1)
+                D_vec[3] = phi_sample - np.roll(phi_sample, -1, axis=0)
+
+
+                z_para = D_vec + u_para
+
+                z_para[:2,:,:] = softTreshold(z_para[:2,:,:], lambda_u/rho)
+                z_para[2:,:,:] = softTreshold(z_para[2:,:,:], lambda_p/rho)
+
+                u_para += D_vec - z_para
+
+            if verbose:
+                print('Number of iteration computed (%d / %d)'%(i+1,itr))
+            
+        return mu_sample, phi_sample
+        
+    
+    
         
     
     def Phase_recon(self, S0_stack, method='Tikhonov', reg_u = 1e-6, reg_p = 1e-6, \
@@ -515,205 +640,246 @@ class waveorder_microscopy:
             S0_stack = self.inten_normalization(cp.array(S0_stack))
             Hu = cp.array(self.Hu, copy=True)
             Hp = cp.array(self.Hp, copy=True)
+            
             S0_stack_f = cp.fft.fft2(S0_stack, axes=(0,1))
+            
+            AHA = [cp.sum(cp.abs(Hu)**2, axis=2) + reg_u, cp.sum(cp.conj(Hu)*Hp, axis=2),\
+                   cp.sum(cp.conj(Hp)*Hu, axis=2), cp.sum(cp.abs(Hp)**2, axis=2) + reg_p]
+            
             b_vec = [cp.sum(cp.conj(Hu)*S0_stack_f, axis=2), \
                      cp.sum(cp.conj(Hp)*S0_stack_f, axis=2)]
             
         else:
             S0_stack = self.inten_normalization(S0_stack)
             S0_stack_f = fft2(S0_stack,axes=(0,1))
+            
+            AHA = [np.sum(np.abs(self.Hu)**2, axis=2) + reg_u, np.sum(np.conj(self.Hu)*self.Hp, axis=2),\
+                   np.sum(np.conj(self.Hp)*self.Hu, axis=2), np.sum(np.abs(self.Hp)**2, axis=2) + reg_p]
+            
             b_vec = [np.sum(np.conj(self.Hu)*S0_stack_f, axis=2), \
                      np.sum(np.conj(self.Hp)*S0_stack_f, axis=2)]
-            
-
-       
+        
         
         if method == 'Tikhonov':
             
             # Deconvolution with Tikhonov regularization
             
-            if self.use_gpu:
-                AHA = [cp.sum(cp.abs(Hu)**2, axis=2) + reg_u, cp.sum(cp.conj(Hu)*Hp, axis=2),\
-                       cp.sum(cp.conj(Hp)*Hu, axis=2), cp.sum(cp.abs(Hp)**2, axis=2) + reg_p]
-            else:
-                AHA = [np.sum(np.abs(self.Hu)**2, axis=2) + reg_u, np.sum(np.conj(self.Hu)*self.Hp, axis=2),\
-                       np.sum(np.conj(self.Hp)*self.Hu, axis=2), np.sum(np.abs(self.Hp)**2, axis=2) + reg_p]
-            
-            
-            
-            determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
-            
-            
-            if self.use_gpu:
-                mu_sample = cp.asnumpy(cp.real(cp.fft.ifft2((b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant)))
-                phi_sample = cp.asnumpy(cp.real(cp.fft.ifft2((b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant)))
-            else:
-                mu_sample = np.real(ifft2((b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant))
-                phi_sample = np.real(ifft2((b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant))
+            mu_sample, phi_sample = self.Tikhonov_deconv_2D(AHA, b_vec)
+                
+                
             
         elif method == 'TV':
             
             # ADMM deconvolution with anisotropic TV regularization
             
-            
-            if self.use_gpu:
-                Dx = cp.zeros((self.N, self.M))
-                Dy = cp.zeros((self.N, self.M))
-                Dx[0,0] = 1; Dx[0,-1] = -1; Dx = cp.fft.fft2(Dx);
-                Dy[0,0] = 1; Dy[-1,0] = -1; Dy = cp.fft.fft2(Dy);
-                
-                rho_term = rho*(cp.conj(Dx)*Dx + cp.conj(Dy)*Dy)
-                AHA = [cp.sum(cp.abs(Hu)**2, axis=2) + reg_u + rho_term, cp.sum(cp.conj(Hu)*Hp, axis=2),\
-                       cp.sum(cp.conj(Hp)*Hu, axis=2), cp.sum(cp.abs(Hp)**2, axis=2) +reg_p+ rho_term]
-                
-                z_para = cp.zeros((4, self.N, self.M))
-                u_para = cp.zeros((4, self.N, self.M))
-                D_vec = cp.zeros((4, self.N, self.M))
-            
-                
-            else:
-                Dx = np.zeros((self.N, self.M))
-                Dy = np.zeros((self.N, self.M))
-                Dx[0,0] = 1; Dx[0,-1] = -1; Dx = fft2(Dx);
-                Dy[0,0] = 1; Dy[-1,0] = -1; Dy = fft2(Dy);
-                rho_term = rho*(np.conj(Dx)*Dx + np.conj(Dy)*Dy)
-                AHA = [np.sum(np.abs(self.Hu)**2, axis=2) + rho_term, np.sum(np.conj(self.Hu)*self.Hp, axis=2),\
-                       np.sum(np.conj(self.Hp)*self.Hu, axis=2), np.sum(np.abs(self.Hp)**2, axis=2) + rho_term]
-                
-                z_para = np.zeros((4, self.N, self.M))
-                u_para = np.zeros((4, self.N, self.M))
-                D_vec = np.zeros((4, self.N, self.M))
-            
-            
-            
-            determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
-            
-            
-            for i in range(itr):
-                
-                
-                if self.use_gpu:
-                    
-                    v_para = cp.fft.fft2(z_para - u_para)
-                    b_vec_new = [b_vec[0] + rho*(cp.conj(Dx)*v_para[0] + cp.conj(Dy)*v_para[1]),\
-                                 b_vec[1] + rho*(cp.conj(Dx)*v_para[2] + cp.conj(Dy)*v_para[3])]
-
-
-                    mu_sample = cp.real(cp.fft.ifft2((b_vec_new[0]*AHA[3] - b_vec_new[1]*AHA[1]) / determinant))
-                    phi_sample = cp.real(cp.fft.ifft2((b_vec_new[1]*AHA[0] - b_vec_new[0]*AHA[2]) / determinant))
-
-                    D_vec[0] = mu_sample - cp.roll(mu_sample, -1, axis=1)
-                    D_vec[1] = mu_sample - cp.roll(mu_sample, -1, axis=0)
-                    D_vec[2] = phi_sample - cp.roll(phi_sample, -1, axis=1)
-                    D_vec[3] = phi_sample - cp.roll(phi_sample, -1, axis=0)
-
-
-                    z_para = D_vec + u_para
-
-                    z_para[:2,:,:] = softTreshold(z_para[:2,:,:], lambda_u/rho, use_gpu=True)
-                    z_para[2:,:,:] = softTreshold(z_para[2:,:,:], lambda_p/rho, use_gpu=True)
-
-                    u_para += D_vec - z_para
-                    
-                    if i == itr-1:
-                        mu_sample  = cp.asnumpy(mu_sample)
-                        phi_sample = cp.asnumpy(phi_sample)
-                        
-
-                        
-                
-                else:
-                
-                    v_para = fft2(z_para - u_para)
-                    b_vec_new = [b_vec[0] + rho*(np.conj(Dx)*v_para[0] + np.conj(Dy)*v_para[1]),\
-                                 b_vec[1] + rho*(np.conj(Dx)*v_para[2] + np.conj(Dy)*v_para[3])]
-
-
-                    mu_sample = np.real(ifft2((b_vec_new[0]*AHA[3] - b_vec_new[1]*AHA[1]) / determinant))
-                    phi_sample = np.real(ifft2((b_vec_new[1]*AHA[0] - b_vec_new[0]*AHA[2]) / determinant))
-
-                    D_vec[0] = mu_sample - np.roll(mu_sample, -1, axis=1)
-                    D_vec[1] = mu_sample - np.roll(mu_sample, -1, axis=0)
-                    D_vec[2] = phi_sample - np.roll(phi_sample, -1, axis=1)
-                    D_vec[3] = phi_sample - np.roll(phi_sample, -1, axis=0)
-
-
-                    z_para = D_vec + u_para
-
-                    z_para[:2,:,:] = softTreshold(z_para[:2,:,:], lambda_u/rho)
-                    z_para[2:,:,:] = softTreshold(z_para[2:,:,:], lambda_p/rho)
-
-                    u_para += D_vec - z_para
-                
-                if verbose:
-                    print('Number of iteration computed (%d / %d)'%(i+1,itr))
+            mu_sample, phi_sample = self.ADMM_TV_deconv_2D(AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose)
             
         
         phi_sample -= phi_sample.mean()
         
         return mu_sample, phi_sample
     
+    
+    def Phase_recon_semi_2D(self, S0_stack, method='Tikhonov', reg_u = 1e-6, reg_p = 1e-6, \
+                    rho = 1e-5, lambda_u = 1e-3, lambda_p = 1e-3, itr = 20, verbose=False):
+        
+        mu_sample = np.zeros((self.N, self.M, self.N_defocus))
+        phi_sample = np.zeros((self.N, self.M, self.N_defocus))
+
+        for i in range(self.N_defocus):
+            
+            if i <= self.ph_deconv_layer//2:
+                tf_start_idx = self.ph_deconv_layer//2 - i
+            else:
+                tf_start_idx = 0
+
+            obj_start_idx = np.maximum(0,i-self.ph_deconv_layer//2)
+
+            if self.N_defocus -i -1 < self.ph_deconv_layer//2:
+                tf_end_idx = self.ph_deconv_layer//2 + (self.N_defocus - i)
+            else:
+                tf_end_idx = self.ph_deconv_layer
+
+            obj_end_idx = np.minimum(self.N_defocus,i+self.ph_deconv_layer-self.ph_deconv_layer//2)
+            
+            print('TF_index = (%d,%d), obj_z_index=(%d,%d), consistency: %s'\
+                  %(tf_start_idx,tf_end_idx, obj_start_idx, obj_end_idx, (obj_end_idx-obj_start_idx)==(tf_end_idx-tf_start_idx)))
+            
+        
+            if self.use_gpu:
+                S0_stack_sub = self.inten_normalization(cp.array(S0_stack[:,:,obj_start_idx:obj_end_idx]))
+                Hu = cp.array(self.Hu[:,:,tf_start_idx:tf_end_idx], copy=True)
+                Hp = cp.array(self.Hp[:,:,tf_start_idx:tf_end_idx], copy=True)
+
+                S0_stack_f = cp.fft.fft2(S0_stack_sub, axes=(0,1))
+
+                AHA = [cp.sum(cp.abs(Hu)**2, axis=2) + reg_u, cp.sum(cp.conj(Hu)*Hp, axis=2),\
+                       cp.sum(cp.conj(Hp)*Hu, axis=2), cp.sum(cp.abs(Hp)**2, axis=2) + reg_p]
+
+                b_vec = [cp.sum(cp.conj(Hu)*S0_stack_f, axis=2), \
+                         cp.sum(cp.conj(Hp)*S0_stack_f, axis=2)]
+
+            else:
+                S0_stack_sub = self.inten_normalization(S0_stack[:,:,obj_start_idx:obj_end_idx])
+                S0_stack_f = fft2(S0_stack_sub,axes=(0,1))
+                
+                Hu = self.Hu[:,:,tf_start_idx:tf_end_idx]
+                Hp = self.Hp[:,:,tf_start_idx:tf_end_idx]
+
+                AHA = [np.sum(np.abs(Hu)**2, axis=2) + reg_u, np.sum(np.conj(Hu)*self.Hp, axis=2),\
+                       np.sum(np.conj(Hp)*self.Hu, axis=2), np.sum(np.abs(Hp)**2, axis=2) + reg_p]
+
+                b_vec = [np.sum(np.conj(Hu)*S0_stack_f, axis=2), \
+                         np.sum(np.conj(Hp)*S0_stack_f, axis=2)]
+                
+                
+            if method == 'Tikhonov':
+
+                # Deconvolution with Tikhonov regularization
+
+                mu_sample_temp, phi_sample_temp = self.Tikhonov_deconv_2D(AHA, b_vec)
+
+
+
+            elif method == 'TV':
+
+                # ADMM deconvolution with anisotropic TV regularization
+
+                mu_sample_temp, phi_sample_temp = self.ADMM_TV_deconv_2D(AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose)
+
+
+            mu_sample[:,:,i] = mu_sample_temp.copy()
+            phi_sample[:,:,i] = phi_sample_temp - phi_sample_temp.mean()
+            
+            
+        return mu_sample, phi_sample
+            
+        
+        
+        
+        
+        
+        
+    
     def Phase_recon_3D(self, S0_stack, absorption_ratio=0.0, method='Tikhonov', reg_re = 1e-4, \
                        rho = 1e-5, lambda_re = 1e-3, itr = 20, verbose=True):
         
         
         S0_stack = self.inten_normalization_3D(S0_stack)
-        S0_stack_f = fftn(S0_stack, axes=(0,1,2))
         H_eff = self.H_re + absorption_ratio*self.H_im
         
-        if method == 'Tikhonov':
+        if self.use_gpu:
             
-            f_real = np.real(ifftn(S0_stack_f * np.conj(H_eff) / (np.abs(H_eff)**2 + reg_re),axes=(0,1,2)))
+            S0_stack_f = cp.fft.fftn(cp.array(S0_stack), axes=(0,1,2))
+            H_eff = cp.array(H_eff)
             
-        if method == 'TV':
-            
-            Dx = np.zeros((self.N, self.M, self.N_defocus))
-            Dy = np.zeros((self.N, self.M, self.N_defocus))
-            Dz = np.zeros((self.N, self.M, self.N_defocus))
-            Dx[0,0,0] = 1; Dx[0,-1,0] = -1; Dx = fftn(Dx,axes=(0,1,2));
-            Dy[0,0,0] = 1; Dy[-1,0,0] = -1; Dy = fftn(Dy,axes=(0,1,2));
-            Dz[0,0,0] = 1; Dz[0,0,-1] = -1; Dz = fftn(Dz,axes=(0,1,2));
-            
-            rho_term = rho*(np.conj(Dx)*Dx + np.conj(Dy)*Dy + np.conj(Dz)*Dz)+reg_re
-            AHA = np.abs(H_eff)**2 + rho_term
-            b_vec = S0_stack_f * np.conj(H_eff)
+            if method == 'Tikhonov':
 
-            z_para = np.zeros((3, self.N, self.M, self.N_defocus))
-            u_para = np.zeros((3, self.N, self.M, self.N_defocus))
-            D_vec = np.zeros((3, self.N, self.M, self.N_defocus))
+                f_real = cp.asnumpy(cp.real(cp.fft.ifftn(S0_stack_f * cp.conj(H_eff) / (cp.abs(H_eff)**2 + reg_re),axes=(0,1,2))))
+
+            if method == 'TV':
+
+                Dx = np.zeros((self.N, self.M, self.N_defocus))
+                Dy = np.zeros((self.N, self.M, self.N_defocus))
+                Dz = np.zeros((self.N, self.M, self.N_defocus))
+                Dx[0,0,0] = 1; Dx[0,-1,0] = -1; Dx = cp.fft.fftn(cp.array(Dx),axes=(0,1,2));
+                Dy[0,0,0] = 1; Dy[-1,0,0] = -1; Dy = cp.fft.fftn(cp.array(Dy),axes=(0,1,2));
+                Dz[0,0,0] = 1; Dz[0,0,-1] = -1; Dz = cp.fft.fftn(cp.array(Dz),axes=(0,1,2));
+
+                rho_term = rho*(cp.conj(Dx)*Dx + cp.conj(Dy)*Dy + cp.conj(Dz)*Dz)+reg_re
+                AHA = cp.abs(H_eff)**2 + rho_term
+                b_vec = S0_stack_f * cp.conj(H_eff)
+
+                z_para = cp.zeros((3, self.N, self.M, self.N_defocus))
+                u_para = cp.zeros((3, self.N, self.M, self.N_defocus))
+                D_vec = cp.zeros((3, self.N, self.M, self.N_defocus))
+
+
+
+
+                for i in range(itr):
+                    v_para = cp.fft.fftn(z_para - u_para, axes=(1,2,3))
+                    b_vec_new = b_vec + rho*(cp.conj(Dx)*v_para[0] + cp.conj(Dy)*v_para[1] + cp.conj(Dz)*v_para[2])
+
+
+                    f_real = cp.real(cp.fft.ifftn(b_vec_new / AHA, axes=(0,1,2)))
+
+                    D_vec[0] = f_real - cp.roll(f_real, -1, axis=1)
+                    D_vec[1] = f_real - cp.roll(f_real, -1, axis=0)
+                    D_vec[2] = f_real - cp.roll(f_real, -1, axis=2)
+
+
+                    z_para = D_vec + u_para
+
+                    z_para = softTreshold(z_para, lambda_re/rho, use_gpu=True)
+
+                    u_para += D_vec - z_para
+
+                    if verbose:
+                        print('Number of iteration computed (%d / %d)'%(i+1,itr))
+                        
+                    if i == itr-1:
+                        f_real = cp.asnumpy(f_real)
             
+        else:
+        
             
+            S0_stack_f = fftn(S0_stack, axes=(0,1,2))
             
-            
-            for i in range(itr):
-                v_para = fftn(z_para - u_para, axes=(1,2,3))
-                b_vec_new = b_vec + rho*(np.conj(Dx)*v_para[0] + np.conj(Dy)*v_para[1] + np.conj(Dz)*v_para[2])
-                                            
-                
-                f_real = np.real(ifftn(b_vec_new / AHA, axes=(0,1,2)))
-                
-                D_vec[0] = f_real - np.roll(f_real, -1, axis=1)
-                D_vec[1] = f_real - np.roll(f_real, -1, axis=0)
-                D_vec[2] = f_real - np.roll(f_real, -1, axis=2)
-                
-                
-                z_para = D_vec + u_para
-                
-                z_para = softTreshold(z_para, lambda_re/rho)
-                
-                u_para += D_vec - z_para
-                
-                if verbose:
-                    print('Number of iteration computed (%d / %d)'%(i+1,itr))
+
+            if method == 'Tikhonov':
+
+                f_real = np.real(ifftn(S0_stack_f * np.conj(H_eff) / (np.abs(H_eff)**2 + reg_re),axes=(0,1,2)))
+
+            if method == 'TV':
+
+                Dx = np.zeros((self.N, self.M, self.N_defocus))
+                Dy = np.zeros((self.N, self.M, self.N_defocus))
+                Dz = np.zeros((self.N, self.M, self.N_defocus))
+                Dx[0,0,0] = 1; Dx[0,-1,0] = -1; Dx = fftn(Dx,axes=(0,1,2));
+                Dy[0,0,0] = 1; Dy[-1,0,0] = -1; Dy = fftn(Dy,axes=(0,1,2));
+                Dz[0,0,0] = 1; Dz[0,0,-1] = -1; Dz = fftn(Dz,axes=(0,1,2));
+
+                rho_term = rho*(np.conj(Dx)*Dx + np.conj(Dy)*Dy + np.conj(Dz)*Dz)+reg_re
+                AHA = np.abs(H_eff)**2 + rho_term
+                b_vec = S0_stack_f * np.conj(H_eff)
+
+                z_para = np.zeros((3, self.N, self.M, self.N_defocus))
+                u_para = np.zeros((3, self.N, self.M, self.N_defocus))
+                D_vec = np.zeros((3, self.N, self.M, self.N_defocus))
+
+
+
+
+                for i in range(itr):
+                    v_para = fftn(z_para - u_para, axes=(1,2,3))
+                    b_vec_new = b_vec + rho*(np.conj(Dx)*v_para[0] + np.conj(Dy)*v_para[1] + np.conj(Dz)*v_para[2])
+
+
+                    f_real = np.real(ifftn(b_vec_new / AHA, axes=(0,1,2)))
+
+                    D_vec[0] = f_real - np.roll(f_real, -1, axis=1)
+                    D_vec[1] = f_real - np.roll(f_real, -1, axis=0)
+                    D_vec[2] = f_real - np.roll(f_real, -1, axis=2)
+
+
+                    z_para = D_vec + u_para
+
+                    z_para = softTreshold(z_para, lambda_re/rho)
+
+                    u_para += D_vec - z_para
+
+                    if verbose:
+                        print('Number of iteration computed (%d / %d)'%(i+1,itr))
             
         
         # Converting to refractive index
 
-        n_square = self.n_media**2 *(1 - f_real*(1+1j*absorption_ratio) / (2*np.pi/self.lambda_illu)**2)
-        n_re = ((np.abs(n_square) + np.real(n_square))/2)**(0.5)
-        n_im = ((np.abs(n_square) - np.real(n_square))/2)**(0.5)
+#         n_square = self.n_media**2 *(1 - f_real*(1+1j*absorption_ratio) / (2*np.pi/self.lambda_illu)**2)
+#         n_re = ((np.abs(n_square) + np.real(n_square))/2)**(0.5)
+#         n_im = ((np.abs(n_square) - np.real(n_square))/2)**(0.5)
         
-        return n_re, n_im
+        return f_real*self.psz
 
     
     

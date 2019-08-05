@@ -254,7 +254,7 @@ def WOTF_semi_2D_compute(Source, Pupil, Hz_det, G_fun_z, use_gpu=False, gpu_id=0
     return Hu, Hp
 
 
-def WOTF_3D_compute(Source, Pupil, Hz_det, G_fun_z, psz):
+def WOTF_3D_compute(Source, Pupil, Hz_det, G_fun_z, psz, use_gpu=False, gpu_id=0):
     
     
     '''
@@ -278,19 +278,49 @@ def WOTF_3D_compute(Source, Pupil, Hz_det, G_fun_z, psz):
     _,_,Nz = Hz_det.shape
     
     window = ifftshift(np.hanning(Nz))
+    
+    if use_gpu:
+        globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
+        
+        Source = cp.array(Source)
+        Pupil  = cp.array(Pupil)
+        Hz_det = cp.array(Hz_det)
+        G_fun_z = cp.array(G_fun_z)
+        window = cp.array(window)
+        
+        H1 = cp.fft.ifft2(cp.conj(cp.fft.fft2(Source[:,:,cp.newaxis] * Pupil[:,:,cp.newaxis] * Hz_det, axes=(0,1)))*\
+                   cp.fft.fft2(Pupil[:,:,cp.newaxis] * G_fun_z, axes=(0,1)), axes=(0,1))
+        H1 = H1*window[cp.newaxis,cp.newaxis,:]
+        H1 = cp.fft.fft(H1, axis=2)*psz
+        H2 = cp.fft.ifft2(cp.fft.fft2(Source[:,:,cp.newaxis] * Pupil[:,:,cp.newaxis] * Hz_det, axes=(0,1))*\
+                   cp.conj(cp.fft.fft2(Pupil[:,:,cp.newaxis] * G_fun_z, axes=(0,1))), axes=(0,1))
+        H2 = H2*window[cp.newaxis,cp.newaxis,:]
+        H2 = cp.fft.fft(H2, axis=2)*psz
 
-    H1 = ifft2(fft2(Source[:,:,np.newaxis] * Pupil[:,:,np.newaxis] * Hz_det, axes=(0,1)).conj()*\
-               fft2(Pupil[:,:,np.newaxis] * G_fun_z, axes=(0,1)), axes=(0,1))
-    H1 = H1*window[np.newaxis,np.newaxis,:]
-    H1 = fft(H1, axis=2)*psz
-    H2 = ifft2(fft2(Source[:,:,np.newaxis] * Pupil[:,:,np.newaxis] * Hz_det, axes=(0,1))*\
-               fft2(Pupil[:,:,np.newaxis] * G_fun_z, axes=(0,1)).conj(), axes=(0,1))
-    H2 = H2*window[np.newaxis,np.newaxis,:]
-    H2 = fft(H2, axis=2)*psz
+        I_norm = cp.sum(Source * Pupil * cp.conj(Pupil))
+        H_re = (H1 + H2)/I_norm
+        H_im = 1j*(H1-H2)/I_norm
+        
+        H_re = cp.asnumpy(H_re)
+        H_im = cp.asnumpy(H_im)
+        
+    else:
+    
+        
 
-    I_norm = np.sum(Source * Pupil * Pupil.conj())
-    H_re = (H1 + H2)/I_norm
-    H_im = 1j*(H1-H2)/I_norm
+        H1 = ifft2(fft2(Source[:,:,np.newaxis] * Pupil[:,:,np.newaxis] * Hz_det, axes=(0,1)).conj()*\
+                   fft2(Pupil[:,:,np.newaxis] * G_fun_z, axes=(0,1)), axes=(0,1))
+        H1 = H1*window[np.newaxis,np.newaxis,:]
+        H1 = fft(H1, axis=2)*psz
+        H2 = ifft2(fft2(Source[:,:,np.newaxis] * Pupil[:,:,np.newaxis] * Hz_det, axes=(0,1))*\
+                   fft2(Pupil[:,:,np.newaxis] * G_fun_z, axes=(0,1)).conj(), axes=(0,1))
+        H2 = H2*window[np.newaxis,np.newaxis,:]
+        H2 = fft(H2, axis=2)*psz
+
+        I_norm = np.sum(Source * Pupil * Pupil.conj())
+        H_re = (H1 + H2)/I_norm
+        H_im = 1j*(H1-H2)/I_norm
     
     
     return H_re, H_im
