@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import gc
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 
 
@@ -277,7 +278,7 @@ def WOTF_3D_compute(Source, Pupil, Hz_det, G_fun_z, psz, use_gpu=False, gpu_id=0
     
     _,_,Nz = Hz_det.shape
     
-    window = ifftshift(np.hanning(Nz))
+    window = ifftshift(np.hanning(Nz)).astype('float32')
     
     if use_gpu:
         globals()['cp'] = __import__("cupy")
@@ -297,6 +298,7 @@ def WOTF_3D_compute(Source, Pupil, Hz_det, G_fun_z, psz, use_gpu=False, gpu_id=0
                    cp.conj(cp.fft.fft2(Pupil[:,:,cp.newaxis] * G_fun_z, axes=(0,1))), axes=(0,1))
         H2 = H2*window[cp.newaxis,cp.newaxis,:]
         H2 = cp.fft.fft(H2, axis=2)*psz
+    
 
         I_norm = cp.sum(Source * Pupil * cp.conj(Pupil))
         H_re = (H1 + H2)/I_norm

@@ -141,7 +141,8 @@ class BackgroundEstimator2D_GPU:
         :param int block_size: Size of blocks image will be divided into
         """
         globals()['cp'] = __import__("cupy")
-        cp.cuda.Device(gpu_id).use()
+        self.gpu_id = gpu_id
+        cp.cuda.Device(self.gpu_id).use()
             
         if block_size is None:
             block_size = 32
@@ -254,8 +255,9 @@ class BackgroundEstimator2D_GPU:
 
         :return np.array background:    Background image
         """
-        
+        cp.cuda.Device(self.gpu_id).use()
         im = cp.asnumpy(im)
+        
         
         coords, values = self.sample_block_medians(im=im)
         background = self.fit_polynomial_surface_2D(

@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools
 import time
+import gc
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from PIL import Image
 from scipy.ndimage import uniform_filter
@@ -163,12 +164,12 @@ class waveorder_microscopy:
             
     def gen_3D_WOTF(self):
         
-        self.H_re = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus),complex)
-        self.H_im = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus),complex)
+        self.H_re = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
+        self.H_im = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
         
         for i in range(self.N_pattern):
-            self.H_re[i], self.H_im[i] = WOTF_3D_compute(self.Source, self.Pupil_obj, self.Hz_det, \
-                                                         self.G_fun_z, self.psz,\
+            self.H_re[i], self.H_im[i] = WOTF_3D_compute(self.Source.astype('float32'), self.Pupil_obj.astype('complex64'), self.Hz_det.astype('complex64'), \
+                                                         self.G_fun_z.astype('complex64'), self.psz,\
                                                          use_gpu=self.use_gpu, gpu_id=self.gpu_id)
         
         self.H_re = np.squeeze(self.H_re)
@@ -770,8 +771,8 @@ class waveorder_microscopy:
         
         if self.use_gpu:
             
-            S0_stack_f = cp.fft.fftn(cp.array(S0_stack), axes=(0,1,2))
-            H_eff = cp.array(H_eff)
+            S0_stack_f = cp.fft.fftn(cp.array(S0_stack.astype('float32')), axes=(0,1,2))
+            H_eff = cp.array(H_eff.astype('complex64'))
             
             if method == 'Tikhonov':
 
