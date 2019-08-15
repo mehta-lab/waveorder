@@ -2,7 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import itertools
 import time
-import gc
 import os
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from PIL import Image
@@ -23,35 +22,6 @@ def intensity_mapping(img_stack):
     return img_stack_out
 
 
-def Jones_PC_forward_model(t_eigen, sa_orientation, fxx, fyy, xx, yy, N_defocus, N_channel, analyzer_para, Pupil_obj, Hz_det, time_re):
-    
-    plane_wave = np.exp(1j*2*np.pi*(fyy * yy +\
-                                    fxx * xx))
-    
-    N, M = xx.shape
-    E_field = []
-    E_field.append(plane_wave)
-    E_field.append(1j*plane_wave) # RHC illumination
-    E_field = np.array(E_field)
-
-    E_sample = Jones_sample(E_field, t_eigen, sa_orientation)
-
-    Stokes_ang = np.zeros((4, N, M, N_defocus))
-    I_meas_ang = np.zeros((N_channel, N, M, N_defocus))
-
-
-    for m in range(N_defocus):
-        Pupil_eff = Pupil_obj * Hz_det[:,:,m]
-        E_field_out = ifft2(fft2(E_sample) * Pupil_eff)
-        Stokes_ang[:,:,:,m] = Jones_to_Stokes(E_field_out)
-
-        for n in range(N_channel):
-            I_meas_ang[n,:,:,m] = np.abs(analyzer_output(E_field_out, analyzer_para[n,0], analyzer_para[n,1]))**2
-            
-            
-    print('Processed %d, elapsed time: %.2f'%(os.getpid(), time.time() - time_re))
-
-    return (Stokes_ang, I_meas_ang)
 
 
 class waveorder_microscopy:
@@ -124,9 +94,6 @@ class waveorder_microscopy:
             else:
                 self.N_pattern = len(Source)
                 
-        t_basic = time.time()
-        print('Finished constructing basic parameters, elapsed time %.2f'%(t_basic-t0))
-
         # select either 2D or 3D model for deconvolution
         
         if phase_deconv == '2D':
@@ -208,199 +175,6 @@ class waveorder_microscopy:
         self.H_re = np.squeeze(self.H_re)
         self.H_im = np.squeeze(self.H_im)
         
-        
-            
-    def simulate_waveorder_measurements(self, t_eigen, sa_orientation, multiprocess=False):        
-        
-        Stokes_out = np.zeros((4, self.N, self.M, self.N_defocus*self.N_pattern))
-        I_meas = np.zeros((self.N_channel, self.N, self.M, self.N_defocus*self.N_pattern))
-        
-        if multiprocess:
-            
-            
-            t0 = time.time()
-            for j in range(self.N_pattern):
-
-                if self.N_pattern == 1:
-                    [idx_y, idx_x] = np.where(self.Source ==1) 
-                else:
-                    [idx_y, idx_x] = np.where(self.Source[j] ==1)
-                N_source = len(idx_y)
-                
-                
-                
-                t_eigen_re = itertools.repeat(t_eigen, N_source)
-                sa_orientation_re = itertools.repeat(sa_orientation, N_source)
-                fxx = self.fxx[idx_y, idx_x].tolist()
-                fyy = self.fyy[idx_y, idx_x].tolist()
-                xx = itertools.repeat(self.xx, N_source)
-                yy = itertools.repeat(self.yy, N_source)
-                N_defocus = itertools.repeat(self.N_defocus, N_source)
-                N_channel = itertools.repeat(self.N_channel, N_source)
-                analyzer_para = itertools.repeat(self.analyzer_para, N_source)
-                Pupil_obj = itertools.repeat(self.Pupil_obj, N_source)
-                Hz_det = itertools.repeat(self.Hz_det, N_source)
-                time_re = itertools.repeat(t0, N_source)
-                
-                # Jones_PC_forward_model(t_eigen, sa_orientation, fxx, fyy, xx, yy, N_defocus, N_channel, analyzer_para, Pupil_obj, Hz_det)
-                
-                with ProcessPoolExecutor() as executor:
-                    for result in executor.map(Jones_PC_forward_model, t_eigen_re, sa_orientation_re, \
-                                               fxx, fyy, xx, yy, N_defocus, N_channel, analyzer_para, Pupil_obj, Hz_det, time_re):
-                        Stokes_out += result[0]
-                        I_meas_ang += result[1]
-                
-                print('Number of sources considered (%d / %d) in pattern (%d / %d), elapsed time: %.2f'\
-                              %(N_source, N_source, j+1, self.N_pattern, time.time()-t0))
-                        
-                        
-            
-            
-        else:
-            t0 = time.time()
-            for j in range(self.N_pattern):
-
-                if self.N_pattern == 1:
-                    [idx_y, idx_x] = np.where(self.Source ==1) 
-                else:
-                    [idx_y, idx_x] = np.where(self.Source[j] ==1)
-                N_source = len(idx_y)
-
-
-                for i in range(N_source):
-                    plane_wave = np.exp(1j*2*np.pi*(self.fyy[idx_y[i], idx_x[i]] * self.yy +\
-                                                    self.fxx[idx_y[i], idx_x[i]] * self.xx))
-                    E_field = []
-                    E_field.append(plane_wave)
-                    E_field.append(1j*plane_wave) # RHC illumination
-                    E_field = np.array(E_field)
-
-                    E_sample = Jones_sample(E_field, t_eigen, sa_orientation)
-
-                    for m in range(self.N_defocus):
-                        Pupil_eff = self.Pupil_obj * self.Hz_det[:,:,m]
-                        E_field_out = ifft2(fft2(E_sample) * Pupil_eff)
-                        Stokes_out[:,:,:,m] += Jones_to_Stokes(E_field_out)
-
-                        for n in range(self.N_channel):
-                            I_meas[n,:,:,m] += np.abs(analyzer_output(E_field_out, self.analyzer_para[n,0], self.analyzer_para[n,1]))**2
-
-                    if np.mod(i+1, 100) == 0 or i+1 == N_source:
-                        print('Number of sources considered (%d / %d) in pattern (%d / %d), elapsed time: %.2f'\
-                              %(i+1,N_source, j+1, self.N_pattern, time.time()-t0))
-
-            
-        return I_meas, Stokes_out
-    
-    def simulate_waveorder_inc_measurements(self, n_e, n_o, dz, mu, orientation, inclination):        
-        
-        Stokes_out = np.zeros((4, self.N, self.M, self.N_defocus*self.N_pattern))
-        I_meas = np.zeros((self.N_channel, self.N, self.M, self.N_defocus*self.N_pattern))
-        
-        sample_norm_x = np.sin(inclination)*np.cos(orientation)
-        sample_norm_y = np.sin(inclination)*np.sin(orientation)
-        sample_norm_z = np.cos(inclination)
-        
-        wave_x = self.lambda_illu*self.fxx
-        wave_y = self.lambda_illu*self.fyy
-        wave_z = (np.maximum(0,1 - wave_x**2 - wave_y**2))**(0.5)
-        
-        
-        
-        for j in range(self.N_pattern):
-            
-            if self.N_pattern == 1:
-                [idx_y, idx_x] = np.where(self.Source ==1) 
-            else:
-                [idx_y, idx_x] = np.where(self.Source[j] ==1)
-            N_source = len(idx_y)
-
-
-            for i in range(N_source):
-                
-                cos_alpha = sample_norm_x*wave_x[idx_y[i], idx_x[i]] + \
-                            sample_norm_y*wave_y[idx_y[i], idx_x[i]] + \
-                            sample_norm_z*wave_z[idx_y[i], idx_x[i]]
-                
-                n_e_alpha = 1/((1-cos_alpha**2)/n_e**2 + cos_alpha**2/n_o**2)**(0.5)
-                
-                t_eigen = np.zeros((2, self.N, self.M), complex)
-
-                t_eigen[0] = np.exp(-mu + 1j*2*np.pi*dz*(n_e_alpha/self.n_media-1)/self.lambda_illu)
-                t_eigen[1] = np.exp(-mu + 1j*2*np.pi*dz*(n_o/self.n_media-1)/self.lambda_illu)
-
-                
-                plane_wave = np.exp(1j*2*np.pi*(self.fyy[idx_y[i], idx_x[i]] * self.yy +\
-                                                self.fxx[idx_y[i], idx_x[i]] * self.xx))
-                E_field = []
-                E_field.append(plane_wave)
-                E_field.append(1j*plane_wave) # RHC illumination
-                E_field = np.array(E_field)
-
-
-                E_sample = Jones_sample(E_field, t_eigen, orientation)
-
-                for m in range(self.N_defocus):
-                    Pupil_eff = self.Pupil_obj * self.Hz_det[:,:,m]
-                    E_field_out = ifft2(fft2(E_sample) * Pupil_eff)
-                    Stokes_out[:,:,:,m*self.N_pattern+j] += Jones_to_Stokes(E_field_out)
-
-                    for n in range(self.N_channel):
-                        I_meas[n,:,:,m*self.N_pattern+j] += np.abs(analyzer_output(E_field_out, self.analyzer_para[n,0], self.analyzer_para[n,1]))**2
-
-                if np.mod(i+1, 100) == 0 or i+1 == N_source:
-                    print('Number of sources considered (%d / %d) in pattern (%d / %d)'%(i+1,N_source, j+1, self.N_pattern))
-
-            
-        return I_meas, Stokes_out
-    
-    def simulate_3D_scalar_measurements(self, t_obj):
-        
-        fr = (self.fxx**2 + self.fyy**2)**(0.5)
-        Pupil_prop = gen_Pupil(self.fxx, self.fyy, 1, self.lambda_illu)
-        oblique_factor_prop = ((1 - self.lambda_illu**2 * fr**2) *Pupil_prop)**(1/2) / self.lambda_illu
-        z_defocus = self.z_defocus-(self.N_defocus/2-1)*self.psz
-        Hz_defocus = Pupil_prop[:,:,np.newaxis] * np.exp(1j*2*np.pi*z_defocus[np.newaxis,np.newaxis,:] *\
-                                                         oblique_factor_prop[:,:,np.newaxis])
-        Hz_step = Pupil_prop * np.exp(1j*2*np.pi*self.psz* oblique_factor_prop)
-
-
-        I_meas = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus))
-        
-        t0 = time.time()
-        for i in range(self.N_pattern):
-            
-            if self.N_pattern == 1:
-                [idx_y, idx_x] = np.where(self.Source ==1)
-            else:
-                [idx_y, idx_x] = np.where(self.Source[i] ==1)
-            
-            N_pt_source = len(idx_y)
-            
-            for j in range(N_pt_source):
-                plane_wave = np.exp(1j*2*np.pi*(self.fyy[idx_y[j], idx_x[j]] * self.yy +\
-                                                self.fxx[idx_y[j], idx_x[j]] * self.xx))
-
-                for m in range(self.N_defocus):
-
-                    if m == 0:
-                        f_field = plane_wave
-
-                    g_field = f_field * t_obj[:,:,m]
-
-                    if m == self.N_defocus-1:
-
-                        f_field_stack_f = fft2(g_field[:,:,np.newaxis],axes=(0,1))*Hz_defocus
-                        I_meas[i] += np.abs(ifft2(f_field_stack_f * self.Pupil_obj[:,:,np.newaxis], axes=(0,1)))**2
-
-                    else:
-                        f_field = ifft2(fft2(g_field)*Hz_step)
-
-                if np.mod(j+1, 100) == 0 or j+1 == N_pt_source:
-                    print('Number of point sources considered (%d / %d) in pattern (%d / %d), elapsed time: %.2f'\
-                          %(j+1, N_pt_source, i+1, self.N_pattern, time.time()-t0))
-            
-        return np.squeeze(I_meas)
     
     
     def Stokes_recon(self, I_meas):
@@ -832,11 +606,6 @@ class waveorder_microscopy:
             
         return mu_sample, phi_sample
             
-        
-        
-        
-        
-        
         
     
     def Phase_recon_3D(self, S0_stack, absorption_ratio=0.0, method='Tikhonov', reg_re = 1e-4, \

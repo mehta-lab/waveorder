@@ -101,6 +101,36 @@ def gen_Pupil(fxx, fyy, NA, lambda_in):
     
     return Pupil
 
+def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA = 0.1):
+    
+    N,M = Source_cont.shape
+    
+    [idx_y, idx_x] = np.where(Source_cont==1)
+
+    NAx_list = NAx_coord[idx_y, idx_x]
+    NAy_list = NAy_coord[idx_y, idx_x]
+    NA_list = ((NAx_list)**2 + (NAy_list)**2)**(0.5)
+    NA_idx = np.argsort(NA_list)
+
+    illu_list =[]
+    
+    first_idx = True
+    
+    for i in NA_idx:
+        
+        if first_idx:
+            illu_list.append(i)
+            first_idx = False
+        elif np.product((NAx_list[i]-NAx_list[illu_list])**2 + (NAy_list[i]-NAy_list[illu_list])**2 >= 0.1**2)==1:
+            illu_list.append(i)
+
+
+    Source_discrete = np.zeros((N,M))
+    Source_discrete[idx_y[illu_list], idx_x[illu_list]] = 1
+    
+    
+    return Source_discrete
+
 
 def gen_Hz_stack(fxx, fyy, Pupil_support, lambda_in, z_stack):
     
