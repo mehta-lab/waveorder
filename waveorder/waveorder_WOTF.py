@@ -110,7 +110,7 @@ class waveorder_microscopy:
             self.gen_semi_2D_WOTF()
             
         elif phase_deconv == '3D':
-            z = ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
+            z = -ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
             self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
             self.G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
             self.gen_3D_WOTF()
@@ -726,7 +726,7 @@ class waveorder_microscopy:
 #         n_re = ((np.abs(n_square) + np.real(n_square))/2)**(0.5)
 #         n_im = ((np.abs(n_square) - np.real(n_square))/2)**(0.5)
         
-        return f_real*self.psz
+        return -f_real*self.psz
 
     
     
