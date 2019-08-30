@@ -95,10 +95,19 @@ class waveorder_microscopy_simulator:
                 raise('No inner rim NA specified in the PH illumination mode')
             else:
                 self.NA_illu_in  = NA_illu_in/n_media
-                inner_pupil = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in, self.lambda_illu)
+                inner_pupil = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in+0.005/self.n_media, self.lambda_illu)
                 self.Source = gen_Pupil(self.fxx, self.fyy, self.NA_illu, self.lambda_illu)
                 self.Source -= inner_pupil
-                self.Pupil_obj = self.Pupil_obj*np.exp(self.Source*(np.log(0.5)+1j*np.pi/2))
+                
+#                 self.Source = ifftshift(np.roll(fftshift(self.Source),(1,0),axis=(0,1)))
+
+                
+                Pupil_ring_out = gen_Pupil(self.fxx, self.fyy, self.NA_illu+0.03/self.n_media, self.lambda_illu)
+                Pupil_ring_in = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in-0.01/self.n_media, self.lambda_illu)
+                
+                
+                
+                self.Pupil_obj = self.Pupil_obj*np.exp((Pupil_ring_out-Pupil_ring_in)*(np.log(0.7)-1j*(np.pi/2 - 0.0*np.pi)))
                 self.N_pattern = 1
         elif illu_mode == 'Arbitrary':
     

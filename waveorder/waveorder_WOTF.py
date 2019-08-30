@@ -81,11 +81,22 @@ class waveorder_microscopy:
                 raise('No inner rim NA specified in the PH illumination mode')
             else:
                 self.NA_illu_in  = NA_illu_in/n_media
-                inner_pupil = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in, self.lambda_illu)
+                inner_pupil = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in+0.005/self.n_media, self.lambda_illu)
                 self.Source = gen_Pupil(self.fxx, self.fyy, self.NA_illu, self.lambda_illu)
                 self.Source -= inner_pupil
-                self.Pupil_obj = self.Pupil_obj*np.exp(self.Source*(np.log(0.5)+1j*np.pi/2))
+                
+#                 self.Source = ifftshift(np.roll(fftshift(self.Source),(1,0),axis=(0,1)))
+
+                
+                Pupil_ring_out = gen_Pupil(self.fxx, self.fyy, self.NA_illu+0.03/self.n_media, self.lambda_illu)
+                Pupil_ring_in = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in-0.01/self.n_media, self.lambda_illu)
+                
+                
+                
+                self.Pupil_obj = self.Pupil_obj*np.exp((Pupil_ring_out-Pupil_ring_in)*(np.log(0.7)-1j*(np.pi/2 - 0.0*np.pi)))
                 self.N_pattern = 1
+                
+                
         elif illu_mode == 'Arbitrary':
     
             self.Source = Source.copy()
@@ -333,7 +344,7 @@ class waveorder_microscopy:
     
     
     
-    def inten_normalization(self, S0_stack):
+    def inten_normalization(self, S0_stack, bg_filter=True):
         
         _,_, Nimg = S0_stack.shape
         
@@ -341,8 +352,10 @@ class waveorder_microscopy:
             S0_norm_stack = cp.zeros_like(S0_stack)
             
             for i in range(Nimg):
-
-                S0_norm_stack[:,:,i] = S0_stack[:,:,i]/uniform_filter_2D(S0_stack[:,:,i], size=self.N//2, use_gpu=True)
+                if bg_filter:
+                    S0_norm_stack[:,:,i] = S0_stack[:,:,i]/uniform_filter_2D(S0_stack[:,:,i], size=self.N//2, use_gpu=True)
+                else:
+                    S0_norm_stack[:,:,i] = S0_stack[:,:,i].copy()
                 S0_norm_stack[:,:,i] /= S0_norm_stack[:,:,i].mean()
                 S0_norm_stack[:,:,i] -= 1
 
@@ -350,8 +363,10 @@ class waveorder_microscopy:
             S0_norm_stack = np.zeros_like(S0_stack)
         
             for i in range(Nimg):
-
-                S0_norm_stack[:,:,i] = S0_stack[:,:,i]/uniform_filter(S0_stack[:,:,i], size=self.N//2)
+                if bg_filter:
+                    S0_norm_stack[:,:,i] = S0_stack[:,:,i]/uniform_filter(S0_stack[:,:,i], size=self.N//2)
+                else:
+                    S0_norm_stack[:,:,i] = S0_stack[:,:,i].copy()
                 S0_norm_stack[:,:,i] /= S0_norm_stack[:,:,i].mean()
                 S0_norm_stack[:,:,i] -= 1
             
@@ -485,11 +500,12 @@ class waveorder_microscopy:
         
     
     def Phase_recon(self, S0_stack, method='Tikhonov', reg_u = 1e-6, reg_p = 1e-6, \
-                    rho = 1e-5, lambda_u = 1e-3, lambda_p = 1e-3, itr = 20, verbose=True):
+                    rho = 1e-5, lambda_u = 1e-3, lambda_p = 1e-3, itr = 20, verbose=True, bg_filter=True):
         
         
         if self.use_gpu:
-            S0_stack = self.inten_normalization(cp.array(S0_stack))
+            
+            S0_stack = self.inten_normalization(cp.array(S0_stack), bg_filter=bg_filter)
             Hu = cp.array(self.Hu, copy=True)
             Hp = cp.array(self.Hp, copy=True)
             
@@ -502,7 +518,7 @@ class waveorder_microscopy:
                      cp.sum(cp.conj(Hp)*S0_stack_f, axis=2)]
             
         else:
-            S0_stack = self.inten_normalization(S0_stack)
+            S0_stack = self.inten_normalization(S0_stack, bg_filter=bg_filter)
             S0_stack_f = fft2(S0_stack,axes=(0,1))
             
             AHA = [np.sum(np.abs(self.Hu)**2, axis=2) + reg_u, np.sum(np.conj(self.Hu)*self.Hp, axis=2),\
@@ -740,7 +756,10 @@ class waveorder_microscopy:
                np.sum(np.abs(self.Hu)**2 + np.abs(self.Hp)**2, axis=2) + reg]
 
         S1_stack_f = fft2(S1_stack, axes=(0,1))
-        S2_stack_f = fft2(S2_stack, axes=(0,1))
+        if self.cali:
+            S2_stack_f = fft2(-S2_stack, axes=(0,1))
+        else:
+            S2_stack_f = fft2(S2_stack, axes=(0,1))
 
         b_vec = [np.sum(-np.conj(self.Hu)*S1_stack_f + np.conj(self.Hp)*S2_stack_f, axis=2), \
                  np.sum(np.conj(self.Hp)*S1_stack_f + np.conj(self.Hu)*S2_stack_f, axis=2)]
@@ -753,10 +772,8 @@ class waveorder_microscopy:
         
         Retardance = 2*(del_phi_s**2 + del_phi_c**2)**(1/2)
         
-        if self.cali == True:
-            slowaxis = 0.5*np.arctan2(del_phi_s, -del_phi_c)%np.pi
-        else:
-            slowaxis = 0.5*np.arctan2(del_phi_s, del_phi_c)%np.pi
+        
+        slowaxis = 0.5*np.arctan2(del_phi_s, del_phi_c)%np.pi
         
         
         return Retardance, slowaxis
