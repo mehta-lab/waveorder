@@ -317,22 +317,29 @@ class waveorder_microscopy:
         
         
         if self.use_gpu:
-            Recon_para[0] = cp.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
+            ret_wrapped = cp.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
                                    S_image_recon[3], S_image_recon[3])  # retardance
+            
             if self.cali == True:
-                Recon_para[1] = 0.5*cp.arctan2(-S_image_recon[1], -S_image_recon[2])%np.pi # slow-axis
+                sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], -S_image_recon[2])%np.pi # slow-axis
             else:
-                Recon_para[1] = 0.5*cp.arctan2(-S_image_recon[1], S_image_recon[2])%np.pi # slow-axis
+                sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], S_image_recon[2])%np.pi # slow-axis
         else:
             
-            Recon_para[0] = np.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
+            ret_wrapped = np.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
                                        S_image_recon[3], S_image_recon[3])  # retardance
+            
+            
+            
             if self.cali == True:
-                Recon_para[1] = 0.5*np.arctan2(-S_image_recon[1], -S_image_recon[2])%np.pi # slow-axis
+                sa_wrapped = 0.5*np.arctan2(-S_image_recon[1], -S_image_recon[2])%np.pi # slow-axis
             else:
-                Recon_para[1] = 0.5*np.arctan2(-S_image_recon[1], S_image_recon[2])%np.pi # slow-axis
+                sa_wrapped = 0.5*np.arctan2(-S_image_recon[1], S_image_recon[2])%np.pi # slow-axis
                 
-        
+        sa_wrapped[ret_wrapped<0] += np.pi/2
+        ret_wrapped[ret_wrapped<0] += np.pi
+        Recon_para[0] = ret_wrapped.copy()        
+        Recon_para[1] = sa_wrapped%np.pi
         Recon_para[2] = S_image_recon[0] # transmittance
         Recon_para[3] = S_image_recon[4] # DoP
         

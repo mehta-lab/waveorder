@@ -189,6 +189,36 @@ def plot_hsv(image_stack, max_val=1, size=5):
         raise("plot_hsv does not support N_channel >2 rendering")
         
         
+def plot_phase_hsv(image_stack, max_val_V=1, max_val_S=1, size=5):
+    
+    N_channel = len(image_stack)
+    
+    if N_channel == 3:
+        I_hsv = np.transpose(np.array([image_stack[0]/np.pi, \
+                                       np.clip(image_stack[1]/np.max(image_stack[1])/max_val_S, 0, 1), \
+                                       np.clip(image_stack[2]/np.max(image_stack[2])/max_val_V, 0, 1)]), (1,2,0))
+        I_rgb = hsv_to_rgb(I_hsv.copy())
+        
+        f1,ax = plt.subplots(1, 2, figsize=(size+size/2, size))
+        ax[0].imshow(I_rgb)
+        
+        V, H = np.mgrid[0:1:500j, 0:1:500j]
+        S = np.ones_like(V)
+        HSV = np.dstack((V,H,S))
+        RGB = hsv_to_rgb(HSV)
+        
+        ax[1].imshow(RGB, origin="lower", extent=[0, 1, 0, 180], aspect=0.2)
+        plt.xlabel("S")
+        plt.ylabel("H")
+        plt.title("$V_{HSV}=1$")
+        
+        plt.tight_layout()
+
+    
+    else:
+        raise("plot_hsv does not support N_channel >3 rendering")
+        
+        
         
         
 def plotVectorField(img,
