@@ -23,11 +23,44 @@ def intensity_mapping(img_stack):
 
 
 
+def instrument_matrix_calibration(I_cali_norm, I_meas):
+    
+    
+    
+    _, N_cali = I_cali_norm.shape
+    
+    theta = np.r_[0:N_cali]/N_cali*2*np.pi
+    S_matrix = np.array([np.ones((N_cali,)), np.cos(2*theta), np.sin(2*theta)])
+    A_matrix = np.transpose(np.linalg.pinv(S_matrix.transpose()).dot(np.transpose(I_cali_norm)))
+    
+    if I_meas.ndim == 3:
+        I_mean = np.mean(I_meas,axis=(1,2))
+    elif I_meas.ndim == 4:
+        I_mean = np.mean(I_meas,axis=(1,2,3))
+        
+    I_tot = np.sum(I_mean)
+    A_matrix_S3 = I_mean/I_tot-A_matrix[:,0] 
+    I_corr = (I_tot/4)*(A_matrix_S3)/np.mean(A_matrix[:,0])
+    
+    print('Calibrated instrument matrix:\n' + str(np.round(A_matrix,4)))
+    print('Last column of instrument matrix:\n' + str(np.round(A_matrix_S3.reshape((4,1)),4)))
+    
+    
+    plt.plot(np.transpose(I_cali_norm))
+    plt.plot(np.transpose(A_matrix.dot(S_matrix)))
+    plt.xlabel('Orientation of LP (deg)')
+    plt.ylabel('Normalized intensity')
+    plt.title('Fitted calibration curves')
+    plt.legend(['$I_0$', '$I_{45}$', '$I_{90}$', '$I_{135}$'])
+
+
+    return A_matrix, I_corr
 
 class waveorder_microscopy:
     
-    def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi,\
+    def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi=None,\
                  n_media=1, cali=False, bg_option='global', 
+                 A_matrix=None,
                  phase_deconv='2D', ph_deconv_layer = 5,
                  illu_mode='BF', NA_illu_in=None, Source=None, 
                  use_gpu=False, gpu_id=0):
@@ -81,15 +114,15 @@ class waveorder_microscopy:
                 raise('No inner rim NA specified in the PH illumination mode')
             else:
                 self.NA_illu_in  = NA_illu_in/n_media
-                inner_pupil = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in+0.005/self.n_media, self.lambda_illu)
+                inner_pupil = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in/self.n_media, self.lambda_illu)
                 self.Source = gen_Pupil(self.fxx, self.fyy, self.NA_illu, self.lambda_illu)
                 self.Source -= inner_pupil
                 
 #                 self.Source = ifftshift(np.roll(fftshift(self.Source),(1,0),axis=(0,1)))
 
                 
-                Pupil_ring_out = gen_Pupil(self.fxx, self.fyy, self.NA_illu+0.03/self.n_media, self.lambda_illu)
-                Pupil_ring_in = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in-0.01/self.n_media, self.lambda_illu)
+                Pupil_ring_out = gen_Pupil(self.fxx, self.fyy, self.NA_illu/self.n_media, self.lambda_illu)
+                Pupil_ring_in = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in/self.n_media, self.lambda_illu)
                 
                 
                 
@@ -114,25 +147,41 @@ class waveorder_microscopy:
         elif phase_deconv == 'semi-2D':
             
             self.ph_deconv_layer = ph_deconv_layer
-            z_deconv = -(np.r_[:self.ph_deconv_layer]-self.ph_deconv_layer//2)*self.psz
+            if self.z_defocus[0] - self.z_defocus[1] >0:
+                z_deconv = -(np.r_[:self.ph_deconv_layer]-self.ph_deconv_layer//2)*self.psz
+            else:
+                z_deconv = (np.r_[:self.ph_deconv_layer]-self.ph_deconv_layer//2)*self.psz
             
             self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z_deconv)
             self.G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z_deconv)
             self.gen_semi_2D_WOTF()
             
         elif phase_deconv == '3D':
-            z = -ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
+            if self.z_defocus[0] - self.z_defocus[1] >0:
+                z = -ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
+            else:
+                z = ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
             self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
             self.G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
             self.gen_3D_WOTF()
         
-        self.analyzer_para = np.array([[np.pi/2, np.pi], \
-                                       [np.pi/2-self.chi, np.pi], \
-                                       [np.pi/2, np.pi-self.chi], \
-                                       [np.pi/2+self.chi, np.pi], \
-                                       [np.pi/2, np.pi+self.chi]]) # [alpha, beta]
         
-        self.N_channel = len(self.analyzer_para)
+        
+        
+        if A_matrix is None:
+            self.N_channel = 5
+            self.N_Stokes = 4
+            self.A_matrix = 0.5*np.array([[1,0,0,-1], \
+                                          [1, np.sin(self.chi), 0, -np.cos(self.chi)], \
+                                          [1, 0, np.sin(self.chi), -np.cos(self.chi)], \
+                                          [1, -np.sin(self.chi), 0, -np.cos(self.chi)], \
+                                          [1, 0, -np.sin(self.chi), -np.cos(self.chi)]])
+        else:
+            self.N_channel = A_matrix.shape[0]
+            self.N_Stokes = A_matrix.shape[1]
+            self.A_matrix = A_matrix.copy()
+        
+        
         
 
     
@@ -190,15 +239,7 @@ class waveorder_microscopy:
     
     def Stokes_recon(self, I_meas):
         
-        
-        A_forward = 0.5*np.array([[1,0,0,-1], \
-                          [1, np.sin(self.chi), 0, -np.cos(self.chi)], \
-                          [1, 0, np.sin(self.chi), -np.cos(self.chi)], \
-                          [1, -np.sin(self.chi), 0, -np.cos(self.chi)], \
-                          [1, 0, -np.sin(self.chi), -np.cos(self.chi)]])
-        
-        
-        A_pinv = np.linalg.pinv(A_forward)
+        A_pinv = np.linalg.pinv(self.A_matrix)
         Stokes_inv = lambda x:  np.transpose(np.squeeze(np.matmul(A_pinv, np.transpose(x,(1,2,0))[:,:,:,np.newaxis])),(2,0,1))
         
         
@@ -208,7 +249,7 @@ class waveorder_microscopy:
             S_image_recon = Stokes_inv(I_meas)
         else:
 
-            S_image_recon = np.zeros((4, self.N, self.M, self.N_defocus*self.N_pattern))
+            S_image_recon = np.zeros((self.N_Stokes, self.N, self.M, self.N_defocus*self.N_pattern))
             
             for i in range(self.N_defocus*self.N_pattern):
                 S_image_recon[:,:,:,i] = Stokes_inv(I_meas[:,:,:,i])
@@ -221,15 +262,27 @@ class waveorder_microscopy:
         
         if self.use_gpu:
             S_image_recon = cp.array(S_image_recon)
-            S_transformed = cp.zeros((5,)+S_image_recon.shape[1:])
+            if self.N_Stokes == 4:
+                S_transformed = cp.zeros((5,)+S_image_recon.shape[1:])
+            elif self.N_Stokes == 3:
+                S_transformed = cp.zeros((3,)+S_image_recon.shape[1:])
         else:
-            S_transformed = np.zeros((5,)+S_image_recon.shape[1:])
+            if self.N_Stokes == 4:
+                S_transformed = np.zeros((5,)+S_image_recon.shape[1:])
+            elif self.N_Stokes == 3:
+                S_transformed = np.zeros((3,)+S_image_recon.shape[1:])
         
         S_transformed[0] = S_image_recon[0]
-        S_transformed[1] = S_image_recon[1] / S_image_recon[3]
-        S_transformed[2] = S_image_recon[2] / S_image_recon[3]
-        S_transformed[3] = S_image_recon[3]
-        S_transformed[4] = (S_image_recon[1]**2 + S_image_recon[2]**2 + S_image_recon[3]**2)**(1/2) / S_image_recon[0] # DoP
+        
+        if self.N_Stokes == 4:
+            S_transformed[1] = S_image_recon[1] / S_image_recon[3]
+            S_transformed[2] = S_image_recon[2] / S_image_recon[3]
+            S_transformed[3] = S_image_recon[3]
+            S_transformed[4] = (S_image_recon[1]**2 + S_image_recon[2]**2 + S_image_recon[3]**2)**(1/2) / S_image_recon[0] # DoP
+        elif self.N_Stokes == 3:
+            S_transformed[1] = S_image_recon[1] / S_image_recon[0]
+            S_transformed[2] = S_image_recon[2] / S_image_recon[0]
+            
         
         if self.use_gpu:
             S_transformed = cp.asnumpy(S_transformed)
@@ -248,12 +301,14 @@ class waveorder_microscopy:
             S_image_tm[0] /= S_bg_tm[0]
             S_image_tm[1] -= S_bg_tm[1]
             S_image_tm[2] -= S_bg_tm[2]
-            S_image_tm[4] /= S_bg_tm[4]
+            if self.N_Stokes == 4:
+                S_image_tm[4] /= S_bg_tm[4]
         else:
             S_image_tm[0] /= S_bg_tm[0,:,:,np.newaxis]
             S_image_tm[1] -= S_bg_tm[1,:,:,np.newaxis]
             S_image_tm[2] -= S_bg_tm[2,:,:,np.newaxis]
-            S_image_tm[4] /= S_bg_tm[4,:,:,np.newaxis]
+            if self.N_Stokes == 4:
+                S_image_tm[4] /= S_bg_tm[4,:,:,np.newaxis]
 
 
  
@@ -311,23 +366,32 @@ class waveorder_microscopy:
         
         if self.use_gpu:
             S_image_recon = cp.array(S_image_recon)
-            Recon_para = cp.zeros((4,)+S_image_recon.shape[1:])
+            Recon_para = cp.zeros((self.N_Stokes,)+S_image_recon.shape[1:])
         else:
-            Recon_para = np.zeros((4,)+S_image_recon.shape[1:])
+            Recon_para = np.zeros((self.N_Stokes,)+S_image_recon.shape[1:])
         
         
         if self.use_gpu:
-            ret_wrapped = cp.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
-                                   S_image_recon[3], S_image_recon[3])  # retardance
+            
+            if self.N_Stokes == 4:
+                ret_wrapped = cp.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
+                                       S_image_recon[3], S_image_recon[3])  # retardance
+            elif self.N_Stokes == 3:
+                ret_wrapped = cp.arcsin((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5))
+
             
             if self.cali == True:
                 sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], -S_image_recon[2])%np.pi # slow-axis
             else:
                 sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], S_image_recon[2])%np.pi # slow-axis
+        
         else:
             
-            ret_wrapped = np.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
-                                       S_image_recon[3], S_image_recon[3])  # retardance
+            if self.N_Stokes == 4:
+                ret_wrapped = np.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
+                                           S_image_recon[3], S_image_recon[3])  # retardance
+            elif self.N_Stokes == 3:
+                ret_wrapped = np.arcsin((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5))
             
             
             
@@ -341,7 +405,9 @@ class waveorder_microscopy:
         Recon_para[0] = ret_wrapped.copy()        
         Recon_para[1] = sa_wrapped%np.pi
         Recon_para[2] = S_image_recon[0] # transmittance
-        Recon_para[3] = S_image_recon[4] # DoP
+        
+        if self.N_Stokes == 4:
+            Recon_para[3] = S_image_recon[4] # DoP
         
         
         if self.use_gpu:
