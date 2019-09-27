@@ -179,15 +179,17 @@ class waveorder_microscopy_simulator:
             for j in range(self.N_pattern):
 
                 if self.N_pattern == 1:
-                    [idx_y, idx_x] = np.where(self.Source ==1) 
+                    [idx_y, idx_x] = np.where(self.Source ==1)
+                    Source_current = self.Source.copy()
                 else:
                     [idx_y, idx_x] = np.where(self.Source[j] ==1)
+                    Source_current = self.Source[j].copy()
                 N_source = len(idx_y)
 
 
                 for i in range(N_source):
-                    plane_wave = np.exp(1j*2*np.pi*(self.fyy[idx_y[i], idx_x[i]] * self.yy +\
-                                                    self.fxx[idx_y[i], idx_x[i]] * self.xx))
+                    plane_wave = Source_current[idx_y[i], idx_x[i]]*np.exp(1j*2*np.pi*(self.fyy[idx_y[i], idx_x[i]] * self.yy +\
+                                                                            self.fxx[idx_y[i], idx_x[i]] * self.xx))
                     E_field = []
                     E_field.append(plane_wave)
                     E_field.append(1j*plane_wave) # RHC illumination
@@ -224,14 +226,16 @@ class waveorder_microscopy_simulator:
         wave_y = self.lambda_illu*self.fyy
         wave_z = (np.maximum(0,1 - wave_x**2 - wave_y**2))**(0.5)
         
-        
+        t0 = time.time()
         
         for j in range(self.N_pattern):
             
             if self.N_pattern == 1:
-                [idx_y, idx_x] = np.where(self.Source ==1) 
+                [idx_y, idx_x] = np.where(self.Source >=1)
+                Source_current = self.Source.copy()
             else:
-                [idx_y, idx_x] = np.where(self.Source[j] ==1)
+                [idx_y, idx_x] = np.where(self.Source[j] >=1)
+                Source_current = self.Source[j].copy()
             N_source = len(idx_y)
 
 
@@ -249,7 +253,7 @@ class waveorder_microscopy_simulator:
                 t_eigen[1] = np.exp(-mu + 1j*2*np.pi*dz*(n_o/self.n_media-1)/self.lambda_illu)
 
                 
-                plane_wave = np.exp(1j*2*np.pi*(self.fyy[idx_y[i], idx_x[i]] * self.yy +\
+                plane_wave =  Source_current[idx_y[i], idx_x[i]]*np.exp(1j*2*np.pi*(self.fyy[idx_y[i], idx_x[i]] * self.yy +\
                                                 self.fxx[idx_y[i], idx_x[i]] * self.xx))
                 E_field = []
                 E_field.append(plane_wave)
@@ -268,7 +272,8 @@ class waveorder_microscopy_simulator:
                         I_meas[n,:,:,m*self.N_pattern+j] += np.abs(analyzer_output(E_field_out, self.analyzer_para[n,0], self.analyzer_para[n,1]))**2
 
                 if np.mod(i+1, 100) == 0 or i+1 == N_source:
-                    print('Number of sources considered (%d / %d) in pattern (%d / %d)'%(i+1,N_source, j+1, self.N_pattern))
+                    print('Number of sources considered (%d / %d) in pattern (%d / %d), elapsed time: %.2f'\
+                          %(i+1,N_source, j+1, self.N_pattern, time.time()-t0))
 
             
         return I_meas, Stokes_out
@@ -291,15 +296,17 @@ class waveorder_microscopy_simulator:
         for i in range(self.N_pattern):
             
             if self.N_pattern == 1:
-                [idx_y, idx_x] = np.where(self.Source ==1)
+                [idx_y, idx_x] = np.where(self.Source >=1)
+                Source_current = self.Source.copy()
             else:
-                [idx_y, idx_x] = np.where(self.Source[i] ==1)
-            
+                [idx_y, idx_x] = np.where(self.Source[i] >=1)
+                Source_current = self.Source[i].copy()
+                
             N_pt_source = len(idx_y)
             
             for j in range(N_pt_source):
-                plane_wave = np.exp(1j*2*np.pi*(self.fyy[idx_y[j], idx_x[j]] * self.yy +\
-                                                self.fxx[idx_y[j], idx_x[j]] * self.xx))
+                plane_wave = Source_current[idx_y[j], idx_x[j]]*np.exp(1j*2*np.pi*(self.fyy[idx_y[j], idx_x[j]] * self.yy +\
+                                                                self.fxx[idx_y[j], idx_x[j]] * self.xx))
 
                 for m in range(self.N_defocus):
 

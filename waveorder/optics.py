@@ -357,3 +357,48 @@ def WOTF_3D_compute(Source, Pupil, Hz_det, G_fun_z, psz, use_gpu=False, gpu_id=0
     
     return H_re, H_im
 
+
+
+def gen_geometric_inc_matrix(incident_theta, incident_phi, Source):
+    
+    '''
+    
+    Compute forward and backward matrix mapping from inclination coefficients to retardance
+    
+    Input:
+        incident_theta           : theta spherical coordinate map in 2D spatial frequency grid with size of (Ny, Nx)
+        incident_phi             : phi spherical coordinate map in 2D spatial frequency grid with size of (Ny, Nx)
+        Source                   : illumination Source pattern in 2D spatial frequency grid with size of (N_pattern, Ny, Nx)
+    
+    Output: 
+        geometric_inc_matrix     : forward matrix mapping from inclination coefficients to retardance
+        geometric_inc_matrix_inv : pinv of the forward matrix
+    
+    '''
+    
+    N_pattern,_,_ = Source.shape
+    
+    geometric_inc_matrix = []
+
+    for i in range(N_pattern):
+
+        idx_y, idx_x = np.where(Source[i])
+
+        geometric_inc_matrix.append([1, np.mean(0.5*np.cos(2*incident_theta[idx_y,idx_x])),\
+                                   np.mean(-0.5*np.sin(2*incident_theta[idx_y,idx_x])*np.cos(incident_phi[idx_y,idx_x])), \
+                                   np.mean(-0.5*np.sin(2*incident_theta[idx_y,idx_x])*np.sin(incident_phi[idx_y,idx_x])), \
+                                   np.mean(-0.5*(np.sin(incident_theta[idx_y,idx_x])**2)*np.cos(2*incident_phi[idx_y,idx_x])),\
+                                   np.mean(-0.5*(np.sin(incident_theta[idx_y,idx_x])**2)*np.sin(2*incident_phi[idx_y,idx_x]))])
+
+
+    geometric_inc_matrix = np.array(geometric_inc_matrix)
+    geometric_inc_matrix_inv = np.linalg.pinv(geometric_inc_matrix)
+    
+    
+    
+    return geometric_inc_matrix, geometric_inc_matrix_inv
+
+
+
+
+

@@ -5,6 +5,7 @@ import time
 import os
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from PIL import Image
+from IPython import display
 from scipy.ndimage import uniform_filter
 from concurrent.futures import ProcessPoolExecutor
 from .util import *
@@ -60,7 +61,7 @@ class waveorder_microscopy:
     
     def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi=None,\
                  n_media=1, cali=False, bg_option='global', 
-                 A_matrix=None,
+                 A_matrix=None, inc_recon=None,
                  phase_deconv='2D', ph_deconv_layer = 5,
                  illu_mode='BF', NA_illu_in=None, Source=None, 
                  use_gpu=False, gpu_id=0):
@@ -105,6 +106,26 @@ class waveorder_microscopy:
         
         # illumination setup
         
+        self.illumination_setup(illu_mode, NA_illu_in, Source)
+                
+        # select either 2D or 3D model for deconvolution
+        
+        self.phase_deconv_setup(phase_deconv, ph_deconv_layer)
+        
+        # inclination reconstruction model selection
+        
+        self.inclination_recon_setup(inc_recon)
+                   
+        # instrument matrix for polarization detection
+        
+        self.instrument_matrix_setup(A_matrix)
+        
+        
+##############   constructor function group   ##############
+
+    def illumination_setup(self, illu_mode, NA_illu_in, Source):
+        
+        
         if illu_mode == 'BF':
             self.Source = gen_Pupil(self.fxx, self.fyy, self.NA_illu, self.lambda_illu)
             self.N_pattern = 1
@@ -137,10 +158,11 @@ class waveorder_microscopy:
                 self.N_pattern = 1
             else:
                 self.N_pattern = len(Source)
-                
-        # select either 2D or 3D model for deconvolution
+
+    def phase_deconv_setup(self, phase_deconv, ph_deconv_layer):
         
         if phase_deconv == '2D':
+            
             self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_defocus)
             self.gen_WOTF()
             
@@ -157,6 +179,7 @@ class waveorder_microscopy:
             self.gen_semi_2D_WOTF()
             
         elif phase_deconv == '3D':
+            
             if self.z_defocus[0] - self.z_defocus[1] >0:
                 z = -ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
             else:
@@ -164,9 +187,31 @@ class waveorder_microscopy:
             self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
             self.G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
             self.gen_3D_WOTF()
+    
+    
+    def inclination_recon_setup(self, inc_recon):
         
-        
-        
+        if inc_recon is not None:
+            wave_vec_norm_x = self.lambda_illu*self.fxx
+            wave_vec_norm_y = self.lambda_illu*self.fyy
+            wave_vec_norm_z = (np.maximum(0,1 - wave_vec_norm_x**2 - wave_vec_norm_y**2))**(0.5)
+
+            incident_theta = np.arctan2((wave_vec_norm_x**2 + wave_vec_norm_y**2)**(0.5), wave_vec_norm_z)
+            incident_phi   = np.arctan2(wave_vec_norm_y,wave_vec_norm_x)
+
+            if inc_recon == 'geometric':
+                self.geometric_inc_matrix, self.geometric_inc_matrix_inv = gen_geometric_inc_matrix(incident_theta, incident_phi, self.Source)
+                
+            elif inc_recon == 'linear-diffraction-pinv' or inc_recon == 'linear-diffraction-iter':
+                
+                self.LD_inc_factor = np.array([np.ones_like(incident_theta), 1/2*np.cos(2*incident_theta), -1/2*np.sin(2*incident_theta)*np.cos(incident_phi), \
+                                               -1/2*np.sin(2*incident_theta)*np.sin(incident_phi), -1/2*(np.sin(incident_theta)**2)*np.cos(2*incident_phi), \
+                                               -1/2*(np.sin(incident_theta)**2)*np.sin(2*incident_phi)])
+                self.N_inc_coeff = self.LD_inc_factor.shape[0]
+                self.gen_H_OTF_inc()
+                self.compute_inc_AHA()
+                
+    def instrument_matrix_setup(self, A_matrix):
         
         if A_matrix is None:
             self.N_channel = 5
@@ -181,10 +226,8 @@ class waveorder_microscopy:
             self.N_Stokes = A_matrix.shape[1]
             self.A_matrix = A_matrix.copy()
         
-        
-        
+##############   constructor asisting function group   ##############
 
-    
     def gen_WOTF(self):
 
         self.Hu = np.zeros((self.N, self.M, self.N_defocus*self.N_pattern),complex)
@@ -235,8 +278,52 @@ class waveorder_microscopy:
         self.H_re = np.squeeze(self.H_re)
         self.H_im = np.squeeze(self.H_im)
         
+        
+    def gen_H_OTF_inc(self):
+        
+        self.H_OTF_inc = np.zeros((2*self.N_inc_coeff, self.N, self.M, self.N_pattern*self.N_defocus), complex)
+        
+        for i,j in itertools.product(range(self.N_defocus), range(self.N_pattern)):
     
+            idx = i*self.N_pattern+j
+            Pupil_eff = self.Pupil_obj * self.Hz_det[:,:,i]
+            
+            I_norm = np.sum(self.Source[j] * Pupil_eff * Pupil_eff.conj())
+
+            for m in range(self.N_inc_coeff):
+                H1_inc = ifft2(fft2(self.Source[j] * self.LD_inc_factor[m] * Pupil_eff).conj()*fft2(Pupil_eff))
+                H2_inc = ifft2(fft2(self.Source[j] * self.LD_inc_factor[m] * Pupil_eff)*fft2(Pupil_eff).conj())
+                self.H_OTF_inc[2*m,:,:,idx] = (H1_inc + H2_inc)/I_norm
+                self.H_OTF_inc[2*m+1,:,:,idx] = 1j*(H1_inc-H2_inc)/I_norm
+                
+    def compute_inc_AHA(self):
+        
+        self.inc_AHA = np.zeros((2*self.N_inc_coeff, 2*self.N_inc_coeff, self.N, self.M, self.N_pattern*self.N_defocus), complex)
+
+        for i in range(2*self.N_inc_coeff):
+            
+            for j in range(2*self.N_inc_coeff):
+                
+                if i <= self.N_inc_coeff-1 and j <= self.N_inc_coeff-1:
+                    self.inc_AHA[i,j] = 1/4*(self.H_OTF_inc[2*i].conj()*self.H_OTF_inc[2*j] + \
+                                                self.H_OTF_inc[2*i+1].conj()*self.H_OTF_inc[2*j+1])
+                    
+                elif i <= self.N_inc_coeff-1 and j > self.N_inc_coeff-1:
+                    self.inc_AHA[i,j] = 1/4*(-self.H_OTF_inc[2*i].conj()*self.H_OTF_inc[2*(j-self.N_inc_coeff)+1] + \
+                                                self.H_OTF_inc[2*i+1].conj()*self.H_OTF_inc[2*(j-self.N_inc_coeff)])
+                    
+                elif i > self.N_inc_coeff-1 and j <= self.N_inc_coeff-1:
+                    self.inc_AHA[i,j] = 1/4*(-self.H_OTF_inc[2*(i-self.N_inc_coeff)+1].conj()*self.H_OTF_inc[2*j] + \
+                                                self.H_OTF_inc[2*(i-self.N_inc_coeff)].conj()*self.H_OTF_inc[2*j+1])
+                    
+                elif i > self.N_inc_coeff-1 and j > self.N_inc_coeff-1:
+                    self.inc_AHA[i,j] = 1/4*(self.H_OTF_inc[2*(i-self.N_inc_coeff)+1].conj()*self.H_OTF_inc[2*(j-self.N_inc_coeff)+1] + \
+                                                self.H_OTF_inc[2*(i-self.N_inc_coeff)].conj()*self.H_OTF_inc[2*(j-self.N_inc_coeff)])
+        
+                
     
+##############   polarization computing function group   ##############
+
     def Stokes_recon(self, I_meas):
         
         A_pinv = np.linalg.pinv(self.A_matrix)
@@ -417,6 +504,271 @@ class waveorder_microscopy:
     
     
     
+    def Birefringence_recon(self, S1_stack, S2_stack, reg = 1e-3):
+        
+        # Birefringence deconvolution with slowly varying transmission approximation
+        
+        AHA = [np.sum(np.abs(self.Hu)**2 + np.abs(self.Hp)**2, axis=2) + reg, \
+               np.sum(self.Hu*np.conj(self.Hp) - np.conj(self.Hu)*self.Hp, axis=2), \
+               -np.sum(self.Hu*np.conj(self.Hp) - np.conj(self.Hu)*self.Hp, axis=2), \
+               np.sum(np.abs(self.Hu)**2 + np.abs(self.Hp)**2, axis=2) + reg]
+
+        S1_stack_f = fft2(S1_stack, axes=(0,1))
+        if self.cali:
+            S2_stack_f = fft2(-S2_stack, axes=(0,1))
+        else:
+            S2_stack_f = fft2(S2_stack, axes=(0,1))
+
+        b_vec = [np.sum(-np.conj(self.Hu)*S1_stack_f + np.conj(self.Hp)*S2_stack_f, axis=2), \
+                 np.sum(np.conj(self.Hp)*S1_stack_f + np.conj(self.Hu)*S2_stack_f, axis=2)]
+
+    
+        del_phi_s, del_phi_c = self.Tikhonov_deconv_2D(AHA, b_vec)
+        
+        Retardance = 2*(del_phi_s**2 + del_phi_c**2)**(1/2) 
+        slowaxis = 0.5*np.arctan2(del_phi_s, del_phi_c)%np.pi
+        
+        
+        return Retardance, slowaxis
+    
+    
+    def Inclination_recon_geometric(self, retardance, orientation, on_axis_idx):
+        
+        
+        retardance_on_axis = retardance[:,:,on_axis_idx].copy()
+        orientation_on_axis = orientation[:,:,on_axis_idx].copy()
+
+        retardance = np.transpose(retardance,(2,0,1))
+        
+        N_meas = self.N_pattern * self.N_defocus
+        
+        
+        inc_coeff = np.reshape(self.geometric_inc_matrix_inv.dot(retardance.reshape((N_meas,self.N*self.M))), (6, self.N, self.M))
+        inc_coeff_sin_2theta = (inc_coeff[2]**2 + inc_coeff[3]**2)**(0.5)
+        inclination = np.arctan2(retardance_on_axis*2, inc_coeff_sin_2theta)
+        inclination = np.pi/2 - (np.pi/2-inclination)*np.sign(inc_coeff[2]*np.cos(orientation_on_axis)+inc_coeff[3]*np.sin(orientation_on_axis))
+
+
+        retardance_ap = retardance_on_axis*np.sin(inclination)**2 / (np.sin(inclination)**4+1e-3)
+        
+        
+        return inclination, retardance_ap, inc_coeff
+    
+    def Inclination_recon_LD_pinv(self, S1_stack, S2_stack, on_axis_idx, reg=1e-1*np.ones((12,)), reg_bire=1e-1):
+        
+        
+        S1_stack_f = fft2(S1_stack, axes=(0,1))
+        S2_stack_f = fft2(S2_stack, axes=(0,1))
+        
+        
+        b_vec = np.zeros((2*self.N_inc_coeff,self.N, self.M, self.N_pattern*self.N_defocus), complex)
+
+        for i in range(2*self.N_inc_coeff):
+            if i <= self.N_inc_coeff-1:
+                b_vec[i] = 1/2*(-self.H_OTF_inc[2*i].conj()*S1_stack_f +\
+                                self.H_OTF_inc[2*i+1].conj()*S2_stack_f)
+            elif i > self.N_inc_coeff-1:
+                b_vec[i] = 1/2*(self.H_OTF_inc[2*(i-self.N_inc_coeff)+1].conj()*S1_stack_f + \
+                                self.H_OTF_inc[2*(i-self.N_inc_coeff)].conj()*S2_stack_f)
+                
+                
+        # Compute on-axis deconv birefringence
+        
+        bire_AHA = [self.inc_AHA[0,0,:,:,on_axis_idx]+reg_bire, self.inc_AHA[0,self.N_inc_coeff,:,:,on_axis_idx], \
+                   self.inc_AHA[self.N_inc_coeff,0,:,:,on_axis_idx], self.inc_AHA[self.N_inc_coeff,self.N_inc_coeff,:,:,on_axis_idx]+reg_bire]
+        bire_b_vec = [b_vec[0,:,:,on_axis_idx], b_vec[self.N_inc_coeff,:,:,on_axis_idx]]
+        
+        del_phi_s, del_phi_c = self.Tikhonov_deconv_2D(bire_AHA, bire_b_vec)
+        
+        
+        retardance_on_axis = (del_phi_s**2 + del_phi_c**2)**(1/2)
+        orientation_on_axis = 0.5*np.arctan2(del_phi_s, del_phi_c)%np.pi
+        
+        AHA_energy = np.zeros((2*self.N_inc_coeff,))
+
+        for i in range(2*self.N_inc_coeff):
+            AHA_energy[i] = np.mean(np.abs(np.sum(self.inc_AHA[i,i],axis=2)))
+
+        AHA_energy = AHA_energy/np.max(AHA_energy)
+
+        for i in range(2*self.N_inc_coeff):
+            self.inc_AHA[i,i] += AHA_energy[i]*reg[i]
+
+        
+        
+        
+        # inc_coeff fit
+        
+        x_est = np.real(ifft2(np.transpose(np.squeeze(np.matmul(np.linalg.pinv(np.transpose(np.sum(self.inc_AHA,axis=4),(2,3,0,1))), 
+                                 np.transpose(np.sum(b_vec,axis=3),(1,2,0))[:,:,:,np.newaxis])), (2,0,1)), axes=(1,2)))
+        
+        inc_coeff = ((x_est[:self.N_inc_coeff,:,:]**2+x_est[self.N_inc_coeff:,:,:]**2)**(0.5))*\
+                     np.sign(x_est[:self.N_inc_coeff,:,:]*np.sin(2*orientation_on_axis) + x_est[self.N_inc_coeff:,:,:]*np.cos(2*orientation_on_axis))
+
+        inc_coeff_sin_2theta = ((inc_coeff[2]**2 + inc_coeff[3]**2)**(0.5))
+
+
+        inclination = np.arctan2(retardance_on_axis*2, inc_coeff_sin_2theta)
+        inclination = np.pi/2 - (np.pi/2-inclination)*np.sign(inc_coeff[2]*np.cos(orientation_on_axis) + inc_coeff[3]*np.sin(orientation_on_axis))
+
+
+        retardance_ap = retardance_on_axis*np.sin(inclination)**2 / (np.sin(inclination)**4+ 1e-2)
+        
+        return inclination, retardance_ap, inc_coeff, retardance_on_axis, orientation_on_axis
+
+        
+    def Inclination_recon_LD_iter(self, S1_stack, S2_stack, on_axis_idx, reg=1e-1*np.ones((12,)), reg_bire=1e-1, itr=100):
+        
+        S1_stack_f = fft2(S1_stack, axes=(0,1))
+        S2_stack_f = fft2(S2_stack, axes=(0,1))
+        
+        
+        # Compute on-axis deconv birefringence
+        
+        AHA = [0.25*(np.abs(self.Hu[:,:,on_axis_idx])**2 + np.abs(self.Hp[:,:,on_axis_idx])**2) + reg_bire, \
+               0.25*(self.Hu[:,:,on_axis_idx]*np.conj(self.Hp[:,:,on_axis_idx]) - np.conj(self.Hu[:,:,on_axis_idx])*self.Hp[:,:,on_axis_idx]), \
+               0.25*(-self.Hu[:,:,on_axis_idx]*np.conj(self.Hp[:,:,on_axis_idx]) - np.conj(self.Hu[:,:,on_axis_idx])*self.Hp[:,:,on_axis_idx]), \
+               0.25*(np.abs(self.Hu[:,:,on_axis_idx])**2 + np.abs(self.Hp[:,:,on_axis_idx])**2) + reg_bire]
+
+        b_vec = [0.5*(-np.conj(self.Hu[:,:,on_axis_idx])*S1_stack_f[:,:,on_axis_idx] + np.conj(self.Hp[:,:,on_axis_idx])*S2_stack_f[:,:,on_axis_idx]), \
+                 0.5*(np.conj(self.Hp[:,:,on_axis_idx])*S1_stack_f[:,:,on_axis_idx] + np.conj(self.Hu[:,:,on_axis_idx])*S2_stack_f[:,:,on_axis_idx])]
+        
+        del_phi_s, del_phi_c = self.Tikhonov_deconv_2D(AHA, b_vec)
+        
+        retardance_on_axis = (del_phi_s**2 + del_phi_c**2)**(1/2)
+        orientation_on_axis = 0.5*np.arctan2(del_phi_s, del_phi_c)%np.pi
+        
+        # Setup iterative algorithm parameters
+        
+        AHA_energy = np.zeros((2*self.N_inc_coeff,))
+
+        for i in range(2*self.N_inc_coeff):
+            AHA_energy[i] = np.mean(np.abs(np.sum(self.inc_AHA[i,i],axis=2)))
+
+        AHA_energy = AHA_energy/np.max(AHA_energy)
+        reg_norm = AHA_energy*reg
+        
+        err = np.zeros(itr+1)
+
+        inc_coeff = np.zeros((self.N_inc_coeff, self.N, self.M))
+        inc_coeff_sin_2theta = np.zeros((self.N, self.M))
+        
+        f1,ax = plt.subplots(3,2,figsize=(6,9))
+
+        tic_time = time.time()
+        
+        
+        # iterative estimator
+        
+        print('|  Iter  |  error  |  Elapsed time (sec)  |')
+
+        for i in range(itr):
+
+            S1_est_f = np.zeros((self.N, self.M, self.N_pattern*self.N_defocus), complex)
+            S2_est_f = np.zeros((self.N, self.M, self.N_pattern*self.N_defocus), complex)
+            for j in range(self.N_inc_coeff):
+                S1_est_f += -0.5*self.H_OTF_inc[2*j,:,:,:]*fft2((inc_coeff[j]*np.sin(2*orientation_on_axis))[:,:,np.newaxis], axes=(0,1)) + \
+                                 0.5*self.H_OTF_inc[2*j+1,:,:,:]*fft2((inc_coeff[j]*np.cos(2*orientation_on_axis))[:,:, np.newaxis], axes=(0,1)) 
+                S2_est_f += 0.5*self.H_OTF_inc[2*j+1,:,:,:]*fft2((inc_coeff[j]*np.sin(2*orientation_on_axis))[:,:,np.newaxis], axes=(0,1)) + \
+                                 0.5*self.H_OTF_inc[2*j,:,:,:]*fft2((inc_coeff[j]*np.cos(2*orientation_on_axis))[:,:,np.newaxis], axes=(0,1))
+
+            S1_res = S1_stack_f - S1_est_f
+            S2_res = S2_stack_f - S2_est_f
+
+            err[i+1] = np.sum(np.abs(S1_res)**2 + np.abs(S2_res)**2)
+
+
+            grad_inc_coeff = np.zeros((self.N_inc_coeff, self.N, self.M), complex)
+
+            for j in range(self.N_inc_coeff):
+                grad_inc_coeff[j] = -0.5*np.sum(ifft2(-0.5*self.H_OTF_inc[2*j,:,:,:].conj()*S1_res + 0.5*self.H_OTF_inc[2*j+1,:,:,:].conj()*S2_res, \
+                                                    axes=(0,1))*np.sin(2*orientation_on_axis[:,:,np.newaxis]) + \
+                                        ifft2(0.5*self.H_OTF_inc[2*j+1,:,:,:].conj()*S1_res + 0.5*self.H_OTF_inc[2*j,:,:,:].conj()*S2_res, \
+                                              axes=(0,1))*np.cos(2*orientation_on_axis[:,:,np.newaxis]), axis=2) / self.N_pattern /self.N_defocus+ reg_norm[j]*inc_coeff[j]
+
+
+            grad_inc_coeff_sin_2theta = 0.5*(grad_inc_coeff[2]*np.cos(orientation_on_axis) + grad_inc_coeff[3]*np.sin(orientation_on_axis))
+
+            inc_coeff -= np.real(grad_inc_coeff)
+            inc_coeff_sin_2theta -= np.real(grad_inc_coeff_sin_2theta)
+
+
+
+            temp = inc_coeff.copy()
+            temp_inc = inc_coeff_sin_2theta.copy()
+
+            if i == 0:
+                t = 1
+
+                inc_coeff = temp.copy()
+                tempp = temp.copy()
+
+                inc_coeff_sin_2theta = temp_inc.copy()
+                tempp_inc = temp_inc.copy()
+
+            else:
+                if err[i] >= err[i-1]:
+                    t = 1
+
+                    inc_coeff = temp.copy()
+                    tempp = temp.copy()
+
+                    inc_coeff_sin_2theta = temp_inc.copy()
+                    tempp_inc = temp_inc.copy()
+
+                else:
+                    tp = t
+                    t = (1 + (1 + 4 * tp**2)**(1/2))/2
+
+                    inc_coeff = temp + (tp - 1) * (temp - tempp) / t
+                    tempp = temp.copy()
+
+                    inc_coeff_sin_2theta = temp_inc + (tp - 1) * (temp_inc - tempp_inc) / t
+                    tempp_inc = temp_inc.copy()
+
+            inc_coeff[2] = inc_coeff_sin_2theta*np.cos(orientation_on_axis)
+            inc_coeff[3] = inc_coeff_sin_2theta*np.sin(orientation_on_axis)
+
+
+            if np.mod(i,1) == 0:
+
+                print('|  %d  |  %.2e  |   %.2f  |'%(i+1,err[i+1],time.time()-tic_time))
+
+                if i != 0:
+                    ax[0,0].cla()
+                    ax[0,1].cla()
+                    ax[1,0].cla()
+                    ax[1,1].cla()
+                    ax[2,0].cla()
+                    ax[2,1].cla()
+
+
+
+
+                ax[0,0].imshow(inc_coeff[0],cmap='gray')    
+                ax[0,1].imshow(inc_coeff[1],cmap='gray')
+                ax[1,0].imshow(inc_coeff[2],cmap='gray')    
+                ax[1,1].imshow(inc_coeff[3],cmap='gray')
+                ax[2,0].imshow(inc_coeff[4],cmap='gray')    
+                ax[2,1].imshow(inc_coeff[5],cmap='gray')
+
+                display.display(f1)
+                display.clear_output(wait=True)
+                time.sleep(0.0001)
+                if i == itr-1:
+                    print('|  %d  |  %.2e  |   %.2f   |'%(i+1,err[i+1],time.time()-tic_time))
+                    
+            
+        inclination = np.arctan2(retardance_on_axis*2, inc_coeff_sin_2theta)
+        retardance_ap = retardance_on_axis*np.sin(inclination)**2 / (np.sin(inclination)**4+ 1e-2)
+        
+        return inclination, retardance_ap, inc_coeff, inc_coeff_sin_2theta, retardance_on_axis, orientation_on_axis
+    
+    
+    
+    
+##############   phase computing function group   ##############
+
     def inten_normalization(self, S0_stack, bg_filter=True):
         
         _,_, Nimg = S0_stack.shape
@@ -468,7 +820,8 @@ class waveorder_microscopy:
             phi_sample = np.real(ifft2((b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant))
             
         return mu_sample, phi_sample
-    
+
+
     def ADMM_TV_deconv_2D(self, AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose):
         
         
@@ -819,35 +1172,5 @@ class waveorder_microscopy:
 
     
     
-    def Birefringence_recon(self, S1_stack, S2_stack, reg = 1e-3):
-        
-        # Birefringence deconvolution with slowly varying transmission approximation
-        
-        AHA = [np.sum(np.abs(self.Hu)**2 + np.abs(self.Hp)**2, axis=2) + reg, \
-               np.sum(self.Hu*np.conj(self.Hp) - np.conj(self.Hu)*self.Hp, axis=2), \
-               -np.sum(self.Hu*np.conj(self.Hp) - np.conj(self.Hu)*self.Hp, axis=2), \
-               np.sum(np.abs(self.Hu)**2 + np.abs(self.Hp)**2, axis=2) + reg]
-
-        S1_stack_f = fft2(S1_stack, axes=(0,1))
-        if self.cali:
-            S2_stack_f = fft2(-S2_stack, axes=(0,1))
-        else:
-            S2_stack_f = fft2(S2_stack, axes=(0,1))
-
-        b_vec = [np.sum(-np.conj(self.Hu)*S1_stack_f + np.conj(self.Hp)*S2_stack_f, axis=2), \
-                 np.sum(np.conj(self.Hp)*S1_stack_f + np.conj(self.Hu)*S2_stack_f, axis=2)]
-
-        determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
-
-        del_phi_s = np.real(ifft2((b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant))
-        del_phi_c = np.real(ifft2((b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant))
-        
-        
-        Retardance = 2*(del_phi_s**2 + del_phi_c**2)**(1/2)
-        
-        
-        slowaxis = 0.5*np.arctan2(del_phi_s, del_phi_c)%np.pi
-        
-        
-        return Retardance, slowaxis
+    
     
