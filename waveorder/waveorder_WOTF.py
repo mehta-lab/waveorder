@@ -464,7 +464,7 @@ class waveorder_microscopy:
                 ret_wrapped = cp.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
                                        S_image_recon[3], S_image_recon[3])  # retardance
             elif self.N_Stokes == 3:
-                ret_wrapped = cp.arcsin((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5))
+                ret_wrapped = cp.arcsin(cp.minimum((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5),1))
 
             
             if self.cali == True:
@@ -478,7 +478,7 @@ class waveorder_microscopy:
                 ret_wrapped = np.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
                                            S_image_recon[3], S_image_recon[3])  # retardance
             elif self.N_Stokes == 3:
-                ret_wrapped = np.arcsin((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5))
+                ret_wrapped = np.arcsin(np.minimum((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5),1))
             
             
             
@@ -532,7 +532,7 @@ class waveorder_microscopy:
         return Retardance, slowaxis
     
     
-    def Inclination_recon_geometric(self, retardance, orientation, on_axis_idx):
+    def Inclination_recon_geometric(self, retardance, orientation, on_axis_idx, reg_ret_ap = 1e-2):
         
         
         retardance_on_axis = retardance[:,:,on_axis_idx].copy()
@@ -549,12 +549,12 @@ class waveorder_microscopy:
         inclination = np.pi/2 - (np.pi/2-inclination)*np.sign(inc_coeff[2]*np.cos(orientation_on_axis)+inc_coeff[3]*np.sin(orientation_on_axis))
 
 
-        retardance_ap = retardance_on_axis*np.sin(inclination)**2 / (np.sin(inclination)**4+1e-3)
+        retardance_ap = retardance_on_axis*np.sin(inclination)**2 / (np.sin(inclination)**4+reg_ret_ap)
         
         
         return inclination, retardance_ap, inc_coeff
     
-    def Inclination_recon_LD_pinv(self, S1_stack, S2_stack, on_axis_idx, reg=1e-1*np.ones((12,)), reg_bire=1e-1):
+    def Inclination_recon_LD_pinv(self, S1_stack, S2_stack, on_axis_idx, reg=1e-1*np.ones((12,)), reg_bire=1e-1, reg_ret_ap = 1e-2):
         
         
         S1_stack_f = fft2(S1_stack, axes=(0,1))
@@ -590,16 +590,18 @@ class waveorder_microscopy:
             AHA_energy[i] = np.mean(np.abs(np.sum(self.inc_AHA[i,i],axis=2)))
 
         AHA_energy = AHA_energy/np.max(AHA_energy)
+        
+        inc_AHA = self.inc_AHA.copy()
 
         for i in range(2*self.N_inc_coeff):
-            self.inc_AHA[i,i] += AHA_energy[i]*reg[i]
+            inc_AHA[i,i] += AHA_energy[i]*reg[i]
 
         
         
         
         # inc_coeff fit
         
-        x_est = np.real(ifft2(np.transpose(np.squeeze(np.matmul(np.linalg.pinv(np.transpose(np.sum(self.inc_AHA,axis=4),(2,3,0,1))), 
+        x_est = np.real(ifft2(np.transpose(np.squeeze(np.matmul(np.linalg.pinv(np.transpose(np.sum(inc_AHA,axis=4),(2,3,0,1))), 
                                  np.transpose(np.sum(b_vec,axis=3),(1,2,0))[:,:,:,np.newaxis])), (2,0,1)), axes=(1,2)))
         
         inc_coeff = ((x_est[:self.N_inc_coeff,:,:]**2+x_est[self.N_inc_coeff:,:,:]**2)**(0.5))*\
@@ -612,12 +614,12 @@ class waveorder_microscopy:
         inclination = np.pi/2 - (np.pi/2-inclination)*np.sign(inc_coeff[2]*np.cos(orientation_on_axis) + inc_coeff[3]*np.sin(orientation_on_axis))
 
 
-        retardance_ap = retardance_on_axis*np.sin(inclination)**2 / (np.sin(inclination)**4+ 1e-2)
+        retardance_ap = retardance_on_axis*np.sin(inclination)**2 / (np.sin(inclination)**4+ reg_ret_ap)
         
         return inclination, retardance_ap, inc_coeff, retardance_on_axis, orientation_on_axis
 
         
-    def Inclination_recon_LD_iter(self, S1_stack, S2_stack, on_axis_idx, reg=1e-1*np.ones((12,)), reg_bire=1e-1, itr=100):
+    def Inclination_recon_LD_iter(self, S1_stack, S2_stack, on_axis_idx, reg=1e-1*np.ones((12,)), reg_bire=1e-1, itr=100, reg_ret_ap = 1e-2):
         
         S1_stack_f = fft2(S1_stack, axes=(0,1))
         S2_stack_f = fft2(S2_stack, axes=(0,1))
@@ -760,7 +762,7 @@ class waveorder_microscopy:
                     
             
         inclination = np.arctan2(retardance_on_axis*2, inc_coeff_sin_2theta)
-        retardance_ap = retardance_on_axis*np.sin(inclination)**2 / (np.sin(inclination)**4+ 1e-2)
+        retardance_ap = retardance_on_axis*np.sin(inclination)**2 / (np.sin(inclination)**4+ reg_ret_ap)
         
         return inclination, retardance_ap, inc_coeff, inc_coeff_sin_2theta, retardance_on_axis, orientation_on_axis
     
