@@ -508,19 +508,42 @@ class waveorder_microscopy:
         
         # Birefringence deconvolution with slowly varying transmission approximation
         
-        AHA = [np.sum(np.abs(self.Hu)**2 + np.abs(self.Hp)**2, axis=2) + reg, \
-               np.sum(self.Hu*np.conj(self.Hp) - np.conj(self.Hu)*self.Hp, axis=2), \
-               -np.sum(self.Hu*np.conj(self.Hp) - np.conj(self.Hu)*self.Hp, axis=2), \
-               np.sum(np.abs(self.Hu)**2 + np.abs(self.Hp)**2, axis=2) + reg]
+        if self.use_gpu:
+            
+            
+            
+            Hu = cp.array(self.Hu, copy=True)
+            Hp = cp.array(self.Hp, copy=True)
+            
+            AHA = [cp.sum(cp.abs(Hu)**2 + cp.abs(Hp)**2, axis=2) + reg, \
+                   cp.sum(Hu*cp.conj(Hp) - cp.conj(Hu)*Hp, axis=2), \
+                   -cp.sum(Hu*cp.conj(Hp) - cp.conj(Hu)*Hp, axis=2), \
+                   cp.sum(cp.abs(Hu)**2 + cp.abs(Hp)**2, axis=2) + reg]
 
-        S1_stack_f = fft2(S1_stack, axes=(0,1))
-        if self.cali:
-            S2_stack_f = fft2(-S2_stack, axes=(0,1))
+            S1_stack_f = cp.fft.fft2(cp.array(S1_stack), axes=(0,1))
+            if self.cali:
+                S2_stack_f = cp.fft.fft2(-cp.array(S2_stack), axes=(0,1))
+            else:
+                S2_stack_f = cp.fft.fft2(cp.array(S2_stack), axes=(0,1))
+
+            b_vec = [cp.sum(-cp.conj(Hu)*S1_stack_f + cp.conj(Hp)*S2_stack_f, axis=2), \
+                     cp.sum(cp.conj(Hp)*S1_stack_f + cp.conj(Hu)*S2_stack_f, axis=2)]
+        
         else:
-            S2_stack_f = fft2(S2_stack, axes=(0,1))
+        
+            AHA = [np.sum(np.abs(self.Hu)**2 + np.abs(self.Hp)**2, axis=2) + reg, \
+                   np.sum(self.Hu*np.conj(self.Hp) - np.conj(self.Hu)*self.Hp, axis=2), \
+                   -np.sum(self.Hu*np.conj(self.Hp) - np.conj(self.Hu)*self.Hp, axis=2), \
+                   np.sum(np.abs(self.Hu)**2 + np.abs(self.Hp)**2, axis=2) + reg]
 
-        b_vec = [np.sum(-np.conj(self.Hu)*S1_stack_f + np.conj(self.Hp)*S2_stack_f, axis=2), \
-                 np.sum(np.conj(self.Hp)*S1_stack_f + np.conj(self.Hu)*S2_stack_f, axis=2)]
+            S1_stack_f = fft2(S1_stack, axes=(0,1))
+            if self.cali:
+                S2_stack_f = fft2(-S2_stack, axes=(0,1))
+            else:
+                S2_stack_f = fft2(S2_stack, axes=(0,1))
+
+            b_vec = [np.sum(-np.conj(self.Hu)*S1_stack_f + np.conj(self.Hp)*S2_stack_f, axis=2), \
+                     np.sum(np.conj(self.Hp)*S1_stack_f + np.conj(self.Hu)*S2_stack_f, axis=2)]
 
     
         del_phi_s, del_phi_c = self.Tikhonov_deconv_2D(AHA, b_vec)
@@ -1022,8 +1045,8 @@ class waveorder_microscopy:
                 Hu = self.Hu[:,:,tf_start_idx:tf_end_idx]
                 Hp = self.Hp[:,:,tf_start_idx:tf_end_idx]
 
-                AHA = [np.sum(np.abs(Hu)**2, axis=2) + reg_u, np.sum(np.conj(Hu)*self.Hp, axis=2),\
-                       np.sum(np.conj(Hp)*self.Hu, axis=2), np.sum(np.abs(Hp)**2, axis=2) + reg_p]
+                AHA = [np.sum(np.abs(Hu)**2, axis=2) + reg_u, np.sum(np.conj(Hu)*Hp, axis=2),\
+                       np.sum(np.conj(Hp)*Hu, axis=2), np.sum(np.abs(Hp)**2, axis=2) + reg_p]
 
                 b_vec = [np.sum(np.conj(Hu)*S0_stack_f, axis=2), \
                          np.sum(np.conj(Hp)*S0_stack_f, axis=2)]
