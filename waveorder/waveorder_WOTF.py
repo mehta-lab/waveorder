@@ -1193,7 +1193,7 @@ class waveorder_microscopy:
 #         n_re = ((np.abs(n_square) + np.real(n_square))/2)**(0.5)
 #         n_im = ((np.abs(n_square) - np.real(n_square))/2)**(0.5)
         
-        return -f_real*self.psz
+        return -f_real*self.psz/4/np.pi*self.lambda_illu
 
     
     

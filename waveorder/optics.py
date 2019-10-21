@@ -195,6 +195,50 @@ def gen_Greens_function_z(fxx, fyy, Pupil_support, lambda_in, z_stack):
     
     return G_fun_z
 
+def gen_Greens_function_real(img_size, ps, psz, lambda_in):
+    
+    '''
+    
+    Generate Green's function in real space
+    
+    Input: 
+        img_size  : tuple, image dimension (Ny, Nx, Nz)
+        ps        : float, transverse pixel size
+        psz       : float, axial pixel size
+        lambda_in : wavelength of the light
+        
+    Output:
+        G_real    : corresponding real-space Green's function with size of (Ny, Nx, Nz)
+    
+    '''
+    
+    N, M, L = img_size
+    
+    x_r = (np.r_[:N]-N//2)*ps
+    y_r = (np.r_[:M]-M//2)*ps
+    z_r = (np.r_[:L]-L//2)*psz
+
+    xx_r, yy_r, zz_r = np.meshgrid(x_r,y_r,z_r)
+    
+    # radial coordinate
+    rho = (xx_r**2 + yy_r**2 + zz_r**2)**(0.5)
+
+    
+    # average radius of integration around r=0
+    epsilon = (ps*ps*psz/np.pi/4*3)**(1/3)
+    
+    # wavenumber
+    k = 2*np.pi/lambda_in
+    
+    # average value for Green's function at r=0
+    V_epsilon=1/1j/k*(epsilon*np.exp(1j*k*epsilon) - 1/1j/k*(np.exp(1j*k*epsilon)-1))/ps/ps/psz
+    
+    
+    G_real = np.exp(1j*k*rho)/(rho+1e-7)/4/np.pi
+    G_real[rho==0] = V_epsilon
+    
+    return G_real
+
 
 def WOTF_2D_compute(Source, Pupil, use_gpu=False, gpu_id=0):
     

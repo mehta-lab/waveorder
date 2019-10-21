@@ -328,3 +328,91 @@ class waveorder_microscopy_simulator:
                           %(j+1, N_pt_source, i+1, self.N_pattern, time.time()-t0))
             
         return np.squeeze(I_meas)
+    
+    
+    def simulate_3D_scalar_measurements_SEAGLE(self, RI_map, itr_max = 100, tolerance=1e-4, verbose=False):
+        
+        G_real = -gen_Greens_function_real((2*self.N,2*self.M,2*self.N_defocus), self.ps, self.psz, self.lambda_illu)
+        G_real_f = fftn(ifftshift(G_real))*(self.ps**2)*(self.psz)
+        
+        f_scat = (2*np.pi/self.lambda_illu)**2 * (1 - (RI_map/self.n_media)**2)
+        
+        fr = (self.fxx**2 + self.fyy**2)**(0.5)
+        Pupil_prop = gen_Pupil(self.fxx, self.fyy, 1, self.lambda_illu)
+        oblique_factor_prop = ((1 - self.lambda_illu**2 * fr**2) *Pupil_prop)**(1/2) / self.lambda_illu
+        z_defocus_m = self.z_defocus-(self.N_defocus/2-1)*self.psz
+        Hz_defocus = Pupil_prop[:,:,np.newaxis] * np.exp(1j*2*np.pi*z_defocus_m[np.newaxis,np.newaxis,:]*oblique_factor_prop[:,:,np.newaxis])
+
+        
+        I_meas = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus))
+
+        t0 = time.time()
+        for i in range(self.N_pattern):
+
+            if self.N_pattern == 1:
+                [idx_y, idx_x] = np.where(self.Source >=1)
+                Source_current = self.Source.copy()
+            else:
+                [idx_y, idx_x] = np.where(self.Source[i] >=1)
+                Source_current = self.Source[i].copy()
+
+
+            N_pt_source = len(idx_y)
+
+            pad_convolve_G = lambda x, y, z: ifftn(fftn(np.pad(x,((self.N//2,),(self.M//2,),(self.N_defocus//2,)), mode='constant', \
+                                                               constant_values=y))*z)[self.N//2:-self.N//2,self.M//2:-self.M//2,self.N_defocus//2:-self.N_defocus//2]
+
+            for j in range(N_pt_source):
+                plane_wave = Source_current[idx_y[j], idx_x[j]]*np.exp(1j*2*np.pi*(self.fyy[idx_y[j], idx_x[j]] * self.yy +\
+                                                                                   self.fxx[idx_y[j], idx_x[j]] * self.xx))[:,:,np.newaxis]\
+                                                        *np.exp(1j*2*np.pi*oblique_factor_prop[idx_y[j], idx_x[j]]*self.z_defocus[np.newaxis,np.newaxis,:])
+                u = plane_wave + pad_convolve_G(plane_wave*f_scat, np.abs(np.mean(plane_wave*f_scat)), G_real_f)
+                err = np.zeros((itr_max+1,))
+
+                tic_time = time.time()
+
+                for m in range(itr_max):
+                    u_in_est = u - pad_convolve_G(u*f_scat, np.abs(np.mean(u*f_scat)), G_real_f)
+                    diff_u = u_in_est - plane_wave
+                    err[m+1] = np.sum(np.abs(diff_u)**2)
+
+                    if err[m+1]/err[1] < tolerance:
+                        break
+
+
+                    grad_u = diff_u - pad_convolve_G(diff_u, np.abs(np.mean(diff_u)), G_real_f.conj())*f_scat.conj()
+
+                    A_grad_u = grad_u - pad_convolve_G(grad_u*f_scat, np.abs(np.mean(grad_u*f_scat)), G_real_f)
+                    step_size = np.sum(np.abs(grad_u)**2)/np.sum(np.abs(A_grad_u)**2)
+
+                    temp = u - step_size*grad_u
+
+                    if m == 0:        
+                        t = 1
+                        u = temp.copy()
+                        tempp = temp.copy()
+                    else:
+                        if err[m]<err[m+1]:
+                            t = 1
+                            u = temp.copy()
+                            tempp = temp.copy()
+                        else:
+                            tp = t
+                            t = (1 + (1 + 4 * tp**2)**(1/2))/2
+
+                            u = temp + (tp - 1) * (temp - tempp) / t
+                            tempp = temp.copy()
+                    if verbose:
+                        print('|  %d  |  %.2e  |   %.2f   |'%(m+1,err[m+1],time.time()-tic_time))
+
+
+
+
+                I_meas[i] += np.abs(ifft2(fft2(u[:,:,-1])[:,:,np.newaxis] * self.Pupil_obj[:,:,np.newaxis]*Hz_defocus, axes=(0,1)))**2
+                if np.mod(j+1, 1) == 0 or j+1 == N_pt_source:
+                    print('Number of point sources considered (%d / %d) in pattern (%d / %d), elapsed time: %.2f'\
+                          %(j+1, N_pt_source, i+1, self.N_pattern, time.time()-t0))
+                    
+        return np.squeeze(I_meas)
+        
+        
