@@ -1,7 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import gc
+import itertools
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
+
 
 
 def Jones_sample(Ein, t, sa):
@@ -34,24 +36,25 @@ def Jones_to_Stokes(Ein):
     Given a coherent electric field, compute the corresponding Stokes vector.
     
     Input: 
-        Ein    : Electric field with size of (2, Ny, Nx)
+        Ein    : Electric field with size of (2, Ny, Nx, ...) 
     
     Output:
-        Stokes : Corresponding Stokes vector with size of (4, Ny, Nx)
+        Stokes : Corresponding Stokes vector with size of (4, Ny, Nx, ...)
     
     '''
     
-    _, N, M = Ein.shape
     
     
-    Stokes = np.zeros((4, N, M))
-    Stokes[0] = np.abs(Ein[0])**2 + np.abs(Ein[1])**2
-    Stokes[1] = np.abs(Ein[0])**2 - np.abs(Ein[1])**2
-    Stokes[2] = np.real(Ein[0].conj()*Ein[1] + Ein[0]*Ein[1].conj())
-    Stokes[3] = np.real(-1j*(Ein[0].conj()*Ein[1] - Ein[0]*Ein[1].conj()))
+    Stokes = []
+    Stokes.append(np.abs(Ein[0])**2 + np.abs(Ein[1])**2)                        # S0
+    Stokes.append(np.abs(Ein[0])**2 - np.abs(Ein[1])**2)                        # S1
+    Stokes.append(np.real(Ein[0].conj()*Ein[1] + Ein[0]*Ein[1].conj()))         # S2
+    Stokes.append(np.real(-1j*(Ein[0].conj()*Ein[1] - Ein[0]*Ein[1].conj())))   # S3
     
     
-    return Stokes
+    
+    
+    return np.array(Stokes)
 
 
 def analyzer_output(Ein, alpha, beta):
@@ -205,17 +208,17 @@ def gen_Greens_function_real(img_size, ps, psz, lambda_in):
         img_size  : tuple, image dimension (Ny, Nx, Nz)
         ps        : float, transverse pixel size
         psz       : float, axial pixel size
-        lambda_in : wavelength of the light
+        lambda_in : float, wavelength of the light
         
     Output:
-        G_real    : corresponding real-space Green's function with size of (Ny, Nx, Nz)
+        G_real    : numpy.ndarray, corresponding real-space Green's function with size of (Ny, Nx, Nz)
     
     '''
     
     N, M, L = img_size
     
-    x_r = (np.r_[:N]-N//2)*ps
-    y_r = (np.r_[:M]-M//2)*ps
+    x_r = (np.r_[:M]-M//2)*ps
+    y_r = (np.r_[:N]-N//2)*ps
     z_r = (np.r_[:L]-L//2)*psz
 
     xx_r, yy_r, zz_r = np.meshgrid(x_r,y_r,z_r)
@@ -238,6 +241,60 @@ def gen_Greens_function_real(img_size, ps, psz, lambda_in):
     G_real[rho==0] = V_epsilon
     
     return G_real
+
+def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space='real'):
+    
+    '''
+    
+    Generate dyadic Green's function tensor in real space or in Fourier space
+    
+    Input: 
+        G_real    : numpy.ndarray, real space Greens function for wave equation with size of (Ny, Nx, Nz)
+        ps        : float, transverse pixel size
+        psz       : float, axial pixel size
+        lambda_in : float, wavelength of the light
+        space     : str, 'real' or 'Fourier' indicate real or Fourier space representation
+        
+    Output:
+        G_tensor  : numpy.ndarray, corresponding real or Fourier space Green's tensor with size of (3, 3, Ny, Nx, Nz)
+    
+    '''
+    
+    N, M, L = G_real.shape
+    
+    fx_r = ifftshift((np.r_[:M]-M//2)/ps/M)
+    fy_r = ifftshift((np.r_[:M]-N//2)/ps/N)
+    fz_r = ifftshift((np.r_[:L]-L//2)/psz/L)
+    fxx_r, fyy_r, fzz_r = np.meshgrid(fx_r,fy_r,fz_r)
+    
+    diff_filter = np.zeros((3, N, M, L), complex)
+    diff_filter[0] = 1j*2*np.pi*fxx_r
+    diff_filter[1] = 1j*2*np.pi*fyy_r
+    diff_filter[2] = 1j*2*np.pi*fzz_r
+    
+    
+    
+    G_tensor = np.zeros((3, 3, N, M, L), complex)
+    G_real_f = fftn(ifftshift(G_real))*(ps*ps*psz)
+    
+        
+    for i in range(3):
+        for j in range(3):
+            G_tensor[i,j] = G_real_f*diff_filter[i]*diff_filter[j]/(2*np.pi/lambda_in)**2
+            if i == j:
+                G_tensor[i,i] += G_real_f
+    
+    
+    if space == 'Fourier':
+        
+        return G_tensor
+    
+    elif space == 'real':
+        
+        return fftshift(ifftn(G_tensor, axes=(2,3,4)), axes=(2,3,4))/ps/ps/psz
+
+
+
 
 
 def WOTF_2D_compute(Source, Pupil, use_gpu=False, gpu_id=0):
@@ -444,5 +501,80 @@ def gen_geometric_inc_matrix(incident_theta, incident_phi, Source):
 
 
 
+def SEAGLE_vec_forward(E_tot, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0):
+    
+    '''
+    
+    Compute vectorial SEAGLE forward model
+    
+    Input:
+        E_tot         : ndarray, total electric field (scattered + incident) with size of (3, Ny, Nx, Nz)
+        f_scat_tensor : ndarray, scattering potential tensor with size of (3, 3, Ny, Nx, Nz)
+        G_tensor      : ndarray, dyadic Green's function with size of (3, 3, Ny, Nx, Nz)
+        use_gpu       : bool, option to use gpu or not
+        gpu_id        : int, gpu_id for computation
+        
+    Output:
+        E_in_est      : ndarray, estimated incident electric field with size of (3, Ny, Nx, Nz)
+        
+    '''
+    
+    N, M, L = E_tot.shape[1:]
+    
+    pad_convolve_G = lambda x, y, z: ifftn(fftn(np.pad(x,((N//2,),(M//2,),(L//2,)), \
+                                                       mode='constant', constant_values=y))*z)[N//2:-N//2,M//2:-M//2,L//2:-L//2]
+    E_interact = np.zeros((3, N, M, L), complex)
+    E_in_est = np.zeros_like(E_tot, complex)
+    
+    
+    for p, q in itertools.product(range(3), range(3)):
+        E_interact[p] += f_scat_tensor[p,q]*E_tot[q]
+            
+    for p, q in itertools.product(range(3), range(3)):     
+        E_in_est[p] += pad_convolve_G(E_interact[q], np.abs(np.mean(E_interact[q])), G_tensor[p,q])
+        if p == q:
+            E_in_est[p] +=  E_tot[p]
+    
+        
+    return E_in_est
 
+
+
+def SEAGLE_vec_backward(E_diff, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0):
+    
+    '''
+    
+    Compute the adjoint of vectorial SEAGLE forward model
+    
+    Input:
+        E_diff        : ndarray, difference between estimated and real incident field with size of (3, Ny, Nx, Nz)
+        f_scat_tensor : ndarray, scattering potential tensor with size of (3, 3, Ny, Nx, Nz)
+        G_tensor      : ndarray, dyadic Green's function with size of (3, 3, Ny, Nx, Nz)
+        use_gpu       : bool, option to use gpu or not
+        gpu_id        : int, gpu_id for computation
+        
+    Output:
+        grad_E        : ndarray, gradient of the total electric field with size of (3, Ny, Nx, Nz)
+        
+    '''
+    
+    N, M, L = E_diff.shape[1:]
+    pad_convolve_G = lambda x, y, z: ifftn(fftn(np.pad(x,((N//2,),(M//2,),(L//2,)), \
+                                                       mode='constant', constant_values=y))*z)[N//2:-N//2,M//2:-M//2,L//2:-L//2]
+    
+    E_diff_conv = np.zeros_like(E_diff, complex)
+    grad_E = np.zeros_like(E_diff, complex)
+    
+    
+    for p, q in itertools.product(range(3), range(3)):
+        E_diff_conv[p] += pad_convolve_G(E_diff[q], np.abs(np.mean(E_diff[p])), G_tensor[p,q].conj())
+    
+    
+    for p in range(3):
+        E_interact = np.zeros((N,M,L), complex)
+        for q in range(3):
+            E_interact += f_scat_tensor[q,p].conj()*E_diff_conv[q]
+        grad_E[p] = E_diff[p] + E_interact
+        
+    return grad_E
 

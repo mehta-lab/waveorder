@@ -526,3 +526,119 @@ class waveorder_microscopy_simulator:
         return np.squeeze(I_meas)
         
         
+        
+    def simulate_3D_vectorial_measurements_SEAGLE(self, RI_tensor, itr_max = 100, tolerance=1e-4, verbose=False):
+        
+        G_real = gen_Greens_function_real((2*self.N,2*self.M,2*self.N_defocus), self.ps, self.psz, self.lambda_illu)
+        G_tensor = gen_dyadic_Greens_tensor(G_real, self.ps, self.psz, self.lambda_illu, space='Fourier')
+
+
+        f_scat_tensor = np.zeros((3, 3, self.N, self.M, self.N_defocus))
+        for p, q in itertools.product(range(3), range(3)):
+            f_scat_tensor[p,q] = (2*np.pi/self.lambda_illu)**2 * (1 - (RI_tensor[p,q]/self.n_media)**2)
+            
+        
+        fr = (self.fxx**2 + self.fyy**2)**(0.5)
+        Pupil_prop = gen_Pupil(self.fxx, self.fyy, 1, self.lambda_illu)
+        oblique_factor_prop = ((1 - self.lambda_illu**2 * fr**2) *Pupil_prop)**(1/2) / self.lambda_illu
+        z_defocus_m = self.z_defocus-(self.N_defocus/2-1)*self.psz
+        Hz_defocus = Pupil_prop[:,:,np.newaxis] * np.exp(1j*2*np.pi*z_defocus_m[np.newaxis,np.newaxis,:]*oblique_factor_prop[:,:,np.newaxis])
+        
+        Stokes_SEAGLE = np.zeros((4, self.N_pattern, self.N, self.M, self.N_defocus))
+        I_meas_SEAGLE = np.zeros((self.N_channel, self.N_pattern, self.N, self.M, self.N_defocus))
+        
+        
+        t0 = time.time()
+        for i in range(self.N_pattern):
+
+            if self.N_pattern == 1:
+                [idx_y, idx_x] = np.where(self.Source >=1)
+                Source_current = self.Source.copy()
+            else:
+                [idx_y, idx_x] = np.where(self.Source[i] >=1)
+                Source_current = self.Source[i].copy()
+
+
+            N_pt_source = len(idx_y)
+
+
+
+            for j in range(N_pt_source):
+
+                E_in = np.zeros((3, self.N, self.M, self.N_defocus), complex)
+                E_tot = np.zeros((3, self.N, self.M, self.N_defocus), complex)
+                E_in_amp = np.zeros((3,), complex)
+
+
+                if fr[idx_y[j], idx_x[j]] ==0:
+                    E_in_amp[0] = 1
+                    E_in_amp[1] = 1j
+                else:
+
+                    E_in_amp[0] = (self.fyy[idx_y[j], idx_x[j]] + \
+                                   1j*self.fxx[idx_y[j], idx_x[j]]*(1 - self.lambda_illu**2 * fr[idx_y[j], idx_x[j]]**2)**(1/2))/fr[idx_y[j], idx_x[j]]
+                    E_in_amp[1] = (-self.fxx[idx_y[j], idx_x[j]] + \
+                                   1j*self.fyy[idx_y[j], idx_x[j]]*(1 - self.lambda_illu**2 * fr[idx_y[j], idx_x[j]]**2)**(1/2))/fr[idx_y[j], idx_x[j]]
+                    E_in_amp[2] = -1j*self.lambda_illu*fr[idx_y[j], idx_x[j]]
+
+                E_in_amp *= (Source_current[idx_y[j], idx_x[j]]/2)**(1/2)
+
+                for p in range(3):
+                    E_in[p] = E_in_amp[p]*np.exp(1j*2*np.pi*(self.fyy[idx_y[j], idx_x[j]] * self.yy + \
+                                                             self.fxx[idx_y[j], idx_x[j]] * self.xx))[:,:,np.newaxis]\
+                                         *np.exp(1j*2*np.pi*oblique_factor_prop[idx_y[j], idx_x[j]]*self.z_defocus[np.newaxis,np.newaxis,:])
+
+
+                E_tot = E_in.copy()
+
+                err = np.zeros((itr_max+1,))
+
+                tic_time = time.time()
+
+                for m in range(itr_max):
+
+                    E_in_est = SEAGLE_vec_forward(E_tot, f_scat_tensor, G_tensor)
+                    E_diff = E_in_est - E_in
+                    err[m+1] = np.sum(np.abs(E_diff)**2)
+
+                    if err[m+1]/err[1] < tolerance:
+                        break
+                    grad_E = SEAGLE_vec_backward(E_diff, f_scat_tensor, G_tensor)
+
+                    A_grad_E = SEAGLE_vec_forward(grad_E, f_scat_tensor, G_tensor)
+
+                    step_size = np.sum(np.abs(grad_E)**2)/np.sum(np.abs(A_grad_E)**2)
+
+                    temp = E_tot - step_size*grad_E
+
+                    if m == 0:        
+                        t = 1
+                        E_tot = temp.copy()
+                        tempp = temp.copy()
+                    else:
+                        if err[m]<err[m+1]:
+                            t = 1
+                            E_tot = temp.copy()
+                            tempp = temp.copy()
+                        else:
+                            tp = t
+                            t = (1 + (1 + 4 * tp**2)**(1/2))/2
+
+                            E_tot = temp + (tp - 1) * (temp - tempp) / t
+                            tempp = temp.copy()
+                    if verbose:
+                        print('|  %d  |  %.2e  |   %.2f   |'%(m+1,err[m+1],time.time()-tic_time))
+
+
+
+                E_field_out = ifft2(fft2(E_tot[:2,:,:,-1],axes=(1,2))[:,:,:,np.newaxis] * (self.Pupil_obj[:,:,np.newaxis]*Hz_defocus)[np.newaxis,:,:,:], axes=(1,2))
+                Stokes_SEAGLE[:,i,:,:,:] += Jones_to_Stokes(E_field_out)
+                for n in range(self.N_channel):
+                    I_meas_SEAGLE[n,i,:,:,:] += np.abs(analyzer_output(E_field_out, self.analyzer_para[n,0], self.analyzer_para[n,1]))**2
+                
+                if np.mod(j+1, 1) == 0 or j+1 == N_pt_source:
+                    print('Number of point sources considered (%d / %d) in pattern (%d / %d), elapsed time: %.2f'\
+                          %(j+1, N_pt_source, i+1, self.N_pattern, time.time()-t0))
+                    
+        return I_meas_SEAGLE, Stokes_SEAGLE
+        
