@@ -7,7 +7,7 @@ from scipy.ndimage import uniform_filter
 
 
 
-def image_stack_viewer(image_stack,size=(10,10), colormap='gray'):
+def image_stack_viewer(image_stack,size=(10,10), colormap='gray', origin='upper'):
     
     '''
     
@@ -24,12 +24,12 @@ def image_stack_viewer(image_stack,size=(10,10), colormap='gray'):
     
     def interact_plot_3D(stack_idx):    
         plt.figure(figsize=size)
-        plt.imshow(image_stack[stack_idx],cmap=colormap, vmin=min_val, vmax=max_val)
+        plt.imshow(image_stack[stack_idx],cmap=colormap, vmin=min_val, vmax=max_val, origin=origin)
         plt.colorbar()
 
     def interact_plot_4D(stack_idx_1, stack_idx_2):    
         plt.figure(figsize=size)
-        plt.imshow(image_stack[stack_idx_1,stack_idx_2],cmap=colormap, vmin=min_val, vmax=max_val)
+        plt.imshow(image_stack[stack_idx_1,stack_idx_2],cmap=colormap, vmin=min_val, vmax=max_val, origin=origin)
         plt.colorbar()
     
     
@@ -40,7 +40,7 @@ def image_stack_viewer(image_stack,size=(10,10), colormap='gray'):
                        stack_idx_2=widgets.IntSlider(value=0, min=0, max=image_stack.shape[1]-1, step=1))
     
     
-def hsv_stack_viewer(image_stack, max_val=1, size=5):
+def hsv_stack_viewer(image_stack, max_val=1, size=5, origin='upper'):
     
     '''
     
@@ -66,7 +66,7 @@ def hsv_stack_viewer(image_stack, max_val=1, size=5):
     def interact_plot_hsv(stack_idx):
     
         f1,ax = plt.subplots(1, 2, figsize=(size+size/2, size))
-        ax[0].imshow(I_rgb[stack_idx])
+        ax[0].imshow(I_rgb[stack_idx], origin=origin)
 
         ax[1].imshow(RGB, origin="lower", extent=[0, 1, 0, 180], aspect=0.2)
         plt.xlabel("V")
@@ -78,8 +78,16 @@ def hsv_stack_viewer(image_stack, max_val=1, size=5):
        
     return interact(interact_plot_hsv, stack_idx=widgets.IntSlider(value=0, min=0, max=len(image_stack1)-1, step=1))
 
+def rgb_stack_viewer(image_stack, size=5, origin='upper'):
     
-def parallel_4D_viewer(image_stack, num_col = 2, size=10):
+    def interact_plot_rgb(stack_idx):
+        plt.figure(figsize=(size, size))
+        plt.imshow(image_stack[stack_idx], origin=origin)
+        
+    return interact(interact_plot_rgb, stack_idx=widgets.IntSlider(value=0, min=0, max=len(image_stack)-1, step=1))
+
+    
+def parallel_4D_viewer(image_stack, num_col = 2, size=10, origin='upper'):
     
     '''
     
@@ -106,19 +114,19 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10):
         if num_row == 1:
             for i in range(N_channel):
                 col_idx = np.mod(i, num_col)
-                ax1 = ax[col_idx].imshow(image_stack[stack_idx, i], cmap='gray')
+                ax1 = ax[col_idx].imshow(image_stack[stack_idx, i], cmap='gray', origin=origin)
                 plt.colorbar(ax1,ax=ax[col_idx])
         else:
             for i in range(N_channel):
                 row_idx = i//num_col
                 col_idx = np.mod(i, num_col)
-                ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx, i], cmap='gray')
+                ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx, i], cmap='gray', origin=origin)
                 plt.colorbar(ax1,ax=ax[row_idx, col_idx])
     
     return interact(interact_plot, stack_idx=widgets.IntSlider(value=0, min=0, max=N_stack-1, step=1))
 
 
-def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles=[], colormap='gray'):
+def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles=[], colormap='gray', origin='upper'):
     
     '''
     
@@ -143,7 +151,7 @@ def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles
     if num_row == 1:
         for i in range(N_stack):
             col_idx = np.mod(i, num_col)
-            ax1 = ax[col_idx].imshow(image_stack[i], cmap=colormap)
+            ax1 = ax[col_idx].imshow(image_stack[i], cmap=colormap, origin=origin)
             plt.colorbar(ax1,ax=ax[col_idx])
             
             if set_title == True:
@@ -152,14 +160,14 @@ def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles
         for i in range(N_stack):
             row_idx = i//num_col
             col_idx = np.mod(i, num_col)
-            ax1 = ax[row_idx, col_idx].imshow(image_stack[i], cmap=colormap)
+            ax1 = ax[row_idx, col_idx].imshow(image_stack[i], cmap=colormap, origin=origin)
             plt.colorbar(ax1,ax=ax[row_idx, col_idx])
             
             if set_title == True:
                 ax[row_idx, col_idx].set_title(titles[i])
 
 
-def plot_hsv(image_stack, max_val=1, size=5):
+def plot_hsv(image_stack, max_val=1, size=5, origin='upper'):
     
     N_channel = len(image_stack)
     
@@ -170,7 +178,7 @@ def plot_hsv(image_stack, max_val=1, size=5):
         I_rgb = hsv_to_rgb(I_hsv.copy())
         
         f1,ax = plt.subplots(1, 2, figsize=(size+size/2, size))
-        ax[0].imshow(I_rgb)
+        ax[0].imshow(I_rgb, origin=origin)
         
         V, H = np.mgrid[0:1:500j, 0:1:500j]
         S = np.ones_like(V)
@@ -189,7 +197,7 @@ def plot_hsv(image_stack, max_val=1, size=5):
         raise("plot_hsv does not support N_channel >2 rendering")
         
         
-def plot_phase_hsv(image_stack, max_val_V=1, max_val_S=1, size=5):
+def plot_phase_hsv(image_stack, max_val_V=1, max_val_S=1, size=5, origin='upper'):
     
     N_channel = len(image_stack)
     
@@ -200,7 +208,7 @@ def plot_phase_hsv(image_stack, max_val_V=1, max_val_S=1, size=5):
         I_rgb = hsv_to_rgb(I_hsv.copy())
         
         f1,ax = plt.subplots(1, 2, figsize=(size+size/2, size))
-        ax[0].imshow(I_rgb)
+        ax[0].imshow(I_rgb, origin=origin)
         
         V, H = np.mgrid[0:1:500j, 0:1:500j]
         S = np.ones_like(V)

@@ -29,7 +29,7 @@ def Jones_sample(Ein, t, sa):
     return Eout
 
 
-def Jones_to_Stokes(Ein):
+def Jones_to_Stokes(Ein, use_gpu=False, gpu_id=0):
     
     '''
     
@@ -43,18 +43,28 @@ def Jones_to_Stokes(Ein):
     
     '''
     
+    if use_gpu:
+        
+        globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
+        
+        S0 = (cp.abs(Ein[0])**2 + cp.abs(Ein[1])**2)[cp.newaxis,:,:,:]
+        S1 = (cp.abs(Ein[0])**2 - cp.abs(Ein[1])**2)[cp.newaxis,:,:,:]
+        S2 = (cp.real(Ein[0].conj()*Ein[1] + Ein[0]*Ein[1].conj()))[cp.newaxis,:,:,:]
+        S3 = (cp.real(-1j*(Ein[0].conj()*Ein[1] - Ein[0]*Ein[1].conj())))[cp.newaxis,:,:,:]
+        Stokes = cp.concatenate((S0,S1,S2,S3), axis=0)
+        
+    else:
+        Stokes = []
+        Stokes.append(np.abs(Ein[0])**2 + np.abs(Ein[1])**2)                        # S0
+        Stokes.append(np.abs(Ein[0])**2 - np.abs(Ein[1])**2)                        # S1
+        Stokes.append(np.real(Ein[0].conj()*Ein[1] + Ein[0]*Ein[1].conj()))         # S2
+        Stokes.append(np.real(-1j*(Ein[0].conj()*Ein[1] - Ein[0]*Ein[1].conj())))   # S3
+        Stokes = np.array(Stokes)
     
     
-    Stokes = []
-    Stokes.append(np.abs(Ein[0])**2 + np.abs(Ein[1])**2)                        # S0
-    Stokes.append(np.abs(Ein[0])**2 - np.abs(Ein[1])**2)                        # S1
-    Stokes.append(np.real(Ein[0].conj()*Ein[1] + Ein[0]*Ein[1].conj()))         # S2
-    Stokes.append(np.real(-1j*(Ein[0].conj()*Ein[1] - Ein[0]*Ein[1].conj())))   # S3
     
-    
-    
-    
-    return np.array(Stokes)
+    return Stokes
 
 
 def analyzer_output(Ein, alpha, beta):
@@ -263,7 +273,7 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space='real'):
     N, M, L = G_real.shape
     
     fx_r = ifftshift((np.r_[:M]-M//2)/ps/M)
-    fy_r = ifftshift((np.r_[:M]-N//2)/ps/N)
+    fy_r = ifftshift((np.r_[:N]-N//2)/ps/N)
     fz_r = ifftshift((np.r_[:L]-L//2)/psz/L)
     fxx_r, fyy_r, fzz_r = np.meshgrid(fx_r,fy_r,fz_r)
     
@@ -521,19 +531,39 @@ def SEAGLE_vec_forward(E_tot, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0):
     
     N, M, L = E_tot.shape[1:]
     
-    pad_convolve_G = lambda x, y, z: ifftn(fftn(np.pad(x,((N//2,),(M//2,),(L//2,)), \
+    if use_gpu:
+        globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
+        
+        pad_convolve_G = lambda x, y, z: cp.fft.ifftn(cp.fft.fftn(cp.pad(x,((N//2,N//2),(M//2,M//2),(L//2,L//2)), \
                                                        mode='constant', constant_values=y))*z)[N//2:-N//2,M//2:-M//2,L//2:-L//2]
-    E_interact = np.zeros((3, N, M, L), complex)
-    E_in_est = np.zeros_like(E_tot, complex)
+        E_interact = cp.zeros((3, N, M, L), complex)
+        E_in_est = cp.zeros_like(E_tot, complex)
+
+
+        for p, q in itertools.product(range(3), range(3)):
+            E_interact[p] += f_scat_tensor[p,q]*E_tot[q]
+
+        for p, q in itertools.product(range(3), range(3)):     
+            E_in_est[p] += pad_convolve_G(E_interact[q], cp.asnumpy(cp.abs(cp.mean(E_interact[q]))), G_tensor[p,q])
+            if p == q:
+                E_in_est[p] +=  E_tot[p]
+        
+    else: 
     
-    
-    for p, q in itertools.product(range(3), range(3)):
-        E_interact[p] += f_scat_tensor[p,q]*E_tot[q]
-            
-    for p, q in itertools.product(range(3), range(3)):     
-        E_in_est[p] += pad_convolve_G(E_interact[q], np.abs(np.mean(E_interact[q])), G_tensor[p,q])
-        if p == q:
-            E_in_est[p] +=  E_tot[p]
+        pad_convolve_G = lambda x, y, z: ifftn(fftn(np.pad(x,((N//2,),(M//2,),(L//2,)), \
+                                                           mode='constant', constant_values=y))*z)[N//2:-N//2,M//2:-M//2,L//2:-L//2]
+        E_interact = np.zeros((3, N, M, L), complex)
+        E_in_est = np.zeros_like(E_tot, complex)
+
+
+        for p, q in itertools.product(range(3), range(3)):
+            E_interact[p] += f_scat_tensor[p,q]*E_tot[q]
+
+        for p, q in itertools.product(range(3), range(3)):     
+            E_in_est[p] += pad_convolve_G(E_interact[q], np.abs(np.mean(E_interact[q])), G_tensor[p,q])
+            if p == q:
+                E_in_est[p] +=  E_tot[p]
     
         
     return E_in_est
@@ -559,22 +589,47 @@ def SEAGLE_vec_backward(E_diff, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0
     '''
     
     N, M, L = E_diff.shape[1:]
-    pad_convolve_G = lambda x, y, z: ifftn(fftn(np.pad(x,((N//2,),(M//2,),(L//2,)), \
+    
+    if use_gpu:
+        globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
+        
+        pad_convolve_G = lambda x, y, z: cp.fft.ifftn(cp.fft.fftn(cp.pad(x,((N//2,N//2),(M//2,M//2),(L//2,L//2)), \
                                                        mode='constant', constant_values=y))*z)[N//2:-N//2,M//2:-M//2,L//2:-L//2]
+        
+        E_diff_conv = cp.zeros_like(E_diff, complex)
+        grad_E = cp.zeros_like(E_diff, complex)
+
+
+        for p, q in itertools.product(range(3), range(3)):
+            E_diff_conv[p] += pad_convolve_G(E_diff[q], cp.asnumpy(cp.abs(cp.mean(E_diff[p]))), G_tensor[p,q].conj())
+
+
+        for p in range(3):
+            E_interact = cp.zeros((N,M,L), complex)
+            for q in range(3):
+                E_interact += f_scat_tensor[q,p].conj()*E_diff_conv[q]
+            grad_E[p] = E_diff[p] + E_interact
+        
+    else:
     
-    E_diff_conv = np.zeros_like(E_diff, complex)
-    grad_E = np.zeros_like(E_diff, complex)
     
-    
-    for p, q in itertools.product(range(3), range(3)):
-        E_diff_conv[p] += pad_convolve_G(E_diff[q], np.abs(np.mean(E_diff[p])), G_tensor[p,q].conj())
-    
-    
-    for p in range(3):
-        E_interact = np.zeros((N,M,L), complex)
-        for q in range(3):
-            E_interact += f_scat_tensor[q,p].conj()*E_diff_conv[q]
-        grad_E[p] = E_diff[p] + E_interact
+        pad_convolve_G = lambda x, y, z: ifftn(fftn(np.pad(x,((N//2,),(M//2,),(L//2,)), \
+                                                           mode='constant', constant_values=y))*z)[N//2:-N//2,M//2:-M//2,L//2:-L//2]
+
+        E_diff_conv = np.zeros_like(E_diff, complex)
+        grad_E = np.zeros_like(E_diff, complex)
+
+
+        for p, q in itertools.product(range(3), range(3)):
+            E_diff_conv[p] += pad_convolve_G(E_diff[q], np.abs(np.mean(E_diff[p])), G_tensor[p,q].conj())
+
+
+        for p in range(3):
+            E_interact = np.zeros((N,M,L), complex)
+            for q in range(3):
+                E_interact += f_scat_tensor[q,p].conj()*E_diff_conv[q]
+            grad_E[p] = E_diff[p] + E_interact
         
     return grad_E
 

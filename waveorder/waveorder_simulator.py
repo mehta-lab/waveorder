@@ -527,15 +527,21 @@ class waveorder_microscopy_simulator:
         
         
         
-    def simulate_3D_vectorial_measurements_SEAGLE(self, RI_tensor, itr_max = 100, tolerance=1e-4, verbose=False):
+    def simulate_3D_vectorial_measurements_SEAGLE(self, epsilon_tensor, itr_max = 100, tolerance=1e-4, verbose=False):
         
         G_real = gen_Greens_function_real((2*self.N,2*self.M,2*self.N_defocus), self.ps, self.psz, self.lambda_illu)
         G_tensor = gen_dyadic_Greens_tensor(G_real, self.ps, self.psz, self.lambda_illu, space='Fourier')
+        
+        xx = fftshift(self.xx)
+        yy = fftshift(self.yy)
 
 
         f_scat_tensor = np.zeros((3, 3, self.N, self.M, self.N_defocus))
         for p, q in itertools.product(range(3), range(3)):
-            f_scat_tensor[p,q] = (2*np.pi/self.lambda_illu)**2 * (1 - (RI_tensor[p,q]/self.n_media)**2)
+            if p == q:
+                f_scat_tensor[p,q] = (2*np.pi/self.lambda_illu)**2 * (1 - epsilon_tensor[p,q]/self.n_media**2)
+            else:
+                f_scat_tensor[p,q] = (2*np.pi/self.lambda_illu)**2 * (- epsilon_tensor[p,q]/self.n_media**2)
             
         
         fr = (self.fxx**2 + self.fyy**2)**(0.5)
@@ -544,6 +550,13 @@ class waveorder_microscopy_simulator:
         z_defocus_m = self.z_defocus-(self.N_defocus/2-1)*self.psz
         Hz_defocus = Pupil_prop[:,:,np.newaxis] * np.exp(1j*2*np.pi*z_defocus_m[np.newaxis,np.newaxis,:]*oblique_factor_prop[:,:,np.newaxis])
         
+        
+        if self.use_gpu:
+            Hz_defocus = cp.array(Hz_defocus)
+            f_scat_tensor = cp.array(f_scat_tensor)
+            Pupil_obj = cp.array(self.Pupil_obj)
+            G_tensor = cp.array(G_tensor)
+            
         Stokes_SEAGLE = np.zeros((4, self.N_pattern, self.N, self.M, self.N_defocus))
         I_meas_SEAGLE = np.zeros((self.N_channel, self.N_pattern, self.N, self.M, self.N_defocus))
         
@@ -584,12 +597,15 @@ class waveorder_microscopy_simulator:
                 E_in_amp *= (Source_current[idx_y[j], idx_x[j]]/2)**(1/2)
 
                 for p in range(3):
-                    E_in[p] = E_in_amp[p]*np.exp(1j*2*np.pi*(self.fyy[idx_y[j], idx_x[j]] * self.yy + \
-                                                             self.fxx[idx_y[j], idx_x[j]] * self.xx))[:,:,np.newaxis]\
+                    E_in[p] = E_in_amp[p]*np.exp(1j*2*np.pi*(self.fyy[idx_y[j], idx_x[j]] * yy + \
+                                                             self.fxx[idx_y[j], idx_x[j]] * xx))[:,:,np.newaxis]\
                                          *np.exp(1j*2*np.pi*oblique_factor_prop[idx_y[j], idx_x[j]]*self.z_defocus[np.newaxis,np.newaxis,:])
 
-
-                E_tot = E_in.copy()
+                if self.use_gpu:
+                    E_tot = cp.array(E_in.copy())
+                    E_in = cp.array(E_in.copy())
+                else:
+                    E_tot = E_in.copy()
 
                 err = np.zeros((itr_max+1,))
 
@@ -597,18 +613,24 @@ class waveorder_microscopy_simulator:
 
                 for m in range(itr_max):
 
-                    E_in_est = SEAGLE_vec_forward(E_tot, f_scat_tensor, G_tensor)
+                    E_in_est = SEAGLE_vec_forward(E_tot, f_scat_tensor, G_tensor, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
                     E_diff = E_in_est - E_in
-                    err[m+1] = np.sum(np.abs(E_diff)**2)
+                    if self.use_gpu:
+                        err[m+1] = cp.asnumpy(cp.sum(cp.abs(E_diff)**2))
+                    else:
+                        err[m+1] = np.sum(np.abs(E_diff)**2)
 
                     if err[m+1]/err[1] < tolerance:
                         break
-                    grad_E = SEAGLE_vec_backward(E_diff, f_scat_tensor, G_tensor)
+                    grad_E = SEAGLE_vec_backward(E_diff, f_scat_tensor, G_tensor, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
 
-                    A_grad_E = SEAGLE_vec_forward(grad_E, f_scat_tensor, G_tensor)
-
-                    step_size = np.sum(np.abs(grad_E)**2)/np.sum(np.abs(A_grad_E)**2)
-
+                    A_grad_E = SEAGLE_vec_forward(grad_E, f_scat_tensor, G_tensor, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+                    
+                    if self.use_gpu:
+                        step_size = cp.sum(cp.abs(grad_E)**2)/cp.sum(cp.abs(A_grad_E)**2)
+                    else:
+                        step_size = np.sum(np.abs(grad_E)**2)/np.sum(np.abs(A_grad_E)**2)
+                    
                     temp = E_tot - step_size*grad_E
 
                     if m == 0:        
@@ -630,12 +652,21 @@ class waveorder_microscopy_simulator:
                         print('|  %d  |  %.2e  |   %.2f   |'%(m+1,err[m+1],time.time()-tic_time))
 
 
-
-                E_field_out = ifft2(fft2(E_tot[:2,:,:,-1],axes=(1,2))[:,:,:,np.newaxis] * (self.Pupil_obj[:,:,np.newaxis]*Hz_defocus)[np.newaxis,:,:,:], axes=(1,2))
-                Stokes_SEAGLE[:,i,:,:,:] += Jones_to_Stokes(E_field_out)
-                for n in range(self.N_channel):
-                    I_meas_SEAGLE[n,i,:,:,:] += np.abs(analyzer_output(E_field_out, self.analyzer_para[n,0], self.analyzer_para[n,1]))**2
+                if self.use_gpu:
+                    
+                    E_field_out = cp.fft.ifft2(cp.fft.fft2(E_tot[:2,:,:,-1],axes=(1,2))[:,:,:,cp.newaxis] * \
+                                               (Pupil_obj[:,:,cp.newaxis]*Hz_defocus)[cp.newaxis,:,:,:], axes=(1,2))
+                    Stokes_SEAGLE[:,i,:,:,:] += cp.asnumpy(Jones_to_Stokes(E_field_out, use_gpu=self.use_gpu, gpu_id=self.gpu_id))
+                    for n in range(self.N_channel):
+                        I_meas_SEAGLE[n,i,:,:,:] += cp.asnumpy(cp.abs(analyzer_output(E_field_out, self.analyzer_para[n,0], self.analyzer_para[n,1]))**2)
+                    
+                else:
                 
+                    E_field_out = ifft2(fft2(E_tot[:2,:,:,-1],axes=(1,2))[:,:,:,np.newaxis] * (self.Pupil_obj[:,:,np.newaxis]*Hz_defocus)[np.newaxis,:,:,:], axes=(1,2))
+                    Stokes_SEAGLE[:,i,:,:,:] += Jones_to_Stokes(E_field_out)
+                    for n in range(self.N_channel):
+                        I_meas_SEAGLE[n,i,:,:,:] += np.abs(analyzer_output(E_field_out, self.analyzer_para[n,0], self.analyzer_para[n,1]))**2
+
                 if np.mod(j+1, 1) == 0 or j+1 == N_pt_source:
                     print('Number of point sources considered (%d / %d) in pattern (%d / %d), elapsed time: %.2f'\
                           %(j+1, N_pt_source, i+1, self.N_pattern, time.time()-t0))

@@ -134,7 +134,7 @@ class waveorder_microscopy:
             if NA_illu_in == None:
                 raise('No inner rim NA specified in the PH illumination mode')
             else:
-                self.NA_illu_in  = NA_illu_in/n_media
+                self.NA_illu_in  = NA_illu_in/self.n_media
                 inner_pupil = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in/self.n_media, self.lambda_illu)
                 self.Source = gen_Pupil(self.fxx, self.fyy, self.NA_illu, self.lambda_illu)
                 self.Source -= inner_pupil
@@ -271,7 +271,11 @@ class waveorder_microscopy:
         self.H_im = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
         
         for i in range(self.N_pattern):
-            self.H_re[i], self.H_im[i] = WOTF_3D_compute(self.Source.astype('float32'), self.Pupil_obj.astype('complex64'), self.Hz_det.astype('complex64'), \
+            if self.N_pattern == 1:
+                Source_current = self.Source.copy()
+            else:
+                Source_current = self.Source[i].copy()
+            self.H_re[i], self.H_im[i] = WOTF_3D_compute(Source_current.astype('float32'), self.Pupil_obj.astype('complex64'), self.Hz_det.astype('complex64'), \
                                                          self.G_fun_z.astype('complex64'), self.psz,\
                                                          use_gpu=self.use_gpu, gpu_id=self.gpu_id)
         

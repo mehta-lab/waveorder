@@ -60,18 +60,53 @@ def genStarTarget(N, M, blur_px = 2):
     
     return star, theta, xx
 
+def genStarTarget_3D(img_dim, ps, psz, blur_size = 0.1):
+    
+    N,M,L = img_dim
+    
+    x = (np.r_[:M]-M//2)*ps
+    y = (np.r_[:N]-N//2)*ps
+    z = (np.r_[:L]-L//2)*psz
+
+    xx, yy, zz = np.meshgrid(x,y,z)
+
+    rho = np.sqrt(xx**2 + yy**2 + zz**2)
+    azimuth = np.arctan2(yy, xx)
+    inc_angle = np.arctan2((xx**2 + yy**2)**(1/2), zz)
+
+
+    star = (1 + np.cos(16*azimuth))
+
+    star = np.pad(star[20:-20,20:-20,20:-20],((20,),(20,),(20,)),mode='constant')
+    star[star<1] = 0
+    star[np.abs(inc_angle-np.pi/2)>np.pi*1/8] = 0
+    star[np.abs(inc_angle-np.pi/2)<np.pi*7/64] = 0
+
+    # Filter to prevent aliasing
+
+    Gaussian = np.exp(-rho**2/(2*blur_size**2))
+
+    star = np.maximum(0, np.real(ifftn(fftn(star) * fftn(ifftshift(Gaussian)))))
+    star /= np.max(star)
+    
+    
+    return star, azimuth, inc_angle
+
+
 def gen_sphere_target(img_dim, ps, psz, radius, blur_size = 0.1):
     
     
     N,M,L = img_dim
-    x = (np.r_[:N]-N//2)*ps
-    y = (np.r_[:M]-M//2)*ps
+    x = (np.r_[:M]-M//2)*ps
+    y = (np.r_[:N]-N//2)*ps
     z = (np.r_[:L]-L//2)*psz
     
     xx, yy, zz = np.meshgrid(x,y,z)
     
     rho = np.sqrt(xx**2 + yy**2 + zz**2)
-
+    azimuth = np.arctan2(yy, xx)
+    inc_angle = np.arctan2((xx**2 + yy**2)**(1/2), zz)
+    
     sphere = np.zeros_like(xx)
     sphere[xx**2 + yy**2 + zz**2<radius**2] = 1
     
@@ -82,8 +117,7 @@ def gen_sphere_target(img_dim, ps, psz, radius, blur_size = 0.1):
     sphere /= np.max(sphere)
     
     
-    return sphere
-
+    return sphere, azimuth, inc_angle
 
 
 
