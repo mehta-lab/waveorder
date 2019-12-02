@@ -42,9 +42,7 @@ def image_stack_viewer(image_stack,size=(10,10), colormap='gray', origin='upper'
     
 def hsv_stack_viewer(image_stack, max_val=1, size=5, origin='upper'):
     
-    '''
-    
-    '''
+
     image_stack1 = image_stack[0]
     image_stack2 = image_stack[1]
     
@@ -87,7 +85,7 @@ def rgb_stack_viewer(image_stack, size=5, origin='upper'):
     return interact(interact_plot_rgb, stack_idx=widgets.IntSlider(value=0, min=0, max=len(image_stack)-1, step=1))
 
     
-def parallel_4D_viewer(image_stack, num_col = 2, size=10, origin='upper'):
+def parallel_4D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin='upper'):
     
     '''
     
@@ -100,10 +98,6 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, origin='upper'):
     
     '''
     
-    
-    max_val = np.max(image_stack)
-    min_val = np.min(image_stack)
-    
     N_stack, N_channel, _, _ = image_stack.shape
     num_row = np.int(np.ceil(N_channel/num_col))
     figsize = (num_col*size, num_row*size)
@@ -114,16 +108,54 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, origin='upper'):
         if num_row == 1:
             for i in range(N_channel):
                 col_idx = np.mod(i, num_col)
-                ax1 = ax[col_idx].imshow(image_stack[stack_idx, i], cmap='gray', origin=origin)
+                ax1 = ax[col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
                 plt.colorbar(ax1,ax=ax[col_idx])
         else:
             for i in range(N_channel):
                 row_idx = i//num_col
                 col_idx = np.mod(i, num_col)
-                ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx, i], cmap='gray', origin=origin)
+                ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
                 plt.colorbar(ax1,ax=ax[row_idx, col_idx])
     
     return interact(interact_plot, stack_idx=widgets.IntSlider(value=0, min=0, max=N_stack-1, step=1))
+
+
+
+def parallel_5D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin='upper'):
+    
+    '''
+    
+    Simultaneous visualize all channels of image stack interactively in jupyter notebook
+    
+    Input: 
+        image_stack : a 5D numpy array with size of (N_stack, N_pattern, Nchannel, N, M)
+        num_col     : number of columns you wish to display
+        size        : the size of one figure panel 
+    
+    '''
+    
+    
+    N_stack, N_pattern, N_channel, _, _ = image_stack.shape
+    num_row = np.int(np.ceil(N_channel/num_col))
+    figsize = (num_col*size, num_row*size)
+    
+    def interact_plot(stack_idx_1, stack_idx_2):
+        
+        f1,ax = plt.subplots(num_row, num_col, figsize=figsize)
+        if num_row == 1:
+            for i in range(N_channel):
+                col_idx = np.mod(i, num_col)
+                ax1 = ax[col_idx].imshow(image_stack[stack_idx_1, stack_idx_2, i], cmap=colormap, origin=origin)
+                plt.colorbar(ax1,ax=ax[col_idx])
+        else:
+            for i in range(N_channel):
+                row_idx = i//num_col
+                col_idx = np.mod(i, num_col)
+                ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx_1, stack_idx_2, i], cmap=colormap, origin=origin)
+                plt.colorbar(ax1,ax=ax[row_idx, col_idx])
+    
+    return interact(interact_plot, stack_idx_1=widgets.IntSlider(value=0, min=0, max=N_stack-1, step=1),\
+                                   stack_idx_2=widgets.IntSlider(value=0, min=0, max=N_pattern-1, step=1))
 
 
 def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles=[], colormap='gray', origin='upper'):

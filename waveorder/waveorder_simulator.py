@@ -602,10 +602,13 @@ class waveorder_microscopy_simulator:
                                          *np.exp(1j*2*np.pi*oblique_factor_prop[idx_y[j], idx_x[j]]*self.z_defocus[np.newaxis,np.newaxis,:])
 
                 if self.use_gpu:
-                    E_tot = cp.array(E_in.copy())
+#                     E_tot = cp.array(E_in.copy())
                     E_in = cp.array(E_in.copy())
+                    E_tot = 2*E_in-SEAGLE_vec_forward(E_in, f_scat_tensor, G_tensor, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+                    
                 else:
-                    E_tot = E_in.copy()
+#                     E_tot = E_in.copy()
+                    E_tot = 2*E_in-SEAGLE_vec_forward(E_in, f_scat_tensor, G_tensor, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
 
                 err = np.zeros((itr_max+1,))
 

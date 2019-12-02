@@ -60,7 +60,7 @@ def genStarTarget(N, M, blur_px = 2):
     
     return star, theta, xx
 
-def genStarTarget_3D(img_dim, ps, psz, blur_size = 0.1):
+def genStarTarget_3D(img_dim, ps, psz, blur_size = 0.1, inc_upper_bound=np.pi/8, inc_range=np.pi/64):
     
     N,M,L = img_dim
     
@@ -79,8 +79,8 @@ def genStarTarget_3D(img_dim, ps, psz, blur_size = 0.1):
 
     star = np.pad(star[20:-20,20:-20,20:-20],((20,),(20,),(20,)),mode='constant')
     star[star<1] = 0
-    star[np.abs(inc_angle-np.pi/2)>np.pi*1/8] = 0
-    star[np.abs(inc_angle-np.pi/2)<np.pi*7/64] = 0
+    star[np.abs(inc_angle-np.pi/2)>inc_upper_bound] = 0
+    star[np.abs(inc_angle-np.pi/2)<inc_upper_bound-inc_range] = 0
 
     # Filter to prevent aliasing
 
@@ -192,10 +192,11 @@ def axial_upsampling(I_meas, upsamp_factor=1):
     
     return I_meas_up
 
-def softTreshold(x, threshold, use_gpu=False):
+def softTreshold(x, threshold, use_gpu=False, gpu_id=0):
     
     if use_gpu:
         globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
         magnitude = cp.abs(x)
         ratio = cp.maximum(0, magnitude-threshold) / magnitude
     else:
@@ -206,13 +207,69 @@ def softTreshold(x, threshold, use_gpu=False):
     
     return x_threshold
 
+def array_based_4x4_det(a):
+    
+    sub_det1 = a[0,0]*(a[1,1]*(a[2,2]*a[3,3]-a[3,2]*a[2,3]) - \
+                       a[1,2]*(a[2,1]*a[3,3]-a[3,1]*a[2,3]) + \
+                       a[1,3]*(a[2,1]*a[3,2]-a[3,1]*a[2,2]) )
+    
+    sub_det2 = a[0,1]*(a[1,0]*(a[2,2]*a[3,3]-a[3,2]*a[2,3]) - \
+                       a[1,2]*(a[2,0]*a[3,3]-a[3,0]*a[2,3]) + \
+                       a[1,3]*(a[2,0]*a[3,2]-a[3,0]*a[2,2]) )
+    
+    sub_det3 = a[0,2]*(a[1,0]*(a[2,1]*a[3,3]-a[3,1]*a[2,3]) - \
+                       a[1,1]*(a[2,0]*a[3,3]-a[3,0]*a[2,3]) + \
+                       a[1,3]*(a[2,0]*a[3,1]-a[3,0]*a[2,1]) )
+    
+    sub_det4 = a[0,3]*(a[1,0]*(a[2,1]*a[3,2]-a[3,1]*a[2,2]) - \
+                       a[1,1]*(a[2,0]*a[3,2]-a[3,0]*a[2,2]) + \
+                       a[1,2]*(a[2,0]*a[3,1]-a[3,0]*a[2,1]) )
 
-def uniform_filter_2D(image, size, use_gpu=False):
+    
+    return sub_det1 - sub_det2 + sub_det3 - sub_det4
+
+def array_based_5x5_det(a):
+    
+    det = a[0,0]*array_based_4x4_det(a[1:,1:]) - \
+          a[0,1]*array_based_4x4_det(a[1:,[0,2,3,4]]) + \
+          a[0,2]*array_based_4x4_det(a[1:,[0,1,3,4]]) - \
+          a[0,3]*array_based_4x4_det(a[1:,[0,1,2,4]]) + \
+          a[0,4]*array_based_4x4_det(a[1:,[0,1,2,3]])
+    
+    return det
+
+def array_based_6x6_det(a):
+    
+    det = a[0,0]*array_based_5x5_det(a[1:,1:]) - \
+          a[0,1]*array_based_5x5_det(a[1:,[0,2,3,4,5]]) + \
+          a[0,2]*array_based_5x5_det(a[1:,[0,1,3,4,5]]) - \
+          a[0,3]*array_based_5x5_det(a[1:,[0,1,2,4,5]]) + \
+          a[0,4]*array_based_5x5_det(a[1:,[0,1,2,3,5]]) - \
+          a[0,5]*array_based_5x5_det(a[1:,[0,1,2,3,4]])
+    
+    return det
+
+def array_based_7x7_det(a):
+    
+    det = a[0,0]*array_based_6x6_det(a[1:,1:]) - \
+          a[0,1]*array_based_6x6_det(a[1:,[0,2,3,4,5,6]]) + \
+          a[0,2]*array_based_6x6_det(a[1:,[0,1,3,4,5,6]]) - \
+          a[0,3]*array_based_6x6_det(a[1:,[0,1,2,4,5,6]]) + \
+          a[0,4]*array_based_6x6_det(a[1:,[0,1,2,3,5,6]]) - \
+          a[0,5]*array_based_6x6_det(a[1:,[0,1,2,3,4,6]]) + \
+          a[0,6]*array_based_6x6_det(a[1:,[0,1,2,3,4,5]])
+    
+    return det
+    
+
+
+def uniform_filter_2D(image, size, use_gpu=False, gpu_id=0):
     
     N, M = image.shape
     
     if use_gpu:
         globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
         
         # filter in y direction
         
@@ -249,3 +306,435 @@ def uniform_filter_2D(image, size, use_gpu=False):
         
         
     return filtered_xy
+
+
+def inten_normalization(S0_stack, bg_filter=True, use_gpu=False, gpu_id=0):
+        
+    N,M, Nimg = S0_stack.shape
+
+    if use_gpu:
+        
+        globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
+        
+        S0_stack = cp.array(S0_stack)
+        S0_norm_stack = cp.zeros_like(S0_stack)
+
+        for i in range(Nimg):
+            if bg_filter:
+                S0_norm_stack[:,:,i] = S0_stack[:,:,i]/uniform_filter_2D(S0_stack[:,:,i], size=N//2, use_gpu=True, gpu_id=gpu_id)
+            else:
+                S0_norm_stack[:,:,i] = S0_stack[:,:,i].copy()
+            S0_norm_stack[:,:,i] /= S0_norm_stack[:,:,i].mean()
+            S0_norm_stack[:,:,i] -= 1
+
+    else:
+        S0_norm_stack = np.zeros_like(S0_stack)
+
+        for i in range(Nimg):
+            if bg_filter:
+                S0_norm_stack[:,:,i] = S0_stack[:,:,i]/uniform_filter(S0_stack[:,:,i], size=N//2)
+            else:
+                S0_norm_stack[:,:,i] = S0_stack[:,:,i].copy()
+            S0_norm_stack[:,:,i] /= S0_norm_stack[:,:,i].mean()
+            S0_norm_stack[:,:,i] -= 1
+
+    return S0_norm_stack
+
+
+
+def inten_normalization_3D(S0_stack):
+
+
+    S0_stack_norm = np.zeros_like(S0_stack)
+    S0_stack_norm = S0_stack / np.mean(S0_stack,axis=(-3,-2,-1))[...,np.newaxis,np.newaxis,np.newaxis]
+    S0_stack_norm -= 1
+
+    return S0_stack_norm
+
+
+def Dual_variable_Tikhonov_deconv_2D(AHA, b_vec, determinant=None, use_gpu=False, gpu_id=0, move_cpu=True):
+    
+    if determinant is None:
+        determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
+    
+    mu_sample_f = (b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant
+    phi_sample_f = (b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant
+
+    if use_gpu:
+        
+        globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
+        
+        mu_sample = cp.real(cp.fft.ifft2(mu_sample_f))
+        phi_sample = cp.real(cp.fft.ifft2(phi_sample_f))
+        
+        if move_cpu:
+            mu_sample = cp.asnumpy(mu_sample)
+            phi_sample = cp.asnumpy(phi_sample)
+        
+    else:
+        mu_sample = np.real(ifft2(mu_sample_f))
+        phi_sample = np.real(ifft2(phi_sample_f))
+
+    return mu_sample, phi_sample
+
+
+
+
+def Dual_variable_ADMM_TV_deconv_2D(AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose, use_gpu=False, gpu_id=0):
+
+
+    # ADMM deconvolution with anisotropic TV regularization
+    
+    N, M = b_vec[0].shape
+    Dx = np.zeros((N, M)); Dx[0,0] = 1; Dx[0,-1] = -1;
+    Dy = np.zeros((N, M)); Dy[0,0] = 1; Dy[-1,0] = -1;
+
+    if use_gpu:
+        
+        globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
+        
+        Dx = cp.fft.fft2(cp.array(Dx));
+        Dy = cp.fft.fft2(cp.array(Dy));
+
+        rho_term = rho*(cp.conj(Dx)*Dx + cp.conj(Dy)*Dy)
+
+        z_para = cp.zeros((4, N, M))
+        u_para = cp.zeros((4, N, M))
+        D_vec = cp.zeros((4, N, M))
+
+
+    else:
+        Dx = fft2(Dx);
+        Dy = fft2(Dy);
+
+        rho_term = rho*(np.conj(Dx)*Dx + np.conj(Dy)*Dy)
+
+        z_para = np.zeros((4, N, M))
+        u_para = np.zeros((4, N, M))
+        D_vec = np.zeros((4, N, M))
+
+
+    AHA[0] = AHA[0] + rho_term
+    AHA[3] = AHA[3] + rho_term
+
+    determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
+
+
+    for i in range(itr):
+
+
+        if use_gpu:
+
+            v_para = cp.fft.fft2(z_para - u_para)
+            b_vec_new = [b_vec[0] + rho*(cp.conj(Dx)*v_para[0] + cp.conj(Dy)*v_para[1]),\
+                         b_vec[1] + rho*(cp.conj(Dx)*v_para[2] + cp.conj(Dy)*v_para[3])]
+
+            mu_sample, phi_sample = Dual_variable_Tikhonov_deconv_2D(AHA, b_vec_new, determinant=determinant, \
+                                                                     use_gpu=use_gpu, gpu_id=gpu_id, move_cpu=not use_gpu)
+            
+
+            D_vec[0] = mu_sample - cp.roll(mu_sample, -1, axis=1)
+            D_vec[1] = mu_sample - cp.roll(mu_sample, -1, axis=0)
+            D_vec[2] = phi_sample - cp.roll(phi_sample, -1, axis=1)
+            D_vec[3] = phi_sample - cp.roll(phi_sample, -1, axis=0)
+
+
+            z_para = D_vec + u_para
+
+            z_para[:2,:,:] = softTreshold(z_para[:2,:,:], lambda_u/rho, use_gpu=True, gpu_id=gpu_id)
+            z_para[2:,:,:] = softTreshold(z_para[2:,:,:], lambda_p/rho, use_gpu=True, gpu_id=gpu_id)
+
+            u_para += D_vec - z_para
+
+            if i == itr-1:
+                mu_sample  = cp.asnumpy(mu_sample)
+                phi_sample = cp.asnumpy(phi_sample)
+
+
+
+
+        else:
+
+            v_para = fft2(z_para - u_para)
+            b_vec_new = [b_vec[0] + rho*(np.conj(Dx)*v_para[0] + np.conj(Dy)*v_para[1]),\
+                         b_vec[1] + rho*(np.conj(Dx)*v_para[2] + np.conj(Dy)*v_para[3])]
+            
+            mu_sample, phi_sample = Dual_variable_Tikhonov_deconv_2D(AHA, b_vec_new, determinant=determinant)
+            
+            D_vec[0] = mu_sample - np.roll(mu_sample, -1, axis=1)
+            D_vec[1] = mu_sample - np.roll(mu_sample, -1, axis=0)
+            D_vec[2] = phi_sample - np.roll(phi_sample, -1, axis=1)
+            D_vec[3] = phi_sample - np.roll(phi_sample, -1, axis=0)
+
+
+            z_para = D_vec + u_para
+
+            z_para[:2,:,:] = softTreshold(z_para[:2,:,:], lambda_u/rho)
+            z_para[2:,:,:] = softTreshold(z_para[2:,:,:], lambda_p/rho)
+
+            u_para += D_vec - z_para
+
+        if verbose:
+            print('Number of iteration computed (%d / %d)'%(i+1,itr))
+
+    return mu_sample, phi_sample
+
+
+
+def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, gpu_id=0):
+    
+    
+    if use_gpu:
+        
+        globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
+        
+        S0_stack_f = cp.fft.fftn(cp.array(S0_stack.astype('float32')), axes=(-3,-2,-1))
+        H_eff      = cp.array(H_eff.astype('complex64'))
+        
+        f_real     = cp.asnumpy(cp.real(cp.fft.ifftn(S0_stack_f * cp.conj(H_eff) / (cp.abs(H_eff)**2 + reg_re),axes=(-3,-2,-1))))
+    else:
+        
+        S0_stack_f = fftn(S0_stack, axes=(-3,-2,-1))
+        
+        f_real     = np.real(ifftn(S0_stack_f * np.conj(H_eff) / (np.abs(H_eff)**2 + reg_re),axes=(-3,-2,-1)))
+        
+    return f_real
+
+
+def Dual_variable_Tikhonov_deconv_3D(AHA, b_vec, determinant=None, use_gpu=False, gpu_id=0, move_cpu=True):
+    
+    if determinant is None:
+        determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
+    
+    f_real_f = (b_vec[0]*AHA[3] - b_vec[1]*AHA[1]) / determinant
+    f_imag_f = (b_vec[1]*AHA[0] - b_vec[0]*AHA[2]) / determinant
+
+    if use_gpu:
+        
+        globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
+        
+        f_real = cp.real(cp.fft.ifftn(f_real_f))
+        f_imag = cp.real(cp.fft.ifftn(f_imag_f))
+        
+        if move_cpu:
+            f_real = cp.asnumpy(f_real)
+            f_imag = cp.asnumpy(f_imag)
+        
+    else:
+        f_real = np.real(ifftn(f_real_f))
+        f_imag = np.real(ifftn(f_imag_f))
+
+    return f_real, f_imag
+
+
+
+def Single_variable_ADMM_TV_deconv_3D(S0_stack, H_eff, rho, reg_re, lambda_re, itr, verbose, use_gpu=False, gpu_id=0):
+    
+    
+    N, M, N_defocus = S0_stack.shape
+    
+    Dx = np.zeros((N, M, N_defocus)); Dx[0,0,0] = 1; Dx[0,-1,0] = -1;
+    Dy = np.zeros((N, M, N_defocus)); Dy[0,0,0] = 1; Dy[-1,0,0] = -1;
+    Dz = np.zeros((N, M, N_defocus)); Dz[0,0,0] = 1; Dz[0,0,-1] = -1;
+    
+    if use_gpu:
+        
+        globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
+        
+        S0_stack_f = cp.fft.fftn(cp.array(S0_stack.astype('float32')), axes=(0,1,2))
+        H_eff = cp.array(H_eff.astype('complex64'))
+        
+        Dx = cp.fft.fftn(cp.array(Dx),axes=(0,1,2))
+        Dy = cp.fft.fftn(cp.array(Dy),axes=(0,1,2))
+        Dz = cp.fft.fftn(cp.array(Dz),axes=(0,1,2))
+
+        rho_term = rho*(cp.conj(Dx)*Dx + cp.conj(Dy)*Dy + cp.conj(Dz)*Dz)+reg_re
+        AHA      = cp.abs(H_eff)**2 + rho_term
+        b_vec    = S0_stack_f * cp.conj(H_eff)
+
+        z_para = cp.zeros((3, N, M, N_defocus))
+        u_para = cp.zeros((3, N, M, N_defocus))
+        D_vec  = cp.zeros((3, N, M, N_defocus))
+
+
+
+
+        for i in range(itr):
+            v_para    = cp.fft.fftn(z_para - u_para, axes=(1,2,3))
+            b_vec_new = b_vec + rho*(cp.conj(Dx)*v_para[0] + cp.conj(Dy)*v_para[1] + cp.conj(Dz)*v_para[2])
+
+
+            f_real = cp.real(cp.fft.ifftn(b_vec_new / AHA, axes=(0,1,2)))
+
+            D_vec[0] = f_real - cp.roll(f_real, -1, axis=1)
+            D_vec[1] = f_real - cp.roll(f_real, -1, axis=0)
+            D_vec[2] = f_real - cp.roll(f_real, -1, axis=2)
+
+
+            z_para = D_vec + u_para
+
+            z_para = softTreshold(z_para, lambda_re/rho, use_gpu=True, gpu_id=gpu_id)
+
+            u_para += D_vec - z_para
+
+            if verbose:
+                print('Number of iteration computed (%d / %d)'%(i+1,itr))
+
+            if i == itr-1:
+                f_real = cp.asnumpy(f_real)
+    
+    else:
+        
+        S0_stack_f = fftn(S0_stack, axes=(0,1,2))
+        
+        Dx = fftn(Dx,axes=(0,1,2));
+        Dy = fftn(Dy,axes=(0,1,2));
+        Dz = fftn(Dz,axes=(0,1,2));
+
+        rho_term = rho*(np.conj(Dx)*Dx + np.conj(Dy)*Dy + np.conj(Dz)*Dz)+reg_re
+        AHA      = np.abs(H_eff)**2 + rho_term
+        b_vec    = S0_stack_f * np.conj(H_eff)
+
+        z_para = np.zeros((3, N, M, N_defocus))
+        u_para = np.zeros((3, N, M, N_defocus))
+        D_vec  = np.zeros((3, N, M, N_defocus))
+
+
+        for i in range(itr):
+            v_para    = fftn(z_para - u_para, axes=(1,2,3))
+            b_vec_new = b_vec + rho*(np.conj(Dx)*v_para[0] + np.conj(Dy)*v_para[1] + np.conj(Dz)*v_para[2])
+
+
+            f_real = np.real(ifftn(b_vec_new / AHA, axes=(0,1,2)))
+
+            D_vec[0] = f_real - np.roll(f_real, -1, axis=1)
+            D_vec[1] = f_real - np.roll(f_real, -1, axis=0)
+            D_vec[2] = f_real - np.roll(f_real, -1, axis=2)
+
+
+            z_para = D_vec + u_para
+
+            z_para = softTreshold(z_para, lambda_re/rho)
+
+            u_para += D_vec - z_para
+
+            if verbose:
+                print('Number of iteration computed (%d / %d)'%(i+1,itr))
+                
+    return f_real
+
+
+def Dual_variable_ADMM_TV_deconv_3D(AHA, b_vec, rho, lambda_re, lambda_im, itr, verbose, use_gpu=False, gpu_id=0):
+
+
+    # ADMM deconvolution with anisotropic TV regularization
+    
+    N, M, L = b_vec[0].shape
+    Dx = np.zeros((N, M, L)); Dx[0,0,0] = 1; Dx[0,-1,0] = -1;
+    Dy = np.zeros((N, M, L)); Dy[0,0,0] = 1; Dy[-1,0,0] = -1;
+    Dz = np.zeros((N, M, L)); Dz[0,0,0] = 1; Dz[0,0,-1] = -1;
+    
+
+    if use_gpu:
+        
+        globals()['cp'] = __import__("cupy")
+        cp.cuda.Device(gpu_id).use()
+        
+        Dx = cp.fft.fftn(cp.array(Dx));
+        Dy = cp.fft.fftn(cp.array(Dy));
+        Dz = cp.fft.fftn(cp.array(Dz));
+
+        rho_term = rho*(cp.conj(Dx)*Dx + cp.conj(Dy)*Dy + cp.conj(Dz)*Dz)
+
+        z_para = cp.zeros((6, N, M, L))
+        u_para = cp.zeros((6, N, M, L))
+        D_vec = cp.zeros((6, N, M, L))
+
+
+    else:
+        Dx = fftn(Dx);
+        Dy = fftn(Dy);
+        Dz = fftn(Dz);
+
+        rho_term = rho*(np.conj(Dx)*Dx + np.conj(Dy)*Dy + np.conj(Dz)*Dz)
+
+        z_para = np.zeros((6, N, M, L))
+        u_para = np.zeros((6, N, M, L))
+        D_vec = np.zeros((6, N, M, L))
+
+
+    AHA[0] = AHA[0] + rho_term
+    AHA[3] = AHA[3] + rho_term
+
+    determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
+
+
+    for i in range(itr):
+
+
+        if use_gpu:
+
+            v_para = cp.fft.fftn(z_para - u_para,axes=(1,2,3))
+            b_vec_new = [b_vec[0] + rho*(cp.conj(Dx)*v_para[0] + cp.conj(Dy)*v_para[1] + cp.conj(Dz)*v_para[2]),\
+                         b_vec[1] + rho*(cp.conj(Dx)*v_para[3] + cp.conj(Dy)*v_para[4] + cp.conj(Dz)*v_para[5])]
+
+            f_real, f_imag = Dual_variable_Tikhonov_deconv_3D(AHA, b_vec_new, determinant=determinant, \
+                                                                     use_gpu=use_gpu, gpu_id=gpu_id, move_cpu=not use_gpu)
+            
+
+            D_vec[0] = f_real - cp.roll(f_real, -1, axis=1)
+            D_vec[1] = f_real - cp.roll(f_real, -1, axis=0)
+            D_vec[2] = f_real - cp.roll(f_real, -1, axis=2)
+            D_vec[3] = f_imag - cp.roll(f_imag, -1, axis=1)
+            D_vec[4] = f_imag - cp.roll(f_imag, -1, axis=0)
+            D_vec[5] = f_imag - cp.roll(f_imag, -1, axis=2)
+
+
+            z_para = D_vec + u_para
+
+            z_para[:3,:,:] = softTreshold(z_para[:3,:,:], lambda_re/rho, use_gpu=True, gpu_id=gpu_id)
+            z_para[3:,:,:] = softTreshold(z_para[3:,:,:], lambda_im/rho, use_gpu=True, gpu_id=gpu_id)
+
+            u_para += D_vec - z_para
+
+            if i == itr-1:
+                f_real  = cp.asnumpy(f_real)
+                f_imag = cp.asnumpy(f_imag)
+
+
+
+
+        else:
+            
+            v_para = fftn(z_para - u_para,axes=(1,2,3))
+            b_vec_new = [b_vec[0] + rho*(np.conj(Dx)*v_para[0] + np.conj(Dy)*v_para[1] + np.conj(Dz)*v_para[2]),\
+                         b_vec[1] + rho*(np.conj(Dx)*v_para[3] + np.conj(Dy)*v_para[4] + np.conj(Dz)*v_para[5])]
+
+            
+            f_real, f_imag = Dual_variable_Tikhonov_deconv_3D(AHA, b_vec_new, determinant=determinant)
+            
+            
+            D_vec[0] = f_real - np.roll(f_real, -1, axis=1)
+            D_vec[1] = f_real - np.roll(f_real, -1, axis=0)
+            D_vec[2] = f_real - np.roll(f_real, -1, axis=2)
+            D_vec[3] = f_imag - np.roll(f_imag, -1, axis=1)
+            D_vec[4] = f_imag - np.roll(f_imag, -1, axis=0)
+            D_vec[5] = f_imag - np.roll(f_imag, -1, axis=2)
+            
+            z_para = D_vec + u_para
+
+            z_para[:3,:,:] = softTreshold(z_para[:3,:,:], lambda_re/rho)
+            z_para[3:,:,:] = softTreshold(z_para[3:,:,:], lambda_im/rho)
+
+            u_para += D_vec - z_para
+
+        if verbose:
+            print('Number of iteration computed (%d / %d)'%(i+1,itr))
+
+    return f_real, f_imag

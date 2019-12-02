@@ -208,6 +208,47 @@ def gen_Greens_function_z(fxx, fyy, Pupil_support, lambda_in, z_stack):
     
     return G_fun_z
 
+def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
+    
+    '''
+    
+    Generate forward dyadic Green's function in u_x, u_y, z space
+    
+    Input:
+        fxx           : 2D spatial frequency array in x-dimension
+        fyy           : 2D spatial frequency array in y-dimension
+        G_fun_z       : forward Green's function in u_x, u_y, z space (3D)
+        Pupil_support : the array that defines the support of the pupil function
+        lambda_in     : wavelength of the light
+    
+    Output:
+        G_tensor_z    : forward dyadic Green's function in u_x, u_y, z space
+    '''
+    
+    N, M = fxx.shape
+    fr = (fxx**2 + fyy**2)**(1/2)
+    oblique_factor = ((1 - lambda_in**2 * fr**2) *Pupil_support)**(1/2) / lambda_in
+    
+    diff_filter = np.zeros((3,)+G_fun_z.shape, complex)
+    diff_filter[0] = (1j*2*np.pi*fxx*Pupil_support)[...,np.newaxis]
+    diff_filter[1] = (1j*2*np.pi*fyy*Pupil_support)[...,np.newaxis]
+    diff_filter[2] = (1j*2*np.pi*oblique_factor)[...,np.newaxis]
+    
+    G_tensor_z = np.zeros((3, 3)+G_fun_z.shape, complex)
+    
+        
+    for i in range(3):
+        for j in range(3):
+            G_tensor_z[i,j] = G_fun_z*diff_filter[i]*diff_filter[j]/(2*np.pi/lambda_in)**2
+            if i == j:
+                G_tensor_z[i,i] += G_fun_z
+    
+    
+        
+    return G_tensor_z
+    
+    
+
 def gen_Greens_function_real(img_size, ps, psz, lambda_in):
     
     '''
@@ -349,21 +390,22 @@ def WOTF_2D_compute(Source, Pupil, use_gpu=False, gpu_id=0):
     
     return Hu, Hp
 
-def WOTF_semi_2D_compute(Source, Pupil, Hz_det, G_fun_z, use_gpu=False, gpu_id=0):
+def WOTF_semi_2D_compute(Source_support, Source, Pupil, Hz_det, G_fun_z, use_gpu=False, gpu_id=0):
     
     '''
     
     Compute semi-2D weak object transfer function (semi-2D WOTF)
     
     Input:
-        Source  : Source pattern with size of (Ny, Nx)
-        Pupil   : Pupil function with size of (Ny, Nx)
-        Hz_det  : One slice of propagation kernel with size of (Ny, Nx)
-        G_fun_z : One slice of scaled 2D Fourier transform of Green's function in xy-dimension with size of (Ny, Nx)
+        Source_support : Source pattern support with size of (Ny, Nx)
+        Source         : Source with spatial frequency modulation with size of (Ny, Nx)
+        Pupil          : Pupil function with size of (Ny, Nx)
+        Hz_det         : One slice of propagation kernel with size of (Ny, Nx)
+        G_fun_z        : One slice of scaled 2D Fourier transform of Green's function in xy-dimension with size of (Ny, Nx)
     
     Output:
-        Hu     : absorption transfer function with size of (Ny, Nx) 
-        Hp     : phase transfer function with size of (Ny, Nx)
+        Hu             : absorption transfer function with size of (Ny, Nx) 
+        Hp             : phase transfer function with size of (Ny, Nx)
     
     '''
     
@@ -372,13 +414,14 @@ def WOTF_semi_2D_compute(Source, Pupil, Hz_det, G_fun_z, use_gpu=False, gpu_id=0
         cp.cuda.Device(gpu_id).use()
         
         Source = cp.array(Source)
+        Source_support = cp.array(Source_support)
         Pupil  = cp.array(Pupil)        
         Hz_det = cp.array(Hz_det)
         G_fun_z = cp.array(G_fun_z)
         
         H1 = cp.fft.ifft2(cp.conj(cp.fft.fft2(Source * Pupil * Hz_det))*cp.fft.fft2(Pupil * G_fun_z))
         H2 = cp.fft.ifft2(cp.fft.fft2(Source * Pupil * Hz_det)*cp.conj(cp.fft.fft2(Pupil * G_fun_z)))
-        I_norm = cp.sum(Source * Pupil * cp.conj(Pupil))
+        I_norm = cp.sum(Source_support * Pupil * cp.conj(Pupil))
         Hu = (H1 + H2)/I_norm
         Hp = 1j*(H1-H2)/I_norm
         
@@ -389,14 +432,14 @@ def WOTF_semi_2D_compute(Source, Pupil, Hz_det, G_fun_z, use_gpu=False, gpu_id=0
     
         H1 = ifft2(fft2(Source * Pupil * Hz_det).conj()*fft2(Pupil * G_fun_z))
         H2 = ifft2(fft2(Source * Pupil * Hz_det)*fft2(Pupil * G_fun_z).conj())
-        I_norm = np.sum(Source * Pupil * Pupil.conj())
+        I_norm = np.sum(Source_support * Pupil * Pupil.conj())
         Hu = (H1 + H2)/I_norm
         Hp = 1j*(H1-H2)/I_norm
     
     return Hu, Hp
 
 
-def WOTF_3D_compute(Source, Pupil, Hz_det, G_fun_z, psz, use_gpu=False, gpu_id=0):
+def WOTF_3D_compute(Source_support, Source, Pupil, Hz_det, G_fun_z, psz, use_gpu=False, gpu_id=0):
     
     
     '''
@@ -404,15 +447,16 @@ def WOTF_3D_compute(Source, Pupil, Hz_det, G_fun_z, psz, use_gpu=False, gpu_id=0
     Compute 3D weak object transfer function (2D WOTF)
     
     Input:
-        Source  : Source pattern with size of (Ny, Nx)
-        Pupil   : Pupil function with size of (Ny, Nx)
-        Hz_det  : Propagation kernel with size of (Ny, Nx, Nz)
-        G_fun_z : 2D Fourier transform of Green's function in xy-dimension with size of (Ny, Nx, Nz)
-        psz     : pixel size in the z-dimension
+        Source_support : Source pattern support with size of (Ny, Nx)
+        Source         : Source with spatial frequency modulation with size of (Ny, Nx)
+        Pupil          : Pupil function with size of (Ny, Nx)
+        Hz_det         : Propagation kernel with size of (Ny, Nx, Nz)
+        G_fun_z        : 2D Fourier transform of Green's function in xy-dimension with size of (Ny, Nx, Nz)
+        psz            : pixel size in the z-dimension
         
     Output:
-        H_re    : transfer function of real refractive index with size of (Ny, Nx, Nz) 
-        H_im    : transfer function of imaginary refractive index with size of (Ny, Nx, Nz)
+        H_re           : transfer function of real refractive index with size of (Ny, Nx, Nz) 
+        H_im           : transfer function of imaginary refractive index with size of (Ny, Nx, Nz)
     
     '''
     
@@ -426,22 +470,23 @@ def WOTF_3D_compute(Source, Pupil, Hz_det, G_fun_z, psz, use_gpu=False, gpu_id=0
         cp.cuda.Device(gpu_id).use()
         
         Source = cp.array(Source)
+        Source_support = cp.array(Source_support)
         Pupil  = cp.array(Pupil)
         Hz_det = cp.array(Hz_det)
         G_fun_z = cp.array(G_fun_z)
         window = cp.array(window)
         
-        H1 = cp.fft.ifft2(cp.conj(cp.fft.fft2(Source[:,:,cp.newaxis] * Pupil[:,:,cp.newaxis] * Hz_det, axes=(0,1)))*\
+        H1 = cp.fft.ifft2(cp.conj(cp.fft.fft2((Source * Pupil)[:,:,cp.newaxis] * Hz_det, axes=(0,1)))*\
                    cp.fft.fft2(Pupil[:,:,cp.newaxis] * G_fun_z, axes=(0,1)), axes=(0,1))
         H1 = H1*window[cp.newaxis,cp.newaxis,:]
         H1 = cp.fft.fft(H1, axis=2)*psz
-        H2 = cp.fft.ifft2(cp.fft.fft2(Source[:,:,cp.newaxis] * Pupil[:,:,cp.newaxis] * Hz_det, axes=(0,1))*\
+        H2 = cp.fft.ifft2(cp.fft.fft2((Source * Pupil)[:,:,cp.newaxis] * Hz_det, axes=(0,1))*\
                    cp.conj(cp.fft.fft2(Pupil[:,:,cp.newaxis] * G_fun_z, axes=(0,1))), axes=(0,1))
         H2 = H2*window[cp.newaxis,cp.newaxis,:]
         H2 = cp.fft.fft(H2, axis=2)*psz
     
 
-        I_norm = cp.sum(Source * Pupil * cp.conj(Pupil))
+        I_norm = cp.sum(Source_support * Pupil * cp.conj(Pupil))
         H_re = (H1 + H2)/I_norm
         H_im = 1j*(H1-H2)/I_norm
         
@@ -452,16 +497,16 @@ def WOTF_3D_compute(Source, Pupil, Hz_det, G_fun_z, psz, use_gpu=False, gpu_id=0
     
         
 
-        H1 = ifft2(fft2(Source[:,:,np.newaxis] * Pupil[:,:,np.newaxis] * Hz_det, axes=(0,1)).conj()*\
+        H1 = ifft2(fft2((Source * Pupil)[:,:,np.newaxis] * Hz_det, axes=(0,1)).conj()*\
                    fft2(Pupil[:,:,np.newaxis] * G_fun_z, axes=(0,1)), axes=(0,1))
         H1 = H1*window[np.newaxis,np.newaxis,:]
         H1 = fft(H1, axis=2)*psz
-        H2 = ifft2(fft2(Source[:,:,np.newaxis] * Pupil[:,:,np.newaxis] * Hz_det, axes=(0,1))*\
+        H2 = ifft2(fft2((Source * Pupil)[:,:,np.newaxis] * Hz_det, axes=(0,1))*\
                    fft2(Pupil[:,:,np.newaxis] * G_fun_z, axes=(0,1)).conj(), axes=(0,1))
         H2 = H2*window[np.newaxis,np.newaxis,:]
         H2 = fft(H2, axis=2)*psz
 
-        I_norm = np.sum(Source * Pupil * Pupil.conj())
+        I_norm = np.sum(Source_support * Pupil * Pupil.conj())
         H_re = (H1 + H2)/I_norm
         H_im = 1j*(H1-H2)/I_norm
     
