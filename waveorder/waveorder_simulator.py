@@ -45,7 +45,7 @@ def Jones_PC_forward_model(t_eigen, sa_orientation, fxx, fyy, xx, yy, N_defocus,
 class waveorder_microscopy_simulator:
     
     def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi,\
-                 n_media=1, illu_mode='BF', NA_illu_in=None, Source=None, use_gpu=False, gpu_id=0):
+                 n_media=1, illu_mode='BF', NA_illu_in=None, Source=None, Source_PolState=np.array([1, 1j]), use_gpu=False, gpu_id=0):
         
         '''
         
@@ -86,36 +86,7 @@ class waveorder_microscopy_simulator:
         
         # illumination setup
         
-        if illu_mode == 'BF':
-            self.Source = gen_Pupil(self.fxx, self.fyy, self.NA_illu, self.lambda_illu)
-            self.N_pattern = 1
-        
-        elif illu_mode == 'PH':
-            if NA_illu_in == None:
-                raise('No inner rim NA specified in the PH illumination mode')
-            else:
-                self.NA_illu_in  = NA_illu_in/n_media
-                inner_pupil = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in+0.005/self.n_media, self.lambda_illu)
-                self.Source = gen_Pupil(self.fxx, self.fyy, self.NA_illu, self.lambda_illu)
-                self.Source -= inner_pupil
-                
-#                 self.Source = ifftshift(np.roll(fftshift(self.Source),(1,0),axis=(0,1)))
-
-                
-                Pupil_ring_out = gen_Pupil(self.fxx, self.fyy, self.NA_illu+0.03/self.n_media, self.lambda_illu)
-                Pupil_ring_in = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in-0.01/self.n_media, self.lambda_illu)
-                
-                
-                
-                self.Pupil_obj = self.Pupil_obj*np.exp((Pupil_ring_out-Pupil_ring_in)*(np.log(0.7)-1j*(np.pi/2 - 0.0*np.pi)))
-                self.N_pattern = 1
-        elif illu_mode == 'Arbitrary':
-    
-            self.Source = Source.copy()
-            if Source.ndim == 2:
-                self.N_pattern = 1
-            else:
-                self.N_pattern = len(Source)
+        self.illumination_setup(illu_mode, NA_illu_in, Source, Source_PolState)
                 
 
         self.analyzer_para = np.array([[np.pi/2, np.pi], \
@@ -126,7 +97,54 @@ class waveorder_microscopy_simulator:
         
         self.N_channel = len(self.analyzer_para)
         
+    
+    def illumination_setup(self, illu_mode, NA_illu_in, Source, Source_PolState):
         
+        
+        if illu_mode == 'BF':
+            self.Source = gen_Pupil(self.fxx, self.fyy, self.NA_illu, self.lambda_illu)
+            self.N_pattern = 1
+        
+        elif illu_mode == 'PH':
+            if NA_illu_in == None:
+                raise('No inner rim NA specified in the PH illumination mode')
+            else:
+                self.NA_illu_in  = NA_illu_in/self.n_media
+                inner_pupil = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in/self.n_media, self.lambda_illu)
+                self.Source = gen_Pupil(self.fxx, self.fyy, self.NA_illu, self.lambda_illu)
+                self.Source -= inner_pupil
+                
+                
+                Pupil_ring_out = gen_Pupil(self.fxx, self.fyy, self.NA_illu/self.n_media, self.lambda_illu)
+                Pupil_ring_in = gen_Pupil(self.fxx, self.fyy, self.NA_illu_in/self.n_media, self.lambda_illu)
+                
+                
+                
+                self.Pupil_obj = self.Pupil_obj*np.exp((Pupil_ring_out-Pupil_ring_in)*(np.log(0.7)-1j*(np.pi/2 - 0.0*np.pi)))
+                self.N_pattern = 1
+                
+                
+        elif illu_mode == 'Arbitrary':
+    
+            self.Source = Source.copy()
+            if Source.ndim == 2:
+                self.N_pattern = 1
+            else:
+                self.N_pattern = len(Source)
+            
+            self.Source_PolState = np.zeros((self.N_pattern, 2), complex)
+            
+            if Source_PolState.ndim == 1:
+                for i in range(self.N_pattern):
+                    self.Source_PolState[i] = Source_PolState/(np.sum(np.abs(Source_PolState)**2))**(1/2)
+            else:
+                if len(Source_PolState) != self.N_pattern:
+                    raise('The length of Source_PolState needs to be either 1 or the same as N_pattern')
+                for i in range(self.N_pattern):
+                    self.Source_PolState[i] = Source_PolState[i]/(np.sum(np.abs(Source_PolState[i])**2))**(1/2)
+                
+                
+    
         
     def simulate_waveorder_measurements(self, t_eigen, sa_orientation, multiprocess=False):        
         
@@ -584,15 +602,27 @@ class waveorder_microscopy_simulator:
 
 
                 if fr[idx_y[j], idx_x[j]] ==0:
-                    E_in_amp[0] = 1
-                    E_in_amp[1] = 1j
+                    E_in_amp[0] = self.Source_PolState[i,0]
+                    E_in_amp[1] = self.Source_PolState[i,1]
                 else:
+                    E_in_amp[0] = (self.Source_PolState[i,0]*((self.fxx[idx_y[j], idx_x[j]]**2)*(1 - self.lambda_illu**2 * fr[idx_y[j], idx_x[j]]**2)**(1/2) + \
+                                                              self.fyy[idx_y[j], idx_x[j]]**2) + \
+                                   self.Source_PolState[i,1]*(self.fxx[idx_y[j], idx_x[j]]*self.fyy[idx_y[j], idx_x[j]] * \
+                                                              ((1 - self.lambda_illu**2 * fr[idx_y[j], idx_x[j]]**2)**(1/2)-1)))/fr[idx_y[j], idx_x[j]]**2
+                    
+                    E_in_amp[1] = (self.Source_PolState[i,0]*(self.fxx[idx_y[j], idx_x[j]]*self.fyy[idx_y[j], idx_x[j]] * \
+                                                              ((1 - self.lambda_illu**2 * fr[idx_y[j], idx_x[j]]**2)**(1/2)-1)) + \
+                                   self.Source_PolState[i,1]*((self.fyy[idx_y[j], idx_x[j]]**2)*(1 - self.lambda_illu**2 * fr[idx_y[j], idx_x[j]]**2)**(1/2) + \
+                                                              self.fxx[idx_y[j], idx_x[j]]**2))/fr[idx_y[j], idx_x[j]]**2
+                    E_in_amp[2] = -self.lambda_illu*(self.Source_PolState[i,0]*self.fxx[idx_y[j], idx_x[j]] + \
+                                                     self.Source_PolState[i,1]*self.fyy[idx_y[j], idx_x[j]])
+                    
 
-                    E_in_amp[0] = (self.fyy[idx_y[j], idx_x[j]] + \
-                                   1j*self.fxx[idx_y[j], idx_x[j]]*(1 - self.lambda_illu**2 * fr[idx_y[j], idx_x[j]]**2)**(1/2))/fr[idx_y[j], idx_x[j]]
-                    E_in_amp[1] = (-self.fxx[idx_y[j], idx_x[j]] + \
-                                   1j*self.fyy[idx_y[j], idx_x[j]]*(1 - self.lambda_illu**2 * fr[idx_y[j], idx_x[j]]**2)**(1/2))/fr[idx_y[j], idx_x[j]]
-                    E_in_amp[2] = -1j*self.lambda_illu*fr[idx_y[j], idx_x[j]]
+#                     E_in_amp[0] = (self.fyy[idx_y[j], idx_x[j]] + \
+#                                    1j*self.fxx[idx_y[j], idx_x[j]]*(1 - self.lambda_illu**2 * fr[idx_y[j], idx_x[j]]**2)**(1/2))/fr[idx_y[j], idx_x[j]]
+#                     E_in_amp[1] = (-self.fxx[idx_y[j], idx_x[j]] + \
+#                                    1j*self.fyy[idx_y[j], idx_x[j]]*(1 - self.lambda_illu**2 * fr[idx_y[j], idx_x[j]]**2)**(1/2))/fr[idx_y[j], idx_x[j]]
+#                     E_in_amp[2] = -1j*self.lambda_illu*fr[idx_y[j], idx_x[j]]
 
                 E_in_amp *= (Source_current[idx_y[j], idx_x[j]]/2)**(1/2)
 

@@ -48,10 +48,10 @@ def Jones_to_Stokes(Ein, use_gpu=False, gpu_id=0):
         globals()['cp'] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
         
-        S0 = (cp.abs(Ein[0])**2 + cp.abs(Ein[1])**2)[cp.newaxis,:,:,:]
-        S1 = (cp.abs(Ein[0])**2 - cp.abs(Ein[1])**2)[cp.newaxis,:,:,:]
-        S2 = (cp.real(Ein[0].conj()*Ein[1] + Ein[0]*Ein[1].conj()))[cp.newaxis,:,:,:]
-        S3 = (cp.real(-1j*(Ein[0].conj()*Ein[1] - Ein[0]*Ein[1].conj())))[cp.newaxis,:,:,:]
+        S0 = (cp.abs(Ein[0])**2 + cp.abs(Ein[1])**2)[cp.newaxis,...]
+        S1 = (cp.abs(Ein[0])**2 - cp.abs(Ein[1])**2)[cp.newaxis,...]
+        S2 = (cp.real(Ein[0].conj()*Ein[1] + Ein[0]*Ein[1].conj()))[cp.newaxis,...]
+        S3 = (cp.real(-1j*(Ein[0].conj()*Ein[1] - Ein[0]*Ein[1].conj())))[cp.newaxis,...]
         Stokes = cp.concatenate((S0,S1,S2,S3), axis=0)
         
     else:
