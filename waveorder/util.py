@@ -1,5 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pywt
+import time
+
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from PIL import Image
 from scipy.ndimage import uniform_filter
@@ -7,6 +10,9 @@ from scipy.ndimage import uniform_filter
 
 import re
 numbers = re.compile(r'(\d+)')
+
+
+
 
 
 def numericalSort(value):
@@ -198,14 +204,44 @@ def softTreshold(x, threshold, use_gpu=False, gpu_id=0):
         globals()['cp'] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
         magnitude = cp.abs(x)
-        ratio = cp.maximum(0, magnitude-threshold) / magnitude
+        ratio = cp.maximum(0, magnitude-threshold) / (magnitude+1e-16)
     else:
         magnitude = np.abs(x)
-        ratio = np.maximum(0, magnitude-threshold) / magnitude
+        ratio = np.maximum(0, magnitude-threshold) / (magnitude+1e-16)
         
     x_threshold = x*ratio
     
     return x_threshold
+
+
+def wavelet_softThreshold(img, wavelet, threshold, level = 1):
+    
+    '''
+    
+    soft thresholding in the nD wavelet space
+    
+    Input:
+        img       : ndarray, image or volume in nD space
+        wavelet   : str,     type of wavelet to use (pywt.wavelist() to find the whole list)
+        threshold : float,   threshold value 
+        
+    Output:
+        img_thres : ndarray, denoised image or volume in nD space
+    
+    '''
+    
+    coeffs = pywt.wavedecn(img, wavelet, level=level)
+    
+    for i in range(level+1):
+        if i == 0:
+            coeffs[i] = softTreshold(coeffs[i], threshold)
+        else:
+            for item in coeffs[i]:
+                coeffs[i][item] = softTreshold(coeffs[i][item], threshold)
+
+    img_thres = pywt.waverecn(coeffs, wavelet)
+    
+    return img_thres
 
 def array_based_4x4_det(a):
     
@@ -738,3 +774,100 @@ def Dual_variable_ADMM_TV_deconv_3D(AHA, b_vec, rho, lambda_re, lambda_im, itr, 
             print('Number of iteration computed (%d / %d)'%(i+1,itr))
 
     return f_real, f_imag
+
+
+def cylindrical_shell_local_orientation(VOI, ps, psz, scale, beta=0.5, c_para=0.5, evec_idx = 0):
+    
+    # Hessian matrix filtering
+
+    N, M, L = VOI.shape
+
+    x_r = (np.r_[:M]-M//2)*ps
+    y_r = (np.r_[:N]-N//2)*ps
+    z_r = (np.r_[:L]-L//2)*psz
+
+
+    xx_r, yy_r, zz_r = np.meshgrid(x_r,y_r,z_r)
+
+    fx_r = ifftshift((np.r_[:M]-M//2)/ps/M)
+    fy_r = ifftshift((np.r_[:N]-N//2)/ps/N)
+    fz_r = ifftshift((np.r_[:L]-L//2)/psz/L)
+    fxx_r, fyy_r, fzz_r = np.meshgrid(fx_r,fy_r,fz_r)
+
+    diff_filter = np.zeros((3, N, M, L), complex)
+    diff_filter[0] = 1j*2*np.pi*fxx_r
+    diff_filter[1] = 1j*2*np.pi*fyy_r
+    diff_filter[2] = 1j*2*np.pi*fzz_r
+
+    V_func = np.zeros_like(VOI)
+    kernel = np.zeros((len(scale),)+(N,M,L))
+
+
+    t0 = time.time()
+
+    for i,s in enumerate(scale):
+        
+        kernel[i] = np.exp(-(xx_r**2 + yy_r**2 + zz_r**2)/2/s**2)/(2*np.pi*s**2)**(3/2)
+        Gaussian_3D_f = fftn(ifftshift(kernel[i]))*(ps*ps*psz)
+
+
+        VOI_filtered = np.zeros((3,3,N,M,L))
+
+
+        for p in range(3):
+            for q in range(3):
+                Hessian_filter = ((s)**2)*Gaussian_3D_f*diff_filter[p]*diff_filter[q]
+                VOI_filtered[p,q] = np.real(ifftn(fftn(VOI)*Hessian_filter)/(ps*ps*psz))
+
+        eigen_val, eigen_vec = np.linalg.eig(np.transpose(VOI_filtered,(2,3,4,0,1)))
+        
+        eig_val_idx = np.zeros((3,N,M,L))
+        for p in range(3):
+            eig_val_idx[p] = np.argpartition(np.abs(eigen_val), p, axis=3)[:,:,:,p]
+        
+        eig_val_sort = np.zeros((3, N, M, L), complex)
+        
+
+        for p in range(3):
+            for q in range(3):
+                eig_val_sort[q,eig_val_idx[q]==p] = eigen_val[eig_val_idx[q]==p,p]
+
+
+        RB = np.abs(eig_val_sort[2]) / np.sqrt(np.abs(eig_val_sort[0])*np.abs(eig_val_sort[1]))
+        S = np.sqrt(np.sum(np.abs(eig_val_sort)**2, axis=0))
+
+        c = c_para*np.max(S)
+
+        V_func_temp = (1-np.exp(-RB**2/2/beta**2))*(1-np.exp(-S**2/2/c**2))
+        V_func_temp[np.real(eig_val_sort[2])>0] = 0
+
+        if i ==0:
+            V_func = V_func_temp.copy()
+            orientation_vec = np.zeros((N, M, L, 3))
+
+            for p in range(3):
+                orientation_vec[eig_val_idx[evec_idx]==p] = np.real(eigen_vec[eig_val_idx[evec_idx]==p,:,p])
+        else:
+            larger_V_idx = (V_func_temp>V_func)
+            V_func[larger_V_idx] = V_func_temp[larger_V_idx]
+
+            for p in range(3):
+                orientation_vec[np.logical_and(larger_V_idx,eig_val_idx[evec_idx]==p)] = np.real(eigen_vec[np.logical_and(larger_V_idx,eig_val_idx[evec_idx]==p),:,p])
+
+        print('Finish V_map computation for scale = %.2f, elapsed time: %.2f'% (s, time.time()-t0))
+
+
+
+
+    orientation_vec = np.transpose(orientation_vec, (3,0,1,2))
+
+    norm = np.sqrt(np.sum(np.abs(orientation_vec)**2,axis=0))
+    theta = np.arccos(np.clip(orientation_vec[2]/norm,-1,1))
+    azimuth = np.arctan2(orientation_vec[1], orientation_vec[0])
+    azimuth = azimuth%(2*np.pi)
+    theta[azimuth>np.pi] = np.pi-theta[azimuth>np.pi]
+    azimuth[azimuth>np.pi] = azimuth[azimuth>np.pi] - np.pi
+
+    print('Finish local orientation extraction, elapsed time:' + str(time.time()-t0))
+    
+    return azimuth, theta, V_func, kernel

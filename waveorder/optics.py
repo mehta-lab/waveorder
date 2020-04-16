@@ -678,3 +678,32 @@ def SEAGLE_vec_backward(E_diff, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0
         
     return grad_E
 
+
+
+def scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='positive', reg_ret_ap = 1e-1):
+    
+    if material_type == 'positive':
+        
+        # Positive uniaxial material
+            
+        azimuth_p = (np.arctan2(-f_tensor[3], -f_tensor[2])/2)%np.pi
+        del_f_sin_square_p = -f_tensor[2]*np.cos(2*azimuth_p) - f_tensor[3]*np.sin(2*azimuth_p)
+        del_f_sin2theta_p = -f_tensor[4]*np.cos(azimuth_p) - f_tensor[5]*np.sin(azimuth_p)
+        theta_p = np.arctan2(2*del_f_sin_square_p, del_f_sin2theta_p)
+        retardance_ap_p = del_f_sin_square_p * np.sin(theta_p)**2 / (np.sin(theta_p)**4 + reg_ret_ap)
+        
+        return retardance_ap_p, azimuth_p, theta_p
+    
+    elif material_type == 'negative':
+
+        # Negative uniaxial material
+
+        azimuth_n = (np.arctan2(f_tensor[3], f_tensor[2])/2)%np.pi
+        del_f_sin_square_n = f_tensor[2]*np.cos(2*azimuth_n) + f_tensor[3]*np.sin(2*azimuth_n)
+        del_f_sin2theta_n = f_tensor[4]*np.cos(azimuth_n) + f_tensor[5]*np.sin(azimuth_n)
+        theta_n = np.arctan2(2*del_f_sin_square_n, del_f_sin2theta_n)
+        retardance_ap_n = -del_f_sin_square_n * np.sin(theta_n)**2 / (np.sin(theta_n)**4 + reg_ret_ap)
+    
+        return retardance_ap_n, azimuth_n, theta_n
+
+

@@ -1,9 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
+import os
 from ipywidgets import interact, interactive, fixed, interact_manual
 from matplotlib.colors import hsv_to_rgb
+from matplotlib.colors import Normalize
 from scipy.ndimage import uniform_filter
+from scipy.stats import binned_statistic_2d
+
 
 
 
@@ -110,6 +114,11 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin
                 col_idx = np.mod(i, num_col)
                 ax1 = ax[col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
                 plt.colorbar(ax1,ax=ax[col_idx])
+        elif num_col == 1:
+            for i in range(N_channel):
+                row_idx = i//num_col
+                ax1 = ax[row_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
+                plt.colorbar(ax1,ax=ax[row_idx])
         else:
             for i in range(N_channel):
                 row_idx = i//num_col
@@ -578,3 +587,142 @@ def orientation_3D_to_rgb(hsv, interp_belt = 20/180*np.pi, sat_factor = 1):
     rgb = np.stack([r, g, b], axis=-1)
 
     return rgb.reshape(in_shape)
+
+
+
+def save_stack_to_folder(img_stack, dir_name, file_name, min_val=None, max_val=None, rgb=False):
+    
+    os.system('mkdir '+dir_name)
+    
+    if rgb:
+        N_frame, N, M, _ = img_stack.shape
+    else:
+        N_frame, N, M = img_stack.shape
+
+
+
+    for i in range(N_frame):
+        
+        file_name_i = file_name +str(i)+'.tif'
+        file_path=os.path.join(dir_name, file_name_i)
+        
+        
+        if rgb:
+            plt.imsave(file_path, img_stack[i,:,:,:], format="tiff")
+        else:
+            plt.imsave(file_path, img_stack[i,:,:], format="tiff", cmap=plt.cm.gray, vmin=min_val, vmax=max_val)
+            
+            
+def plot3DVectorField(img, azimuth, theta, anisotropy=1, cmapImage='gray', clim=[None, None], aspect=1, 
+                      spacing=20, window=20, linelength=20, linewidth=3, linecolor='g', cmapAzimuth='hsv', alpha=1, subplot_ax = None):
+    
+    U = anisotropy*linelength*np.cos(2*azimuth)
+    V = anisotropy*linelength*np.sin(2*azimuth)
+    
+    USmooth = uniform_filter(U, (window, window)) # plot smoothed vector field
+    VSmooth = uniform_filter(V, (window, window)) # plot smoothed vector field
+    azimuthSmooth = 0.5*np.arctan2(VSmooth,USmooth)
+    RSmooth = np.sqrt(USmooth**2+VSmooth**2)
+    USmooth, VSmooth = RSmooth*np.cos(azimuthSmooth), RSmooth*np.sin(azimuthSmooth)
+    
+    nY, nX = img.shape
+    Y, X = np.mgrid[0:nY,0:nX] # notice the reversed order of X and Y
+    
+    # Plot sparsely sampled vector lines
+    Plotting_X = X[::-spacing, ::spacing]
+    Plotting_Y = Y[::-spacing, ::spacing]
+    Plotting_U = linelength * USmooth[::-spacing, ::spacing]
+    Plotting_V = linelength * VSmooth[::-spacing, ::spacing]
+    
+    Plotting_inc = ((theta[::-spacing, ::spacing])%np.pi)*180/np.pi
+    
+    if subplot_ax is None:
+        im_ax = plt.imshow(img, cmap=cmapImage, vmin=clim[0], vmax=clim[1], origin='lower', aspect=aspect)
+        plt.title('3D Orientation map')
+        plt.quiver(Plotting_X, Plotting_Y, Plotting_U, Plotting_V, Plotting_inc,
+                   cmap=cmapAzimuth, norm = Normalize(vmin=0, vmax=180),
+                   edgecolor=linecolor, facecolor=linecolor,units='xy', alpha=alpha, width=linewidth,
+                   headwidth = 0, headlength = 0, headaxislength = 0,
+                   scale_units = 'xy',scale = 1, angles = 'uv', pivot = 'mid')
+    else:
+        im_ax = subplot_ax.imshow(img, cmap=cmapImage, vmin=clim[0], vmax=clim[1], origin='lower', aspect=aspect)
+        subplot_ax.set_title('3D Orientation map')
+        subplot_ax.quiver(Plotting_X, Plotting_Y, Plotting_U, Plotting_V, Plotting_inc,
+                   cmap=cmapAzimuth, norm = Normalize(vmin=0, vmax=180),
+                   edgecolor=linecolor, facecolor=linecolor,units='xy', alpha=alpha, width=linewidth,
+                   headwidth = 0, headlength = 0, headaxislength = 0,
+                   scale_units = 'xy',scale = 1, angles = 'uv', pivot = 'mid')
+        
+    
+    return im_ax
+
+
+
+
+
+def orientation_3D_hist(azimuth, theta, retardance, bins=20, num_col=1, size=10, contour_level = 100, hist_cmap='gray'):
+    
+    if azimuth.ndim == 3:
+        
+        N_hist = 1
+        N, M, L = azimuth.shape
+        azimuth = azimuth[np.newaxis,:,:,:]
+        theta = theta[np.newaxis,:,:,:]
+        retardance = retardance[np.newaxis,:,:,:]
+        
+        
+    elif azimuth.ndim == 4:
+
+        N_hist, N, M, L = azimuth.shape
+        
+    num_row = np.int(np.ceil(N_hist/num_col))
+    figsize = (num_col*size, num_row*size)
+    
+    azimuth_edges = np.linspace(0, np.pi, bins)
+    theta_edges = np.linspace(0, np.pi, bins)
+    theta_hist, azimuth_hist = np.meshgrid(theta_edges, azimuth_edges)
+        
+    fig, ax = plt.subplots(num_row, num_col, subplot_kw=dict(projection='polar'), figsize=figsize)
+
+    for i in range(N_hist):
+        
+        az = azimuth[i].reshape((N*M*L,))
+        th = theta[i].reshape((N*M*L,))
+        val = retardance[i].reshape((N*M*L,))
+
+        statistic, aedges, tedges, binnumber = binned_statistic_2d(az, th, val, statistic='sum', bins=bins, range=[[0, np.pi], [0, np.pi]])
+        
+        row_idx = i//num_col
+        col_idx = np.mod(i, num_col)
+        
+        
+        if num_row == 1:
+            if num_col ==1:
+                img = ax.contourf(azimuth_hist, theta_hist/np.pi*180, statistic, levels=contour_level, cmap=hist_cmap)
+                ax.set_yticks([0, 30, 60, 90, 120, 150, 180])
+                ax.set_thetamax(180)
+                fig.colorbar(img, ax=ax)
+            else:
+                img = ax[col_idx].contourf(azimuth_hist, theta_hist/np.pi*180, statistic, levels=contour_level, cmap=hist_cmap)
+                ax[col_idx].set_yticks([0, 30, 60, 90, 120, 150, 180])
+                ax[col_idx].set_thetamax(180)
+                fig.colorbar(img, ax=ax[col_idx])
+            
+        else:
+            if num_col ==1:
+                img = ax[row_idx].contourf(azimuth_hist, theta_hist/np.pi*180, statistic, levels=contour_level, cmap=hist_cmap)
+                ax[row_idx].set_yticks([0, 30, 60, 90, 120, 150, 180])
+                ax[row_idx].set_thetamax(180)
+                fig.colorbar(img, ax=ax[row_idx])
+            else:
+                img = ax[row_idx, col_idx].contourf(azimuth_hist, theta_hist/np.pi*180, statistic, levels=contour_level, cmap=hist_cmap)
+                ax[row_idx, col_idx].set_yticks([0, 30, 60, 90, 120, 150, 180])
+                ax[row_idx, col_idx].set_thetamax(180)
+                fig.colorbar(img, ax=ax[row_idx, col_idx])
+            
+    return fig, ax
+
+
+
+        
+        

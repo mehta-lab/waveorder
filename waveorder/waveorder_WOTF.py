@@ -23,6 +23,80 @@ def intensity_mapping(img_stack):
     return img_stack_out
 
 
+def instrument_matrix_and_source_calibration(I_cali_mean, handedness = 'RCP'):
+    
+    _, N_cali = I_cali_mean.shape
+    
+    # locate the index for zero-degree polarizer
+    idx = np.argsort(I_cali_mean[0]/np.sum(I_cali_mean, axis=0))[-1]
+
+    # align the calibration curve 
+    zero_idx = -idx
+    I_cali_mean = np.roll(I_cali_mean,zero_idx,axis=1)
+    
+    # Source intensity
+    I_tot = np.sum(I_cali_mean,axis=0)
+
+    
+    # Calibration matrix
+    theta = np.r_[0:N_cali]/N_cali*2*np.pi
+    C_matrix = np.array([np.ones((N_cali,)), np.cos(2*theta), np.sin(2*theta)])
+    
+    # Source calibration
+    
+    S_source = np.linalg.pinv(C_matrix.transpose()).dot(I_tot[:,np.newaxis])
+    S_source_norm = S_source/S_source[0]
+    
+    Ax = np.sqrt((S_source_norm[0]+S_source_norm[1])/2)
+    Ay = np.sqrt((S_source_norm[0]-S_source_norm[1])/2)
+    del_phi = np.arccos(S_source_norm[2]/2/Ax/Ay)
+    
+    if handedness == 'RCP':
+        E_in = np.array([Ax, Ay*np.exp(1j*del_phi)])
+    elif handedness == 'LCP':
+        E_in = np.array([Ax, Ay*np.exp(-1j*del_phi)])
+    else:
+        raise TypeError("handedness type must be 'LCP' or 'RCP'")
+        
+    # Instrument matrix calibration
+    I_cali_norm = I_cali_mean/I_tot
+    A_matrix = np.transpose(np.linalg.pinv(C_matrix.transpose()).dot(np.transpose(I_cali_norm)))
+    
+    print('Calibrated source field:\n' + str(np.round(E_in,4)))
+    print('Calibrated instrument matrix:\n' + str(np.round(A_matrix,4)))
+    
+    fig,ax = plt.subplots(2,2,figsize=(20,20))
+    ax[0,0].plot(np.transpose(I_cali_mean))
+    ax[0,0].legend(['$I_0$', '$I_{45}$', '$I_{90}$', '$I_{135}$'])
+    ax[0,0].set_title('Calibration curve without normalization')
+    ax[0,0].set_xlabel('Orientation of LP (deg)')
+    ax[0,0].set_ylabel('Raw intensity')
+
+    ax[0,1].plot(I_tot)
+    ax[0,1].plot(np.transpose(C_matrix).dot(S_source))
+    ax[0,1].legend(['Mean source intensity', 'Fitted source intensity'])
+    ax[0,1].set_title('Source calibration curve')
+    ax[0,1].set_xlabel('Orientation of LP (deg)')
+    ax[0,1].set_ylabel('Mean intensity from 4 linear channels')
+
+
+    ax[1,0].plot(np.transpose(I_cali_mean/I_tot))
+    ax[1,0].legend(['$I_0$', '$I_{45}$', '$I_{90}$', '$I_{135}$'])
+    ax[1,0].set_title('Normalized calibration curve')
+    ax[1,0].set_xlabel('Orientation of LP (deg)')
+    ax[1,0].set_ylabel('Normalized intensity')
+    
+    ax[1,1].plot(np.transpose(I_cali_norm))
+    ax[1,1].plot(np.transpose(A_matrix.dot(C_matrix)))
+    ax[1,1].legend(['$I_0$', '$I_{45}$', '$I_{90}$', '$I_{135}$'])
+    ax[1,1].set_xlabel('Orientation of LP (deg)')
+    ax[1,1].set_ylabel('Normalized intensity')
+    ax[1,1].set_title('Fitted calibration curves')
+    
+    return E_in, A_matrix, I_cali_mean
+    
+    
+
 
 def instrument_matrix_calibration(I_cali_norm, I_meas):
     
@@ -56,6 +130,9 @@ def instrument_matrix_calibration(I_cali_norm, I_meas):
 
 
     return A_matrix, I_corr
+
+
+
 
 class waveorder_microscopy:
     
@@ -1186,17 +1263,14 @@ class waveorder_microscopy:
         
         return f_tensor
     
-    def scattering_potential_tensor_to_3D_orientation(self, f_tensor, S_image_recon, material_type='positive', reg_ret_ap = 1e-2, full_fitting=False, itr=20):
+    def scattering_potential_tensor_to_3D_orientation(self, f_tensor, S_image_recon=None, material_type='positive', reg_ret_ap = 1e-2, itr=20, step_size=0.3,verbose=True):
         
         if material_type == 'positive' or 'unknown':
             
             # Positive uniaxial material
+
+            retardance_ap_p, azimuth_p, theta_p = scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='positive', reg_ret_ap = reg_ret_ap)
             
-            azimuth_p = (np.arctan2(-f_tensor[3], -f_tensor[2])/2)%np.pi
-            del_f_sin_square_p = -f_tensor[2]*np.cos(2*azimuth_p) - f_tensor[3]*np.sin(2*azimuth_p)
-            del_f_sin2theta_p = -f_tensor[4]*np.cos(azimuth_p) - f_tensor[5]*np.sin(azimuth_p)
-            theta_p = np.arctan2(2*del_f_sin_square_p, del_f_sin2theta_p)
-            retardance_ap_p = del_f_sin_square_p * np.sin(theta_p)**2 / (np.sin(theta_p)**4 + reg_ret_ap)
             
             if material_type == 'positive':
                 
@@ -1206,11 +1280,8 @@ class waveorder_microscopy:
             
             # Negative uniaxial material
 
-            azimuth_n = (np.arctan2(f_tensor[3], f_tensor[2])/2)%np.pi
-            del_f_sin_square_n = f_tensor[2]*np.cos(2*azimuth_n) + f_tensor[3]*np.sin(2*azimuth_n)
-            del_f_sin2theta_n = f_tensor[4]*np.cos(azimuth_n) + f_tensor[5]*np.sin(azimuth_n)
-            theta_n = np.arctan2(2*del_f_sin_square_n, del_f_sin2theta_n)
-            retardance_ap_n = -del_f_sin_square_n * np.sin(theta_n)**2 / (np.sin(theta_n)**4 + reg_ret_ap)
+            retardance_ap_n, azimuth_n, theta_n = scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='negative', reg_ret_ap = reg_ret_ap)
+            
             
             if material_type == 'negative':
                 
@@ -1230,112 +1301,189 @@ class waveorder_microscopy:
             f_tensor_p[1] = -retardance_ap_p*(np.sin(theta_p)**2)*np.sin(2*azimuth_p)
             f_tensor_p[2] = -retardance_ap_p*(np.sin(2*theta_p))*np.cos(azimuth_p)
             f_tensor_p[3] = -retardance_ap_p*(np.sin(2*theta_p))*np.sin(azimuth_p)
-            
-            if full_fitting == True:
-                f_tensor_p[4] = retardance_ap_p*(np.sin(theta_p)**2 - 2*np.cos(theta_p)**2)
+            f_tensor_p[4] = retardance_ap_p*(np.sin(theta_p)**2 - 2*np.cos(theta_p)**2)
 
             f_tensor_n = np.zeros((5,)+f_tensor.shape[1:])
             f_tensor_n[0] = -retardance_ap_n*(np.sin(theta_n)**2)*np.cos(2*azimuth_n)
             f_tensor_n[1] = -retardance_ap_n*(np.sin(theta_n)**2)*np.sin(2*azimuth_n)
             f_tensor_n[2] = -retardance_ap_n*(np.sin(2*theta_n))*np.cos(azimuth_n)
             f_tensor_n[3] = -retardance_ap_n*(np.sin(2*theta_n))*np.sin(azimuth_n)
-            
-            if full_fitting == True:
-                f_tensor_n[4] = retardance_ap_n*(np.sin(theta_n)**2 - 2*np.cos(theta_n)**2)
+            f_tensor_n[4] = retardance_ap_n*(np.sin(theta_n)**2 - 2*np.cos(theta_n)**2)
 
             f_vec  = f_tensor.copy()
 
             x_map = np.zeros(f_tensor.shape[1:])
-            p_map = 1/(1+np.exp(-x_map))
+            y_map = np.zeros(f_tensor.shape[1:])
+            
+            
+            if f_tensor.ndim == 4:
+                f_vec_f = fftn(f_vec, axes=(1,2,3))
+                S_est_vec = np.zeros((self.N_Stokes, self.N_pattern, self.N, self.M, self.N_defocus), complex)
+
+                for p,q in itertools.product(range(self.N_Stokes), range(2)):
+                     S_est_vec[p] += self.H_dyadic_OTF[p,q]*f_vec_f[np.newaxis,q]
+            
+            elif f_tensor.ndim == 3:
+                
+                f_vec_f = fft2(f_vec, axes=(1,2))
+                S_est_vec = np.zeros((self.N_Stokes, self.N, self.M, self.N_defocus*self.N_pattern), complex)
+
+                for p,q in itertools.product(range(self.N_Stokes), range(2)):
+                     S_est_vec[p] += self.H_dyadic_2D_OTF[p,q]*f_vec_f[q,:,:,np.newaxis]
+                        
+                        
+            if self.use_gpu:
+                f_tensor_p = cp.array(f_tensor_p)
+                f_tensor_n = cp.array(f_tensor_n)
+                f_vec = cp.array(f_vec)
+                
 
             err = np.zeros(itr+1)
 
             tic_time = time.time()
-            print('|  Iter  |  error  |  Elapsed time (sec)  |')
             
-            f1,ax = plt.subplots(1,2,figsize=(20,10))
+            if verbose:
+                print('|  Iter  |  error  |  Elapsed time (sec)  |')
+                f1,ax = plt.subplots(2,2,figsize=(20,20))
             
             
             for i in range(itr):
-    
-                p_map = 1/(1+np.exp(-x_map))
-
-                for j in range(4):
-                    f_vec[j+2] = p_map*f_tensor_p[j] + (1-p_map)*f_tensor_n[j]
                 
-                if full_fitting == True:
-                    f_vec[6] = p_map*f_tensor_p[4] + (1-p_map)*f_tensor_n[4]
+                if self.use_gpu:
+                    x_map = cp.array(x_map)
+                    y_map = cp.array(y_map)
                 
-                if f_tensor.ndim == 4:
-                    f_vec_f = fftn(f_vec, axes=(1,2,3))
-                    S_est_vec = np.zeros((self.N_Stokes, self.N_pattern, self.N, self.M, self.N_defocus), complex)
+
+                for j in range(5):
+                    f_vec[j+2] = x_map*f_tensor_p[j] + y_map*f_tensor_n[j]
+                
+                S_est_vec_update = S_est_vec.copy()
+                
+                if self.use_gpu:
                     
-                    for p,q in itertools.product(range(self.N_Stokes), range(7)):
-                         S_est_vec[p] += self.H_dyadic_OTF[p,q]*f_vec_f[np.newaxis,q]
+                    if f_tensor.ndim == 4:
+                        f_vec_f = cp.fft.fftn(f_vec, axes=(1,2,3))
+
+                        for p,q in itertools.product(range(self.N_Stokes), range(5)):
+                             S_est_vec_update[p] += cp.asnumpy(cp.array(self.H_dyadic_OTF[p,q+2])*f_vec_f[np.newaxis,q+2])
+
+                    elif f_tensor.ndim == 3:
+                        f_vec_f = cp.fft.fft2(f_vec, axes=(1,2))
+
+                        for p,q in itertools.product(range(self.N_Stokes), range(5)):
+                             S_est_vec_update[p] += cp.asnumpy(cp.array(self.H_dyadic_2D_OTF[p,q+2])*f_vec_f[q+2,:,:,np.newaxis])
+                
+                else:
                     
-                elif f_tensor.ndim == 3:
-                    f_vec_f = fft2(f_vec, axes=(1,2))
-                    S_est_vec = np.zeros((self.N_Stokes, self.N, self.M, self.N_defocus*self.N_pattern), complex)
-                    
-                    for p,q in itertools.product(range(self.N_Stokes), range(7)):
-                         S_est_vec[p] += self.H_dyadic_2D_OTF[p,q]*f_vec_f[q,:,:,np.newaxis]
+                    if f_tensor.ndim == 4:
+                        f_vec_f = fftn(f_vec, axes=(1,2,3))
+
+                        for p,q in itertools.product(range(self.N_Stokes), range(5)):
+                             S_est_vec_update[p] += self.H_dyadic_OTF[p,q+2]*f_vec_f[np.newaxis,q+2]
+
+                    elif f_tensor.ndim == 3:
+                        f_vec_f = fft2(f_vec, axes=(1,2))
+
+                        for p,q in itertools.product(range(self.N_Stokes), range(5)):
+                             S_est_vec_update[p] += self.H_dyadic_2D_OTF[p,q+2]*f_vec_f[q+2,:,:,np.newaxis]
 
 
-                S_diff = S_stack_f-S_est_vec
+                S_diff = S_stack_f-S_est_vec_update
 
 
 
                 err[i+1] = np.sum(np.abs(S_diff)**2)
                 if err[i+1]>err[i] and i>0:
                     break
-
-                AH_S_diff = np.zeros((7,)+f_tensor.shape[1:], complex)
-                
-                if f_tensor.ndim == 4:
                     
-                    for p,q in itertools.product(range(7), range(self.N_Stokes)):
-                        AH_S_diff[p] += np.sum(np.conj(self.H_dyadic_OTF[q,p])*S_diff[q],axis=0)
-                        
-                    if full_fitting == True:
-                        grad_x_map = -np.real(np.sum((f_tensor_p-f_tensor_n)*ifftn(AH_S_diff[2:7],axes=(1,2,3)),axis=0)*(1-p_map)*p_map)
-                    else:
-                        grad_x_map = -np.real(np.sum((f_tensor_p[0:4]-f_tensor_n[0:4])*ifftn(AH_S_diff[2:6],axes=(1,2,3)),axis=0)*(1-p_map)*p_map)
-                        
-                elif f_tensor.ndim == 3:
+                if self.use_gpu:
                     
-                    for p,q in itertools.product(range(7), range(self.N_Stokes)):
-                        AH_S_diff[p] += np.sum(np.conj(self.H_dyadic_2D_OTF[q,p])*S_diff[q],axis=2)
-                        
-                    if full_fitting == True:
-                        grad_x_map = -np.real(np.sum((f_tensor_p-f_tensor_n)*ifft2(AH_S_diff[2:7],axes=(1,2)),axis=0)*(1-p_map)*p_map)
-                    else:
-                        grad_x_map = -np.real(np.sum((f_tensor_p[0:4]-f_tensor_n[0:4])*ifft2(AH_S_diff[2:6],axes=(1,2)),axis=0)*(1-p_map)*p_map)
-                
-                
-                
-                x_map -= grad_x_map/np.max(grad_x_map)*0.3
+                    AH_S_diff = cp.zeros((5,)+f_tensor.shape[1:], complex)
+
+                    if f_tensor.ndim == 4:
+
+                        for p,q in itertools.product(range(5), range(self.N_Stokes)):
+                            AH_S_diff[p] += cp.sum(cp.conj(cp.array(self.H_dyadic_OTF[q,p+2]))*cp.array(S_diff[q]),axis=0)
 
 
-                print('|  %d  |  %.2e  |   %.2f   |'%(i+1,err[i+1],time.time()-tic_time))
+                        grad_x_map = -cp.real(cp.sum(f_tensor_p*cp.fft.ifftn(AH_S_diff,axes=(1,2,3)),axis=0))
+                        grad_y_map = -cp.real(cp.sum(f_tensor_n*cp.fft.ifftn(AH_S_diff,axes=(1,2,3)),axis=0))
 
-                if i != 0:
-                        ax[0].cla()
-                        ax[1].cla()
-                if f_tensor.ndim == 4:
-                    ax[0].imshow(p_map[:,:,self.N_defocus//2],origin='lower', vmin=0, vmax=1)    
-                    ax[1].imshow(np.transpose(p_map[self.N//2,:,:]),origin='lower',vmin=0, vmax=1)
-                elif f_tensor.ndim == 3:
-                    ax[0].imshow(p_map,origin='lower', vmin=0, vmax=1)
+                    elif f_tensor.ndim == 3:
+
+                        for p,q in itertools.product(range(5), range(self.N_Stokes)):
+                            AH_S_diff[p] += cp.sum(cp.conj(cp.array(self.H_dyadic_2D_OTF[q,p+2]))*cp.array(S_diff[q]),axis=2)
+
+
+                        grad_x_map = -cp.real(cp.sum(f_tensor_p*cp.fft.ifft2(AH_S_diff,axes=(1,2)),axis=0))
+                        grad_y_map = -cp.real(cp.sum(f_tensor_n*cp.fft.ifft2(AH_S_diff,axes=(1,2)),axis=0))
+
+
+
+
+                    x_map -= grad_x_map/cp.max(cp.abs(grad_x_map))*step_size
+                    y_map -= grad_y_map/cp.max(cp.abs(grad_y_map))*step_size
                     
-                display.display(f1)
-                display.clear_output(wait=True)
-                time.sleep(0.0001)
+                    x_map = cp.asnumpy(x_map)
+                    y_map = cp.asnumpy(y_map)
+                    
+                else:
+
+                    AH_S_diff = np.zeros((5,)+f_tensor.shape[1:], complex)
+
+                    if f_tensor.ndim == 4:
+
+                        for p,q in itertools.product(range(5), range(self.N_Stokes)):
+                            AH_S_diff[p] += np.sum(np.conj(self.H_dyadic_OTF[q,p+2])*S_diff[q],axis=0)
+
+
+                        grad_x_map = -np.real(np.sum(f_tensor_p*ifftn(AH_S_diff,axes=(1,2,3)),axis=0))
+                        grad_y_map = -np.real(np.sum(f_tensor_n*ifftn(AH_S_diff,axes=(1,2,3)),axis=0))
+
+                    elif f_tensor.ndim == 3:
+
+                        for p,q in itertools.product(range(5), range(self.N_Stokes)):
+                            AH_S_diff[p] += np.sum(np.conj(self.H_dyadic_2D_OTF[q,p+2])*S_diff[q],axis=2)
+
+
+                        grad_x_map = -np.real(np.sum(f_tensor_p*ifft2(AH_S_diff,axes=(1,2)),axis=0))
+                        grad_y_map = -np.real(np.sum(f_tensor_n*ifft2(AH_S_diff,axes=(1,2)),axis=0))
+
+
+
+
+                    x_map -= grad_x_map/np.max(np.abs(grad_x_map))*0.3
+                    y_map -= grad_y_map/np.max(np.abs(grad_y_map))*0.3
+
+                if verbose:
+                    print('|  %d  |  %.2e  |   %.2f   |'%(i+1,err[i+1],time.time()-tic_time))
+
+                    if i != 0:
+                            ax[0,0].cla()
+                            ax[0,1].cla()
+                            ax[1,0].cla()
+                            ax[1,1].cla()
+                    if f_tensor.ndim == 4:
+                        ax[0,0].imshow(x_map[:,:,self.N_defocus//2],origin='lower', vmin=0, vmax=2)    
+                        ax[0,1].imshow(np.transpose(x_map[self.N//2,:,:]),origin='lower',vmin=0, vmax=2)
+                        ax[1,0].imshow(y_map[:,:,self.N_defocus//2],origin='lower', vmin=0, vmax=2)    
+                        ax[1,1].imshow(np.transpose(y_map[self.N//2,:,:]),origin='lower',vmin=0, vmax=2)
+                    elif f_tensor.ndim == 3:
+                        ax[0,0].imshow(x_map,origin='lower', vmin=0, vmax=2)
+                        ax[0,1].imshow(y_map,origin='lower', vmin=0, vmax=2)
+
+                    if i != itr-1:
+                        display.display(f1)
+                        display.clear_output(wait=True)
+                        time.sleep(0.0001)
             
             retardance_ap = np.stack([retardance_ap_p, retardance_ap_n])
             azimuth       = np.stack([azimuth_p, azimuth_n])
             theta         = np.stack([theta_p, theta_n]) 
+            mat_map       = np.stack([x_map, y_map])
+            print('Finish optic sign estimation, elapsed time: %.2f'%(time.time()-tic_time))
             
-            return retardance_ap, azimuth, theta, p_map
+            return retardance_ap, azimuth, theta, mat_map
 
         
     
