@@ -613,8 +613,9 @@ def save_stack_to_folder(img_stack, dir_name, file_name, min_val=None, max_val=N
             plt.imsave(file_path, img_stack[i,:,:], format="tiff", cmap=plt.cm.gray, vmin=min_val, vmax=max_val)
             
             
-def plot3DVectorField(img, azimuth, theta, anisotropy=1, cmapImage='gray', clim=[None, None], aspect=1, 
-                      spacing=20, window=20, linelength=20, linewidth=3, linecolor='g', cmapAzimuth='hsv', alpha=1, subplot_ax = None):
+def plot3DVectorField(img, azimuth, theta, threshold=None,anisotropy=1, cmapImage='gray', 
+                      clim=[None, None], aspect=1, spacing=20, window=20, linelength=20, 
+                      linewidth=3, linecolor='g', cmapAzimuth='hsv', alpha=1, subplot_ax = None):
     
     U = anisotropy*linelength*np.cos(2*azimuth)
     V = anisotropy*linelength*np.sin(2*azimuth)
@@ -636,10 +637,17 @@ def plot3DVectorField(img, azimuth, theta, anisotropy=1, cmapImage='gray', clim=
     
     Plotting_inc = ((theta[::-spacing, ::spacing])%np.pi)*180/np.pi
     
+    if threshold is None:
+        threshold = np.ones_like(X) # no threshold
+        
+    Plotting_thres = threshold[::-spacing, ::spacing]
+    
     if subplot_ax is None:
         im_ax = plt.imshow(img, cmap=cmapImage, vmin=clim[0], vmax=clim[1], origin='lower', aspect=aspect)
         plt.title('3D Orientation map')
-        plt.quiver(Plotting_X, Plotting_Y, Plotting_U, Plotting_V, Plotting_inc,
+        plt.quiver(Plotting_X[Plotting_thres==1], Plotting_Y[Plotting_thres==1], 
+                   Plotting_U[Plotting_thres==1], Plotting_V[Plotting_thres==1], 
+                   Plotting_inc[Plotting_thres==1],
                    cmap=cmapAzimuth, norm = Normalize(vmin=0, vmax=180),
                    edgecolor=linecolor, facecolor=linecolor,units='xy', alpha=alpha, width=linewidth,
                    headwidth = 0, headlength = 0, headaxislength = 0,
@@ -647,11 +655,14 @@ def plot3DVectorField(img, azimuth, theta, anisotropy=1, cmapImage='gray', clim=
     else:
         im_ax = subplot_ax.imshow(img, cmap=cmapImage, vmin=clim[0], vmax=clim[1], origin='lower', aspect=aspect)
         subplot_ax.set_title('3D Orientation map')
-        subplot_ax.quiver(Plotting_X, Plotting_Y, Plotting_U, Plotting_V, Plotting_inc,
-                   cmap=cmapAzimuth, norm = Normalize(vmin=0, vmax=180),
-                   edgecolor=linecolor, facecolor=linecolor,units='xy', alpha=alpha, width=linewidth,
-                   headwidth = 0, headlength = 0, headaxislength = 0,
-                   scale_units = 'xy',scale = 1, angles = 'uv', pivot = 'mid')
+        subplot_ax.quiver(Plotting_X[Plotting_thres==1], Plotting_Y[Plotting_thres==1],
+                          Plotting_U[Plotting_thres==1], Plotting_V[Plotting_thres==1], 
+                          Plotting_inc[Plotting_thres==1],
+                          cmap=cmapAzimuth, norm = Normalize(vmin=0, vmax=180),
+                          edgecolor=linecolor, facecolor=linecolor,units='xy', alpha=alpha,
+                          width=linewidth,
+                          headwidth = 0, headlength = 0, headaxislength = 0,
+                          scale_units = 'xy',scale = 1, angles = 'uv', pivot = 'mid')
         
     
     return im_ax

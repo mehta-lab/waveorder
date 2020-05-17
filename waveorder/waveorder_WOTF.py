@@ -1394,6 +1394,9 @@ class waveorder_microscopy:
 
                 err[i+1] = np.sum(np.abs(S_diff)**2)
                 if err[i+1]>err[i] and i>0:
+                    if self.use_gpu:
+                        x_map = cp.asnumpy(x_map)
+                        y_map = cp.asnumpy(y_map)
                     break
                     
                 if self.use_gpu:
