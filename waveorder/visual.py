@@ -89,7 +89,7 @@ def rgb_stack_viewer(image_stack, size=5, origin='upper'):
     return interact(interact_plot_rgb, stack_idx=widgets.IntSlider(value=0, min=0, max=len(image_stack)-1, step=1))
 
     
-def parallel_4D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin='upper'):
+def parallel_4D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin='upper', vrange=None):
     
     '''
     
@@ -107,24 +107,46 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin
     figsize = (num_col*size, num_row*size)
     
     def interact_plot(stack_idx):
-        
-        f1,ax = plt.subplots(num_row, num_col, figsize=figsize)
-        if num_row == 1:
-            for i in range(N_channel):
-                col_idx = np.mod(i, num_col)
-                ax1 = ax[col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
-                plt.colorbar(ax1,ax=ax[col_idx])
-        elif num_col == 1:
-            for i in range(N_channel):
-                row_idx = i//num_col
-                ax1 = ax[row_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
-                plt.colorbar(ax1,ax=ax[row_idx])
+        if vrange is None:
+            f1,ax = plt.subplots(num_row, num_col, figsize=figsize)
+            if num_row == 1:
+                for i in range(N_channel):
+                    col_idx = np.mod(i, num_col)
+                    ax1 = ax[col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
+                    plt.colorbar(ax1,ax=ax[col_idx])
+            elif num_col == 1:
+                for i in range(N_channel):
+                    row_idx = i//num_col
+                    ax1 = ax[row_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
+                    plt.colorbar(ax1,ax=ax[row_idx])
+            else:
+                for i in range(N_channel):
+                    row_idx = i//num_col
+                    col_idx = np.mod(i, num_col)
+                    ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
+                    plt.colorbar(ax1,ax=ax[row_idx, col_idx])
+                    
+        elif len(vrange)==2 and vrange[0]<vrange[1]:
+            f1,ax = plt.subplots(num_row, num_col, figsize=figsize)
+            if num_row == 1:
+                for i in range(N_channel):
+                    col_idx = np.mod(i, num_col)
+                    ax1 = ax[col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin, vmin=vrange[0], vmax=vrange[1])
+                    plt.colorbar(ax1,ax=ax[col_idx])
+            elif num_col == 1:
+                for i in range(N_channel):
+                    row_idx = i//num_col
+                    ax1 = ax[row_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin, vmin=vrange[0], vmax=vrange[1])
+                    plt.colorbar(ax1,ax=ax[row_idx])
+            else:
+                for i in range(N_channel):
+                    row_idx = i//num_col
+                    col_idx = np.mod(i, num_col)
+                    ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin, vmin=vrange[0], vmax=vrange[1])
+                    plt.colorbar(ax1,ax=ax[row_idx, col_idx])
+    
         else:
-            for i in range(N_channel):
-                row_idx = i//num_col
-                col_idx = np.mod(i, num_col)
-                ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
-                plt.colorbar(ax1,ax=ax[row_idx, col_idx])
+            assert('range should be a list with length of 2 and range[0]<range[1]')
     
     return interact(interact_plot, stack_idx=widgets.IntSlider(value=0, min=0, max=N_stack-1, step=1))
 
@@ -673,18 +695,17 @@ def plot3DVectorField(img, azimuth, theta, threshold=None,anisotropy=1, cmapImag
 
 def orientation_3D_hist(azimuth, theta, retardance, bins=20, num_col=1, size=10, contour_level = 100, hist_cmap='gray'):
     
-    if azimuth.ndim == 3:
+    if azimuth.ndim == 1:
         
         N_hist = 1
-        N, M, L = azimuth.shape
-        azimuth = azimuth[np.newaxis,:,:,:]
-        theta = theta[np.newaxis,:,:,:]
-        retardance = retardance[np.newaxis,:,:,:]
+        azimuth = azimuth[np.newaxis,:]
+        theta = theta[np.newaxis,:]
+        retardance = retardance[np.newaxis,:]
         
         
-    elif azimuth.ndim == 4:
+    elif azimuth.ndim == 2:
 
-        N_hist, N, M, L = azimuth.shape
+        N_hist, _ = azimuth.shape
         
     num_row = np.int(np.ceil(N_hist/num_col))
     figsize = (num_col*size, num_row*size)
@@ -697,9 +718,9 @@ def orientation_3D_hist(azimuth, theta, retardance, bins=20, num_col=1, size=10,
 
     for i in range(N_hist):
         
-        az = azimuth[i].reshape((N*M*L,))
-        th = theta[i].reshape((N*M*L,))
-        val = retardance[i].reshape((N*M*L,))
+        az = azimuth[i].copy()
+        th = theta[i].copy()
+        val = retardance[i].copy()
 
         statistic, aedges, tedges, binnumber = binned_statistic_2d(az, th, val, statistic='sum', bins=bins, range=[[0, np.pi], [0, np.pi]])
         

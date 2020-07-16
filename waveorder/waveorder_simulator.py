@@ -424,10 +424,10 @@ class waveorder_microscopy_simulator:
         for i in range(self.N_pattern):
 
             if self.N_pattern == 1:
-                [idx_y, idx_x] = np.where(self.Source >=1)
+                [idx_y, idx_x] = np.where(self.Source >0)
                 Source_current = self.Source.copy()
             else:
-                [idx_y, idx_x] = np.where(self.Source[i] >=1)
+                [idx_y, idx_x] = np.where(self.Source[i] >0)
                 Source_current = self.Source[i].copy()
 
 
@@ -583,10 +583,10 @@ class waveorder_microscopy_simulator:
         for i in range(self.N_pattern):
 
             if self.N_pattern == 1:
-                [idx_y, idx_x] = np.where(self.Source >=1)
+                [idx_y, idx_x] = np.where(self.Source >0)
                 Source_current = self.Source.copy()
             else:
-                [idx_y, idx_x] = np.where(self.Source[i] >=1)
+                [idx_y, idx_x] = np.where(self.Source[i] >0)
                 Source_current = self.Source[i].copy()
 
 

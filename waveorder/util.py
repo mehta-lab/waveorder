@@ -22,7 +22,7 @@ def numericalSort(value):
 
 
 
-def genStarTarget(N, M, blur_px = 2):
+def genStarTarget(N, M, blur_px = 2, margin=60):
     
     '''
     
@@ -51,7 +51,7 @@ def genStarTarget(N, M, blur_px = 2):
     # star = (1 + np.cos(40*theta))
     # star = np.pad(star[10:-10,10:-10],(10,),mode='constant')
     star = (1 + np.cos(16*theta))
-    star = np.pad(star[60:-60,60:-60],(60,),mode='constant')
+    star = np.pad(star[margin:-margin,margin:-margin],(margin,),mode='constant')
     star[star<1] = 0
     
     # Filter to prevent aliasing

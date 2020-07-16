@@ -118,7 +118,7 @@ def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA = 0.1):
     
     N,M = Source_cont.shape
     
-    [idx_y, idx_x] = np.where(Source_cont==1)
+    [idx_y, idx_x] = np.where(Source_cont>0)
 
     NAx_list = NAx_coord[idx_y, idx_x]
     NAy_list = NAy_coord[idx_y, idx_x]
