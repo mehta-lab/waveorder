@@ -136,6 +136,105 @@ def instrument_matrix_calibration(I_cali_norm, I_meas):
 
 class waveorder_microscopy:
     
+    '''
+    
+    waveorder_microscopy contains methods to compute weak object transfer function 
+    for label-free image reconstruction with various types of dataset:
+    
+    1) 2D/3D phase reconstruction with a single brightfield defocused stack (Transport of intensity, TIE)
+    
+    2) 2D/3D phase reconstruction with intensities of asymetric illumination 
+       (differential phase contrast, DPC)
+       
+    3) 2D/3D joint phase and polarization (2D orientation) reconstruction 
+       with brightfield-illuminated polarization-sensitive intensities (QLIPP)
+       
+    4) 2D/3D joint phase and polarization (permittivity tensor, 3D orientation) reconstruction
+       with asymmetrically-illuminated polarization-sensitive intensities (QUTIPP)
+    
+    Parameters
+    ----------
+        img_dim         : tuple
+                          shape of the computed 2D space with size of (N, M)
+                  
+        lambda_illu     : float
+                          wavelength of the incident light
+        
+        ps              : float
+                          xy pixel size of the image space
+                          
+        psz             : float
+                          z step size of the image space
+        
+        NA_obj          : float
+                          numerical aperture of the detection objective
+        
+        NA_illu         : float 
+                          numerical aperture of the illumination condenser
+        
+        z_defocus       : numpy.ndarray
+                          1D array of defocused z position corresponds to the intensity stack
+                          (matters for 2D reconstruction, the direction positive z matters for 3D reconstruction)
+                          
+        chi             : float
+                          swing of the illumination or detection polarization state (in radian)
+                          
+        n_media         : float
+                          refractive index of the immersing media
+                          
+        cali            : bool
+                          'True' for the orientation convention of QLIPP data, 
+                          'False' for the orientation convention of QUTIPP data
+                          
+        bg_option       : str
+                          'local' for estimating background with scipy uniform filter
+                          'local_fit' for estimating background with polynomial fit
+                          other string for normal background subtraction with the provided background
+        
+        A_matrix        : numpy.ndarray
+                          self-provided instrument matrix converting polarization-sensitive intensity into Stokes parameters 
+                          with shape of (N_channel, N_Stokes)
+                          If None is provided, the instrument matrix is determined by the QLIPP convention with swing specify by chi
+                          
+        inc_recon       : str
+                          option for constructing settings for 3D orientation reconstruction
+                          '2D-vec-WOTF' for 2D diffractive reconstruction of 3D anisotropy (phase_deconv is set to '2D')
+                          '3D' for 3D for diffractive reconstruction of 3D anisotropy (phase_deconv is set to '3D')
+                          other allowed strings is going to be deprecated
+        
+        phase_deconv    : str
+                          string contains the phase reconstruction dimension 
+                          '2D'      for 2D phase deconvolution
+                          '3D'      for 3D phase deconvolution
+        
+        ph_deconv_layer : int
+                          number of layers included for each layer of semi-3D phase reconstruction
+        
+        illu_mode       : str
+                          string to set the pattern of illumination source
+                          'BF' for brightfield illumination with source pattern specified by NA_illu
+                          'PH' for phase contrast illumination with the source pattern specify by NA_illu and NA_illu_in
+                          'Arbitrary' for self-defined source pattern of dimension (N_pattern, N, M)
+                          
+        NA_illu_in      : flaot
+                          numerical aperture of the inner circle for phase contrast ring illumination
+                          
+        Source          : numpy.ndarray
+                          illumination source pattern with dimension of (N_pattern, N, M)
+                          
+        Source_PolState : numpy.ndarray
+                          illumination polarization states (Ex, Ey) for each illumination pattern with dimension of (N_pattern, 2)
+                          If provided with size of (2,), a single state is used for all illumination patterns
+        
+        use_gpu         : bool
+                          option to use gpu or not
+        
+        gpu_id          : int
+                          number refering to which gpu will be used
+                  
+    
+    '''
+    
     def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi=None,\
                  n_media=1, cali=False, bg_option='global', 
                  A_matrix=None, inc_recon=None, 
