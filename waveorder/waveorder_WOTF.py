@@ -192,7 +192,7 @@ class waveorder_microscopy:
                           other string for normal background subtraction with the provided background
         
         A_matrix        : numpy.ndarray
-                          self-provided instrument matrix converting polarization-sensitive intensity into Stokes parameters 
+                          self-provided instrument matrix converting polarization-sensitive intensity images into Stokes parameters 
                           with shape of (N_channel, N_Stokes)
                           If None is provided, the instrument matrix is determined by the QLIPP convention with swing specify by chi
                           
@@ -305,6 +305,30 @@ class waveorder_microscopy:
 
     def illumination_setup(self, illu_mode, NA_illu_in, Source, Source_PolState):
         
+        '''
+    
+        setup illumination source function for transfer function computing
+        
+        Parameters
+        ----------
+            illu_mode       : str
+                              string to set the pattern of illumination source
+                              'BF' for brightfield illumination with source pattern specified by NA_illu
+                              'PH' for phase contrast illumination with the source pattern specify by NA_illu and NA_illu_in
+                              'Arbitrary' for self-defined source pattern of dimension (N_pattern, N, M)
+        
+            NA_illu_in      : flaot
+                              numerical aperture of the inner circle for phase contrast ring illumination
+                          
+            Source          : numpy.ndarray
+                              illumination source pattern with dimension of (N_pattern, N, M)
+                          
+            Source_PolState : numpy.ndarray
+                              illumination polarization states (Ex, Ey) for each illumination pattern with dimension of (N_pattern, 2)
+                              
+                              
+        '''
+        
         
         if illu_mode == 'BF':
             self.Source = gen_Pupil(self.fxx, self.fyy, self.NA_illu, self.lambda_illu)
@@ -351,14 +375,34 @@ class waveorder_microscopy:
 
     def phase_deconv_setup(self, phase_deconv, ph_deconv_layer):
         
+        '''
+    
+        setup transfer functions for phase deconvolution with the corresponding dimensions
+        
+        Parameters
+        ----------
+            phase_deconv    : str
+                              string contains the phase reconstruction dimension 
+                              '2D' for 2D phase deconvolution
+                              '3D' for 3D phase deconvolution
+        
+            ph_deconv_layer : int
+                              number of layers included for each layer of semi-3D phase reconstruction
+                              
+        '''
+        
         if phase_deconv == '2D':
             
+            # generate defocus kernel based on Pupil function and z_defocus
             self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_defocus)
+            
+            # compute 2D phase transfer function
             self.gen_WOTF()
             
         elif phase_deconv == 'semi-2D':
             
             self.ph_deconv_layer = ph_deconv_layer
+            
             if self.z_defocus[0] - self.z_defocus[1] >0:
                 z_deconv = -(np.r_[:self.ph_deconv_layer]-self.ph_deconv_layer//2)*self.psz
             else:
@@ -370,16 +414,38 @@ class waveorder_microscopy:
             
         elif phase_deconv == '3D':
             
+            # generate defocus kernel and Green's function
             if self.z_defocus[0] - self.z_defocus[1] >0:
                 z = -ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
             else:
-                z = ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
+                z = ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)    
             self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
             self.G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
+            
+            # compute 3D phase transfer function
             self.gen_3D_WOTF()
     
     
     def inclination_recon_setup(self, inc_recon, phase_deconv):
+        
+        '''
+    
+        setup transfer functions for QUTIPP reconstruction
+        
+        Parameters
+        ----------
+            phase_deconv : str
+                           string contains the phase reconstruction dimension 
+                           '2D' for 2D phase deconvolution
+                           '3D' for 3D phase deconvolution
+        
+            inc_recon    : str
+                           option for constructing settings for 3D orientation reconstruction
+                           '2D-vec-WOTF' for 2D diffractive reconstruction of 3D anisotropy (phase_deconv is set to '2D')
+                           '3D' for 3D for diffractive reconstruction of 3D anisotropy (phase_deconv is set to '3D')
+                           other allowed strings is going to be deprecated
+                              
+        '''
         
         if inc_recon is not None and inc_recon != '3D':
             wave_vec_norm_x = self.lambda_illu*self.fxx
@@ -401,22 +467,40 @@ class waveorder_microscopy:
                 self.gen_H_OTF_inc()
                 self.compute_inc_AHA()
             elif inc_recon == '2D-vec-WOTF' and phase_deconv == '2D':
+                
+                # generate 2D vectorial transfer function for 2D QUTIPP
                 self.gen_2D_vec_WOTF_inc()
+                
+                # compute the AHA matrix for later 2D inversion
                 self.inc_AHA_2D_vec = np.zeros((7,7,self.N,self.M),complex)
-
                 for i,j,p in itertools.product(range(7), range(7), range(self.N_Stokes)):
                     self.inc_AHA_2D_vec[i,j] += np.sum(np.conj(self.H_dyadic_2D_OTF[p,i])*self.H_dyadic_2D_OTF[p,j],axis=2)
 
                 
         elif inc_recon == '3D' and phase_deconv == '3D':
+            # generate 3D vectorial transfer function for 3D QUTIPP
             self.gen_3D_vec_WOTF_inc()
             self.inc_AHA_3D_vec = np.zeros((7,7,self.N,self.M,self.N_defocus), dtype='complex64')
-
+            
+            # compute the AHA matrix for later 3D inversion
             for i,j,p in itertools.product(range(7), range(7), range(self.N_Stokes)):
                 self.inc_AHA_3D_vec[i,j] += np.sum(np.conj(self.H_dyadic_OTF[p,i])*self.H_dyadic_OTF[p,j],axis=0)
             
                 
     def instrument_matrix_setup(self, A_matrix):
+        
+        '''
+    
+        setup instrument matrix
+        
+        Parameters
+        ----------
+            A_matrix : numpy.ndarray
+                       self-provided instrument matrix converting polarization-sensitive intensity images into Stokes parameters 
+                       with shape of (N_channel, N_Stokes)
+                       If None is provided, the instrument matrix is determined by the QLIPP convention with swing specify by chi
+                              
+        '''
         
         if A_matrix is None:
             self.N_channel = 5
@@ -434,6 +518,13 @@ class waveorder_microscopy:
 ##############   constructor asisting function group   ##############
 
     def gen_WOTF(self):
+        
+        '''
+    
+        generate 2D phase transfer functions
+        
+                             
+        '''
 
         self.Hu = np.zeros((self.N, self.M, self.N_defocus*self.N_pattern),complex)
         self.Hp = np.zeros((self.N, self.M, self.N_defocus*self.N_pattern),complex)
@@ -450,6 +541,13 @@ class waveorder_microscopy:
                                                                        use_gpu=self.use_gpu, gpu_id=self.gpu_id)
                 
     def gen_semi_2D_WOTF(self):
+        
+        '''
+    
+        generate semi-3D phase transfer functions
+        
+                             
+        '''
         
         self.Hu = np.zeros((self.N, self.M, self.ph_deconv_layer*self.N_pattern),complex)
         self.Hp = np.zeros((self.N, self.M, self.ph_deconv_layer*self.N_pattern),complex)
@@ -469,6 +567,13 @@ class waveorder_microscopy:
 
             
     def gen_3D_WOTF(self):
+        
+        '''
+    
+        generate 3D phase transfer functions
+        
+                             
+        '''
         
         self.H_re = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
         self.H_im = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
@@ -569,11 +674,18 @@ class waveorder_microscopy:
             
     def gen_2D_vec_WOTF_inc(self):
         
+        '''
+    
+        generate 2D vectorial transfer functions for 2D QUTIPP
+        
+                             
+        '''
+        
         
         self.H_dyadic_2D_OTF = np.zeros((self.N_Stokes, 7, self.N, self.M, self.N_defocus*self.N_pattern),dtype='complex64')
 
         
-        
+        # angle-dependent electric field components due to focusing effect
         fr = (self.fxx**2 + self.fyy**2)**(0.5)
         cos_factor = (1-(self.lambda_illu**2)*(fr**2)*self.Pupil_support)**(0.5)*self.Pupil_support
         dc_idx = (fr==0)
@@ -588,10 +700,12 @@ class waveorder_microscopy:
         E_field_factor[3, nondc_idx] = -self.lambda_illu*self.fxx[nondc_idx]
         E_field_factor[4, nondc_idx] = -self.lambda_illu*self.fyy[nondc_idx]
         
+        # generate dyadic Green's tensor
         G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_defocus)
         G_tensor_z = gen_dyadic_Greens_tensor_z(self.fxx, self.fyy, G_fun_z, self.Pupil_support, self.lambda_illu)
-
-
+        
+        
+        # compute transfer functions
         OTF_compute = lambda x, y, z, w: WOTF_semi_2D_compute(x, y, self.Pupil_obj, w, \
                                                            z, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
         
@@ -604,6 +718,7 @@ class waveorder_microscopy:
             
             idx = i*self.N_pattern+j
             
+            # focusing electric field components
             Ex_field = self.Source_PolState[j,0]*E_field_factor[0] + self.Source_PolState[j,1]*E_field_factor[1]
             Ey_field = self.Source_PolState[j,0]*E_field_factor[1] + self.Source_PolState[j,1]*E_field_factor[2]
             Ez_field = self.Source_PolState[j,0]*E_field_factor[3] + self.Source_PolState[j,1]*E_field_factor[4]
@@ -615,7 +730,8 @@ class waveorder_microscopy:
             IF_EyEz = Ey_field * np.conj(Ez_field)
 
             Source_norm = Source_current*(IF_ExEx + IF_EyEy)
-
+            
+            # intermediate transfer functions
             ExEx_Gxx_re, ExEx_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,0,:,:,i], self.Hz_det[:,:,i])
             ExEy_Gxy_re, ExEy_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,1,:,:,i], self.Hz_det[:,:,i])
             ExEz_Gxz_re, ExEz_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,2,:,:,i], self.Hz_det[:,:,i])
@@ -647,7 +763,7 @@ class waveorder_microscopy:
             EyEy_Gxz_re, EyEy_Gxz_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,2,:,:,i], self.Hz_det[:,:,i])
             ExEx_Gyz_re, ExEx_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[1,2,:,:,i], self.Hz_det[:,:,i])
 
-
+            # 2D vectorial transfer functions
             self.H_dyadic_2D_OTF[0,0,:,:,idx] = ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re + EyEx_Gyx_re + EyEy_Gyy_re + EyEz_Gyz_re
             self.H_dyadic_2D_OTF[0,1,:,:,idx] = ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im + EyEx_Gyx_im + EyEy_Gyy_im + EyEz_Gyz_im
             self.H_dyadic_2D_OTF[0,2,:,:,idx] = ExEx_Gxx_re - ExEy_Gxy_re + EyEx_Gyx_re - EyEy_Gyy_re
@@ -672,6 +788,7 @@ class waveorder_microscopy:
             self.H_dyadic_2D_OTF[2,5,:,:,idx] = ExEy_Gyz_re + ExEz_Gyy_re + EyEy_Gxz_re + EyEz_Gyx_re
             self.H_dyadic_2D_OTF[2,6,:,:,idx] = ExEz_Gyz_re + EyEz_Gxz_re
             
+            # transfer functions for S3
             if self.N_Stokes == 4:
         
                 self.H_dyadic_2D_OTF[3,0,:,:,idx] = -ExEx_Gxy_im - ExEy_Gyy_im - ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
@@ -684,9 +801,16 @@ class waveorder_microscopy:
             
     def gen_3D_vec_WOTF_inc(self):
         
+        '''
+    
+        generate 3D vectorial transfer functions for 3D QUTIPP
+        
+                             
+        '''
         
         self.H_dyadic_OTF = np.zeros((self.N_Stokes, 7, self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
         
+        # angle-dependent electric field components due to focusing effect
         fr = (self.fxx**2 + self.fyy**2)**(0.5)
         cos_factor = (1-(self.lambda_illu**2)*(fr**2)*self.Pupil_support)**(0.5)*self.Pupil_support
         dc_idx = (fr==0)
@@ -703,7 +827,7 @@ class waveorder_microscopy:
         
 
         
-
+        # generate dyadic Green's tensor
         N_defocus = self.G_tensor_z_upsampling*self.N_defocus
         psz = self.psz/self.G_tensor_z_upsampling
         if self.z_defocus[0] - self.z_defocus[1] >0:
@@ -717,7 +841,7 @@ class waveorder_microscopy:
         G_tensor_z = (ifft(G_tensor, axis=4)/psz)[...,::np.int(self.G_tensor_z_upsampling)]
         
 
-
+        # compute transfer functions
         OTF_compute = lambda x, y, z: WOTF_3D_compute(x.astype('float32'), y.astype('complex64'), 
                                                       self.Pupil_obj.astype('complex64'), self.Hz_det.astype('complex64'), \
                                                       z.astype('complex64'), self.psz,\
@@ -728,7 +852,8 @@ class waveorder_microscopy:
                 Source_current = self.Source.copy()
             else:
                 Source_current = self.Source[i].copy()
-                
+            
+            # focusing electric field components
             Ex_field = self.Source_PolState[i,0]*E_field_factor[0] + self.Source_PolState[i,1]*E_field_factor[1]
             Ey_field = self.Source_PolState[i,0]*E_field_factor[1] + self.Source_PolState[i,1]*E_field_factor[2]
             Ez_field = self.Source_PolState[i,0]*E_field_factor[3] + self.Source_PolState[i,1]*E_field_factor[4]
@@ -740,7 +865,8 @@ class waveorder_microscopy:
             IF_EyEz = Ey_field * np.conj(Ez_field)
             
             Source_norm = Source_current*(IF_ExEx + IF_EyEy)
-
+            
+            # intermediate transfer functions
             ExEx_Gxx_re, ExEx_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,0])
             ExEy_Gxy_re, ExEy_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,1])
             ExEz_Gxz_re, ExEz_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,2])
@@ -772,7 +898,7 @@ class waveorder_microscopy:
             EyEy_Gxz_re, EyEy_Gxz_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,2])
             ExEx_Gyz_re, ExEx_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[1,2])
 
-
+            # 3D vectorial transfer functions
             self.H_dyadic_OTF[0,0,i] = ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re + EyEx_Gyx_re + EyEy_Gyy_re + EyEz_Gyz_re
             self.H_dyadic_OTF[0,1,i] = ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im + EyEx_Gyx_im + EyEy_Gyy_im + EyEz_Gyz_im
             self.H_dyadic_OTF[0,2,i] = ExEx_Gxx_re - ExEy_Gxy_re + EyEx_Gyx_re - EyEy_Gyy_re
@@ -797,6 +923,7 @@ class waveorder_microscopy:
             self.H_dyadic_OTF[2,5,i] = ExEy_Gyz_re + ExEz_Gyy_re + EyEy_Gxz_re + EyEz_Gyx_re
             self.H_dyadic_OTF[2,6,i] = ExEz_Gyz_re + EyEz_Gxz_re
             
+            # transfer functions for S3
             if self.N_Stokes == 4:
         
                 self.H_dyadic_OTF[3,0,i] = -ExEx_Gxy_im - ExEy_Gyy_im - ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
@@ -814,8 +941,24 @@ class waveorder_microscopy:
 
     def Stokes_recon(self, I_meas):
         
+        '''
+    
+        reconstruct Stokes parameters from polarization-sensitive intensity images
+        
+        Parameters
+        ----------
+            I_meas        : numpy.ndarray
+                            polarization-sensitive intensity images with the size of (N_channel, ...)
+                          
+        Returns
+        -------
+            S_image_recon : numpy.ndarray
+                            reconstructed Stokes parameters with the size of (N_Stokes, ...)
+                       
+                              
+        '''
+        
         img_shape = I_meas.shape
-        dim = I_meas.ndim 
         
         A_pinv = np.linalg.pinv(self.A_matrix)
         S_image_recon = np.reshape(np.dot(A_pinv, I_meas.reshape((self.N_channel, -1))), (self.N_Stokes,)+img_shape[1:])
@@ -825,6 +968,23 @@ class waveorder_microscopy:
     
     
     def Stokes_transform(self, S_image_recon):
+        
+        '''
+    
+        transform Stokes parameters into normalized Stokes parameters
+        
+        Parameters
+        ----------
+            S_image_recon : numpy.ndarray
+                            reconstructed Stokes parameters with the size of (N_Stokes, ...)
+                          
+        Returns
+        -------
+            S_transformed : numpy.ndarray
+                            normalized Stokes parameters with the size of (3, ...) or (5, ...)
+                       
+                              
+        '''
         
         if self.use_gpu:
             S_image_recon = cp.array(S_image_recon)
@@ -857,6 +1017,32 @@ class waveorder_microscopy:
     
     
     def Polscope_bg_correction(self, S_image_tm, S_bg_tm, kernel_size=400, poly_order=2):
+        
+        '''
+    
+        QLIPP background correction algorithm
+        
+        Parameters
+        ----------
+            S_image_tm  : numpy.ndarray
+                          normalized Stokes parameters with the size of (3, ...) or (5, ...)
+                          
+            S_bg_tm     : numpy.ndarray
+                          normalized background Stokes parameters
+            
+            kernel_size : int
+                          size of smoothing window for background estimation in 'local' method
+            
+            poly_order  : int
+                          order of polynomial fitting for background estimation in 'local_fit' method
+                          
+        Returns
+        -------
+            S_image_tm : numpy.ndarray
+                         background corrected normalized Stokes parameters with the same size as the input Stokes parameters
+            
+                              
+        '''
         
         if self.use_gpu:
             S_image_tm = cp.array(S_image_tm)
@@ -929,6 +1115,27 @@ class waveorder_microscopy:
     
     
     def Polarization_recon(self, S_image_recon):
+        
+        '''
+    
+        reconstruction of polarization-related physical properties in QLIPP
+        
+        Parameters
+        ----------
+            S_image_recon : numpy.ndarray
+                            normalized Stokes parameters with the size of (3, ...) or (5, ...)
+                                                  
+        Returns
+        -------
+            Recon_para    : numpy.ndarray
+                            reconstructed polarization-related physical properties
+                            channel 0 is retardance
+                            channel 1 is in-plane orientation
+                            channel 2 is brightfield
+                            channel 3 is degree of polarization
+            
+                              
+        '''
         
         if self.use_gpu:
             S_image_recon = cp.array(S_image_recon)
@@ -1270,6 +1477,25 @@ class waveorder_microscopy:
     
     def scattering_potential_tensor_recon_2D_vec(self, S_image_recon, reg_inc=1e-1*np.ones((7,))):
         
+        '''
+    
+        Tikhonov reconstruction of 2D scattering potential tensor components with vectorial model in QUTIPP
+        
+        Parameters
+        ----------
+            S_image_recon : numpy.ndarray
+                            background corrected Stokes parameters normalized with S0's mean with the size of (3, N, M, N_pattern)
+                            
+            reg_inc       : numpy.ndarray
+                            Tikhonov regularization parameters for 7 scattering potential tensor components with the size of (7,)
+                                                  
+        Returns
+        -------
+            f_tensor      : numpy.ndarray
+                            2D scattering potential tensor components with the size of (7, N, M)
+            
+                              
+        '''
         
         start_time = time.time()
 
@@ -1318,6 +1544,25 @@ class waveorder_microscopy:
     
     def scattering_potential_tensor_recon_3D_vec(self, S_image_recon, reg_inc=1e-1*np.ones((7,))):
         
+        '''
+    
+        Tikhonov reconstruction of 3D scattering potential tensor components with vectorial model in QUTIPP
+        
+        Parameters
+        ----------
+            S_image_recon : numpy.ndarray
+                            background corrected Stokes parameters normalized with S0's mean with the size of (3, N_pattern, N, M, N_defocus)
+                            
+            reg_inc       : numpy.ndarray
+                            Tikhonov regularization parameters for 7 scattering potential tensor components with the size of (7,)
+                                                  
+        Returns
+        -------
+            f_tensor      : numpy.ndarray
+                            3D scattering potential tensor components with the size of (7, N, M, N_defocus)
+            
+                              
+        '''
         
         start_time = time.time()
         
@@ -1362,7 +1607,63 @@ class waveorder_microscopy:
         
         return f_tensor
     
+    
+    
     def scattering_potential_tensor_to_3D_orientation(self, f_tensor, S_image_recon=None, material_type='positive', reg_ret_ap = 1e-2, itr=20, step_size=0.3,verbose=True):
+        
+        '''
+    
+        Estimating principal retardance, 3D orientation, optic sign from scattering potential tensor components 
+        
+        Parameters
+        ----------
+            f_tensor      : numpy.ndarray
+                            scattering potential tensor components
+        
+            S_image_recon : numpy.ndarray
+                            background corrected Stokes parameters normalized with S0's mean
+                            
+            material_type : str
+                            'positive' for assumption of positively uniaxial material
+                            'negative' for assumption of negatively uniaxial material
+                            'unknown' for triggering optic sign estimation algorithm -> return two sets of solution with a probability map of material
+                            
+            reg_ret_ap    : numpy.ndarray
+                            regularization parameters for principal retardance estimation
+            
+            itr           : int
+                            number of iterations for the optic sign retrieval algorithm
+            
+            step_size     : float
+                            scaling of the gradient step size for the optic sign retrieval algorithm
+            
+            verbose       : bool
+                            option to display details of optic sign retrieval algorithm in each iteration
+                                                  
+        Returns
+        -------
+            retardance_ap : numpy.ndarray
+                            reconstructed principal retardance with the size of (2, N, M) for 2D and (2, N, M, N_defocus) for 3D
+                            channel 0: positively uniaxial solution (or return retardance_ap_p when 'positive' is specified for material_type)
+                            channel 1: negatively uniaxial solution (or return retardance_ap_n when 'negative' is specified for material_type)
+            
+            azimuth       : numpy.ndarray
+                            reconstructed in-plane orientation with the size of (2, N, M) for 2D and (2, N, M, N_defocus) for 3D
+                            channel 0: positively uniaxial solution (or return azimuth_p when 'positive' is specified for material_type)
+                            channel 1: negatively uniaxial solution (or return azimuth_n when 'negative' is specified for material_type)
+                            
+            theta         : numpy.ndarray
+                            reconstructed out-of-plane inclination with the size of (2, N, M) for 2D and (2, N, M, N_defocus) for 3D
+                            channel 0: positively uniaxial solution (or return theta_p when 'positive' is specified for material_type)
+                            channel 1: negatively uniaxial solution (or return theta_n when 'negative' is specified for material_type)
+            
+            mat_map       : numpy.ndarray
+                            reconstructed material tendancy with the size of (2, N, M) for 2D and (2, N, M, N_defocus) for 3D
+                            channel 0: tendancy for positively uniaxial solution
+                            channel 1: tendancy for negatively uniaxial solution
+            
+                              
+        '''
         
         if material_type == 'positive' or 'unknown':
             
@@ -1436,7 +1737,8 @@ class waveorder_microscopy:
                 f_tensor_n = cp.array(f_tensor_n)
                 f_vec = cp.array(f_vec)
                 
-
+            
+            # iterative optic sign estimation algorithm
             err = np.zeros(itr+1)
 
             tic_time = time.time()
@@ -1596,6 +1898,55 @@ class waveorder_microscopy:
     def Phase_recon(self, S0_stack, method='Tikhonov', reg_u = 1e-6, reg_p = 1e-6, \
                     rho = 1e-5, lambda_u = 1e-3, lambda_p = 1e-3, itr = 20, verbose=True, bg_filter=True):
         
+        '''
+    
+        conduct 2D phase reconstruction from defocused or asymmetrically-illuminated set of intensity images (TIE or DPC)
+        
+        Parameters
+        ----------
+            S0_stack  : numpy.ndarray
+                        defocused or asymmetrically-illuminated set of S0 intensity images with the size of (N, M, N_pattern*N_defocus)
+                         
+            method    : str
+                        denoiser for 2D phase reconstruction
+                        'Tikhonov' for Tikhonov denoiser
+                        'TV'       for TV denoiser
+            
+            reg_u     : float
+                        Tikhonov regularization parameter for 2D absorption
+                             
+            reg_p     : float
+                        Tikhonov regularization parameter for 2D phase
+                             
+            lambda_u  : float
+                        TV regularization parameter for 2D absorption
+                             
+            lambda_p  : float        
+                        TV regularization parameter for 2D absorption
+                             
+            rho       : float
+                        augmented Lagrange multiplier for 2D ADMM algorithm
+                             
+            itr       : int
+                        number of iterations for 2D ADMM algorithm
+                             
+            verbose   : bool
+                        option to display detailed progress of computations or not
+                             
+            bg_filter : bool
+                        option for slow-varying 2D background normalization with uniform filter
+                          
+        Returns
+        -------
+            mu_sample  : numpy.ndarray
+                         2D absorption reconstruction with the size of (N, M)
+                  
+            phi_sample : numpy.ndarray
+                         2D phase reconstruction with the size of (N, M)
+                      
+                                          
+        '''
+        
         
         S0_stack = inten_normalization(S0_stack, bg_filter=bg_filter, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
         
@@ -1720,6 +2071,55 @@ class waveorder_microscopy:
     def Phase_recon_3D(self, S0_stack, absorption_ratio=0.0, method='Tikhonov', reg_re = 1e-4, reg_im = 1e-4,\
                        rho = 1e-5, lambda_re = 1e-3, lambda_im = 1e-3, itr = 20, verbose=True):
         
+        '''
+    
+        conduct 3D phase reconstruction from defocused or asymmetrically-illuminated stack of intensity images (TIE or DPC)
+        
+        Parameters
+        ----------
+            S0_stack         : numpy.ndarray
+                               defocused or asymmetrically-illuminated stack of S0 intensity images with the size of (N_pattern, N, M, N_defocus) or (N, M, N_defocus)
+                        
+            absorption_ratio : float
+                               assumption of correlation between phase and absorption (0 means absorption = phase*0, effective when N_pattern==1)
+                         
+            method           : str
+                               denoiser for 3D phase reconstruction
+                               'Tikhonov' for Tikhonov denoiser
+                               'TV'       for TV denoiser
+                             
+            reg_re           : float
+                               Tikhonov regularization parameter for 3D phase
+                        
+            reg_im           : float
+                               Tikhonov regularization parameter for 3D absorption
+                               
+            rho              : float
+                               augmented Lagrange multiplier for 3D ADMM algorithm
+                               
+            lambda_re        : float        
+                               TV regularization parameter for 3D absorption
+                             
+            lambda_im        : float
+                               TV regularization parameter for 3D absorption
+                             
+            itr              : int
+                               number of iterations for 3D ADMM algorithm
+                             
+            verbose          : bool
+                               option to display detailed progress of computations or not
+                             
+                          
+        Returns
+        -------
+            scaled f_real    : numpy.ndarray
+                               3D reconstruction of phase with the size of (N, M, N_defocus)
+                  
+            scaled f_imag    : numpy.ndarray
+                               3D reconstruction of absorption with the size of (N, M, N_defocus)
+                      
+                                          
+        '''
         
         S0_stack = inten_normalization_3D(S0_stack)
         
