@@ -860,7 +860,11 @@ def cylindrical_shell_local_orientation(VOI, ps, psz, scale, beta=0.5, c_para=0.
 
 
     orientation_vec = np.transpose(orientation_vec, (3,0,1,2))
-
+    
+#     orientation_vec[0] = orientation_vec[0]*ps
+#     orientation_vec[1] = orientation_vec[1]*ps
+#     orientation_vec[2] = orientation_vec[2]*psz
+    
     norm = np.sqrt(np.sum(np.abs(orientation_vec)**2,axis=0))
     theta = np.arccos(np.clip(orientation_vec[2]/norm,-1,1))
     azimuth = np.arctan2(orientation_vec[1], orientation_vec[0])

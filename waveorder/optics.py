@@ -9,15 +9,23 @@ from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 def Jones_sample(Ein, t, sa):
     
     '''
-    Compute output electric field after the interaction between the sample and incident electric field.
+    compute output electric field after the interaction between the transparent retardant sample and incident electric field.
     
-    Input:
-        Ein  : Incident electric field with size of (2, Ny, Nx)
-        t    : eigen-transmission of the sample at its optical axis with size of (2, Ny, Nx)
-        sa   : slow-axis orientation in radian with size of (Ny, Nx)
+    Parameters
+    ----------
+        Ein  : numpy.ndarray
+               incident electric field with the size of (2, Ny, Nx, ...)
+               
+        t    : numpy.ndarray or a list
+               eigen-transmission of the sample at its optical axis with size of (2, Ny, Nx, ...)
+               
+        sa   : numpy.ndarray
+               slow-axis orientation in radian with the size of (Ny, Nx, ...)
         
-    Output:
-        Eout : Output electric field with size od (2, Ny, Nx)
+    Returns
+    -------
+        Eout : numpy.ndarray
+               output electric field with the size of (2, Ny, Nx, ...)
     '''
     
     Eout = np.zeros_like(Ein)
@@ -33,13 +41,23 @@ def Jones_to_Stokes(Ein, use_gpu=False, gpu_id=0):
     
     '''
     
-    Given a coherent electric field, compute the corresponding Stokes vector.
+    given a coherent electric field, compute the corresponding Stokes vector.
     
-    Input: 
-        Ein    : Electric field with size of (2, Ny, Nx, ...) 
+    Parameters
+    ---------- 
+        Ein     : numpy.ndarray
+                  electric field with the size of (2, Ny, Nx, ...) 
+                  
+        use_gpu : bool
+                  option to use gpu or not
+        
+        gpu_id  : int
+                  number refering to which gpu will be used
     
-    Output:
-        Stokes : Corresponding Stokes vector with size of (4, Ny, Nx, ...)
+    Returns
+    -------
+        Stokes  : numpy.ndarray
+                  corresponding Stokes vector with the size of (4, Ny, Nx, ...)
     
     '''
     
@@ -71,15 +89,23 @@ def analyzer_output(Ein, alpha, beta):
     
     '''
     
-    Compute output electric field after passing through an universal analyzer.
+    compute output electric field after passing through an universal analyzer.
     
-    Input: 
-        Ein   : Incident electric field with size of (2, Ny, Nx)
-        alpha : retardance of the first LC
-        beta  : retardance of the second LC
+    Parameters
+    ----------  
+        Ein   : numpy.ndarray
+                incident electric field with the size of (2, Ny, Nx, ...)
+                
+        alpha : numpy.ndarray
+                retardance of the first LC
+                
+        beta  : numpy.ndarray
+                retardance of the second LC
         
-    Output: 
-        Eout  : Output electric field with size od (2, Ny, Nx)
+    Returns
+    ------- 
+        Eout  : numpy.ndarray
+                output electric field with the size of (2, Ny, Nx, ...)
     '''
     
     Eout = Ein[0] * np.exp(-1j*beta/2) * np.cos(alpha/2) - \
@@ -93,16 +119,26 @@ def gen_Pupil(fxx, fyy, NA, lambda_in):
     
     '''
     
-    Compute pupil function given spatial frequency, NA, wavelength.
+    compute pupil function given spatial frequency, NA, wavelength.
     
-    Input: 
-        fxx       : 2D spatial frequency array in x-dimension
-        fyy       : 2D spatial frequency array in y-dimension
-        NA        : numerical aperture of the pupil function
-        lambda_in : wavelength of the light
+    Parameters
+    ----------
+        fxx       : numpy.ndarray
+                    x component of 2D spatial frequency array with the size of (Ny, Nx)
+                    
+        fyy       : numpy.ndarray
+                    y component of 2D spatial frequency array with the size of (Ny, Nx)
+                    
+        NA        : float
+                    numerical aperture of the pupil function (normalized by the refractive index of the immersion media)
+                    
+        lambda_in : float
+                    wavelength of the light (inside the immersion media)
         
-    Output: 
-        Pupil     : pupil function with the specified parameters
+    Returns
+    ------- 
+        Pupil     : numpy.ndarray
+                    pupil function with the specified parameters with the size of (Ny, Nx)
     
     '''
     
@@ -115,6 +151,32 @@ def gen_Pupil(fxx, fyy, NA, lambda_in):
     return Pupil
 
 def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA = 0.1):
+    
+    '''
+    
+    compute the sub-sampled source function with the specified sampling spacing in NA coordinate
+    
+    Parameters
+    ----------
+        Source_cont     : numpy.ndarray
+                          continuous illumination source pattern with dimension of (Ny, Nx)
+        
+        NAx_coord       : numpy.ndarray
+                          x component of 2D spatial frequency array multiplied by wavelength with the size of (Ny, Nx)
+                    
+        NAy_coord       : numpy.ndarray
+                          y component of 2D spatial frequency array multiplied by wavelength with the size of (Ny, Nx)
+                    
+        subsampled_NA   : float
+                          subsampled spatial frequency in the unit of numerical aperture (normalized by the refractive index of the immersion media)
+                    
+        
+    Returns
+    ------- 
+        Source_discrete : numpy.ndarray
+                          discretized illumination source pattern with dimension of (Ny, Nx)
+    
+    '''
     
     N,M = Source_cont.shape
     
@@ -149,17 +211,29 @@ def gen_Hz_stack(fxx, fyy, Pupil_support, lambda_in, z_stack):
     
     '''
     
-    Generate propagation kernel
+    generate propagation kernel
     
-    Input: 
-        fxx           : 2D spatial frequency array in x-dimension
-        fyy           : 2D spatial frequency array in y-dimension
-        Pupil_support : the array that defines the support of the pupil function
-        lambda_in     : wavelength of the light
-        z_stack       : a list of defocused distance
+    Parameters
+    ---------- 
+        fxx           : numpy.ndarray
+                        x component of 2D spatial frequency array with the size of (Ny, Nx)
+                        
+        fyy           : numpy.ndarray
+                        y component of 2D spatial frequency array with the size of (Ny, Nx)
+                        
+        Pupil_support : numpy.ndarray
+                        the array that defines the support of the pupil function
+                        
+        lambda_in     : float
+                        wavelength of the light in the immersion media
+                        
+        z_stack       : numpy.ndarray
+                        1D array of defocused z position 
         
-    Output:
-        Hz_stack      : corresponding propagation kernel with size of (Ny, Nx, Nz)
+    Returns
+    -------
+        Hz_stack      : numpy.ndarray
+                        corresponding propagation kernel with size of (Ny, Nx, Nz)
     
     '''
     
