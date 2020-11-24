@@ -26,17 +26,35 @@ def genStarTarget(N, M, blur_px = 2, margin=60):
     
     '''
     
-    generate Siemens star for simulation target
+    generate Siemens star image for simulation
     
-    Input:
-        (N, M)  : (y, x) dimension of the simulated image
-        blur_px : degree of the blurring imposed on the generated image
+    Parameters
+    ----------
+        N       : int
+                  size of the simulated image in y dimension
+             
+        M       : int
+                  size of the simulated image in x dimension
         
-    Output:
-        star    : Siemens star with the size of (N, M)
-        theta   : polar angle np array with the size of (N, M)
+        blur_px : float
+                  the standard deviation of the imposed Gaussian blur on the simulated image
+                  
+        margin  : int
+                  the size of blank margin on the simulated image
+        
+    Returns
+    -------
+        star    : numpy.ndarray
+                  Siemens star with the size of (Ny, Nx)
+                  
+        theta   : numpy.ndarray
+                  azimuthal angle of the polar coordinate with the size of (Ny, Nx)
+                  
+        xx      : numpy.ndarray
+                  x coordinate array with the size of (Ny, Nx)
     
     '''
+
     
     # Construct Siemens star
 
@@ -67,6 +85,44 @@ def genStarTarget(N, M, blur_px = 2, margin=60):
     return star, theta, xx
 
 def genStarTarget_3D(img_dim, ps, psz, blur_size = 0.1, inc_upper_bound=np.pi/8, inc_range=np.pi/64):
+    
+    '''
+    
+    generate 3D star image for simulation
+    
+    Parameters
+    ----------
+        img_dim         : tuple
+                          shape of the computed 3D space with size of (Ny, Nx, Nz)
+                          
+        ps              : float
+                          transverse pixel size of the image space
+                          
+        psz             : float
+                          axial step size of the image space
+        
+        blur_size       : float
+                          the standard deviation of the imposed 3D Gaussian blur on the simulated image
+                  
+        inc_upper_bound : float
+                          the upper bound of the inclination angle of the tilted feature from 0 to pi/2
+        
+        inc_range       : float
+                          the range of the inclination that defines the axial width of the tilted feature
+        
+    Returns
+    -------
+        star            : numpy.ndarray
+                          3D star image with the size of (Ny, Nx, Nz)
+                  
+        azimuth         : numpy.ndarray
+                          azimuthal angle of the 3D polar coordinate with the size of (Ny, Nx, Nz)
+                  
+        inc_angle       : numpy.ndarray
+                          theta angle of the 3D polar coordinate with the size of (Ny, Nx, Nz)
+    
+    '''
+    
     
     N,M,L = img_dim
     
@@ -101,6 +157,41 @@ def genStarTarget_3D(img_dim, ps, psz, blur_size = 0.1, inc_upper_bound=np.pi/8,
 
 def gen_sphere_target(img_dim, ps, psz, radius, blur_size = 0.1):
     
+    '''
+    
+    generate 3D sphere target for simulation
+    
+    Parameters
+    ----------
+        img_dim   : tuple
+                    shape of the computed 3D space with size of (Ny, Nx, Nz)
+                          
+        ps        : float
+                    transverse pixel size of the image space
+                          
+        psz       : float
+                    axial step size of the image space
+                          
+        radius    : float
+                    radius of the generated sphere
+        
+        blur_size : float
+                    the standard deviation of the imposed 3D Gaussian blur on the simulated image
+                  
+        
+    Returns
+    -------
+        sphere    : numpy.ndarray
+                    3D star image with the size of (Ny, Nx, Nz)
+                  
+        azimuth   : numpy.ndarray
+                    azimuthal angle of the 3D polar coordinate with the size of (Ny, Nx, Nz)
+                  
+        inc_angle : numpy.ndarray
+                    theta angle of the 3D polar coordinate with the size of (Ny, Nx, Nz)
+    
+    '''
+    
     
     N,M,L = img_dim
     x = (np.r_[:M]-M//2)*ps
@@ -134,14 +225,24 @@ def gen_coordinate(img_dim, ps):
     generate spatial and spatial frequency coordinate arrays
     
     Input:
-        img_dim : describes the (y, x) dimension of the computed 2D space
-        ps      : pixel size
+        img_dim : tuple
+                  shape of the computed 2D space with size of (Ny, Nx)
+                    
+        ps      : float
+                  transverse pixel size of the image space
         
     Output:
-        xx      : 2D x-coordinate array
-        yy      : 2D y-coordinate array
-        fxx     : 2D spatial frequency array in x-dimension
-        fyy     : 2D spatial frequency array in y-dimension
+        xx      : numpy.ndarray
+                  x coordinate array with the size of (Ny, Nx)
+                  
+        yy      : numpy.ndarray
+                  y coordinate array with the size of (Ny, Nx)
+        
+        fxx     : numpy.ndarray
+                  x component of 2D spatial frequency array with the size of (Ny, Nx)
+                        
+        fyy     : numpy.ndarray
+                  y component of 2D spatial frequency array with the size of (Ny, Nx)
     
     '''
     
@@ -158,28 +259,6 @@ def gen_coordinate(img_dim, ps):
 
     return (xx, yy, fxx, fyy)
 
-
-def image_upsampling(Ic_image, upsamp_factor = 1, bg = 0, method=None):
-    F = lambda x: ifftshift(fft2(fftshift(x)))
-    iF = lambda x: ifftshift(ifft2(fftshift(x)))
-    
-    N_channel, Ncrop, Mcrop, N_defocus = Ic_image.shape
-
-    N = Ncrop*upsamp_factor
-    M = Mcrop*upsamp_factor
-
-    Ic_image_up = np.zeros((N_channel,N,M,N_defocus))
-    
-    for i in range(0,N_channel):
-        for j in range(0, N_defocus):
-            if method == 'BICUBIC':
-                Ic_image_up[i,:,:,j] = np.array(Image.fromarray(Ic_image[i,:,:,j]-bg).resize((M,N), Image.BICUBIC))
-            else:
-                Ic_image_up[i,:,:,j] = abs(iF(np.pad(F(np.maximum(0,Ic_image[i,:,:,j]-bg)),\
-                                      (((N-Ncrop)//2,),((M-Mcrop)//2,)),mode='constant')))
-            
-        
-    return Ic_image_up
 
 def axial_upsampling(I_meas, upsamp_factor=1):
     
@@ -199,6 +278,31 @@ def axial_upsampling(I_meas, upsamp_factor=1):
     return I_meas_up
 
 def softTreshold(x, threshold, use_gpu=False, gpu_id=0):
+    
+    '''
+    
+    compute soft thresholding operation on numpy ndarray with gpu option
+    
+    Parameters
+    ----------
+        x          : numpy.ndarray
+                     targeted array for soft thresholding operation with arbitrary size
+                  
+        threshold  : numpy.ndarray
+                     array contains threshold value for each x array position
+        
+        use_gpu    : bool
+                     option to use gpu or not
+        
+        gpu_id     : int
+                     number refering to which gpu will be used
+    
+    Returns
+    -------
+        x_threshold : numpy.ndarray
+                      thresholded array
+                      
+    '''
     
     if use_gpu:
         globals()['cp'] = __import__("cupy")
@@ -220,13 +324,21 @@ def wavelet_softThreshold(img, wavelet, threshold, level = 1):
     
     soft thresholding in the nD wavelet space
     
-    Input:
-        img       : ndarray, image or volume in nD space
-        wavelet   : str,     type of wavelet to use (pywt.wavelist() to find the whole list)
-        threshold : float,   threshold value 
+    Parameters
+    ----------
+        img       : numpy.ndarray
+                    image or volume in nD space
+                    
+        wavelet   : str
+                    type of wavelet to use (pywt.wavelist() to find the whole list)
+                    
+        threshold : float
+                    threshold value 
         
-    Output:
-        img_thres : ndarray, denoised image or volume in nD space
+    Returns
+    -------
+        img_thres : numpy.ndarray
+                    denoised image or volume in nD space
     
     '''
     
@@ -243,7 +355,24 @@ def wavelet_softThreshold(img, wavelet, threshold, level = 1):
     
     return img_thres
 
+
 def array_based_4x4_det(a):
+    
+    '''
+    
+    compute array-based determinant on 4 x 4 matrix
+    
+    Parameters
+    ----------
+        a   : numpy.ndarray or cupy.ndarray
+              4 x 4 matrix in the nD space with the shape of (4, 4, Ny, Nx, Nz, ...)
+        
+    Returns
+    -------
+        det : numpy.ndarray or cupy.ndarray
+              computed determinant in the nD space with the shape of (Ny, Nx, Nz, ...)
+    
+    '''
     
     sub_det1 = a[0,0]*(a[1,1]*(a[2,2]*a[3,3]-a[3,2]*a[2,3]) - \
                        a[1,2]*(a[2,1]*a[3,3]-a[3,1]*a[2,3]) + \
@@ -260,11 +389,29 @@ def array_based_4x4_det(a):
     sub_det4 = a[0,3]*(a[1,0]*(a[2,1]*a[3,2]-a[3,1]*a[2,2]) - \
                        a[1,1]*(a[2,0]*a[3,2]-a[3,0]*a[2,2]) + \
                        a[1,2]*(a[2,0]*a[3,1]-a[3,0]*a[2,1]) )
+    
+    det = sub_det1 - sub_det2 + sub_det3 - sub_det4
 
     
-    return sub_det1 - sub_det2 + sub_det3 - sub_det4
+    return det
 
 def array_based_5x5_det(a):
+    
+    '''
+    
+    compute array-based determinant on 5 x 5 matrix
+    
+    Parameters
+    ----------
+        a   : numpy.ndarray or cupy.ndarray
+              5 x 5 matrix in the nD space with the shape of (5, 5, Ny, Nx, Nz, ...)
+        
+    Returns
+    -------
+        det : numpy.ndarray or cupy.ndarray
+              computed determinant in the nD space with the shape of (Ny, Nx, Nz, ...)
+    
+    '''
     
     det = a[0,0]*array_based_4x4_det(a[1:,1:]) - \
           a[0,1]*array_based_4x4_det(a[1:,[0,2,3,4]]) + \
@@ -276,6 +423,22 @@ def array_based_5x5_det(a):
 
 def array_based_6x6_det(a):
     
+    '''
+    
+    compute array-based determinant on 6 x 6 matrix
+    
+    Parameters
+    ----------
+        a   : numpy.ndarray or cupy.ndarray
+              6 x 6 matrix in the nD space with the shape of (6, 6, Ny, Nx, Nz, ...)
+        
+    Returns
+    -------
+        det : numpy.ndarray or cupy.ndarray
+              computed determinant in the nD space with the shape of (Ny, Nx, Nz, ...)
+    
+    '''
+    
     det = a[0,0]*array_based_5x5_det(a[1:,1:]) - \
           a[0,1]*array_based_5x5_det(a[1:,[0,2,3,4,5]]) + \
           a[0,2]*array_based_5x5_det(a[1:,[0,1,3,4,5]]) - \
@@ -286,6 +449,22 @@ def array_based_6x6_det(a):
     return det
 
 def array_based_7x7_det(a):
+    
+    '''
+    
+    compute array-based determinant on 7 x 7 matrix
+    
+    Parameters
+    ----------
+        a   : numpy.ndarray or cupy.ndarray
+              7 x 7 matrix in the nD space with the shape of (7, 7, Ny, Nx, Nz, ...)
+        
+    Returns
+    -------
+        det : numpy.ndarray or cupy.ndarray
+              computed determinant in the nD space with the shape of (Ny, Nx, Nz, ...)
+    
+    '''
     
     det = a[0,0]*array_based_6x6_det(a[1:,1:]) - \
           a[0,1]*array_based_6x6_det(a[1:,[0,2,3,4,5,6]]) + \
@@ -300,6 +479,31 @@ def array_based_7x7_det(a):
 
 
 def uniform_filter_2D(image, size, use_gpu=False, gpu_id=0):
+    
+    '''
+    
+    compute uniform filter operation on 2D image with gpu option
+    
+    Parameters
+    ----------
+        image          : numpy.ndarray
+                         targeted image for filtering with size of (Ny, Nx) 
+                  
+        size           : int
+                         size of the kernel for uniform filtering
+        
+        use_gpu        : bool
+                         option to use gpu or not
+        
+        gpu_id         : int
+                         number refering to which gpu will be used
+    
+    Returns
+    -------
+        image_filtered : numpy.ndarray
+                         filtered image with size of (Ny, Nx)
+                         
+    '''
     
     N, M = image.shape
     
@@ -335,61 +539,142 @@ def uniform_filter_2D(image, size, use_gpu=False, gpu_id=0):
         image_bound_x[:,0:M] = cp.fliplr(filtered_y)
         image_bound_x[:,2*M:3*M] = cp.fliplr(filtered_y)
 
-        filtered_xy = cp.real(cp.fft.ifft(cp.fft.fft(image_bound_x,axis=1)*kernel_x[cp.newaxis,:],axis=1))
-        filtered_xy = filtered_xy[:,M:2*M]
+        image_filtered = cp.real(cp.fft.ifft(cp.fft.fft(image_bound_x,axis=1)*kernel_x[cp.newaxis,:],axis=1))
+        image_filtered = image_filtered[:,M:2*M]
     else:
-        filtered_xy = uniform_filter(image, size=size)
+        image_filtered = uniform_filter(image, size=size)
         
         
-    return filtered_xy
+    return image_filtered
 
 
-def inten_normalization(S0_stack, bg_filter=True, use_gpu=False, gpu_id=0):
+def inten_normalization(img_stack, bg_filter=True, use_gpu=False, gpu_id=0):
+    
+    '''
+    
+    layer-by-layer intensity normalization to reduce low-frequency phase artifacts
+    
+    Parameters
+    ----------
+        img_stack      : numpy.ndarray
+                         image stack for normalization with size of (Ny, Nx, Nz)
+                  
+        type           : str
+                         '2D' refers to layer-by-layer and '3D' refers to whole-stack normalization
+                     
+        bg_filter      : bool
+                         option for slow-varying 2D background normalization with uniform filter
         
-    N,M, Nimg = S0_stack.shape
+        use_gpu        : bool
+                         option to use gpu or not
+        
+        gpu_id         : int
+                         number refering to which gpu will be used
+    
+    Returns
+    -------
+        img_norm_stack : numpy.ndarray
+                         normalized image stack with size of (Ny, Nx, Nz)
+                         
+    '''
+        
+    N,M, Nimg = img_stack.shape
 
     if use_gpu:
         
         globals()['cp'] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
         
-        S0_stack = cp.array(S0_stack)
-        S0_norm_stack = cp.zeros_like(S0_stack)
+        img_stack = cp.array(img_stack)
+        img_norm_stack = cp.zeros_like(img_stack)
 
         for i in range(Nimg):
             if bg_filter:
-                S0_norm_stack[:,:,i] = S0_stack[:,:,i]/uniform_filter_2D(S0_stack[:,:,i], size=N//2, use_gpu=True, gpu_id=gpu_id)
+                img_norm_stack[:,:,i] = img_stack[:,:,i]/uniform_filter_2D(img_stack[:,:,i], size=N//2, use_gpu=True, gpu_id=gpu_id)
             else:
-                S0_norm_stack[:,:,i] = S0_stack[:,:,i].copy()
-            S0_norm_stack[:,:,i] /= S0_norm_stack[:,:,i].mean()
-            S0_norm_stack[:,:,i] -= 1
+                img_norm_stack[:,:,i] = img_stack[:,:,i].copy()
+            img_norm_stack[:,:,i] /= img_norm_stack[:,:,i].mean()
+            img_norm_stack[:,:,i] -= 1
 
     else:
-        S0_norm_stack = np.zeros_like(S0_stack)
+        img_norm_stack = np.zeros_like(img_stack)
 
         for i in range(Nimg):
             if bg_filter:
-                S0_norm_stack[:,:,i] = S0_stack[:,:,i]/uniform_filter(S0_stack[:,:,i], size=N//2)
+                img_norm_stack[:,:,i] = img_stack[:,:,i]/uniform_filter(img_stack[:,:,i], size=N//2)
             else:
-                S0_norm_stack[:,:,i] = S0_stack[:,:,i].copy()
-            S0_norm_stack[:,:,i] /= S0_norm_stack[:,:,i].mean()
-            S0_norm_stack[:,:,i] -= 1
+                img_norm_stack[:,:,i] = img_stack[:,:,i].copy()
+            img_norm_stack[:,:,i] /= img_norm_stack[:,:,i].mean()
+            img_norm_stack[:,:,i] -= 1
 
-    return S0_norm_stack
-
-
-
-def inten_normalization_3D(S0_stack):
+    return img_norm_stack
 
 
-    S0_stack_norm = np.zeros_like(S0_stack)
-    S0_stack_norm = S0_stack / np.mean(S0_stack,axis=(-3,-2,-1))[...,np.newaxis,np.newaxis,np.newaxis]
-    S0_stack_norm -= 1
 
-    return S0_stack_norm
+def inten_normalization_3D(img_stack):
+    
+    '''
+    
+    whole-stack intensity normalization to reduce low-frequency phase artifacts
+    
+    Parameters
+    ----------
+        img_stack      : numpy.ndarray
+                         image stack for normalization with size of (Ny, Nx, Nz)
+    
+    Returns
+    -------
+        img_norm_stack : numpy.ndarray
+                         normalized image stack with size of (Ny, Nx, Nz)
+                         
+    '''
+
+
+    img_norm_stack = np.zeros_like(img_stack)
+    img_norm_stack = img_stack / np.mean(img_stack,axis=(-3,-2,-1))[...,np.newaxis,np.newaxis,np.newaxis]
+    img_norm_stack -= 1
+
+    return img_norm_stack
 
 
 def Dual_variable_Tikhonov_deconv_2D(AHA, b_vec, determinant=None, use_gpu=False, gpu_id=0, move_cpu=True):
+    
+    '''
+    
+    2D Tikhonov deconvolution to solve for phase and absorption with weak object transfer function
+    
+    Parameters
+    ----------
+        AHA         : list
+                      A^H times A matrix stored with a list of 4 2D numpy array (4 diagonal matrices)
+                      | AHA[0]  AHA[1] |
+                      | AHA[2]  AHA[3] |
+                  
+        b_vec       : list
+                      measured intensity stored with a list of 2 2D numpy array (2 vectors)
+                      | b_vec[0] |
+                      | b_vec[1] |
+                     
+        determinant : numpy.ndarray
+                      determinant of the AHA matrix in 2D space
+        
+        use_gpu     : bool
+                      option to use gpu or not
+        
+        gpu_id      : int
+                      number refering to which gpu will be used
+                     
+        move_cpu    : bool
+                      option to move the array from gpu to cpu
+    
+    Returns
+    -------
+        mu_sample   : numpy.ndarray
+                      2D absorption reconstruction with the size of (Ny, Nx)
+                  
+        phi_sample  : numpy.ndarray
+                      2D phase reconstruction with the size of (Ny, Nx)
+    '''
     
     if determinant is None:
         determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
@@ -419,7 +704,56 @@ def Dual_variable_Tikhonov_deconv_2D(AHA, b_vec, determinant=None, use_gpu=False
 
 
 def Dual_variable_ADMM_TV_deconv_2D(AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose, use_gpu=False, gpu_id=0):
-
+    
+    '''
+    
+    2D TV deconvolution to solve for phase and absorption with weak object transfer function
+    
+    ADMM formulation:
+        
+        0.5 * || A*x - b ||_2^2 + lambda * || z ||_1 + 0.5 * rho * || D*x - z + u ||_2^2
+    
+    Parameters
+    ----------
+        AHA        : list
+                     A^H times A matrix stored with a list of 4 2D numpy array (4 diagonal matrices)
+                     | AHA[0]  AHA[1] |
+                     | AHA[2]  AHA[3] |
+                  
+        b_vec      : list
+                     measured intensity stored with a list of 2 2D numpy array (2 vectors)
+                     | b_vec[0] |
+                     | b_vec[1] |
+                     
+        rho        : float
+                     ADMM rho parameter
+        
+        lambda_u   : float
+                     TV regularization parameter for absorption
+        
+        lambda_p   : float
+                     TV regularization parameter for phase
+        
+        itr        : int
+                     number of iterations of ADMM algorithm
+        
+        verbose    : bool
+                     option to display progress of the computation
+        
+        use_gpu    : bool
+                     option to use gpu or not
+        
+        gpu_id     : int
+                     number refering to which gpu will be used
+    
+    Returns
+    -------
+        mu_sample  : numpy.ndarray
+                     2D absorption reconstruction with the size of (Ny, Nx)
+                  
+        phi_sample : numpy.ndarray
+                     2D phase reconstruction with the size of (Ny, Nx)
+    '''
 
     # ADMM deconvolution with anisotropic TV regularization
     
@@ -522,6 +856,32 @@ def Dual_variable_ADMM_TV_deconv_2D(AHA, b_vec, rho, lambda_u, lambda_p, itr, ve
 
 def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, gpu_id=0):
     
+    '''
+    
+    3D Tikhonov deconvolution to solve for phase with weak object transfer function
+    
+    Parameters
+    ----------
+        S0_stack : numpy.ndarray
+                   S0 z-stack for 3D phase deconvolution with size of (Ny, Nx, Nz)
+                  
+        H_eff    : numpy.ndarray
+                   effective transfer function with size of (Ny, Nx, Nz)
+                     
+        reg_re   : float
+                   Tikhonov regularization parameter
+        
+        use_gpu  : bool
+                   option to use gpu or not
+        
+        gpu_id   : int
+                   number refering to which gpu will be used
+    
+    Returns
+    -------
+        f_real   : numpy.ndarray
+                   3D unscaled phase reconstruction with the size of (Ny, Nx, Nz)
+    '''
     
     if use_gpu:
         
@@ -542,6 +902,43 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
 
 
 def Dual_variable_Tikhonov_deconv_3D(AHA, b_vec, determinant=None, use_gpu=False, gpu_id=0, move_cpu=True):
+    
+    '''
+    
+    3D Tikhonov deconvolution to solve for phase and absorption with weak object transfer function
+    
+    Parameters
+    ----------
+        AHA         : list
+                      A^H times A matrix stored with a list of 4 3D numpy array (4 diagonal matrices)
+                      | AHA[0]  AHA[1] |
+                      | AHA[2]  AHA[3] |
+                  
+        b_vec       : list
+                      measured intensity stored with a list of 2 3D numpy array (2 vectors)
+                      | b_vec[0] |
+                      | b_vec[1] |
+                     
+        determinant : numpy.ndarray
+                      determinant of the AHA matrix in 3D space
+        
+        use_gpu     : bool
+                      option to use gpu or not
+        
+        gpu_id      : int
+                      number refering to which gpu will be used
+                     
+        move_cpu    : bool
+                      option to move the array from gpu to cpu
+    
+    Returns
+    -------
+        f_real      : numpy.ndarray
+                      3D real scattering potential (unscaled phase) reconstruction with the size of (Ny, Nx, Nz)
+                  
+        f_imag      : numpy.ndarray
+                      3D imaginary scattering potential (unscaled absorption) reconstruction with the size of (Ny, Nx, Nz)
+    '''
     
     if determinant is None:
         determinant = AHA[0]*AHA[3] - AHA[1]*AHA[2]
@@ -571,6 +968,48 @@ def Dual_variable_Tikhonov_deconv_3D(AHA, b_vec, determinant=None, use_gpu=False
 
 def Single_variable_ADMM_TV_deconv_3D(S0_stack, H_eff, rho, reg_re, lambda_re, itr, verbose, use_gpu=False, gpu_id=0):
     
+    '''
+    
+    3D TV deconvolution to solve for phase with weak object transfer function
+    
+    ADMM formulation:
+        
+        0.5 * || A*x - b ||_2^2 + lambda * || z ||_1 + 0.5 * rho * || D*x - z + u ||_2^2
+    
+    Parameters
+    ----------
+        S0_stack  : numpy.ndarray
+                    S0 z-stack for 3D phase deconvolution with size of (Ny, Nx, Nz)
+                  
+        H_eff     : numpy.ndarray
+                    effective transfer function with size of (Ny, Nx, Nz)
+                     
+        reg_re    : float
+                    Tikhonov regularization parameter
+                     
+        rho       : float
+                    ADMM rho parameter
+        
+        lambda_re : float
+                    TV regularization parameter for phase
+        
+        itr       : int
+                    number of iterations of ADMM algorithm
+        
+        verbose   : bool
+                    option to display progress of the computation
+        
+        use_gpu   : bool
+                    option to use gpu or not
+        
+        gpu_id    : int
+                    number refering to which gpu will be used
+    
+    Returns
+    -------
+        f_real    : numpy.ndarray
+                    3D unscaled phase reconstruction with the size of (Ny, Nx, Nz)
+    '''
     
     N, M, N_defocus = S0_stack.shape
     
@@ -667,7 +1106,57 @@ def Single_variable_ADMM_TV_deconv_3D(S0_stack, H_eff, rho, reg_re, lambda_re, i
 
 
 def Dual_variable_ADMM_TV_deconv_3D(AHA, b_vec, rho, lambda_re, lambda_im, itr, verbose, use_gpu=False, gpu_id=0):
-
+    
+    '''
+    
+    3D TV deconvolution to solve for phase and absorption with weak object transfer function
+    
+    ADMM formulation:
+        
+        0.5 * || A*x - b ||_2^2 + lambda * || z ||_1 + 0.5 * rho * || D*x - z + u ||_2^2
+    
+    Parameters
+    ----------
+        AHA        : list
+                     A^H times A matrix stored with a list of 4 3D numpy array (4 diagonal matrices)
+                     | AHA[0]  AHA[1] |
+                     | AHA[2]  AHA[3] |
+                  
+        b_vec      : list
+                     measured intensity stored with a list of 2 3D numpy array (2 vectors)
+                     | b_vec[0] |
+                     | b_vec[1] |
+                     
+        rho        : float
+                     ADMM rho parameter
+        
+        lambda_re  : float
+                     TV regularization parameter for phase
+        
+        lambda_im  : float
+                     TV regularization parameter for absorption
+        
+        itr        : int
+                     number of iterations of ADMM algorithm
+        
+        verbose    : bool
+                     option to display progress of the computation
+        
+        use_gpu    : bool
+                     option to use gpu or not
+        
+        gpu_id     : int
+                     number refering to which gpu will be used
+    
+    Returns
+    -------
+        f_real     : numpy.ndarray
+                     3D real scattering potential (unscaled phase) reconstruction with the size of (Ny, Nx, Nz)
+                  
+        f_imag     : numpy.ndarray
+                     3D imaginary scattering potential (unscaled absorption) reconstruction with the size of (Ny, Nx, Nz)
+    '''
+    
 
     # ADMM deconvolution with anisotropic TV regularization
     
@@ -777,6 +1266,54 @@ def Dual_variable_ADMM_TV_deconv_3D(AHA, b_vec, rho, lambda_re, lambda_im, itr, 
 
 
 def cylindrical_shell_local_orientation(VOI, ps, psz, scale, beta=0.5, c_para=0.5, evec_idx = 0):
+    
+    '''
+    
+    segmentation of 3D cylindrical shell structure and the estimation of local orientation of the geometry
+    
+    Parameters
+    ----------
+        VOI      : numpy.ndarray
+                   3D volume of interest
+                    
+        ps       : float
+                   transverse pixel size of the image space
+                          
+        psz      : float
+                   axial step size of the image space
+                    
+        scale    : list
+                   list of feature size to scan through for a segmentation including multi-scale feature size
+                
+        beta     : float
+                   value to control whether the segmentation need to highlight more or less on the shell-like feature
+                   larger  -> highlight the most strong shell-like feature (more sparse segmentation) 
+                   smaller -> highlight somewhat shell-like feature (more connected segmentation)
+        
+        c_para   : float
+                   value to control whether the segmentation need to highlight more or less on the structure with overall large gradient
+                 
+        evec_idx : int
+                   the index of eigenvector we consider for local orientation
+                   0: smallest eigenvector, which cooresponds to the local orientation along the cylindrical shell
+                   2: largest eigenvector, which cooresponds to the local orientation normal to the cylindrical shell
+        
+        
+    Returns
+    -------
+        azimuth  : numpy.ndarray
+                   the azimuthal angle of the computed local orientation
+        
+        theta    : numpy.ndarray
+                   the theta part of the computed local orientation
+        
+        V_func   : numpy.ndarray
+                   the segmentation map of the cylindrical shell structure
+                   
+        kernel   : numpy.ndarray
+                   the kernel corresponding to the highlighting feature sizes in the segmentation with the size of (N_scale, Ny, Nx, Nz)
+    
+    '''
     
     # Hessian matrix filtering
 

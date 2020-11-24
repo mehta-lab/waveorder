@@ -4,6 +4,15 @@ import numpy as np
 import itertools
 
 
+'''
+
+This script is adopted from 
+
+https://github.com/mehta-lab/reconstruct-order
+
+
+'''
+
 
 class BackgroundEstimator2D:
     """Estimates flat field image"""

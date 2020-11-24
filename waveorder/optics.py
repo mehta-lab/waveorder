@@ -159,7 +159,7 @@ def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA = 0.1):
     Parameters
     ----------
         Source_cont     : numpy.ndarray
-                          continuous illumination source pattern with dimension of (Ny, Nx)
+                          continuous illumination source pattern with the size of (Ny, Nx)
         
         NAx_coord       : numpy.ndarray
                           x component of 2D spatial frequency array multiplied by wavelength with the size of (Ny, Nx)
@@ -222,13 +222,13 @@ def gen_Hz_stack(fxx, fyy, Pupil_support, lambda_in, z_stack):
                         y component of 2D spatial frequency array with the size of (Ny, Nx)
                         
         Pupil_support : numpy.ndarray
-                        the array that defines the support of the pupil function
+                        the array that defines the support of the pupil function with the size of (Ny, Nx)
                         
         lambda_in     : float
                         wavelength of the light in the immersion media
                         
         z_stack       : numpy.ndarray
-                        1D array of defocused z position 
+                        1D array of defocused z position with the size of (Nz,)
         
     Returns
     -------
@@ -255,17 +255,29 @@ def gen_Greens_function_z(fxx, fyy, Pupil_support, lambda_in, z_stack):
         
     '''
     
-    Generate Green's function
+    generate Green's function in u_x, u_y, z space
     
-    Input: 
-        fxx           : 2D spatial frequency array in x-dimension
-        fyy           : 2D spatial frequency array in y-dimension
-        Pupil_support : the array that defines the support of the pupil function
-        lambda_in     : wavelength of the light
-        z_stack       : a list of defocused distance
+    Parameters
+    ---------- 
+        fxx           : numpy.ndarray
+                        x component of 2D spatial frequency array with the size of (Ny, Nx)
+                        
+        fyy           : numpy.ndarray
+                        y component of 2D spatial frequency array with the size of (Ny, Nx)
+                        
+        Pupil_support : numpy.ndarray
+                        the array that defines the support of the pupil function with the size of (Ny, Nx)
         
-    Output:
-        G_fun_z       : corresponding Green's function with size of (Ny, Nx, Nz)
+        lambda_in     : float
+                        wavelength of the light in the immersion media
+                        
+        z_stack       : numpy.ndarray
+                        1D array of defocused z position with the size of (Nz,)
+        
+    Returns
+    -------
+        G_fun_z       : numpy.ndarray
+                        corresponding Green's function in u_x, u_y, z space with size of (Ny, Nx, Nz)
     
     '''
     
@@ -286,17 +298,29 @@ def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
     
     '''
     
-    Generate forward dyadic Green's function in u_x, u_y, z space
+    generate forward dyadic Green's function in u_x, u_y, z space
     
-    Input:
-        fxx           : 2D spatial frequency array in x-dimension
-        fyy           : 2D spatial frequency array in y-dimension
-        G_fun_z       : forward Green's function in u_x, u_y, z space (3D)
-        Pupil_support : the array that defines the support of the pupil function
-        lambda_in     : wavelength of the light
+    Parameters
+    ----------
+        fxx           : numpy.ndarray
+                        x component of 2D spatial frequency array with the size of (Ny, Nx)
+                        
+        fyy           : numpy.ndarray
+                        y component of 2D spatial frequency array with the size of (Ny, Nx)
+                        
+        G_fun_z       : numpy.ndarray
+                        forward Green's function in u_x, u_y, z space with size of (Ny, Nx, Nz)
+        
+        Pupil_support : numpy.ndarray
+                        the array that defines the support of the pupil function with the size of (Ny, Nx)
+                        
+        lambda_in     : float
+                        wavelength of the light in the immersion media
     
-    Output:
-        G_tensor_z    : forward dyadic Green's function in u_x, u_y, z space
+    Returns
+    -------
+        G_tensor_z    : numpy.ndarray
+                        forward dyadic Green's function in u_x, u_y, z space with the size of (3, 3, Ny, Nx, Nz)
     '''
     
     N, M = fxx.shape
@@ -327,16 +351,26 @@ def gen_Greens_function_real(img_size, ps, psz, lambda_in):
     
     '''
     
-    Generate Green's function in real space
+    generate Green's function in real space
     
-    Input: 
-        img_size  : tuple, image dimension (Ny, Nx, Nz)
-        ps        : float, transverse pixel size
-        psz       : float, axial pixel size
-        lambda_in : float, wavelength of the light
+    Parameters
+    ---------- 
+        img_size  : tuple 
+                    image dimension (Ny, Nx, Nz)
+                    
+        ps        : float
+                    transverse pixel size
+                    
+        psz       : float
+                    axial pixel size
+                    
+        lambda_in : float
+                    wavelength of the light in the immersion media
         
-    Output:
-        G_real    : numpy.ndarray, corresponding real-space Green's function with size of (Ny, Nx, Nz)
+    Returns
+    -------
+        G_real    : numpy.ndarray
+                    corresponding real-space Green's function with size of (Ny, Nx, Nz)
     
     '''
     
@@ -371,17 +405,29 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space='real'):
     
     '''
     
-    Generate dyadic Green's function tensor in real space or in Fourier space
+    generate dyadic Green's function tensor in real space or in Fourier space
     
-    Input: 
-        G_real    : numpy.ndarray, real space Greens function for wave equation with size of (Ny, Nx, Nz)
-        ps        : float, transverse pixel size
-        psz       : float, axial pixel size
-        lambda_in : float, wavelength of the light
-        space     : str, 'real' or 'Fourier' indicate real or Fourier space representation
+    Parameters
+    ---------- 
+        G_real    : numpy.ndarray
+                    real space Greens function for wave equation with size of (Ny, Nx, Nz)
+                    
+        ps        : float
+                    transverse pixel size
+                    
+        psz       : float
+                    axial pixel size
+                    
+        lambda_in : float
+                    wavelength of the light
+                    
+        space     : str
+                    'real' or 'Fourier' indicate real or Fourier space representation
         
-    Output:
-        G_tensor  : numpy.ndarray, corresponding real or Fourier space Green's tensor with size of (3, 3, Ny, Nx, Nz)
+    Returns
+    -------
+        G_tensor  : numpy.ndarray
+                    corresponding real or Fourier space Green's tensor with size of (3, 3, Ny, Nx, Nz)
     
     '''
     
@@ -426,15 +472,29 @@ def WOTF_2D_compute(Source, Pupil, use_gpu=False, gpu_id=0):
     
     '''
     
-    Compute 2D weak object transfer function (2D WOTF)
+    compute 2D weak object transfer function (2D WOTF)
     
-    Input:
-        Source : Source pattern with size of (Ny, Nx)
-        Pupil  : Pupil function with size of (Ny, Nx)
+    Parameters
+    ----------
+        Source  : numpy.ndarray
+                  illumination source pattern with the size of (Ny, Nx)
+                 
+        Pupil   : numpy.ndarray
+                  pupil function with the size of (Ny, Nx)
+                 
+        use_gpu : bool
+                  option to use gpu or not
+        
+        gpu_id  : int
+                  number refering to which gpu will be used
     
-    Output:
-        Hu     : absorption transfer function with size of (Ny, Nx) 
-        Hp     : phase transfer function with size of (Ny, Nx)
+    Returns
+    -------
+        Hu      : numpy.ndarray
+                  absorption transfer function with size of (Ny, Nx) 
+                 
+        Hp      : numpy.ndarray
+                  phase transfer function with size of (Ny, Nx)
     
     '''
     
@@ -464,22 +524,42 @@ def WOTF_2D_compute(Source, Pupil, use_gpu=False, gpu_id=0):
     
     return Hu, Hp
 
-def WOTF_semi_2D_compute(Source_support, Source, Pupil, Hz_det, G_fun_z, use_gpu=False, gpu_id=0):
+def WOTF_semi_3D_compute(Source_support, Source, Pupil, Hz_det, G_fun_z, use_gpu=False, gpu_id=0):
     
     '''
     
-    Compute semi-2D weak object transfer function (semi-2D WOTF)
+    compute semi-3D weak object transfer function (semi-3D WOTF)
     
-    Input:
-        Source_support : Source pattern support with size of (Ny, Nx)
-        Source         : Source with spatial frequency modulation with size of (Ny, Nx)
-        Pupil          : Pupil function with size of (Ny, Nx)
-        Hz_det         : One slice of propagation kernel with size of (Ny, Nx)
-        G_fun_z        : One slice of scaled 2D Fourier transform of Green's function in xy-dimension with size of (Ny, Nx)
+    Parameters
+    ----------
+        Source_support : numpy.ndarray
+                         illumination source pattern support with size of (Ny, Nx)
+                         
+        Source         : numpy.ndarray
+                         illumination source pattern with spatial frequency modulation with size of (Ny, Nx)
+                         
+        Pupil          : numpy.ndarray
+                         pupil function with the size of (Ny, Nx)
+                         
+        Hz_det         : numpy.ndarray
+                         one slice of propagation kernel with size of (Ny, Nx)
+        
+        G_fun_z        : numpy.ndarray
+                         one slice of scaled 2D Fourier transform of Green's function in xy-dimension with size of (Ny, Nx)
+                         
+        use_gpu        : bool
+                         option to use gpu or not
+        
+        gpu_id         : int
+                         number refering to which gpu will be used
     
-    Output:
-        Hu             : absorption transfer function with size of (Ny, Nx) 
-        Hp             : phase transfer function with size of (Ny, Nx)
+    Returns
+    -------
+        Hu             : numpy.ndarray
+                         absorption transfer function with size of (Ny, Nx) 
+                         
+        Hp             : numpy.ndarray
+                         phase transfer function with size of (Ny, Nx)
     
     '''
     
@@ -518,19 +598,41 @@ def WOTF_3D_compute(Source_support, Source, Pupil, Hz_det, G_fun_z, psz, use_gpu
     
     '''
     
-    Compute 3D weak object transfer function (2D WOTF)
+    compute 3D weak object transfer function (2D WOTF)
     
-    Input:
-        Source_support : Source pattern support with size of (Ny, Nx)
-        Source         : Source with spatial frequency modulation with size of (Ny, Nx)
-        Pupil          : Pupil function with size of (Ny, Nx)
-        Hz_det         : Propagation kernel with size of (Ny, Nx, Nz)
-        G_fun_z        : 2D Fourier transform of Green's function in xy-dimension with size of (Ny, Nx, Nz)
-        psz            : pixel size in the z-dimension
+    Parameters
+    ----------
+        Source_support : numpy.ndarray
+                         illumination source pattern support with the size of (Ny, Nx)
+                         
+        Source         : numpy.ndarray
+                         source with spatial frequency modulation with the size of (Ny, Nx)
+                         
+        Pupil          : numpy.ndarray
+                         pupil function with the size of (Ny, Nx)
+                         
+        Hz_det         : numpy.ndarray
+                         propagation kernel with size of (Ny, Nx, Nz)
+                         
+        G_fun_z        : numpy.ndarray
+                         2D Fourier transform of Green's function in xy-dimension with size of (Ny, Nx, Nz)
+                         
+        psz            : float
+                         pixel size in the z-dimension
         
-    Output:
-        H_re           : transfer function of real refractive index with size of (Ny, Nx, Nz) 
-        H_im           : transfer function of imaginary refractive index with size of (Ny, Nx, Nz)
+        use_gpu        : bool
+                         option to use gpu or not
+        
+        gpu_id         : int
+                         number refering to which gpu will be used
+        
+    Returns
+    -------
+        H_re           : numpy.ndarray
+                         transfer function of real scattering potential with the size of (Ny, Nx, Nz) 
+                         
+        H_im           : numpy.ndarray
+                         transfer function of imaginary scattering potential with the size of (Ny, Nx, Nz)
     
     '''
     
@@ -593,16 +695,26 @@ def gen_geometric_inc_matrix(incident_theta, incident_phi, Source):
     
     '''
     
-    Compute forward and backward matrix mapping from inclination coefficients to retardance
+    compute forward and backward matrix mapping from inclination coefficients to retardance with geometric model
     
-    Input:
-        incident_theta           : theta spherical coordinate map in 2D spatial frequency grid with size of (Ny, Nx)
-        incident_phi             : phi spherical coordinate map in 2D spatial frequency grid with size of (Ny, Nx)
-        Source                   : illumination Source pattern in 2D spatial frequency grid with size of (N_pattern, Ny, Nx)
+    Parameters
+    ----------
+        incident_theta           : numpy.ndarray
+                                   theta spherical coordinate map in 2D spatial frequency grid with the size of (Ny, Nx)
+                                   
+        incident_phi             : numpy.ndarray
+                                   phi spherical coordinate map in 2D spatial frequency grid with the size of (Ny, Nx)
+                                   
+        Source                   : numpy.ndarray
+                                   illumination Source pattern in 2D spatial frequency grid with the size of (N_pattern, Ny, Nx)
     
-    Output: 
-        geometric_inc_matrix     : forward matrix mapping from inclination coefficients to retardance
-        geometric_inc_matrix_inv : pinv of the forward matrix
+    Returns
+    ------- 
+        geometric_inc_matrix     : numpy.ndarray
+                                   forward matrix mapping from inclination coefficients to retardance
+                                   
+        geometric_inc_matrix_inv : numpy.ndarray
+                                   pinv of the forward matrix
     
     '''
     
@@ -615,10 +727,10 @@ def gen_geometric_inc_matrix(incident_theta, incident_phi, Source):
         idx_y, idx_x = np.where(Source[i])
 
         geometric_inc_matrix.append([1, np.mean(0.5*np.cos(2*incident_theta[idx_y,idx_x])),\
-                                   np.mean(-0.5*np.sin(2*incident_theta[idx_y,idx_x])*np.cos(incident_phi[idx_y,idx_x])), \
-                                   np.mean(-0.5*np.sin(2*incident_theta[idx_y,idx_x])*np.sin(incident_phi[idx_y,idx_x])), \
-                                   np.mean(-0.5*(np.sin(incident_theta[idx_y,idx_x])**2)*np.cos(2*incident_phi[idx_y,idx_x])),\
-                                   np.mean(-0.5*(np.sin(incident_theta[idx_y,idx_x])**2)*np.sin(2*incident_phi[idx_y,idx_x]))])
+                                     np.mean(-0.5*np.sin(2*incident_theta[idx_y,idx_x])*np.cos(incident_phi[idx_y,idx_x])), \
+                                     np.mean(-0.5*np.sin(2*incident_theta[idx_y,idx_x])*np.sin(incident_phi[idx_y,idx_x])), \
+                                     np.mean(-0.5*(np.sin(incident_theta[idx_y,idx_x])**2)*np.cos(2*incident_phi[idx_y,idx_x])),\
+                                     np.mean(-0.5*(np.sin(incident_theta[idx_y,idx_x])**2)*np.sin(2*incident_phi[idx_y,idx_x]))])
 
 
     geometric_inc_matrix = np.array(geometric_inc_matrix)
@@ -634,17 +746,29 @@ def SEAGLE_vec_forward(E_tot, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0):
     
     '''
     
-    Compute vectorial SEAGLE forward model
+    compute vectorial SEAGLE forward model
     
-    Input:
-        E_tot         : ndarray, total electric field (scattered + incident) with size of (3, Ny, Nx, Nz)
-        f_scat_tensor : ndarray, scattering potential tensor with size of (3, 3, Ny, Nx, Nz)
-        G_tensor      : ndarray, dyadic Green's function with size of (3, 3, Ny, Nx, Nz)
-        use_gpu       : bool, option to use gpu or not
-        gpu_id        : int, gpu_id for computation
+    Parameters
+    ----------
+        E_tot         : nunmpy.ndarray
+                        total electric field (scattered + incident) with the size of (3, Ny, Nx, Nz)
         
-    Output:
-        E_in_est      : ndarray, estimated incident electric field with size of (3, Ny, Nx, Nz)
+        f_scat_tensor : numpy.ndarray
+                        scattering potential tensor with the size of (3, 3, Ny, Nx, Nz)
+        
+        G_tensor      : numpy.ndarray
+                        dyadic Green's function with the size of (3, 3, Ny, Nx, Nz)
+        
+        use_gpu       : bool
+                        option to use gpu or not
+        
+        gpu_id        : int 
+                        number refering to which gpu will be used
+        
+    Returns
+    -------
+        E_in_est      : numpy.ndarray
+                        estimated incident electric field with the size of (3, Ny, Nx, Nz)
         
     '''
     
@@ -693,17 +817,29 @@ def SEAGLE_vec_backward(E_diff, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0
     
     '''
     
-    Compute the adjoint of vectorial SEAGLE forward model
+    compute the adjoint of vectorial SEAGLE forward model
     
-    Input:
-        E_diff        : ndarray, difference between estimated and real incident field with size of (3, Ny, Nx, Nz)
-        f_scat_tensor : ndarray, scattering potential tensor with size of (3, 3, Ny, Nx, Nz)
-        G_tensor      : ndarray, dyadic Green's function with size of (3, 3, Ny, Nx, Nz)
-        use_gpu       : bool, option to use gpu or not
-        gpu_id        : int, gpu_id for computation
+    Parameters
+    ----------
+        E_diff        : numpy.ndarray
+                        difference between estimated and true incident field with the size of (3, Ny, Nx, Nz)
+                        
+        f_scat_tensor : numpy.ndarray
+                        scattering potential tensor with the size of (3, 3, Ny, Nx, Nz)
+                        
+        G_tensor      : numpy.ndarray
+                        dyadic Green's function with the size of (3, 3, Ny, Nx, Nz)
+                        
+        use_gpu       : bool
+                        option to use gpu or not
+                        
+        gpu_id        : int
+                        gpu_id for computation
         
-    Output:
-        grad_E        : ndarray, gradient of the total electric field with size of (3, Ny, Nx, Nz)
+    Returns
+    -------
+        grad_E        : numpy.ndarray
+                        gradient of the total electric field with the size of (3, Ny, Nx, Nz)
         
     '''
     
@@ -754,7 +890,42 @@ def SEAGLE_vec_backward(E_diff, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0
 
 
 
-def scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='positive', reg_ret_ap = 1e-1):
+def scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='positive', reg_ret_pr = 1e-1):
+    
+    '''
+    
+    compute the adjoint of vectorial SEAGLE forward model
+    
+    Parameters
+    ----------
+        f_tensor      : numpy.ndarray
+                        scattering potential tensor components with the size of (7, N, M) or (7, N, M, N_defocus) for 3D
+                        
+        material_type : str
+                        'positive' for assumption of positively uniaxial material
+                        'negative' for assumption of negatively uniaxial material
+                        
+        reg_ret_pr    : numpy.ndarray
+                        regularization parameters for principal retardance estimation
+        
+    Returns
+    -------
+        retardance_pr : numpy.ndarray
+                        reconstructed principal retardance with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+                        p: positively uniaxial solution (return retardance_pr_p when 'positive' is specified for material_type)
+                        n: negatively uniaxial solution (return retardance_pr_n when 'negative' is specified for material_type)
+            
+        azimuth       : numpy.ndarray
+                        reconstructed in-plane orientation with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+                        p: positively uniaxial solution (return azimuth_p when 'positive' is specified for material_type)
+                        n: negatively uniaxial solution (return azimuth_n when 'negative' is specified for material_type)
+
+        theta         : numpy.ndarray
+                        reconstructed out-of-plane inclination with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+                        p: positively uniaxial solution (return theta_p when 'positive' is specified for material_type)
+                        n: negatively uniaxial solution (return theta_n when 'negative' is specified for material_type)
+        
+    '''
     
     if material_type == 'positive':
         
@@ -764,9 +935,9 @@ def scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='po
         del_f_sin_square_p = -f_tensor[2]*np.cos(2*azimuth_p) - f_tensor[3]*np.sin(2*azimuth_p)
         del_f_sin2theta_p = -f_tensor[4]*np.cos(azimuth_p) - f_tensor[5]*np.sin(azimuth_p)
         theta_p = np.arctan2(2*del_f_sin_square_p, del_f_sin2theta_p)
-        retardance_ap_p = del_f_sin_square_p * np.sin(theta_p)**2 / (np.sin(theta_p)**4 + reg_ret_ap)
+        retardance_pr_p = del_f_sin_square_p * np.sin(theta_p)**2 / (np.sin(theta_p)**4 + reg_ret_pr)
         
-        return retardance_ap_p, azimuth_p, theta_p
+        return retardance_pr_p, azimuth_p, theta_p
     
     elif material_type == 'negative':
 
@@ -776,8 +947,8 @@ def scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='po
         del_f_sin_square_n = f_tensor[2]*np.cos(2*azimuth_n) + f_tensor[3]*np.sin(2*azimuth_n)
         del_f_sin2theta_n = f_tensor[4]*np.cos(azimuth_n) + f_tensor[5]*np.sin(azimuth_n)
         theta_n = np.arctan2(2*del_f_sin_square_n, del_f_sin2theta_n)
-        retardance_ap_n = -del_f_sin_square_n * np.sin(theta_n)**2 / (np.sin(theta_n)**4 + reg_ret_ap)
+        retardance_pr_n = -del_f_sin_square_n * np.sin(theta_n)**2 / (np.sin(theta_n)**4 + reg_ret_pr)
     
-        return retardance_ap_n, azimuth_n, theta_n
+        return retardance_pr_n, azimuth_n, theta_n
 
 

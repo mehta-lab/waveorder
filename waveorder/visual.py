@@ -10,16 +10,29 @@ from scipy.stats import binned_statistic_2d
 
 
 
-
 def image_stack_viewer(image_stack,size=(10,10), colormap='gray', origin='upper'):
     
     '''
     
-    Visualize 3D and 4D image stack interactively in jupyter notebook
+    visualize 3D and 4D image stack interactively in jupyter notebook (or jupyter lab)
     
-    Input: 
-        image_stack : a 3D or 4D numpy array with size of (N_stack, N, M) or (N_stack, Nchannel, N, M)
-        size        : the dimension of the figure panel (width, height)
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      a 3D or 4D image stack with the size of (N_stack, Ny, Nx) or (N_stack, Nchannel, Ny, Nx)
+        
+        size        : tuple
+                      the size of the figure panel (width, height)
+        
+        colormap    : str
+                      the colormap of the display figure (from the colormap of the matplotlib library)
+        
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
+    
+    Returns
+    -------
+        a interactive widget shown in the output cell of the jupyter notebook (or jupyter lab)
     
     '''
     
@@ -46,6 +59,32 @@ def image_stack_viewer(image_stack,size=(10,10), colormap='gray', origin='upper'
     
 def hsv_stack_viewer(image_stack, max_val=1, size=5, origin='upper'):
     
+    '''
+    
+    visualize 3D retardance + orientation image stack with hsv colormap (orientation in h, constant in s, retardance in v)
+    interactively in jupyter notebook (or jupyter lab)
+    
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      a 3D image stack with size of  (Nchannel, N_stack, Ny, Nx)
+                      the 0 index corresponds to the orientation stack (range from 0 to pi)
+                      the 1 index corresponds to the retardance stack 
+                      
+        max_val     : float
+                      raise the brightness of the retardance channel by 1/max_val
+        
+        size        : int
+                      the size of the figure panel (size, size)
+        
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
+    
+    Returns
+    -------
+        a interactive widget shown in the output cell of the jupyter notebook (or jupyter lab)
+    
+    '''
 
     image_stack1 = image_stack[0]
     image_stack2 = image_stack[1]
@@ -55,7 +94,7 @@ def hsv_stack_viewer(image_stack, max_val=1, size=5, origin='upper'):
     
     
     for i in range(N_stack):
-        I_hsv = np.transpose(np.stack([image_stack1[i]/np.max(image_stack1[i]), \
+        I_hsv = np.transpose(np.stack([image_stack1[i]/np.pi, \
                                            np.ones_like(image_stack1[i]), \
                                            np.minimum(1, image_stack2[i]/np.max(image_stack2[i])/max_val)]), (1,2,0))
         I_rgb[i] = hsv_to_rgb(I_hsv)
@@ -82,6 +121,27 @@ def hsv_stack_viewer(image_stack, max_val=1, size=5, origin='upper'):
 
 def rgb_stack_viewer(image_stack, size=5, origin='upper'):
     
+    '''
+    
+    visualize 3D rgb image stack interactively in jupyter notebook (or jupyter lab)
+    
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      a 3D rgb image stack with the size of  (N_stack, Ny, Nx, 3)
+        
+        size        : int
+                      the size of the figure panel (size, size)
+        
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
+    
+    Returns
+    -------
+        a interactive widget shown in the output cell of the jupyter notebook (or jupyter lab)
+    
+    '''
+    
     def interact_plot_rgb(stack_idx):
         plt.figure(figsize=(size, size))
         plt.imshow(image_stack[stack_idx], origin=origin)
@@ -93,12 +153,31 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin
     
     '''
     
-    Simultaneous visualize all channels of image stack interactively in jupyter notebook
+    simultaneous visualize all channels of image stack interactively in jupyter notebook
     
-    Input: 
-        image_stack : a 4D numpy array with size of (N_stack, Nchannel, N, M)
-        num_col     : number of columns you wish to display
-        size        : the size of one figure panel 
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      a 4D image with the size of (N_stack, Nchannel, N, M)
+                      
+        num_col     : int
+                      number of columns you wish to display
+        
+        size        : int
+                      the size of one figure panel 
+                      
+        colormap    : str
+                      the colormap of the display figure (from the colormap of the matplotlib library)
+                      
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
+        
+        vrange      : list
+                      list of range (two numbers) for all the image panels
+    
+    Returns
+    -------
+        a interactive widget shown in the output cell of the jupyter notebook (or jupyter lab)
     
     '''
     
@@ -156,15 +235,30 @@ def parallel_5D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin
     
     '''
     
-    Simultaneous visualize all channels of image stack interactively in jupyter notebook
+    simultaneous visualize all channels of image stack interactively in jupyter notebook with two stepping nobs on N_stack and N_pattern
     
-    Input: 
-        image_stack : a 5D numpy array with size of (N_stack, N_pattern, Nchannel, N, M)
-        num_col     : number of columns you wish to display
-        size        : the size of one figure panel 
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      a 5D image with the size of (N_stack, N_pattern, Nchannel, N, M)
+                      
+        num_col     : int
+                      number of columns you wish to display
+        
+        size        : int
+                      the size of one figure panel 
+                      
+        colormap    : str
+                      the colormap of the display figure (from the colormap of the matplotlib library)
+                      
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
+    
+    Returns
+    -------
+        a interactive widget shown in the output cell of the jupyter notebook (or jupyter lab)
     
     '''
-    
     
     N_stack, N_pattern, N_channel, _, _ = image_stack.shape
     num_row = np.int(np.ceil(N_channel/num_col))
@@ -193,14 +287,30 @@ def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles
     
     '''
     
-    Plot images in multiple columns
+    plot images in multiple columns
     
-    Input: 
-        image_stack : image stack in the size of (N_stack, N, M)
-        num_col     : number of columns you wish to display
-        size        : the size of one figure panel
-        set_title   : Options for setting up titles of the figures
-        titles      : titles for the figures
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      image stack with the size of (N_stack, N, M)
+                      
+        num_col     : int
+                      number of columns you wish to display
+                      
+        size        : int
+                      the size of one figure panel
+                      
+        set_title   : bool
+                      options for setting up titles of the figures
+                      
+        titles      : list
+                      list of titles for the figures
+                      
+        colormap    : str
+                      the colormap of the display figure (from the colormap of the matplotlib library)
+                      
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
     
     '''
     
@@ -232,6 +342,28 @@ def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles
 
 def plot_hsv(image_stack, max_val=1, size=5, origin='upper'):
     
+    '''
+    
+    visualize retardance + orientation image with hsv colormap (orientation in h, constant in s, retardance in v)
+    
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      retardance and orientation image with size of (N_channel, Ny, Nx)
+                      the 0 index corresponds to the orientation image (range from 0 to pi)
+                      the 1 index corresponds to the retardance image 
+                      
+        max_val     : float
+                      raise the brightness of the retardance channel by 1/max_val
+        
+        size        : int
+                      the size of the figure panel (size, size)
+        
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
+    
+    '''
+    
     N_channel = len(image_stack)
     
     if N_channel == 2:
@@ -261,6 +393,32 @@ def plot_hsv(image_stack, max_val=1, size=5, origin='upper'):
         
         
 def plot_phase_hsv(image_stack, max_val_V=1, max_val_S=1, size=5, origin='upper'):
+    
+    '''
+    
+    visualize retardance + orientation + phase image with hsv colormap (orientation in h, retardance in s, phase in v)
+    
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      retardance and orientation image with size of (N_channel, Ny, Nx)
+                      the 0 index corresponds to the orientation image (range from 0 to pi)
+                      the 1 index corresponds to the retardance image 
+                      the 2 index corresponds to the phase image
+                      
+        max_val_V   : float
+                      raise the brightness of the phase channel by 1/max_val_V
+                      
+        max_val_S   : float
+                      raise the brightness of the retardance channel by 1/max_val_S
+        
+        size        : int
+                      the size of the figure panel (size, size)
+        
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
+    
+    '''
     
     N_channel = len(image_stack)
     
@@ -306,41 +464,59 @@ def plotVectorField(img,
                     alpha=1,
                     clim=[None, None],
                     cmapImage='gray'):
-    """Overlays orientation field on the image. Returns matplotlib image axes.
-    Options:
-        threshold:
-        colorOrient: if it is True, then color the lines by their orientation.
-        linelength : can be a scalar or an image the same size as the orientation.
+    '''
+    
+    overlays orientation field on the image. Returns matplotlib image axes.
+        
     Parameters
     ----------
-    img: nparray
-        image to overlay orientation lines on
-    orientation: nparray
-        orientation in radian
-    anisotropy: nparray
-    spacing: int
-    window: int
-    linelength: int
-        can be a scalar or an image the same size as the orientation
-    linewidth: int
-        width of the orientation line
-    linecolor: str
-    colorOrient: bool
-        if it is True, then color the lines by their orientation.
-    cmapOrient:
-    threshold: nparray
-        a binary numpy array, wherever the map is 0, ignore the plotting of the line
-    alpha: int
-        line transparency. [0,1]. lower is more transparent
-    clim: list
-        [min, max], min and max intensities for displaying img
-    cmapImage:
-        colormap for displaying the image
+        img         : numpy.ndarray
+                      image to overlay orientation lines on
+                      
+        orientation : numpy.ndarray
+                      orientation in radian
+                      
+        anisotropy  : numpy.ndarray
+                      magnitude encoded in the line length
+                      
+        spacing     : int
+                      spacing of the line glyphs
+                      
+        window      : int
+                      size of the blurring window for the orientation field
+                      
+        linelength  : int
+                      can be a scalar or an image the same size as the orientation to encode linelength further
+                      
+        linewidth   : int
+                      width of the orientation line
+                      
+        linecolor   : str
+                      for example 'y' -> yellow
+                      
+        colorOrient : bool
+                      if it is True, then color the lines by their orientation
+                      
+        cmapOrient  : str
+                      colormap for coloring the lines by the orientation 
+                      
+        threshold   : numpy.ndarray
+                      a binary numpy array, wherever the map is 0, ignore the plotting of the line
+                      
+        alpha       : int
+                      line transparency. [0,1]. lower is more transparent
+                      
+        clim        : list
+                      [min, max], min and max intensities for displaying img
+        
+        cmapImage   : str
+                      colormap for displaying the image
     Returns
     -------
-    im_ax: obj
-        matplotlib image axes
-    """
+        im_ax       : obj
+                      matplotlib image axes
+                      
+    '''
 
     # plot vector field representaiton of the orientation map
     
@@ -389,6 +565,25 @@ def plotVectorField(img,
     return im_ax
         
 def orientation_2D_colorwheel(wheelsize=256, circ_size=50):
+    
+    '''
+    
+    generate hsv colorwheel for color-encoded 2D orientation
+    
+    Parameters
+    ---------- 
+        wheelsize : int
+                    size of 2D array to create this colorwheel
+        
+        circ_size : int
+                    radius of the colorwheel in pixel
+    
+    Returns
+    -------
+        im_ax     : obj
+                    matplotlib image axes
+    
+    '''
 
     xx_grid, yy_grid = np.meshgrid(np.r_[0:wheelsize]-wheelsize//2, np.r_[0:wheelsize]-wheelsize//2)
 
@@ -406,17 +601,56 @@ def orientation_2D_colorwheel(wheelsize=256, circ_size=50):
     
     
 
-def orientation_3D_colorwheel(wheelsize=256, circ_size=50, interp_belt=40/180*np.pi, sat_factor=1):
+def orientation_3D_colorwheel(wheelsize=256, circ_size=50, interp_belt=40/180*np.pi, sat_factor=1, discretize=False):
+    
+    '''
+    
+    generate colorwheel for color-encoded 3D orientation
+    
+    Parameters
+    ---------- 
+        wheelsize   : int
+                      size of 2D array to create this colorwheel
+        
+        circ_size   : int
+                      radius of the colorwheel in pixel
+                      
+        interp_belt : float
+                      width of the interpolation belt (in radian) between the top hemi-sphere and bottom hemi-sphere
+        
+        sat_factor  : float
+                      gamma factor of the saturation value
+                      sat_factor > 1 : larger white color range in theta dimension
+                      sat_factor < 1 : smaller white color range in theta dimension
+        
+        discretize  : bool
+                      option to display the discretized top hemisphere of the colorsphere or not
+    
+    Returns
+    -------
+        im_ax       : obj
+                      matplotlib image axes
+    
+    '''
     
     xx_grid, yy_grid = np.meshgrid(np.r_[0:wheelsize]-wheelsize//2, np.r_[0:wheelsize]-wheelsize//2)
 
     circle_mask = np.zeros_like(xx_grid)
-    circle_mask[xx_grid**2  + yy_grid**2 <= 4*circ_size**2] = 1
-    rho = ((xx_grid**2  + yy_grid**2)/(circ_size)**2)**(0.5)*circle_mask
-    inc = rho*np.pi/2
-
-
-    orientation = (np.arctan2(yy_grid, xx_grid)%(np.pi*2))/2/np.pi
+    
+    if discretize:
+        circle_mask[xx_grid**2  + yy_grid**2 <= 1*circ_size**2] = 1
+        rho = ((xx_grid**2  + yy_grid**2)/(circ_size)**2)**(0.5)*circle_mask
+        inc = np.round(rho*2,0)/2*np.pi/2
+        orientation = (np.arctan2(yy_grid, xx_grid)%(np.pi*2))/2/np.pi
+        orientation = np.round(orientation*16,0)/16
+    else:
+        circle_mask[xx_grid**2  + yy_grid**2 <= 4*circ_size**2] = 1
+        rho = ((xx_grid**2  + yy_grid**2)/(circ_size)**2)**(0.5)*circle_mask
+        inc = rho*np.pi/2
+        orientation = (np.arctan2(yy_grid, xx_grid)%(np.pi*2))/2/np.pi
+    
+    
+    
     value = circle_mask.copy()
 
     orientation_image = np.transpose(np.array([orientation, inc, value]),(1,2,0))
@@ -424,32 +658,50 @@ def orientation_3D_colorwheel(wheelsize=256, circ_size=50, interp_belt=40/180*np
     
     
     theta = np.linspace(0, 2*np.pi, 1000)
-
+    
     r = circ_size
     x1 = r*np.cos(theta) + wheelsize//2
     x2 = r*np.sin(theta) + wheelsize//2
 
     im_ax = plt.imshow(RGB_image, origin='lower')
-    plt.plot(x1,x2, 'k')
+    if not discretize:
+        plt.plot(x1,x2, 'k')
     
     return im_ax
 
 def orientation_3D_to_rgb(hsv, interp_belt = 20/180*np.pi, sat_factor = 1):
-    """
-    Convert hsv values to rgb.
+    
+    '''
+    
+    convert [azimuth, theta, retardance] values to rgb according to 
+    
+    S.-T. Wu, R. Voltoline, and Y. Clarissa Lin, 
+    "A view-independent line-coding colormap for diffusion tensor imaging," Computer & Graphics, 60, 2016
 
     Parameters
     ----------
-    hsv : (..., 3) array-like
-       [h, s, v] is refered to [hue, saturation(inclination), value]
-       h and v are assumed to be in range [0, 1]
-       s is assumed to be in range of [0, pi]
+        hsv         : numpy.ndarray
+                      array with the shape of (..., 3)
+                      [h, s, v] is refered to [hue, saturation(inclination), value]
+                      h and v are assumed to be in range [0, 1]
+                      s is assumed to be in range of [0, pi]
+              
+        interp_belt : float
+                      width of the interpolation belt (in radian) between the top hemi-sphere and bottom hemi-sphere
+        
+        sat_factor  : float
+                      gamma factor of the saturation value
+                      sat_factor > 1 : larger white color range in theta dimension
+                      sat_factor < 1 : smaller white color range in theta dimension
 
     Returns
     -------
-    rgb : (..., 3) ndarray
-       Colors converted to RGB values in range [0, 1]
-    """
+        rgb         : numpy.ndarray
+                      rgb array with the shape of (..., 3)
+                      colors converted to RGB values in range [0, 1]
+                      
+    '''
+    
     hsv = np.asarray(hsv)
 
     # check length of the last dimension, should be _some_ sort of rgb
@@ -614,6 +866,33 @@ def orientation_3D_to_rgb(hsv, interp_belt = 20/180*np.pi, sat_factor = 1):
 
 def save_stack_to_folder(img_stack, dir_name, file_name, min_val=None, max_val=None, rgb=False):
     
+    '''
+    
+    save image stack into separate images
+    
+    Parameters
+    ---------- 
+        img_stack   : numpy.ndarray
+                      image stack with the shape of (N_frame, Ny, Nx) or (N_frame, Ny, Nx, 3) for RGB images
+        
+        dir_name    : str
+                      path to the saving folder
+                      
+        file_name   : str
+                      prefix name of the saving images
+        
+        min_val     : float
+                      minimal value of the plotting range
+                      
+        max_val     : float
+                      minimal value of the plotting range
+                      
+        rgb         : bool
+                      option to save rgb image or not
+    
+    
+    '''
+    
     os.system('mkdir '+dir_name)
     
     if rgb:
@@ -635,9 +914,73 @@ def save_stack_to_folder(img_stack, dir_name, file_name, min_val=None, max_val=N
             plt.imsave(file_path, img_stack[i,:,:], format="tiff", cmap=plt.cm.gray, vmin=min_val, vmax=max_val)
             
             
-def plot3DVectorField(img, azimuth, theta, threshold=None,anisotropy=1, cmapImage='gray', 
+def plot3DVectorField(img, azimuth, theta, threshold=None, anisotropy=1, cmapImage='gray', 
                       clim=[None, None], aspect=1, spacing=20, window=20, linelength=20, 
                       linewidth=3, linecolor='g', cmapAzimuth='hsv', alpha=1, subplot_ax = None):
+    
+    '''
+    
+    overlays 3D orientation field (azimuth in line orientation, theta in hsv color, retardance in linelength) on the image
+        
+    Parameters
+    ----------
+        img         : numpy.ndarray
+                      image to overlay orientation lines on
+                      
+        azimuth     : numpy.ndarray
+                      orientation in radian
+                      
+        theta       : numpy.ndarray
+                      theta in radian
+                      
+        threshold   : numpy.ndarray
+                      a binary numpy array, wherever the map is 0, ignore the plotting of the line              
+        
+        anisotropy  : numpy.ndarray
+                      magnitude encoded in the line length
+                      
+        cmapImage   : str
+                      colormap for displaying the image
+                      
+        clim        : list
+                      [min, max], min and max intensities for displaying img
+                      
+        aspect      : float
+                      aspect ratio of the 2D image 
+                      
+        spacing     : int
+                      spacing of the line glyphs
+                      
+        window      : int
+                      size of the blurring window for the orientation field
+                      
+        linelength  : int
+                      can be a scalar or an image the same size as the orientation to encode linelength further
+                      
+        linewidth   : int
+                      width of the orientation line
+                      
+        linecolor   : str
+                      for example 'y' -> yellow
+                      
+        cmapAzimuth : str
+                      colormap for coloring the lines by the theta 
+                      
+                      
+        alpha       : int
+                      line transparency. [0,1]. lower is more transparent
+                      
+        
+        subplot_ax  : obj
+                      matplotlib image axes from subplots
+        
+    Returns
+    -------
+        im_ax       : obj
+                      matplotlib image axes
+    
+    '''
+    
     
     U = anisotropy*linelength*np.cos(2*azimuth)
     V = anisotropy*linelength*np.sin(2*azimuth)
@@ -693,7 +1036,60 @@ def plot3DVectorField(img, azimuth, theta, threshold=None,anisotropy=1, cmapImag
 
 
 
-def orientation_3D_hist(azimuth, theta, retardance, bins=20, num_col=1, size=10, contour_level = 100, hist_cmap='gray'):
+def orientation_3D_hist(azimuth, theta, retardance, bins=20, num_col=1, size=10, contour_level = 100, hist_cmap='gray', top_hemi = False, colorbar=True):
+    
+    '''
+    
+    plot histogram of 3D orientation weighted by anisotropy
+    
+    Parameters
+    ---------- 
+        azimuth       : numpy.ndarray
+                        a flatten array or a stack of flatten array of azimuth with the shape of (N,) or (N_stack, N)
+        
+        theta         : numpy.ndarray
+                        a flatten array or a stack of flatten array of theta with the shape of (N,) or (N_stack, N)
+        
+        retardance    : numpy.ndarray
+                        a flatten array or a stack of flatten array of retardance with the shape of (N,) or (N_stack, N)
+        
+        bins          : int
+                        number of bins for both azimuth and theta dimension
+                     
+        num_col       : int
+                        number of columns for display of multiple histograms
+                     
+        size          : int
+                        the size of each figure panel
+                     
+        contour_level : int
+                        number of discrete contour levels of the signal counts
+                        
+        hist_cmap     : str
+                        colormap for the plotted histogram
+        
+        top_hemi      : bool
+                        option to convert the azimuth and theta from the front hemisphere to the top hemisphere
+                        
+        colorbar      : bool
+                        option to show the colorbar
+    
+    Returns
+    -------
+        fig           : obj
+                        matplotlib figure object
+        
+        ax            : obj
+                        matplotlib axes object
+    
+    '''
+    
+    if top_hemi:
+        
+        index_remapping = theta>np.pi/2
+        azimuth[index_remapping] = azimuth[index_remapping] + np.pi
+        theta[index_remapping] = np.pi - theta[index_remapping]
+        
     
     if azimuth.ndim == 1:
         
@@ -710,8 +1106,13 @@ def orientation_3D_hist(azimuth, theta, retardance, bins=20, num_col=1, size=10,
     num_row = np.int(np.ceil(N_hist/num_col))
     figsize = (num_col*size, num_row*size)
     
-    azimuth_edges = np.linspace(0, np.pi, bins)
-    theta_edges = np.linspace(0, np.pi, bins)
+    if top_hemi:
+        azimuth_edges = np.linspace(0, 2*np.pi, 2*bins)
+        theta_edges = np.linspace(0, np.pi/2, bins/2)
+    else:
+        azimuth_edges = np.linspace(0, np.pi, bins)
+        theta_edges = np.linspace(0, np.pi, bins)
+    
     theta_hist, azimuth_hist = np.meshgrid(theta_edges, azimuth_edges)
         
     fig, ax = plt.subplots(num_row, num_col, subplot_kw=dict(projection='polar'), figsize=figsize)
@@ -721,8 +1122,11 @@ def orientation_3D_hist(azimuth, theta, retardance, bins=20, num_col=1, size=10,
         az = azimuth[i].copy()
         th = theta[i].copy()
         val = retardance[i].copy()
-
-        statistic, aedges, tedges, binnumber = binned_statistic_2d(az, th, val, statistic='sum', bins=bins, range=[[0, np.pi], [0, np.pi]])
+        
+        if top_hemi:
+            statistic, aedges, tedges, binnumber = binned_statistic_2d(az, th, val, statistic='sum', bins=[2*bins, bins/2], range=[[0, 2*np.pi], [0, np.pi/2]])
+        else:
+            statistic, aedges, tedges, binnumber = binned_statistic_2d(az, th, val, statistic='sum', bins=bins, range=[[0, np.pi], [0, np.pi]])
         
         row_idx = i//num_col
         col_idx = np.mod(i, num_col)
@@ -731,26 +1135,52 @@ def orientation_3D_hist(azimuth, theta, retardance, bins=20, num_col=1, size=10,
         if num_row == 1:
             if num_col ==1:
                 img = ax.contourf(azimuth_hist, theta_hist/np.pi*180, statistic, levels=contour_level, cmap=hist_cmap)
-                ax.set_yticks([0, 30, 60, 90, 120, 150, 180])
-                ax.set_thetamax(180)
-                fig.colorbar(img, ax=ax)
+                if top_hemi:
+                    ax.set_yticks([0, 30, 60])
+                    ax.set_xticks(np.pi/180 * np.linspace(0,  360, 12, endpoint=False))
+                    ax.set_rmax(90)
+                else:
+                    ax.set_yticks([0, 30, 60, 90, 120, 150, 180])
+                    ax.set_thetamax(180)
+                if colorbar:
+                    fig.colorbar(img, ax=ax)
             else:
                 img = ax[col_idx].contourf(azimuth_hist, theta_hist/np.pi*180, statistic, levels=contour_level, cmap=hist_cmap)
-                ax[col_idx].set_yticks([0, 30, 60, 90, 120, 150, 180])
-                ax[col_idx].set_thetamax(180)
-                fig.colorbar(img, ax=ax[col_idx])
+                if top_hemi:
+                    ax[col_idx].set_xticks(np.pi/180 * np.linspace(0,  360, 12, endpoint=False))
+                    ax[col_idx].set_yticks([0, 30, 60])
+                    ax[col_idx].set_rmax(90)
+                else:
+                    ax[col_idx].set_yticks([0, 30, 60, 90, 120, 150, 180])
+                    ax[col_idx].set_thetamax(180)
+                    
+                if colorbar:
+                    fig.colorbar(img, ax=ax[col_idx])
             
         else:
             if num_col ==1:
                 img = ax[row_idx].contourf(azimuth_hist, theta_hist/np.pi*180, statistic, levels=contour_level, cmap=hist_cmap)
-                ax[row_idx].set_yticks([0, 30, 60, 90, 120, 150, 180])
-                ax[row_idx].set_thetamax(180)
-                fig.colorbar(img, ax=ax[row_idx])
+                
+                if top_hemi:
+                    ax[row_idx].set_xticks(np.pi/180 * np.linspace(0,  360, 12, endpoint=False))
+                    ax[row_idx].set_yticks([0, 30, 60])
+                    ax[row_idx].set_rmax(90)
+                else:
+                    ax[row_idx].set_yticks([0, 30, 60, 90, 120, 150, 180])
+                    ax[row_idx].set_thetamax(180)
+                if colorbar:
+                    fig.colorbar(img, ax=ax[row_idx])
             else:
                 img = ax[row_idx, col_idx].contourf(azimuth_hist, theta_hist/np.pi*180, statistic, levels=contour_level, cmap=hist_cmap)
-                ax[row_idx, col_idx].set_yticks([0, 30, 60, 90, 120, 150, 180])
-                ax[row_idx, col_idx].set_thetamax(180)
-                fig.colorbar(img, ax=ax[row_idx, col_idx])
+                if top_hemi:
+                    ax[row_idx, col_idx].set_xticks(np.pi/180 * np.linspace(0,  360, 12, endpoint=False))
+                    ax[row_idx, col_idx].set_yticks([0, 30, 60])
+                    ax[row_idx, col_idx].set_rmax(90)
+                else:
+                    ax[row_idx, col_idx].set_yticks([0, 30, 60, 90, 120, 150, 180])
+                    ax[row_idx, col_idx].set_thetamax(180)
+                if colorbar:
+                    fig.colorbar(img, ax=ax[row_idx, col_idx])
             
     return fig, ax
 
