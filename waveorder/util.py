@@ -4,7 +4,6 @@ import pywt
 import time
 
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
-from PIL import Image
 from scipy.ndimage import uniform_filter
 
 
