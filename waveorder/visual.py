@@ -1108,7 +1108,7 @@ def orientation_3D_hist(azimuth, theta, retardance, bins=20, num_col=1, size=10,
     
     if top_hemi:
         azimuth_edges = np.linspace(0, 2*np.pi, 2*bins)
-        theta_edges = np.linspace(0, np.pi/2, bins/2)
+        theta_edges = np.linspace(0, np.pi/2, bins//2)
     else:
         azimuth_edges = np.linspace(0, np.pi, bins)
         theta_edges = np.linspace(0, np.pi, bins)
