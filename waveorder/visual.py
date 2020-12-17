@@ -149,7 +149,7 @@ def rgb_stack_viewer(image_stack, size=5, origin='upper'):
     return interact(interact_plot_rgb, stack_idx=widgets.IntSlider(value=0, min=0, max=len(image_stack)-1, step=1))
 
     
-def parallel_4D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin='upper', vrange=None):
+def parallel_4D_viewer(image_stack, num_col = 2, size=10, set_title = False, titles=[], colormap='gray',origin='upper', vrange=None):
     
     '''
     
@@ -165,6 +165,12 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin
         
         size        : int
                       the size of one figure panel 
+                      
+        set_title   : bool
+                      options for setting up titles of the figures
+                      
+        titles      : list
+                      list of titles for the figures
                       
         colormap    : str
                       the colormap of the display figure (from the colormap of the matplotlib library)
@@ -182,6 +188,8 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin
     '''
     
     N_stack, N_channel, _, _ = image_stack.shape
+    if set_title == True and len(titles) != N_channel:
+        raise ValueError('number of titles does not match with the number of channels')
     num_row = np.int(np.ceil(N_channel/num_col))
     figsize = (num_col*size, num_row*size)
     
@@ -193,17 +201,23 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin
                     col_idx = np.mod(i, num_col)
                     ax1 = ax[col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
                     plt.colorbar(ax1,ax=ax[col_idx])
+                    if set_title == True:
+                        ax[col_idx].set_title(titles[i])
             elif num_col == 1:
                 for i in range(N_channel):
                     row_idx = i//num_col
                     ax1 = ax[row_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
                     plt.colorbar(ax1,ax=ax[row_idx])
+                    if set_title == True:
+                        ax[row_idx].set_title(titles[i])
             else:
                 for i in range(N_channel):
                     row_idx = i//num_col
                     col_idx = np.mod(i, num_col)
                     ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
                     plt.colorbar(ax1,ax=ax[row_idx, col_idx])
+                    if set_title == True:
+                        ax[row_idx, col_idx].set_title(titles[i])
                     
         elif len(vrange)==2 and vrange[0]<vrange[1]:
             f1,ax = plt.subplots(num_row, num_col, figsize=figsize)
@@ -212,26 +226,32 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin
                     col_idx = np.mod(i, num_col)
                     ax1 = ax[col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin, vmin=vrange[0], vmax=vrange[1])
                     plt.colorbar(ax1,ax=ax[col_idx])
+                    if set_title == True:
+                        ax[col_idx].set_title(titles[i])
             elif num_col == 1:
                 for i in range(N_channel):
                     row_idx = i//num_col
                     ax1 = ax[row_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin, vmin=vrange[0], vmax=vrange[1])
                     plt.colorbar(ax1,ax=ax[row_idx])
+                    if set_title == True:
+                        ax[row_idx].set_title(titles[i])
             else:
                 for i in range(N_channel):
                     row_idx = i//num_col
                     col_idx = np.mod(i, num_col)
                     ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin, vmin=vrange[0], vmax=vrange[1])
                     plt.colorbar(ax1,ax=ax[row_idx, col_idx])
+                    if set_title == True:
+                        ax[row_idx, col_idx].set_title(titles[i])
     
         else:
-            assert('range should be a list with length of 2 and range[0]<range[1]')
+            raise ValueError('range should be a list with length of 2 and range[0]<range[1]')
     
     return interact(interact_plot, stack_idx=widgets.IntSlider(value=0, min=0, max=N_stack-1, step=1))
 
 
 
-def parallel_5D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin='upper'):
+def parallel_5D_viewer(image_stack, num_col = 2, size=10, set_title = False, titles=[], colormap='gray',origin='upper'):
     
     '''
     
@@ -248,6 +268,12 @@ def parallel_5D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin
         size        : int
                       the size of one figure panel 
                       
+        set_title   : bool
+                      options for setting up titles of the figures
+                      
+        titles      : list
+                      list of titles for the figures
+                      
         colormap    : str
                       the colormap of the display figure (from the colormap of the matplotlib library)
                       
@@ -261,6 +287,8 @@ def parallel_5D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin
     '''
     
     N_stack, N_pattern, N_channel, _, _ = image_stack.shape
+    if set_title == True and len(titles) != N_channel:
+        raise ValueError('number of titles does not match with the number of channels')
     num_row = np.int(np.ceil(N_channel/num_col))
     figsize = (num_col*size, num_row*size)
     
@@ -272,12 +300,16 @@ def parallel_5D_viewer(image_stack, num_col = 2, size=10, colormap='gray',origin
                 col_idx = np.mod(i, num_col)
                 ax1 = ax[col_idx].imshow(image_stack[stack_idx_1, stack_idx_2, i], cmap=colormap, origin=origin)
                 plt.colorbar(ax1,ax=ax[col_idx])
+                if set_title == True:
+                    ax[col_idx].set_title(titles[i])
         else:
             for i in range(N_channel):
                 row_idx = i//num_col
                 col_idx = np.mod(i, num_col)
                 ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx_1, stack_idx_2, i], cmap=colormap, origin=origin)
                 plt.colorbar(ax1,ax=ax[row_idx, col_idx])
+                if set_title == True:
+                    ax[row_idx, col_idx].set_title(titles[i])
     
     return interact(interact_plot, stack_idx_1=widgets.IntSlider(value=0, min=0, max=N_stack-1, step=1),\
                                    stack_idx_2=widgets.IntSlider(value=0, min=0, max=N_pattern-1, step=1))
@@ -389,7 +421,7 @@ def plot_hsv(image_stack, max_val=1, size=5, origin='upper'):
 
     
     else:
-        raise("plot_hsv does not support N_channel >2 rendering")
+        raise ValueError("plot_hsv does not support N_channel >2 rendering")
         
         
 def plot_phase_hsv(image_stack, max_val_V=1, max_val_S=1, size=5, origin='upper'):
@@ -445,7 +477,7 @@ def plot_phase_hsv(image_stack, max_val_V=1, max_val_S=1, size=5, origin='upper'
 
     
     else:
-        raise("plot_hsv does not support N_channel >3 rendering")
+        raise ValueError("plot_hsv does not support N_channel >3 rendering")
         
         
         
