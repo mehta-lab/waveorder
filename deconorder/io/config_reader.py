@@ -57,6 +57,18 @@ class ConfigReader:
         self.itr_3D = 50
         self.Tik_reg_ph_3D = 1e-4
         self.TV_reg_ph_3D = 5e-5
+        
+        # Plotting Parameters
+        self.normalize_color_images = True
+        self.retardance_scaling = 1e3
+        self.transmission_scaling = 1e4
+        self.phase_2D_scaling = 1
+        self.absorption_2D_scaling = 1
+        self.phase_3D_scaling = 1
+        self.save_birefringence_fig = False
+        self.save_stokes_fig = False
+        self.save_polarization_fig = False
+        self.save_micromanager_fig = False
 
         if path:
             self.read_config(path)
@@ -210,31 +222,27 @@ class ConfigReader:
 
 
 
-        # if 'plotting' in self.yaml_config:
-        #     for (key, value) in self.yaml_config['plotting'].items():
-        #         if key == 'normalize_color_images':
-        #             self.plotting.normalize_color_images = value
-        #         elif key == 'retardance_scaling':
-        #             self.plotting.retardance_scaling = float(value)
-        #         elif key == 'transmission_scaling':
-        #             self.plotting.transmission_scaling = float(value)
-        #         elif key == 'phase_2D_scaling':
-        #             self.plotting.phase_2D_scaling = float(value)
-        #         elif key == 'absorption_2D_scaling':
-        #             self.plotting.absorption_2D_scaling = float(value)
-        #         elif key == 'phase_3D_scaling':
-        #             self.plotting.phase_3D_scaling = float(value)
-        #         elif key == 'save_birefringence_fig':
-        #             self.plotting.save_birefringence_fig = value
-        #         elif key == 'save_stokes_fig':
-        #             self.plotting.save_stokes_fig = value
-        #         elif key == 'save_polarization_fig':
-        #             self.plotting.save_polarization_fig = value
-        #         elif key == 'save_micromanager_fig':
-        #             self.plotting.save_micromanager_fig = value
-        #         else:
-        #             raise NameError('Unrecognized configfile field:{}, key:{}'.format('plotting', key))
-
-
-with ConfigReader('/Users/cameron.foltz/decOrder/deconorder/examples/config_example.yml') as config:
-    print(config.calib_data)
+        if 'plotting' in self.yaml_config:
+            for (key, value) in self.yaml_config['plotting'].items():
+                if key == 'normalize_color_images':
+                    self.plotting.normalize_color_images = value
+                elif key == 'retardance_scaling':
+                    self.plotting.retardance_scaling = float(value)
+                elif key == 'transmission_scaling':
+                    self.plotting.transmission_scaling = float(value)
+                elif key == 'phase_2D_scaling':
+                    self.plotting.phase_2D_scaling = float(value)
+                elif key == 'absorption_2D_scaling':
+                    self.plotting.absorption_2D_scaling = float(value)
+                elif key == 'phase_3D_scaling':
+                    self.plotting.phase_3D_scaling = float(value)
+                elif key == 'save_birefringence_fig':
+                    self.plotting.save_birefringence_fig = value
+                elif key == 'save_stokes_fig':
+                    self.plotting.save_stokes_fig = value
+                elif key == 'save_polarization_fig':
+                    self.plotting.save_polarization_fig = value
+                elif key == 'save_micromanager_fig':
+                    self.plotting.save_micromanager_fig = value
+                else:
+                    raise NameError('Unrecognized configfile field:{}, key:{}'.format('plotting', key))
