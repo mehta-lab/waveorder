@@ -1,9 +1,11 @@
 import yaml
 # import glob
 import os.path
+from dataclasses import dataclass
 # from collections.abc import Iterable
 # from .imgIO import get_sub_dirs
 
+@dataclass(frozen=True)
 class ConfigReader:
 
     def __init__(self, path=[]):
