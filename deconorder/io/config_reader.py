@@ -225,24 +225,24 @@ class ConfigReader:
         if 'plotting' in self.yaml_config:
             for (key, value) in self.yaml_config['plotting'].items():
                 if key == 'normalize_color_images':
-                    self.plotting.normalize_color_images = value
+                    self.normalize_color_images = value
                 elif key == 'retardance_scaling':
-                    self.plotting.retardance_scaling = float(value)
+                    self.retardance_scaling = float(value)
                 elif key == 'transmission_scaling':
-                    self.plotting.transmission_scaling = float(value)
+                    self.transmission_scaling = float(value)
                 elif key == 'phase_2D_scaling':
-                    self.plotting.phase_2D_scaling = float(value)
+                    self.phase_2D_scaling = float(value)
                 elif key == 'absorption_2D_scaling':
-                    self.plotting.absorption_2D_scaling = float(value)
+                    self.absorption_2D_scaling = float(value)
                 elif key == 'phase_3D_scaling':
-                    self.plotting.phase_3D_scaling = float(value)
+                    self.phase_3D_scaling = float(value)
                 elif key == 'save_birefringence_fig':
-                    self.plotting.save_birefringence_fig = value
+                    self.save_birefringence_fig = value
                 elif key == 'save_stokes_fig':
-                    self.plotting.save_stokes_fig = value
+                    self.save_stokes_fig = value
                 elif key == 'save_polarization_fig':
-                    self.plotting.save_polarization_fig = value
+                    self.save_polarization_fig = value
                 elif key == 'save_micromanager_fig':
-                    self.plotting.save_micromanager_fig = value
+                    self.save_micromanager_fig = value
                 else:
                     raise NameError('Unrecognized configfile field:{}, key:{}'.format('plotting', key))
