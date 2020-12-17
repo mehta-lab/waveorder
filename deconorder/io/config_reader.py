@@ -5,84 +5,94 @@ from dataclasses import dataclass
 # from collections.abc import Iterable
 # from .imgIO import get_sub_dirs
 
-@dataclass(frozen=True)
-class ConfigReader:
+# @dataclass(frozen=True)
+class ConfigReader(object):
 
     def __init__(self, path=[]):
-        self.yaml_config = None
+        object.__setattr__(self, 'yaml_config', None)
 
         # Dataset Parameters
-        self.data_dir = None
-        self.processed_dir = None
-        self.samples = None
-        self.positions = 'all'
-        self.z_slices = 'all'
-        self.timepoints = 'all'
-        self.background = None
-        self.calib_data = None
-        self.sample_paths = None
+        object.__setattr__(self, 'data_dir', None)
+        object.__setattr__(self, 'processed_dir', None)
+        object.__setattr__(self, 'samples', None)
+        object.__setattr__(self, 'positions', 'all')
+        object.__setattr__(self, 'z_slices', 'all')
+        object.__setattr__(self, 'timepoints', 'all')
+        object.__setattr__(self, 'background', None)
+        object.__setattr__(self, 'calib_data', None)
+        object.__setattr__(self, 'sample_paths', None)
 
         # Background Correction
-        self.background_correction = 'None'
-        self.n_slice_local_bg = 'all'
-        self.flatfield_correction = None
-        self.local_fit_order = 2
+        object.__setattr__(self, 'background_correction', 'None')
+        object.__setattr__(self, 'n_slice_local_bg', 'all')
+        object.__setattr__(self, 'flatfield_correction', None)
+        object.__setattr__(self, 'local_fit_order', 2)
 
         # Output Parameters
-        self.separate_positions = True
-        self.circularity = 'rcp'
-        self.binning = 1
+        object.__setattr__(self, 'separate_positions', True)
+        object.__setattr__(self, 'circularity', 'rcp')
+        object.__setattr__(self, 'binning', 1)
 
         # GPU
-        self.use_gpu = False
-        self.gpu_id = 0
+        object.__setattr__(self, 'use_gpu', False)
+        object.__setattr__(self, 'gpu_id', 0)
 
         # Phase Reconstruction Parameters
-        self.pixel_size = None
-        self.magnification = None
-        self.NA_objective = None
-        self.NA_condenser = None
-        self.n_objective_media = 1.003
-        self.focus_zidx = None
-        self.pad_z = 0
+        object.__setattr__(self, 'pixel_size', None)
+        object.__setattr__(self, 'magnification', None)
+        object.__setattr__(self, 'NA_objective', None)
+        object.__setattr__(self, 'NA_condenser', None)
+        object.__setattr__(self, 'n_objective_media', 1.003)
+        object.__setattr__(self, 'focus_zidx', None)
+        object.__setattr__(self, 'pad_z', 0)
 
         # Phase Algorithm Tuning Parameters
-        self.phase_denoiser_2D = 'Tikhonov'
-        self.Tik_reg_abs_2D = 1e-4
-        self.Tik_reg_ph_2D = 1e-4
-        self.rho_2D = 1
-        self.itr_2D = 50
-        self.TV_reg_abs_2D = 1e-3
-        self.TV_reg_ph_2D = 1e-5
-        self.phase_denoiser_3D = 'Tikhonov'
-        self.rho_3D = 1e-3
-        self.itr_3D = 50
-        self.Tik_reg_ph_3D = 1e-4
-        self.TV_reg_ph_3D = 5e-5
-        
+        object.__setattr__(self, 'phase_denoiser_2D', 'Tikhonov')
+        object.__setattr__(self, 'Tik_reg_abs_2D', 1e-4)
+        object.__setattr__(self, 'Tik_reg_ph_2D', 1e-4)
+        object.__setattr__(self, 'rho_2D', 1)
+        object.__setattr__(self, 'itr_2D', 50)
+        object.__setattr__(self, 'TV_reg_abs_2D', 1e-3)
+        object.__setattr__(self, 'TV_reg_ph_2D', 1e-5)
+        object.__setattr__(self, 'phase_denoiser_3D', 'Tikhonov')
+        object.__setattr__(self, 'rho_3D', 1e-3)
+        object.__setattr__(self, 'itr_3D', 50)
+        object.__setattr__(self, 'Tik_reg_ph_3D', 1e-4)
+        object.__setattr__(self, 'TV_reg_ph_3D', 5e-5)
+
         # Plotting Parameters
-        self.normalize_color_images = True
-        self.retardance_scaling = 1e3
-        self.transmission_scaling = 1e4
-        self.phase_2D_scaling = 1
-        self.absorption_2D_scaling = 1
-        self.phase_3D_scaling = 1
-        self.save_birefringence_fig = False
-        self.save_stokes_fig = False
-        self.save_polarization_fig = False
-        self.save_micromanager_fig = False
+        object.__setattr__(self, 'normalize_color_images', True)
+        object.__setattr__(self, 'retardance_scaling', 1e3)
+        object.__setattr__(self, 'transmission_scaling', 1e4)
+        object.__setattr__(self, 'phase_2D_scaling', 1)
+        object.__setattr__(self, 'absorption_2D_scaling', 1)
+        object.__setattr__(self, 'phase_3D_scaling', 1)
+        object.__setattr__(self, 'save_birefringence_fig', False)
+        object.__setattr__(self, 'save_stokes_fig', False)
+        object.__setattr__(self, 'save_polarization_fig', False)
+        object.__setattr__(self, 'save_micromanager_fig', False)
 
         if path:
             self.read_config(path)
+
+    # def __setattr__(self, name, value):
+    #     raise AttributeError('''Can't set attribute "{0}"'''.format(name))
 
     def __enter__(self):
         return self
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
+    def __setattr__(self, name, value):
+        raise AttributeError("Attempting to change immutable object")
+
+    # def __setattr__(self, name, value):
+    #     raise AttributeError('''Can't set attribute "{0}"'''.format(name))
+
     def read_config(self, path):
         with open(path, 'r') as f:
-            self.yaml_config = yaml.load(f)
+            object.__setattr__(self, 'yaml_config', yaml.load(f))
+            # self.yaml_config = yaml.load(f)
 
         assert 'dataset' in self.yaml_config, \
             'dataset is a required field in the config yaml file'
@@ -93,99 +103,99 @@ class ConfigReader:
         assert 'samples' in self.yaml_config['dataset'], \
             'Please provide samples in config file'
 
-        self.data_dir = self.yaml_config['dataset']['data_dir']
-        self.processed_dir = self.yaml_config['dataset']['processed_dir']
+        # self.data_dir = self.yaml_config['dataset']['data_dir']
+        object.__setattr__(self, 'data_dir', self.yaml_config['dataset']['data_dir'])
+        object.__setattr__(self, 'processed_dir', self.yaml_config['dataset']['processed_dir'])
 
         for (key, value) in self.yaml_config['dataset'].items():
             if key == 'samples':
-                self.samples = value
+                object.__setattr__(self, 'samples', value)
             elif key == 'positions':
-                self.positions = value
+                object.__setattr__(self, 'positions', value)
             elif key == 'ROI':
-                self.ROI = value
+                object.__setattr__(self, 'ROI', value)
             elif key == 'z_slices':
-                self.z_slices = value
+                object.__setattr__(self, 'z_slices', value)
             elif key == 'timepoints':
-                self.timepoints = value
+                object.__setattr__(self, 'timepoints', value)
             elif key == 'background':
-                self.background = value
+                object.__setattr__(self, 'background', value)
             elif key == 'path_to_calibration_data':
-                self.calib_data = value
+                object.__setattr__(self, 'calib_data', value)
             elif key not in ('data_dir', 'processed_dir'):
                 raise NameError('Unrecognized configfile field:{}, key:{}'.format('dataset', key))
 
         for sample in self.samples:
             paths = []
             paths.append(os.path.join(self.data_dir,sample))
-            self.sample_paths = paths
+            object.__setattr__(self, 'sample_paths',paths)
 
         if 'processing' in self.yaml_config:
-
             for (key, value) in self.yaml_config['processing'].items():
                 if key == 'output_channels':
-                    self.output_channels = value
+                    object.__setattr__(self, 'output_channels', value)
                     if 'Phase2D' in value or 'Phase_semi3D' in value  or 'Phase3D' in value:
                         phase_processing = True
                     else:
                         phase_processing = False
                 elif key == 'circularity':
-                    self.circularity = value
+                    object.__setattr__(self, 'circularity', value)
                 elif key == 'calibration_scheme':
-                    self.calibration_scheme = value
+                    object.__setattr__(self, 'calibration_scheme', value)
                 elif key == 'background_correction':
-                    self.background_correction = value
+                    object.__setattr__(self, 'background_correction', value)
                 elif key == 'flatfield_correction':
-                    self.flatfield_correction = value
+                    object.__setattr__(self, 'flatfield_correction', value)
                 elif key == 'separate_positions':
-                    self.separate_positions = value
+                    object.__setattr__(self, 'separate_positions', value)
                 elif key == 'n_slice_local_bg':
-                    self.n_slice_local_bg = value
+                    object.__setattr__(self, 'n_slice_local_bg', value)
                 elif key == 'local_fit_order':
-                    self.local_fit_order = value
+                    object.__setattr__(self, 'local_fit_order', value)
                 elif key == 'binning':
-                    self.binning = value
+                    object.__setattr__(self, 'binning', value)
                 elif key == 'use_gpu':
-                    self.use_gpu = value
+                    object.__setattr__(self, 'use_gpu', value)
                 elif key == 'gpu_id':
-                    self.gpu_id = value
+                    object.__setattr__(self, 'gpu_id', value)
                 elif key == 'pixel_size':
-                    self.pixel_size = value
+                    object.__setattr__(self, 'pixel_size', value)
                 elif key == 'magnification':
-                    self.magnification = value
+                    object.__setattr__(self, 'magnification', value)
                 elif key == 'NA_objective':
-                    self.NA_objective = value
+                    object.__setattr__(self, 'NA_objective', value)
                 elif key == 'NA_condenser':
-                    self.NA_condenser = value
+                    object.__setattr__(self, 'NA_condenser', value)
                 elif key == 'n_objective_media':
-                    self.n_objective_media = value
+                    object.__setattr__(self, 'n_objective_media', value)
                 elif key == 'focus_zidx':
-                    self.focus_zidx = value
+                    object.__setattr__(self, 'focus_zidx', value)
                 elif key == 'phase_denoiser_2D':
-                    self.phase_denoiser_2D = value
+                    object.__setattr__(self, 'phase_denoiser_2D', value)
                 elif key == 'Tik_reg_abs_2D':
-                    self.Tik_reg_abs_2D = value
+                    object.__setattr__(self, 'Tik_reg_abs_2D', value)
                 elif key == 'Tik_reg_ph_2D':
-                    self.Tik_reg_ph_2D = value
+                    object.__setattr__(self, 'Tik_reg_ph_2D', value)
                 elif key == 'rho_2D':
-                    self.rho_2D = value
+                    object.__setattr__(self, 'rho_2D', value)
                 elif key == 'itr_2D':
-                    self.itr_2D = value
+                    object.__setattr__(self, 'itr_2D', value)
                 elif key == 'TV_reg_abs_2D':
-                    self.TV_reg_abs_2D = value
+                    object.__setattr__(self, 'TV_reg_abs_2D', value)
                 elif key == 'TV_reg_ph_2D':
-                    self.TV_reg_ph_2D = value
+                    object.__setattr__(self, 'TV_reg_ph_2D', value)
                 elif key == 'phase_denoiser_3D':
-                    self.phase_denoiser_3D = value
+                    object.__setattr__(self, 'phase_denoiser_3D', value)
                 elif key == 'rho_3D':
-                    self.rho_3D = value
+                    object.__setattr__(self, 'rho_3D', value)
                 elif key == 'itr_3D':
-                    self.itr_3D = value
+                    object.__setattr__(self, 'itr_3D', value)
                 elif key == 'Tik_reg_ph_3D':
-                    self.Tik_reg_ph_3D = value
+                    object.__setattr__(self, 'Tik_reg_ph_3D', value)
                 elif key == 'TV_reg_ph_3D':
-                    self.TV_reg_ph_3D = value
+                    object.__setattr__(self, 'TV_reg_ph_3D', value)
                 elif key == 'pad_z':
-                    self.pad_z = value
+                    object.__setattr__(self, 'pad_z', value)
                 else:
                     raise NameError('Unrecognized configfile field:{}, key:{}'.format('processing', key))
 
@@ -227,24 +237,24 @@ class ConfigReader:
         if 'plotting' in self.yaml_config:
             for (key, value) in self.yaml_config['plotting'].items():
                 if key == 'normalize_color_images':
-                    self.normalize_color_images = value
+                    object.__setattr__(self, 'normalize_color_images', value)
                 elif key == 'retardance_scaling':
-                    self.retardance_scaling = float(value)
+                    object.__setattr__(self, 'retardance_scaling', float(value))
                 elif key == 'transmission_scaling':
-                    self.transmission_scaling = float(value)
+                    object.__setattr__(self, 'transmission_scaling', float(value))
                 elif key == 'phase_2D_scaling':
-                    self.phase_2D_scaling = float(value)
+                    object.__setattr__(self, 'phase_2D_scaling', float(value))
                 elif key == 'absorption_2D_scaling':
-                    self.absorption_2D_scaling = float(value)
+                    object.__setattr__(self, 'absorption_2D_scaling', float(value))
                 elif key == 'phase_3D_scaling':
-                    self.phase_3D_scaling = float(value)
+                    object.__setattr__(self, 'phase_3D_scaling', float(value))
                 elif key == 'save_birefringence_fig':
-                    self.save_birefringence_fig = value
+                    object.__setattr__(self, 'save_birefringence_fig', value)
                 elif key == 'save_stokes_fig':
-                    self.save_stokes_fig = value
+                    object.__setattr__(self, 'save_stokes_fig', value)
                 elif key == 'save_polarization_fig':
-                    self.save_polarization_fig = value
+                    object.__setattr__(self, 'save_polarization_fig', value)
                 elif key == 'save_micromanager_fig':
-                    self.save_micromanager_fig = value
+                    object.__setattr__(self, 'save_micromanager_fig', value)
                 else:
                     raise NameError('Unrecognized configfile field:{}, key:{}'.format('plotting', key))
