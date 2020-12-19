@@ -2,12 +2,42 @@ import numpy as np
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
 import os
-from ipywidgets import interact, interactive, fixed, interact_manual
+import cv2
+from ipywidgets import Image, Layout, interact, interactive, fixed, interact_manual, HBox, VBox
 from matplotlib.colors import hsv_to_rgb
 from matplotlib.colors import Normalize
 from scipy.ndimage import uniform_filter
 from scipy.stats import binned_statistic_2d
 
+
+def im_bit_convert(im, bit=16, norm=False, limit=[]):
+    im = im.astype(np.float32, copy=False) # convert to float32 without making a copy to save memory
+    if norm:
+        if not limit:
+            limit = [np.nanmin(im[:]), np.nanmax(im[:])] # scale each image individually based on its min and max
+        im = (im-limit[0])/(limit[1]-limit[0])*(2**bit-1)
+    im = np.clip(im, 0, 2**bit-1) # clip the values to avoid wrap-around by np.astype
+    if bit==8:
+        im = im.astype(np.uint8, copy=False) # convert to 8 bit
+    else:
+        im = im.astype(np.uint16, copy=False) # convert to 16 bit
+    return im
+
+def im_adjust(img, tol=1, bit=8):
+    """
+    Adjust contrast of the image
+
+    """
+    limit = np.percentile(img, [tol, 100 - tol])
+    im_adjusted = im_bit_convert(img, bit=bit, norm=True, limit=limit.tolist())
+    return im_adjusted
+
+
+def array2jpg_bytes(img):
+    """encode numpy array in 8-bit jpg bytes"""
+    is_success, png = cv2.imencode(".png", img)
+    png = png.tobytes()
+    return png
 
 
 def image_stack_viewer(image_stack,size=(10,10), colormap='gray', origin='upper'):
@@ -55,6 +85,55 @@ def image_stack_viewer(image_stack,size=(10,10), colormap='gray', origin='upper'
     else:
         return interact(interact_plot_4D, stack_idx_1=widgets.IntSlider(value=0, min=0, max=image_stack.shape[0]-1, step=1),\
                        stack_idx_2=widgets.IntSlider(value=0, min=0, max=image_stack.shape[1]-1, step=1))
+    
+def image_stack_viewer_fast(image_stack, size=(512, 512), origin='upper', vrange=None):
+    
+    '''
+    
+    faster function to visualize 3D image stack interactively in jupyter notebook (or jupyter lab)
+    
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      a 3D image stack with the size of (N_stack, Ny, Nx)
+        
+        size        : tuple
+                      the size of the figure panel (width, height)
+        
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
+    
+    Returns
+    -------
+        a interactive widget shown in the output cell of the jupyter notebook (or jupyter lab)
+    
+    '''
+    if vrange is None:
+        imgs = im_adjust(image_stack, tol=0, bit=16)
+    elif vrange[0]<vrange[1]:
+        imgs = im_bit_convert(image_stack, bit=16, norm=True, limit=vrange)
+    else:
+        raise ValueError('vrange needs to be a two element list with vrange[0] < vrange[1]')
+        
+
+    im_dict = {}
+    for idx, img in enumerate(imgs):
+        if origin == 'upper':
+            im_dict[idx] = array2jpg_bytes(img)
+        elif origin == 'lower':
+            im_dict[idx] = array2jpg_bytes(np.flipud(img))
+        else:
+            raise ValueError('origin can only be either "upper" or "lower"')
+    
+    im_wgt = Image(value=im_dict[0],layout=Layout(height=str(size[0])+'px', width=str(size[1])+'px'))
+    
+    def interact_plot_3D(stack_idx):    
+        im_wgt.value = im_dict[stack_idx]
+
+    interact(interact_plot_3D, stack_idx=widgets.IntSlider(value=0, min=0, max=len(im_dict)-1, step=1))
+    
+    return HBox([im_wgt])
+
     
     
 def hsv_stack_viewer(image_stack, max_val=1, size=5, origin='upper'):
@@ -147,6 +226,52 @@ def rgb_stack_viewer(image_stack, size=5, origin='upper'):
         plt.imshow(image_stack[stack_idx], origin=origin)
         
     return interact(interact_plot_rgb, stack_idx=widgets.IntSlider(value=0, min=0, max=len(image_stack)-1, step=1))
+
+
+def rgb_stack_viewer_fast(image_stack, size=(256,256), origin='upper'):
+    
+    '''
+    
+    visualize 3D rgb image stack interactively in jupyter notebook (or jupyter lab)
+    
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      a 3D rgb image stack with the size of  (N_stack, Ny, Nx, 3)
+        
+        size        : int
+                      the size of the figure panel (size, size)
+        
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
+    
+    Returns
+    -------
+        a interactive widget shown in the output cell of the jupyter notebook (or jupyter lab)
+    
+    '''
+    imgs = np.zeros_like(image_stack)
+    imgs[:,:,:,0] = np.uint8(image_stack[:,:,:,2]*255)
+    imgs[:,:,:,1] = np.uint8(image_stack[:,:,:,1]*255)
+    imgs[:,:,:,2] = np.uint8(image_stack[:,:,:,0]*255)
+
+    im_dict = {}
+    for idx, img in enumerate(imgs):
+        if origin == 'upper':
+            im_dict[idx] = array2jpg_bytes(img)
+        elif origin == 'lower':
+            im_dict[idx] = array2jpg_bytes(np.flipud(img))
+        else:
+            raise ValueError('origin can only be either "upper" or "lower"')
+    
+    im_wgt = Image(value=im_dict[0],layout=Layout(height=str(size[0])+'px', width=str(size[1])+'px'))
+    
+    def interact_plot_3D(stack_idx):    
+        im_wgt.value = im_dict[stack_idx]
+
+    interact(interact_plot_3D, stack_idx=widgets.IntSlider(value=0, min=0, max=len(im_dict)-1, step=1))
+    
+    return HBox([im_wgt])
 
     
 def parallel_4D_viewer(image_stack, num_col = 2, size=10, set_title = False, titles=[], colormap='gray',origin='upper', vrange=None):
@@ -251,6 +376,74 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, set_title = False, tit
 
 
 
+def parallel_4D_viewer_fast(image_stack, num_col = 2, size=256, origin='upper', vrange=None):
+    
+    '''
+    
+    simultaneous visualize all channels of image stack interactively in jupyter notebook
+    
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      a 4D image with the size of (N_stack, Nchannel, N, M)
+                      
+        num_col     : int
+                      number of columns you wish to display
+        
+        size        : int
+                      the size of one figure panel 
+                      
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
+        
+        vrange      : list
+                      list of range (two numbers) for all the image panels
+    
+    Returns
+    -------
+        a interactive widget shown in the output cell of the jupyter notebook (or jupyter lab)
+    
+    '''
+    N_stack, N_channel, _, _ = image_stack.shape
+    
+    list_of_widgets = []
+    list_of_img_binaries = []
+    
+    for i in range(N_channel):
+        
+        if vrange is None:
+            imgs = im_adjust(image_stack[:,i], tol=0, bit=16)
+        elif vrange[0]<vrange[1]:
+            imgs = im_bit_convert(image_stack[:,i], bit=16, norm=True, limit=vrange)
+        else:
+            raise ValueError('vrange needs to be a two element list with vrange[0] < vrange[1]')
+
+        list_of_img_binaries.append({})
+        for idx, img in enumerate(imgs):
+            if origin == 'upper':
+                list_of_img_binaries[i][idx] = array2jpg_bytes(img)
+            elif origin == 'lower':
+                list_of_img_binaries[i][idx] = array2jpg_bytes(np.flipud(img))
+            else:
+                raise ValueError('origin can only be either "upper" or "lower"')
+
+        list_of_widgets.append(Image(value=list_of_img_binaries[i][0],layout=Layout(height=str(size)+'px', width=str(size)+'px')))
+    
+    
+    def interact_plot(stack_idx):   
+        for i in range(N_channel):
+            list_of_widgets[i].value = list_of_img_binaries[i][stack_idx]
+
+
+    interact(interact_plot, stack_idx=widgets.IntSlider(value=0, min=0, max=N_stack-1, step=1))
+    
+    return widgets.GridBox(list_of_widgets, layout=widgets.Layout(grid_template_columns='repeat('+str(num_col)+','+str(size+10)+'px)'))
+
+
+    
+    
+
+
 def parallel_5D_viewer(image_stack, num_col = 2, size=10, set_title = False, titles=[], colormap='gray',origin='upper'):
     
     '''
@@ -313,6 +506,82 @@ def parallel_5D_viewer(image_stack, num_col = 2, size=10, set_title = False, tit
     
     return interact(interact_plot, stack_idx_1=widgets.IntSlider(value=0, min=0, max=N_stack-1, step=1),\
                                    stack_idx_2=widgets.IntSlider(value=0, min=0, max=N_pattern-1, step=1))
+
+def parallel_5D_viewer_fast(image_stack, num_col = 2, size=256, origin='upper', vrange=None):
+    
+    '''
+    
+    simultaneous visualize all channels of image stack interactively in jupyter notebook with two stepping nobs on N_stack and N_pattern
+    
+    Parameters
+    ---------- 
+        image_stack : numpy.ndarray
+                      a 5D image with the size of (N_stack, N_pattern, Nchannel, N, M)
+                      
+        num_col     : int
+                      number of columns you wish to display
+        
+        size        : int
+                      the size of one figure panel 
+                      
+        set_title   : bool
+                      options for setting up titles of the figures
+                      
+        titles      : list
+                      list of titles for the figures
+                      
+        colormap    : str
+                      the colormap of the display figure (from the colormap of the matplotlib library)
+                      
+        origin      : str
+                      option to set the origin of the array to the top ('upper') or to the bottom ('lower')
+    
+    Returns
+    -------
+        a interactive widget shown in the output cell of the jupyter notebook (or jupyter lab)
+    
+    '''
+    
+    N_stack, N_pattern, N_channel, _, _ = image_stack.shape
+    
+    list_of_widgets = []
+    list_of_list_img_binaries = []
+    
+    
+    for j in range(N_pattern):
+        list_of_img_binaries = []
+        for i in range(N_channel):
+            if vrange is None:
+                imgs = im_adjust(image_stack[:,j,i], tol=0, bit=16)
+            elif vrange[0]<vrange[1]:
+                imgs = im_bit_convert(image_stack[:,i], bit=16, norm=True, limit=vrange)
+            else:
+                raise ValueError('vrange needs to be a two element list with vrange[0] < vrange[1]')
+
+            list_of_img_binaries.append({})
+            for idx, img in enumerate(imgs):
+                if origin == 'upper':
+                    list_of_img_binaries[i][idx] = array2jpg_bytes(img)
+                elif origin == 'lower':
+                    list_of_img_binaries[i][idx] = array2jpg_bytes(np.flipud(img))
+                else:
+                    raise ValueError('origin can only be either "upper" or "lower"')
+            
+            if j ==0:
+                list_of_widgets.append(Image(value=list_of_img_binaries[i][0],layout=Layout(height=str(size)+'px', width=str(size)+'px')))
+        
+        list_of_list_img_binaries.append(list_of_img_binaries)
+    
+    
+    def interact_plot(stack_idx_1, stack_idx_2):
+        for i in range(N_channel):
+            list_of_widgets[i].value = list_of_list_img_binaries[stack_idx_2][i][stack_idx_1]
+
+
+    interact(interact_plot, stack_idx_1=widgets.IntSlider(value=0, min=0, max=N_stack-1, step=1),\
+                            stack_idx_2=widgets.IntSlider(value=0, min=0, max=N_pattern-1, step=1))
+    
+    return widgets.GridBox(list_of_widgets, layout=widgets.Layout(grid_template_columns='repeat('+str(num_col)+','+str(size+10)+'px)'))
 
 
 def plot_multicolumn(image_stack, num_col =2, size=10, set_title = False, titles=[], colormap='gray', origin='upper'):
