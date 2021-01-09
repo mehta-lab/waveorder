@@ -153,91 +153,95 @@ class waveorder_microscopy:
     
     Parameters
     ----------
-        img_dim         : tuple
-                          shape of the computed 2D space with size of (N, M)
+        img_dim              : tuple
+                               shape of the computed 2D space with size of (N, M)
                   
-        lambda_illu     : float
-                          wavelength of the incident light
+        lambda_illu          : float
+                               wavelength of the incident light
         
-        ps              : float
-                          xy pixel size of the image space
+        ps                   : float
+                               xy pixel size of the image space
                           
-        psz             : float
-                          z step size of the image space
+        psz                  : float
+                               z step size of the image space
         
-        NA_obj          : float
-                          numerical aperture of the detection objective
+        NA_obj               : float
+                               numerical aperture of the detection objective
         
-        NA_illu         : float 
-                          numerical aperture of the illumination condenser
+        NA_illu              : float 
+                               numerical aperture of the illumination condenser
         
-        z_defocus       : numpy.ndarray
-                          1D array of defocused z position corresponds to the intensity stack
-                          (matters for 2D reconstruction, the direction positive z matters for 3D reconstruction)
+        z_defocus            : numpy.ndarray
+                               1D array of defocused z position corresponds to the intensity stack
+                               (matters for 2D reconstruction, the direction positive z matters for 3D reconstruction)
                           
-        chi             : float
-                          swing of the illumination or detection polarization state (in radian)
+        chi                  : float
+                               swing of the illumination or detection polarization state (in radian)
                           
-        n_media         : float
-                          refractive index of the immersing media
+        n_media              : float
+                               refractive index of the immersing media
                           
-        cali            : bool
-                          'True' for the orientation convention of QLIPP data, 
-                          'False' for the orientation convention of QUTIPP data
+        cali                 : bool
+                               'True' for the orientation convention of QLIPP data, 
+                               'False' for the orientation convention of uPTI data
                           
-        bg_option       : str
-                          'local' for estimating background with scipy uniform filter
-                          'local_fit' for estimating background with polynomial fit
-                          other string for normal background subtraction with the provided background
+        bg_option            : str
+                               'local' for estimating background with scipy uniform filter
+                               'local_fit' for estimating background with polynomial fit
+                               other string for normal background subtraction with the provided background
         
-        A_matrix        : numpy.ndarray
-                          self-provided instrument matrix converting polarization-sensitive intensity images into Stokes parameters 
-                          with shape of (N_channel, N_Stokes)
-                          If None is provided, the instrument matrix is determined by the QLIPP convention with swing specify by chi
+        A_matrix             : numpy.ndarray
+                               self-provided instrument matrix converting polarization-sensitive intensity images into Stokes parameters 
+                               with shape of (N_channel, N_Stokes)
+                               If None is provided, the instrument matrix is determined by the QLIPP convention with swing specify by chi
                           
-        inc_recon       : str
-                          option for constructing settings for 3D orientation reconstruction
-                          '2D-vec-WOTF' for 2D diffractive reconstruction of 3D anisotropy (phase_deconv is set to '2D')
-                          '3D' for 3D for diffractive reconstruction of 3D anisotropy (phase_deconv is set to '3D')
-                          other allowed strings is going to be deprecated
-        
-        phase_deconv    : str
-                          string contains the phase reconstruction dimension 
-                          '2D'      for 2D phase deconvolution
-                          '3D'      for 3D phase deconvolution
-        
-        ph_deconv_layer : int
-                          number of layers included for each layer of semi-3D phase reconstruction
-        
-        illu_mode       : str
-                          string to set the pattern of illumination source
-                          'BF' for brightfield illumination with source pattern specified by NA_illu
-                          'PH' for phase contrast illumination with the source pattern specify by NA_illu and NA_illu_in
-                          'Arbitrary' for self-defined source pattern of dimension (N_pattern, N, M)
+        bire_in_plane_deconv : str
+                               string contains the dimension of 2D birefringence deconvolution  
+                               '2D' for 2D deconvolution of 2D birefringence
+                               '3D' for 3D deconvolution of 2D birefringence
                           
-        NA_illu_in      : flaot
-                          numerical aperture of the inner circle for phase contrast ring illumination
-                          
-        Source          : numpy.ndarray
-                          illumination source pattern with dimension of (N_pattern, N, M)
-                          
-        Source_PolState : numpy.ndarray
-                          illumination polarization states (Ex, Ey) for each illumination pattern with dimension of (N_pattern, 2)
-                          If provided with size of (2,), a single state is used for all illumination patterns
+        inc_recon            : str
+                               option for constructing settings for 3D orientation reconstruction
+                               '2D-vec-WOTF' for 2D diffractive reconstruction of 3D anisotropy
+                               '3D' for 3D for diffractive reconstruction of 3D anisotropy 
         
-        use_gpu         : bool
-                          option to use gpu or not
+        phase_deconv         : str
+                               string contains the phase reconstruction dimension 
+                               '2D' for 2D phase deconvolution
+                               '3D' for 3D phase deconvolution
         
-        gpu_id          : int
-                          number refering to which gpu will be used
+        ph_deconv_layer      : int
+                               number of layers included for each layer of semi-3D phase reconstruction
+        
+        illu_mode            : str
+                               string to set the pattern of illumination source
+                               'BF' for brightfield illumination with source pattern specified by NA_illu
+                               'PH' for phase contrast illumination with the source pattern specify by NA_illu and NA_illu_in
+                               'Arbitrary' for self-defined source pattern of dimension (N_pattern, N, M)
+                          
+        NA_illu_in           : flaot
+                               numerical aperture of the inner circle for phase contrast ring illumination
+                          
+        Source               : numpy.ndarray
+                               illumination source pattern with dimension of (N_pattern, N, M)
+                          
+        Source_PolState      : numpy.ndarray
+                               illumination polarization states (Ex, Ey) for each illumination pattern with dimension of (N_pattern, 2)
+                               If provided with size of (2,), a single state is used for all illumination patterns
+        
+        use_gpu              : bool
+                               option to use gpu or not
+        
+        gpu_id               : int
+                               number refering to which gpu will be used
                   
     
     '''
     
     def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi=None,\
                  n_media=1, cali=False, bg_option='global', 
-                 A_matrix=None, inc_recon=None, 
-                 phase_deconv='2D', ph_deconv_layer = 5,
+                 A_matrix=None, bire_in_plane_deconv=None, inc_recon=None, 
+                 phase_deconv=None, ph_deconv_layer = 5,
                  illu_mode='BF', NA_illu_in=None, Source=None, Source_PolState=np.array([1, 1j]),
                  use_gpu=False, gpu_id=0):
         
@@ -284,18 +288,26 @@ class waveorder_microscopy:
         # illumination setup
         
         self.illumination_setup(illu_mode, NA_illu_in, Source, Source_PolState)
-                
-        # select either 2D or 3D model for deconvolution
         
-        self.phase_deconv_setup(phase_deconv, ph_deconv_layer)
+        # Defocus kernel initialization
+        
+        self.Hz_det_setup(phase_deconv, ph_deconv_layer, bire_in_plane_deconv, inc_recon)
+                
+        # select either 2D or 3D model for phase deconvolution
+        
+        self.phase_deconv_setup(phase_deconv)
         
         # instrument matrix for polarization detection
         
         self.instrument_matrix_setup(A_matrix)
         
+        # select either 2D or 3D model for 2D birefringence deconvolution
+        
+        self.bire_in_plane_deconv_setup(bire_in_plane_deconv)
+        
         # inclination reconstruction model selection
         
-        self.inclination_recon_setup(inc_recon, phase_deconv)
+        self.inclination_recon_setup(inc_recon)
                    
         
         
@@ -360,19 +372,76 @@ class waveorder_microscopy:
             else:
                 self.N_pattern = len(Source)
                 
-            self.Source_PolState = np.zeros((self.N_pattern, 2), complex)
-            
-            if Source_PolState.ndim == 1:
-                for i in range(self.N_pattern):
-                    self.Source_PolState[i] = Source_PolState/(np.sum(np.abs(Source_PolState)**2))**(1/2)
-            else:
-                if len(Source_PolState) != self.N_pattern:
-                    raise('The length of Source_PolState needs to be either 1 or the same as N_pattern')
-                for i in range(self.N_pattern):
-                    self.Source_PolState[i] = Source_PolState[i]/(np.sum(np.abs(Source_PolState[i])**2))**(1/2)
-            
+        self.Source_PolState = np.zeros((self.N_pattern, 2), complex)
 
-    def phase_deconv_setup(self, phase_deconv, ph_deconv_layer):
+        if Source_PolState.ndim == 1:
+            for i in range(self.N_pattern):
+                self.Source_PolState[i] = Source_PolState/(np.sum(np.abs(Source_PolState)**2))**(1/2)
+        else:
+            if len(Source_PolState) != self.N_pattern:
+                raise('The length of Source_PolState needs to be either 1 or the same as N_pattern')
+            for i in range(self.N_pattern):
+                self.Source_PolState[i] = Source_PolState[i]/(np.sum(np.abs(Source_PolState[i])**2))**(1/2)
+    
+    def Hz_det_setup(self, phase_deconv, ph_deconv_layer, bire_in_plane_deconv, inc_recon):
+        
+        '''
+    
+        setup defocus kernels for deconvolution with the corresponding dimensions
+        
+        Parameters
+        ----------
+            phase_deconv         : str
+                                   string contains the dimension of the phase reconstruction
+                                   '2D' for 2D phase deconvolution
+                                   '3D' for 3D phase deconvolution
+        
+            ph_deconv_layer      : int
+                                   number of layers included for each layer of semi-3D phase reconstruction
+                              
+            bire_in_plane_deconv : str
+                                   string contains the dimension of 2D birefringence deconvolution  
+                                   '2D' for 2D deconvolution of 2D birefringence
+                                   '3D' for 3D deconvolution of 2D birefringence
+            
+            inc_recon            : str
+                                   option for constructing settings for 3D orientation reconstruction
+                                   '2D-geometric' for 2D non-diffractive reconstruction of 3D anisotropy
+                                   '2D-vec-WOTF' for 2D diffractive reconstruction of 3D anisotropy
+                                   '3D' for 3D for diffractive reconstruction of 3D anisotropy 
+                              
+        '''
+        
+        if phase_deconv == '2D' or bire_in_plane_deconv == '2D' or inc_recon == '2D-vec-WOTF':
+            
+            # generate defocus kernel based on Pupil function and z_defocus
+            self.Hz_det_2D = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_defocus)
+        
+        if phase_deconv == 'semi-3D':
+            
+            self.ph_deconv_layer = ph_deconv_layer
+            
+            if self.z_defocus[0] - self.z_defocus[1] >0:
+                z_deconv = -(np.r_[:self.ph_deconv_layer]-self.ph_deconv_layer//2)*self.psz
+            else:
+                z_deconv = (np.r_[:self.ph_deconv_layer]-self.ph_deconv_layer//2)*self.psz
+            
+            self.Hz_det_semi_3D = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z_deconv)
+            self.G_fun_z_semi_3D = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z_deconv)
+        
+        if phase_deconv == '3D' or bire_in_plane_deconv == '3D' or inc_recon == '3D': 
+            
+            # generate defocus kernel and Green's function
+            if self.z_defocus[0] - self.z_defocus[1] >0:
+                z = -ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
+            else:
+                z = ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)    
+            self.Hz_det_3D = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
+            self.G_fun_z_3D = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
+            
+    
+
+    def phase_deconv_setup(self, phase_deconv):
         
         '''
     
@@ -381,7 +450,7 @@ class waveorder_microscopy:
         Parameters
         ----------
             phase_deconv    : str
-                              string contains the phase reconstruction dimension 
+                              string contains the dimension of the phase reconstruction
                               '2D' for 2D phase deconvolution
                               '3D' for 3D phase deconvolution
         
@@ -392,44 +461,51 @@ class waveorder_microscopy:
         
         if phase_deconv == '2D':
             
-            # generate defocus kernel based on Pupil function and z_defocus
-            self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, self.z_defocus)
-            
             # compute 2D phase transfer function
             self.gen_WOTF()
             
         elif phase_deconv == 'semi-3D':
             
-            self.ph_deconv_layer = ph_deconv_layer
             
-            if self.z_defocus[0] - self.z_defocus[1] >0:
-                z_deconv = -(np.r_[:self.ph_deconv_layer]-self.ph_deconv_layer//2)*self.psz
-            else:
-                z_deconv = (np.r_[:self.ph_deconv_layer]-self.ph_deconv_layer//2)*self.psz
-            
-            self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z_deconv)
-            self.G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z_deconv)
             self.gen_semi_3D_WOTF()
             
         elif phase_deconv == '3D':
             
-            # generate defocus kernel and Green's function
-            if self.z_defocus[0] - self.z_defocus[1] >0:
-                z = -ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
-            else:
-                z = ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)    
-            self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
-            self.G_fun_z = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
-            
             # compute 3D phase transfer function
             self.gen_3D_WOTF()
-    
-    
-    def inclination_recon_setup(self, inc_recon, phase_deconv):
+            
+    def bire_in_plane_deconv_setup(self, bire_in_plane_deconv):
         
         '''
     
-        setup transfer functions for QUTIPP reconstruction
+        setup transfer functions for 2D birefringence deconvolution with the corresponding dimensions
+        
+        Parameters
+        ----------
+            
+            bire_in_plane_deconv : str
+                                   string contains the dimension of 2D birefringence deconvolution  
+                                   '2D' for 2D deconvolution of 2D birefringence
+                                   '3D' for 3D deconvolution of 2D birefringence
+                                          
+        '''
+        
+        if bire_in_plane_deconv == '2D':
+            
+            # generate 2D vectorial transfer function for 2D birefringence deconvolution in 2D space
+            self.gen_2D_vec_WOTF(False)
+            
+        elif bire_in_plane_deconv == '3D':
+            
+            # generate 3D vectorial transfer function for 2D birefringence deconvolution in 3D space
+            self.gen_3D_vec_WOTF(False)
+    
+    
+    def inclination_recon_setup(self, inc_recon):
+        
+        '''
+    
+        setup transfer functions for uPTI reconstruction
         
         Parameters
         ----------
@@ -441,28 +517,28 @@ class waveorder_microscopy:
             inc_recon    : str
                            option for constructing settings for 3D orientation reconstruction
                            '2D-geometric' for 2D non-diffractive reconstruction of 3D anisotropy
-                           '2D-vec-WOTF' for 2D diffractive reconstruction of 3D anisotropy (phase_deconv is set to '2D')
-                           '3D' for 3D for diffractive reconstruction of 3D anisotropy (phase_deconv is set to '3D')
-                           other allowed strings is going to be deprecated
+                           '2D-vec-WOTF' for 2D diffractive reconstruction of 3D anisotropy 
+                           '3D' for 3D for diffractive reconstruction of 3D anisotropy 
                               
         '''
         
         if inc_recon is not None and inc_recon != '3D':
-            wave_vec_norm_x = self.lambda_illu*self.fxx
-            wave_vec_norm_y = self.lambda_illu*self.fyy
-            wave_vec_norm_z = (np.maximum(0,1 - wave_vec_norm_x**2 - wave_vec_norm_y**2))**(0.5)
-
-            incident_theta = np.arctan2((wave_vec_norm_x**2 + wave_vec_norm_y**2)**(0.5), wave_vec_norm_z)
-            incident_phi   = np.arctan2(wave_vec_norm_y,wave_vec_norm_x)
 
             if inc_recon == '2D-geometric':
                 
+                wave_vec_norm_x = self.lambda_illu*self.fxx
+                wave_vec_norm_y = self.lambda_illu*self.fyy
+                wave_vec_norm_z = (np.maximum(0,1 - wave_vec_norm_x**2 - wave_vec_norm_y**2))**(0.5)
+
+                incident_theta = np.arctan2((wave_vec_norm_x**2 + wave_vec_norm_y**2)**(0.5), wave_vec_norm_z)
+                incident_phi   = np.arctan2(wave_vec_norm_y,wave_vec_norm_x)
+                
                 self.geometric_inc_matrix, self.geometric_inc_matrix_inv = gen_geometric_inc_matrix(incident_theta, incident_phi, self.Source)
                 
-            elif inc_recon == '2D-vec-WOTF' and phase_deconv == '2D':
+            elif inc_recon == '2D-vec-WOTF':
                 
-                # generate 2D vectorial transfer function for 2D QUTIPP
-                self.gen_2D_vec_WOTF_inc()
+                # generate 2D vectorial transfer function for 2D uPTI
+                self.gen_2D_vec_WOTF(True)
                 
                 # compute the AHA matrix for later 2D inversion
                 self.inc_AHA_2D_vec = np.zeros((7,7,self.N,self.M),complex)
@@ -470,9 +546,10 @@ class waveorder_microscopy:
                     self.inc_AHA_2D_vec[i,j] += np.sum(np.conj(self.H_dyadic_2D_OTF[p,i])*self.H_dyadic_2D_OTF[p,j],axis=2)
 
                 
-        elif inc_recon == '3D' and phase_deconv == '3D':
-            # generate 3D vectorial transfer function for 3D QUTIPP
-            self.gen_3D_vec_WOTF_inc()
+        elif inc_recon == '3D':
+            
+            # generate 3D vectorial transfer function for 3D uPTI
+            self.gen_3D_vec_WOTF(True)
             self.inc_AHA_3D_vec = np.zeros((7,7,self.N,self.M,self.N_defocus), dtype='complex64')
             
             # compute the AHA matrix for later 3D inversion
@@ -524,13 +601,13 @@ class waveorder_microscopy:
         
         if self.N_pattern == 1:
             for i in range(self.N_defocus):
-                self.Hu[:,:,i], self.Hp[:,:,i] = WOTF_2D_compute(self.Source, self.Pupil_obj * self.Hz_det[:,:,i], \
+                self.Hu[:,:,i], self.Hp[:,:,i] = WOTF_2D_compute(self.Source, self.Pupil_obj * self.Hz_det_2D[:,:,i], \
                                                                  use_gpu=self.use_gpu, gpu_id=self.gpu_id)
         else:
             
             for i,j in itertools.product(range(self.N_defocus), range(self.N_pattern)):
                 idx = i*self.N_pattern+j
-                self.Hu[:,:,idx], self.Hp[:,:,idx] = WOTF_2D_compute(self.Source[j], self.Pupil_obj * self.Hz_det[:,:,i], \
+                self.Hu[:,:,idx], self.Hp[:,:,idx] = WOTF_2D_compute(self.Source[j], self.Pupil_obj * self.Hz_det_2D[:,:,i], \
                                                                        use_gpu=self.use_gpu, gpu_id=self.gpu_id)
                 
     def gen_semi_3D_WOTF(self):
@@ -554,8 +631,8 @@ class waveorder_microscopy:
                 Source_current = self.Source[j].copy()
 
             idx = i*self.N_pattern+j
-            self.Hu[:,:,idx], self.Hp[:,:,idx] = WOTF_semi_3D_compute(Source_current, Source_current, self.Pupil_obj, self.Hz_det[:,:,i], \
-                                                                      self.G_fun_z[:,:,i]*4*np.pi*1j/self.lambda_illu, \
+            self.Hu[:,:,idx], self.Hp[:,:,idx] = WOTF_semi_3D_compute(Source_current, Source_current, self.Pupil_obj, self.Hz_det_semi_3D[:,:,i], \
+                                                                      self.G_fun_z_semi_3D[:,:,i]*4*np.pi*1j/self.lambda_illu, \
                                                                       use_gpu=self.use_gpu, gpu_id=self.gpu_id)
 
             
@@ -577,14 +654,14 @@ class waveorder_microscopy:
             else:
                 Source_current = self.Source[i].copy()
             self.H_re[i], self.H_im[i] = WOTF_3D_compute(Source_current.astype('float32'), Source_current.astype('float32'), self.Pupil_obj.astype('complex64'), \
-                                                         self.Hz_det.astype('complex64'),  self.G_fun_z.astype('complex64'), self.psz,\
+                                                         self.Hz_det_3D.astype('complex64'),  self.G_fun_z_3D.astype('complex64'), self.psz,\
                                                          use_gpu=self.use_gpu, gpu_id=self.gpu_id)
         
         self.H_re = np.squeeze(self.H_re)
         self.H_im = np.squeeze(self.H_im)
         
             
-    def gen_2D_vec_WOTF_inc(self):
+    def gen_2D_vec_WOTF(self, inc_option):
         
         '''
     
@@ -593,8 +670,10 @@ class waveorder_microscopy:
                              
         '''
         
-        
-        self.H_dyadic_2D_OTF = np.zeros((self.N_Stokes, 7, self.N, self.M, self.N_defocus*self.N_pattern),dtype='complex64')
+        if inc_option == True:
+            self.H_dyadic_2D_OTF = np.zeros((self.N_Stokes, 7, self.N, self.M, self.N_defocus*self.N_pattern),dtype='complex64')
+        else:
+            self.H_dyadic_2D_OTF_in_plane = np.zeros((2, 2, self.N, self.M, self.N_defocus*self.N_pattern),dtype='complex64')
 
         
         # angle-dependent electric field components due to focusing effect
@@ -644,74 +723,82 @@ class waveorder_microscopy:
             Source_norm = Source_current*(IF_ExEx + IF_EyEy)
             
             # intermediate transfer functions
-            ExEx_Gxx_re, ExEx_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,0,:,:,i], self.Hz_det[:,:,i])
-            ExEy_Gxy_re, ExEy_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,1,:,:,i], self.Hz_det[:,:,i])
-            ExEz_Gxz_re, ExEz_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,2,:,:,i], self.Hz_det[:,:,i])
-            EyEx_Gyx_re, EyEx_Gyx_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,1,:,:,i], self.Hz_det[:,:,i])
-            EyEy_Gyy_re, EyEy_Gyy_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[1,1,:,:,i], self.Hz_det[:,:,i])
-            EyEz_Gyz_re, EyEz_Gyz_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[1,2,:,:,i], self.Hz_det[:,:,i])
-            ExEx_Gxy_re, ExEx_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,1,:,:,i], self.Hz_det[:,:,i])
-            ExEy_Gxx_re, ExEy_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,0,:,:,i], self.Hz_det[:,:,i])
-            EyEx_Gyy_re, EyEx_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[1,1,:,:,i], self.Hz_det[:,:,i])
-            EyEy_Gyx_re, EyEy_Gyx_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,1,:,:,i], self.Hz_det[:,:,i])
-            ExEx_Gxz_re, ExEx_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,2,:,:,i], self.Hz_det[:,:,i])
-            ExEz_Gxx_re, ExEz_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,0,:,:,i], self.Hz_det[:,:,i])
-            EyEx_Gyz_re, EyEx_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[1,2,:,:,i], self.Hz_det[:,:,i])
-            EyEz_Gyx_re, EyEz_Gyx_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,1,:,:,i], self.Hz_det[:,:,i])
-            ExEy_Gxz_re, ExEy_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,2,:,:,i], self.Hz_det[:,:,i])
-            ExEz_Gxy_re, ExEz_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,1,:,:,i], self.Hz_det[:,:,i])
-            EyEy_Gyz_re, EyEy_Gyz_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[1,2,:,:,i], self.Hz_det[:,:,i])
-            EyEz_Gyy_re, EyEz_Gyy_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[1,1,:,:,i], self.Hz_det[:,:,i])
-            ExEy_Gyy_re, ExEy_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[1,1,:,:,i], self.Hz_det[:,:,i])
-            ExEz_Gyz_re, ExEz_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[1,2,:,:,i], self.Hz_det[:,:,i])
-            EyEx_Gxx_re, EyEx_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,0,:,:,i], self.Hz_det[:,:,i])
-            EyEz_Gxz_re, EyEz_Gxz_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,2,:,:,i], self.Hz_det[:,:,i])
-            ExEx_Gyy_re, ExEx_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[1,1,:,:,i], self.Hz_det[:,:,i])
-            EyEy_Gxx_re, EyEy_Gxx_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,0,:,:,i], self.Hz_det[:,:,i])
-            EyEx_Gxz_re, EyEx_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,2,:,:,i], self.Hz_det[:,:,i])
-            EyEz_Gxx_re, EyEz_Gxx_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,0,:,:,i], self.Hz_det[:,:,i])
-            ExEy_Gyz_re, ExEy_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[1,2,:,:,i], self.Hz_det[:,:,i])
-            ExEz_Gyy_re, ExEz_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[1,1,:,:,i], self.Hz_det[:,:,i])
-            EyEy_Gxz_re, EyEy_Gxz_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,2,:,:,i], self.Hz_det[:,:,i])
-            ExEx_Gyz_re, ExEx_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[1,2,:,:,i], self.Hz_det[:,:,i])
+            ExEx_Gxx_re, ExEx_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,0,:,:,i], self.Hz_det_2D[:,:,i]) #
+            ExEy_Gxy_re, ExEy_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,1,:,:,i], self.Hz_det_2D[:,:,i]) #
+            EyEx_Gyx_re, EyEx_Gyx_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,1,:,:,i], self.Hz_det_2D[:,:,i]) #
+            EyEy_Gyy_re, EyEy_Gyy_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[1,1,:,:,i], self.Hz_det_2D[:,:,i]) #
+            ExEx_Gxy_re, ExEx_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,1,:,:,i], self.Hz_det_2D[:,:,i]) #
+            ExEy_Gxx_re, ExEy_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,0,:,:,i], self.Hz_det_2D[:,:,i]) #
+            EyEx_Gyy_re, EyEx_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[1,1,:,:,i], self.Hz_det_2D[:,:,i]) #
+            EyEy_Gyx_re, EyEy_Gyx_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,1,:,:,i], self.Hz_det_2D[:,:,i]) #
+            ExEx_Gyy_re, ExEx_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[1,1,:,:,i], self.Hz_det_2D[:,:,i]) #
+            EyEy_Gxx_re, EyEy_Gxx_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,0,:,:,i], self.Hz_det_2D[:,:,i]) #
+            EyEx_Gxx_re, EyEx_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,0,:,:,i], self.Hz_det_2D[:,:,i]) #
+            ExEy_Gyy_re, ExEy_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[1,1,:,:,i], self.Hz_det_2D[:,:,i]) #
 
-            # 2D vectorial transfer functions
-            self.H_dyadic_2D_OTF[0,0,:,:,idx] = ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re + EyEx_Gyx_re + EyEy_Gyy_re + EyEz_Gyz_re
-            self.H_dyadic_2D_OTF[0,1,:,:,idx] = ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im + EyEx_Gyx_im + EyEy_Gyy_im + EyEz_Gyz_im
-            self.H_dyadic_2D_OTF[0,2,:,:,idx] = ExEx_Gxx_re - ExEy_Gxy_re + EyEx_Gyx_re - EyEy_Gyy_re
-            self.H_dyadic_2D_OTF[0,3,:,:,idx] = ExEx_Gxy_re + ExEy_Gxx_re + EyEx_Gyy_re + EyEy_Gyx_re
-            self.H_dyadic_2D_OTF[0,4,:,:,idx] = ExEx_Gxz_re + ExEz_Gxx_re + EyEx_Gyz_re + EyEz_Gyx_re
-            self.H_dyadic_2D_OTF[0,5,:,:,idx] = ExEy_Gxz_re + ExEz_Gxy_re + EyEy_Gyz_re + EyEz_Gyy_re
-            self.H_dyadic_2D_OTF[0,6,:,:,idx] = ExEz_Gxz_re + EyEz_Gyz_re
+            if inc_option == True:
+                ExEz_Gxz_re, ExEz_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,2,:,:,i], self.Hz_det_2D[:,:,i])
+                EyEz_Gyz_re, EyEz_Gyz_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[1,2,:,:,i], self.Hz_det_2D[:,:,i])
+                ExEx_Gxz_re, ExEx_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,2,:,:,i], self.Hz_det_2D[:,:,i])
+                ExEz_Gxx_re, ExEz_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,0,:,:,i], self.Hz_det_2D[:,:,i])
+                EyEx_Gyz_re, EyEx_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[1,2,:,:,i], self.Hz_det_2D[:,:,i])
+                EyEz_Gyx_re, EyEz_Gyx_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,1,:,:,i], self.Hz_det_2D[:,:,i])
+                ExEy_Gxz_re, ExEy_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,2,:,:,i], self.Hz_det_2D[:,:,i])
+                ExEz_Gxy_re, ExEz_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,1,:,:,i], self.Hz_det_2D[:,:,i])
+                EyEy_Gyz_re, EyEy_Gyz_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[1,2,:,:,i], self.Hz_det_2D[:,:,i])
+                EyEz_Gyy_re, EyEz_Gyy_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[1,1,:,:,i], self.Hz_det_2D[:,:,i])
+                ExEz_Gyz_re, ExEz_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[1,2,:,:,i], self.Hz_det_2D[:,:,i])
+                EyEz_Gxz_re, EyEz_Gxz_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,2,:,:,i], self.Hz_det_2D[:,:,i])            
+                EyEx_Gxz_re, EyEx_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,2,:,:,i], self.Hz_det_2D[:,:,i])
+                EyEz_Gxx_re, EyEz_Gxx_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,0,:,:,i], self.Hz_det_2D[:,:,i])
+                ExEy_Gyz_re, ExEy_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[1,2,:,:,i], self.Hz_det_2D[:,:,i])
+                ExEz_Gyy_re, ExEz_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[1,1,:,:,i], self.Hz_det_2D[:,:,i])
+                EyEy_Gxz_re, EyEy_Gxz_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,2,:,:,i], self.Hz_det_2D[:,:,i])
+                ExEx_Gyz_re, ExEx_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[1,2,:,:,i], self.Hz_det_2D[:,:,i])
 
-            self.H_dyadic_2D_OTF[1,0,:,:,idx] = ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re - EyEx_Gyx_re - EyEy_Gyy_re - EyEz_Gyz_re
-            self.H_dyadic_2D_OTF[1,1,:,:,idx] = ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im - EyEx_Gyx_im - EyEy_Gyy_im - EyEz_Gyz_im
-            self.H_dyadic_2D_OTF[1,2,:,:,idx] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
-            self.H_dyadic_2D_OTF[1,3,:,:,idx] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
-            self.H_dyadic_2D_OTF[1,4,:,:,idx] = ExEx_Gxz_re + ExEz_Gxx_re - EyEx_Gyz_re - EyEz_Gyx_re
-            self.H_dyadic_2D_OTF[1,5,:,:,idx] = ExEy_Gxz_re + ExEz_Gxy_re - EyEy_Gyz_re - EyEz_Gyy_re
-            self.H_dyadic_2D_OTF[1,6,:,:,idx] = ExEz_Gxz_re - EyEz_Gyz_re
+                # 2D vectorial transfer functions
+                self.H_dyadic_2D_OTF[0,0,:,:,idx] = ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re + EyEx_Gyx_re + EyEy_Gyy_re + EyEz_Gyz_re
+                self.H_dyadic_2D_OTF[0,1,:,:,idx] = ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im + EyEx_Gyx_im + EyEy_Gyy_im + EyEz_Gyz_im
+                self.H_dyadic_2D_OTF[0,2,:,:,idx] = ExEx_Gxx_re - ExEy_Gxy_re + EyEx_Gyx_re - EyEy_Gyy_re
+                self.H_dyadic_2D_OTF[0,3,:,:,idx] = ExEx_Gxy_re + ExEy_Gxx_re + EyEx_Gyy_re + EyEy_Gyx_re
+                self.H_dyadic_2D_OTF[0,4,:,:,idx] = ExEx_Gxz_re + ExEz_Gxx_re + EyEx_Gyz_re + EyEz_Gyx_re
+                self.H_dyadic_2D_OTF[0,5,:,:,idx] = ExEy_Gxz_re + ExEz_Gxy_re + EyEy_Gyz_re + EyEz_Gyy_re
+                self.H_dyadic_2D_OTF[0,6,:,:,idx] = ExEz_Gxz_re + EyEz_Gyz_re
 
-            self.H_dyadic_2D_OTF[2,0,:,:,idx] = ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re + EyEx_Gxx_re + EyEy_Gyx_re + EyEz_Gxz_re
-            self.H_dyadic_2D_OTF[2,1,:,:,idx] = ExEx_Gxy_im + ExEy_Gyy_im + ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
-            self.H_dyadic_2D_OTF[2,2,:,:,idx] = ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
-            self.H_dyadic_2D_OTF[2,3,:,:,idx] = ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
-            self.H_dyadic_2D_OTF[2,4,:,:,idx] = ExEx_Gyz_re + ExEz_Gxy_re + EyEx_Gxz_re + EyEz_Gxx_re
-            self.H_dyadic_2D_OTF[2,5,:,:,idx] = ExEy_Gyz_re + ExEz_Gyy_re + EyEy_Gxz_re + EyEz_Gyx_re
-            self.H_dyadic_2D_OTF[2,6,:,:,idx] = ExEz_Gyz_re + EyEz_Gxz_re
+                self.H_dyadic_2D_OTF[1,0,:,:,idx] = ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re - EyEx_Gyx_re - EyEy_Gyy_re - EyEz_Gyz_re
+                self.H_dyadic_2D_OTF[1,1,:,:,idx] = ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im - EyEx_Gyx_im - EyEy_Gyy_im - EyEz_Gyz_im
+                self.H_dyadic_2D_OTF[1,2,:,:,idx] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
+                self.H_dyadic_2D_OTF[1,3,:,:,idx] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
+                self.H_dyadic_2D_OTF[1,4,:,:,idx] = ExEx_Gxz_re + ExEz_Gxx_re - EyEx_Gyz_re - EyEz_Gyx_re
+                self.H_dyadic_2D_OTF[1,5,:,:,idx] = ExEy_Gxz_re + ExEz_Gxy_re - EyEy_Gyz_re - EyEz_Gyy_re
+                self.H_dyadic_2D_OTF[1,6,:,:,idx] = ExEz_Gxz_re - EyEz_Gyz_re
+
+                self.H_dyadic_2D_OTF[2,0,:,:,idx] = ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re + EyEx_Gxx_re + EyEy_Gyx_re + EyEz_Gxz_re
+                self.H_dyadic_2D_OTF[2,1,:,:,idx] = ExEx_Gxy_im + ExEy_Gyy_im + ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
+                self.H_dyadic_2D_OTF[2,2,:,:,idx] = ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
+                self.H_dyadic_2D_OTF[2,3,:,:,idx] = ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
+                self.H_dyadic_2D_OTF[2,4,:,:,idx] = ExEx_Gyz_re + ExEz_Gxy_re + EyEx_Gxz_re + EyEz_Gxx_re
+                self.H_dyadic_2D_OTF[2,5,:,:,idx] = ExEy_Gyz_re + ExEz_Gyy_re + EyEy_Gxz_re + EyEz_Gyx_re
+                self.H_dyadic_2D_OTF[2,6,:,:,idx] = ExEz_Gyz_re + EyEz_Gxz_re
+
+                # transfer functions for S3
+                if self.N_Stokes == 4:
+
+                    self.H_dyadic_2D_OTF[3,0,:,:,idx] = -ExEx_Gxy_im - ExEy_Gyy_im - ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
+                    self.H_dyadic_2D_OTF[3,1,:,:,idx] =  ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re - EyEx_Gxx_re - EyEy_Gyx_re - EyEz_Gxz_re
+                    self.H_dyadic_2D_OTF[3,2,:,:,idx] = -ExEx_Gxy_im + ExEy_Gyy_im + EyEx_Gxx_im - EyEy_Gyx_im
+                    self.H_dyadic_2D_OTF[3,3,:,:,idx] = -ExEx_Gyy_im - ExEy_Gxy_im + EyEx_Gyx_im + EyEy_Gxx_im
+                    self.H_dyadic_2D_OTF[3,4,:,:,idx] = -ExEx_Gyz_im - ExEz_Gxy_im + EyEx_Gxz_im + EyEz_Gxx_im
+                    self.H_dyadic_2D_OTF[3,5,:,:,idx] = -ExEy_Gyz_im - ExEz_Gyy_im + EyEy_Gxz_im + EyEz_Gyx_im
+                    self.H_dyadic_2D_OTF[3,6,:,:,idx] = -ExEz_Gyz_im + EyEz_Gxz_im
+            else:
+                
+                self.H_dyadic_2D_OTF_in_plane[0,0,:,:,idx] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
+                self.H_dyadic_2D_OTF_in_plane[0,1,:,:,idx] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
+                self.H_dyadic_2D_OTF_in_plane[1,0,:,:,idx] = ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
+                self.H_dyadic_2D_OTF_in_plane[1,1,:,:,idx] = ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
             
-            # transfer functions for S3
-            if self.N_Stokes == 4:
-        
-                self.H_dyadic_2D_OTF[3,0,:,:,idx] = -ExEx_Gxy_im - ExEy_Gyy_im - ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
-                self.H_dyadic_2D_OTF[3,1,:,:,idx] =  ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re - EyEx_Gxx_re - EyEy_Gyx_re - EyEz_Gxz_re
-                self.H_dyadic_2D_OTF[3,2,:,:,idx] = -ExEx_Gxy_im + ExEy_Gyy_im + EyEx_Gxx_im - EyEy_Gyx_im
-                self.H_dyadic_2D_OTF[3,3,:,:,idx] = -ExEx_Gyy_im - ExEy_Gxy_im + EyEx_Gyx_im + EyEy_Gxx_im
-                self.H_dyadic_2D_OTF[3,4,:,:,idx] = -ExEx_Gyz_im - ExEz_Gxy_im + EyEx_Gxz_im + EyEz_Gxx_im
-                self.H_dyadic_2D_OTF[3,5,:,:,idx] = -ExEy_Gyz_im - ExEz_Gyy_im + EyEy_Gxz_im + EyEz_Gyx_im
-                self.H_dyadic_2D_OTF[3,6,:,:,idx] = -ExEz_Gyz_im + EyEz_Gxz_im
-            
-    def gen_3D_vec_WOTF_inc(self):
+    def gen_3D_vec_WOTF(self, inc_option):
         
         '''
     
@@ -720,7 +807,11 @@ class waveorder_microscopy:
                              
         '''
         
-        self.H_dyadic_OTF = np.zeros((self.N_Stokes, 7, self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
+        if inc_option == True:
+            self.H_dyadic_OTF = np.zeros((self.N_Stokes, 7, self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
+        else:
+            self.H_dyadic_OTF_in_plane = np.zeros((2, 2, self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
+
         
         # angle-dependent electric field components due to focusing effect
         fr = (self.fxx**2 + self.fyy**2)**(0.5)
@@ -755,7 +846,7 @@ class waveorder_microscopy:
 
         # compute transfer functions
         OTF_compute = lambda x, y, z: WOTF_3D_compute(x.astype('float32'), y.astype('complex64'), 
-                                                      self.Pupil_obj.astype('complex64'), self.Hz_det.astype('complex64'), \
+                                                      self.Pupil_obj.astype('complex64'), self.Hz_det_3D.astype('complex64'), \
                                                       z.astype('complex64'), self.psz,\
                                                       use_gpu=self.use_gpu, gpu_id=self.gpu_id)
 
@@ -779,73 +870,80 @@ class waveorder_microscopy:
             Source_norm = Source_current*(IF_ExEx + IF_EyEy)
             
             # intermediate transfer functions
-            ExEx_Gxx_re, ExEx_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,0])
-            ExEy_Gxy_re, ExEy_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,1])
-            ExEz_Gxz_re, ExEz_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,2])
-            EyEx_Gyx_re, EyEx_Gyx_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,1])
-            EyEy_Gyy_re, EyEy_Gyy_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[1,1])
-            EyEz_Gyz_re, EyEz_Gyz_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[1,2])
-            ExEx_Gxy_re, ExEx_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,1])
-            ExEy_Gxx_re, ExEy_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,0])
-            EyEx_Gyy_re, EyEx_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[1,1])
-            EyEy_Gyx_re, EyEy_Gyx_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,1])
-            ExEx_Gxz_re, ExEx_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,2])
-            ExEz_Gxx_re, ExEz_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,0])
-            EyEx_Gyz_re, EyEx_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[1,2])
-            EyEz_Gyx_re, EyEz_Gyx_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,1])
-            ExEy_Gxz_re, ExEy_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,2])
-            ExEz_Gxy_re, ExEz_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,1])
-            EyEy_Gyz_re, EyEy_Gyz_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[1,2])
-            EyEz_Gyy_re, EyEz_Gyy_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[1,1])
-            ExEy_Gyy_re, ExEy_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[1,1])
-            ExEz_Gyz_re, ExEz_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[1,2])
-            EyEx_Gxx_re, EyEx_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,0])
-            EyEz_Gxz_re, EyEz_Gxz_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,2])
-            ExEx_Gyy_re, ExEx_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[1,1])
-            EyEy_Gxx_re, EyEy_Gxx_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,0])
-            EyEx_Gxz_re, EyEx_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,2])
-            EyEz_Gxx_re, EyEz_Gxx_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,0])
-            ExEy_Gyz_re, ExEy_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[1,2])
-            ExEz_Gyy_re, ExEz_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[1,1])
-            EyEy_Gxz_re, EyEy_Gxz_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,2])
-            ExEx_Gyz_re, ExEx_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[1,2])
-
-            # 3D vectorial transfer functions
-            self.H_dyadic_OTF[0,0,i] = ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re + EyEx_Gyx_re + EyEy_Gyy_re + EyEz_Gyz_re
-            self.H_dyadic_OTF[0,1,i] = ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im + EyEx_Gyx_im + EyEy_Gyy_im + EyEz_Gyz_im
-            self.H_dyadic_OTF[0,2,i] = ExEx_Gxx_re - ExEy_Gxy_re + EyEx_Gyx_re - EyEy_Gyy_re
-            self.H_dyadic_OTF[0,3,i] = ExEx_Gxy_re + ExEy_Gxx_re + EyEx_Gyy_re + EyEy_Gyx_re
-            self.H_dyadic_OTF[0,4,i] = ExEx_Gxz_re + ExEz_Gxx_re + EyEx_Gyz_re + EyEz_Gyx_re
-            self.H_dyadic_OTF[0,5,i] = ExEy_Gxz_re + ExEz_Gxy_re + EyEy_Gyz_re + EyEz_Gyy_re
-            self.H_dyadic_OTF[0,6,i] = ExEz_Gxz_re + EyEz_Gyz_re
-
-            self.H_dyadic_OTF[1,0,i] = ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re - EyEx_Gyx_re - EyEy_Gyy_re - EyEz_Gyz_re
-            self.H_dyadic_OTF[1,1,i] = ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im - EyEx_Gyx_im - EyEy_Gyy_im - EyEz_Gyz_im
-            self.H_dyadic_OTF[1,2,i] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
-            self.H_dyadic_OTF[1,3,i] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
-            self.H_dyadic_OTF[1,4,i] = ExEx_Gxz_re + ExEz_Gxx_re - EyEx_Gyz_re - EyEz_Gyx_re
-            self.H_dyadic_OTF[1,5,i] = ExEy_Gxz_re + ExEz_Gxy_re - EyEy_Gyz_re - EyEz_Gyy_re
-            self.H_dyadic_OTF[1,6,i] = ExEz_Gxz_re - EyEz_Gyz_re
-
-            self.H_dyadic_OTF[2,0,i] = ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re + EyEx_Gxx_re + EyEy_Gyx_re + EyEz_Gxz_re
-            self.H_dyadic_OTF[2,1,i] = ExEx_Gxy_im + ExEy_Gyy_im + ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
-            self.H_dyadic_OTF[2,2,i] = ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
-            self.H_dyadic_OTF[2,3,i] = ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
-            self.H_dyadic_OTF[2,4,i] = ExEx_Gyz_re + ExEz_Gxy_re + EyEx_Gxz_re + EyEz_Gxx_re
-            self.H_dyadic_OTF[2,5,i] = ExEy_Gyz_re + ExEz_Gyy_re + EyEy_Gxz_re + EyEz_Gyx_re
-            self.H_dyadic_OTF[2,6,i] = ExEz_Gyz_re + EyEz_Gxz_re
+            ExEx_Gxx_re, ExEx_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,0]) #
+            ExEy_Gxy_re, ExEy_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,1]) #            
+            EyEx_Gyx_re, EyEx_Gyx_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,1]) #
+            EyEy_Gyy_re, EyEy_Gyy_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[1,1]) #            
+            ExEx_Gxy_re, ExEx_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,1]) #
+            ExEy_Gxx_re, ExEy_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,0]) #
+            EyEx_Gyy_re, EyEx_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[1,1]) #
+            EyEy_Gyx_re, EyEy_Gyx_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,1]) #
+            ExEy_Gyy_re, ExEy_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[1,1]) #
+            EyEx_Gxx_re, EyEx_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,0]) #
+            ExEx_Gyy_re, ExEx_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[1,1]) #
+            EyEy_Gxx_re, EyEy_Gxx_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,0]) #
             
-            # transfer functions for S3
-            if self.N_Stokes == 4:
-        
-                self.H_dyadic_OTF[3,0,i] = -ExEx_Gxy_im - ExEy_Gyy_im - ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
-                self.H_dyadic_OTF[3,1,i] =  ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re - EyEx_Gxx_re - EyEy_Gyx_re - EyEz_Gxz_re
-                self.H_dyadic_OTF[3,2,i] = -ExEx_Gxy_im + ExEy_Gyy_im + EyEx_Gxx_im - EyEy_Gyx_im
-                self.H_dyadic_OTF[3,3,i] = -ExEx_Gyy_im - ExEy_Gxy_im + EyEx_Gyx_im + EyEy_Gxx_im
-                self.H_dyadic_OTF[3,4,i] = -ExEx_Gyz_im - ExEz_Gxy_im + EyEx_Gxz_im + EyEz_Gxx_im
-                self.H_dyadic_OTF[3,5,i] = -ExEy_Gyz_im - ExEz_Gyy_im + EyEy_Gxz_im + EyEz_Gyx_im
-                self.H_dyadic_OTF[3,6,i] = -ExEz_Gyz_im + EyEz_Gxz_im
-        
+            if inc_option == True:
+                ExEz_Gxz_re, ExEz_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,2])
+                EyEz_Gyz_re, EyEz_Gyz_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[1,2])
+                ExEx_Gxz_re, ExEx_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[0,2])
+                ExEz_Gxx_re, ExEz_Gxx_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,0])
+                EyEx_Gyz_re, EyEx_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[1,2])
+                EyEz_Gyx_re, EyEz_Gyx_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,1])
+                ExEy_Gxz_re, ExEy_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[0,2])
+                ExEz_Gxy_re, ExEz_Gxy_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[0,1])
+                EyEy_Gyz_re, EyEy_Gyz_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[1,2])
+                EyEz_Gyy_re, EyEz_Gyy_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[1,1])            
+                ExEz_Gyz_re, ExEz_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[1,2])            
+                EyEz_Gxz_re, EyEz_Gxz_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,2])            
+                EyEx_Gxz_re, EyEx_Gxz_im = OTF_compute(Source_norm, Source_current*IF_ExEy.conj(), G_tensor_z[0,2])
+                EyEz_Gxx_re, EyEz_Gxx_im = OTF_compute(Source_norm, Source_current*IF_EyEz, G_tensor_z[0,0])
+                ExEy_Gyz_re, ExEy_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEy, G_tensor_z[1,2])
+                ExEz_Gyy_re, ExEz_Gyy_im = OTF_compute(Source_norm, Source_current*IF_ExEz, G_tensor_z[1,1])
+                EyEy_Gxz_re, EyEy_Gxz_im = OTF_compute(Source_norm, Source_current*IF_EyEy, G_tensor_z[0,2])
+                ExEx_Gyz_re, ExEx_Gyz_im = OTF_compute(Source_norm, Source_current*IF_ExEx, G_tensor_z[1,2])
+
+                # 3D vectorial transfer functions
+                self.H_dyadic_OTF[0,0,i] = ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re + EyEx_Gyx_re + EyEy_Gyy_re + EyEz_Gyz_re
+                self.H_dyadic_OTF[0,1,i] = ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im + EyEx_Gyx_im + EyEy_Gyy_im + EyEz_Gyz_im
+                self.H_dyadic_OTF[0,2,i] = ExEx_Gxx_re - ExEy_Gxy_re + EyEx_Gyx_re - EyEy_Gyy_re
+                self.H_dyadic_OTF[0,3,i] = ExEx_Gxy_re + ExEy_Gxx_re + EyEx_Gyy_re + EyEy_Gyx_re
+                self.H_dyadic_OTF[0,4,i] = ExEx_Gxz_re + ExEz_Gxx_re + EyEx_Gyz_re + EyEz_Gyx_re
+                self.H_dyadic_OTF[0,5,i] = ExEy_Gxz_re + ExEz_Gxy_re + EyEy_Gyz_re + EyEz_Gyy_re
+                self.H_dyadic_OTF[0,6,i] = ExEz_Gxz_re + EyEz_Gyz_re
+
+                self.H_dyadic_OTF[1,0,i] = ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re - EyEx_Gyx_re - EyEy_Gyy_re - EyEz_Gyz_re
+                self.H_dyadic_OTF[1,1,i] = ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im - EyEx_Gyx_im - EyEy_Gyy_im - EyEz_Gyz_im
+                self.H_dyadic_OTF[1,2,i] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
+                self.H_dyadic_OTF[1,3,i] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
+                self.H_dyadic_OTF[1,4,i] = ExEx_Gxz_re + ExEz_Gxx_re - EyEx_Gyz_re - EyEz_Gyx_re
+                self.H_dyadic_OTF[1,5,i] = ExEy_Gxz_re + ExEz_Gxy_re - EyEy_Gyz_re - EyEz_Gyy_re
+                self.H_dyadic_OTF[1,6,i] = ExEz_Gxz_re - EyEz_Gyz_re
+
+                self.H_dyadic_OTF[2,0,i] = ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re + EyEx_Gxx_re + EyEy_Gyx_re + EyEz_Gxz_re
+                self.H_dyadic_OTF[2,1,i] = ExEx_Gxy_im + ExEy_Gyy_im + ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
+                self.H_dyadic_OTF[2,2,i] = ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
+                self.H_dyadic_OTF[2,3,i] = ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
+                self.H_dyadic_OTF[2,4,i] = ExEx_Gyz_re + ExEz_Gxy_re + EyEx_Gxz_re + EyEz_Gxx_re
+                self.H_dyadic_OTF[2,5,i] = ExEy_Gyz_re + ExEz_Gyy_re + EyEy_Gxz_re + EyEz_Gyx_re
+                self.H_dyadic_OTF[2,6,i] = ExEz_Gyz_re + EyEz_Gxz_re
+
+                # transfer functions for S3
+                if self.N_Stokes == 4:
+
+                    self.H_dyadic_OTF[3,0,i] = -ExEx_Gxy_im - ExEy_Gyy_im - ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
+                    self.H_dyadic_OTF[3,1,i] =  ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re - EyEx_Gxx_re - EyEy_Gyx_re - EyEz_Gxz_re
+                    self.H_dyadic_OTF[3,2,i] = -ExEx_Gxy_im + ExEy_Gyy_im + EyEx_Gxx_im - EyEy_Gyx_im
+                    self.H_dyadic_OTF[3,3,i] = -ExEx_Gyy_im - ExEy_Gxy_im + EyEx_Gyx_im + EyEy_Gxx_im
+                    self.H_dyadic_OTF[3,4,i] = -ExEx_Gyz_im - ExEz_Gxy_im + EyEx_Gxz_im + EyEz_Gxx_im
+                    self.H_dyadic_OTF[3,5,i] = -ExEy_Gyz_im - ExEz_Gyy_im + EyEy_Gxz_im + EyEz_Gyx_im
+                    self.H_dyadic_OTF[3,6,i] = -ExEz_Gyz_im + EyEz_Gxz_im
+            else:
+                
+                self.H_dyadic_OTF_in_plane[0,0,i] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
+                self.H_dyadic_OTF_in_plane[0,1,i] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
+                self.H_dyadic_OTF_in_plane[1,0,i] = ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
+                self.H_dyadic_OTF_in_plane[1,1,i] = ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
             
                 
     
@@ -1151,6 +1249,194 @@ class waveorder_microscopy:
         
         
         return Retardance, slowaxis
+    
+    def Birefringence_recon_2D(self, S1_stack, S2_stack, method='Tikhonov', reg_br = 1,\
+                               rho = 1e-5, lambda_br=1e-3, itr = 20, verbose=True):
+    
+        '''
+    
+        conduct 2D birefringence deconvolution from defocused or asymmetrically-illuminated set of intensity images
+        
+        Parameters
+        ----------
+            S1_stack   : numpy.ndarray
+                         defocused or asymmetrically-illuminated set of S1 intensity images with the size of (N, M, N_pattern*N_defocus)
+                        
+            S2_stack   : numpy.ndarray
+                         defocused or asymmetrically-illuminated set of S1 intensity images with the size of (N, M, N_pattern*N_defocus)
+                         
+            method     : str
+                         denoiser for 2D birefringence deconvolution
+                         'Tikhonov' for Tikhonov denoiser
+                         'TV'       for TV denoiser
+            
+            reg_br     : float
+                         Tikhonov regularization parameter
+                             
+            lambda_br  : float
+                         TV regularization parameter
+                             
+            rho        : float
+                         augmented Lagrange multiplier for 2D ADMM algorithm
+                             
+            itr        : int
+                         number of iterations for 2D ADMM algorithm
+                             
+            verbose    : bool
+                         option to display detailed progress of computations or not
+                             
+                          
+        Returns
+        -------
+            retardance : numpy.ndarray
+                         2D retardance (in the unit of rad) reconstruction with the size of (N, M)
+                         
+            azimuth    : numpy.ndarray
+                         2D orientation reconstruction with the size of (N, M)
+                                      
+                                          
+        '''
+        
+        
+        H_1_1c = self.H_dyadic_2D_OTF_in_plane[0,0]
+        H_1_1s = self.H_dyadic_2D_OTF_in_plane[0,1]
+        H_2_1c = self.H_dyadic_2D_OTF_in_plane[1,0]
+        H_2_1s = self.H_dyadic_2D_OTF_in_plane[1,1]
+
+        S1_stack_f = fft2(S1_stack, axes=(0,1))
+        S2_stack_f = fft2(S2_stack, axes=(0,1))
+
+        cross_term = np.sum(np.conj(H_1_1c)*H_1_1s + np.conj(H_2_1c)*H_2_1s, axis=2)
+
+        AHA = [np.sum(np.abs(H_1_1c)**2 + np.abs(H_2_1c)**2, axis=2), cross_term,\
+               np.conj(cross_term)                         , np.sum(np.abs(H_1_1s)**2 + np.abs(H_2_1s)**2, axis=2)]
+
+        AHA[0] += np.mean(np.abs(AHA[0]))*reg_br
+        AHA[3] += np.mean(np.abs(AHA[3]))*reg_br
+
+        b_vec = [np.sum(np.conj(H_1_1c)*S1_stack_f + np.conj(H_2_1c)*S2_stack_f, axis=2), \
+                 np.sum(np.conj(H_1_1s)*S1_stack_f + np.conj(H_2_1s)*S2_stack_f, axis=2)]
+
+
+        if self.use_gpu:
+            AHA = cp.array(AHA)
+            b_vec = cp.array(b_vec)
+
+
+        if method == 'Tikhonov':
+
+            # Deconvolution with Tikhonov regularization
+
+            g_1c, g_1s = Dual_variable_Tikhonov_deconv_2D(AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+
+        elif method == 'TV':
+
+            # ADMM deconvolution with anisotropic TV regularization
+
+            g_1c, g_1s = Dual_variable_ADMM_TV_deconv_2D(AHA, b_vec, rho, lambda_br, lambda_br, itr, verbose, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+
+
+
+        azimuth = (np.arctan2(-g_1s, -g_1c)/2)%np.pi
+        retardance = ((np.abs(g_1s)**2 + np.abs(g_1c)**2)**(1/2))/(2*np.pi/self.lambda_illu)
+
+
+        return retardance, azimuth
+    
+    def Birefringence_recon_3D(self, S1_stack, S2_stack, method='Tikhonov', reg_br = 1,\
+                               rho = 1e-5, lambda_br=1e-3, itr = 20, verbose=True):
+    
+        
+        '''
+    
+        conduct 3D deconvolution of 2D birefringence from defocused stack of intensity images
+        
+        Parameters
+        ----------
+            S1_stack         : numpy.ndarray
+                               defocused stack of S1 intensity images with the size of (N, M, N_defocus)
+                               
+            S2_stack         : numpy.ndarray
+                               defocused stack of S2 intensity images with the size of (N, M, N_defocus)
+                         
+            method           : str
+                               denoiser for 3D phase reconstruction
+                               'Tikhonov' for Tikhonov denoiser
+                               'TV'       for TV denoiser
+                             
+            reg_br           : float
+                               Tikhonov regularization parameter
+                               
+            rho              : float
+                               augmented Lagrange multiplier for 3D ADMM algorithm
+                               
+            lambda_br        : float        
+                               TV regularization parameter
+                             
+            itr              : int
+                               number of iterations for 3D ADMM algorithm
+                             
+            verbose          : bool
+                               option to display detailed progress of computations or not
+                             
+                          
+        Returns
+        -------
+            retardance       : numpy.ndarray
+                               3D reconstruction of retardance (in the unit of rad) with the size of (N, M, N_defocus)
+        
+            azimuth          : numpy.ndarray
+                               3D reconstruction of 2D orientation with the size of (N, M, N_defocus)
+                  
+                      
+                                          
+        '''
+        
+        
+        H_1_1c = self.H_dyadic_OTF_in_plane[0,0,0]
+        H_1_1s = self.H_dyadic_OTF_in_plane[0,1,0]
+        H_2_1c = self.H_dyadic_OTF_in_plane[1,0,0]
+        H_2_1s = self.H_dyadic_OTF_in_plane[1,1,0]
+
+        S1_stack_f = fftn(S1_stack)
+        S2_stack_f = fftn(S2_stack)
+
+        cross_term = np.conj(H_1_1c)*H_1_1s + np.conj(H_2_1c)*H_2_1s
+
+        AHA = [np.abs(H_1_1c)**2 + np.abs(H_2_1c)**2, cross_term,\
+               np.conj(cross_term)                  , np.abs(H_1_1s)**2 + np.abs(H_2_1s)**2]
+
+        AHA[0] += np.mean(np.abs(AHA[0]))*reg_br
+        AHA[3] += np.mean(np.abs(AHA[3]))*reg_br
+
+        b_vec = [np.conj(H_1_1c)*S1_stack_f + np.conj(H_2_1c)*S2_stack_f, \
+                 np.conj(H_1_1s)*S1_stack_f + np.conj(H_2_1s)*S2_stack_f]
+
+
+        if self.use_gpu:
+            AHA = cp.array(AHA)
+            b_vec = cp.array(b_vec)
+
+
+        if method == 'Tikhonov':
+
+            # Deconvolution with Tikhonov regularization
+
+            f_1c, f_1s = Dual_variable_Tikhonov_deconv_3D(AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+
+        elif method == 'TV':
+
+            # ADMM deconvolution with anisotropic TV regularization
+
+            f_1c, f_1s = Dual_variable_ADMM_TV_deconv_3D(AHA, b_vec, rho, lambda_br, lambda_br, itr, verbose, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+
+
+
+        azimuth = (np.arctan2(-f_1s, -f_1c)/2)%np.pi
+        retardance = ((np.abs(f_1s)**2 + np.abs(f_1c)**2)**(1/2))/(2*np.pi/self.lambda_illu)*self.psz
+
+
+        return retardance, azimuth
     
     
     def Inclination_recon_geometric(self, retardance, orientation, on_axis_idx, reg_ret_pr = 1e-2):
@@ -1677,7 +1963,7 @@ class waveorder_microscopy:
                          2D absorption reconstruction with the size of (N, M)
                   
             phi_sample : numpy.ndarray
-                         2D phase reconstruction with the size of (N, M)
+                         2D phase reconstruction (in the unit of rad) with the size of (N, M)
                       
                                           
         '''
@@ -1848,7 +2134,7 @@ class waveorder_microscopy:
         Returns
         -------
             scaled f_real    : numpy.ndarray
-                               3D reconstruction of phase with the size of (N, M, N_defocus)
+                               3D reconstruction of phase (in the unit of rad) with the size of (N, M, N_defocus)
                   
             scaled f_imag    : numpy.ndarray
                                3D reconstruction of absorption with the size of (N, M, N_defocus)
