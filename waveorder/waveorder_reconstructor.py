@@ -1297,6 +1297,9 @@ class waveorder_microscopy:
                                           
         '''
         
+        if self.N_defocus == 1:
+            S1_stack = np.reshape(S1_stack, (self.N, self.M, 1))
+            S2_stack = np.reshape(S2_stack, (self.N, self.M, 1))
         
         H_1_1c = self.H_dyadic_2D_OTF_in_plane[0,0]
         H_1_1s = self.H_dyadic_2D_OTF_in_plane[0,1]
