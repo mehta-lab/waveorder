@@ -1165,21 +1165,19 @@ class waveorder_microscopy:
         else:
             Recon_para = np.zeros((self.N_Stokes,)+S_image_recon.shape[1:])
 
-        S1 = S_image_recon[1] * S_image_recon[3]
-        S2 = S_image_recon[2] * S_image_recon[3]
-
         if self.use_gpu:
             
             if self.N_Stokes == 4:
-                ret_wrapped = cp.arctan2((S1**2 + S2**2)**(1/2), S_image_recon[3])  # retardance
+                ret_wrapped = cp.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
+                                         S_image_recon[3], S_image_recon[3])  # retardance
             elif self.N_Stokes == 3:
                 ret_wrapped = cp.arcsin(cp.minimum((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5),1))
 
             
             if self.cali == True:
-                sa_wrapped = 0.5*cp.arctan2(-S1, -S2)%np.pi # slow-axis
+                sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], -S_image_recon[2]) % np.pi # slow-axis
             else:
-                sa_wrapped = 0.5*cp.arctan2(-S1, S2)%np.pi # slow-axis
+                sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], S_image_recon[2]) % np.pi # slow-axis
         
         else:
             
@@ -1192,9 +1190,9 @@ class waveorder_microscopy:
             
             
             if self.cali == True:
-                sa_wrapped = 0.5*np.arctan2(-S1, -S2)%np.pi # slow-axis
+                sa_wrapped = 0.5*np.arctan2(-S_image_recon[1], -S_image_recon[2]) % np.pi # slow-axis
             else:
-                sa_wrapped = 0.5*np.arctan2(-S1, S2)%np.pi # slow-axis
+                sa_wrapped = 0.5*np.arctan2(-S_image_recon[1], S_image_recon[2]) % np.pi # slow-axis
                 
         sa_wrapped[ret_wrapped<0] += np.pi/2
         ret_wrapped[ret_wrapped<0] += np.pi

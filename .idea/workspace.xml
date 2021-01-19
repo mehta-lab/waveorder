@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="b4ff7577-5796-499d-8bd0-cb135e37c8cf" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/waveorder/waveorder_reconstructor.py" beforeDir="false" afterPath="$PROJECT_DIR$/waveorder/waveorder_reconstructor.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -86,7 +87,7 @@
       <workItem from="1610149827990" duration="2090000" />
       <workItem from="1610651448106" duration="13000" />
       <workItem from="1610653500751" duration="77000" />
-      <workItem from="1610653733855" duration="1207000" />
+      <workItem from="1610653733855" duration="2129000" />
     </task>
     <servers />
   </component>
