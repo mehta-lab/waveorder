@@ -194,6 +194,11 @@ class waveorder_microscopy:
                                self-provided instrument matrix converting polarization-sensitive intensity images into Stokes parameters 
                                with shape of (N_channel, N_Stokes)
                                If None is provided, the instrument matrix is determined by the QLIPP convention with swing specify by chi
+
+
+       QLIPP_birefringence_only : bool
+                               'True' to skip pre-processing functions for phase/uPTI reconstruction
+                               'False' to continue with pre-processing functions for phase/uPTI reconstruction
                           
         bire_in_plane_deconv : str
                                string contains the dimension of 2D birefringence deconvolution  
@@ -240,7 +245,7 @@ class waveorder_microscopy:
     
     def __init__(self, img_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi=None,\
                  n_media=1, cali=False, bg_option='global', 
-                 A_matrix=None, bire_in_plane_deconv=None, inc_recon=None, 
+                 A_matrix=None, QLIPP_birefringence_only = False, bire_in_plane_deconv=None, inc_recon=None,
                  phase_deconv=None, ph_deconv_layer = 5,
                  illu_mode='BF', NA_illu_in=None, Source=None, Source_PolState=np.array([1, 1j]),
                  use_gpu=False, gpu_id=0):
@@ -279,35 +284,42 @@ class waveorder_microscopy:
         self.cali                      = cali
         self.bg_option                 = bg_option
              
-        
-        # setup microscocpe variables
-        self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
-        self.Pupil_obj = gen_Pupil(self.fxx, self.fyy, self.NA_obj, self.lambda_illu)
-        self.Pupil_support = self.Pupil_obj.copy()
-        
-        # illumination setup
-        
-        self.illumination_setup(illu_mode, NA_illu_in, Source, Source_PolState)
-        
-        # Defocus kernel initialization
-        
-        self.Hz_det_setup(phase_deconv, ph_deconv_layer, bire_in_plane_deconv, inc_recon)
-                
-        # select either 2D or 3D model for phase deconvolution
-        
-        self.phase_deconv_setup(phase_deconv)
-        
-        # instrument matrix for polarization detection
-        
-        self.instrument_matrix_setup(A_matrix)
-        
-        # select either 2D or 3D model for 2D birefringence deconvolution
-        
-        self.bire_in_plane_deconv_setup(bire_in_plane_deconv)
-        
-        # inclination reconstruction model selection
-        
-        self.inclination_recon_setup(inc_recon)
+
+        if QLIPP_birefringence_only == False:
+            # setup microscocpe variables
+            self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
+            self.Pupil_obj = gen_Pupil(self.fxx, self.fyy, self.NA_obj, self.lambda_illu)
+            self.Pupil_support = self.Pupil_obj.copy()
+
+            # illumination setup
+
+            self.illumination_setup(illu_mode, NA_illu_in, Source, Source_PolState)
+
+            # Defocus kernel initialization
+
+            self.Hz_det_setup(phase_deconv, ph_deconv_layer, bire_in_plane_deconv, inc_recon)
+
+            # select either 2D or 3D model for phase deconvolution
+
+            self.phase_deconv_setup(phase_deconv)
+
+            # instrument matrix for polarization detection
+
+            self.instrument_matrix_setup(A_matrix)
+
+            # select either 2D or 3D model for 2D birefringence deconvolution
+
+            self.bire_in_plane_deconv_setup(bire_in_plane_deconv)
+
+            # inclination reconstruction model selection
+
+            self.inclination_recon_setup(inc_recon)
+
+        else:
+
+            # instrument matrix for polarization detection
+            self.instrument_matrix_setup(A_matrix)
+
                    
         
         
@@ -1152,21 +1164,20 @@ class waveorder_microscopy:
             Recon_para = cp.zeros((self.N_Stokes,)+S_image_recon.shape[1:])
         else:
             Recon_para = np.zeros((self.N_Stokes,)+S_image_recon.shape[1:])
-        
-        
+
         if self.use_gpu:
             
             if self.N_Stokes == 4:
                 ret_wrapped = cp.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
-                                       S_image_recon[3], S_image_recon[3])  # retardance
+                                         S_image_recon[3], S_image_recon[3])  # retardance
             elif self.N_Stokes == 3:
                 ret_wrapped = cp.arcsin(cp.minimum((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5),1))
 
             
             if self.cali == True:
-                sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], -S_image_recon[2])%np.pi # slow-axis
+                sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], -S_image_recon[2]) % np.pi # slow-axis
             else:
-                sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], S_image_recon[2])%np.pi # slow-axis
+                sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], S_image_recon[2]) % np.pi # slow-axis
         
         else:
             
@@ -1179,9 +1190,9 @@ class waveorder_microscopy:
             
             
             if self.cali == True:
-                sa_wrapped = 0.5*np.arctan2(-S_image_recon[1], -S_image_recon[2])%np.pi # slow-axis
+                sa_wrapped = 0.5*np.arctan2(-S_image_recon[1], -S_image_recon[2]) % np.pi # slow-axis
             else:
-                sa_wrapped = 0.5*np.arctan2(-S_image_recon[1], S_image_recon[2])%np.pi # slow-axis
+                sa_wrapped = 0.5*np.arctan2(-S_image_recon[1], S_image_recon[2]) % np.pi # slow-axis
                 
         sa_wrapped[ret_wrapped<0] += np.pi/2
         ret_wrapped[ret_wrapped<0] += np.pi
