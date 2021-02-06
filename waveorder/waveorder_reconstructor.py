@@ -234,6 +234,9 @@ class waveorder_microscopy:
                                illumination polarization states (Ex, Ey) for each illumination pattern with dimension of (N_pattern, 2)
                                If provided with size of (2,), a single state is used for all illumination patterns
         
+        pad_z                : int
+                               number of z-layers to pad (reflection boundary condition) for 3D deconvolution
+        
         use_gpu              : bool
                                option to use gpu or not
         
@@ -248,7 +251,7 @@ class waveorder_microscopy:
                  A_matrix=None, QLIPP_birefringence_only = False, bire_in_plane_deconv=None, inc_recon=None,
                  phase_deconv=None, ph_deconv_layer = 5,
                  illu_mode='BF', NA_illu_in=None, Source=None, Source_PolState=np.array([1, 1j]),
-                 use_gpu=False, gpu_id=0):
+                 pad_z=0, use_gpu=False, gpu_id=0):
         
         '''
         
@@ -277,9 +280,11 @@ class waveorder_microscopy:
         if len(z_defocus) >= 2:
             self.psz                   = np.abs(z_defocus[0] - z_defocus[1])
             self.G_tensor_z_upsampling = np.ceil(self.psz/(self.lambda_illu/2))
+        self.pad_z                     = pad_z
         self.NA_obj                    = NA_obj/n_media
         self.NA_illu                   = NA_illu/n_media
         self.N_defocus                 = len(z_defocus)
+        self.N_defocus_3D              = self.N_defocus + 2*self.pad_z
         self.chi                       = chi
         self.cali                      = cali
         self.bg_option                 = bg_option
@@ -445,9 +450,9 @@ class waveorder_microscopy:
             
             # generate defocus kernel and Green's function
             if self.z_defocus[0] - self.z_defocus[1] >0:
-                z = -ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)
+                z = -ifftshift((np.r_[0:self.N_defocus_3D]-self.N_defocus_3D//2)*self.psz)
             else:
-                z = ifftshift((np.r_[0:self.N_defocus]-self.N_defocus//2)*self.psz)    
+                z = ifftshift((np.r_[0:self.N_defocus_3D]-self.N_defocus_3D//2)*self.psz)    
             self.Hz_det_3D = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
             self.G_fun_z_3D = gen_Greens_function_z(self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z)
             
@@ -562,7 +567,7 @@ class waveorder_microscopy:
             
             # generate 3D vectorial transfer function for 3D uPTI
             self.gen_3D_vec_WOTF(True)
-            self.inc_AHA_3D_vec = np.zeros((7,7,self.N,self.M,self.N_defocus), dtype='complex64')
+            self.inc_AHA_3D_vec = np.zeros((7,7,self.N,self.M,self.N_defocus_3D), dtype='complex64')
             
             # compute the AHA matrix for later 3D inversion
             for i,j,p in itertools.product(range(7), range(7), range(self.N_Stokes)):
@@ -657,8 +662,8 @@ class waveorder_microscopy:
                              
         '''
         
-        self.H_re = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
-        self.H_im = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
+        self.H_re = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus_3D),dtype='complex64')
+        self.H_im = np.zeros((self.N_pattern, self.N, self.M, self.N_defocus_3D),dtype='complex64')
         
         for i in range(self.N_pattern):
             if self.N_pattern == 1:
@@ -820,9 +825,9 @@ class waveorder_microscopy:
         '''
         
         if inc_option == True:
-            self.H_dyadic_OTF = np.zeros((self.N_Stokes, 7, self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
+            self.H_dyadic_OTF = np.zeros((self.N_Stokes, 7, self.N_pattern, self.N, self.M, self.N_defocus_3D),dtype='complex64')
         else:
-            self.H_dyadic_OTF_in_plane = np.zeros((2, 2, self.N_pattern, self.N, self.M, self.N_defocus),dtype='complex64')
+            self.H_dyadic_OTF_in_plane = np.zeros((2, 2, self.N_pattern, self.N, self.M, self.N_defocus_3D),dtype='complex64')
 
         
         # angle-dependent electric field components due to focusing effect
@@ -843,7 +848,7 @@ class waveorder_microscopy:
 
         
         # generate dyadic Green's tensor
-        N_defocus = self.G_tensor_z_upsampling*self.N_defocus
+        N_defocus = self.G_tensor_z_upsampling*self.N_defocus_3D
         psz = self.psz/self.G_tensor_z_upsampling
         if self.z_defocus[0] - self.z_defocus[1] >0:
             z = -ifftshift((np.r_[0:N_defocus]-N_defocus//2)*psz)
@@ -1406,6 +1411,21 @@ class waveorder_microscopy:
                                           
         '''
         
+        if self.pad_z != 0:
+            S1_pad = np.pad(S1_stack,((0,0),(0,0),(self.pad_z,self.pad_z)), mode='constant',constant_values=S1_stack.mean())
+            S2_pad = np.pad(S2_stack,((0,0),(0,0),(self.pad_z,self.pad_z)), mode='constant',constant_values=S2_stack.mean())
+            if self.pad_z < self.N_defocus:
+                S1_pad[:,:,:self.pad_z] = (S1_stack[:,:,:self.pad_z])[:,:,::-1]
+                S1_pad[:,:,-self.pad_z:] = (S1_stack[:,:,-self.pad_z:])[:,:,::-1]
+                S2_pad[:,:,:self.pad_z] = (S2_stack[:,:,:self.pad_z])[:,:,::-1]
+                S2_pad[:,:,-self.pad_z:] = (S2_stack[:,:,-self.pad_z:])[:,:,::-1]
+            else:
+                print('pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding')
+            
+            S1_stack = S1_pad.copy()
+            S2_stack = S2_pad.copy()
+            
+        
         
         H_1_1c = self.H_dyadic_OTF_in_plane[0,0,0]
         H_1_1s = self.H_dyadic_OTF_in_plane[0,1,0]
@@ -1448,7 +1468,11 @@ class waveorder_microscopy:
 
         azimuth = (np.arctan2(-f_1s, -f_1c)/2)%np.pi
         retardance = ((np.abs(f_1s)**2 + np.abs(f_1c)**2)**(1/2))/(2*np.pi/self.lambda_illu)*self.psz
-
+        
+        
+        if self.pad_z != 0:
+            azimuth = azimuth[:,:,self.pad_z:-(self.pad_z)]
+            retardance = retardance[:,:,self.pad_z:-(self.pad_z)]
 
         return retardance, azimuth
     
@@ -1601,6 +1625,17 @@ class waveorder_microscopy:
         
         start_time = time.time()
         
+        if self.pad_z != 0:
+            S_pad = np.pad(S_image_recon,((0,0),(0,0),(0,0),(0,0),(self.pad_z,self.pad_z)), mode='constant',constant_values=0)
+            if self.pad_z < self.N_defocus:
+                S_pad[...,:self.pad_z] = (S_image_recon[...,:self.pad_z])[:,:,::-1]
+                S_pad[...,-self.pad_z:] = (S_image_recon[...,-self.pad_z:])[:,:,::-1]
+
+            else:
+                print('pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding')
+            
+            S_image_recon = S_pad.copy()
+        
         S_stack_f = fftn(S_image_recon,axes=(-3,-2,-1))
 
 
@@ -1609,7 +1644,7 @@ class waveorder_microscopy:
         for i in range(7):
             AHA[i,i] += np.mean(np.abs(AHA[i,i]))*reg_inc[i]
 
-        b_vec = np.zeros((7,self.N,self.M,self.N_defocus), dtype='complex64')
+        b_vec = np.zeros((7,self.N,self.M,self.N_defocus_3D), dtype='complex64')
 
         for i,j in itertools.product(range(7), range(self.N_Stokes)):
             b_vec[i] += np.sum(np.conj(self.H_dyadic_OTF[j,i])*S_stack_f[j],axis=0)
@@ -1623,7 +1658,7 @@ class waveorder_microscopy:
 
             determinant = array_based_7x7_det(AHA)
 
-            f_tensor = cp.zeros((7, self.N,self.M,self.N_defocus), dtype='float32')
+            f_tensor = cp.zeros((7, self.N,self.M,self.N_defocus_3D), dtype='float32')
 
             for i in range(7):
                 AHA_b_vec = AHA.copy()
@@ -1636,9 +1671,14 @@ class waveorder_microscopy:
             
             AHA_pinv = np.linalg.pinv(np.transpose(AHA,(2,3,4,0,1)))
             f_tensor = np.real(ifftn(np.transpose(np.squeeze(np.matmul(AHA_pinv, np.transpose(b_vec,(1,2,3,0))[...,np.newaxis])),(3,0,1,2)),axes=(1,2,3)))
-            
+        
+        
+        if self.pad_z != 0:
+            f_tensor = f_tensor[...,self.pad_z:-(self.pad_z)]
         
         print('Finished reconstruction, elapsed time: %.2f'%(time.time()-start_time))
+        
+        
         
         return f_tensor
     
@@ -1700,6 +1740,23 @@ class waveorder_microscopy:
                               
         '''
         
+        
+        if self.pad_z != 0 and material_type == 'unknown':
+            S_pad = np.pad(S_image_recon,((0,0),(0,0),(0,0),(0,0),(self.pad_z,self.pad_z)), mode='constant',constant_values=0)
+            f_tensor_pad = np.pad(f_tensor,((0,0),(0,0),(0,0),(self.pad_z,self.pad_z)), mode='constant',constant_values=0)
+            if self.pad_z < self.N_defocus:
+                S_pad[...,:self.pad_z] = (S_image_recon[...,:self.pad_z])[:,:,::-1]
+                S_pad[...,-self.pad_z:] = (S_image_recon[...,-self.pad_z:])[:,:,::-1]
+                f_tensor_pad[...,:self.pad_z] = (f_tensor[...,:self.pad_z])[:,:,::-1]
+                f_tensor_pad[...,-self.pad_z:] = (f_tensor[...,-self.pad_z:])[:,:,::-1]
+
+            else:
+                print('pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding')
+            
+            S_image_recon = S_pad.copy()
+            f_tensor = f_tensor_pad.copy()
+        
+        
         if material_type == 'positive' or 'unknown':
             
             # Positive uniaxial material
@@ -1724,6 +1781,7 @@ class waveorder_microscopy:
             
         
         if material_type == 'unknown':
+            
             
             if f_tensor.ndim == 4:
                 S_stack_f = fftn(S_image_recon,axes=(-3,-2,-1))
@@ -1753,7 +1811,7 @@ class waveorder_microscopy:
             
             if f_tensor.ndim == 4:
                 f_vec_f = fftn(f_vec, axes=(1,2,3))
-                S_est_vec = np.zeros((self.N_Stokes, self.N_pattern, self.N, self.M, self.N_defocus), complex)
+                S_est_vec = np.zeros((self.N_Stokes, self.N_pattern, self.N, self.M, self.N_defocus_3D), complex)
 
                 for p,q in itertools.product(range(self.N_Stokes), range(2)):
                      S_est_vec[p] += self.H_dyadic_OTF[p,q]*f_vec_f[np.newaxis,q]
@@ -1903,9 +1961,9 @@ class waveorder_microscopy:
                             ax[1,0].cla()
                             ax[1,1].cla()
                     if f_tensor.ndim == 4:
-                        ax[0,0].imshow(x_map[:,:,self.N_defocus//2],origin='lower', vmin=0, vmax=2)    
+                        ax[0,0].imshow(x_map[:,:,self.N_defocus_3D//2],origin='lower', vmin=0, vmax=2)    
                         ax[0,1].imshow(np.transpose(x_map[self.N//2,:,:]),origin='lower',vmin=0, vmax=2)
-                        ax[1,0].imshow(y_map[:,:,self.N_defocus//2],origin='lower', vmin=0, vmax=2)    
+                        ax[1,0].imshow(y_map[:,:,self.N_defocus_3D//2],origin='lower', vmin=0, vmax=2)    
                         ax[1,1].imshow(np.transpose(y_map[self.N//2,:,:]),origin='lower',vmin=0, vmax=2)
                     elif f_tensor.ndim == 3:
                         ax[0,0].imshow(x_map,origin='lower', vmin=0, vmax=2)
@@ -1921,6 +1979,13 @@ class waveorder_microscopy:
             theta         = np.stack([theta_p, theta_n]) 
             mat_map       = np.stack([x_map, y_map])
             print('Finish optic sign estimation, elapsed time: %.2f'%(time.time()-tic_time))
+            
+            
+            if self.pad_z != 0:
+                retardance_pr = retardance_pr[...,self.pad_z:-(self.pad_z)]
+                azimuth       = azimuth[...,self.pad_z:-(self.pad_z)]
+                theta         = theta[...,self.pad_z:-(self.pad_z)]
+                mat_map       = mat_map[...,self.pad_z:-(self.pad_z)]
             
             return retardance_pr, azimuth, theta, mat_map
 
@@ -2155,11 +2220,27 @@ class waveorder_microscopy:
                       
                                           
         '''
+                
         
-        S0_stack = inten_normalization_3D(S0_stack)
+        
         
         
         if self.N_pattern == 1:
+            
+            if self.pad_z == 0:
+                S0_stack = inten_normalization_3D(S0_stack)
+            else:
+                S0_pad = np.pad(S0_stack,((0,0),(0,0),(self.pad_z,self.pad_z)), mode='constant',constant_values=0)
+                if self.pad_z < self.N_defocus:
+                    S0_pad[:,:,:self.pad_z] = (S0_stack[:,:,:self.pad_z])[:,:,::-1]
+                    S0_pad[:,:,-self.pad_z:] = (S0_stack[:,:,-self.pad_z:])[:,:,::-1]
+                else:
+                    print('pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding')
+
+                S0_stack = inten_normalization_3D(S0_pad)
+            
+            
+            
             
             H_eff = self.H_re + absorption_ratio*self.H_im
 
@@ -2170,10 +2251,26 @@ class waveorder_microscopy:
             elif method == 'TV':
 
                 f_real = Single_variable_ADMM_TV_deconv_3D(S0_stack, H_eff, rho, reg_re, lambda_re, itr, verbose, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
-
+            
+            if self.pad_z != 0:
+                f_real = f_real[:,:,self.pad_z:-(self.pad_z)]
+            
             return -f_real*self.psz/4/np.pi*self.lambda_illu
         
         else:
+            
+            if self.pad_z == 0:
+                S0_stack = inten_normalization_3D(S0_stack)
+            else:
+                S0_pad = np.pad(S0_stack,((0,0),(0,0),(0,0),(self.pad_z,self.pad_z)), mode='constant',constant_values=0)
+                if self.pad_z < self.N_defocus:
+                    S0_pad[...,:self.pad_z] = (S0_stack[...,:self.pad_z])[...,::-1]
+                    S0_pad[...,-self.pad_z:] = (S0_stack[...,-self.pad_z:])[...,::-1]
+                else:
+                    print('pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding')
+
+                S0_stack = inten_normalization_3D(S0_pad)
+            
             
             if self.use_gpu:
             
@@ -2210,6 +2307,11 @@ class waveorder_microscopy:
                 # ADMM deconvolution with anisotropic TV regularization
 
                 f_real, f_imag = Dual_variable_ADMM_TV_deconv_3D(AHA, b_vec, rho, lambda_re, lambda_im, itr, verbose, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+                
+            
+            if self.pad_z != 0:
+                f_real = f_real[:,:,self.pad_z:-(self.pad_z)]
+                f_imag = f_imag[:,:,self.pad_z:-(self.pad_z)]
             
             return -f_real*self.psz/4/np.pi*self.lambda_illu, f_imag*self.psz/4/np.pi*self.lambda_illu
 
