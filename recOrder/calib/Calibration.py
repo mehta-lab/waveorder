@@ -10,6 +10,7 @@ if p not in sys.path:
 import time
 from recOrder.recOrder.calib.CoreFunctions import define_lc_state, snap_image, set_lc, get_lc, set_lc_state
 from recOrder.recOrder.calib.Optimization import optimize_brent, optimize_grid
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 # from Extra_Optimization import optimize_minscalar
 import json
 
@@ -68,6 +69,8 @@ class QLIPP_Calibration():
         self.height = None
         self.width = None        
         self.directory = None
+
+        self.ROI = None
         
         self.inst_mat = None
         
@@ -228,6 +231,7 @@ class QLIPP_Calibration():
         # self.mmc.clearCircularBuffer()
 
         set_lc_state(self.mmc, 'State0')
+        time.sleep(2)
 
 #         self.mmc.snapImage()
 #         self.height, self.width = self.mmc.getImageHeight(), self.mmc.getImageWidth()
@@ -614,6 +618,7 @@ class QLIPP_Calibration():
         self.mmc.snapImage()
         self.mmc.getImage()
         self.height, self.width = self.mmc.getImageHeight(), self.mmc.getImageWidth()
+        self.ROI = (0,0,self.height,self.width)
 
         # Check if change of ROI is needed
         if use_full_FOV is False:
@@ -625,6 +630,7 @@ class QLIPP_Calibration():
                 return
             else:
                 self.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
+                self.ROI = (rect.x, rect.y, rect.width, rect.height)
 
         # Calculate Blacklevel
         print('Calculating Blacklevel ...')
@@ -676,6 +682,7 @@ class QLIPP_Calibration():
         self.mmc.snapImage()
         self.mmc.getImage()
         self.height, self.width = self.mmc.getImageHeight(), self.mmc.getImageWidth()
+        self.ROI = (0,0,self.height,self.width)
 
         # Check if change of ROI is needed
         if use_full_FOV is False:
@@ -687,6 +694,8 @@ class QLIPP_Calibration():
                 return
             else:
                 self.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
+                self.ROI = (rect.x, rect.y, rect.width, rect.height)
+
 
         # Calculate Blacklevel
         print('Calculating Blacklevel ...')
@@ -787,8 +796,9 @@ class QLIPP_Calibration():
                                 'Swing0': self.swing0,
                                 'Swing60': self.swing60,
                                 'Swing120': self.swing120,
-                                'Extinction Ratio': self.extinction_ratio
-                                
+                                'Extinction Ratio': self.extinction_ratio,
+                                'ROI Used (x ,y, width, height)': self.ROI
+
                                  #Edit out later
                                #  "MicroManagerVersion": "1.4.22",
                                #  "Prefix": "Background Images",
@@ -818,8 +828,9 @@ class QLIPP_Calibration():
                                 'Swing45': self.swing45,
                                 'Swing90': self.swing90,
                                 'Swing135': self.swing135,
-                                'Extinction Ratio': self.extinction_ratio
-                                
+                                'Extinction Ratio': self.extinction_ratio,
+                                'ROI Used (x ,y, width, height)': self.ROI
+
                                 #Edit out later
                                #  "MicroManagerVersion": "1.4.22",
                                #  "Prefix": "Background Images",
@@ -904,3 +915,39 @@ class QLIPP_Calibration():
             state4 = np.mean(state4, axis=(0))
            
             tiff.imsave(directory + 'State4.tif', state4)
+
+        def add_colorbar(mappable):
+            last_axes = plt.gca()
+            ax = mappable.axes
+            fig = ax.figure
+            divider = make_axes_locatable(ax)
+            cax = divider.append_axes("right", size="5%", pad=0.05)
+            cbar = fig.colorbar(mappable, cax=cax)
+            plt.sca(last_axes)
+            return cbar
+
+        fig, ax = plt.subplots(2, 2, figsize=(20,20))
+
+        # min_array = [np.min(state1), np.min(state2), np.min(state3)]
+        # max_array = [np.max(state1), np.max(state2), np.max(state3)]
+        #
+        # min = np.min(min_array)
+        # max = np.max(max_array)
+
+        im = ax[0,0].imshow(state0, 'gray',)
+        ax[0,0].set_title('Extinction')
+        add_colorbar(im)
+
+        im = ax[0,1].imshow(state1, 'gray')
+        ax[0,1].set_title('State1')
+        add_colorbar(im)
+
+        im = ax[1,0].imshow(state2, 'gray')
+        ax[1,0].set_title('State2')
+        add_colorbar(im)
+
+        im = ax[1,1].imshow(state3, 'gray')
+        ax[1,1].set_title('State3')
+        add_colorbar(im)
+
+        plt.show()
