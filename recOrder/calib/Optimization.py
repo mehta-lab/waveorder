@@ -286,3 +286,174 @@ def optimize_grid(calib, a_min, a_max, b_min, b_max, step):
     best_lcb = better_lcb
 
     return best_lca, best_lcb, min_int
+
+def optimize_minscalar(calib, reference, bound_range, mode, normalize=False):
+    
+    current_lca = get_lc(calib.mmc, calib.PROPERTIES['LCA'])
+    current_lcb = get_lc(calib.mmc, calib.PROPERTIES['LCB'])
+    
+    # check that bounds don't exceed range of LC
+    lca_lower_bound = 0.01 if (current_lca - bound_range) <= 0.01 else current_lca - bound_range
+    lca_upper_bound = 1.6 if (current_lca + bound_range) >= 1.6 else current_lca + bound_range
+
+    lcb_lower_bound = 0.01 if current_lcb - bound_range <= 0.01 else current_lcb - bound_range
+    lcb_upper_bound = 1.6 if current_lcb + bound_range >= 1.6 else current_lcb + bound_range
+    
+    bounds = [(lca_lower_bound, lca_upper_bound),(lcb_lower_bound,lcb_upper_bound)]
+    
+    if mode == '60' or mode == '120':
+        res = optimize.minimize_scalar(calib.opt_lc_cons, bounds=bounds[0], method='bounded', args=(reference,mode))
+
+        # Brent Optimization
+        set_lc(calib.mmc, res.x, calib.PROPERTIES['LCA'])
+        
+        swing = (calib.lca_ext - res.x) * calib.ratio
+        
+        if mode == '60':
+            lcb = calib.lcb_ext + swing
+            set_lc(calib.mmc, lcb, calib.PROPERTIES['LCB'])
+        
+        if mode == '120':
+            lcb = calib.lcb_ext - swing
+            set_lc(calib.mmc, lcb, calib.PROPERTIES['LCB'])
+        
+        difference = (res.fun / reference) * 100
+        
+        if calib.print_details:
+            print('\tOptimizing lca w/ constrained lcb ...')
+            print(f"\tlca = {res.x:.4f}")
+            print(f'\tlcb = {lcb:.4f}')
+            print(f'\tIntensity = {res.fun + reference}')
+            print(f'\tIntensity Difference = {difference:.7f}%')
+        
+        return res.x, lcb, res.fun
+
+    elif mode == '90':
+        
+        res = optimize.minimize_scalar(calib.opt_lc, bounds=bounds[0], method='bounded',args=(calib.PROPERTIES['LCA'],reference,normalize))
+        
+        set_lc(calib.mmc, res.x, calib.PROPERTIES['LCA'])
+        
+        difference = (res.fun / reference) * 100
+        lcb = get_lc(calib.mmc, calib.PROPERTIES['LCB'])
+        if calib.print_details:
+            print('\tOptimize lca ...')
+            print(f"\tlca = {res.x:.4f}")
+            print(f"\tlcb = {lcb:.4f}")
+            print(f'\tIntensity = {res.fun + reference}')
+            print(f'\tIntensity Difference = {difference:.7f}%')
+            
+            
+        return res.x, lcb, res.fun
+    
+    elif mode == '45' or mode == '135':
+        res = optimize.minimize_scalar(calib.opt_lc, bounds=bounds[1], method='bounded',args=(calib.PROPERTIES['LCB'],reference,normalize))
+        
+        set_lc(calib.mmc, res.x, calib.PROPERTIES['LCB'])
+        
+        difference = (res.fun / reference) * 100
+        lca = get_lc(calib.mmc, calib.PROPERTIES['LCA'])
+        
+        if calib.print_details:
+            print('\tOptimize lcb ...')
+            print(f"\tlca = {lca:.4f}")
+            print(f"\tlcb = {res.x:.4f}")
+            print(f'\tIntensity = {res.fun + reference}')
+            print(f'\tIntensity Difference = {difference:.7f}%')
+            
+        return lca, res.x, res.fun
+            
+            
+    else:
+            
+        optimal = []
+        
+        res_a=optimize.minimize_scalar(calib.opt_lc, bounds=bounds[0], method='bounded',args=(calib.PROPERTIES['LCA'],reference,normalize))
+        
+        set_lc(calib.mmc, res_a.x, calib.PROPERTIES['LCA'])
+        
+        lcb = get_lc(calib.mmc, calib.PROPERTIES['LCB'])
+        
+        optimal.append([res_a.x, lcb, abs(res_a.fun)])
+        
+        difference = (res_a.fun / reference) * 100
+        
+        if calib.print_details:
+            print('\tOptimize lca ...')
+            print(f"\tlca = {res_a.x:.4f}")
+            print(f"\tlcb = {lcb:.4f}")
+            print(f'\tIntensity = {res_a.fun + reference}')
+            print(f'\tIntensity Difference = {difference:.7f}%\n')
+
+        res_b=optimize.minimize_scalar(calib.opt_lc, bounds=bounds[1], method='bounded',args=(calib.PROPERTIES['LCB'],reference,normalize))
+
+        set_lc(calib.mmc, res_b.x, calib.PROPERTIES['LCB'])
+        
+        lca = get_lc(calib.mmc, calib.PROPERTIES['LCA'])
+        
+        optimal.append([lca, res_b.x, abs(res_b.fun)])
+        
+        difference = (res_b.fun / reference) * 100
+        
+        if calib.print_details:
+            print('\tOptimize lcb ...')
+            print(f"\tlca = {lca:.4f}")
+            print(f"\tlcb = {res_b.x:.4f}")
+            print(f'\tIntensity = {res_b.fun + reference}')
+            print(f'\tIntensity Difference = {difference:.7f}%\n')
+            
+            
+            print(f'\tBegin Finer Search\n')
+            
+            
+        #============BEGIN FINE SEARCH=================
+            
+        bounds = [(lca-.01, lca+.01), (res_b.x -.01, res_b.x + .01)]
+        
+        res_a=optimize.minimize_scalar(calib.opt_lc, bounds=bounds[0], method='bounded',args=(calib.PROPERTIES['LCA'],reference,normalize))
+        
+        set_lc(calib.mmc, res_a.x, calib.PROPERTIES['LCA'])
+        
+        lcb = get_lc(calib.mmc, calib.PROPERTIES['LCB'])
+        
+        optimal.append([res_a.x, lcb, abs(res_a.fun)])
+        
+        difference = (res_a.fun / reference) * 100
+        
+        if calib.print_details:
+            print('\tOptimize lca ...')
+            print(f"\tlca = {res_a.x:.4f}")
+            print(f"\tlcb = {lcb:.4f}")
+            print(f'\tIntensity = {res_a.fun + reference}')
+            print(f'\tIntensity Difference = {difference:.7f}%\n')
+
+        res_b=optimize.minimize_scalar(calib.opt_lc, bounds=bounds[1], method='bounded',args=(calib.PROPERTIES['LCB'],reference,normalize))
+
+        set_lc(calib.mmc, res_b.x, calib.PROPERTIES['LCB'])
+        
+        lca = get_lc(calib.mmc, calib.PROPERTIES['LCA'])
+        
+        optimal.append([lca, res_b.x, abs(res_b.fun)])
+        
+        difference = (res_b.fun / reference) * 100
+        
+        optimal = np.asarray(optimal)
+#         print(optimal)
+        opt = np.where(optimal == np.min(optimal[:][2]))[0]
+        
+#         print(optimal[opt])
+        set_lc(calib.mmc, float(optimal[opt][0][0]), calib.PROPERTIES['LCA'])
+        set_lc(calib.mmc, float(optimal[opt][0][1]), calib.PROPERTIES['LCB'])
+            
+        if calib.print_details:
+            print('\tOptimize lcb ...')
+            print(f"\tlca = {lca:.4f}")
+            print(f"\tlcb = {res_b.x:.4f}")
+            print(f'\tIntensity = {res_b.fun + reference}')
+            print(f'\tIntensity Difference = {difference:.7f}%')
+            
+            print(f'\n Lowest Intensity: {optimal[opt][0][2]:.4f}, lca = {optimal[opt][0][0]:.4f}, lcb = {optimal[opt][0][1]:.7f}')
+            
+            
+            
+        return lca, res_b.x, res_b.fun

@@ -9,7 +9,7 @@ if p not in sys.path:
 
 import time
 from recOrder.recOrder.calib.CoreFunctions import define_lc_state, snap_image, set_lc, get_lc, set_lc_state
-from recOrder.recOrder.calib.Optimization import optimize_brent, optimize_grid
+from recOrder.recOrder.calib.Optimization import optimize_brent, optimize_grid, optimize_minscalar
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 # from Extra_Optimization import optimize_minscalar
 import json
@@ -274,8 +274,8 @@ class QLIPP_Calibration():
             best_lcb = get_lc(self.mmc, self.PROPERTIES['LCB'])
             
         if method == 'min_scalar':
-            # best_lca, best_lcb, i_ext_ = optimize_minscalar(self, self.I_black, 0.1, mode=None)
-            raise ValueError('Not Implemented Yet')
+            best_lca, best_lcb, i_ext_ = optimize_minscalar(self, self.I_black, 0.1, mode=None)
+#             raise ValueError('Not Implemented Yet')
 
         if self.print_details:
             print("fine search done")
@@ -328,7 +328,7 @@ class QLIPP_Calibration():
 
         return [self.lca_0, self.lcb_0, ref]
 
-    def opt_I45(self, lca_bound, lcb_bound):
+    def opt_I45(self, lca_bound, lcb_bound, method):
         """
         optimized relative to Ielliptical (opt_I90)
         Parameters
@@ -346,8 +346,15 @@ class QLIPP_Calibration():
         
         set_lc(self.mmc, self.lca_ext, self.PROPERTIES['LCA'])
         set_lc(self.mmc, self.lcb_ext - self.swing, self.PROPERTIES['LCB'])
-
-        intensity = optimize_brent(self, lca_bound, lcb_bound, self.i_elliptical, n_iter=5, thresh=.01, mode='45')
+        
+        if method == 'brent':
+            intensity = optimize_brent(self, lca_bound, lcb_bound, self.i_elliptical, n_iter=5, thresh=.01, mode='45')
+            self.lca_45 = get_lc(self.mmc, self.PROPERTIES['LCA'])
+            self.lcb_45 = get_lc(self.mmc, self.PROPERTIES['LCB'])
+        
+        if method == 'min_scalar':
+#             raise ValueError('Not implemented yet')
+            self.lca_45, self.lcb_45, intensity = optimize_minscalar(self, self.i_elliptical, lca_bound, mode='45', normalize=False)
 
         define_lc_state(self.mmc, self.PROPERTIES, self.PROPERTIES['State2'])
         
@@ -393,14 +400,15 @@ class QLIPP_Calibration():
         # Brent Optimization
         set_lc(self.mmc, self.lca_ext + lca_swing, self.PROPERTIES['LCA'])
         set_lc(self.mmc, self.lcb_ext + lcb_swing, self.PROPERTIES['LCB'])
+        
         if method == 'brent':
             intensity = optimize_brent(self, lca_bound, lcb_bound, self.i_elliptical, n_iter=5, thresh=.01, mode='60')
             self.lca_60 = get_lc(self.mmc, self.PROPERTIES['LCA'])
             self.lcb_60 = get_lc(self.mmc, self.PROPERTIES['LCB'])
             
         if method == 'min_scalar':
-            raise ValueError('Not implemented yet')
-            # self.lca_60, self.lcb_60, intensity = optimize_minscalar(self, self.i_elliptical, lca_bound, mode='60', normalize=False)
+#             raise ValueError('Not implemented yet')
+            self.lca_60, self.lcb_60, intensity = optimize_minscalar(self, self.i_elliptical, lca_bound, mode='60', normalize=False)
 
         define_lc_state(self.mmc, self.PROPERTIES, self.PROPERTIES['State2'])
         
@@ -422,7 +430,7 @@ class QLIPP_Calibration():
 
         return [self.lca_60, self.lcb_60, intensity]
 
-    def opt_I90(self, lca_bound, lcb_bound):
+    def opt_I90(self, lca_bound, lcb_bound, method):
         """
         optimized relative to Ielliptical (opt_I90)
         Parameters
@@ -439,9 +447,16 @@ class QLIPP_Calibration():
         print('\nCalibrating State3 (I90)...')
         set_lc(self.mmc, self.lca_ext + self.swing, self.PROPERTIES['LCA'])
         set_lc(self.mmc, self.lcb_ext, self.PROPERTIES['LCB'])
+        
+        if method == 'brent':
+            intensity = optimize_brent(self, lca_bound, lcb_bound, self.i_elliptical, n_iter=5, thresh=.01, mode='90')
+            self.lca_90 = get_lc(self.mmc, self.PROPERTIES['LCA'])
+            self.lcb_90 = get_lc(self.mmc, self.PROPERTIES['LCB'])
 
-        intensity = optimize_brent(self, lca_bound, lcb_bound, self.i_elliptical, n_iter=5, thresh=.01, mode='90')
-
+        if method == 'min_scalar':
+#             raise ValueError('Not implemented yet')
+            self.lca_90, self.lcb_90, intensity = optimize_minscalar(self, self.i_elliptical, lca_bound, mode='90', normalize=False)
+        
         define_lc_state(self.mmc, self.PROPERTIES, self.PROPERTIES['State3'])
         
         self.lca_90 = get_lc(self.mmc, self.PROPERTIES['LCA'])
@@ -494,8 +509,8 @@ class QLIPP_Calibration():
             self.lcb_120 = get_lc(self.mmc, self.PROPERTIES['LCB'])
             
         if method == 'min_scalar':
-            raise ValueError('Not implemented yet')
-            # self.lca_120, self.lcb_120, intensity = optimize_minscalar(self, self.i_elliptical, lca_bound, mode='120', normalize=False)
+#             raise ValueError('Not implemented yet')
+            self.lca_120, self.lcb_120, intensity = optimize_minscalar(self, self.i_elliptical, lca_bound, mode='120', normalize=False)
 
         define_lc_state(self.mmc, self.PROPERTIES, self.PROPERTIES['State3'])
         
@@ -517,9 +532,9 @@ class QLIPP_Calibration():
 
         return [self.lca_120, self.lcb_120, intensity]
     
-    def opt_I135(self, lca_bound, lcb_bound):
+    def opt_I135(self, lca_bound, lcb_bound, method):
         """
-        optimized relative to Ielliptical (opt_I90)
+        optimized relative to Ielliptical (opt_I0)
         Parameters
         ----------
         lca_bound
@@ -536,8 +551,15 @@ class QLIPP_Calibration():
         set_lc(self.mmc, self.lca_ext, self.PROPERTIES['LCA'])
         set_lc(self.mmc, self.lcb_ext + self.swing, self.PROPERTIES['LCB'])
 
-        intensity = optimize_brent(self, lca_bound, lcb_bound, self.i_elliptical, n_iter=5, thresh=.01, mode='135')
-
+        if method == 'brent':
+            intensity = optimize_brent(self, lca_bound, lcb_bound, self.i_elliptical, n_iter=5, thresh=.01, mode='135')
+            self.lca_120 = get_lc(self.mmc, self.PROPERTIES['LCA'])
+            self.lcb_120 = get_lc(self.mmc, self.PROPERTIES['LCB'])
+            
+        if method == 'min_scalar':
+#             raise ValueError('Not implemented yet')
+            self.lca_135, self.lcb_135, intensity = optimize_minscalar(self, self.i_elliptical, lca_bound, mode='135', normalize=False)
+    
         define_lc_state(self.mmc, self.PROPERTIES, self.PROPERTIES['State4'])
         
         self.lca_135 = get_lc(self.mmc, self.PROPERTIES['LCA'])
@@ -647,11 +669,11 @@ class QLIPP_Calibration():
         self.lca_elliptical, self.lcb_elliptical, self.i_elliptical = self.opt_I0()
 
         # optimize I0, I45, I135 based on lelliptical
-        _, _, _, = self.opt_I45(0.002, 0.002)
+        _, _, _, = self.opt_I45(0.02, 0.02, method)
 
-        _, _, _, = self.opt_I90(0.002, 0.002)
+        _, _, _, = self.opt_I90(0.02, 0.02, method)
 
-        _, _, _, = self.opt_I135(0.002, 0.002)
+        _, _, _, = self.opt_I135(0.02, 0.02, method)
 
         # Calculate Extinction
         self.extinction_ratio = self.calculate_extinction()
