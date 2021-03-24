@@ -587,6 +587,7 @@ class QLIPP_Calibration():
         boxes = []
         for i in range(size):
             win = windows.get(i).toFront()
+            time.sleep(0.05)
             roi = self.mm.displays().getActiveDataViewer().getImagePlus().getRoi()
             if roi != None:
                 boxes.append(roi)
@@ -870,6 +871,17 @@ class QLIPP_Calibration():
         with open(directory + 'metadata.txt', 'w') as metafile:
             json.dump(data, metafile, indent=1)
 
+            
+    def add_colorbar(self, mappable):
+        last_axes = plt.gca()
+        ax = mappable.axes
+        fig = ax.figure
+        divider = make_axes_locatable(ax)
+        cax = divider.append_axes("right", size="5%", pad=0.05)
+        cbar = fig.colorbar(mappable, cax=cax)
+        plt.sca(last_axes)
+        return cbar
+        
     def capture_bg(self, n_avg, n_states, directory):
         """"
         This function will capture an image at every state
@@ -883,6 +895,8 @@ class QLIPP_Calibration():
             Directory to save images
             
         """
+        
+
         
         if not os.path.exists(directory):
             os.makedirs(directory)
@@ -937,39 +951,47 @@ class QLIPP_Calibration():
             state4 = np.mean(state4, axis=(0))
            
             tiff.imsave(directory + 'State4.tif', state4)
+            
+            fig, ax = plt.subplots(3, 2, figsize=(20,20))
 
-        def add_colorbar(mappable):
-            last_axes = plt.gca()
-            ax = mappable.axes
-            fig = ax.figure
-            divider = make_axes_locatable(ax)
-            cax = divider.append_axes("right", size="5%", pad=0.05)
-            cbar = fig.colorbar(mappable, cax=cax)
-            plt.sca(last_axes)
-            return cbar
+            im = ax[0,0].imshow(state0, 'gray',)
+            ax[0,0].set_title('Extinction')
+            self.add_colorbar(im)
 
-        fig, ax = plt.subplots(2, 2, figsize=(20,20))
+            im = ax[0,1].imshow(state1, 'gray')
+            ax[0,1].set_title('State1')
+            self.add_colorbar(im)
 
-        # min_array = [np.min(state1), np.min(state2), np.min(state3)]
-        # max_array = [np.max(state1), np.max(state2), np.max(state3)]
-        #
-        # min = np.min(min_array)
-        # max = np.max(max_array)
+            im = ax[1,0].imshow(state2, 'gray')
+            ax[1,0].set_title('State2')
+            self.add_colorbar(im)
 
-        im = ax[0,0].imshow(state0, 'gray',)
-        ax[0,0].set_title('Extinction')
-        add_colorbar(im)
+            im = ax[1,1].imshow(state3, 'gray')
+            ax[1,1].set_title('State3')
+            
+            im = ax[2,0].imshow(state4, 'gray')
+            ax[2,0].set_title('State4')
+            
+            fig.delaxes(ax[2,1])
+            plt.show()
+        
+        if n_states == 4:
+            fig, ax = plt.subplots(2, 2, figsize=(20,20))
 
-        im = ax[0,1].imshow(state1, 'gray')
-        ax[0,1].set_title('State1')
-        add_colorbar(im)
+            im = ax[0,0].imshow(state0, 'gray',)
+            ax[0,0].set_title('Extinction')
+            self.add_colorbar(im)
 
-        im = ax[1,0].imshow(state2, 'gray')
-        ax[1,0].set_title('State2')
-        add_colorbar(im)
+            im = ax[0,1].imshow(state1, 'gray')
+            ax[0,1].set_title('State1')
+            self.add_colorbar(im)
 
-        im = ax[1,1].imshow(state3, 'gray')
-        ax[1,1].set_title('State3')
-        add_colorbar(im)
+            im = ax[1,0].imshow(state2, 'gray')
+            ax[1,0].set_title('State2')
+            self.add_colorbar(im)
 
-        plt.show()
+            im = ax[1,1].imshow(state3, 'gray')
+            ax[1,1].set_title('State3')
+            self.add_colorbar(im)
+
+            plt.show()
