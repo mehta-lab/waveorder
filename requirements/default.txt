@@ -4,3 +4,5 @@ scipy>=1.3.0
 pywavelets>=1.1.1
 ipywidgets>=7.5.1
 opencv-python>=3.4.1
+tifffile>=2020.11.26
+# aicsimageio>=3.3.1
