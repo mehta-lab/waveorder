@@ -2381,8 +2381,6 @@ class fluorescence_microscopy:
         self.n_media = n_media
         self.lambda_emiss = lambda_emiss / self.n_media
         self.ps = ps
-        # if len(z_defocus) >= 2:
-        #     self.G_tensor_z_upsampling = np.ceil(self.psz / (self.lambda_emiss / 2))
         self.psz = psz
         self.pad_z = pad_z
         self.NA_obj = NA_obj / n_media
@@ -2396,19 +2394,46 @@ class fluorescence_microscopy:
         self.Pupil_obj = gen_Pupil(self.fxx, self.fyy, self.NA_obj, self.lambda_emiss)
         self.Pupil_support = self.Pupil_obj.copy()
 
+        # Setup defocus kernel
         self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_emiss, self.z)
 
         # Set up PSF and OTF for 3D deconvolution
-
         self.fluor_deconv_setup(self.Hz_det)
 
 
     def fluor_deconv_setup(self, Hz_det):
 
+        """
+        Set up the PSF and OTF for 3D deconvolution
+
+        Parameters
+        ----------
+            Hz_det          : defocus kernel
+
+        Returns
+        -------
+
+        """
+
         self.PSF_3D = np.abs(ifft2(Hz_det, axes=(0,1)))**2
         self.OTF_3D = fftn(self.PSF_3D, axes=(0, 1, 2))
 
     def deconvolve_fluor_3D(self, I_fluor, bg_level, reg_re):
+        """
+
+        Performs deconvolution with Tikhonov regularization on raw fluorescence stack.
+
+        Parameters
+        ----------
+            I_fluor         : (nd-array) Raw fluorescence intensity stack in dimensions (N, M, Z)
+            bg_level        : (float) Estimated background intensity level
+            reg_re          : (float) regularization parameter for deconvolution
+
+        Returns
+        -------
+            I_fluor_deconv  : (nd-array) Deconvolved fluoresence stack in dimensions (N, M, Z)
+
+        """
 
         I_fluor = np.maximum(0, I_fluor - bg_level)
 
