@@ -2440,6 +2440,3 @@ class fluorescence_microscopy:
         I_fluor_deconv = Single_variable_Tikhonov_deconv_3D(I_fluor, self.OTF_3D, reg_re,  use_gpu=self.use_gpu, gpu_id=self.gpu_id)
 
         return np.abs(I_fluor_deconv)
-
-##############   constructor function group   ##############
-
