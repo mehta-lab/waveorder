@@ -2315,7 +2315,106 @@ class waveorder_microscopy:
             
             return -f_real*self.psz/4/np.pi*self.lambda_illu, f_imag*self.psz/4/np.pi*self.lambda_illu
 
-    
-    
-    
-    
+
+class fluorescence_microscopy:
+    '''
+
+    fluorescence_microscopy contains methods to compute weak object transfer function
+    for fluorescence images:
+
+    1) 3D Deconvolution of Fluorescence
+
+
+    Parameters
+    ----------
+        img_dim              : tuple
+                               shape of the computed 2D space with size of (N, M, Z)
+
+        lambda_emiss          : float
+                               wavelength of the fluorescence emmission
+
+        ps                   : float
+                               xy pixel size of the image space
+
+        psz                  : float
+                               z step size of the image space
+
+        NA_obj               : float
+                               numerical aperture of the detection objective
+
+        n_media              : float
+                               refractive index of the immersing media
+
+        pad_z                : int
+                               number of z-layers to pad (reflection boundary condition) for 3D deconvolution
+
+        use_gpu              : bool
+                               option to use gpu or not
+
+        gpu_id               : int
+                               number refering to which gpu will be used
+
+
+    '''
+
+    def __init__(self, img_dim, lambda_emiss, ps, psz, NA_obj, n_media=1, pad_z=0, use_gpu=False, gpu_id=0):
+
+        '''
+
+        initialize the system parameters for phase and orders microscopy
+
+        '''
+
+        t0 = time.time()
+
+        # GPU/CPU
+
+        self.use_gpu = use_gpu
+        self.gpu_id = gpu_id
+
+        if self.use_gpu:
+            globals()['cp'] = __import__("cupy")
+            cp.cuda.Device(self.gpu_id).use()
+
+        # Basic parameter
+        self.N, self.M, self.N_defocus = img_dim
+        self.n_media = n_media
+        self.lambda_emiss = lambda_emiss / self.n_media
+        self.ps = ps
+        # if len(z_defocus) >= 2:
+        #     self.G_tensor_z_upsampling = np.ceil(self.psz / (self.lambda_emiss / 2))
+        self.psz = psz
+        self.pad_z = pad_z
+        self.NA_obj = NA_obj / n_media
+        self.N_defocus_3D = self.N_defocus + 2 * self.pad_z
+
+        #TODO: Implement z-padding?
+        self.z = ifftshift((np.r_[0:self.N_defocus] - self.N_defocus // 2) * self.psz)
+
+        # setup microscocpe variables
+        self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
+        self.Pupil_obj = gen_Pupil(self.fxx, self.fyy, self.NA_obj, self.lambda_emiss)
+        self.Pupil_support = self.Pupil_obj.copy()
+
+        self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_emiss, self.z)
+
+        # Set up PSF and OTF for 3D deconvolution
+
+        self.fluor_deconv_setup(self.Hz_det)
+
+
+    def fluor_deconv_setup(self, Hz_det):
+
+        self.PSF_3D = np.abs(ifft2(Hz_det, axes=(0,1)))**2
+        self.OTF_3D = fftn(self.PSF_3D, axes=(0, 1, 2))
+
+    def deconvolve_fluor_3D(self, I_fluor, bg_level, reg_re):
+
+        I_fluor = np.maximum(0, I_fluor - bg_level)
+
+        I_fluor_deconv = Single_variable_Tikhonov_deconv_3D(I_fluor, self.OTF_3D, reg_re,  use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+
+        return np.abs(I_fluor_deconv)
+
+##############   constructor function group   ##############
+
