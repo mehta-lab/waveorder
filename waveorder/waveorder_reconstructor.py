@@ -2418,16 +2418,40 @@ class fluorescence_microscopy:
         self.PSF_3D = np.abs(ifft2(Hz_det, axes=(0,1)))**2
         self.OTF_3D = fftn(self.PSF_3D, axes=(0, 1, 2))
 
-    def deconvolve_fluor_3D(self, I_fluor, bg_level, reg_re):
+    def deconvolve_fluor_3D(self, I_fluor, bg_level, method='Tikhonov', reg_re = 1e-4,\
+                                rho = 1e-5, lambda_re = 1e-3, itr = 20, verbose=True):
         """
 
         Performs deconvolution with Tikhonov regularization on raw fluorescence stack.
 
         Parameters
         ----------
-            I_fluor         : (nd-array) Raw fluorescence intensity stack in dimensions (N, M, Z)
-            bg_level        : (float) Estimated background intensity level
-            reg_re          : (float) regularization parameter for deconvolution
+            I_fluor         : nd-array
+                              Raw fluorescence intensity stack in dimensions (N, M, Z)
+
+            bg_level        : float
+                              Estimated background intensity level
+
+            method           : str
+                               denoiser for 3D phase reconstruction
+                               'Tikhonov' for Tikhonov denoiser
+                               'TV'       for TV denoiser
+
+            reg_re           : float
+                               Tikhonov regularization parameter for Deconvolution
+
+            rho              : float
+                               augmented Lagrange multiplier for 3D ADMM algorithm
+
+            lambda_re        : float
+                               TV regularization parameter for deconvolution
+
+            itr              : int
+                               number of iterations for 3D ADMM algorithm
+
+            verbose          : bool
+                               option to display detailed progress of computations or not
+
 
         Returns
         -------
@@ -2437,6 +2461,14 @@ class fluorescence_microscopy:
 
         I_fluor = np.maximum(0, I_fluor - bg_level)
 
-        I_fluor_deconv = Single_variable_Tikhonov_deconv_3D(I_fluor, self.OTF_3D, reg_re,  use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+        if method == 'Tikhonov':
+
+            I_fluor_deconv = Single_variable_Tikhonov_deconv_3D(I_fluor, self.OTF_3D, reg_re, use_gpu=self.use_gpu,
+                                                        gpu_id=self.gpu_id)
+
+        elif method == 'TV':
+
+            I_fluor_deconv = Single_variable_ADMM_TV_deconv_3D(I_fluor, self.OTF_3D, rho, reg_re, lambda_re, itr, verbose,
+                                                       use_gpu=self.use_gpu, gpu_id=self.gpu_id)
 
         return np.abs(I_fluor_deconv)
