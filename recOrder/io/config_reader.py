@@ -10,7 +10,7 @@ class ConfigReader(object):
 
     def __init__(self, path=[]):
         object.__setattr__(self, 'yaml_config', None)
-
+        object.__setattr__(self, 'default', None)
         # Dataset Parameters
         object.__setattr__(self, 'data_dir', None)
         object.__setattr__(self, 'processed_dir', None)
@@ -19,7 +19,8 @@ class ConfigReader(object):
         object.__setattr__(self, 'z_slices', 'all')
         object.__setattr__(self, 'timepoints', 'all')
         object.__setattr__(self, 'background', None)
-        object.__setattr__(self, 'calib_data', None)
+        object.__setattr__(self, 'background_ROI', None)
+        object.__setattr__(self, 'calibration_metadata', None)
         object.__setattr__(self, 'sample_paths', None)
 
         # Background Correction
@@ -38,11 +39,13 @@ class ConfigReader(object):
         object.__setattr__(self, 'gpu_id', 0)
 
         # Phase Reconstruction Parameters
+        object.__setattr__(self, 'wavelength', None)
         object.__setattr__(self, 'pixel_size', None)
         object.__setattr__(self, 'magnification', None)
         object.__setattr__(self, 'NA_objective', None)
         object.__setattr__(self, 'NA_condenser', None)
         object.__setattr__(self, 'n_objective_media', 1.003)
+        object.__setattr__(self, 'z_step', None)
         object.__setattr__(self, 'focus_zidx', None)
         object.__setattr__(self, 'pad_z', 0)
 
@@ -106,29 +109,32 @@ class ConfigReader(object):
         # self.data_dir = self.yaml_config['dataset']['data_dir']
         object.__setattr__(self, 'data_dir', self.yaml_config['dataset']['data_dir'])
         object.__setattr__(self, 'processed_dir', self.yaml_config['dataset']['processed_dir'])
+        object.__setattr__(self, 'default', self.yaml_config['default'])
+
+
 
         for (key, value) in self.yaml_config['dataset'].items():
             if key == 'samples':
                 object.__setattr__(self, 'samples', value)
             elif key == 'positions':
                 object.__setattr__(self, 'positions', value)
-            elif key == 'ROI':
-                object.__setattr__(self, 'ROI', value)
             elif key == 'z_slices':
                 object.__setattr__(self, 'z_slices', value)
             elif key == 'timepoints':
                 object.__setattr__(self, 'timepoints', value)
             elif key == 'background':
                 object.__setattr__(self, 'background', value)
-            elif key == 'path_to_calibration_data':
-                object.__setattr__(self, 'calib_data', value)
+            elif key == 'background_ROI':
+                object.__setattr__(self, 'background_ROI', value)
+            elif key == 'calibration_metadata':
+                object.__setattr__(self, 'calibration_metadata', value)
             elif key not in ('data_dir', 'processed_dir'):
                 raise NameError('Unrecognized configfile field:{}, key:{}'.format('dataset', key))
 
         for sample in self.samples:
             paths = []
-            paths.append(os.path.join(self.data_dir,sample))
-            object.__setattr__(self, 'sample_paths',paths)
+            paths.append(os.path.join(self.data_dir, sample))
+            object.__setattr__(self, 'sample_paths', paths)
 
         if 'processing' in self.yaml_config:
             for (key, value) in self.yaml_config['processing'].items():
@@ -138,8 +144,6 @@ class ConfigReader(object):
                         phase_processing = True
                     else:
                         phase_processing = False
-                elif key == 'circularity':
-                    object.__setattr__(self, 'circularity', value)
                 elif key == 'calibration_scheme':
                     object.__setattr__(self, 'calibration_scheme', value)
                 elif key == 'background_correction':
@@ -158,6 +162,8 @@ class ConfigReader(object):
                     object.__setattr__(self, 'use_gpu', value)
                 elif key == 'gpu_id':
                     object.__setattr__(self, 'gpu_id', value)
+                elif key == 'wavelength':
+                    object.__setattr__(self, 'wavelength', value)
                 elif key == 'pixel_size':
                     object.__setattr__(self, 'pixel_size', value)
                 elif key == 'magnification':
@@ -168,6 +174,8 @@ class ConfigReader(object):
                     object.__setattr__(self, 'NA_condenser', value)
                 elif key == 'n_objective_media':
                     object.__setattr__(self, 'n_objective_media', value)
+                elif key == 'z_step':
+                    object.__setattr__(self, 'z_step', value)
                 elif key == 'focus_zidx':
                     object.__setattr__(self, 'focus_zidx', value)
                 elif key == 'phase_denoiser_2D':
@@ -230,8 +238,6 @@ class ConfigReader(object):
 
                 assert self.focus_zidx is not None, \
                 "focus_zidx has to be specified to run 2D phase reconstruction"
-
-
 
 
         if 'plotting' in self.yaml_config:
