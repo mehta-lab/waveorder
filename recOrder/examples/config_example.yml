@@ -1,7 +1,4 @@
-defaults:
-  default1: 'QLIPP_3D'
-  default2:
-  default3:
+default: 'QLIPP_3D'
 # the default configratuons for 3D Reconstruction, 3D Reconstruction over time, and 2D reconstruction over time
 
 dataset:

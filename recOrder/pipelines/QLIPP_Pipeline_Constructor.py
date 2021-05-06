@@ -5,6 +5,7 @@ from recOrder.io.utils import load_bg
 from recOrder.compute.QLIPP_compute import initialize_reconstructor, reconstruct_QLIPP_birefringence
 import json
 import numpy as np
+import time
 
 class qlipp_pipeline_constructor:
 
@@ -69,14 +70,28 @@ class qlipp_3D_pipeline:
         writer.create_zarr_root(f'{sample}.zarr')
 
 
+        start_time = time.time()
+        print(f'Beginning Reconstruction...')
         #TODO: write fluorescence data from remaining channels, need to get their c_idx
         for pos in range(self.pos):
+
             writer.create_position(pos)
             writer.init_array(data_shape, chunk_size, self.channels)
 
+            if pos != 0:
+                pos_tot_time = (pos_end_time-pos_start_time)/60
+                total_time = pos_tot_time*self.pos
+                remaining_time = total_time - pos*pos_tot_time
+                print(f'Estimated Time Remaining: {np.round(remaining_time,0)} min')
+
+            pos_start_time = time.time()
             for t in range(self.t):
+
                 position = self.data.get_array(pos)
                 recon_data = reconstruct_QLIPP_birefringence(position[t], reconstructor, bg_stokes)
+
+                print(f'Reconstructing Position {pos}, Time {t}')
+                time_start_time = time.time()
 
                 if 'Phase3D' in self.channels:
                     phase3D = reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
@@ -99,6 +114,10 @@ class qlipp_3D_pipeline:
                     else:
                         #TODO: Add writing fluorescence
                         raise NotImplementedError(f'{self.channels[chan]} not available to write yet')
+                time_end_time = time.time()
+                print(f'Finished Reconstructing Position {pos}, Time {t} ({(time_end_time-time_start_time)/60} min)')
+
+            pos_end_time = time.time()
 
 
 

@@ -11,3 +11,4 @@ def run_pipeline(config: ConfigReader):
             pipeline = qlipp_pipeline_constructor(config, data, sample)
 
             pipeline.run_reconstruction()
+
