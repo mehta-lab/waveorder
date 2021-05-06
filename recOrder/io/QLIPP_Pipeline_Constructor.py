@@ -25,7 +25,7 @@ class qlipp_3D_pipeline:
     def __init__(self, config, data: MicromanagerReader, sample: str):
         self.config = config
         self.data = data
-        self.calib_meta = json.load(self.config.calibration_metadata)
+        self.calib_meta = json.load(open(self.config.calibration_metadata))
 
         #TODO: Parse positions if not 'all', parse timepoints if not 'all'
         self.pos = data.get_num_positions() if self.config.positions == 'all' else self.config.positions
