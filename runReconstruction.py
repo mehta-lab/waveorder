@@ -11,6 +11,8 @@ Returns
 """
 
 import argparse
+import shutil
+import os
 
 from recOrder.pipelines.run_pipeline import run_pipeline
 from recOrder.io.config_reader import ConfigReader
@@ -34,3 +36,4 @@ if __name__ == '__main__':
     args = parse_args()
     config = ConfigReader(args.config)
     run_pipeline(config)
+    shutil.copy(args.config, os.path.join(config.processed_dir, 'config.yml'))

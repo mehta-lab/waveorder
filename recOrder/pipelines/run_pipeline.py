@@ -1,5 +1,6 @@
 from waveorder.io.reader import MicromanagerReader
 import os
+import shutil
 from recOrder.pipelines.QLIPP_Pipeline_Constructor import qlipp_pipeline_constructor
 from recOrder.io.config_reader import ConfigReader
 
@@ -11,4 +12,6 @@ def run_pipeline(config: ConfigReader):
             pipeline = qlipp_pipeline_constructor(config, data, sample)
 
             pipeline.run_reconstruction()
+        shutil.copy()
+
 
