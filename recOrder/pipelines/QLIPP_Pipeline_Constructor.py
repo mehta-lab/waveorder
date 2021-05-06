@@ -1,8 +1,8 @@
-from .config_reader import ConfigReader
+from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import MicromanagerReader
 from waveorder.io.writer import WaveorderWriter
-from .utils import load_bg
-from ..compute.QLIPP_compute import initialize_reconstructor, reconstruct_QLIPP_birefringence
+from recOrder.io.utils import load_bg
+from recOrder.compute.QLIPP_compute import initialize_reconstructor, reconstruct_QLIPP_birefringence
 import json
 import numpy as np
 
@@ -17,7 +17,7 @@ class qlipp_pipeline_constructor:
             # self.reconstructor == 'Custom'
 
     def run_reconstruction(self):
-        pass
+        self.reconstructor.reconstruct()
 
 
 class qlipp_3D_pipeline:

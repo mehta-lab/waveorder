@@ -8,6 +8,9 @@ dataset:
   data_dir: '/gpfs/CompMicro/Spinningdisk/RawData/virtualstaining/2019_02_15_kidney_slice'
   # (str) The path of the folder that holds raw data
 
+  data_type: 'ome_tiff'
+  # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
+
   samples: ['Tissue_Section_1']
   # (str or list) Acquisition folder(s) within the experiment folder to process,
 

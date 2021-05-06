@@ -13,6 +13,7 @@ class ConfigReader(object):
         object.__setattr__(self, 'default', None)
         # Dataset Parameters
         object.__setattr__(self, 'data_dir', None)
+        object.__setattr__(self, 'data_type', None)
         object.__setattr__(self, 'processed_dir', None)
         object.__setattr__(self, 'samples', None)
         object.__setattr__(self, 'positions', 'all')
@@ -108,6 +109,7 @@ class ConfigReader(object):
 
         # self.data_dir = self.yaml_config['dataset']['data_dir']
         object.__setattr__(self, 'data_dir', self.yaml_config['dataset']['data_dir'])
+        object.__setattr__(self, 'data_type', self.yaml_config['dataset']['data_type'])
         object.__setattr__(self, 'processed_dir', self.yaml_config['dataset']['processed_dir'])
         object.__setattr__(self, 'default', self.yaml_config['default'])
 
