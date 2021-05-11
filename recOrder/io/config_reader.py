@@ -169,10 +169,6 @@ class ConfigReader(object):
                         elif key == 'level':
                             object.__setattr__(self, 'preproc_denoise_levels', value)
 
-            if self.preproc_denoise_use == True:
-                assert self.preproc_denoise_channles is not None, \
-                    'User must specify the channels to use for de-noising'
-
         if 'post_processing' in self.yaml_config:
             for (key1, value) in self.yaml_config['post_processing'].items():
                 if 'denoise' in key1:
@@ -189,10 +185,6 @@ class ConfigReader(object):
                             object.__setattr__(self, 'postproc_denoise_thresholds', value)
                         elif key == 'level':
                             object.__setattr__(self, 'postproc_denoise_levels', value)
-
-            if self.postproc_denoise_use == True:
-                assert self.postproc_denoise_channles is not None, \
-                    'User must specify the channels to use for de-noising'
 
         if 'processing' in self.yaml_config:
             for (key, value) in self.yaml_config['processing'].items():
