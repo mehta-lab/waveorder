@@ -27,9 +27,8 @@ def load_bg(bg_path, height, width, ROI=None):
     bg_data   : (ndarray) Array of background data w/ dimensions (N_channel, Y, X)
     """
 
-    bg_paths = glob.glob(bg_path + '*.tif')
+    bg_paths = glob.glob(os.path.join(bg_path,'*.tif'))
     bg_paths.sort()
-    #     print(bg_paths)
     bg_data = np.zeros([len(bg_paths), height, width])
 
     for i in range(len(bg_paths)):
