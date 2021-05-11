@@ -83,7 +83,7 @@ class qlipp_3D_pipeline:
                 pos_tot_time = (pos_end_time-pos_start_time)/60
                 total_time = pos_tot_time*self.pos
                 remaining_time = total_time - pos*pos_tot_time
-                print(f'Estimated Time Remaining: {np.round(remaining_time,0)} min')
+                print(f'Estimated Time Remaining: {np.round(remaining_time,0):0.0f} min')
 
             pos_start_time = time.time()
             for t in range(self.t):
@@ -117,7 +117,7 @@ class qlipp_3D_pipeline:
                         #TODO: Add writing fluorescence
                         raise NotImplementedError(f'{self.channels[chan]} not available to write yet')
                 time_end_time = time.time()
-                print(f'Finished Reconstructing Position {pos}, Time {t} ({(time_end_time-time_start_time)/60} min)')
+                print(f'Finished Reconstructing Position {pos}, Time {t} ({(time_end_time-time_start_time)/60:02f} min)')
 
             pos_end_time = time.time()
 
