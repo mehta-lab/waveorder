@@ -2,7 +2,8 @@ from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import MicromanagerReader
 from waveorder.io.writer import WaveorderWriter
 from recOrder.io.utils import load_bg
-from recOrder.compute.QLIPP_compute import initialize_reconstructor, reconstruct_QLIPP_birefringence
+from waveorder.util import wavelet_softThreshold
+from recOrder.compute.QLIPP_compute import *
 import json
 import numpy as np
 import time
@@ -51,7 +52,7 @@ class qlipp_3D_pipeline:
         bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
 
         #TODO: read step size from metadata
-        reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
+        self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
                                                  self.calib_meta['Summary']['~ Swing (fraction)'],
                                                  len(self.calib_meta['Summary']['ChNames']),
                                                  self.config.NA_objective, self.config.NA_condenser,
@@ -61,17 +62,17 @@ class qlipp_3D_pipeline:
                                                  self.config.use_gpu, self.config.gpu_id)
 
         #TODO: Add check to make sure that State0..4 are the first 4 channels
-        bg_stokes = reconstructor.Stokes_recon(bg_data)
-        bg_stokes = reconstructor.Stokes_transform(bg_stokes)
+        bg_stokes = self.reconstructor.Stokes_recon(bg_data)
+        bg_stokes = self.reconstructor.Stokes_transform(bg_stokes)
 
         data_shape = (self.t, len(self.channels), self.img_dim[2], self.img_dim[0], self.img_dim[1])
         chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
 
         writer = WaveorderWriter(self.config.processed_dir, 'physical')
         writer.create_zarr_root(f'{self.sample}.zarr')
+        writer.store.attrs.put(self.config.yaml_config)
 
 
-        start_time = time.time()
         print(f'Beginning Reconstruction...')
         #TODO: write fluorescence data from remaining channels, need to get their c_idx
         for pos in range(self.pos):
@@ -90,14 +91,22 @@ class qlipp_3D_pipeline:
 
                 print(f'Reconstructing Position {pos}, Time {t}')
                 position = self.data.get_array(pos)
-                recon_data = reconstruct_QLIPP_birefringence(position[t], reconstructor, bg_stokes)
 
+                # Add pre-proc denoising
+                if self.config.preproc_denoise_use:
+
+                    stokes = reconstruct_QLIPP_stokes(position[t], self.reconstructor, bg_stokes)
+                    stokes = self.preproc_denoise(stokes)
+                    recon_data = self.bire_from_stokes(stokes)
+
+                if not self.config.preproc_denoise_use:
+                    recon_data = reconstruct_QLIPP_birefringence(position[t], self.reconstructor, bg_stokes)
 
                 time_start_time = time.time()
 
                 if 'Phase3D' in self.channels:
                     print('Computing Phase...')
-                    phase3D = reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
+                    phase3D = self.reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
                                                            method=self.config.phase_denoiser_3D,
                                                            reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
                                                            lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D,
@@ -122,7 +131,46 @@ class qlipp_3D_pipeline:
 
             pos_end_time = time.time()
 
-    def add_denoising(self):
-        pass
+    def preproc_denoise(self, stokes):
 
+        params = []
 
+        for i in range(len(self.config.preproc_denoise.channels)):
+            threshold = 0.1 if self.config.preproc_denoise.thresholds is None \
+                else self.config.preproc_denoise.thresholds[i]
+            level = 1 if self.config.preproc_denoise.levels is None \
+                else self.config.preproc_denoise.levels[i]
+
+            params.append([self.config.preproc_denoise.channels[i], threshold, level])
+
+        for chan in range(len(params)):
+            stokes_denoised = np.zeros_like(stokes)
+
+            if 'S0' in params[chan][0]:
+                for z in range(len(stokes)):
+                    stokes_denoised[z, 0, :, :] = wavelet_softThreshold(stokes[z, 0, :, :],
+                                                                        params[chan][1], params[chan][2])
+            elif 'S1' in params[chan][0]:
+                for z in range(len(stokes)):
+                    stokes_denoised[z, 1, :, :] = wavelet_softThreshold(stokes[z, 1, :, :],
+                                                                        params[chan][1], params[chan][2])
+            if 'S2' in params[chan][0]:
+                for z in range(len(stokes)):
+                    stokes_denoised[z, 2, :, :] = wavelet_softThreshold(stokes[z, 2, :, :],
+                                                                        params[chan][1], params[chan][2])
+
+            if 'S3' in params[chan][0]:
+                for z in range(len(stokes)):
+                    stokes_denoised[z, 3, :, :] = wavelet_softThreshold(stokes[z, 3, :, :],
+                                                                        params[chan][1], params[chan][2])
+
+        return stokes_denoised
+
+    def bire_from_stokes(self, stokes):
+
+        recon_data = np.zeros([stokes.shape[0], 4, stokes.shape[-2], stokes.shape[-1]])
+        for z in range(len(stokes)):
+
+            recon_data[z, :, :, :] = self.reconstructor.Polarization_recon(stokes[z])
+
+        return np.transpose(recon_data, (1,0,2,3))

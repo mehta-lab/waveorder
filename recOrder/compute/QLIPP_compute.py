@@ -104,10 +104,31 @@ def initialize_reconstructor(image_dim, wavelength, swing, N_channel, NA_obj, NA
 
     return recon
 
+def reconstruct_QLIPP_stokes(position, recon, bg_stokes):
+
+    stokes_stack = []
+    raw_stack = np.transpose(position[0:recon.N_channel], (1, 0, 2, 3))
+
+    for z in range(position.shape[1]):
+        stokes_data = recon.Stokes_recon(raw_stack[z])
+        stokes_data = recon.Stokes_transform(stokes_data)
+
+        if recon.bg_option != 'None':
+
+            S_image_tm = recon.Polscope_bg_correction(stokes_data, bg_stokes)
+            stokes_stack.append(S_image_tm)
+
+        else:
+            stokes_stack.append(stokes_data)
+
+    return np.asarray(stokes_stack)
+
+
+
 def reconstruct_QLIPP_birefringence(position, recon, bg_stokes):
 
-    start_time = time.time()
-    print('Computing Birefringence...')
+    # start_time = time.time()
+    # print('Computing Birefringence...')
 
     recon_data = np.zeros([position.shape[1], 4, position.shape[2], position.shape[3]])
     raw_stack = np.transpose(position[0:recon.N_channel], (1, 0, 2, 3))

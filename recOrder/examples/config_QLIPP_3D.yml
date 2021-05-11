@@ -37,9 +37,12 @@ dataset:
   processed_dir: '/gpfs/CompMicro/projects/microscope_dev/2021_05_10_NewKazansky_PipelineTest'
   # (str) The path of the parent folder where the output will be saved
 
-#pre_processing:
-#  denoise: '?'
-#  etc:
+pre_processing:
+  denoise:
+    use: True
+    channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
+    threshold: [0.1, 0.1, 0.1, 0.1]
+    level: [1, 1, 1, 1]
 
 
 processing:
@@ -132,5 +135,8 @@ processing:
   ##   5.0e-5 is generally good
 
 post_processing:
-  denoise: '?'
-  etc:
+  denoise:
+    use: True
+    channels: ['Retardance'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
+    threshold: [0.1]
+    level: [1]

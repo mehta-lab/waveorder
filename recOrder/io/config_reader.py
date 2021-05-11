@@ -24,6 +24,13 @@ class ConfigReader(object):
         object.__setattr__(self, 'calibration_metadata', None)
         object.__setattr__(self, 'sample_paths', None)
 
+        # Pre-Processing
+        ## Denoising
+        object.__setattr__(self, 'preproc_denoise_use', False)
+        object.__setattr__(self, 'preproc_denoise_channels', None)
+        object.__setattr__(self, 'preproc_denoise_thresholds', None)
+        object.__setattr__(self, 'preproc_denoise_levels', None)
+
         # Background Correction
         object.__setattr__(self, 'background_correction', 'None')
         object.__setattr__(self, 'n_slice_local_bg', 'all')
@@ -63,6 +70,13 @@ class ConfigReader(object):
         object.__setattr__(self, 'itr_3D', 50)
         object.__setattr__(self, 'Tik_reg_ph_3D', 1e-4)
         object.__setattr__(self, 'TV_reg_ph_3D', 5e-5)
+
+        # Post-Processing
+        ## Denoising
+        object.__setattr__(self, 'postproc_denoise_use', False)
+        object.__setattr__(self, 'postproc_denoise_channels', None)
+        object.__setattr__(self, 'postproc_denoise_thresholds', None)
+        object.__setattr__(self, 'postproc_denoise_levels', None)
 
         # Plotting Parameters
         object.__setattr__(self, 'normalize_color_images', True)
@@ -137,6 +151,40 @@ class ConfigReader(object):
             paths = []
             paths.append(os.path.join(self.data_dir, sample))
             object.__setattr__(self, 'sample_paths', paths)
+
+        if 'pre_processing' in self.yaml_config:
+            for (key1, value) in self.yaml_config['pre_processing'].items():
+                if 'denoise' in key1:
+                    for (key, value) in self.yaml_config['pre_processing']['denoise'].items():
+                        if key == 'use':
+                            object.__setattr__(self, 'preproc_denoise_use', value)
+                        elif key == 'channels':
+                            object.__setattr__(self, 'preproc_denoise_channels', value)
+                        elif key == 'threshold':
+                            object.__setattr__(self, 'preproc_denoise_thresholds', value)
+                        elif key == 'level':
+                            object.__setattr__(self, 'preproc_denoise_levels', value)
+
+            if self.denoise_use == True:
+                assert self.denoise_channles is not None, \
+                    'User must specify the channels to use for de-noising'
+
+        if 'post_processing' in self.yaml_config:
+            for (key1, value) in self.yaml_config['post_processing'].items():
+                if 'denoise' in key1:
+                    for (key, value) in self.yaml_config['post_processing']['denoise'].items():
+                        if key == 'use':
+                            object.__setattr__(self, 'postproc_denoise_use', value)
+                        elif key == 'channels':
+                            object.__setattr__(self, 'postproc_denoise_channels', value)
+                        elif key == 'threshold':
+                            object.__setattr__(self, 'postproc_denoise_thresholds', value)
+                        elif key == 'level':
+                            object.__setattr__(self, 'postproc_denoise_levels', value)
+
+            if self.denoise_use == True:
+                assert self.denoise_channles is not None, \
+                    'User must specify the channels to use for de-noising'
 
         if 'processing' in self.yaml_config:
             for (key, value) in self.yaml_config['processing'].items():
