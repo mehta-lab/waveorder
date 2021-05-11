@@ -161,7 +161,7 @@ class ConfigReader(object):
                             preproc_denoise = True if value else False
                         elif key == 'channels':
                             if preproc_denoise:
-                                assert self.preproc_denoise_channles is not None, \
+                                assert value is not None, \
                                     'User must specify the channels to use for de-noising'
                             object.__setattr__(self, 'preproc_denoise_channels', value)
                         elif key == 'threshold':
