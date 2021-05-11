@@ -39,8 +39,8 @@ class qlipp_3D_pipeline:
         self.bg_correction = self.config.background_correction
         self.img_dim = (self.data.height, self.data.width, self.data.slices)
 
-        self.bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
-        self.reconstructor = initialize_reconstructor(self.img_dim, self.config.wavelength, self.config.swing)
+        # self.bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
+        # self.reconstructor = initialize_reconstructor(self.img_dim, self.config.wavelength, self.config.swing)
 
         if self.data.channels < 4:
             raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
