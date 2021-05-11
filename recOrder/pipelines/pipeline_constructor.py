@@ -15,7 +15,7 @@ class PipelineConstructor:
     def __init__(self, config: ConfigReader, data: MicromanagerReader, sample: str):
 
         if config.default == 'QLIPP_3D':
-            self.reconstructor = qlipp_3D_pipeline(config, data, sample, self.pre_processing, self.post_processing)
+            self.reconstructor = qlipp_3D_pipeline(config, data, sample)
 
         elif config.default == 'UPTI':
             raise NotImplementedError
