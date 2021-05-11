@@ -29,8 +29,8 @@ class PipelineConstructor:
             # self.reconstructor == 'Custom'
 
         self.config = config
-        self.add_preprocessing(config.pre_processing)
-        self.add_postprocessing(config.post_processing)
+        # self.add_preprocessing(config.pre_processing)
+        # self.add_postprocessing(config.post_processing)
 
 
     # def add_preprocessing(self):
