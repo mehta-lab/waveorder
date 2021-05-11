@@ -30,8 +30,8 @@ class qlipp_3D_pipeline:
         self.sample = sample
 
         #TODO: Parse positions if not 'all', parse timepoints if not 'all'
-        self.pos = data.get_num_positions() if self.config.positions == 'all' else self.config.positions
-        self.t = data.frames if self.config.timepoints == 'all' else None
+        self.pos = data.get_num_positions() if self.config.positions == 'all' else NotImplementedError
+        self.t = data.frames if self.config.timepoints == 'all' else NotImplementedError
 
         self.channels = self.config.output_channels
         self.chan_names = self.data.channel_names
@@ -64,7 +64,7 @@ class qlipp_3D_pipeline:
         bg_stokes = reconstructor.Stokes_recon(bg_data)
         bg_stokes = reconstructor.Stokes_transform(bg_stokes)
 
-        data_shape = (1, len(self.channels), self.img_dim[2], self.img_dim[0], self.img_dim[1])
+        data_shape = (self.t, len(self.channels), self.img_dim[2], self.img_dim[0], self.img_dim[1])
         chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
 
         writer = WaveorderWriter(self.config.processed_dir, 'physical')
