@@ -90,6 +90,7 @@ class qlipp_3D_pipeline:
             for t in range(self.t):
 
                 print(f'Reconstructing Position {pos}, Time {t}')
+                time_start_time = time.time()
                 position = self.data.get_array(pos)
 
                 # Add pre-proc denoising
@@ -102,7 +103,6 @@ class qlipp_3D_pipeline:
                 if not self.config.preproc_denoise_use:
                     recon_data = reconstruct_QLIPP_birefringence(position[t], self.reconstructor, bg_stokes)
 
-                time_start_time = time.time()
 
                 if 'Phase3D' in self.channels:
                     print('Computing Phase...')
