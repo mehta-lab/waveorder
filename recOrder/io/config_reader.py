@@ -130,7 +130,7 @@ class ConfigReader(object):
                 object.__setattr__(self, 'background_ROI', value)
             elif key == 'calibration_metadata':
                 object.__setattr__(self, 'calibration_metadata', value)
-            elif key not in ('data_dir', 'processed_dir'):
+            elif key not in ('data_dir', 'processed_dir', 'data_type'):
                 raise NameError('Unrecognized configfile field:{}, key:{}'.format('dataset', key))
 
         for sample in self.samples:
