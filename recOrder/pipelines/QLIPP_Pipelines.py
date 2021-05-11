@@ -119,22 +119,6 @@ class qlipp_3D_pipeline:
 
             pos_end_time = time.time()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
     def add_denoising(self):
         pass
 

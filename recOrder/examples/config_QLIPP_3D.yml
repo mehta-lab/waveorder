@@ -34,6 +34,11 @@ dataset:
   processed_dir: '/gpfs/CompMicro/Projects/reconOrderTestData'
   # (str) The path of the parent folder where the output will be saved
 
+pre_processing:
+  denoise: '?'
+  etc:
+
+
 processing:
   output_channels: ['Retardance', 'Orientation','Brightfield', 'Phase3D']
 
@@ -119,3 +124,7 @@ processing:
   TV_reg_ph_3D: 5.0e-5
   # (float) TV regularization parameter for 3D phase
   ##   5.0e-5 is generally good
+
+post_processing:
+  denoise: '?'
+  etc:
