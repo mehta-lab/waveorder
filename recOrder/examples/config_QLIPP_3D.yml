@@ -2,10 +2,13 @@ default: 'QLIPP_3D'
 # the default configratuons for 3D Reconstruction, 3D Reconstruction over time, and 2D reconstruction over time
 
 dataset:
-  data_dir: '/gpfs/CompMicro/Spinningdisk/RawData/virtualstaining/2019_02_15_kidney_slice'
+  data_dir: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA'
   # (str) The path of the folder that holds raw data
 
-  samples: ['Tissue_Section_1']
+  data_type: 'ome_tiff'
+  # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
+
+  samples: ['NewKaz_2T_3P_65Z_2048_2048_1']
   # (str or list) Acquisition folder(s) within the experiment folder to process,
 
   positions: 'all'
@@ -22,21 +25,21 @@ dataset:
   ##   !!python/object/apply:builtins.range [10, 50, 5], in which case timepoints in range(10,50,5) will be analyzed
   ##   [['all'], [0, 10, 20]], in which case all timepoints from Sample1 and timepoints 0, 10, and 20 from Sample2 will be analyzed
 
-  background: '/gpfs/CompMicro/Spinningdisk/RawData/virtualstaining/2019_02_15_kidney_slice/BG'
+  background: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA/BG'
 
   #(str or list) Background folder(s) within the experiment folder
   ##   a list, e.g. ['/path/to/bg_1', '/path/to/bg_2'], of one background dataset per sample
 
   background_ROI:
 
-  calibration_metadata: '/gpfs/CompMicro/Spinningdisk/RawData/virtualstaining/2019_02_15_kidney_slice/metadata.txt'
+  calibration_metadata: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA/metadata.txt'
 
-  processed_dir: '/gpfs/CompMicro/Projects/reconOrderTestData'
+  processed_dir: '/gpfs/CompMicro/projects/microscope_dev/2021_05_10_NewKazansky_PipelineTest'
   # (str) The path of the parent folder where the output will be saved
 
-pre_processing:
-  denoise: '?'
-  etc:
+#pre_processing:
+#  denoise: '?'
+#  etc:
 
 
 processing:
@@ -63,10 +66,10 @@ processing:
   flatfield_correction: False
   # (bool) perform flat-field correction on fluorescence images if True
 
-  use_gpu: False
+  use_gpu: True
   # (bool) Option to use GPU processing if True (require cupy to be installed)
 
-  gpu_id: 0
+  gpu_id: 2
   # (int) ID of GPU to be used
 
   ########################################
@@ -82,13 +85,13 @@ processing:
   magnification: 63
   # (float) Magnification of the objective
 
-  NA_objective: 1.47
+  NA_objective: 1.2
   # (float) Numerical aperture of the objective
 
-  NA_condenser: 0.9
+  NA_condenser: 0.4
   # (float) Numerical aperture of the condenser
 
-  n_objective_media: 1.512
+  n_objective_media: 1.33
   # (float) Refractive index of the objective immersion oil
 
   focus_zidx: 22
