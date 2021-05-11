@@ -97,8 +97,8 @@ class qlipp_3D_pipeline:
                 if 'Phase3D' in self.channels:
                     phase3D = reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
                                                            method=self.config.phase_denoiser_3D,
-                                                           reg_re=self.config.Tik_ref_ph_3D, rho=self.config.rho_3D,
-                                                           lambda_re=self.config.TV_ref_ph_3D, itr=self.config.itr_3D,
+                                                           reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
+                                                           lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D,
                                                            verbose=False)
 
                 for chan in range(len(self.channels)):
