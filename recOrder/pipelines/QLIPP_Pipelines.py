@@ -88,10 +88,11 @@ class qlipp_3D_pipeline:
             pos_start_time = time.time()
             for t in range(self.t):
 
+                print(f'Reconstructing Position {pos}, Time {t}')
                 position = self.data.get_array(pos)
                 recon_data = reconstruct_QLIPP_birefringence(position[t], reconstructor, bg_stokes)
 
-                print(f'Reconstructing Position {pos}, Time {t}')
+
                 time_start_time = time.time()
 
                 if 'Phase3D' in self.channels:
