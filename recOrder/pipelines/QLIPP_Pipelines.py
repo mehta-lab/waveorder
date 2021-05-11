@@ -135,13 +135,13 @@ class qlipp_3D_pipeline:
 
         params = []
 
-        for i in range(len(self.config.preproc_denoise.channels)):
-            threshold = 0.1 if self.config.preproc_denoise.thresholds is None \
-                else self.config.preproc_denoise.thresholds[i]
-            level = 1 if self.config.preproc_denoise.levels is None \
-                else self.config.preproc_denoise.levels[i]
+        for i in range(len(self.config.preproc_denoise_channels)):
+            threshold = 0.1 if self.config.preproc_denoise_thresholds is None \
+                else self.config.preproc_denoise_thresholds[i]
+            level = 1 if self.config.preproc_denoise_levels is None \
+                else self.config.preproc_denoise_levels[i]
 
-            params.append([self.config.preproc_denoise.channels[i], threshold, level])
+            params.append([self.config.preproc_denoise_channels[i], threshold, level])
 
         for chan in range(len(params)):
             stokes_denoised = np.zeros_like(stokes)
