@@ -27,6 +27,7 @@ class qlipp_3D_pipeline:
         self.config = config
         self.data = data
         self.calib_meta = json.load(open(self.config.calibration_metadata))
+        self.sample = sample
 
         #TODO: Parse positions if not 'all', parse timepoints if not 'all'
         self.pos = data.get_num_positions() if self.config.positions == 'all' else self.config.positions
@@ -67,7 +68,7 @@ class qlipp_3D_pipeline:
         chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
 
         writer = WaveorderWriter(self.config.processed_dir, 'physical')
-        writer.create_zarr_root(f'{sample}.zarr')
+        writer.create_zarr_root(f'{self.sample}.zarr')
 
 
         start_time = time.time()
