@@ -96,6 +96,7 @@ class qlipp_3D_pipeline:
                 time_start_time = time.time()
 
                 if 'Phase3D' in self.channels:
+                    print('Computing Phase...')
                     phase3D = reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
                                                            method=self.config.phase_denoiser_3D,
                                                            reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
