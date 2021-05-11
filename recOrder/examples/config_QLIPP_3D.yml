@@ -5,7 +5,7 @@ dataset:
   data_dir: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA'
   # (str) The path of the folder that holds raw data
 
-  data_type: 'ome_tiff'
+  data_type: 'ometiff'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
 
   samples: ['NewKaz_2T_3P_65Z_2048_2048_1']
@@ -66,7 +66,7 @@ processing:
   flatfield_correction: False
   # (bool) perform flat-field correction on fluorescence images if True
 
-  use_gpu: True
+  use_gpu: False
   # (bool) Option to use GPU processing if True (require cupy to be installed)
 
   gpu_id: 2
