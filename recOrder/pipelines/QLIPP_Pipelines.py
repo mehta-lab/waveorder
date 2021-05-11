@@ -50,7 +50,7 @@ class qlipp_3D_pipeline:
         bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
 
         #TODO: read step size from metadata
-        reconstructor = initialize_reconstructor(self.img_dim, self.config.wavelength,
+        reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
                                                  self.calib_meta['Summary']['~ Swing (fraction)'],
                                                  len(self.calib_meta['Summary']['ChNames']),
                                                  self.config.NA_objective, self.config.NA_condenser,

@@ -94,6 +94,9 @@ processing:
   n_objective_media: 1.33
   # (float) Refractive index of the objective immersion oil
 
+  z_step: 0.25
+  # (int) Step size of the z-dimension in um
+
   focus_zidx: 22
   # (int) Index of the focused z slice of the dataset for 2D phase reconstruction
 
