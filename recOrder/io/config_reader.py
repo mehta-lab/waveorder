@@ -32,16 +32,11 @@ class ConfigReader(object):
         object.__setattr__(self, 'preproc_denoise_levels', None)
 
         # Background Correction
-        object.__setattr__(self, 'background_correction', 'None')
-        object.__setattr__(self, 'n_slice_local_bg', 'all')
+        object.__setattr__(self, 'background_correction', 'Global')
         object.__setattr__(self, 'flatfield_correction', None)
-        object.__setattr__(self, 'local_fit_order', 2)
 
         # Output Parameters
-        object.__setattr__(self, 'separate_positions', True)
         object.__setattr__(self, 'circularity', 'rcp')
-        object.__setattr__(self, 'binning', 1)
-
         # GPU
         object.__setattr__(self, 'use_gpu', False)
         object.__setattr__(self, 'gpu_id', 0)
@@ -200,14 +195,6 @@ class ConfigReader(object):
                     object.__setattr__(self, 'background_correction', value)
                 elif key == 'flatfield_correction':
                     object.__setattr__(self, 'flatfield_correction', value)
-                elif key == 'separate_positions':
-                    object.__setattr__(self, 'separate_positions', value)
-                elif key == 'n_slice_local_bg':
-                    object.__setattr__(self, 'n_slice_local_bg', value)
-                elif key == 'local_fit_order':
-                    object.__setattr__(self, 'local_fit_order', value)
-                elif key == 'binning':
-                    object.__setattr__(self, 'binning', value)
                 elif key == 'use_gpu':
                     object.__setattr__(self, 'use_gpu', value)
                 elif key == 'gpu_id':
@@ -277,9 +264,6 @@ class ConfigReader(object):
                 assert self.n_objective_media >= self.NA_objective and self.n_objective_media >= self.NA_condenser, \
                 "n_objective_media (refractive index of the immersing media) has to be larger than the NA of the objective and condenser"
 
-                assert self.n_slice_local_bg == 'all', \
-                "n_slice_local_bg has to be 'all' in order to run phase reconstruction properly"
-
                 assert self.z_slices == 'all', \
                 "z_slices has to be 'all' in order to run phase reconstruction properly"
 
@@ -290,27 +274,27 @@ class ConfigReader(object):
                 "focus_zidx has to be specified to run 2D phase reconstruction"
 
 
-        if 'plotting' in self.yaml_config:
-            for (key, value) in self.yaml_config['plotting'].items():
-                if key == 'normalize_color_images':
-                    object.__setattr__(self, 'normalize_color_images', value)
-                elif key == 'retardance_scaling':
-                    object.__setattr__(self, 'retardance_scaling', float(value))
-                elif key == 'transmission_scaling':
-                    object.__setattr__(self, 'transmission_scaling', float(value))
-                elif key == 'phase_2D_scaling':
-                    object.__setattr__(self, 'phase_2D_scaling', float(value))
-                elif key == 'absorption_2D_scaling':
-                    object.__setattr__(self, 'absorption_2D_scaling', float(value))
-                elif key == 'phase_3D_scaling':
-                    object.__setattr__(self, 'phase_3D_scaling', float(value))
-                elif key == 'save_birefringence_fig':
-                    object.__setattr__(self, 'save_birefringence_fig', value)
-                elif key == 'save_stokes_fig':
-                    object.__setattr__(self, 'save_stokes_fig', value)
-                elif key == 'save_polarization_fig':
-                    object.__setattr__(self, 'save_polarization_fig', value)
-                elif key == 'save_micromanager_fig':
-                    object.__setattr__(self, 'save_micromanager_fig', value)
-                else:
-                    raise NameError('Unrecognized configfile field:{}, key:{}'.format('plotting', key))
+        # if 'plotting' in self.yaml_config:
+        #     for (key, value) in self.yaml_config['plotting'].items():
+        #         if key == 'normalize_color_images':
+        #             object.__setattr__(self, 'normalize_color_images', value)
+        #         elif key == 'retardance_scaling':
+        #             object.__setattr__(self, 'retardance_scaling', float(value))
+        #         elif key == 'transmission_scaling':
+        #             object.__setattr__(self, 'transmission_scaling', float(value))
+        #         elif key == 'phase_2D_scaling':
+        #             object.__setattr__(self, 'phase_2D_scaling', float(value))
+        #         elif key == 'absorption_2D_scaling':
+        #             object.__setattr__(self, 'absorption_2D_scaling', float(value))
+        #         elif key == 'phase_3D_scaling':
+        #             object.__setattr__(self, 'phase_3D_scaling', float(value))
+        #         elif key == 'save_birefringence_fig':
+        #             object.__setattr__(self, 'save_birefringence_fig', value)
+        #         elif key == 'save_stokes_fig':
+        #             object.__setattr__(self, 'save_stokes_fig', value)
+        #         elif key == 'save_polarization_fig':
+        #             object.__setattr__(self, 'save_polarization_fig', value)
+        #         elif key == 'save_micromanager_fig':
+        #             object.__setattr__(self, 'save_micromanager_fig', value)
+        #         else:
+        #             raise NameError('Unrecognized configfile field:{}, key:{}'.format('plotting', key))

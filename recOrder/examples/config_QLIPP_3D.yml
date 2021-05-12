@@ -56,15 +56,12 @@ processing:
   #    The order in which fluor channels are listed corresponds to their order in
   #    the acquisition.  Specified name stored in the metadata.
 
-  background_correction: 'Local_fit'
+  background_correction: 'local_fit'
   # (str) Background correction method, one of the following
   ##   'None': no background correction will be performed
-  ##   'Global': standard background correction / normalization performed from given background data
-  ##   'Local_filter': sample is first corrected with background provided in dataset section. The residual background is further estimated with a low-pass filter and removed.
-  ##   'Local_fit': sample is first corrected with background provided in dataset section. The residual background is further estimated by a polynomial fit and removed. More robust than filtering approach.
-
-  local_fit_order: 2
-  # (int) order of the polynomial used for 'Local_fit' background correction
+  ##   'local': for estimating background with scipy uniform filter
+  ##   'local_fit': for estimating background with polynomial fit
+  ##   'global': for normal background subtraction with the provided background
 
   flatfield_correction: False
   # (bool) perform flat-field correction on fluorescence images if True

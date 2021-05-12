@@ -93,9 +93,10 @@ class qlipp_3D_pipeline:
                 time_start_time = time.time()
                 position = self.data.get_array(pos)
 
+                ###### ADD PRE-PROCESSING ######
+
                 # Add pre-proc denoising
                 if self.config.preproc_denoise_use:
-
                     stokes = reconstruct_QLIPP_stokes(position[t], self.reconstructor, bg_stokes)
                     stokes = self.preproc_denoise(stokes)
                     recon_data = self.bire_from_stokes(stokes)
