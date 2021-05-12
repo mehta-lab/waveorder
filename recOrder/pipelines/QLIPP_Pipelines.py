@@ -103,7 +103,6 @@ class qlipp_3D_pipeline:
                 if not self.config.preproc_denoise_use:
                     recon_data = reconstruct_QLIPP_birefringence(position[t], self.reconstructor, bg_stokes)
 
-
                 if 'Phase3D' in self.channels:
                     print('Computing Phase...')
                     phase3D = self.reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
@@ -127,7 +126,7 @@ class qlipp_3D_pipeline:
                         #TODO: Add writing fluorescence
                         raise NotImplementedError(f'{self.channels[chan]} not available to write yet')
                 time_end_time = time.time()
-                print(f'Finished Reconstructing Position {pos}, Time {t} ({(time_end_time-time_start_time)/60:02f} min)')
+                print(f'Finished Reconstructing Position {pos}, Time {t} ({(time_end_time-time_start_time)/60:0.1f} min)')
 
             pos_end_time = time.time()
 
@@ -143,8 +142,8 @@ class qlipp_3D_pipeline:
 
             params.append([self.config.preproc_denoise_channels[i], threshold, level])
 
+        stokes_denoised = np.copy(stokes)
         for chan in range(len(params)):
-            stokes_denoised = np.zeros_like(stokes)
 
             if 'S0' in params[chan][0]:
                 for z in range(len(stokes)):
