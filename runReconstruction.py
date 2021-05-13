@@ -33,7 +33,7 @@ def parse_args(path):
         raise ValueError('Specified path does not exist')
 
 if __name__ == '__main__':
-    cfg_path = parse_args(path)
+    cfg_path = parse_args()
     config = ConfigReader(cfg_path)
     run_pipeline(config)
     shutil.copy(cfg_path, os.path.join(config.processed_dir, 'config.yml'))
