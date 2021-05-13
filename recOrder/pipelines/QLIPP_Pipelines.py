@@ -98,8 +98,8 @@ class qlipp_3D_pipeline:
                 self.reconstruct_z_stack(position_data, t)
 
                 time_end_time = time.time()
-                print(f'Finished Reconstructing Position {pos}, Time {t} \
-                        ({(time_end_time - time_start_time) / 60:0.1f} min)')
+                print(f'Finished Reconstructing Position {pos}, Time {t} '
+                      f'({(time_end_time - time_start_time) / 60:0.1f} min)')
 
             pos_end_time = time.time()
 
