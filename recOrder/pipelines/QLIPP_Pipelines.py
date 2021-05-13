@@ -8,25 +8,25 @@ import json
 import numpy as np
 import time
 
-class qlipp_pipeline_constructor:
-
-    def __init__(self, config: ConfigReader, data: MicromanagerReader, sample: str):
-
-        if config.default == 'QLIPP_3D':
-            self.reconstructor = qlipp_3D_pipeline(config, data, sample)
-        elif config.default == 'None':
-            pass
-            # self.reconstructor == 'Custom'
-
-    def run_reconstruction(self):
-        self.reconstructor.reconstruct()
-
 
 class qlipp_3D_pipeline:
+    """
+    This class contains methods to reconstruct an entire dataset alongside pre/post-processing
+    """
 
     def __init__(self, config, data: MicromanagerReader, sample: str):
+        """
+        Parameters
+        ----------
+        config:     (Object) initialized ConfigReader object
+        data:       (Object) initialized MicromanagerReader object (data should be extracted already)
+        sample:     (str) name of the sample to pass for naming of folders, etc.
+        """
+
         self.config = config
         self.data = data
+
+        #TODO: Parse if bg_ROI matches the data size
         self.calib_meta = json.load(open(self.config.calibration_metadata))
         self.sample = sample
 
@@ -41,12 +41,8 @@ class qlipp_3D_pipeline:
         self.bg_correction = self.config.background_correction
         self.img_dim = (self.data.height, self.data.width, self.data.slices)
 
-        # self.bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
-        # self.reconstructor = initialize_reconstructor(self.img_dim, self.config.wavelength, self.config.swing)
-
         if self.data.channels < 4:
             raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
-
 
         bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
 
@@ -72,6 +68,13 @@ class qlipp_3D_pipeline:
         self.writer.store.attrs.put(self.config.yaml_config)
 
     def reconstruct_all(self):
+        """
+        This method will loop through every position/timepoint specified in config.
+
+        Returns
+        -------
+
+        """
 
         print(f'Beginning Reconstruction...')
         #TODO: write fluorescence data from remaining channels, need to get their c_idx
@@ -95,6 +98,7 @@ class qlipp_3D_pipeline:
                 print(f'Reconstructing Position {pos}, Time {t}')
                 time_start_time = time.time()
 
+                # PERFORM RECONSTRUCTION
                 self.reconstruct_z_stack(position_data, t)
 
                 time_end_time = time.time()
@@ -104,6 +108,19 @@ class qlipp_3D_pipeline:
             pos_end_time = time.time()
 
     def reconstruct_z_stack(self, position_data, t):
+        """
+        This method performs reconstruction / pre / post processing for a single z-stack.
+
+        Parameters
+        ----------
+        position_data:      (np.array) np.array of dimension (T, C, Z, Y, X)
+        t:                  (int) index of the time-point to pull from position_data
+
+        Returns
+        -------
+        written data to the processed directory specified in the config
+
+        """
 
         ###### ADD PRE-PROCESSING ######
 
@@ -139,6 +156,18 @@ class qlipp_3D_pipeline:
                 raise NotImplementedError(f'{self.channels[chan]} not available to write yet')
 
     def preproc_denoise(self, stokes):
+        """
+        This method performs pre-processing denoising on specified stokes channels
+
+        Parameters
+        ----------
+        stokes:         (np.array) Stokes data of format (Z, C, Y, X)
+
+        Returns
+        -------
+        stokes_denoised:    (np.array) denoised stokes data of format (Z, C, Y, X)
+
+        """
 
         params = []
 
@@ -174,6 +203,20 @@ class qlipp_3D_pipeline:
         return stokes_denoised
 
     def bire_from_stokes(self, stokes):
+
+        """
+        quick method to calculate the birefringence from provided stokes.  Used after pre-proc denoising
+
+        Parameters
+        ----------
+        stokes:         (np.array) Stokes data of format (Z, C, Y, X)
+
+        Returns
+        -------
+        recon_data:     (np.array) reconstructed z-stack of dimensions (C, Z, Y, X).
+                                    channels in order are [Retardance, Orientation, BF, Polarization]
+
+        """
 
         recon_data = np.zeros([stokes.shape[0], 4, stokes.shape[-2], stokes.shape[-1]])
         for z in range(len(stokes)):
