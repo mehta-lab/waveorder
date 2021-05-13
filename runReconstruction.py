@@ -10,7 +10,7 @@ Returns
     None: the script writes data to disk.
 """
 
-import argparse
+import click
 import shutil
 import os
 
@@ -18,22 +18,21 @@ from recOrder.pipelines.run_pipeline import run_pipeline
 from recOrder.io.config_reader import ConfigReader
 
 
-def parse_args():
+@click.option('--config', required=True, type=str, help='path to config yml file')
+def parse_args(path):
     """Parse command line arguments
     In python namespaces are implemented as dictionaries
     :return: namespace containing the arguments passed.
     """
 
-    parser = argparse.ArgumentParser()
+    if os.path.exists(path):
+        return path
 
-    parser.add_argument('--config', type=str,
-                       help='path to yaml configuration file')
-
-    args = parser.parse_args()
-    return args
+    else:
+        raise ValueError('Specified path does not exist')
 
 if __name__ == '__main__':
-    args = parse_args()
-    config = ConfigReader(args.config)
+    cfg_path = parse_args()
+    config = ConfigReader(cfg_path)
     run_pipeline(config)
-    shutil.copy(args.config, os.path.join(config.processed_dir, 'config.yml'))
+    shutil.copy(cfg_path, os.path.join(config.processed_dir, 'config.yml'))
