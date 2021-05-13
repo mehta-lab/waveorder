@@ -43,4 +43,4 @@ class PipelineConstructor:
     #     pass
 
     def run(self):
-        self.reconstructor.reconstruct()
+        self.reconstructor.reconstruct_all()

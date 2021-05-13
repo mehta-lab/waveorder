@@ -47,7 +47,6 @@ class qlipp_3D_pipeline:
         if self.data.channels < 4:
             raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
 
-    def reconstruct(self):
 
         bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
 
@@ -62,23 +61,24 @@ class qlipp_3D_pipeline:
                                                  self.config.use_gpu, self.config.gpu_id)
 
         #TODO: Add check to make sure that State0..4 are the first 4 channels
-        bg_stokes = self.reconstructor.Stokes_recon(bg_data)
-        bg_stokes = self.reconstructor.Stokes_transform(bg_stokes)
+        self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
+        self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
 
-        data_shape = (self.t, len(self.channels), self.img_dim[2], self.img_dim[0], self.img_dim[1])
-        chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
+        self.data_shape = (self.t, len(self.channels), self.img_dim[2], self.img_dim[0], self.img_dim[1])
+        self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
 
-        writer = WaveorderWriter(self.config.processed_dir, 'physical')
-        writer.create_zarr_root(f'{self.sample}.zarr')
-        writer.store.attrs.put(self.config.yaml_config)
+        self.writer = WaveorderWriter(self.config.processed_dir, 'physical')
+        self.writer.create_zarr_root(f'{self.sample}.zarr')
+        self.writer.store.attrs.put(self.config.yaml_config)
 
+    def reconstruct_all(self):
 
         print(f'Beginning Reconstruction...')
         #TODO: write fluorescence data from remaining channels, need to get their c_idx
         for pos in range(self.pos):
 
-            writer.create_position(pos)
-            writer.init_array(data_shape, chunk_size, self.channels)
+            self.writer.create_position(pos)
+            self.writer.init_array(self.data_shape, self.chunk_size, self.channels)
 
             if pos != 0:
                 pos_tot_time = (pos_end_time-pos_start_time)/60
@@ -87,49 +87,57 @@ class qlipp_3D_pipeline:
                 print(f'Estimated Time Remaining: {np.round(remaining_time,0):0.0f} min')
 
             pos_start_time = time.time()
+
+            position_data = self.data.get_array(pos)
+
             for t in range(self.t):
 
                 print(f'Reconstructing Position {pos}, Time {t}')
                 time_start_time = time.time()
-                position = self.data.get_array(pos)
 
-                ###### ADD PRE-PROCESSING ######
+                self.reconstruct_z_stack(position_data, t)
 
-                # Add pre-proc denoising
-                if self.config.preproc_denoise_use:
-                    stokes = reconstruct_QLIPP_stokes(position[t], self.reconstructor, bg_stokes)
-                    stokes = self.preproc_denoise(stokes)
-                    recon_data = self.bire_from_stokes(stokes)
-
-                if not self.config.preproc_denoise_use:
-                    recon_data = reconstruct_QLIPP_birefringence(position[t], self.reconstructor, bg_stokes)
-
-                if 'Phase3D' in self.channels:
-                    print('Computing Phase...')
-                    phase3D = self.reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
-                                                           method=self.config.phase_denoiser_3D,
-                                                           reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
-                                                           lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D,
-                                                           verbose=False)
-
-                for chan in range(len(self.channels)):
-                    if 'Retardance' in self.channels[chan]:
-                        ret = recon_data[0] / (2 * np.pi) * self.config.wavelength
-                        writer.write(ret, t=t, c=chan)
-
-                    elif 'Orientation' in self.channels[chan]:
-                        writer.write(recon_data[1], t=t, c=chan)
-                    elif 'Brightfield' in self.channels[chan]:
-                        writer.write(recon_data[2], t=t, c=chan)
-                    elif 'Phase3D' in self.channels[chan]:
-                        writer.write(np.transpose(phase3D, (2,0,1)), t=t, c=chan)
-                    else:
-                        #TODO: Add writing fluorescence
-                        raise NotImplementedError(f'{self.channels[chan]} not available to write yet')
                 time_end_time = time.time()
-                print(f'Finished Reconstructing Position {pos}, Time {t} ({(time_end_time-time_start_time)/60:0.1f} min)')
+                print(f'Finished Reconstructing Position {pos}, Time {t} \
+                        ({(time_end_time - time_start_time) / 60:0.1f} min)')
 
             pos_end_time = time.time()
+
+    def reconstruct_z_stack(self, position_data, t):
+
+        ###### ADD PRE-PROCESSING ######
+
+        # Add pre-proc denoising
+        if self.config.preproc_denoise_use:
+            stokes = reconstruct_QLIPP_stokes(position_data[t], self.reconstructor, self.bg_stokes)
+            stokes = self.preproc_denoise(stokes)
+            recon_data = self.bire_from_stokes(stokes)
+
+        if not self.config.preproc_denoise_use:
+            recon_data = reconstruct_QLIPP_birefringence(position_data[t], self.reconstructor, self.bg_stokes)
+
+        if 'Phase3D' in self.channels:
+            print('Computing Phase...')
+            phase3D = self.reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
+                                                   method=self.config.phase_denoiser_3D,
+                                                   reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
+                                                   lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D,
+                                                   verbose=False)
+
+        for chan in range(len(self.channels)):
+            if 'Retardance' in self.channels[chan]:
+                ret = recon_data[0] / (2 * np.pi) * self.config.wavelength
+                self.writer.write(ret, t=t, c=chan)
+
+            elif 'Orientation' in self.channels[chan]:
+                self.writer.write(recon_data[1], t=t, c=chan)
+            elif 'Brightfield' in self.channels[chan]:
+                self.writer.write(recon_data[2], t=t, c=chan)
+            elif 'Phase3D' in self.channels[chan]:
+                self.writer.write(np.transpose(phase3D, (2,0,1)), t=t, c=chan)
+            else:
+                #TODO: Add writing fluorescence
+                raise NotImplementedError(f'{self.channels[chan]} not available to write yet')
 
     def preproc_denoise(self, stokes):
 
