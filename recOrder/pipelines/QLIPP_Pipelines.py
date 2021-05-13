@@ -117,7 +117,6 @@ class qlipp_3D_pipeline:
             recon_data = reconstruct_QLIPP_birefringence(position_data[t], self.reconstructor, self.bg_stokes)
 
         if 'Phase3D' in self.channels:
-            print('Computing Phase...')
             phase3D = self.reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
                                                    method=self.config.phase_denoiser_3D,
                                                    reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
