@@ -52,8 +52,8 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
 
-    if not os.path.exists(args):
-        raise ValueError('Specified path does not exist')
+    # if not os.path.exists(args):
+    #     raise ValueError('Specified path does not exist')
 
     config = ConfigReader(args)
     run_pipeline(config)
