@@ -4,6 +4,7 @@ from waveorder.io.writer import WaveorderWriter
 from recOrder.io.utils import load_bg
 from waveorder.util import wavelet_softThreshold
 from recOrder.compute.QLIPP_compute import *
+from recOrder.postproc.post_processing import *
 import json
 import numpy as np
 import time
@@ -40,6 +41,7 @@ class qlipp_3D_pipeline:
         self.bg_roi = self.config.background_ROI
         self.bg_correction = self.config.background_correction
         self.img_dim = (self.data.height, self.data.width, self.data.slices)
+        self.s0_idx, self.s1_idx, self.s2_idx, self.s3_idx, self.fluor_idxs = self.parse_channel_idx(self.chan_names)
 
         if self.data.channels < 4:
             raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
@@ -140,11 +142,19 @@ class qlipp_3D_pipeline:
                                                    lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D,
                                                    verbose=False)
 
+        if self.config.postproc_denoise_use:
+            registered_stacks = []
+            for idx in self.config.postproc.channel_idx:
+                registered_stacks.append(register_translation(position_data[t, idx],
+                                                              self.config.postproc_registration_shift))
+
+        #TODO: ASSIGN CHANNELS INDEX UPON INIT?
+        #TODO: FIGURE OUT HOW TO WRITE FLUOR CHANNELS IN CORRECT ORDER
+        fluor_idx = 0
         for chan in range(len(self.channels)):
             if 'Retardance' in self.channels[chan]:
                 ret = recon_data[0] / (2 * np.pi) * self.config.wavelength
                 self.writer.write(ret, t=t, c=chan)
-
             elif 'Orientation' in self.channels[chan]:
                 self.writer.write(recon_data[1], t=t, c=chan)
             elif 'Brightfield' in self.channels[chan]:
@@ -152,8 +162,11 @@ class qlipp_3D_pipeline:
             elif 'Phase3D' in self.channels[chan]:
                 self.writer.write(np.transpose(phase3D, (2,0,1)), t=t, c=chan)
             else:
-                #TODO: Add writing fluorescence
-                raise NotImplementedError(f'{self.channels[chan]} not available to write yet')
+                if self.config.postproc_registration_use:
+                    self.writer.write(registered_stacks[fluor_idx], t=t, c=chan)
+                    fluor_idx += 1
+                else:
+                  raise NotImplementedError(f'{self.channels[chan]} not available to write yet')
 
     def preproc_denoise(self, stokes):
         """
@@ -224,3 +237,22 @@ class qlipp_3D_pipeline:
             recon_data[z, :, :, :] = self.reconstructor.Polarization_recon(stokes[z])
 
         return np.transpose(recon_data, (1,0,2,3))
+
+    #TODO: name fluor channels based off metadata name?
+    def parse_channel_idx(self, channel_list):
+        fluor_idx = []
+        for channel in range(len(channel_list)):
+            if 'State0' in channel_list[channel]:
+                s0_idx = channel
+            elif 'State1' in channel_list[channel]:
+                s1_idx = channel
+            elif 'State2' in channel_list[channel]:
+                s2_idx = channel
+            elif 'State3' in channel_list[channel]:
+                s3_idx = channel
+            else:
+                fluor_idx.append(channel)
+
+        return s0_idx, s1_idx, s2_idx, s3_idx, fluor_idx
+
+

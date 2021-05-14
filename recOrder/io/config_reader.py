@@ -73,6 +73,10 @@ class ConfigReader(object):
         object.__setattr__(self, 'postproc_denoise_thresholds', None)
         object.__setattr__(self, 'postproc_denoise_levels', None)
 
+        object.__setattr__(self, 'postproc_registration_use', False)
+        object.__setattr__(self, 'postproc_registration_channel_idx', None)
+        object.__setattr__(self, 'postproc_registration_shift', None)
+
         # Plotting Parameters
         object.__setattr__(self, 'normalize_color_images', True)
         object.__setattr__(self, 'retardance_scaling', 1e3)
@@ -180,6 +184,21 @@ class ConfigReader(object):
                             object.__setattr__(self, 'postproc_denoise_thresholds', value)
                         elif key == 'level':
                             object.__setattr__(self, 'postproc_denoise_levels', value)
+                if 'registration' in key1:
+                    for (key, value) in self.yaml_config['post_processing']['denoise'].items():
+                        if key == 'use':
+                            object.__setattr__(self, 'postproc_registration_use', value)
+                            postproc_registration = True if value else False
+                        elif key == 'channel_idx':
+                            object.__setattr__(self, 'postproc_registration_channel_idx', value)
+                            if postproc_registration:
+                                assert value is not None, \
+                                    'User must specify the channel index to use for registration'
+                        elif key == 'shift':
+                            object.__setattr__(self, 'postproc_registration_shift', value)
+                            if postproc_registration:
+                                assert value is not None, \
+                                    'User must specify the shift to use for registration'
 
         if 'processing' in self.yaml_config:
             for (key, value) in self.yaml_config['processing'].items():
