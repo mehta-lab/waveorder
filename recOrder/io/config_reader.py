@@ -185,7 +185,7 @@ class ConfigReader(object):
                         elif key == 'level':
                             object.__setattr__(self, 'postproc_denoise_levels', value)
                 if 'registration' in key1:
-                    for (key, value) in self.yaml_config['post_processing']['denoise'].items():
+                    for (key, value) in self.yaml_config['post_processing']['registration'].items():
                         if key == 'use':
                             object.__setattr__(self, 'postproc_registration_use', value)
                             postproc_registration = True if value else False
