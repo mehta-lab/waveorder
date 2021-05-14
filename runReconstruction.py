@@ -46,15 +46,15 @@ def parse_args():
 
     args = parser.parse_args()
 
-    if os.path.exists(args):
-        return args
-
-    else:
-        raise ValueError('Specified path does not exist')
+    return args
 
 
 if __name__ == '__main__':
     args = parse_args()
+
+    if not os.path.exists(args):
+        raise ValueError('Specified path does not exist')
+
     config = ConfigReader(args)
     run_pipeline(config)
     shutil.copy(args, os.path.join(config.processed_dir, 'config.yml'))
