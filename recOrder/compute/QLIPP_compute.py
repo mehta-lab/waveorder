@@ -127,7 +127,7 @@ def reconstruct_QLIPP_stokes(position, recon, bg_stokes):
 
 def reconstruct_QLIPP_birefringence(position, recon, bg_stokes):
 
-    # start_time = time.time()
+    start_time = time.time()
     # print('Computing Birefringence...')
 
     recon_data = np.zeros([position.shape[1], 4, position.shape[2], position.shape[3]])
