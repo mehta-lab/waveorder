@@ -21,7 +21,6 @@ class PipelineConstructor:
 
         elif config.default == 'None':
             raise NotImplementedError
-            pass
             # self.reconstructor == 'Custom'
 
         self.config = config

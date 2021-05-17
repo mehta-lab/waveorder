@@ -20,7 +20,11 @@ def run_pipeline(config: ConfigReader):
     for sample in config.samples:
 
         print('Reading Data...')
-        data = MicromanagerReader(os.path.join(config.data_dir, sample), config.data_type, extract_data=True)
+        # data = MicromanagerReader(os.path.join(config.data_dir, sample), config.data_type, extract_data=True)
+        data = MicromanagerReader(os.path.join(config.data_dir, sample), config.data_type)
+        data.frames = 121
+        data.reader._create_stores(data.reader.master_ome_tiff)
         print('Finished Reading Data')
+
         pipeline = PipelineConstructor(config, data, sample)
         pipeline.run()
