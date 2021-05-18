@@ -142,10 +142,10 @@ class qlipp_3D_pipeline:
                                                    lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D,
                                                    verbose=False)
 
-        if self.config.postproc_denoise_use:
+        if self.config.postproc_registration_use:
             registered_stacks = []
-            for idx in self.config.postproc.channel_idx:
-                registered_stacks.append(register_translation(position_data[t, idx],
+            for idx in self.config.postproc_registration_channel_idx:
+                registered_stacks.append(translate_3D(position_data[t, idx],
                                                               self.config.postproc_registration_shift))
 
         #TODO: ASSIGN CHANNELS INDEX UPON INIT?
