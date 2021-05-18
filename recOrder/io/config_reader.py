@@ -190,10 +190,14 @@ class ConfigReader(object):
                             object.__setattr__(self, 'postproc_registration_use', value)
                             postproc_registration = True if value else False
                         elif key == 'channel_idx':
-                            object.__setattr__(self, 'postproc_registration_channel_idx', value)
                             if postproc_registration:
                                 assert value is not None, \
                                     'User must specify the channel index to use for registration'
+
+                            if isinstance(value, int):
+                                value = [value]
+
+                            object.__setattr__(self, 'postproc_registration_channel_idx', value)
                         elif key == 'shift':
                             object.__setattr__(self, 'postproc_registration_shift', value)
                             if postproc_registration:
