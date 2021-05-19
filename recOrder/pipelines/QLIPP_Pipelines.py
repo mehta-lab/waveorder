@@ -142,11 +142,14 @@ class qlipp_3D_pipeline:
                                                    lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D,
                                                    verbose=False)
 
+        ###### ADD POST-PROCESSING ######
         if self.config.postproc_registration_use:
             registered_stacks = []
             for idx in self.config.postproc_registration_channel_idx:
                 registered_stacks.append(translate_3D(position_data[t, idx],
-                                                              self.config.postproc_registration_shift))
+                                                      (int(self.config.postproc_registration_shift[0]),
+                                                       int(self.config.postproc_registration_shift[1]),
+                                                       int(self.config.postproc_registration_shift[2]))))
 
         #TODO: ASSIGN CHANNELS INDEX UPON INIT?
         #TODO: FIGURE OUT HOW TO WRITE FLUOR CHANNELS IN CORRECT ORDER
