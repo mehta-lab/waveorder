@@ -1,15 +1,6 @@
-default: 'QLIPP_3D'
-# the default configratuons for 3D Reconstruction, 3D Reconstruction over time, and 2D reconstruction over time
-
 dataset:
-  data_dir: '/gpfs/CompMicro/Spinningdisk/RawData/virtualstaining/2019_02_15_kidney_slice'
-  # (str) The path of the folder that holds raw data
-
   data_type: 'ome_tiff'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
-
-  samples: ['Tissue_Section_1']
-  # (str or list) Acquisition folder(s) within the experiment folder to process,
 
   positions: 'all'
   # (str or list) Positions within all of sample folders that are to be analyzed.
@@ -43,9 +34,6 @@ dataset:
     # a list, e.g. ['/path/to/bg_1', '/path/to/bg_2'], of one background dataset per sample
 
   calibration_metadata: '/gpfs/CompMicro/Spinningdisk/RawData/virtualstaining/2019_02_15_kidney_slice/metadata.txt'
-
-  processed_dir: '/gpfs/CompMicro/Projects/reconOrderTestData'
-  # (str) The path of the parent folder where the output will be saved
 
 processing:
   output_channels: ['Brightfield_computed', 'Retardance', 'Orientation', 'Phase3D']

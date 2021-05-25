@@ -12,10 +12,10 @@ class ConfigReader(object):
         object.__setattr__(self, 'yaml_config', None)
 
         # Dataset Parameters
-        object.__setattr__(self, 'data_dir', None)
+        # object.__setattr__(self, 'data_dir', None)
         object.__setattr__(self, 'data_type', None)
-        object.__setattr__(self, 'processed_dir', None)
-        object.__setattr__(self, 'samples', None)
+        # object.__setattr__(self, 'processed_dir', None)
+        # object.__setattr__(self, 'samples', None)
         object.__setattr__(self, 'positions', 'all')
         object.__setattr__(self, 'z_slices', 'all')
         object.__setattr__(self, 'timepoints', 'all')

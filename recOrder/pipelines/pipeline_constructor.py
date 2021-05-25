@@ -16,11 +16,20 @@ class PipelineConstructor:
         end = time.time()
         print(f'Finished Reading Data ({end - start / 60:0.1f} min')
 
+        self.config = config
+
         if mode == 'QLIPP_3D':
             self.reconstructor = qlipp_3D_pipeline(config, data, save_dir, name)
 
         elif mode == 'QLIPP_2D':
             self.reconstructor = qlipp_2D_pipeline(config, data, save_dir, name)
+
+        ##TODO: determine automatically which method to compute stokes (IPS, QLIPP, UPTI)
+        elif mode == 'stokes':
+            raise NotImplementedError
+
+        elif mode == 'denoise':
+            raise NotImplementedError
 
         elif mode == 'UPTI':
             raise NotImplementedError
@@ -32,7 +41,7 @@ class PipelineConstructor:
             raise NotImplementedError
             # self.reconstructor == 'Custom'
 
-        self.config = config
-
     def run(self):
         self.reconstructor.reconstruct_all()
+
+

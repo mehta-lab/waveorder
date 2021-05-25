@@ -1,39 +1,10 @@
-default: 'QLIPP_3D'
-# the default configratuons for 3D Reconstruction, 3D Reconstruction over time, and 2D reconstruction over time
-
 dataset:
-  data_dir: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA'
-  # (str) The path of the folder that holds raw data
-
-  data_type: 'ometiff'
-  # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
-
-  samples: ['NewKaz_2T_3P_65Z_2048_2048_1']
-  # (str or list) Acquisition folder(s) within the experiment folder to process,
-
-  positions: 'all'
-  # (str or list) Positions within all of sample folders that are to be analyzed.
-  ##   'all'
-  ##   [0, N] for pos 0 through N
-
-  timepoints: 'all'
-  # (str, list, or range) Timepoints to be analyzed.
-  # The same set of timepoints will be analyzed for all positions and z-slices within a given sample
-  # If the data do not contain z slices, leave out this parameter or set to 'all'
-  ##   'all'
-  ##   [0, 10, 20]
-  ##   !!python/object/apply:builtins.range [10, 50, 5], in which case timepoints in range(10,50,5) will be analyzed
-  ##   [['all'], [0, 10, 20]], in which case all timepoints from Sample1 and timepoints 0, 10, and 20 from Sample2 will be analyzed
-
   background: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA/BG'
 
   #(str or list) Background folder(s) within the experiment folder
   ##   a list, e.g. ['/path/to/bg_1', '/path/to/bg_2'], of one background dataset per sample
 
   calibration_metadata: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA/metadata.txt'
-
-  processed_dir: '/gpfs/CompMicro/projects/microscope_dev/2021_05_10_NewKazansky_PipelineTest'
-  # (str) The path of the parent folder where the output will be saved
 
 processing:
   output_channels: ['Retardance', 'Orientation','Brightfield', 'Phase3D']
