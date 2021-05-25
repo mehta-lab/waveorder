@@ -1,60 +1,42 @@
-"""
-runReconstruction:
-Reconstruct birefringence, slow axis, transmission, and degree of polarization from polarization-resolved images.
-This script provides a convenient method to workflow process multi-dimensional images acquired with Micro-Manager and OpenPolScope acquisition plugin.
-Parameters
-----------
-    --config: path to configuration file.
-Returns
--------
-    None: the script writes data to disk.
-"""
-
 import click
-import argparse
 import shutil
 import os
-from recOrder.pipelines.run_pipeline import run_pipeline
 from recOrder.io.config_reader import ConfigReader
+from recOrder.pipelines.pipeline_constructor import PipelineConstructor
 
+@click.command()
+@click.option('--mode', required=True, type=str, help='mode of reconstruction: \
+                                                      QLIPP_3D,QLIPP_2D,stokes')
+@click.option('--data_dir', required=True, type=str, help='path to the data')
+@click.option('--save_dir', required=True, type=str, help='path to the save directory')
+@click.option('--name', required=True, type=str, help='name to use for saving the data')
+@click.option('--config', required=False, type=str, help='path to config yml file')
+def parse_args(mode, data_dir, save_dir, name, config):
+    """parse command line arguments and return class with the arguments"""
 
-# @click.command()
-# @click.option('--config', required=True, type=str, help='path to config yml file')
-# def parse_args(config):
-#     """Parse command line arguments
-#     In python namespaces are implemented as dictionaries
-#     :return: namespace containing the arguments passed.
-#     """
-#
-#     if os.path.exists(config):
-#         return config
-#
-#     else:
-#         raise ValueError('Specified path does not exist')
+    class Args():
+        def __init__(self, mode, data_dir, save_dir, name, config):
+            self.mode = mode
+            self.config = config
+            self.data_dir = data_dir
+            self.save_dir = save_dir
+            self.name = name
 
-
-def parse_args():
-    """Parse command line arguments
-    In python namespaces are implemented as dictionaries
-    :return: namespace containing the arguments passed.
-    """
-
-    parser = argparse.ArgumentParser()
-
-    parser.add_argument('--config', type=str,
-                       help='path to yaml configuration file')
-
-    args = parser.parse_args()
-
-    return args
-
+    return Args(mode, data_dir, save_dir, name, config)
 
 if __name__ == '__main__':
-    args = parse_args()
 
-    if not os.path.exists(args.config):
-        raise ValueError('Specified path does not exist')
+    Args = parse_args(standalone_mode=False)
+    print(Args.config, Args.name, Args.save_dir, Args.data_dir)
 
-    config = ConfigReader(args.config)
-    run_pipeline(config)
-    shutil.copy(args.config, os.path.join(config.processed_dir, 'config.yml'))
+    if Args.config:
+        if not os.path.exists(Args.config):
+            raise ValueError('Specified config path does not exist')
+        else:
+            config = ConfigReader(Args.config)
+    else:
+        config = ConfigReader()
+
+    constructor = PipelineConstructor(Args.mode, Args.data_dir, Args.save_dir, Args.name, config)
+    constructor.run()
+    shutil.copy(Args.config, os.path.join(Args.save_dir, 'config.yml'))

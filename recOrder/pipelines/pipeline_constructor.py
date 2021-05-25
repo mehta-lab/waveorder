@@ -1,25 +1,34 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import MicromanagerReader
+import time
 from recOrder.pipelines.QLIPP_Pipelines import qlipp_3D_pipeline
-
 
 class PipelineConstructor:
     """
     This will pull the necessary pipeline based off the config default.
     """
 
-    def __init__(self, config: ConfigReader, data: MicromanagerReader, sample: str):
+    def __init__(self, mode: str, data_dir: str, save_dir: str, name: str, config: ConfigReader, data_type: str = 'ometiff'):
 
-        if config.default == 'QLIPP_3D':
-            self.reconstructor = qlipp_3D_pipeline(config, data, sample)
+        start = time.time()
+        print('Reading Data...')
+        data = MicromanagerReader(data_dir, data_type, extract_data=True)
+        end = time.time()
+        print(f'Finished Reading Data ({end - start / 60:0.1f} min')
 
-        elif config.default == 'UPTI':
+        if mode == 'QLIPP_3D':
+            self.reconstructor = qlipp_3D_pipeline(config, data, save_dir, name)
+
+        elif mode == 'QLIPP_2D':
+            self.reconstructor = qlipp_2D_pipeline(config, data, save_dir, name)
+
+        elif mode == 'UPTI':
             raise NotImplementedError
 
-        elif config.default == 'IPS':
+        elif mode == 'IPS':
             raise NotImplementedError
 
-        elif config.default == 'None':
+        elif mode == 'None':
             raise NotImplementedError
             # self.reconstructor == 'Custom'
 

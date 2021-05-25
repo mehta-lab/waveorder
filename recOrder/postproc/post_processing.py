@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import zarr
 import tifffile as tiff
 
+
 def translate_3D(image_stack, shift, binning=1, size_z_param=0, size_z_um=0):
     """
     Parameters
@@ -24,16 +25,19 @@ def translate_3D(image_stack, shift, binning=1, size_z_param=0, size_z_um=0):
     """
 
     registered_images = []
-    for img in image_stack:
-        if size_z_um == 0:  # 2D translation
-            shift[0] = 0
-        else:
-            # 3D translation. Scale z-shift according to the z-step size.
-            shift[0] = shift[0] * size_z_param / size_z_um
-        if not binning == 1:
-            shift[1] = shift[1] / binning
-            shift[2] = shift[2] / binning
 
-        image = affine_transform(img, np.ones(3), shift, order=1)
+    matrix = [[1, 0, shift[1]], [0, 1, shift[2]]]
+    for img in image_stack:
+        #         if size_z_um == 0:  # 2D translation
+        #             pass
+        # #             shift[0] = 0
+        #         else:
+        #             # 3D translation. Scale z-shift according to the z-step size.
+        #             shift[0] = shift[0] * size_z_param / size_z_um
+        #         if not binning == 1:
+        #             shift[1] = shift[1] / binning
+        #             shift[2] = shift[2] / binning
+
+        image = affine_transform(img, matrix, order=1)
         registered_images.append(image)
     return np.asarray(registered_images)

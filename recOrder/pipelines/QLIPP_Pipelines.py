@@ -15,13 +15,14 @@ class qlipp_3D_pipeline:
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
     """
 
-    def __init__(self, config, data: MicromanagerReader, sample: str):
+    def __init__(self, config, data: MicromanagerReader, save_dir: str, name: str):
         """
         Parameters
         ----------
         config:     (Object) initialized ConfigReader object
         data:       (Object) initialized MicromanagerReader object (data should be extracted already)
-        sample:     (str) name of the sample to pass for naming of folders, etc.
+        save_dir:   (str) save directory
+        name:       (str) name of the sample to pass for naming of folders, etc.
         """
 
         self.config = config
@@ -29,7 +30,8 @@ class qlipp_3D_pipeline:
 
         #TODO: Parse if bg_ROI matches the data size
         self.calib_meta = json.load(open(self.config.calibration_metadata))
-        self.sample = sample
+        self.name = name
+        self.save_dir = save_dir
 
         #TODO: Parse positions if not 'all', parse timepoints if not 'all'
         self.pos = data.get_num_positions() if self.config.positions == 'all' else NotImplementedError
@@ -38,7 +40,7 @@ class qlipp_3D_pipeline:
         self.channels = self.config.output_channels
         self.chan_names = self.data.channel_names
         self.bg_path = self.config.background
-        self.bg_roi = self.config.background_ROI
+        self.bg_roi = self.calib_meta['Summary']['ROI Used (x ,y, width, height)']
         self.bg_correction = self.config.background_correction
         self.img_dim = (self.data.height, self.data.width, self.data.slices)
         self.s0_idx, self.s1_idx, self.s2_idx, self.s3_idx, self.fluor_idxs = self.parse_channel_idx(self.chan_names)
@@ -66,7 +68,7 @@ class qlipp_3D_pipeline:
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
 
         self.writer = WaveorderWriter(self.config.processed_dir, 'physical')
-        self.writer.create_zarr_root(f'{self.sample}.zarr')
+        self.writer.create_zarr_root(f'{self.name}.zarr')
         self.writer.store.attrs.put(self.config.yaml_config)
 
     def reconstruct_all(self):
@@ -146,10 +148,7 @@ class qlipp_3D_pipeline:
         if self.config.postproc_registration_use:
             registered_stacks = []
             for idx in self.config.postproc_registration_channel_idx:
-                registered_stacks.append(translate_3D(position_data[t, idx],
-                                                      (int(self.config.postproc_registration_shift[0]),
-                                                       int(self.config.postproc_registration_shift[1]),
-                                                       int(self.config.postproc_registration_shift[2]))))
+                registered_stacks.append(translate_3D(position_data[t, idx], self.config.postproc_registration_shift))
 
         #TODO: ASSIGN CHANNELS INDEX UPON INIT?
         #TODO: FIGURE OUT HOW TO WRITE FLUOR CHANNELS IN CORRECT ORDER

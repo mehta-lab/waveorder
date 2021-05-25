@@ -10,7 +10,7 @@ class ConfigReader(object):
 
     def __init__(self, path=[]):
         object.__setattr__(self, 'yaml_config', None)
-        object.__setattr__(self, 'default', None)
+
         # Dataset Parameters
         object.__setattr__(self, 'data_dir', None)
         object.__setattr__(self, 'data_type', None)
@@ -20,7 +20,6 @@ class ConfigReader(object):
         object.__setattr__(self, 'z_slices', 'all')
         object.__setattr__(self, 'timepoints', 'all')
         object.__setattr__(self, 'background', None)
-        object.__setattr__(self, 'background_ROI', None)
         object.__setattr__(self, 'calibration_metadata', None)
         object.__setattr__(self, 'sample_paths', None)
 
@@ -32,7 +31,7 @@ class ConfigReader(object):
         object.__setattr__(self, 'preproc_denoise_levels', None)
 
         # Background Correction
-        object.__setattr__(self, 'background_correction', 'Global')
+        object.__setattr__(self, 'background_correction', 'None')
         object.__setattr__(self, 'flatfield_correction', None)
 
         # Output Parameters
@@ -99,39 +98,35 @@ class ConfigReader(object):
         return self
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
-
     def __setattr__(self, name, value):
         raise AttributeError("Attempting to change immutable object")
-
     # def __setattr__(self, name, value):
     #     raise AttributeError('''Can't set attribute "{0}"'''.format(name))
 
     def read_config(self, path):
         with open(path, 'r') as f:
-            object.__setattr__(self, 'yaml_config', yaml.load(f))
+            object.__setattr__(self, 'yaml_config', yaml.safe_load(f))
             # self.yaml_config = yaml.load(f)
 
         assert 'dataset' in self.yaml_config, \
             'dataset is a required field in the config yaml file'
-        assert 'data_dir' in self.yaml_config['dataset'], \
-            'Please provide data_dir in config file'
-        assert 'processed_dir' in self.yaml_config['dataset'], \
-            'Please provide processed_dir in config file'
-        assert 'samples' in self.yaml_config['dataset'], \
-            'Please provide samples in config file'
+        # assert 'data_dir' in self.yaml_config['dataset'], \
+        #     'Please provide data_dir in config file'
+        # assert 'processed_dir' in self.yaml_config['dataset'], \
+        #     'Please provide processed_dir in config file'
+        # assert 'samples' in self.yaml_config['dataset'], \
+        #     'Please provide samples in config file'
 
         # self.data_dir = self.yaml_config['dataset']['data_dir']
-        object.__setattr__(self, 'data_dir', self.yaml_config['dataset']['data_dir'])
-        object.__setattr__(self, 'data_type', self.yaml_config['dataset']['data_type'])
-        object.__setattr__(self, 'processed_dir', self.yaml_config['dataset']['processed_dir'])
-        object.__setattr__(self, 'default', self.yaml_config['default'])
-
-
+        # object.__setattr__(self, 'data_dir', self.yaml_config['dataset']['data_dir'])
+        # object.__setattr__(self, 'data_type', self.yaml_config['dataset']['data_type'])
+        # object.__setattr__(self, 'processed_dir', self.yaml_config['dataset']['processed_dir'])
+        # object.__setattr__(self, 'default', self.yaml_config['default'])
 
         for (key, value) in self.yaml_config['dataset'].items():
-            if key == 'samples':
-                object.__setattr__(self, 'samples', value)
-            elif key == 'positions':
+            # if key == 'samples':
+            #     object.__setattr__(self, 'samples', value)
+            if key == 'positions':
                 object.__setattr__(self, 'positions', value)
             elif key == 'z_slices':
                 object.__setattr__(self, 'z_slices', value)
@@ -146,10 +141,10 @@ class ConfigReader(object):
             elif key not in ('data_dir', 'processed_dir', 'data_type'):
                 raise NameError('Unrecognized configfile field:{}, key:{}'.format('dataset', key))
 
-        for sample in self.samples:
-            paths = []
-            paths.append(os.path.join(self.data_dir, sample))
-            object.__setattr__(self, 'sample_paths', paths)
+        # for sample in self.samples:
+        #     paths = []
+        #     paths.append(os.path.join(self.data_dir, sample))
+        #     object.__setattr__(self, 'sample_paths', paths)
 
         if 'pre_processing' in self.yaml_config:
             for (key1, value) in self.yaml_config['pre_processing'].items():
