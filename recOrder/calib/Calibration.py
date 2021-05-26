@@ -172,7 +172,7 @@ class QLIPP_Calibration():
         """
             
         set_lc(self.mmc, x, self.PROPERTIES['LCA'])
-        swing = (self.lca_ext - x) * self.ratio
+        swing = abs(self.lca_ext - x) * self.ratio
 
 
         if mode == '60':
@@ -813,14 +813,14 @@ class QLIPP_Calibration():
                                 '~ BlackLevel': self.I_black,
                                 'ChNames': ["State0", "State1", "State2", "State3"],
                                 '[LCA_Ext, LCB_Ext]': [self.lca_ext, self.lcb_ext],
-                                '[LCA_0, LCB_120]': [self.lca_0, self.lcb_0],
-                                '[LCA_60, LCB_120]': [self.lca_60, self.lcb_60],
+                                '[LCA_0, LCB_0]': [self.lca_0, self.lcb_0],
+                                '[LCA_60, LCB_60]': [self.lca_60, self.lcb_60],
                                 '[LCA_120, LCB_120]': [self.lca_120, self.lcb_120],
                                 'Swing0': self.swing0,
                                 'Swing60': self.swing60,
                                 'Swing120': self.swing120,
                                 'Extinction Ratio': self.extinction_ratio,
-                                'ROI Used (x ,y, width, height)': self.ROI
+                                'ROI Used (x , y, width, height)': self.ROI
 
                                  #Edit out later
                                #  "MicroManagerVersion": "1.4.22",
@@ -843,8 +843,8 @@ class QLIPP_Calibration():
                                 '~ BlackLevel': self.I_black,
                                 'ChNames': ["State0", "State1", "State2", "State3", "State4"],
                                 '[LCA_Ext, LCB_Ext]': [self.lca_ext, self.lcb_ext],
-                                '[LCA_0, LCB_120]': [self.lca_0, self.lcb_0],
-                                '[LCA_60, LCB_120]': [self.lca_45, self.lcb_45],
+                                '[LCA_0, LCB_0]': [self.lca_0, self.lcb_0],
+                                '[LCA_45, LCB_45]': [self.lca_45, self.lcb_45],
                                 '[LCA_90, LCB_90]': [self.lca_90, self.lcb_90],
                                 '[LCA_135, LCB_135]': [self.lca_135, self.lcb_135],
                                 'Swing0': self.swing0,
@@ -852,7 +852,7 @@ class QLIPP_Calibration():
                                 'Swing90': self.swing90,
                                 'Swing135': self.swing135,
                                 'Extinction Ratio': self.extinction_ratio,
-                                'ROI Used (x ,y, width, height)': self.ROI
+                                'ROI Used (x , y, width, height)': self.ROI
 
                                 #Edit out later
                                #  "MicroManagerVersion": "1.4.22",

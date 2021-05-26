@@ -287,6 +287,7 @@ def optimize_grid(calib, a_min, a_max, b_min, b_max, step):
 
     return best_lca, best_lcb, min_int
 
+
 def optimize_minscalar(calib, reference, bound_range, mode, normalize=False):
     
     current_lca = get_lc(calib.mmc, calib.PROPERTIES['LCA'])
