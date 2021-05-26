@@ -7,7 +7,6 @@ import matplotlib.pyplot as plt
 import zarr
 import tifffile as tiff
 
-
 def translate_3D(image_stack, shift, binning=1, size_z_param=0, size_z_um=0):
     """
     Parameters

@@ -16,9 +16,9 @@ class ConfigReader(object):
         object.__setattr__(self, 'data_type', None)
         # object.__setattr__(self, 'processed_dir', None)
         # object.__setattr__(self, 'samples', None)
-        object.__setattr__(self, 'positions', 'all')
-        object.__setattr__(self, 'z_slices', 'all')
-        object.__setattr__(self, 'timepoints', 'all')
+        object.__setattr__(self, 'positions', ['all'])
+        object.__setattr__(self, 'z_slices', ['all'])
+        object.__setattr__(self, 'timepoints', ['all'])
         object.__setattr__(self, 'background', None)
         object.__setattr__(self, 'calibration_metadata', None)
         object.__setattr__(self, 'sample_paths', None)
@@ -127,11 +127,29 @@ class ConfigReader(object):
             # if key == 'samples':
             #     object.__setattr__(self, 'samples', value)
             if key == 'positions':
-                object.__setattr__(self, 'positions', value)
+                assert(isinstance(value,str) or isinstance(value,list), \
+                       'Value must be string == \'all\' or list')
+                if value == 'all':
+                    object.__setattr__(self, 'positions', [value])
+                else:
+                    object.__setattr__(self, 'positions', value)
+
             elif key == 'z_slices':
-                object.__setattr__(self, 'z_slices', value)
+                assert (isinstance(value, str) or isinstance(value, list), \
+                        'Value must be string == \'all\' or list')
+                if value == 'all':
+                    object.__setattr__(self, 'z_slices', [value])
+                else:
+                    object.__setattr__(self, 'z_slices', value)
+
             elif key == 'timepoints':
-                object.__setattr__(self, 'timepoints', value)
+                assert (isinstance(value, str) or isinstance(value, list), \
+                        'Value must be string == \'all\' or list')
+                if value == 'all':
+                    object.__setattr__(self, 'timepoints', [value])
+                else:
+                    object.__setattr__(self, 'timepoints', value)
+
             elif key == 'background':
                 object.__setattr__(self, 'background', value)
             elif key == 'background_ROI':
@@ -290,29 +308,3 @@ class ConfigReader(object):
 
                 assert self.focus_zidx is not None, \
                 "focus_zidx has to be specified to run 2D phase reconstruction"
-
-
-        # if 'plotting' in self.yaml_config:
-        #     for (key, value) in self.yaml_config['plotting'].items():
-        #         if key == 'normalize_color_images':
-        #             object.__setattr__(self, 'normalize_color_images', value)
-        #         elif key == 'retardance_scaling':
-        #             object.__setattr__(self, 'retardance_scaling', float(value))
-        #         elif key == 'transmission_scaling':
-        #             object.__setattr__(self, 'transmission_scaling', float(value))
-        #         elif key == 'phase_2D_scaling':
-        #             object.__setattr__(self, 'phase_2D_scaling', float(value))
-        #         elif key == 'absorption_2D_scaling':
-        #             object.__setattr__(self, 'absorption_2D_scaling', float(value))
-        #         elif key == 'phase_3D_scaling':
-        #             object.__setattr__(self, 'phase_3D_scaling', float(value))
-        #         elif key == 'save_birefringence_fig':
-        #             object.__setattr__(self, 'save_birefringence_fig', value)
-        #         elif key == 'save_stokes_fig':
-        #             object.__setattr__(self, 'save_stokes_fig', value)
-        #         elif key == 'save_polarization_fig':
-        #             object.__setattr__(self, 'save_polarization_fig', value)
-        #         elif key == 'save_micromanager_fig':
-        #             object.__setattr__(self, 'save_micromanager_fig', value)
-        #         else:
-        #             raise NameError('Unrecognized configfile field:{}, key:{}'.format('plotting', key))

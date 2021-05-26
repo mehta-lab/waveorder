@@ -28,7 +28,6 @@ class qlipp_3D_pipeline:
         self.config = config
         self.data = data
 
-        #TODO: Parse if bg_ROI matches the data size
         self.calib_meta = json.load(open(self.config.calibration_metadata))
         self.name = name
         self.save_dir = save_dir
@@ -39,6 +38,7 @@ class qlipp_3D_pipeline:
 
         self.channels = self.config.output_channels
         self.chan_names = self.data.channel_names
+        self.LF_indices = (self.parse_channel_idx(self.chan_names))
         self.bg_path = self.config.background
         self.bg_roi = self.calib_meta['Summary']['ROI Used (x ,y, width, height)']
         self.bg_correction = self.config.background_correction
@@ -61,8 +61,9 @@ class qlipp_3D_pipeline:
                                                  self.config.use_gpu, self.config.gpu_id)
 
         #TODO: Add check to make sure that State0..4 are the first 4 channels
-        self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
-        self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
+        if self.background_correction != None:
+            self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
+            self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
 
         self.data_shape = (self.t, len(self.channels), self.img_dim[2], self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
@@ -111,31 +112,39 @@ class qlipp_3D_pipeline:
 
             pos_end_time = time.time()
 
-    def reconstruct_z_stack(self, position_data, t):
+    def reconstruct_volume(self, pt):
         """
         This method performs reconstruction / pre / post processing for a single z-stack.
 
         Parameters
         ----------
-        position_data:      (np.array) np.array of dimension (T, C, Z, Y, X)
-        t:                  (int) index of the time-point to pull from position_data
+        pt:                 (tuple) set entry of (pos, t)
 
         Returns
         -------
         written data to the processed directory specified in the config
 
         """
+        position_data = self.data.get_array(pt[0])
+        t = pt[1]
 
-        ###### ADD PRE-PROCESSING ######
+        LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
 
-        # Add pre-proc denoising
-        if self.config.preproc_denoise_use:
-            stokes = reconstruct_QLIPP_stokes(position_data[t], self.reconstructor, self.bg_stokes)
-            stokes = self.preproc_denoise(stokes)
-            recon_data = self.bire_from_stokes(stokes)
+        LF_array[0] = position_data[t,self.LF_indices[0]]
+        LF_array[1] = position_data[t, self.LF_indices[1]]
+        LF_array[2] = position_data[t, self.LF_indices[2]]
+        LF_array[3] = position_data[t, self.LF_indices[3]]
 
-        if not self.config.preproc_denoise_use:
-            recon_data = reconstruct_QLIPP_birefringence(position_data[t], self.reconstructor, self.bg_stokes)
+        # ###### ADD PRE-PROCESSING ######
+        # # Add pre-proc denoising
+        # if self.config.preproc_denoise_use:
+        #     stokes = reconstruct_QLIPP_stokes(LF_array, self.reconstructor, self.bg_stokes)
+        #     stokes = self.preproc_denoise(stokes)
+        #     recon_data = self.bire_from_stokes(stokes)
+        #
+        # if not self.config.preproc_denoise_use:
+
+        recon_data = reconstruct_QLIPP_birefringence(LF_array, self.reconstructor, self.bg_stokes)
 
         if 'Phase3D' in self.channels:
             phase3D = self.reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
@@ -150,8 +159,6 @@ class qlipp_3D_pipeline:
             for idx in self.config.postproc_registration_channel_idx:
                 registered_stacks.append(translate_3D(position_data[t, idx], self.config.postproc_registration_shift))
 
-        #TODO: ASSIGN CHANNELS INDEX UPON INIT?
-        #TODO: FIGURE OUT HOW TO WRITE FLUOR CHANNELS IN CORRECT ORDER
         fluor_idx = 0
         for chan in range(len(self.channels)):
             if 'Retardance' in self.channels[chan]:
@@ -168,7 +175,8 @@ class qlipp_3D_pipeline:
                     self.writer.write(registered_stacks[fluor_idx], t=t, c=chan)
                     fluor_idx += 1
                 else:
-                  raise NotImplementedError(f'{self.channels[chan]} not available to write yet')
+                    self.writer.write(position_data[t, self.LF_indices[4][fluor_idx]], t=t, c=chan)
+                    fluor_idx += 1
 
     def preproc_denoise(self, stokes):
         """
