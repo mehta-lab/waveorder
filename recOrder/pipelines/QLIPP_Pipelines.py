@@ -10,12 +10,13 @@ import numpy as np
 import time
 
 
-class qlipp_3D_pipeline:
+class qlipp_pipeline:
+
     """
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
     """
 
-    def __init__(self, config, data: MicromanagerReader, save_dir: str, name: str):
+    def __init__(self, config, data: MicromanagerReader, save_dir: str, name: str, mode: str):
         """
         Parameters
         ----------
@@ -23,34 +24,48 @@ class qlipp_3D_pipeline:
         data:       (Object) initialized MicromanagerReader object (data should be extracted already)
         save_dir:   (str) save directory
         name:       (str) name of the sample to pass for naming of folders, etc.
+        mode:       (str) mode of operation, can be '2D', '3D', or 'stokes'
         """
 
+        # Dataset Parameters
         self.config = config
         self.data = data
-
-        self.calib_meta = json.load(open(self.config.calibration_metadata))
         self.name = name
         self.save_dir = save_dir
 
-        #TODO: Parse positions if not 'all', parse timepoints if not 'all'
+        # Dimension Parameters
         self.pos = data.get_num_positions() if self.config.positions == 'all' else NotImplementedError
         self.t = data.frames if self.config.timepoints == 'all' else NotImplementedError
-
         self.channels = self.config.output_channels
+        if self.data.channels < 4:
+            raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
+
+        self.slices = self.data.slices
+        self.focus_slice = None
+        if mode == '2D':
+            self.slices = 1
+            self.focus_slice = self.config.focus_zidx
+
+        # Metadata
         self.chan_names = self.data.channel_names
         self.LF_indices = (self.parse_channel_idx(self.chan_names))
+        self.calib_meta = json.load(open(self.config.calibration_metadata))
         self.bg_path = self.config.background
         self.bg_roi = self.calib_meta['Summary']['ROI Used (x ,y, width, height)']
         self.bg_correction = self.config.background_correction
         self.img_dim = (self.data.height, self.data.width, self.data.slices)
         self.s0_idx, self.s1_idx, self.s2_idx, self.s3_idx, self.fluor_idxs = self.parse_channel_idx(self.chan_names)
 
-        if self.data.channels < 4:
-            raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
-
-        bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
+        # Writer Parameters
+        self.data_shape = (self.t, len(self.channels), self.img_dim[2], self.img_dim[0], self.img_dim[1])
+        self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
+        self.writer = WaveorderWriter(self.config.processed_dir, 'physical' if mode != 'stokes' else 'stokes')
+        self.writer.create_zarr_root(f'{self.name}.zarr')
+        self.writer.store.attrs.put(self.config.yaml_config)
 
         #TODO: read step size from metadata
+
+        # Initialize Reconstructor
         self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
                                                  self.calib_meta['Summary']['~ Swing (fraction)'],
                                                  len(self.calib_meta['Summary']['ChNames']),
@@ -60,58 +75,103 @@ class qlipp_3D_pipeline:
                                                  self.config.background_correction, self.config.n_objective_media,
                                                  self.config.use_gpu, self.config.gpu_id)
 
-        #TODO: Add check to make sure that State0..4 are the first 4 channels
+        # Compute BG stokes if necessary
         if self.background_correction != None:
+            bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
             self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
             self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
 
-        self.data_shape = (self.t, len(self.channels), self.img_dim[2], self.img_dim[0], self.img_dim[1])
-        self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
+    def reconstruct_stokes_volume(self, data):
+        """
+        This method reconstructs a stokes volume from raw data
 
-        self.writer = WaveorderWriter(self.config.processed_dir, 'physical')
-        self.writer.create_zarr_root(f'{self.name}.zarr')
-        self.writer.store.attrs.put(self.config.yaml_config)
+        Parameters
+        ----------
+        data:           (nd-array) raw data volume at certain position, time.
+                                  dimensions must be (C, Z, Y, X)
 
-    def reconstruct_stokes_volume(self, pt):
+        Returns
+        -------
+        stokes:         (nd-array) stokes volume of dimensions (Z, 5, Y, X)
+                                    where C is the stokes channels (S0..S3 + DOP)
 
-        position_data = self.data.get_array(pt[0])
+        """
 
-        t = pt[1]
 
-        LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
+        LF_array = np.zeros([4, self.slices, self.data.height, self.data.width])
 
-        LF_array[0] = position_data[t, self.LF_indices[0]]
-        LF_array[1] = position_data[t, self.LF_indices[1]]
-        LF_array[2] = position_data[t, self.LF_indices[2]]
-        LF_array[3] = position_data[t, self.LF_indices[3]]
+        LF_array[0] = data[self.LF_indices[0]]
+        LF_array[1] = data[self.LF_indices[1]]
+        LF_array[2] = data[self.LF_indices[2]]
+        LF_array[3] = data[self.LF_indices[3]]
 
         stokes = reconstruct_QLIPP_stokes(LF_array, self.reconstructor, self.bg_stokes)
 
         return stokes
 
-
-    def reconstruct_birefringence_volume(self, pt, stokes):
+    def reconstruct_phase_volume(self, pt, stokes):
         """
-        This method performs reconstruction / pre / post processing for a single z-stack.
+        This method reconstructs a phase volume or 2D phase image given stokes stack
 
         Parameters
         ----------
-        pt:                 (tuple) set entry of (pos, t)
+        stokes:             (nd-array) stokes stack of (Z, C, Y, X) where C = stokes channel
 
         Returns
         -------
-        written data to the processed directory specified in the config
+        phase3D:            (nd-array) 3D phase stack of (Z, Y, X)
+
+        or
+
+        phase2D:            (nd-array) 2D phase image of (Y, X)
 
         """
 
-        recon_data = reconstruct_QLIPP_birefringence(stokes, self.reconstructor)
-
         if 'Phase3D' in self.channels:
-            phase3D = self.reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
+            phase3D = self.reconstructor.Phase_recon_3D(np.transpose(stokes[:, 0], (1, 2, 0)),
                                                    method=self.config.phase_denoiser_3D,
                                                    reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
                                                    lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D,
                                                    verbose=False)
+
+            return np.transpose(phase3D, (2, 0, 1))
+
+        if 'Phase2D' in self.channels:
+            _, phase2D = self.reconstructor.Phase_recon(np.transpose(stokes[:, 0], (1, 2, 0)),
+                                                        method=self.config.phase_denoiser_2D,
+                                                        reg_u=self.config.Tik_reg_abs_2D,
+                                                        reg_p=self.config.Tik_reg_ph_2D,
+                                                        rho=self.config.rho_2D, lambda_u=self.config.TV_reg_abs_2D,
+                                                        lambda_p=self.config.TV_reg_ph_2D, itr=self.config.itr_2d,
+                                                        verbose=False)
+
+            return phase2D
+
+        else:
+            return None
+
+
+    def reconstruct_birefringence_volume(self, stokes):
+        """
+        This method reconstructs birefringence (Ret, Ori, BF, Pol)
+        for given stokes
+
+        Parameters
+        ----------
+        stokes:             (nd-array) stokes stack of (Z, C, Y, X) where C = stokes channel
+
+        Returns
+        -------
+        birefringence:       (nd-array) birefringence stack of (C, Z, Y, X)
+                                        where C = Retardance, Orientation, BF, Polarization
+
+        """
+
+        birefringence = reconstruct_QLIPP_birefringence(stokes[slice(None) if self.slices != 1 else self.focus_slice],
+                                                        self.reconstructor)
+
+        return birefringence
+
 
         ###### ADD POST-PROCESSING ######
         if self.config.postproc_registration_use:
@@ -119,24 +179,35 @@ class qlipp_3D_pipeline:
             for idx in self.config.postproc_registration_channel_idx:
                 registered_stacks.append(translate_3D(position_data[t, idx], self.config.postproc_registration_shift))
 
+
+    #TODO: Add stokes writing?
+    def write_data(self, pt, pt_data, stokes, birefringence, phase):
+
+        t = pt[1]
         fluor_idx = 0
+
         for chan in range(len(self.channels)):
             if 'Retardance' in self.channels[chan]:
-                ret = recon_data[0] / (2 * np.pi) * self.config.wavelength
+                ret = birefringence[0] / (2 * np.pi) * self.config.wavelength
                 self.writer.write(ret, t=t, c=chan)
             elif 'Orientation' in self.channels[chan]:
-                self.writer.write(recon_data[1], t=t, c=chan)
+                self.writer.write(birefringence[1], t=t, c=chan)
             elif 'Brightfield' in self.channels[chan]:
-                self.writer.write(recon_data[2], t=t, c=chan)
+                self.writer.write(birefringence[2], t=t, c=chan)
             elif 'Phase3D' in self.channels[chan]:
-                self.writer.write(np.transpose(phase3D, (2,0,1)), t=t, c=chan)
+                self.writer.write(phase, t=t, c=chan)
+            elif 'S0' in self.channels[chan]:
+                self.writer.write(stokes[:,0], t=t, c=chan)
+            elif 'S1' in self.channels[chan]:
+                self.writer.write(phase, t=t, c=chan)
             else:
                 if self.config.postproc_registration_use:
                     self.writer.write(registered_stacks[fluor_idx], t=t, c=chan)
                     fluor_idx += 1
                 else:
-                    self.writer.write(position_data[t, self.LF_indices[4][fluor_idx]], t=t, c=chan)
+                    self.writer.write(pt_data[t, self.LF_indices[4][fluor_idx]], t=t, c=chan)
                     fluor_idx += 1
+
 
     def preproc_denoise(self, stokes):
         """

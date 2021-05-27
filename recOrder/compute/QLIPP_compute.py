@@ -125,13 +125,17 @@ def reconstruct_QLIPP_stokes(data, recon, bg_stokes):
 
 def reconstruct_QLIPP_birefringence(stokes, recon):
 
-    recon_data = np.zeros([stokes.shape[0], 4, stokes.shape[-2], stokes.shape[-1]])
+    if len(stokes.shape) == 4:
+        slices = stokes.shape[0]
+        recon_data = np.zeros([stokes.shape[0], 4, stokes.shape[-2], stokes.shape[-1]])
+    elif len(stokes.shape) == 3:
+        slices = 1
+        recon_data = np.zeros([1, 4, stokes.shape[-2], stokes.shape[-1]])
 
-    for z in range(stokes.shape[0]):
+    for z in range(slices):
         recon_data[z, :, :, :] = recon.Polarization_recon(stokes[z])
 
-    return recon_data
-
+    return np.transpose(recon_data, (1,0,2,3))
 
 def reconstruct_QLIPP_birefringence(position, recon, bg_stokes):
 

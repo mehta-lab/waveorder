@@ -1,7 +1,7 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import MicromanagerReader
 import time
-from recOrder.pipelines.QLIPP_Pipelines import qlipp_3D_pipeline
+from recOrder.pipelines.QLIPP_Pipelines import qlipp_pipeline
 from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_proce import *
 
@@ -10,7 +10,8 @@ class PipelineConstructor:
     This will pull the necessary pipeline based off the config default.
     """
 
-    def __init__(self, mode: str, data_dir: str, save_dir: str, name: str, config: ConfigReader, data_type: str = 'ometiff'):
+    def __init__(self, method: str, mode: str, data_dir: str, save_dir: str, name: str,
+                 config: ConfigReader, data_type: str = 'ometiff'):
 
         start = time.time()
         print('Reading Data...')
@@ -21,15 +22,8 @@ class PipelineConstructor:
         self.config = config
         self.data = data
 
-        if mode == 'QLIPP_3D':
-            self.reconstructor = qlipp_3D_pipeline(config, data, save_dir, name)
-
-        elif mode == 'QLIPP_2D':
-            self.reconstructor = qlipp_2D_pipeline(config, data, save_dir, name)
-
-        ##TODO: determine automatically which method to compute stokes (IPS, QLIPP, UPTI)
-        elif mode == 'stokes':
-            raise NotImplementedError
+        if method == 'QLIPP':
+            self.reconstructor = qlipp_pipeline(config, data, save_dir, name, mode)
 
         elif mode == 'denoise':
             raise NotImplementedError
@@ -43,6 +37,8 @@ class PipelineConstructor:
         elif mode == 'None':
             raise NotImplementedError
             # self.reconstructor == 'Custom'
+
+
 
     def _get_preprocessing(self):
         pass
@@ -107,14 +103,19 @@ class PipelineConstructor:
         print(f'Beginning Reconstruction...')
         for pt in self.pt_set:
 
-            self.writer.create_position(pt[0])
-            self.writer.init_array(self.reconstructor.data_shape,
-                                   self.reconstructor.chunk_size,
-                                   self.reconstructor.channels)
+            self.reconstructor.writer.create_position(pt[0])
+            self.reconstructor.writer.init_array(self.reconstructor.data_shape,
+                                                 self.reconstructor.chunk_size,
+                                                 self.reconstructor.channels)
+
+            pt_data = self.data.get_array(pt[0], pt[1])
 
             # self.pre_processing(pt)
-            self.reconstructor.reconstruct_volume(pt)
+            stokes = self.reconstructor.reconstruct_stokes_volume(pt_data)
+            birefringence = self.reconstructor.reconstruct_birefringence_volume(stokes)
+            phase = self.reconstruct.reconstruct_phase_volume(stokes)
             # self.reconstructor.post_processing
+            self.reconstructor.write_data(pt, pt_data, stokes, birefringence, phase)
 
     def pre_processing(self):
         pass
