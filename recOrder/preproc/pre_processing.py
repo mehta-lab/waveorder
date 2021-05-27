@@ -19,7 +19,6 @@ def preproc_denoise(stokes, params):
             for z in range(len(stokes)):
                 stokes_denoised[z, 2, :, :] = wavelet_softThreshold(stokes[z, 2, :, :], 'db8',
                                                                     params[chan][1], params[chan][2])
-
         if 'S3' in params[chan][0]:
             for z in range(len(stokes)):
                 stokes_denoised[z, 3, :, :] = wavelet_softThreshold(stokes[z, 3, :, :], 'db8',

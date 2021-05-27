@@ -197,9 +197,13 @@ class qlipp_pipeline:
             elif 'Phase3D' in self.channels[chan]:
                 self.writer.write(phase, t=t, c=chan)
             elif 'S0' in self.channels[chan]:
-                self.writer.write(stokes[:,0], t=t, c=chan)
+                self.writer.write(stokes[:, 0], t=t, c=chan)
             elif 'S1' in self.channels[chan]:
-                self.writer.write(phase, t=t, c=chan)
+                self.writer.write(stokes[:, 1], t=t, c=chan)
+            elif 'S2' in self.channels[chan]:
+                self.writer.write(stokes[:, 2], t=t, c=chan)
+            elif 'S3' in self.channels[chan]:
+                self.writer.write(stokes[:, 3], t=t, c=chan)
             else:
                 if self.config.postproc_registration_use:
                     self.writer.write(registered_stacks[fluor_idx], t=t, c=chan)

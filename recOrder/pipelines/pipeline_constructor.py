@@ -3,7 +3,7 @@ from waveorder.io.reader import MicromanagerReader
 import time
 from recOrder.pipelines.QLIPP_Pipelines import qlipp_pipeline
 from recOrder.postproc.post_processing import *
-from recOrder.preproc.pre_proce import *
+from recOrder.preproc.pre_processing import *
 
 class PipelineConstructor:
     """
@@ -163,16 +163,26 @@ class PipelineConstructor:
 
             pt_data = self.data.get_array(pt[0], pt[1])
 
-            # self.pre_processing(pt)
             stokes = self.reconstructor.reconstruct_stokes_volume(pt_data)
+            stokes = self.pre_processing(stokes)
+
             birefringence = self.reconstructor.reconstruct_birefringence_volume(stokes)
             phase = self.reconstruct.reconstruct_phase_volume(stokes)
+
             denoised_data, registered_data = self.reconstructor.post_processing
+
             self.reconstructor.write_data(pt, pt_data, stokes, birefringence, phase)
 
-    def pre_processing(self, pt_data):
+    def pre_processing(self, stokes):
+
+        denoise_params = self._get_preprocessing()
+
+        return preproc_denoise(stokes, denoise_params) if denoise_params else stokes
+
+    def post_processing(self, phase):
+
+        #TODO: IMPLEMENT POSTPROC RETURN
 
 
 
-        pass
 
