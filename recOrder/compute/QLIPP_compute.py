@@ -1,13 +1,11 @@
 import waveorder as wo
 from waveorder.waveorder_reconstructor import waveorder_microscopy as setup
 import numpy as np
-import tifffile as tiff
-import glob
 import time
 
 
 def initialize_reconstructor(image_dim, wavelength, swing, N_channel, NA_obj, NA_illu, mag, N_slices, z_step, pad_z,
-                             pixel_size, bg_option='local_fit', n_media=1.0, use_gpu=False, gpu_id=0):
+                             pixel_size, bg_option='local_fit', n_media=1.0, mode = '3D', use_gpu=False, gpu_id=0):
     """
     Compute 3D birefringence and phase from a single position
 

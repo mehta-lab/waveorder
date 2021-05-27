@@ -8,9 +8,11 @@ from recOrder.postproc.post_processing import *
 import json
 import numpy as np
 import time
+from recOrder.pipelines.Pipeline_ABC import Pipeline_Builder
 
 
-class qlipp_pipeline:
+
+class qlipp_pipeline(Pipeline_Builder):
 
     """
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
@@ -31,6 +33,7 @@ class qlipp_pipeline:
         self.config = config
         self.data = data
         self.name = name
+        self.mode = mode
         self.save_dir = save_dir
 
         # Dimension Parameters
@@ -42,7 +45,7 @@ class qlipp_pipeline:
 
         self.slices = self.data.slices
         self.focus_slice = None
-        if mode == '2D':
+        if self.mode == '2D':
             self.slices = 1
             self.focus_slice = self.config.focus_zidx
 
@@ -73,7 +76,7 @@ class qlipp_pipeline:
                                                  self.config.magnification, self.img_dim[2], self.config.z_step,
                                                  self.config.pad_z, self.config.pixel_size,
                                                  self.config.background_correction, self.config.n_objective_media,
-                                                 self.config.use_gpu, self.config.gpu_id)
+                                                 self.mode, self.config.use_gpu, self.config.gpu_id)
 
         # Compute BG stokes if necessary
         if self.background_correction != None:
@@ -172,7 +175,6 @@ class qlipp_pipeline:
 
         return birefringence
 
-    #TODO: Add stokes writing?
     def write_data(self, pt, pt_data, stokes, birefringence, phase, registered_stacks):
 
         t = pt[1]

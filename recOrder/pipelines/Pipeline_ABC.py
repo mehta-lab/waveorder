@@ -13,3 +13,6 @@ class Pipeline_Builder:
 
     def reconstruct_birefringence_volume(self):
         pass
+
+    def write_data(self):
+        pass
