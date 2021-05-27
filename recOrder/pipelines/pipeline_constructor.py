@@ -34,17 +34,70 @@ class PipelineConstructor:
         elif mode == 'IPS':
             raise NotImplementedError
 
-        elif mode == 'None':
-            raise NotImplementedError
-            # self.reconstructor == 'Custom'
-
-
 
     def _get_preprocessing(self):
-        pass
+        """
+        method to get pre-processing functions and parameters.
+        Only supports denoising at the moment
+
+        Returns
+        -------
+        denoise_params:     (list) [[channels, thresholds, levels]]
+
+        """
+        # CAN ADD OTHER PREPROC FUNCTIONS IN FUTURE
+        denoise_params = []
+        if self.config.pre_proc_denoise_use:
+            for i in range(len(self.config.preproc_denoise_channels)):
+                threshold = 0.1 if self.config.preproc_denoise_thresholds is None \
+                    else self.config.preproc_denoise_thresholds[i]
+                level = 1 if self.config.preproc_denoise_levels is None \
+                    else self.config.preproc_denoise_levels[i]
+
+                denoise_params.append([self.config.preproc_denoise_channels[i], threshold, level])
+
+            return denoise_params
+
+        else:
+            return None
 
     def _get_postprocessing(self):
-        pass
+        """
+        Method to gather parameters for post_processing functions.
+        Currently only supports denoising, registration
+
+        CAN ADD MORE IN FUTURE
+
+        Returns
+        -------
+        denoise_params:         (list) [[channel, threshold, levels]]
+
+        registration_params:    (list) [[channel index, shift]]
+
+        """
+
+        denoise_params = []
+        if self.config.post_proc_denoise_use:
+            for i in range(len(self.config.postproc_denoise_channels)):
+                threshold = 0.1 if self.config.postproc_denoise_thresholds is None \
+                    else self.config.postproc_denoise_thresholds[i]
+                level = 1 if self.config.postproc_denoise_levels is None \
+                    else self.config.postproc_denoise_levels[i]
+
+                denoise_params.append([self.config.postproc_denoise_channels[i], threshold, level])
+
+        else:
+            denoise_params = None
+
+        registration_params = []
+        if self.config.post_proc_registration_use:
+            for i in range(len(self.config.postproc_registration_channel_idx)):
+                registration_params.append([self.config.postproc_registration_channel_idx[i],
+                                            self.config.post_proc_registration_shift[i]])
+        else:
+            registration_params = None
+
+        return denoise_params, registration_params
 
 
     #TODO: Create metadata dictionary to append to zarr attributes
@@ -114,9 +167,12 @@ class PipelineConstructor:
             stokes = self.reconstructor.reconstruct_stokes_volume(pt_data)
             birefringence = self.reconstructor.reconstruct_birefringence_volume(stokes)
             phase = self.reconstruct.reconstruct_phase_volume(stokes)
-            # self.reconstructor.post_processing
+            denoised_data, registered_data = self.reconstructor.post_processing
             self.reconstructor.write_data(pt, pt_data, stokes, birefringence, phase)
 
-    def pre_processing(self):
+    def pre_processing(self, pt_data):
+
+
+
         pass
 
