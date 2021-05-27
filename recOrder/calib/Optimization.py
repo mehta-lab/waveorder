@@ -327,7 +327,7 @@ def optimize_minscalar(calib, reference, bound_range, mode, normalize=False):
             print(f'\tIntensity = {res.fun + reference}')
             print(f'\tIntensity Difference = {difference:.7f}%')
         
-        return res.x, lcb, res.fun
+        return res.x, lcb, res.fun+reference
 
     elif mode == '90':
         
@@ -345,7 +345,7 @@ def optimize_minscalar(calib, reference, bound_range, mode, normalize=False):
             print(f'\tIntensity Difference = {difference:.7f}%')
             
             
-        return res.x, lcb, res.fun
+        return res.x, lcb, res.fun+reference
     
     elif mode == '45' or mode == '135':
         res = optimize.minimize_scalar(calib.opt_lc, bounds=bounds[1], method='bounded',args=(calib.PROPERTIES['LCB'],reference,normalize))
@@ -362,7 +362,7 @@ def optimize_minscalar(calib, reference, bound_range, mode, normalize=False):
             print(f'\tIntensity = {res.fun + reference}')
             print(f'\tIntensity Difference = {difference:.7f}%')
             
-        return lca, res.x, res.fun
+        return lca, res.x, res.fun+reference
             
             
     else:
@@ -417,7 +417,7 @@ def optimize_minscalar(calib, reference, bound_range, mode, normalize=False):
         
         lcb = get_lc(calib.mmc, calib.PROPERTIES['LCB'])
         
-        optimal.append([res_a.x, lcb, abs(res_a.fun)])
+        optimal.append([res_a.x, lcb, abs(res_a.fun+reference)])
         
         difference = (res_a.fun / reference) * 100
         
@@ -434,7 +434,7 @@ def optimize_minscalar(calib, reference, bound_range, mode, normalize=False):
         
         lca = get_lc(calib.mmc, calib.PROPERTIES['LCA'])
         
-        optimal.append([lca, res_b.x, abs(res_b.fun)])
+        optimal.append([lca, res_b.x, abs(res_b.fun+reference)])
         
         difference = (res_b.fun / reference) * 100
         
@@ -453,8 +453,8 @@ def optimize_minscalar(calib, reference, bound_range, mode, normalize=False):
             print(f'\tIntensity = {res_b.fun + reference}')
             print(f'\tIntensity Difference = {difference:.7f}%')
             
-            print(f'\n Lowest Intensity: {optimal[opt][0][2]:.4f}, lca = {optimal[opt][0][0]:.4f}, lcb = {optimal[opt][0][1]:.7f}')
+            print(f'\nLowest Intensity: {optimal[opt][0][2]:.4f}, lca = {optimal[opt][0][0]:.4f}, lcb = {optimal[opt][0][1]:.7f}')
             
             
             
-        return lca, res_b.x, res_b.fun
+        return lca, res_b.x, res_b.fun+reference
