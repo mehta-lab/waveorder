@@ -68,7 +68,7 @@ class QLIPP_Calibration():
         self.swing135 = None
         self.height = None
         self.width = None        
-        self.directory = None
+        self.meta_file = None
 
         self.ROI = None
         
@@ -617,7 +617,7 @@ class QLIPP_Calibration():
         
         cont = input('Would You Like to Calibrate Using this ROI? (Yes/No): \t')
         
-        if cont in ['Yes','Y','yes', 'ye', 'y']:
+        if cont in ['Yes','Y','yes', 'ye', 'y', '']:
             return True
         
         if cont in ['No', 'N', 'no', 'n']:
@@ -633,7 +633,7 @@ class QLIPP_Calibration():
         """
         self.swing = param[0]
         self.wavelength = param[1]
-        self.directory = param[2]
+        self.meta_file = param[2]
         method = param[3]
         use_full_FOV = param[4]
 
@@ -680,7 +680,7 @@ class QLIPP_Calibration():
         self.extinction_ratio = self.calculate_extinction()
 
         # Write Metadata
-        self.write_metadata(5, self.directory)
+        self.write_metadata(5, self.meta_file)
 
         # Return ROI to full FOV
         if use_full_FOV is False:
@@ -697,7 +697,7 @@ class QLIPP_Calibration():
         """
         self.swing = param[0]
         self.wavelength = param[1]
-        self.directory = param[2]
+        self.meta_file = param[2]
         method = param[3]
         use_full_FOV = param[4]
 
@@ -743,7 +743,7 @@ class QLIPP_Calibration():
         self.extinction_ratio = self.calculate_extinction()
 
         # Write Metadata
-        self.write_metadata(4, self.directory)
+        self.write_metadata(4, self.meta_file)
 
         # Return ROI to full FOV
         if use_full_FOV is False:
@@ -868,7 +868,10 @@ class QLIPP_Calibration():
                                 }
                     }
 
-        with open(directory + 'metadata.txt', 'w') as metafile:
+        if not self.meta_file.endswith('.txt'):
+            self.meta_file += '.txt'
+            
+        with open(self.meta_file, 'w') as metafile:
             json.dump(data, metafile, indent=1)
 
             
@@ -910,7 +913,7 @@ class QLIPP_Calibration():
            
         state0 = np.mean(state0, axis=(0))
         
-        tiff.imsave(directory + 'State0.tif', state0)
+        tiff.imsave(os.path.join(directory,'State0.tif'), state0)
 
         set_lc_state(self.mmc, 'State1')
         
@@ -920,7 +923,7 @@ class QLIPP_Calibration():
             
         state1 = np.mean(state1, axis=(0))
         
-        tiff.imsave(directory + 'State1.tif', state1)
+        tiff.imsave(os.path.join(directory,'State1.tif'), state1)
 
         set_lc_state(self.mmc, 'State2')
         
@@ -930,7 +933,7 @@ class QLIPP_Calibration():
             
         state2 = np.mean(state2, axis=(0))
 
-        tiff.imsave(directory + 'State2.tif', state2)
+        tiff.imsave(os.path.join(directory,'State2.tif'), state2)
 
         set_lc_state(self.mmc, 'State3')
         
@@ -940,7 +943,7 @@ class QLIPP_Calibration():
             
         state3 = np.mean(state3, axis=(0))
 
-        tiff.imsave(directory + 'State3.tif', state3)
+        tiff.imsave(os.path.join(directory,'State3.tif'), state3)
 
         if n_states == 5:
             set_lc_state(self.mmc, 'State4')
@@ -950,7 +953,7 @@ class QLIPP_Calibration():
             
             state4 = np.mean(state4, axis=(0))
            
-            tiff.imsave(directory + 'State4.tif', state4)
+            tiff.imsave(os.path.join(directory,'State4.tif'), state4)
             
             fig, ax = plt.subplots(3, 2, figsize=(20,20))
 
