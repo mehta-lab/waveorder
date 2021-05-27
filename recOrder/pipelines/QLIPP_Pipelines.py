@@ -62,7 +62,7 @@ class qlipp_pipeline(Pipeline_Builder):
         # Writer Parameters
         self.data_shape = (self.t, len(self.channels), self.img_dim[2], self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
-        self.writer = WaveorderWriter(self.config.processed_dir, 'physical' if mode != 'stokes' else 'stokes')
+        self.writer = WaveorderWriter(self.save_dir, 'physical' if mode != 'stokes' else 'stokes')
         self.writer.create_zarr_root(f'{self.name}.zarr')
         self.writer.store.attrs.put(self.config.yaml_config)
 
