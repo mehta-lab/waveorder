@@ -169,9 +169,9 @@ class PipelineConstructor:
             birefringence = self.reconstructor.reconstruct_birefringence_volume(stokes)
             phase = self.reconstruct.reconstruct_phase_volume(stokes)
 
-            denoised_data, registered_data = self.reconstructor.post_processing
+            birefringence, phase, registered_data = self.post_processing(pt_data, phase, birefringence)
 
-            self.reconstructor.write_data(pt, pt_data, stokes, birefringence, phase)
+            self.reconstructor.write_data(pt, pt_data, stokes, birefringence, phase, registered_data)
 
     def pre_processing(self, stokes):
 
@@ -179,9 +179,33 @@ class PipelineConstructor:
 
         return preproc_denoise(stokes, denoise_params) if denoise_params else stokes
 
-    def post_processing(self, phase):
+    def post_processing(self, pt_data, phase, birefringence):
 
-        #TODO: IMPLEMENT POSTPROC RETURN
+        denoise_params, registration_params = self._get_postprocessing()
+
+        phase_denoise = np.copy(phase)
+        birefringence_denoise = np.copy(birefringence)
+        if denoise_params:
+            for chan in denoise_params:
+                if 'Retardance' in chan[0]:
+                    birefringence_denoise[0] = post_proc_denoise(birefringence[0])
+                elif 'Orientation' in chan[0]:
+                    birefringence_denoise[1] = post_proc_denoise(birefringence[1])
+                elif 'Brightfield' in chan[0]:
+                    birefringence_denoise[2] = post_proc_denoise(birefringence[2])
+                elif 'Phase' in chan[0]:
+                    phase_denoise = post_proc_denoise(phase)
+                else:
+                    raise ValueError(f'Didnt understand post_proc denoise channel {chan[0]}')
+
+        if registration_params:
+            registered_stacks = []
+            for param in registration_params:
+                registered_stacks.append(translate_3D(pt_data[param[0]], param[1]))
+        else:
+            registered_stacks = None
+
+        return birefringence_denoise, phase_denoise, registered_stacks
 
 
 

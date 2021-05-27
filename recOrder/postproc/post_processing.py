@@ -3,11 +3,20 @@ from skimage.feature import register_translation
 import os
 import json
 import numpy as np
+from waveorder.util import wavelet_softThreshold
 import matplotlib.pyplot as plt
 import zarr
 import tifffile as tiff
 
-def post_proc_denoise(volume):
+def post_proc_denoise(data_volume, params):
+
+    data_volume_denoised = np.copy(data_volume)
+    for z in range(len(data_volume)):
+        data_volume_denoised[z, :, :] = wavelet_softThreshold(data_volume[z], 'db8',
+                                                            params[1], params[2])
+
+    return data_volume_denoised
+
 
 def translate_3D(image_stack, shift, binning=1, size_z_param=0, size_z_um=0):
     """

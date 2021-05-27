@@ -172,16 +172,8 @@ class qlipp_pipeline:
 
         return birefringence
 
-
-        ###### ADD POST-PROCESSING ######
-        if self.config.postproc_registration_use:
-            registered_stacks = []
-            for idx in self.config.postproc_registration_channel_idx:
-                registered_stacks.append(translate_3D(position_data[t, idx], self.config.postproc_registration_shift))
-
-
     #TODO: Add stokes writing?
-    def write_data(self, pt, pt_data, stokes, birefringence, phase):
+    def write_data(self, pt, pt_data, stokes, birefringence, phase, registered_stacks):
 
         t = pt[1]
         fluor_idx = 0
@@ -209,10 +201,11 @@ class qlipp_pipeline:
                     self.writer.write(registered_stacks[fluor_idx], t=t, c=chan)
                     fluor_idx += 1
                 else:
-                    self.writer.write(pt_data[t, self.LF_indices[4][fluor_idx]], t=t, c=chan)
+                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], t=t, c=chan)
                     fluor_idx += 1
 
     #TODO: name fluor channels based off metadata name?
+    #TODO: ADD CHECKS FOR OUTPUT CHANNELS AND NUMBER OF FLUOR
     def parse_channel_idx(self, channel_list):
         fluor_idx = []
         for channel in range(len(channel_list)):
