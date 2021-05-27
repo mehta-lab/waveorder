@@ -50,6 +50,12 @@ class PipelineConstructor:
     def _get_postprocessing(self):
         pass
 
+
+    #TODO: Create metadata dictionary to append to zarr attributes
+    def _create_meta_dict(self):
+
+        dict = {'Dataset': {}}
+
     def _gen_coord_set(self):
         """
         Function creates a set of all position, time values to loop through for reconstruction
@@ -112,3 +118,4 @@ class PipelineConstructor:
 
     def pre_processing(self):
         pass
+

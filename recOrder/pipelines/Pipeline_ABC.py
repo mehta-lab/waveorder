@@ -5,11 +5,11 @@ class Pipeline_Builder:
     Builder class that all pipelines must inherit and follow
     """
 
-    def reconstruct_stokes(self):
+    def reconstruct_stokes_volume(self):
         pass
 
-    def reconstruct_phase(self):
+    def reconstruct_phase_volume(self):
         pass
 
-    def reconstruct_birefringence(self):
+    def reconstruct_birefringence_volume(self):
         pass

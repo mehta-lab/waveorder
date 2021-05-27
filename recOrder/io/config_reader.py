@@ -76,18 +76,6 @@ class ConfigReader(object):
         object.__setattr__(self, 'postproc_registration_channel_idx', None)
         object.__setattr__(self, 'postproc_registration_shift', None)
 
-        # Plotting Parameters
-        object.__setattr__(self, 'normalize_color_images', True)
-        object.__setattr__(self, 'retardance_scaling', 1e3)
-        object.__setattr__(self, 'transmission_scaling', 1e4)
-        object.__setattr__(self, 'phase_2D_scaling', 1)
-        object.__setattr__(self, 'absorption_2D_scaling', 1)
-        object.__setattr__(self, 'phase_3D_scaling', 1)
-        object.__setattr__(self, 'save_birefringence_fig', False)
-        object.__setattr__(self, 'save_stokes_fig', False)
-        object.__setattr__(self, 'save_polarization_fig', False)
-        object.__setattr__(self, 'save_micromanager_fig', False)
-
         if path:
             self.read_config(path)
 
@@ -300,7 +288,7 @@ class ConfigReader(object):
                 assert self.n_objective_media >= self.NA_objective and self.n_objective_media >= self.NA_condenser, \
                 "n_objective_media (refractive index of the immersing media) has to be larger than the NA of the objective and condenser"
 
-                assert self.z_slices == 'all', \
+                assert self.z_slices == ['all'], \
                 "z_slices has to be 'all' in order to run phase reconstruction properly"
 
 

@@ -72,47 +72,25 @@ class qlipp_3D_pipeline:
         self.writer.create_zarr_root(f'{self.name}.zarr')
         self.writer.store.attrs.put(self.config.yaml_config)
 
-    def reconstruct_all(self):
-        """
-        This method will loop through every position/timepoint specified in config.
+    def reconstruct_stokes_volume(self, pt):
 
-        Returns
-        -------
+        position_data = self.data.get_array(pt[0])
 
-        """
+        t = pt[1]
 
-        print(f'Beginning Reconstruction...')
-        #TODO: write fluorescence data from remaining channels, need to get their c_idx
-        for pos in range(self.pos):
+        LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
 
-            self.writer.create_position(pos)
-            self.writer.init_array(self.data_shape, self.chunk_size, self.channels)
+        LF_array[0] = position_data[t, self.LF_indices[0]]
+        LF_array[1] = position_data[t, self.LF_indices[1]]
+        LF_array[2] = position_data[t, self.LF_indices[2]]
+        LF_array[3] = position_data[t, self.LF_indices[3]]
 
-            if pos != 0:
-                pos_tot_time = (pos_end_time-pos_start_time)/60
-                total_time = pos_tot_time*self.pos
-                remaining_time = total_time - pos*pos_tot_time
-                print(f'Estimated Time Remaining: {np.round(remaining_time,0):0.0f} min')
+        stokes = reconstruct_QLIPP_stokes(LF_array, self.reconstructor, self.bg_stokes)
 
-            pos_start_time = time.time()
+        return stokes
 
-            position_data = self.data.get_array(pos)
 
-            for t in range(self.t):
-
-                print(f'Reconstructing Position {pos}, Time {t}')
-                time_start_time = time.time()
-
-                # PERFORM RECONSTRUCTION
-                self.reconstruct_z_stack(position_data, t)
-
-                time_end_time = time.time()
-                print(f'Finished Reconstructing Position {pos}, Time {t} '
-                      f'({(time_end_time - time_start_time) / 60:0.1f} min)')
-
-            pos_end_time = time.time()
-
-    def reconstruct_volume(self, pt):
+    def reconstruct_birefringence_volume(self, pt, stokes):
         """
         This method performs reconstruction / pre / post processing for a single z-stack.
 
@@ -125,26 +103,8 @@ class qlipp_3D_pipeline:
         written data to the processed directory specified in the config
 
         """
-        position_data = self.data.get_array(pt[0])
-        t = pt[1]
 
-        LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
-
-        LF_array[0] = position_data[t,self.LF_indices[0]]
-        LF_array[1] = position_data[t, self.LF_indices[1]]
-        LF_array[2] = position_data[t, self.LF_indices[2]]
-        LF_array[3] = position_data[t, self.LF_indices[3]]
-
-        # ###### ADD PRE-PROCESSING ######
-        # # Add pre-proc denoising
-        # if self.config.preproc_denoise_use:
-        #     stokes = reconstruct_QLIPP_stokes(LF_array, self.reconstructor, self.bg_stokes)
-        #     stokes = self.preproc_denoise(stokes)
-        #     recon_data = self.bire_from_stokes(stokes)
-        #
-        # if not self.config.preproc_denoise_use:
-
-        recon_data = reconstruct_QLIPP_birefringence(LF_array, self.reconstructor, self.bg_stokes)
+        recon_data = reconstruct_QLIPP_birefringence(stokes, self.reconstructor)
 
         if 'Phase3D' in self.channels:
             phase3D = self.reconstructor.Phase_recon_3D(np.transpose(recon_data[2], (1, 2, 0)),
