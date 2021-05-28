@@ -123,7 +123,6 @@ def reconstruct_QLIPP_stokes(data, recon, bg_stokes):
 
 def reconstruct_QLIPP_birefringence(stokes, recon):
 
-    start_time = time.time()
     if len(stokes.shape) == 4:
         slices = stokes.shape[0]
         recon_data = np.zeros([stokes.shape[0], 4, stokes.shape[-2], stokes.shape[-1]])
@@ -134,9 +133,7 @@ def reconstruct_QLIPP_birefringence(stokes, recon):
     for z in range(slices):
         recon_data[z, :, :, :] = recon.Polarization_recon(stokes[z])
 
-    end_time = time.time()
 
-    print(f'Finished Computing Birefringence ({(end_time - start_time) / 60:0.2f} min)')
     return np.transpose(recon_data, (1,0,2,3))
 
 def reconstruct_QLIPP_3D(position, bg_data, reconstructor, method='Tikhonov',

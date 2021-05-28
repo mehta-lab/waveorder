@@ -124,7 +124,7 @@ class PipelineConstructor:
             if p_entry == 'all':
                 for p in range(self.data.get_num_positions()):
                     p_indices.append(p)
-                    break
+                break
             elif isinstance(p_entry,list):
                 for p in p_entry:
                     p_indices.append(p)
@@ -138,7 +138,7 @@ class PipelineConstructor:
             if t_entry == 'all':
                 for t in range(self.data.frames):
                     t_indices.append(t)
-                    break
+                break
             elif isinstance(t_entry,list):
                 for t in t_entry:
                     t_indices.append(t)
@@ -152,6 +152,16 @@ class PipelineConstructor:
             for time_point in t_indices:
                 self.pt_set.add((pos, time_point))
 
+    def _create_or_open_group(self, pt):
+        try:
+            self.reconstructor.writer.create_position(pt[0])
+            self.reconstructor.writer.init_array(self.reconstructor.data_shape,
+                                                 self.reconstructor.chunk_size,
+                                                 self.reconstructor.channels)
+        except:
+            self.reconstructor.writer.open_position(pt[0])
+
+
     #TODO: use arbol print statements
     def run(self):
 
@@ -159,13 +169,8 @@ class PipelineConstructor:
 
         for pt in self.pt_set:
             start_time = time.time()
-            self.reconstructor.writer.create_position(pt[0])
 
-            self.reconstructor.writer.init_array(self.reconstructor.data_shape,
-                                                 self.reconstructor.chunk_size,
-                                                 self.reconstructor.channels)
-
-
+            self._create_or_open_group(pt)
 
             pt_data = self.data.get_array(pt[0])
             pt_data = pt_data[pt[1]]
@@ -181,7 +186,7 @@ class PipelineConstructor:
             self.reconstructor.write_data(pt, pt_data, stokes, birefringence, phase, registered_data)
 
             end_time = time.time()
-            print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f})')
+            print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f}) min')
 
     def pre_processing(self, stokes):
 
