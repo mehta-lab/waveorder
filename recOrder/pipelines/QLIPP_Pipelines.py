@@ -37,8 +37,7 @@ class qlipp_pipeline(Pipeline_Builder):
         self.save_dir = save_dir
 
         # Dimension Parameters
-        self.pos = data.get_num_positions() if self.config.positions == 'all' else NotImplementedError
-        self.t = data.frames if self.config.timepoints == 'all' else NotImplementedError
+        self.t = data.frames if self.config.timepoints == ['all'] else NotImplementedError
         self.channels = self.config.output_channels
         if self.data.channels < 4:
             raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
@@ -60,7 +59,7 @@ class qlipp_pipeline(Pipeline_Builder):
         self.s0_idx, self.s1_idx, self.s2_idx, self.s3_idx, self.fluor_idxs = self.parse_channel_idx(self.chan_names)
 
         # Writer Parameters
-        self.data_shape = (self.t, len(self.channels), self.img_dim[2], self.img_dim[0], self.img_dim[1])
+        self.data_shape = (self.t, len(self.channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
         self.writer = WaveorderWriter(self.save_dir, 'physical' if mode != 'stokes' else 'stokes')
         self.writer.create_zarr_root(f'{self.name}.zarr')
@@ -73,13 +72,13 @@ class qlipp_pipeline(Pipeline_Builder):
                                                  self.calib_meta['Summary']['~ Swing (fraction)'],
                                                  len(self.calib_meta['Summary']['ChNames']),
                                                  self.config.NA_objective, self.config.NA_condenser,
-                                                 self.config.magnification, self.img_dim[2], self.config.z_step,
+                                                 self.config.magnification, self.data.slices, self.config.z_step,
                                                  self.config.pad_z, self.config.pixel_size,
                                                  self.config.background_correction, self.config.n_objective_media,
                                                  self.mode, self.config.use_gpu, self.config.gpu_id)
 
         # Compute BG stokes if necessary
-        if self.background_correction != None:
+        if self.bg_correction != None:
             bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
             self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
             self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
@@ -112,7 +111,7 @@ class qlipp_pipeline(Pipeline_Builder):
 
         return stokes
 
-    def reconstruct_phase_volume(self, pt, stokes):
+    def reconstruct_phase_volume(self, stokes):
         """
         This method reconstructs a phase volume or 2D phase image given stokes stack
 

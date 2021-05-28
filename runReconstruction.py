@@ -13,7 +13,7 @@ from recOrder.pipelines.pipeline_constructor import PipelineConstructor
 @click.option('--save_dir', required=True, type=str, help='path to the save directory')
 @click.option('--name', required=True, type=str, help='name to use for saving the data')
 @click.option('--config', required=False, type=str, help='path to config yml file')
-def parse_args(mode, data_dir, save_dir, name, config):
+def parse_args(method, mode, data_dir, save_dir, name, config):
     """parse command line arguments and return class with the arguments"""
 
     class Args():

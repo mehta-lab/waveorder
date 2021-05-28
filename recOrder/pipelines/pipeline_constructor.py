@@ -17,10 +17,12 @@ class PipelineConstructor:
         print('Reading Data...')
         data = MicromanagerReader(data_dir, data_type, extract_data=True)
         end = time.time()
-        print(f'Finished Reading Data ({end - start / 60:0.1f} min')
+        print(f'Finished Reading Data ({(end - start) / 60 :0.1f} min)')
 
         self.config = config
         self.data = data
+
+        self._gen_coord_set()
 
         if method == 'QLIPP':
             self.reconstructor = qlipp_pipeline(config, data, save_dir, name, mode)
@@ -47,7 +49,7 @@ class PipelineConstructor:
         """
         # CAN ADD OTHER PREPROC FUNCTIONS IN FUTURE
         denoise_params = []
-        if self.config.pre_proc_denoise_use:
+        if self.config.preproc_denoise_use:
             for i in range(len(self.config.preproc_denoise_channels)):
                 threshold = 0.1 if self.config.preproc_denoise_thresholds is None \
                     else self.config.preproc_denoise_thresholds[i]
@@ -77,7 +79,7 @@ class PipelineConstructor:
         """
 
         denoise_params = []
-        if self.config.post_proc_denoise_use:
+        if self.config.postproc_denoise_use:
             for i in range(len(self.config.postproc_denoise_channels)):
                 threshold = 0.1 if self.config.postproc_denoise_thresholds is None \
                     else self.config.postproc_denoise_thresholds[i]
@@ -90,10 +92,10 @@ class PipelineConstructor:
             denoise_params = None
 
         registration_params = []
-        if self.config.post_proc_registration_use:
+        if self.config.postproc_registration_use:
             for i in range(len(self.config.postproc_registration_channel_idx)):
                 registration_params.append([self.config.postproc_registration_channel_idx[i],
-                                            self.config.post_proc_registration_shift[i]])
+                                            self.config.postproc_registration_shift[i]])
         else:
             registration_params = None
 
@@ -154,24 +156,32 @@ class PipelineConstructor:
     def run(self):
 
         print(f'Beginning Reconstruction...')
-        for pt in self.pt_set:
 
+        for pt in self.pt_set:
+            start_time = time.time()
             self.reconstructor.writer.create_position(pt[0])
+
             self.reconstructor.writer.init_array(self.reconstructor.data_shape,
                                                  self.reconstructor.chunk_size,
                                                  self.reconstructor.channels)
 
-            pt_data = self.data.get_array(pt[0], pt[1])
+
+
+            pt_data = self.data.get_array(pt[0])
+            pt_data = pt_data[pt[1]]
 
             stokes = self.reconstructor.reconstruct_stokes_volume(pt_data)
             stokes = self.pre_processing(stokes)
 
             birefringence = self.reconstructor.reconstruct_birefringence_volume(stokes)
-            phase = self.reconstruct.reconstruct_phase_volume(stokes)
+            phase = self.reconstructor.reconstruct_phase_volume(stokes)
 
             birefringence, phase, registered_data = self.post_processing(pt_data, phase, birefringence)
 
             self.reconstructor.write_data(pt, pt_data, stokes, birefringence, phase, registered_data)
+
+            end_time = time.time()
+            print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f})')
 
     def pre_processing(self, stokes):
 

@@ -93,7 +93,7 @@ def initialize_reconstructor(image_dim, wavelength, swing, N_channel, NA_obj, NA
     recon = setup(image_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi=chi,
                   n_media=n_media, cali=cali, bg_option=bg_option,
                   A_matrix=inst_mat, QLIPP_birefringence_only=False, pad_z=pad_z,
-                  phase_deconv='3D', illu_mode='BF', use_gpu=use_gpu, gpu_id=gpu_id)
+                  phase_deconv=mode, illu_mode='BF', use_gpu=use_gpu, gpu_id=gpu_id)
 
     recon.N_channel = N_channel
 
@@ -123,6 +123,7 @@ def reconstruct_QLIPP_stokes(data, recon, bg_stokes):
 
 def reconstruct_QLIPP_birefringence(stokes, recon):
 
+    start_time = time.time()
     if len(stokes.shape) == 4:
         slices = stokes.shape[0]
         recon_data = np.zeros([stokes.shape[0], 4, stokes.shape[-2], stokes.shape[-1]])
@@ -133,35 +134,10 @@ def reconstruct_QLIPP_birefringence(stokes, recon):
     for z in range(slices):
         recon_data[z, :, :, :] = recon.Polarization_recon(stokes[z])
 
+    end_time = time.time()
+
+    print(f'Finished Computing Birefringence ({(end_time - start_time) / 60:0.2f} min)')
     return np.transpose(recon_data, (1,0,2,3))
-
-def reconstruct_QLIPP_birefringence(position, recon, bg_stokes):
-
-    start_time = time.time()
-    # print('Computing Birefringence...')
-
-    recon_data = np.zeros([position.shape[1], 4, position.shape[2], position.shape[3]])
-    raw_stack = np.transpose(position[0:recon.N_channel], (1, 0, 2, 3))
-
-    for z in range(position.shape[1]):
-        stokes_data = recon.Stokes_recon(raw_stack[z])
-
-        stokes_data = recon.Stokes_transform(stokes_data)
-
-        if recon.bg_option != 'None':
-
-            S_image_tm = recon.Polscope_bg_correction(stokes_data, bg_stokes)
-            recon_data[z, :, :, :] = recon.Polarization_recon(S_image_tm)
-
-        else:
-            recon_data[z, :, :, :] = recon.Polarization_recon(stokes_data)
-
-    elapsed_time = (time.time() - start_time) / 60
-    print(f'Finished Computing Birefringence ({elapsed_time:0.2f} min)')
-
-    return np.transpose(recon_data, (1,0,2,3))
-
-
 
 def reconstruct_QLIPP_3D(position, bg_data, reconstructor, method='Tikhonov',
                          reg_re=1e-4, reg_im=1e-4, rho=1e-5,
