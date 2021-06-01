@@ -172,8 +172,7 @@ class PipelineConstructor:
 
             self._create_or_open_group(pt)
 
-            pt_data = self.data.get_array(pt[0])
-            pt_data = pt_data[pt[1]]
+            pt_data = self.data.get_array(pt[0])[pt[1]]
 
             stokes = self.reconstructor.reconstruct_stokes_volume(pt_data)
             stokes = self.pre_processing(stokes)

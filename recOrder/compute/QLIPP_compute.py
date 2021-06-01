@@ -105,7 +105,7 @@ def initialize_reconstructor(image_dim, wavelength, swing, N_channel, NA_obj, NA
 def reconstruct_QLIPP_stokes(data, recon, bg_stokes):
 
     stokes_stack = []
-    raw_stack = np.transpose(data[0:recon.N_channel], (1, 0, 2, 3))
+    raw_stack = np.transpose(data, (1, 0, 2, 3))
 
     for z in range(data.shape[1]):
         stokes_data = recon.Stokes_recon(raw_stack[z])
@@ -125,13 +125,13 @@ def reconstruct_QLIPP_birefringence(stokes, recon):
 
     if len(stokes.shape) == 4:
         slices = stokes.shape[0]
-        recon_data = np.zeros([stokes.shape[0], 4, stokes.shape[-2], stokes.shape[-1]])
+        recon_data = np.zeros([slices, 4, stokes.shape[-2], stokes.shape[-1]])
     elif len(stokes.shape) == 3:
         slices = 1
         recon_data = np.zeros([1, 4, stokes.shape[-2], stokes.shape[-1]])
 
     for z in range(slices):
-        recon_data[z, :, :, :] = recon.Polarization_recon(stokes[z])
+        recon_data[z, :, :, :] = recon.Polarization_recon(stokes[z] if slices != 1 else stokes)
 
 
     return np.transpose(recon_data, (1,0,2,3))

@@ -100,7 +100,7 @@ class qlipp_pipeline(Pipeline_Builder):
         """
 
 
-        LF_array = np.zeros([4, self.slices, self.data.height, self.data.width])
+        LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
 
         LF_array[0] = data[self.LF_indices[0]]
         LF_array[1] = data[self.LF_indices[1]]
@@ -144,7 +144,7 @@ class qlipp_pipeline(Pipeline_Builder):
                                                         reg_u=self.config.Tik_reg_abs_2D,
                                                         reg_p=self.config.Tik_reg_ph_2D,
                                                         rho=self.config.rho_2D, lambda_u=self.config.TV_reg_abs_2D,
-                                                        lambda_p=self.config.TV_reg_ph_2D, itr=self.config.itr_2d,
+                                                        lambda_p=self.config.TV_reg_ph_2D, itr=self.config.itr_2D,
                                                         verbose=False)
 
             return phase2D
@@ -169,6 +169,8 @@ class qlipp_pipeline(Pipeline_Builder):
 
         """
 
+
+        # print(np.shape(stokes[slice(None) if self.slices != 1 else self.focus_slice]))
         birefringence = reconstruct_QLIPP_birefringence(stokes[slice(None) if self.slices != 1 else self.focus_slice],
                                                         self.reconstructor)
 

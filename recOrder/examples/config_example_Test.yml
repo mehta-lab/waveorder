@@ -14,7 +14,7 @@ pre_processing:
     level: [1, 1, 1, 1]
 
 processing:
-  output_channels: ['Retardance', 'Orientation','Brightfield', 'Phase3D']
+  output_channels: ['Retardance', 'Orientation','Brightfield', 'Phase2D']
 
   # (list) Any combination of the following values.
   #    'Retardance', 'Orientation','Brightfield', 'Phase3D'

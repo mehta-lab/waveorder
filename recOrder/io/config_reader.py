@@ -1,27 +1,25 @@
 import yaml
-# import glob
-import os.path
-from dataclasses import dataclass
-# from collections.abc import Iterable
-# from .imgIO import get_sub_dirs
 
-# @dataclass(frozen=True)
+
+
 class ConfigReader(object):
 
-    def __init__(self, path=[]):
+    def __init__(self, path=[], data_dir=None, save_dir=None, name=None):
         object.__setattr__(self, 'yaml_config', None)
 
         # Dataset Parameters
-        # object.__setattr__(self, 'data_dir', None)
+        object.__setattr__(self, 'data_dir', data_dir)
         object.__setattr__(self, 'data_type', None)
-        # object.__setattr__(self, 'processed_dir', None)
-        # object.__setattr__(self, 'samples', None)
+        object.__setattr__(self, 'save_dir', save_dir)
+        object.__setattr__(self, 'data_save_name', name)
+        object.__setattr__(self, 'method', None)
+        object.__setattr__(self, 'mode', None)
+
         object.__setattr__(self, 'positions', ['all'])
         object.__setattr__(self, 'z_slices', ['all'])
         object.__setattr__(self, 'timepoints', ['all'])
         object.__setattr__(self, 'background', None)
         object.__setattr__(self, 'calibration_metadata', None)
-        object.__setattr__(self, 'sample_paths', None)
 
         # Pre-Processing
         ## Denoising
@@ -79,37 +77,40 @@ class ConfigReader(object):
         if path:
             self.read_config(path)
 
-    # def __setattr__(self, name, value):
-    #     raise AttributeError('''Can't set attribute "{0}"'''.format(name))
-
     def __enter__(self):
         return self
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
     def __setattr__(self, name, value):
         raise AttributeError("Attempting to change immutable object")
-    # def __setattr__(self, name, value):
-    #     raise AttributeError('''Can't set attribute "{0}"'''.format(name))
 
     def read_config(self, path):
         with open(path, 'r') as f:
             object.__setattr__(self, 'yaml_config', yaml.safe_load(f))
-            # self.yaml_config = yaml.load(f)
 
         assert 'dataset' in self.yaml_config, \
             'dataset is a required field in the config yaml file'
-        # assert 'data_dir' in self.yaml_config['dataset'], \
-        #     'Please provide data_dir in config file'
-        # assert 'processed_dir' in self.yaml_config['dataset'], \
-        #     'Please provide processed_dir in config file'
-        # assert 'samples' in self.yaml_config['dataset'], \
-        #     'Please provide samples in config file'
+        if not self.method: assert 'mode' in self.yaml_config['dataset'], \
+            'Please provide method in config file or CLI argument'
+        if not self.mode: assert 'mode' in self.yaml_config['dataset'], \
+            'Please provide mode in config file or CLI argument'
+        if not self.data_dir: assert 'data_dir' in self.yaml_config['dataset'], \
+            'Please provide data_dir in config file or CLI argument'
+        if not self.save_dir: assert 'save_dir' in self.yaml_config['dataset'], \
+            'Please provide save_dir in config file or CLI argument'
+        if not self.data_save_name: assert 'save_dir' in self.yaml_config['dataset'], \
+            'Please provide data_save_name in config file or CLI argument'
 
-        # self.data_dir = self.yaml_config['dataset']['data_dir']
-        # object.__setattr__(self, 'data_dir', self.yaml_config['dataset']['data_dir'])
-        # object.__setattr__(self, 'data_type', self.yaml_config['dataset']['data_type'])
-        # object.__setattr__(self, 'processed_dir', self.yaml_config['dataset']['processed_dir'])
-        # object.__setattr__(self, 'default', self.yaml_config['default'])
+        if self.method and self.yaml_config['dataset']['method'] is not None:
+            object.__setattr__(self, 'method', self.yaml_config['dataset']['method'])
+        if self.mode and self.yaml_config['dataset']['mode'] is not None:
+            object.__setattr__(self, 'mode', self.yaml_config['dataset']['mode'])
+        if self.data_dir and self.yaml_config['dataset']['data_dir'] is not None:
+            object.__setattr__(self, 'data_dir', self.yaml_config['dataset']['data_dir'])
+        if self.save_dir and self.yaml_config['dataset']['save_dir'] is not None:
+            object.__setattr__(self, 'save_dir', self.yaml_config['dataset']['save_dir'])
+        if self.data_save_name and self.yaml_config['dataset']['data_save_name'] is not None:
+            object.__setattr__(self, 'data_save_name', self.yaml_config['dataset']['data_save_name'])
 
         for (key, value) in self.yaml_config['dataset'].items():
             # if key == 'samples':
@@ -213,8 +214,6 @@ class ConfigReader(object):
                         phase_processing = True
                     else:
                         phase_processing = False
-                elif key == 'calibration_scheme':
-                    object.__setattr__(self, 'calibration_scheme', value)
                 elif key == 'background_correction':
                     object.__setattr__(self, 'background_correction', value)
                 elif key == 'flatfield_correction':

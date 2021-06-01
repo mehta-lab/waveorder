@@ -1,14 +1,18 @@
-default: 'QLIPP_3D'
-# the default configratuons for 3D Reconstruction, 3D Reconstruction over time, and 2D reconstruction over time
-
 dataset:
+  method: 'QLIPP'
+
+  mode: '3D'
+
   data_dir: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA'
   # (str) The path of the folder that holds raw data
 
   data_type: 'ometiff'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
 
-  samples: ['NewKaz_2T_3P_65Z_2048_2048_1']
+  save_dir: '/gpfs/CompMicro/projects/microscope_dev/2021_05_10_NewKazansky_PipelineTest'
+  # (str) The path of the parent folder where the output will be saved
+
+  data_save_name: ['NewKaz_2T_3P_65Z_2048_2048_1']
   # (str or list) Acquisition folder(s) within the experiment folder to process,
 
   positions: 'all'
@@ -31,9 +35,6 @@ dataset:
   ##   a list, e.g. ['/path/to/bg_1', '/path/to/bg_2'], of one background dataset per sample
 
   calibration_metadata: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA/metadata.txt'
-
-  processed_dir: '/gpfs/CompMicro/projects/microscope_dev/2021_05_10_NewKazansky_PipelineTest'
-  # (str) The path of the parent folder where the output will be saved
 
 pre_processing:
   denoise:
