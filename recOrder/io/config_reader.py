@@ -119,9 +119,9 @@ class ConfigReader(object):
     def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
 
         with open(cfg_path) as f:
-            self.__set_attr(self, 'config', yaml.load(f))
+            self.__set_attr(self, 'config', yaml.safe_load(f))
 
-        # self._check_assertions(data_dir, save_dir, method, mode, name)
+        self._check_assertions(data_dir, save_dir, method, mode, name)
         self._parse_cli(data_dir, save_dir, method, mode, name)
         self._parse_dataset()
         self._parse_preprocessing()
@@ -131,8 +131,39 @@ class ConfigReader(object):
         if self.data_save_name == None:
             self._use_default_name()
 
-    def _check_assertions(self):
-        pass
+    #todo: finish assertions for processing field
+    def _check_assertions(self, data_dir, save_dir, method, mode, name):
+
+        # assert main fields of config
+        assert 'dataset' in self.config, \
+            'dataset is a required field in the config yaml file'
+        assert 'processing' in self.config, \
+            'processing is a required field in the config yaml file'
+
+        if not method: assert 'mode' in self.config['dataset'], \
+            'Please provide method in config file or CLI argument'
+        if not mode: assert 'mode' in self.config['dataset'], \
+            'Please provide mode in config file or CLI argument'
+        if not data_dir: assert 'data_dir' in self.config['dataset'], \
+            'Please provide data_dir in config file or CLI argument'
+        if not save_dir: assert 'save_dir' in self.config['dataset'], \
+            'Please provide save_dir in config file or CLI argument'
+        if not name: assert 'save_dir' in self.config['dataset'], \
+            'Please provide data_save_name in config file or CLI argument'
+
+        if 'preprocessing' in self.config:
+            for key, value in PREPROCESSING.items():
+                if self.config['preprocessing'][key]['use']:
+                    for key_child, value_child in PREPROCESSING[key].items():
+                        assert key_child in self.config['preprocessing'][key], \
+                            f'User must specify {key_child} to use for {key}'
+
+        if 'postprocessing' in self.config:
+            for key, value in POSTPROCESSING.items():
+                if self.config['postprocessing'][key]['use']:
+                    for key_child, value_child in POSTPROCESSING[key].items():
+                        assert key_child in self.config['postprocessing'][key], \
+                            f'User must specify {key_child} to use for {key}'
 
     def _use_default_name(self):
         path = pathlib.PurePath(self.data_dir)
