@@ -197,7 +197,7 @@ class ConfigReader(object):
             if isinstance(value, dict):
                 yaml_dict['post_processing'][key] = {}
                 for key_child, value_child in POSTPROCESSING[key].items():
-                    yaml_dict['post_processing'][key][key_child] = getattr(self.preprocessing, f'{key}_{key_child}')
+                    yaml_dict['post_processing'][key][key_child] = getattr(self.postprocessing, f'{key}_{key_child}')
             else:
                 yaml_dict['post_processing'][key] = getattr(self, key)
 
