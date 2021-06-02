@@ -1,6 +1,6 @@
 import pytest
 from ..conftest import setup_folder_qlipp_pipeline
-from recOrder.io.config_reader import ConfigReader
+from recOrder.io.config_reader_old import ConfigReader
 from recOrder.pipelines.run_pipeline import run_pipeline
 
 

@@ -2,12 +2,9 @@ from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import MicromanagerReader
 from waveorder.io.writer import WaveorderWriter
 from recOrder.io.utils import load_bg
-from waveorder.util import wavelet_softThreshold
 from recOrder.compute.QLIPP_compute import *
-from recOrder.postproc.post_processing import *
 import json
 import numpy as np
-import time
 from recOrder.pipelines.Pipeline_ABC import Pipeline_Builder
 
 
@@ -18,7 +15,7 @@ class qlipp_pipeline(Pipeline_Builder):
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
     """
 
-    def __init__(self, config, data: MicromanagerReader, save_dir: str, name: str, mode: str):
+    def __init__(self, config: ConfigReader, data: MicromanagerReader, save_dir: str, name: str, mode: str):
         """
         Parameters
         ----------
