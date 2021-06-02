@@ -15,7 +15,7 @@ class PipelineConstructor:
 
         start = time.time()
         print('Reading Data...')
-        data = MicromanagerReader(data_dir, data_type, extract_data=True)
+        data = MicromanagerReader(config.data_dir, config.data_type, extract_data=True)
         end = time.time()
         print(f'Finished Reading Data ({(end - start) / 60 :0.1f} min)')
 
@@ -25,7 +25,8 @@ class PipelineConstructor:
         self._gen_coord_set()
 
         if method == 'QLIPP':
-            self.reconstructor = qlipp_pipeline(config, data, save_dir, name, mode)
+            self.reconstructor = qlipp_pipeline(self.config, data, self.config.save_dir,
+                                                self.config.data_save_name, self.config.mode)
 
         elif mode == 'denoise':
             raise NotImplementedError
@@ -49,14 +50,14 @@ class PipelineConstructor:
         """
         # CAN ADD OTHER PREPROC FUNCTIONS IN FUTURE
         denoise_params = []
-        if self.config.preproc_denoise_use:
-            for i in range(len(self.config.preproc_denoise_channels)):
-                threshold = 0.1 if self.config.preproc_denoise_thresholds is None \
-                    else self.config.preproc_denoise_thresholds[i]
-                level = 1 if self.config.preproc_denoise_levels is None \
-                    else self.config.preproc_denoise_levels[i]
+        if self.config.preprocessing.denoise_use:
+            for i in range(len(self.config.preprocessing.denoise_channels)):
+                threshold = 0.1 if self.config.preprocessing.denoise_threshold is None \
+                    else self.config.preprocessing.denoise_threshold[i]
+                level = 1 if self.config.preprocessing.denoise_level is None \
+                    else self.config.preprocessing.denoise_level[i]
 
-                denoise_params.append([self.config.preproc_denoise_channels[i], threshold, level])
+                denoise_params.append([self.config.preprocessing.denoise_channels[i], threshold, level])
 
             return denoise_params
 
@@ -79,23 +80,23 @@ class PipelineConstructor:
         """
 
         denoise_params = []
-        if self.config.postproc_denoise_use:
-            for i in range(len(self.config.postproc_denoise_channels)):
-                threshold = 0.1 if self.config.postproc_denoise_thresholds is None \
-                    else self.config.postproc_denoise_thresholds[i]
-                level = 1 if self.config.postproc_denoise_levels is None \
-                    else self.config.postproc_denoise_levels[i]
+        if self.config.postprocessing.denoise_use:
+            for i in range(len(self.config.postprocessing.denoise_channels)):
+                threshold = 0.1 if self.config.postprocessing.denoise_threshold is None \
+                    else self.config.postprocessing.denoise_threshold[i]
+                level = 1 if self.config.postprocessing.denoise_level is None \
+                    else self.config.postprocessing.denoise_level[i]
 
-                denoise_params.append([self.config.postproc_denoise_channels[i], threshold, level])
+                denoise_params.append([self.config.postprocessing.denoise_channels[i], threshold, level])
 
         else:
             denoise_params = None
 
         registration_params = []
-        if self.config.postproc_registration_use:
-            for i in range(len(self.config.postproc_registration_channel_idx)):
-                registration_params.append([self.config.postproc_registration_channel_idx[i],
-                                            self.config.postproc_registration_shift[i]])
+        if self.config.postprocessing.registration_use:
+            for i in range(len(self.config.postprocessing.registration_channel_idx)):
+                registration_params.append([self.config.postprocessing.registration_channel_idx[i],
+                                            self.config.postprocessing.registration_shift[i]])
         else:
             registration_params = None
 
