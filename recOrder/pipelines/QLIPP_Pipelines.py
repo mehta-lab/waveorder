@@ -60,7 +60,7 @@ class qlipp_pipeline(Pipeline_Builder):
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
         self.writer = WaveorderWriter(self.save_dir, 'physical' if mode != 'stokes' else 'stokes')
         self.writer.create_zarr_root(f'{self.name}.zarr')
-        self.writer.store.attrs.put(self.config.yaml_config)
+        self.writer.store.attrs.put(self.config.config)
 
         #TODO: read step size from metadata
 
