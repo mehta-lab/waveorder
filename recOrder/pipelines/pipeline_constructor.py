@@ -10,6 +10,8 @@ class PipelineConstructor:
     This will pull the necessary pipeline based off the config default.
     """
 
+    #TODO: Reorganize arguments with new config reader
+    #TODO: copy config to save_dir
     def __init__(self, method: str, mode: str, data_dir: str, save_dir: str, name: str,
                  config: ConfigReader, data_type: str = 'ometiff'):
 
