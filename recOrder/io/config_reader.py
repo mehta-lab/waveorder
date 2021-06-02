@@ -207,7 +207,6 @@ class ConfigReader(object):
             else:
                 warnings.warn(f'yaml DATASET config field {key} is not recognized')
 
-    #TODO: MAKE COMPATIBLE WITH PREDEFINED LIST
     def _parse_preprocessing(self):
         for key, value in self.config['pre_processing'].items():
             if key in PREPROCESSING.keys():

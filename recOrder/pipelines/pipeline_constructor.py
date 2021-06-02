@@ -103,12 +103,6 @@ class PipelineConstructor:
 
         return denoise_params, registration_params
 
-
-    #TODO: Create metadata dictionary to append to zarr attributes
-    def _create_meta_dict(self):
-
-        dict = {'Dataset': {}}
-
     def _gen_coord_set(self):
         """
         Function creates a set of all position, time values to loop through for reconstruction
