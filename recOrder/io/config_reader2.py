@@ -7,6 +7,7 @@ DATASET = {
     'mode': None,
     'data_dir': None,
     'save_dir': None,
+    'data_type': 'ometiff',
     'data_save_name': None,
     'positions': ['all'],
     'timepoints': ['all'],
@@ -58,6 +59,7 @@ PROCESSING = {
 POSTPROCESSING = {
     'denoise':{
         'use': False,
+        'channels': None,
         'threshold': None,
         'level': None
     },
@@ -77,33 +79,51 @@ class ConfigReader(object):
     def __init__(self, cfg_path=None, data_dir=None, save_dir=None, method=None, mode=None, name=None):
 
         # initialize defaults
-        self.preprocessing = Object()
-        self.postprocessing = Object()
+        self.__set_attr(self, 'preprocessing', Object())
+        self.__set_attr(self, 'postprocessing', Object())
 
-        for entry in DATASET:
-            setattr(self, entry[0], entry[1])
-        for entry in PREPROCESSING:
-            setattr(self.preprocessing, entry[0], entry[1])
-        for entry in PROCESSING:
-            setattr(self, entry[0], entry[1])
-        for entry in POSTPROCESSING:
-            setattr(self.postprocessing, entry[0], entry[1])
+        for key, value in DATASET.items():
+            self.__set_attr(self, key, value)
+        for key, value in PREPROCESSING.items():
+            if isinstance(value, dict):
+                for key_child, value_child in PREPROCESSING[key].items():
+                    self.__set_attr(self.preprocessing, f'{key}_{key_child}', value_child)
+            else:
+                self.__set_attr(self.preprocessing, key, value)
+        for key, value in PROCESSING.items():
+            self.__set_attr(self, key, value)
+        for key, value in POSTPROCESSING.items():
+            if isinstance(value, dict):
+                for key_child, value_child in POSTPROCESSING[key].items():
+                    self.__set_attr(self.postprocessing, f'{key}_{key_child}', value_child)
+            else:
+                self.__set_attr(self.postprocessing, key, value)
+
         # parse config
         if cfg_path:
             self.read_config(cfg_path, data_dir, save_dir, method, mode, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
 
     # Override set attribute function to disallow changes after init
     def __setattr__(self, name, value):
         raise AttributeError("Attempting to change immutable object")
 
+    def __set_attr(self, object_, name, value):
+        object.__setattr__(object_, name, value)
+
     def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
 
         with open(cfg_path) as f:
-            setattr(self, 'config', yaml.load(f))
+            self.__set_attr(self, 'config', yaml.load(f))
 
-        self._check_assertions(data_dir, save_dir, method, mode, name)
+        # self._check_assertions(data_dir, save_dir, method, mode, name)
         self._parse_cli(data_dir, save_dir, method, mode, name)
-        self._parse_dataset(data_dir, save_dir, method, mode, name)
+        self._parse_dataset()
         self._parse_preprocessing()
         self._parse_processing()
         self._parse_postprocessing()
@@ -116,19 +136,19 @@ class ConfigReader(object):
 
     def _use_default_name(self):
         path = pathlib.PurePath(self.data_dir)
-        setattr(self, 'data_save_name', path.name)
+        self.__set_attr(self, 'data_save_name', path.name)
 
     def _parse_cli(self, data_dir, save_dir, method, mode, name):
         if data_dir:
-            setattr(self, 'data_dir', data_dir)
+            self.__set_attr(self, 'data_dir', data_dir)
         if save_dir:
-            setattr(self, 'save_dir', save_dir)
+            self.__set_attr(self, 'save_dir', save_dir)
         if method:
-            setattr(self, 'method', method)
+            self.__set_attr(self, 'method', method)
         if mode:
-            setattr(self, 'mode', mode)
+            self.__set_attr(self, 'mode', mode)
         if name:
-            setattr(self, 'data_save_name', name)
+            self.__set_attr(self, 'data_save_name', name)
 
     def _parse_dataset(self):
         for key, value in self.config['dataset'].items():
@@ -141,47 +161,47 @@ class ConfigReader(object):
 
                 elif key == 'positions':
                     if isinstance(value, str) and value == 'all':
-                        setattr(self, key, [value])
+                        self.__set_attr(self, key, [value])
                     else:
-                        setattr(self, key, value)
+                        self.__set_attr(self, key, value)
 
                 elif key == 'timepoints':
                     if isinstance(value, str) and value == 'all':
-                        setattr(self, key, [value])
+                        self.__set_attr(self, key, [value])
                     else:
-                        setattr(self, key, value)
+                        self.__set_attr(self, key, value)
 
                 else:
-                    setattr(self, key, value)
+                    self.__set_attr(self, key, value)
 
             else:
                 warnings.warn(f'yaml DATASET config field {key} is not recognized')
 
     #TODO: MAKE COMPATIBLE WITH PREDEFINED LIST
     def _parse_preprocessing(self):
-        for key, value in self.config['preprocessing'].items():
+        for key, value in self.config['pre_processing'].items():
             if key in PREPROCESSING.keys():
-                for key_child, value_child in self.config['preprocessing'][key]:
-                    if key_child in key.keys():
-                        setattr(self.preprocessing, f'{key}_{key_child}', value_child)
+                for key_child, value_child in self.config['pre_processing'][key].items():
+                    if key_child in PREPROCESSING[key].keys():
+                        self.__set_attr(self.preprocessing, f'{key}_{key_child}', value_child)
                     else:
                         warnings.warn(f'yaml PREPROCESSING config field {key}, {key_child} is not recognized')
             else:
                 warnings.warn(f'yaml PREPROCESSING config field {key} is not recognized')
 
     def _parse_processing(self):
-        for key, value in self.config['dataset'].items():
+        for key, value in self.config['processing'].items():
             if key in PROCESSING.keys():
-                setattr(self, key, value)
+                self.__set_attr(self, key, value)
             else:
                 warnings.warn(f'yaml PROCESSING config field {key} is not recognized')
 
     def _parse_postprocessing(self):
-        for key, value in self.config['postprocessing'].items():
+        for key, value in self.config['post_processing'].items():
             if key in POSTPROCESSING.keys():
-                for key_child, value_child in self.config['postprocessing'][key]:
-                    if key_child in key.keys():
-                        setattr(self.postprocessing, f'{key}_{key_child}', value_child)
+                for key_child, value_child in self.config['post_processing'][key].items():
+                    if key_child in POSTPROCESSING[key].keys():
+                        self.__set_attr(self.postprocessing, f'{key}_{key_child}', value_child)
                     else:
                         warnings.warn(f'yaml POSTPROCESSING config field {key}, {key_child} is not recognized')
             else:
