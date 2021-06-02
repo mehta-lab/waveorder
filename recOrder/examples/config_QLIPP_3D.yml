@@ -3,7 +3,7 @@ dataset:
 
   mode: '3D'
 
-  data_dir: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA'
+  data_dir: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA/NewKaz_2T_3P_65Z_2048_2048_1'
   # (str) The path of the folder that holds raw data
 
   data_type: 'ometiff'
