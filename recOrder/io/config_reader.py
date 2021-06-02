@@ -118,8 +118,8 @@ class ConfigReader(object):
 
     def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
 
-        with open(cfg_path) as f:
-            self.__set_attr(self, 'config', yaml.safe_load(f))
+
+        self.__set_attr(self, 'config', yaml.safe_load(open(cfg_path)))
 
         self._check_assertions(data_dir, save_dir, method, mode, name)
         self._parse_cli(data_dir, save_dir, method, mode, name)
