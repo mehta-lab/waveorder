@@ -27,7 +27,7 @@ def parse_args(method, mode, data_dir, save_dir, name, config):
 
     return Args(method, mode, data_dir, save_dir, name, config)
 
-if __name__ == '__main__':
+def main()
 
     Args = parse_args(standalone_mode=False)
 
