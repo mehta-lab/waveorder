@@ -2,9 +2,9 @@ import os.path as osp
 from setuptools import setup, find_packages
 
 # todo: modify as we decide on versions, names, descriptions. readme
-MIN_PY_VER = ''
-DISTNAME = ''
-DESCRIPTION = ''
+MIN_PY_VER = '3.7'
+DISTNAME = 'recOrder'
+DESCRIPTION = 'computational microscopy toolkit for label-free imaging'
 with open("README.md", "r") as fh:
     LONG_DESCRIPTION = fh.read()
     LONG_DESCRIPTION_content_type = "text/markdown"
@@ -12,7 +12,7 @@ with open("README.md", "r") as fh:
 LICENSE = 'Chan Zuckerberg Biohub Software License'
 DOWNLOAD_URL = ''
 
-INSTALL_REQUIRES = []
+INSTALL_REQUIRES = ['numpy', 'scipy', 'matplotlib', ]
 REQUIRES = []
 
 # todo: modify for python dependency
@@ -64,7 +64,7 @@ if __name__ == '__main__':
         python_requires=f'>={MIN_PY_VER}',
         packages=PACKAGES,
         include_package_data=True,
-        entry_points={
-            'console_scripts': ['']
-        }
+        # entry_points={
+        #     'console_scripts': ['']
+        # }
     )

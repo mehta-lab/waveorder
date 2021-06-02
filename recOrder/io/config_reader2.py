@@ -16,10 +16,11 @@ DATASET = {
 }
 
 PREPROCESSING = {
-    ('denoise_use', False),
-    ('denoise_channels', None),
-    ('denoise_threshold', None),
-    ('denoise_level', None)
+    ('denoise',
+        [('use', False),
+         ('channels', None),
+         ('threshold',None),
+         ('level', None)])
 }
 
 PROCESSING = {
@@ -51,15 +52,19 @@ PROCESSING = {
     ('pad_z', 0)
 }
 
-POSTPROCESSING = {
-    ('denoise_use', False),
-    ('denoise_channels', None),
-    ('denoise_threshold', None),
-    ('denoise_level', None),
 
-    ('registration_use', False),
-    ('registration_channel_idx', None),
-    ('registration_shift', None)
+
+POSTPROCESSING = {
+    ('denoise',
+        [('use', False),
+         ('channels', None),
+         ('threshold',None),
+         ('level', None)]),
+
+    ('registration',
+         [('use', False),
+          ('channel_idx', None),
+          ('shift', None)])
 }
 
 class Object():
@@ -150,23 +155,31 @@ class ConfigReader(object):
             else:
                 warnings.warn(f'yaml DATASET config field {key} is not recognized')
 
+    #TODO: MAKE COMPATIBLE WITH PREDEFINED LIST
     def _parse_preprocessing(self):
         for key, value in self.config['preprocessing'].items():
-            for key_child, value_child in self.config['preprocessing'][key]:
-                setattr(self.preprocessing, key_child, value_child)
+            if key in PREPROCESSING:
+                for key_child, value_child in self.config['preprocessing'][key]:
+                    setattr(self.preprocessing, f'key_{key_child}', value_child)
+                else:
+                    warnings.warn(f'yaml PREPROCESSING config field {key}, {key_child} is not recognized')
             else:
-                warnings.warn(f'yaml PREPROCESSING config field {key}, {key_child} is not recognized')
+                warnings.warn(f'yaml PREPROCESSING config field {key} is not recognized')
 
-    def _parse_processing(self, ):
+    def _parse_processing(self):
         for key, value in self.config['dataset'].items():
-            if key in DATASET:
+            if key in PROCESSING:
                 setattr(self, key, value)
             else:
                 warnings.warn(f'yaml PROCESSING config field {key} is not recognized')
 
     def _parse_postprocessing(self):
         for key, value in self.config['postprocessing'].items():
-            for key_child, value_child in self.config['postprocessing'][key]:
-                setattr(self.preprocessing, key_child, value_child)
+            if key in POSTPROCESSING:
+                for key_child, value_child in self.config['postprocessing'][key]:
+                    if f'{key}_{key_child}' in
+                    setattr(self.postprocessing, f'key_{key_child}', value_child)
+                else:
+                    warnings.warn(f'yaml POSTPROCESSING config field {key}, {key_child} is not recognized')
             else:
-                warnings.warn(f'yaml POSTPROCESSING config field {key}, {key_child} is not recognized')
+                warnings.warn(f'yaml POSTPROCESSING config field {key} is not recognized')
