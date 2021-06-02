@@ -119,7 +119,7 @@ class ConfigReader(object):
     def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
 
 
-        with open(cfg_path, 'r') as file:
+        with file(config) as file:
             config = yaml.safe_load(file)
 
         self.__set_attr(self, 'config', config)

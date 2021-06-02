@@ -12,7 +12,7 @@ dataset:
   save_dir: '/gpfs/CompMicro/projects/microscope_dev/recOrder_Testing'
   # (str) The path of the parent folder where the output will be saved
 
-  positions: 'all'gu
+  positions: 'all'
   # (str or list) Positions within all of sample folders that are to be analyzed.
   ##   'all'
   ##   [0, N] for pos 0 through N
