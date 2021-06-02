@@ -196,17 +196,17 @@ class PipelineConstructor:
         phase_denoise = np.copy(phase)
         birefringence_denoise = np.copy(birefringence)
         if denoise_params:
-            for chan in denoise_params:
-                if 'Retardance' in chan[0]:
-                    birefringence_denoise[0] = post_proc_denoise(birefringence[0])
-                elif 'Orientation' in chan[0]:
-                    birefringence_denoise[1] = post_proc_denoise(birefringence[1])
-                elif 'Brightfield' in chan[0]:
-                    birefringence_denoise[2] = post_proc_denoise(birefringence[2])
-                elif 'Phase' in chan[0]:
-                    phase_denoise = post_proc_denoise(phase)
+            for chan_param in denoise_params:
+                if 'Retardance' in chan_param[0]:
+                    birefringence_denoise[0] = post_proc_denoise(birefringence[0], chan_param)
+                elif 'Orientation' in chan_param[0]:
+                    birefringence_denoise[1] = post_proc_denoise(birefringence[1], chan_param)
+                elif 'Brightfield' in chan_param[0]:
+                    birefringence_denoise[2] = post_proc_denoise(birefringence[2], chan_param)
+                elif 'Phase' in chan_param[0]:
+                    phase_denoise = post_proc_denoise(phase, chan_param)
                 else:
-                    raise ValueError(f'Didnt understand post_proc denoise channel {chan[0]}')
+                    raise ValueError(f'Didnt understand post_proc denoise channel {chan_param[0]}')
 
         if registration_params:
             registered_stacks = []

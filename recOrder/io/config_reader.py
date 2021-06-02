@@ -1,5 +1,6 @@
 import yaml
 import pathlib
+import os
 import warnings
 
 DATASET = {
@@ -130,6 +131,8 @@ class ConfigReader(object):
         if self.data_save_name == None:
             self._use_default_name()
 
+        self._save_yaml()
+
     #todo: finish assertions for processing field
     def _check_assertions(self, data_dir, save_dir, method, mode, name):
 
@@ -163,6 +166,20 @@ class ConfigReader(object):
                     for key_child, value_child in POSTPROCESSING[key].items():
                         assert key_child in self.config['postprocessing'][key], \
                             f'User must specify {key_child} to use for {key}'
+
+    def _save_yaml(self):
+        with open(os.path.join(self.save_dir, f'config_{self.data_save_name}.yml'), 'w') as file:
+            yaml.dump(self.yaml_dict, file)
+
+    def _create_yaml_dict(self):
+
+        self.yaml_dict = {'dataset',
+                          'pre_processing: ',
+                          'processing',
+                           'post_processing: '}
+        for key, value in DATASET.items():
+
+
 
     def _use_default_name(self):
         path = pathlib.PurePath(self.data_dir)
