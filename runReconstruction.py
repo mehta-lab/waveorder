@@ -35,10 +35,10 @@ if __name__ == '__main__':
         if not os.path.exists(Args.config):
             raise ValueError('Specified config path does not exist')
         else:
-            config = ConfigReader(Args.config)
+            config = ConfigReader(Args.config, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name)
     else:
-        config = ConfigReader()
+        config = ConfigReader(None, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name)
 
-    constructor = PipelineConstructor(Args.method, Args.mode, Args.data_dir, Args.save_dir, Args.name, config)
+    constructor = PipelineConstructor(config)
     constructor.run()
-    shutil.copy(Args.config, os.path.join(Args.save_dir, 'config.yml'))
+    # shutil.copy(Args.config, os.path.join(Args.save_dir, 'config.yml'))

@@ -12,8 +12,7 @@ class PipelineConstructor:
 
     #TODO: Reorganize arguments with new config reader
     #TODO: copy config to save_dir
-    def __init__(self, method: str, mode: str, data_dir: str, save_dir: str, name: str,
-                 config: ConfigReader, data_type: str = 'ometiff'):
+    def __init__(self, config: ConfigReader):
 
         start = time.time()
         print('Reading Data...')
@@ -27,7 +26,7 @@ class PipelineConstructor:
         self._gen_coord_set()
 
         if self.config.method == 'QLIPP':
-            self.reconstructor = qlipp_pipeline(self.config, data, self.config.save_dir,
+            self.reconstructor = qlipp_pipeline(self.config, self.data, self.config.save_dir,
                                                 self.config.data_save_name, self.config.mode)
 
         elif self.config.mode == 'denoise':
