@@ -172,6 +172,8 @@ class ConfigReader(object):
         with open(os.path.join(self.save_dir, f'config_{self.data_save_name}.yml'), 'w') as file:
             yaml.dump(self.yaml_dict, file)
 
+        file.close()
+
     def _create_yaml_dict(self):
 
         yaml_dict = {'dataset': {},
