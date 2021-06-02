@@ -174,7 +174,11 @@ class ConfigReader(object):
 
     def _create_yaml_dict(self):
 
-        yaml_dict = {}
+        yaml_dict = {'dataset': {},
+                     'pre_processing': {},
+                     'processing': {},
+                     'post_processing': {}}
+
         for key, value in DATASET.items():
             yaml_dict['dataset'][key] = getattr(self, key)
 
