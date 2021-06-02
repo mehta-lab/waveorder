@@ -33,7 +33,7 @@ dataset:
 
 pre_processing:
   denoise:
-    use: False
+    use: True
     channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
     threshold: [0.1, 0.1, 0.1, 0.1]
     level: [1, 1, 1, 1]
@@ -60,10 +60,10 @@ processing:
   flatfield_correction: False
   # (bool) perform flat-field correction on fluorescence images if True
 
-  use_gpu: False
+  use_gpu: True
   # (bool) Option to use GPU processing if True (require cupy to be installed)
 
-  gpu_id: 2
+  gpu_id: 1
   # (int) ID of GPU to be used
 
   ########################################
@@ -127,11 +127,11 @@ processing:
 
 post_processing:
   denoise:
-    use: False
-    channels: ['Retardance'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [0.1]
-    level: [1]
+    use: True
+    channels: ['Retardance', 'Phase3D'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
+    threshold: [0.1, 0.1]
+    level: [1, 1]
   registration:
-    use: False
-    channel_idx: 4 # if multiple channels, must match order of the fluorescence channels
-    shift: (z, y, x) # up and to the right (0, +y, -x)
+    use: True
+    channel_idx: 3 # if multiple channels, must match order of the fluorescence channels
+    shift: (0, 50, 50) # up and to the right (0, +y, -x)

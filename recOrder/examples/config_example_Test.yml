@@ -8,7 +8,7 @@ dataset:
 
 pre_processing:
   denoise:
-    use: False
+    use: True
     channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
     threshold: [0.1, 0.1, 0.1, 0.1]
     level: [1, 1, 1, 1]
@@ -67,11 +67,11 @@ processing:
 
 post_processing:
   denoise:
-    use: False
-    channels: ['Retardance'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [0.1]
-    level: [1]
+    use: True
+    channels: ['Retardance', 'Phase3D'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
+    threshold: [0.1, 0.1]
+    level: [1, 1]
   registration:
-    use: False
-    channel_idx: 4 # if multiple channels, must match order of the fluorescence channels
-    shift: (z, y, x) # up and to the right (0, +y, -x)
+    use: True
+    channel_idx: 3 # if multiple channels, must match order of the fluorescence channels
+    shift: (z, 50, 50) # up and to the right (0, +y, -x)
