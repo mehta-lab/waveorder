@@ -24,17 +24,17 @@ class PipelineConstructor:
 
         self._gen_coord_set()
 
-        if method == 'QLIPP':
+        if self.config.method == 'QLIPP':
             self.reconstructor = qlipp_pipeline(self.config, data, self.config.save_dir,
                                                 self.config.data_save_name, self.config.mode)
 
-        elif mode == 'denoise':
+        elif self.config.mode == 'denoise':
             raise NotImplementedError
 
-        elif mode == 'UPTI':
+        elif self.config.mode == 'UPTI':
             raise NotImplementedError
 
-        elif mode == 'IPS':
+        elif self.config.mode == 'IPS':
             raise NotImplementedError
 
 
