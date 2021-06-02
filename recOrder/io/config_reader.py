@@ -104,6 +104,9 @@ class ConfigReader(object):
         if cfg_path:
             self.read_config(cfg_path, data_dir, save_dir, method, mode, name)
 
+        self._create_yaml_dict()
+        self._save_yaml()
+
     def __enter__(self):
         return self
 
@@ -173,13 +176,26 @@ class ConfigReader(object):
 
     def _create_yaml_dict(self):
 
-        self.yaml_dict = {'dataset',
-                          'pre_processing: ',
-                          'processing',
-                           'post_processing: '}
+        self.yaml_dict = {}
         for key, value in DATASET.items():
+            self.yaml_dict['dataset'][key] = value
 
+        for key, value in PREPROCESSING.items():
+            if isinstance(value, dict):
+                for key_child, value_child in PREPROCESSING[key].items():
+                    self.yaml_dict['pre_processing'][key][key_child] = value_child
+            else:
+                self.yaml_dict['pre_processing'][key] = value
 
+        for key, value in PROCESSING.items():
+            self.yaml_dict['processing'][key] = value
+
+        for key, value in POSTPROCESSING.items():
+            if isinstance(value, dict):
+                for key_child, value_child in POSTPROCESSING[key].items():
+                    self.yaml_dict['post_processing'][key][key_child] = value_child
+            else:
+                self.yaml_dict['post_processing'][key] = value
 
     def _use_default_name(self):
         path = pathlib.PurePath(self.data_dir)
