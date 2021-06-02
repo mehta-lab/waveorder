@@ -64,7 +64,9 @@ if __name__ == '__main__':
         python_requires=f'>={MIN_PY_VER}',
         packages=PACKAGES,
         include_package_data=True,
-        # entry_points={
-        #     'console_scripts': ['']
-        # }
+        entry_points={
+            'console_scripts': [
+                'recOrder.reconstruct = recOrder.runReconstruction:main'
+            ]
+        }
     )
