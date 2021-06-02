@@ -9,10 +9,10 @@ dataset:
   data_type: 'ometiff'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
 
-  save_dir: '/gpfs/CompMicro/projects/microscope_dev/2021_05_10_NewKazansky_PipelineTest'
+  save_dir: '/gpfs/CompMicro/projects/microscope_dev/recOrder_Testing'
   # (str) The path of the parent folder where the output will be saved
 
-  positions: 'all'
+  positions: 'all'gu
   # (str or list) Positions within all of sample folders that are to be analyzed.
   ##   'all'
   ##   [0, N] for pos 0 through N
