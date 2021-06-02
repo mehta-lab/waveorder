@@ -104,7 +104,7 @@ class ConfigReader(object):
         if cfg_path:
             self.read_config(cfg_path, data_dir, save_dir, method, mode, name)
 
-        self.yaml_dict = self._create_yaml_dict()
+        self.__set_attr(self, 'yaml_dict', self._create_yaml_dict())
         self._save_yaml()
 
     def __enter__(self):
