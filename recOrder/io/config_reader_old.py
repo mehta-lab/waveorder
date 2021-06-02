@@ -1,7 +1,5 @@
 import yaml
 
-
-
 class ConfigReader(object):
 
     def __init__(self, path=[], data_dir=None, save_dir=None, name=None):
