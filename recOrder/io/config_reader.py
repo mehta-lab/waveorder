@@ -134,8 +134,6 @@ class ConfigReader(object):
         if self.data_save_name == None:
             self._use_default_name()
 
-        self._save_yaml()
-
     #todo: finish assertions for processing field
     def _check_assertions(self, data_dir, save_dir, method, mode, name):
 
