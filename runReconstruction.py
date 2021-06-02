@@ -5,13 +5,13 @@ from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_constructor import PipelineConstructor
 
 @click.command()
-@click.option('--method', required=True, type=str, help='mode of reconstruction: \
+@click.option('--method', required=False, type=str, help='mode of reconstruction: \
                                                       QLIPP,IPS,UPTI')
-@click.option('--mode', required=True, type=str, help='mode of reconstruction: \
+@click.option('--mode', required=False, type=str, help='mode of reconstruction: \
                                                       2D,3D,Stokes')
-@click.option('--data_dir', required=True, type=str, help='path to the data')
-@click.option('--save_dir', required=True, type=str, help='path to the save directory')
-@click.option('--name', required=True, type=str, help='name to use for saving the data')
+@click.option('--data_dir', required=False, type=str, help='path to the data')
+@click.option('--save_dir', required=False, type=str, help='path to the save directory')
+@click.option('--name', required=False, type=str, help='name to use for saving the data')
 @click.option('--config', required=False, type=str, help='path to config yml file')
 def parse_args(method, mode, data_dir, save_dir, name, config):
     """parse command line arguments and return class with the arguments"""
