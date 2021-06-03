@@ -196,9 +196,11 @@ class qlipp_pipeline(Pipeline_Builder):
                 self.writer.write(stokes[:, 3], t=t, c=chan)
             else:
                 if self.config.postprocessing.registration_use:
+                    print('writing registered data')
                     self.writer.write(registered_stacks[fluor_idx], t=t, c=chan)
                     fluor_idx += 1
                 else:
+                    print('not writing registered data')
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], t=t, c=chan)
                     fluor_idx += 1
 
