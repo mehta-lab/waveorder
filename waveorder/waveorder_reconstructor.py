@@ -1534,7 +1534,7 @@ class waveorder_microscopy:
     
     
     
-    def scattering_potential_tensor_recon_2D_vec(self, S_image_recon, reg_inc=1e-1*np.ones((7,))):
+    def scattering_potential_tensor_recon_2D_vec(self, S_image_recon, reg_inc=1e-1*np.ones((7,)), cupy_det=False):
         
         '''
     
@@ -1547,6 +1547,9 @@ class waveorder_microscopy:
                             
             reg_inc       : numpy.ndarray
                             Tikhonov regularization parameters for 7 scattering potential tensor components with the size of (7,)
+                            
+            cupy_det      : bool
+                            option to use the determinant algorithm from cupy package (cupy v9 has very fast determinant calculation compared to array-based determinant calculation)
                                                   
         Returns
         -------
@@ -1574,18 +1577,32 @@ class waveorder_microscopy:
         print('Finished preprocess, elapsed time: %.2f'%(time.time()-start_time))
         
         if self.use_gpu:
+            
+            if cupy_det:
+                AHA = cp.transpose(cp.array(AHA), (2,3,0,1))
+                b_vec = cp.transpose(cp.array(b_vec), (1,2,0))
+                
+                determinant = cp.linalg.det(AHA)
+                f_tensor = cp.zeros((7, self.N, self.M), dtype='float32')
+                
+                for i in range(7):
+                    AHA_b_vec = AHA.copy()
+                    AHA_b_vec[:,:,:,i] = b_vec.copy()
+                    f_tensor[i] = cp.real(cp.fft.ifftn(cp.linalg.det(AHA_b_vec) / determinant))
+                
+            else:
         
-            AHA = cp.array(AHA)
-            b_vec = cp.array(b_vec)
+                AHA = cp.array(AHA)
+                b_vec = cp.array(b_vec)
 
-            determinant = array_based_7x7_det(AHA)
+                determinant = array_based_7x7_det(AHA)
 
-            f_tensor = cp.zeros((7, self.N, self.M))
+                f_tensor = cp.zeros((7, self.N, self.M))
 
-            for i in range(7):
-                AHA_b_vec = AHA.copy()
-                AHA_b_vec[:,i] = b_vec.copy()
-                f_tensor[i] = cp.real(cp.fft.ifft2(array_based_7x7_det(AHA_b_vec) / determinant))
+                for i in range(7):
+                    AHA_b_vec = AHA.copy()
+                    AHA_b_vec[:,i] = b_vec.copy()
+                    f_tensor[i] = cp.real(cp.fft.ifft2(array_based_7x7_det(AHA_b_vec) / determinant))
 
             f_tensor = cp.asnumpy(f_tensor)
 
@@ -1601,7 +1618,7 @@ class waveorder_microscopy:
     
     
     
-    def scattering_potential_tensor_recon_3D_vec(self, S_image_recon, reg_inc=1e-1*np.ones((7,))):
+    def scattering_potential_tensor_recon_3D_vec(self, S_image_recon, reg_inc=1e-1*np.ones((7,)), cupy_det=False):
         
         '''
     
@@ -1614,6 +1631,9 @@ class waveorder_microscopy:
                             
             reg_inc       : numpy.ndarray
                             Tikhonov regularization parameters for 7 scattering potential tensor components with the size of (7,)
+                            
+            cupy_det      : bool
+                            option to use the determinant algorithm from cupy package (cupy v9 has very fast determinant calculation compared to array-based determinant calculation)
                                                   
         Returns
         -------
@@ -1652,18 +1672,31 @@ class waveorder_microscopy:
         print('Finished preprocess, elapsed time: %.2f'%(time.time()-start_time))
         
         if self.use_gpu:
+            
+            if cupy_det:
+                AHA = cp.transpose(cp.array(AHA), (2,3,4,0,1))
+                b_vec = cp.transpose(cp.array(b_vec), (1,2,3,0))
+                
+                determinant = cp.linalg.det(AHA)
+                f_tensor = cp.zeros((7, self.N, self.M, self.N_defocus_3D), dtype='float32')
+                
+                for i in range(7):
+                    AHA_b_vec = AHA.copy()
+                    AHA_b_vec[:,:,:,:,i] = b_vec.copy()
+                    f_tensor[i] = cp.real(cp.fft.ifftn(cp.linalg.det(AHA_b_vec) / determinant))
+            else:
         
-            AHA = cp.array(AHA)
-            b_vec = cp.array(b_vec)
+                AHA = cp.array(AHA)
+                b_vec = cp.array(b_vec)
 
-            determinant = array_based_7x7_det(AHA)
+                determinant = array_based_7x7_det(AHA)
 
-            f_tensor = cp.zeros((7, self.N,self.M,self.N_defocus_3D), dtype='float32')
+                f_tensor = cp.zeros((7, self.N, self.M, self.N_defocus_3D), dtype='float32')
 
-            for i in range(7):
-                AHA_b_vec = AHA.copy()
-                AHA_b_vec[:,i] = b_vec.copy()
-                f_tensor[i] = cp.real(cp.fft.ifftn(array_based_7x7_det(AHA_b_vec) / determinant))
+                for i in range(7):
+                    AHA_b_vec = AHA.copy()
+                    AHA_b_vec[:,i] = b_vec.copy()
+                    f_tensor[i] = cp.real(cp.fft.ifftn(array_based_7x7_det(AHA_b_vec) / determinant))
 
             f_tensor = cp.asnumpy(f_tensor)
 
@@ -1684,7 +1717,7 @@ class waveorder_microscopy:
     
     
     
-    def scattering_potential_tensor_to_3D_orientation(self, f_tensor, S_image_recon=None, material_type='positive', reg_ret_pr = 1e-2, itr=20, step_size=0.3,verbose=True):
+    def scattering_potential_tensor_to_3D_orientation(self, f_tensor, S_image_recon=None, material_type='positive', reg_ret_pr = 1e-2, itr=20, step_size=0.3,verbose=True,fast_gpu_mode=False):
         
         '''
     
@@ -1714,6 +1747,9 @@ class waveorder_microscopy:
             
             verbose       : bool
                             option to display details of optic sign retrieval algorithm in each iteration
+                            
+            fast_gpu_mode : bool
+                            option to use faster gpu computation mode (all arrays in gpu, it may consume more memory)
                                                   
         Returns
         -------
@@ -1789,6 +1825,7 @@ class waveorder_microscopy:
             elif f_tensor.ndim == 3:
                 S_stack_f = fft2(S_image_recon,axes=(1,2))
                 
+                
             f_tensor_p = np.zeros((5,)+f_tensor.shape[1:])
             f_tensor_p[0] = -retardance_pr_p*(np.sin(theta_p)**2)*np.cos(2*azimuth_p)
             f_tensor_p[1] = -retardance_pr_p*(np.sin(theta_p)**2)*np.sin(2*azimuth_p)
@@ -1829,6 +1866,8 @@ class waveorder_microscopy:
                 f_tensor_p = cp.array(f_tensor_p)
                 f_tensor_n = cp.array(f_tensor_n)
                 f_vec = cp.array(f_vec)
+                if fast_gpu_mode:
+                    S_stack_f = cp.array(S_stack_f)
                 
             
             # iterative optic sign estimation algorithm
@@ -1855,17 +1894,35 @@ class waveorder_microscopy:
                 
                 if self.use_gpu:
                     
-                    if f_tensor.ndim == 4:
-                        f_vec_f = cp.fft.fftn(f_vec, axes=(1,2,3))
+                    if fast_gpu_mode:
+                        
+                        S_est_vec_update = cp.array(S_est_vec_update)
+                        
+                        if f_tensor.ndim == 4:
+                            f_vec_f = cp.fft.fftn(f_vec, axes=(1,2,3))
 
-                        for p,q in itertools.product(range(self.N_Stokes), range(5)):
-                             S_est_vec_update[p] += cp.asnumpy(cp.array(self.H_dyadic_OTF[p,q+2])*f_vec_f[np.newaxis,q+2])
+                            for p,q in itertools.product(range(self.N_Stokes), range(5)):
+                                 S_est_vec_update[p] += cp.array(self.H_dyadic_OTF[p,q+2])*f_vec_f[np.newaxis,q+2]
 
-                    elif f_tensor.ndim == 3:
-                        f_vec_f = cp.fft.fft2(f_vec, axes=(1,2))
+                        elif f_tensor.ndim == 3:
+                            f_vec_f = cp.fft.fft2(f_vec, axes=(1,2))
 
-                        for p,q in itertools.product(range(self.N_Stokes), range(5)):
-                             S_est_vec_update[p] += cp.asnumpy(cp.array(self.H_dyadic_2D_OTF[p,q+2])*f_vec_f[q+2,:,:,np.newaxis])
+                            for p,q in itertools.product(range(self.N_Stokes), range(5)):
+                                 S_est_vec_update[p] += cp.array(self.H_dyadic_2D_OTF[p,q+2])*f_vec_f[q+2,:,:,np.newaxis]
+                    
+                    else:
+                    
+                        if f_tensor.ndim == 4:
+                            f_vec_f = cp.fft.fftn(f_vec, axes=(1,2,3))
+
+                            for p,q in itertools.product(range(self.N_Stokes), range(5)):
+                                 S_est_vec_update[p] += cp.asnumpy(cp.array(self.H_dyadic_OTF[p,q+2])*f_vec_f[np.newaxis,q+2])
+
+                        elif f_tensor.ndim == 3:
+                            f_vec_f = cp.fft.fft2(f_vec, axes=(1,2))
+
+                            for p,q in itertools.product(range(self.N_Stokes), range(5)):
+                                 S_est_vec_update[p] += cp.asnumpy(cp.array(self.H_dyadic_2D_OTF[p,q+2])*f_vec_f[q+2,:,:,np.newaxis])
                 
                 else:
                     
@@ -1886,7 +1943,11 @@ class waveorder_microscopy:
 
 
 
-                err[i+1] = np.sum(np.abs(S_diff)**2)
+                if fast_gpu_mode and self.use_gpu:
+                    err[i+1] = cp.asnumpy(cp.sum(cp.abs(S_diff)**2))
+                else:
+                    err[i+1] = np.sum(np.abs(S_diff)**2)
+                    
                 if err[i+1]>err[i] and i>0:
                     if self.use_gpu:
                         x_map = cp.asnumpy(x_map)
@@ -1898,9 +1959,12 @@ class waveorder_microscopy:
                     AH_S_diff = cp.zeros((5,)+f_tensor.shape[1:], complex)
 
                     if f_tensor.ndim == 4:
-
+                        
                         for p,q in itertools.product(range(5), range(self.N_Stokes)):
-                            AH_S_diff[p] += cp.sum(cp.conj(cp.array(self.H_dyadic_OTF[q,p+2]))*cp.array(S_diff[q]),axis=0)
+                            if fast_gpu_mode:
+                                AH_S_diff[p] += cp.sum(cp.conj(cp.array(self.H_dyadic_OTF[q,p+2]))*S_diff[q],axis=0)
+                            else:
+                                AH_S_diff[p] += cp.sum(cp.conj(cp.array(self.H_dyadic_OTF[q,p+2]))*cp.array(S_diff[q]),axis=0)
 
 
                         grad_x_map = -cp.real(cp.sum(f_tensor_p*cp.fft.ifftn(AH_S_diff,axes=(1,2,3)),axis=0))
@@ -1909,7 +1973,10 @@ class waveorder_microscopy:
                     elif f_tensor.ndim == 3:
 
                         for p,q in itertools.product(range(5), range(self.N_Stokes)):
-                            AH_S_diff[p] += cp.sum(cp.conj(cp.array(self.H_dyadic_2D_OTF[q,p+2]))*cp.array(S_diff[q]),axis=2)
+                            if fast_gpu_mode:
+                                AH_S_diff[p] += cp.sum(cp.conj(cp.array(self.H_dyadic_2D_OTF[q,p+2]))*S_diff[q],axis=2)
+                            else:
+                                AH_S_diff[p] += cp.sum(cp.conj(cp.array(self.H_dyadic_2D_OTF[q,p+2]))*cp.array(S_diff[q]),axis=2)
 
 
                         grad_x_map = -cp.real(cp.sum(f_tensor_p*cp.fft.ifft2(AH_S_diff,axes=(1,2)),axis=0))
