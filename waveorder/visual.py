@@ -73,11 +73,13 @@ def image_stack_viewer(image_stack,size=(10,10), colormap='gray', origin='upper'
         plt.figure(figsize=size)
         plt.imshow(image_stack[stack_idx],cmap=colormap, vmin=min_val, vmax=max_val, origin=origin)
         plt.colorbar()
+        plt.show()
 
     def interact_plot_4D(stack_idx_1, stack_idx_2):    
         plt.figure(figsize=size)
         plt.imshow(image_stack[stack_idx_1,stack_idx_2],cmap=colormap, vmin=min_val, vmax=max_val, origin=origin)
         plt.colorbar()
+        plt.show()
     
     
     if image_stack.ndim == 3:    
@@ -194,6 +196,7 @@ def hsv_stack_viewer(image_stack, max_val=1, size=5, origin='upper'):
         plt.title("$S_{HSV}=1$")
 
         plt.tight_layout()
+        plt.show()
     
        
     return interact(interact_plot_hsv, stack_idx=widgets.IntSlider(value=0, min=0, max=len(image_stack1)-1, step=1))
@@ -224,6 +227,7 @@ def rgb_stack_viewer(image_stack, size=5, origin='upper'):
     def interact_plot_rgb(stack_idx):
         plt.figure(figsize=(size, size))
         plt.imshow(image_stack[stack_idx], origin=origin)
+        plt.show()
         
     return interact(interact_plot_rgb, stack_idx=widgets.IntSlider(value=0, min=0, max=len(image_stack)-1, step=1))
 
@@ -328,6 +332,7 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, set_title = False, tit
                     plt.colorbar(ax1,ax=ax[col_idx])
                     if set_title == True:
                         ax[col_idx].set_title(titles[i])
+                plt.show()
             elif num_col == 1:
                 for i in range(N_channel):
                     row_idx = i//num_col
@@ -335,6 +340,7 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, set_title = False, tit
                     plt.colorbar(ax1,ax=ax[row_idx])
                     if set_title == True:
                         ax[row_idx].set_title(titles[i])
+                plt.show()
             else:
                 for i in range(N_channel):
                     row_idx = i//num_col
@@ -343,6 +349,7 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, set_title = False, tit
                     plt.colorbar(ax1,ax=ax[row_idx, col_idx])
                     if set_title == True:
                         ax[row_idx, col_idx].set_title(titles[i])
+                plt.show()
                     
         elif len(vrange)==2 and vrange[0]<vrange[1]:
             f1,ax = plt.subplots(num_row, num_col, figsize=figsize)
@@ -353,6 +360,7 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, set_title = False, tit
                     plt.colorbar(ax1,ax=ax[col_idx])
                     if set_title == True:
                         ax[col_idx].set_title(titles[i])
+                plt.show()
             elif num_col == 1:
                 for i in range(N_channel):
                     row_idx = i//num_col
@@ -360,6 +368,7 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, set_title = False, tit
                     plt.colorbar(ax1,ax=ax[row_idx])
                     if set_title == True:
                         ax[row_idx].set_title(titles[i])
+                plt.show()
             else:
                 for i in range(N_channel):
                     row_idx = i//num_col
@@ -368,6 +377,7 @@ def parallel_4D_viewer(image_stack, num_col = 2, size=10, set_title = False, tit
                     plt.colorbar(ax1,ax=ax[row_idx, col_idx])
                     if set_title == True:
                         ax[row_idx, col_idx].set_title(titles[i])
+                plt.show()
     
         else:
             raise ValueError('range should be a list with length of 2 and range[0]<range[1]')
@@ -495,6 +505,7 @@ def parallel_5D_viewer(image_stack, num_col = 2, size=10, set_title = False, tit
                 plt.colorbar(ax1,ax=ax[col_idx])
                 if set_title == True:
                     ax[col_idx].set_title(titles[i])
+            plt.show()
         else:
             for i in range(N_channel):
                 row_idx = i//num_col
@@ -503,6 +514,7 @@ def parallel_5D_viewer(image_stack, num_col = 2, size=10, set_title = False, tit
                 plt.colorbar(ax1,ax=ax[row_idx, col_idx])
                 if set_title == True:
                     ax[row_idx, col_idx].set_title(titles[i])
+            plt.show()
     
     return interact(interact_plot, stack_idx_1=widgets.IntSlider(value=0, min=0, max=N_stack-1, step=1),\
                                    stack_idx_2=widgets.IntSlider(value=0, min=0, max=N_pattern-1, step=1))
