@@ -134,4 +134,4 @@ post_processing:
   registration:
     use: False
     channel_idx: [3] # if multiple channels, must match order of the fluorescence channels
-    shift: (0, 50, 50) # up and to the right (0, +y, -x)
+    shift: [[0, 50, 50]] # up and to the right [0, +y, -x]

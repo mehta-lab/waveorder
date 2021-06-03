@@ -166,8 +166,6 @@ class qlipp_pipeline(Pipeline_Builder):
 
         """
 
-
-        # print(np.shape(stokes[slice(None) if self.slices != 1 else self.focus_slice]))
         birefringence = reconstruct_QLIPP_birefringence(stokes[slice(None) if self.slices != 1 else self.focus_slice],
                                                         self.reconstructor)
 
@@ -197,7 +195,7 @@ class qlipp_pipeline(Pipeline_Builder):
             elif 'S3' in self.channels[chan]:
                 self.writer.write(stokes[:, 3], t=t, c=chan)
             else:
-                if self.config.postproc_registration_use:
+                if self.config.postprocessing.registration_use:
                     self.writer.write(registered_stacks[fluor_idx], t=t, c=chan)
                     fluor_idx += 1
                 else:
