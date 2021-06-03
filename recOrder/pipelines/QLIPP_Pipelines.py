@@ -68,6 +68,7 @@ class qlipp_pipeline(Pipeline_Builder):
         self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
                                                  self.calib_meta['Summary']['~ Swing (fraction)'],
                                                  len(self.calib_meta['Summary']['ChNames']),
+                                                 self.config.qlipp_birefringence_only,
                                                  self.config.NA_objective, self.config.NA_condenser,
                                                  self.config.magnification, self.data.slices, self.config.z_step,
                                                  self.config.pad_z, self.config.pixel_size,

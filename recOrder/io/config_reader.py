@@ -28,6 +28,7 @@ PREPROCESSING = {
 
 PROCESSING = {
     'output_channels': None,
+    'qlipp_birefringence_only': False,
     'background_correction': 'None',
     'flatfield_correction': None,
     'use_gpu': False,
@@ -154,6 +155,10 @@ class ConfigReader(object):
         if not name: assert 'save_dir' in self.config['dataset'], \
             'Please provide data_save_name in config file or CLI argument'
 
+        for key,value in PROCESSING.items():
+
+
+
         if 'preprocessing' in self.config:
             for key, value in PREPROCESSING.items():
                 if self.config['preprocessing'][key]['use']:
@@ -265,6 +270,9 @@ class ConfigReader(object):
                 self.__set_attr(self, key, value)
             else:
                 warnings.warn(f'yaml PROCESSING config field {key} is not recognized')
+
+        if 'Phase' not in self.output_channels:
+            self.__set_attr(self, 'qlipp_birefringence_only', True)
 
     def _parse_postprocessing(self):
         for key, value in self.config['post_processing'].items():

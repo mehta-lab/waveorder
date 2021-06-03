@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 
-def initialize_reconstructor(image_dim, wavelength, swing, N_channel, NA_obj, NA_illu, mag, N_slices, z_step, pad_z,
+def initialize_reconstructor(image_dim, wavelength, swing, N_channel, anistropy_only, NA_obj, NA_illu, mag, N_slices, z_step, pad_z,
                              pixel_size, bg_option='local_fit', n_media=1.0, mode = '3D', use_gpu=False, gpu_id=0):
     """
     Compute 3D birefringence and phase from a single position
@@ -23,6 +23,9 @@ def initialize_reconstructor(image_dim, wavelength, swing, N_channel, NA_obj, NA
 
             N_channel         : int
                                 number of label-free channels used in acquisition
+
+            anisotropy_only   : bool
+                                True if only want to process Ret, Ori, BF.  False if phase processing
 
             NA_obj            : float
                                 numerical aperture of the detection objective
@@ -92,7 +95,7 @@ def initialize_reconstructor(image_dim, wavelength, swing, N_channel, NA_obj, NA
     start_time = time.time()
     recon = setup(image_dim, lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi=chi,
                   n_media=n_media, cali=cali, bg_option=bg_option,
-                  A_matrix=inst_mat, QLIPP_birefringence_only=False, pad_z=pad_z,
+                  A_matrix=inst_mat, QLIPP_birefringence_only=anistropy_only, pad_z=pad_z,
                   phase_deconv=mode, illu_mode='BF', use_gpu=use_gpu, gpu_id=gpu_id)
 
     recon.N_channel = N_channel
