@@ -121,11 +121,13 @@ class PipelineConstructor:
                 for p in range(self.data.get_num_positions()):
                     p_indices.append(p)
                 break
-            elif isinstance(p_entry,list):
+            elif isinstance(p_entry, int):
+                p_indices.append(p_entry)
+            elif isinstance(p_entry, list):
                 for p in p_entry:
                     p_indices.append(p)
             elif isinstance(p_entry, tuple):
-                for p in range(p_entry[0],p_entry[1]):
+                for p in range(p_entry[0], p_entry[1]):
                     p_indices.append(p)
             else:
                 raise ValueError(f'Did not understand entry {p_entry} in config specified positions')
@@ -135,7 +137,9 @@ class PipelineConstructor:
                 for t in range(self.data.frames):
                     t_indices.append(t)
                 break
-            elif isinstance(t_entry,list):
+            elif isinstance(t_entry, int):
+                p_indices.append(t_entry)
+            elif isinstance(t_entry, ist):
                 for t in t_entry:
                     t_indices.append(t)
             elif isinstance(t_entry, tuple):
