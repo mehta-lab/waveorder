@@ -51,10 +51,12 @@ class qlipp_pipeline(Pipeline_Builder):
 
         # Metadata
         self.chan_names = self.data.channel_names
-        self.LF_indices = (self.parse_channel_idx(self.chan_names))
-        self.calib_meta = json.load(open(self.config.calibration_metadata))
-        self.bg_path = self.config.background
-        self.bg_roi = self.calib_meta['Summary']['ROI Used (x ,y, width, height)']
+        self.LF_indices = (self.parse_channel_idx(self.chan_names)) if not phase_only
+        self.calib_meta = json.load(open(self.config.calibration_metadata)) \
+            if self.config.calibration_metadata else None
+        self.bg_path = self.config.background if self.config.background else None
+        self.bg_roi = self.calib_meta['Summary']['ROI Used (x ,y, width, height)'] \
+            if self.config.calibration_metadata else None
         self.bg_correction = self.config.background_correction
         self.img_dim = (self.data.height, self.data.width, self.data.slices)
         self.s0_idx, self.s1_idx, self.s2_idx, self.s3_idx, self.fluor_idxs = self.parse_channel_idx(self.chan_names)
