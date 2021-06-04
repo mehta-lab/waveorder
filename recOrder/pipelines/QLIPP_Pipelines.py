@@ -36,7 +36,11 @@ class qlipp_pipeline(Pipeline_Builder):
         # Dimension Parameters
         self.t = data.frames if self.config.timepoints == ['all'] else NotImplementedError
         self.channels = self.config.output_channels
-        if self.data.channels < 4:
+        if len(self.channels) == 1:
+            if 'Phase3D' in self.channels or 'Phase2D' in self.channels:
+                phase_only = True
+
+        if self.data.channels < 4 and not phase_only:
             raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
 
         self.slices = self.data.slices
