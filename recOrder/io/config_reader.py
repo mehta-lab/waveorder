@@ -156,19 +156,19 @@ class ConfigReader(object):
         if not name: assert 'save_dir' in self.config['dataset'], \
             'Please provide data_save_name in config file or CLI argument'
 
-        for key,value in PROCESSING.items():
-            if key == 'output_channels':
-                if 'Phase3D' in self.config['processing'][key] or 'Phase2D' in self.config['processing'][key]:
-                    'wavelength': None,
-                    'pixel_size': None,
-                    'magnification': None,
-                    'NA_objective': None,
-                    'NA_condenser': None,
-                    phase_processing = True
-                elif 'Phase3D' in self.config['processing'][key] and 'Phase2D' in self.config['processing'][key]:
-                    raise KeyError(f'Both Phase3D and Phase2D cannot be specified in {key}')
-            if phase_processing:
-                assert('')
+        # for key,value in PROCESSING.items():
+        #     if key == 'output_channels':
+        #         if 'Phase3D' in self.config['processing'][key] or 'Phase2D' in self.config['processing'][key]:
+        #             'wavelength': None,
+        #             'pixel_size': None,
+        #             'magnification': None,
+        #             'NA_objective': None,
+        #             'NA_condenser': None,
+        #             phase_processing = True
+        #         elif 'Phase3D' in self.config['processing'][key] and 'Phase2D' in self.config['processing'][key]:
+        #             raise KeyError(f'Both Phase3D and Phase2D cannot be specified in {key}')
+        #     if phase_processing:
+        #         assert('')
 
 
 
