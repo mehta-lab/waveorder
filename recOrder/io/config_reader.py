@@ -76,7 +76,6 @@ POSTPROCESSING = {
 class Object():
     pass
 
-#todo: add default channels for 2d/3d when not specified
 class ConfigReader(object):
 
     def __init__(self, cfg_path=None, data_dir=None, save_dir=None, method=None, mode=None, name=None):
@@ -136,7 +135,6 @@ class ConfigReader(object):
         if self.data_save_name == None:
             self._use_default_name()
 
-    #todo: finish assertions for processing field
     def _check_assertions(self, data_dir, save_dir, method, mode, name):
 
         # assert main fields of config
@@ -166,6 +164,13 @@ class ConfigReader(object):
 
                 elif 'Phase3D' in self.config['processing'][key] and 'Phase2D' in self.config['processing'][key]:
                     raise KeyError(f'Both Phase3D and Phase2D cannot be specified in {key}')
+
+            elif key == 'background_correction':
+                if self.config['processing'][key] =='None' or 'local_filter':
+                    pass
+                else:
+                    assert self.config['dataset']['background'] is not None, \
+                        'path to background data must be specified for this background correction method'
 
         if 'preprocessing' in self.config:
             for key, value in PREPROCESSING.items():

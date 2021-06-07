@@ -10,8 +10,6 @@ class PipelineConstructor:
     This will pull the necessary pipeline based off the config default.
     """
 
-    #TODO: Reorganize arguments with new config reader
-    #TODO: copy config to save_dir
     def __init__(self, config: ConfigReader):
 
         start = time.time()
