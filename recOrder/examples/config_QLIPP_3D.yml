@@ -13,16 +13,16 @@ dataset:
   # (str) The path of the parent folder where the output will be saved
 
   positions: 'all'
-  # (str or list) Positions within all of sample folders that are to be analyzed.
+  # (str or list) Positions within the dataset that are to be analyzed.
   ##   'all'
   ##   !!python/tuple [0, N] for pos 0 through N
   ## [0, 1, 5] for pos 0, 1, and 5
 
-  timepoints: [(0,2)]
-  # (str or list) Positions within all of sample folders that are to be analyzed.
+  timepoints: 'all'
+  # (str or list) timepoints within the dataset that are to be analyzed.
   ##   'all'
-  ##   (0, N) for timepoint 0 through N
-  ## [0, 1, 5] for timepoint 0, 1, and 5
+  ##   !!python/tuple [0, N] for pos 0 through N
+  ## [0, 1, 5] for pos 0, 1, and 5
 
   background: '/gpfs/CompMicro/rawdata/hummingbird/Cameron/2021_05_10_NewKazansky_63x_WI_04NA/BG'
 
