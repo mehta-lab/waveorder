@@ -247,7 +247,6 @@ class ConfigReader(object):
                 # skip and use the user-specified name
                 if key == 'name' and self.data_save_name:
                     continue
-
                 elif key == 'positions' or key == 'timepoints':
                     if isinstance(value, str):
                         if value == 'all':
@@ -257,9 +256,16 @@ class ConfigReader(object):
                                        please specify a list or "all"')
                     elif isinstance(value, int):
                         self.__set_attr(self, key, [value])
-                    else:
+                    elif isinstance(value, tuple):
+                        if len(value) == 2:
+                            self.__set_attr(self, key, value)
+                        else:
+                            raise KeyError(f'{key} value {value} is not a tuple with length of 2')
+                    elif isinstance(value, list):
                         self.__set_attr(self, key, value)
-
+                    else:
+                        raise KeyError(f'{key} value {value} format not understood. \
+                                       Must be list with nested tuple or list or "all"')
                 else:
                     self.__set_attr(self, key, value)
 

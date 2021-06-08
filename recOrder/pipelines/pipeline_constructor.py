@@ -143,7 +143,7 @@ class PipelineConstructor:
                     t_indices.append(t)
             elif isinstance(t_entry, tuple):
                 for t in range(t_entry[0],t_entry[1]):
-                    t_indices.append(p)
+                    t_indices.append(t)
             else:
                 raise ValueError(f'Did not understand entry {t_entry} in config specified positions')
 
