@@ -63,9 +63,9 @@ class qlipp_pipeline(Pipeline_Structure):
         self.s0_idx, self.s1_idx, self.s2_idx, self.s3_idx, self.fluor_idxs = self.parse_channel_idx(self.chan_names)
 
         # Writer Parameters
-        self.data_shape = (self.t, self.channels, self.slices, self.img_dim[0], self.img_dim[1])
+        self.data_shape = (self.t, len(self.channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
-        self.writer = WaveorderWriter(self.save_dir, 'physical' if mode != 'stokes' else 'stokes')
+        self.writer = WaveorderWriter(self.save_dir, 'physical')
         self.writer.create_zarr_root(f'{self.name}.zarr')
         self.writer.store.attrs.put(self.config.yaml_dict)
 
