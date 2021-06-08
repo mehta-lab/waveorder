@@ -146,11 +146,11 @@ class ConfigReader(object):
             'Please provide data_save_name in config file or CLI argument'
 
         if self.config['dataset']['positions'] != 'all' and not isinstance(self.config['dataset']['positions'], int):
-            assert(isinstance(self.config['dataset']['positions'], list), \
-                'if not single integer value or "all", positions must be list (nested lists/tuples allowed)')
+            assert isinstance(self.config['dataset']['positions'], list), \
+                'if not single integer value or "all", positions must be list (nested lists/tuples allowed)'
         if self.config['dataset']['timepoints'] != 'all' and not isinstance(self.config['dataset']['timepoints'], int):
-            assert(isinstance(self.config['dataset']['timepoints'], list), \
-                'if not single integer value or "all", timepoints must be list (nested lists/tuples allowed)')
+            assert isinstance(self.config['dataset']['timepoints'], list), \
+                'if not single integer value or "all", timepoints must be list (nested lists/tuples allowed)'
 
         for key,value in PROCESSING.items():
             if key == 'output_channels':
