@@ -1,8 +1,7 @@
 import click
-import shutil
 import os
 from recOrder.io.config_reader import ConfigReader
-from recOrder.pipelines.pipeline_constructor import PipelineConstructor
+from recOrder.pipelines.pipeline_daemon import PipelineDaemon
 
 @click.command()
 @click.option('--method', required=False, type=str, help='mode of reconstruction: \
@@ -39,6 +38,5 @@ def main():
     else:
         config = ConfigReader(None, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name)
 
-    constructor = PipelineConstructor(config)
+    constructor = PipelineDaemon(config)
     constructor.run()
-    # shutil.copy(Args.config, os.path.join(Args.save_dir, 'config.yml'))

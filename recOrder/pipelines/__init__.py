@@ -1,2 +1,2 @@
-from .pipeline_constructor import PipelineConstructor
-from .QLIPP_Pipelines import *
+from .pipeline_daemon import PipelineDaemon
+from .QLIPP_Pipeline import *

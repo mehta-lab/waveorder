@@ -1,11 +1,11 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import MicromanagerReader
 import time
-from recOrder.pipelines.QLIPP_Pipelines import qlipp_pipeline
+from recOrder.pipelines.QLIPP_Pipeline import qlipp_pipeline
 from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_processing import *
 
-class PipelineConstructor:
+class PipelineDaemon:
     """
     This will pull the necessary pipeline based off the config default.
     """
@@ -24,8 +24,8 @@ class PipelineConstructor:
         self._gen_coord_set()
 
         if self.config.method == 'QLIPP':
-            self.reconstructor = qlipp_pipeline(self.config, self.data, self.config.save_dir,
-                                                self.config.data_save_name, self.config.mode)
+            self.pipeline = qlipp_pipeline(self.config, self.data, self.config.save_dir,
+                                           self.config.data_save_name, self.config.mode)
 
         elif self.config.mode == 'denoise':
             raise NotImplementedError
@@ -152,12 +152,12 @@ class PipelineConstructor:
 
     def _create_or_open_group(self, pt):
         try:
-            self.reconstructor.writer.create_position(pt[0])
-            self.reconstructor.writer.init_array(self.reconstructor.data_shape,
-                                                 self.reconstructor.chunk_size,
-                                                 self.reconstructor.channels)
+            self.pipeline.writer.create_position(pt[0])
+            self.pipeline.writer.init_array(self.pipeline.data_shape,
+                                            self.pipeline.chunk_size,
+                                            self.pipeline.channels)
         except:
-            self.reconstructor.writer.open_position(pt[0])
+            self.pipeline.writer.open_position(pt[0])
 
 
     #TODO: use arbol print statements
@@ -172,15 +172,16 @@ class PipelineConstructor:
 
             pt_data = self.data.get_array(pt[0])[pt[1]]
 
-            stokes = self.reconstructor.reconstruct_stokes_volume(pt_data)
+            stokes = self.pipeline.reconstruct_stokes_volume(pt_data)
+
             stokes = self.pre_processing(stokes)
 
-            birefringence = self.reconstructor.reconstruct_birefringence_volume(stokes)
-            phase = self.reconstructor.reconstruct_phase_volume(stokes)
+            birefringence = self.pipeline.reconstruct_birefringence_volume(stokes)
+            phase = self.pipeline.reconstruct_phase_volume(stokes)
 
             birefringence, phase, registered_data = self.post_processing(pt_data, phase, birefringence)
 
-            self.reconstructor.write_data(pt, pt_data, stokes, birefringence, phase, registered_data)
+            self.pipeline.write_data(pt, pt_data, stokes, birefringence, phase, registered_data)
 
             end_time = time.time()
             print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f}) min')
