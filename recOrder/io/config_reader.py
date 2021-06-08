@@ -2,6 +2,7 @@ import yaml
 import pathlib
 import os
 import warnings
+import re
 
 DATASET = {
     'method': None,
@@ -106,6 +107,7 @@ class ConfigReader(object):
 
         # parse config
         if cfg_path:
+            # self.allow_yaml_tuple()
             self.read_config(cfg_path, data_dir, save_dir, method, mode, name)
 
         # Create yaml dict to save in save_dir
@@ -142,8 +144,6 @@ class ConfigReader(object):
             'Please provide data_dir in config file or CLI argument'
         if not save_dir: assert 'save_dir' in self.config['dataset'], \
             'Please provide save_dir in config file or CLI argument'
-        if not name: assert 'data_save_name' in self.config['dataset'], \
-            'Please provide data_save_name in config file or CLI argument'
 
         if self.config['dataset']['positions'] != 'all' and not isinstance(self.config['dataset']['positions'], int):
             assert isinstance(self.config['dataset']['positions'], list), \
@@ -289,7 +289,7 @@ class ConfigReader(object):
             else:
                 warnings.warn(f'yaml PROCESSING config field {key} is not recognized')
 
-        if 'Phase3D' not in self.output_channels or 'Phase2D' not in self.output_channels:
+        if 'Phase3D' not in self.output_channels and 'Phase2D' not in self.output_channels:
             self.__set_attr(self, 'qlipp_birefringence_only', True)
 
     def _parse_postprocessing(self):
@@ -305,7 +305,7 @@ class ConfigReader(object):
 
     def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
 
-        self.__set_attr(self, 'config', yaml.safe_load(open(cfg_path)))
+        self.__set_attr(self, 'config', yaml.full_load(open(cfg_path)))
 
         self._check_assertions(data_dir, save_dir, method, mode, name)
         self._parse_cli(data_dir, save_dir, method, mode, name)

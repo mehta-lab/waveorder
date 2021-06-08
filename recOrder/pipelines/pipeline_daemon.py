@@ -136,7 +136,7 @@ class PipelineDaemon:
                     t_indices.append(t)
                 break
             elif isinstance(t_entry, int):
-                p_indices.append(t_entry)
+                t_indices.append(t_entry)
             elif isinstance(t_entry, list):
                 for t in t_entry:
                     t_indices.append(t)

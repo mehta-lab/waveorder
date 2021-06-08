@@ -15,10 +15,10 @@ dataset:
   positions: 'all'
   # (str or list) Positions within all of sample folders that are to be analyzed.
   ##   'all'
-  ##   [0, N] for pos 0 through N
+  ##   !!python/tuple [0, N] for pos 0 through N
   ## [0, 1, 5] for pos 0, 1, and 5
 
-  timepoints: 'all'
+  timepoints: [(0,2)]
   # (str or list) Positions within all of sample folders that are to be analyzed.
   ##   'all'
   ##   (0, N) for timepoint 0 through N
