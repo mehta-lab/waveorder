@@ -80,20 +80,23 @@ class ConfigReader(object):
 
     def __init__(self, cfg_path=None, data_dir=None, save_dir=None, method=None, mode=None, name=None):
 
-        # initialize defaults
         self.__set_attr(self, 'preprocessing', Object())
         self.__set_attr(self, 'postprocessing', Object())
 
+        # initialize defaults
         for key, value in DATASET.items():
             self.__set_attr(self, key, value)
+
         for key, value in PREPROCESSING.items():
             if isinstance(value, dict):
                 for key_child, value_child in PREPROCESSING[key].items():
                     self.__set_attr(self.preprocessing, f'{key}_{key_child}', value_child)
             else:
                 self.__set_attr(self.preprocessing, key, value)
+
         for key, value in PROCESSING.items():
             self.__set_attr(self, key, value)
+
         for key, value in POSTPROCESSING.items():
             if isinstance(value, dict):
                 for key_child, value_child in POSTPROCESSING[key].items():
@@ -105,6 +108,7 @@ class ConfigReader(object):
         if cfg_path:
             self.read_config(cfg_path, data_dir, save_dir, method, mode, name)
 
+        # Create yaml dict to save in save_dir
         self.__set_attr(self, 'yaml_dict', self._create_yaml_dict())
         self._save_yaml()
 
@@ -118,22 +122,9 @@ class ConfigReader(object):
     def __setattr__(self, name, value):
         raise AttributeError("Attempting to change immutable object")
 
+    # Custom set attr function to initially set attributes before its overridden
     def __set_attr(self, object_, name, value):
         object.__setattr__(object_, name, value)
-
-    def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
-
-        self.__set_attr(self, 'config', yaml.safe_load(open(cfg_path)))
-
-        self._check_assertions(data_dir, save_dir, method, mode, name)
-        self._parse_cli(data_dir, save_dir, method, mode, name)
-        self._parse_dataset()
-        self._parse_preprocessing()
-        self._parse_processing()
-        self._parse_postprocessing()
-
-        if self.data_save_name == None:
-            self._use_default_name()
 
     def _check_assertions(self, data_dir, save_dir, method, mode, name):
 
@@ -143,7 +134,7 @@ class ConfigReader(object):
         assert 'processing' in self.config, \
             'processing is a required field in the config yaml file'
 
-        if not method: assert 'mode' in self.config['dataset'], \
+        if not method: assert 'method' in self.config['dataset'], \
             'Please provide method in config file or CLI argument'
         if not mode: assert 'mode' in self.config['dataset'], \
             'Please provide mode in config file or CLI argument'
@@ -153,6 +144,13 @@ class ConfigReader(object):
             'Please provide save_dir in config file or CLI argument'
         if not name: assert 'data_save_name' in self.config['dataset'], \
             'Please provide data_save_name in config file or CLI argument'
+
+        if self.config['dataset']['positions'] != 'all' and not isinstance(self.config['dataset']['positions'], int):
+            assert(isinstance(self.config['dataset']['positions']), list), \
+                'if not single integer value or "all", positions must be list (nested lists/tuples allowed)'
+        if self.config['dataset']['timepoints'] != 'all' and not isinstance(self.config['dataset']['timepoints'], int):
+            assert(isinstance(self.config['dataset']['timepoints']), list), \
+                'if not single integer value or "all", timepoints must be list (nested lists/tuples allowed)'
 
         for key,value in PROCESSING.items():
             if key == 'output_channels':
@@ -303,3 +301,17 @@ class ConfigReader(object):
                         warnings.warn(f'yaml POSTPROCESSING config field {key}, {key_child} is not recognized')
             else:
                 warnings.warn(f'yaml POSTPROCESSING config field {key} is not recognized')
+
+    def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
+
+        self.__set_attr(self, 'config', yaml.safe_load(open(cfg_path)))
+
+        self._check_assertions(data_dir, save_dir, method, mode, name)
+        self._parse_cli(data_dir, save_dir, method, mode, name)
+        self._parse_dataset()
+        self._parse_preprocessing()
+        self._parse_processing()
+        self._parse_postprocessing()
+
+        if self.data_save_name == None:
+            self._use_default_name()
