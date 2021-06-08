@@ -151,7 +151,7 @@ class ConfigReader(object):
             'Please provide data_dir in config file or CLI argument'
         if not save_dir: assert 'save_dir' in self.config['dataset'], \
             'Please provide save_dir in config file or CLI argument'
-        if not name: assert 'save_dir' in self.config['dataset'], \
+        if not name: assert 'data_save_name' in self.config['dataset'], \
             'Please provide data_save_name in config file or CLI argument'
 
         for key,value in PROCESSING.items():
@@ -248,14 +248,14 @@ class ConfigReader(object):
                 if key == 'name' and self.data_save_name:
                     continue
 
-                elif key == 'positions':
-                    if isinstance(value, str) and value == 'all':
-                        self.__set_attr(self, key, [value])
-                    else:
-                        self.__set_attr(self, key, value)
-
-                elif key == 'timepoints':
-                    if isinstance(value, str) and value == 'all':
+                elif key == 'positions' or key == 'timepoints':
+                    if isinstance(value, str):
+                        if value == 'all':
+                            self.__set_attr(self, key, [value])
+                        else:
+                            raise KeyError(f'{key} value {value} not understood,\
+                                       please specify a list or "all"')
+                    elif isinstance(value, int):
                         self.__set_attr(self, key, [value])
                     else:
                         self.__set_attr(self, key, value)

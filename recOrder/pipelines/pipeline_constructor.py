@@ -138,7 +138,7 @@ class PipelineConstructor:
                 break
             elif isinstance(t_entry, int):
                 p_indices.append(t_entry)
-            elif isinstance(t_entry, ist):
+            elif isinstance(t_entry, list):
                 for t in t_entry:
                     t_indices.append(t)
             elif isinstance(t_entry, tuple):

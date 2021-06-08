@@ -70,8 +70,7 @@ def initialize_reconstructor(image_dim, wavelength, swing, N_channel, anistropy_
         """
 
     lambda_illu = wavelength / 1000
-    N_pattern = 1
-    N_defocus = N_slices + 2 * pad_z
+    N_defocus = N_slices
     z_defocus = -(np.r_[:N_defocus] - N_defocus // 2) * z_step
     ps = pixel_size / mag
     cali = True
