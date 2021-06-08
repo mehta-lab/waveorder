@@ -101,7 +101,6 @@ class PipelineConstructor:
 
         return denoise_params, registration_params
 
-    #todo: Look at coord generator, assert that positions/timepoints is a list?
     def _gen_coord_set(self):
         """
         Function creates a set of all position, time values to loop through for reconstruction

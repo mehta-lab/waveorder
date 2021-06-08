@@ -15,6 +15,7 @@ class qlipp_pipeline(Pipeline_Builder):
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
     """
 
+    #todo: clean up init
     def __init__(self, config: ConfigReader, data: MicromanagerReader, save_dir: str, name: str, mode: str):
         """
         Parameters
@@ -178,6 +179,7 @@ class qlipp_pipeline(Pipeline_Builder):
 
         return birefringence
 
+    #todo: think about better way to write fluor/registered data?
     def write_data(self, pt, pt_data, stokes, birefringence, phase, registered_stacks):
 
         t = pt[1]
