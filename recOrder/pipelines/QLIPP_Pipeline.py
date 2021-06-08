@@ -52,7 +52,7 @@ class qlipp_pipeline(Pipeline_Structure):
 
         # Metadata
         self.chan_names = self.data.channel_names
-        self.LF_indices = (self.parse_channel_idx(self.chan_names)) if not phase_only
+        self.LF_indices = (self.parse_channel_idx(self.chan_names))
         self.calib_meta = json.load(open(self.config.calibration_metadata)) \
             if self.config.calibration_metadata else None
         self.bg_path = self.config.background if self.config.background else None
