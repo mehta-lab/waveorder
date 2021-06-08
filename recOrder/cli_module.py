@@ -38,5 +38,5 @@ def main():
     else:
         config = ConfigReader(None, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name)
 
-    constructor = PipelineDaemon(config)
-    constructor.run()
+    daemon = PipelineDaemon(config)
+    daemon.run()
