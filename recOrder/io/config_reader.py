@@ -146,17 +146,18 @@ class ConfigReader(object):
             'Please provide data_save_name in config file or CLI argument'
 
         if self.config['dataset']['positions'] != 'all' and not isinstance(self.config['dataset']['positions'], int):
-            assert(isinstance(self.config['dataset']['positions']), list), \
-                'if not single integer value or "all", positions must be list (nested lists/tuples allowed)'
+            assert(isinstance(self.config['dataset']['positions'], list), \
+                'if not single integer value or "all", positions must be list (nested lists/tuples allowed)')
         if self.config['dataset']['timepoints'] != 'all' and not isinstance(self.config['dataset']['timepoints'], int):
-            assert(isinstance(self.config['dataset']['timepoints']), list), \
-                'if not single integer value or "all", timepoints must be list (nested lists/tuples allowed)'
+            assert(isinstance(self.config['dataset']['timepoints'], list), \
+                'if not single integer value or "all", timepoints must be list (nested lists/tuples allowed)')
 
         for key,value in PROCESSING.items():
             if key == 'output_channels':
                 if 'Phase3D' in self.config['processing'][key] or 'Phase2D' in self.config['processing'][key]:
                     assert 'wavelength' in self.config['processing'], 'wavelength required for phase reconstruction'
-                    assert 'pixel_size' in self.config['processing'], 'pixel_size required for phase reconstruction'                    'magnification': None,
+                    assert 'pixel_size' in self.config['processing'], 'pixel_size required for phase reconstruction'
+                    assert 'magnification' in self.config['processing'], 'magnification required for phase reconstruction'
                     assert 'NA_objective' in self.config['processing'], 'NA_objective required for phase reconstruction'
                     assert 'NA_condenser' in self.config['processing'], 'NA_condenser required for phase reconstruction'
 
