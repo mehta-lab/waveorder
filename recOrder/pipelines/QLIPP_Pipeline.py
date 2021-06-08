@@ -16,7 +16,7 @@ class qlipp_pipeline(Pipeline_Structure):
     """
 
     #todo: clean up init
-    def __init__(self, config: ConfigReader, data: MicromanagerReader, save_dir: str, name: str, mode: str):
+    def __init__(self, config: ConfigReader, data: MicromanagerReader, save_dir: str, name: str, mode: str, num_t: int):
         """
         Parameters
         ----------
@@ -35,7 +35,7 @@ class qlipp_pipeline(Pipeline_Structure):
         self.save_dir = save_dir
 
         # Dimension Parameters
-        self.t = data.frames if self.config.timepoints == ['all'] else NotImplementedError
+        self.t = num_t
         self.channels = self.config.output_channels
         if len(self.channels) == 1:
             if 'Phase3D' in self.channels or 'Phase2D' in self.channels:
@@ -63,7 +63,6 @@ class qlipp_pipeline(Pipeline_Structure):
         self.s0_idx, self.s1_idx, self.s2_idx, self.s3_idx, self.fluor_idxs = self.parse_channel_idx(self.chan_names)
 
         # Writer Parameters
-        self.data_shape = (self.t, len(self.channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
         self.writer = WaveorderWriter(self.save_dir, 'physical' if mode != 'stokes' else 'stokes')
         self.writer.create_zarr_root(f'{self.name}.zarr')

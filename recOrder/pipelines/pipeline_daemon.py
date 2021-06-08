@@ -25,7 +25,7 @@ class PipelineDaemon:
 
         if self.config.method == 'QLIPP':
             self.pipeline = qlipp_pipeline(self.config, self.data, self.config.save_dir,
-                                           self.config.data_save_name, self.config.mode)
+                                           self.config.data_save_name, self.config.mode, self.num_t)
 
         elif self.config.mode == 'denoise':
             raise NotImplementedError
@@ -111,40 +111,43 @@ class PipelineDaemon:
         """
 
         self.pt_set = set()
-        p_indices = []
-        t_indices = []
+        p_indices = set()
+        t_indices = set()
 
         for p_entry in self.config.positions:
             if p_entry == 'all':
                 for p in range(self.data.get_num_positions()):
-                    p_indices.append(p)
+                    p_indices.add(p)
                 break
             elif isinstance(p_entry, int):
-                p_indices.append(p_entry)
+                p_indices.add(p_entry)
             elif isinstance(p_entry, list):
                 for p in p_entry:
-                    p_indices.append(p)
+                    p_indices.add(p)
             elif isinstance(p_entry, tuple):
                 for p in range(p_entry[0], p_entry[1]):
-                    p_indices.append(p)
+                    p_indices.add(p)
             else:
                 raise ValueError(f'Did not understand entry {p_entry} in config specified positions')
 
         for t_entry in self.config.timepoints:
             if t_entry == 'all':
                 for t in range(self.data.frames):
-                    t_indices.append(t)
+                    t_indices.add(t)
                 break
             elif isinstance(t_entry, int):
-                t_indices.append(t_entry)
+                t_indices.add(t_entry)
             elif isinstance(t_entry, list):
                 for t in t_entry:
-                    t_indices.append(t)
+                    t_indices.add(t)
             elif isinstance(t_entry, tuple):
                 for t in range(t_entry[0],t_entry[1]):
-                    t_indices.append(t)
+                    t_indices.add(t)
             else:
                 raise ValueError(f'Did not understand entry {t_entry} in config specified positions')
+
+        self.num_t = len(t_indices)
+        self.num_p = len(p_indices)
 
         for pos in p_indices:
             for time_point in t_indices:
