@@ -10,17 +10,17 @@ class PipelineDaemon:
     This will pull the necessary pipeline based off the config default.
     """
 
-    def __init__(self, config: ConfigReader):
+    def __init__(self, config: ConfigReader, read_data=True):
 
-        start = time.time()
-        print('Reading Data...')
-        data = MicromanagerReader(config.data_dir, config.data_type, extract_data=True)
-        end = time.time()
-        print(f'Finished Reading Data ({(end - start) / 60 :0.1f} min)')
+        if read_data:
+            start = time.time()
+            print('Reading Data...')
+            data = MicromanagerReader(config.data_dir, config.data_type, extract_data=True)
+            end = time.time()
+            print(f'Finished Reading Data ({(end - start) / 60 :0.1f} min)')
+            self.data = data
 
         self.config = config
-        self.data = data
-
         self._gen_coord_set()
 
         if self.config.method == 'QLIPP':
