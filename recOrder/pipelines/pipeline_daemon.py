@@ -20,21 +20,24 @@ class PipelineDaemon:
             print(f'Finished Reading Data ({(end - start) / 60 :0.1f} min)')
             self.data = data
 
-        self.config = config
-        self._gen_coord_set()
+            self.config = config
+            self._gen_coord_set()
 
-        if self.config.method == 'QLIPP':
-            self.pipeline = qlipp_pipeline(self.config, self.data, self.config.save_dir,
-                                           self.config.data_save_name, self.config.mode, self.num_t)
+            if self.config.method == 'QLIPP':
+                self.pipeline = qlipp_pipeline(self.config, self.data, self.config.save_dir,
+                                               self.config.data_save_name, self.config.mode, self.num_t)
 
-        elif self.config.mode == 'denoise':
-            raise NotImplementedError
+            elif self.config.mode == 'denoise':
+                raise NotImplementedError
 
-        elif self.config.mode == 'UPTI':
-            raise NotImplementedError
+            elif self.config.mode == 'UPTI':
+                raise NotImplementedError
 
-        elif self.config.mode == 'IPS':
-            raise NotImplementedError
+            elif self.config.mode == 'IPS':
+                raise NotImplementedError
+
+        else:
+            self.config = config
 
 
     def _get_preprocessing(self):
