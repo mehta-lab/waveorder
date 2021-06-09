@@ -10,34 +10,31 @@ class PipelineDaemon:
     This will pull the necessary pipeline based off the config default.
     """
 
-    def __init__(self, config: ConfigReader, read_data=True):
+    def __init__(self, config: ConfigReader):
 
-        if read_data:
-            start = time.time()
-            print('Reading Data...')
-            data = MicromanagerReader(config.data_dir, config.data_type, extract_data=True)
-            end = time.time()
-            print(f'Finished Reading Data ({(end - start) / 60 :0.1f} min)')
-            self.data = data
+        start = time.time()
+        print('Reading Data...')
+        data = MicromanagerReader(config.data_dir, config.data_type, extract_data=True)
+        end = time.time()
+        print(f'Finished Reading Data ({(end - start) / 60 :0.1f} min)')
 
-            self.config = config
-            self._gen_coord_set()
+        self.config = config
+        self.data = data
 
-            if self.config.method == 'QLIPP':
-                self.pipeline = qlipp_pipeline(self.config, self.data, self.config.save_dir,
-                                               self.config.data_save_name, self.config.mode, self.num_t)
+        self._gen_coord_set()
 
-            elif self.config.mode == 'denoise':
-                raise NotImplementedError
+        if self.config.method == 'QLIPP':
+            self.pipeline = qlipp_pipeline(self.config, self.data, self.config.save_dir,
+                                           self.config.data_save_name, self.config.mode, self.num_t)
 
-            elif self.config.mode == 'UPTI':
-                raise NotImplementedError
+        elif self.config.mode == 'denoise':
+            raise NotImplementedError
 
-            elif self.config.mode == 'IPS':
-                raise NotImplementedError
+        elif self.config.mode == 'UPTI':
+            raise NotImplementedError
 
-        else:
-            self.config = config
+        elif self.config.mode == 'IPS':
+            raise NotImplementedError
 
 
     def _get_preprocessing(self):
