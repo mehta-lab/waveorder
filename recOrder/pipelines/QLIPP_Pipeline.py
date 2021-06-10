@@ -16,6 +16,7 @@ class qlipp_pipeline(Pipeline_Structure):
     """
 
     #todo: clean up init
+    #todo: make sure if only computing phase that birefringence isn't computed
     def __init__(self, config: ConfigReader, data: MicromanagerReader, save_dir: str, name: str, mode: str, num_t: int):
         """
         Parameters
@@ -36,12 +37,11 @@ class qlipp_pipeline(Pipeline_Structure):
 
         # Dimension Parameters
         self.t = num_t
-        self.channels = self.config.output_channels
-        if len(self.channels) == 1:
-            if 'Phase3D' in self.channels or 'Phase2D' in self.channels:
-                phase_only = True
-
-        if self.data.channels < 4 and not phase_only:
+        self.output_channels = self.config.output_channels
+        if len(self.output_channels) == 1:
+            if 'Phase3D' in self.output_channels or 'Phase2D' in self.output_channels:
+                self.phase_only = True
+        if self.data.channels < 4:
             raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
 
         self.slices = self.data.slices
@@ -63,7 +63,7 @@ class qlipp_pipeline(Pipeline_Structure):
         self.s0_idx, self.s1_idx, self.s2_idx, self.s3_idx, self.fluor_idxs = self.parse_channel_idx(self.chan_names)
 
         # Writer Parameters
-        self.data_shape = (self.t, len(self.channels), self.slices, self.img_dim[0], self.img_dim[1])
+        self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
         self.writer = WaveorderWriter(self.save_dir, 'physical')
         self.writer.create_zarr_root(f'{self.name}.zarr')
@@ -134,7 +134,7 @@ class qlipp_pipeline(Pipeline_Structure):
 
         """
 
-        if 'Phase3D' in self.channels:
+        if 'Phase3D' in self.output_channels:
             phase3D = self.reconstructor.Phase_recon_3D(np.transpose(stokes[:, 0], (1, 2, 0)),
                                                    method=self.config.phase_denoiser_3D,
                                                    reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
@@ -143,7 +143,7 @@ class qlipp_pipeline(Pipeline_Structure):
 
             return np.transpose(phase3D, (2, 0, 1))
 
-        if 'Phase2D' in self.channels:
+        if 'Phase2D' in self.output_channels:
             _, phase2D = self.reconstructor.Phase_recon(np.transpose(stokes[:, 0], (1, 2, 0)),
                                                         method=self.config.phase_denoiser_2D,
                                                         reg_u=self.config.Tik_reg_abs_2D,
@@ -174,10 +174,13 @@ class qlipp_pipeline(Pipeline_Structure):
 
         """
 
-        birefringence = reconstruct_QLIPP_birefringence(stokes[slice(None) if self.slices != 1 else self.focus_slice],
-                                                        self.reconstructor)
+        if self.phase_only:
+            return None
+        else:
+            birefringence = reconstruct_QLIPP_birefringence(stokes[slice(None) if self.slices != 1 else self.focus_slice],
+                                                            self.reconstructor)
 
-        return birefringence
+            return birefringence
 
     #todo: think about better way to write fluor/registered data?
     def write_data(self, pt, pt_data, stokes, birefringence, phase, registered_stacks):
@@ -185,23 +188,23 @@ class qlipp_pipeline(Pipeline_Structure):
         t = pt[1]
         fluor_idx = 0
 
-        for chan in range(len(self.channels)):
-            if 'Retardance' in self.channels[chan]:
+        for chan in range(len(self.output_channels)):
+            if 'Retardance' in self.output_channels[chan]:
                 ret = birefringence[0] / (2 * np.pi) * self.config.wavelength
                 self.writer.write(ret, t=t, c=chan)
-            elif 'Orientation' in self.channels[chan]:
+            elif 'Orientation' in self.output_channels[chan]:
                 self.writer.write(birefringence[1], t=t, c=chan)
-            elif 'Brightfield' in self.channels[chan]:
+            elif 'Brightfield' in self.output_channels[chan]:
                 self.writer.write(birefringence[2], t=t, c=chan)
-            elif 'Phase3D' in self.channels[chan]:
+            elif 'Phase3D' in self.output_channels[chan]:
                 self.writer.write(phase, t=t, c=chan)
-            elif 'S0' in self.channels[chan]:
+            elif 'S0' in self.output_channels[chan]:
                 self.writer.write(stokes[:, 0], t=t, c=chan)
-            elif 'S1' in self.channels[chan]:
+            elif 'S1' in self.output_channels[chan]:
                 self.writer.write(stokes[:, 1], t=t, c=chan)
-            elif 'S2' in self.channels[chan]:
+            elif 'S2' in self.output_channels[chan]:
                 self.writer.write(stokes[:, 2], t=t, c=chan)
-            elif 'S3' in self.channels[chan]:
+            elif 'S3' in self.output_channels[chan]:
                 self.writer.write(stokes[:, 3], t=t, c=chan)
             else:
                 if self.config.postprocessing.registration_use:
@@ -211,8 +214,6 @@ class qlipp_pipeline(Pipeline_Structure):
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], t=t, c=chan)
                     fluor_idx += 1
 
-    #TODO: name fluor channels based off metadata name?
-    #TODO: ADD CHECKS FOR OUTPUT CHANNELS AND NUMBER OF FLUOR
     def parse_channel_idx(self, channel_list):
         fluor_idx = []
         for channel in range(len(channel_list)):
