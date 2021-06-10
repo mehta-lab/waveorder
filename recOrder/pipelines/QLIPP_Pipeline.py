@@ -41,6 +41,7 @@ class qlipp_pipeline(Pipeline_Structure):
         if len(self.output_channels) == 1:
             if 'Phase3D' in self.output_channels or 'Phase2D' in self.output_channels:
                 self.phase_only = True
+
         if self.data.channels < 4:
             raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
 
@@ -50,17 +51,18 @@ class qlipp_pipeline(Pipeline_Structure):
             self.slices = 1
             self.focus_slice = self.config.focus_zidx
 
+        self.img_dim = (self.data.height, self.data.width, self.data.slices)
+
         # Metadata
         self.chan_names = self.data.channel_names
-        self.LF_indices = (self.parse_channel_idx(self.chan_names))
         self.calib_meta = json.load(open(self.config.calibration_metadata)) \
             if self.config.calibration_metadata else None
         self.bg_path = self.config.background if self.config.background else None
-        self.bg_roi = self.calib_meta['Summary']['ROI Used (x ,y, width, height)'] \
-            if self.config.calibration_metadata else None
-        self.bg_correction = self.config.background_correction
-        self.img_dim = (self.data.height, self.data.width, self.data.slices)
-        self.s0_idx, self.s1_idx, self.s2_idx, self.s3_idx, self.fluor_idxs = self.parse_channel_idx(self.chan_names)
+        self.bg_roi = self.calib_meta['Summary']['ROI Used (x ,y, width, height)'] if self.calib_meta else None
+
+        self.s0_idx, self.s1_idx, \
+        self.s2_idx, self.s3_idx, \
+        self.fluor_idxs = self.parse_channel_idx(self.data.channel_names)
 
         # Writer Parameters
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
@@ -83,7 +85,7 @@ class qlipp_pipeline(Pipeline_Structure):
                                                  self.mode, self.config.use_gpu, self.config.gpu_id)
 
         # Compute BG stokes if necessary
-        if self.bg_correction != None:
+        if self.config.bg_correction != None:
             bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
             self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
             self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
@@ -107,10 +109,10 @@ class qlipp_pipeline(Pipeline_Structure):
 
         LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
 
-        LF_array[0] = data[self.LF_indices[0]]
-        LF_array[1] = data[self.LF_indices[1]]
-        LF_array[2] = data[self.LF_indices[2]]
-        LF_array[3] = data[self.LF_indices[3]]
+        LF_array[0] = data[self.s0_idx]
+        LF_array[1] = data[self.s1_idx]
+        LF_array[2] = data[self.s2_idx]
+        LF_array[3] = data[self.s3_idx]
 
         stokes = reconstruct_QLIPP_stokes(LF_array, self.reconstructor, self.bg_stokes)
 
@@ -174,12 +176,11 @@ class qlipp_pipeline(Pipeline_Structure):
 
         """
 
-        if self.phase_only:
+        if self.phase_only or self.stokes_only:
             return None
         else:
             birefringence = reconstruct_QLIPP_birefringence(stokes[slice(None) if self.slices != 1 else self.focus_slice],
                                                             self.reconstructor)
-
             return birefringence
 
     #todo: think about better way to write fluor/registered data?
@@ -206,6 +207,8 @@ class qlipp_pipeline(Pipeline_Structure):
                 self.writer.write(stokes[:, 2], t=t, c=chan)
             elif 'S3' in self.output_channels[chan]:
                 self.writer.write(stokes[:, 3], t=t, c=chan)
+
+            # Assume any other output channel in config is fluorescence
             else:
                 if self.config.postprocessing.registration_use:
                     self.writer.write(registered_stacks[fluor_idx], t=t, c=chan)
