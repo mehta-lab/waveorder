@@ -1,8 +1,9 @@
 import pytest
 import shutil
 import os
+from google_drive_downloader import GoogleDriveDownloader as gdd
 
-@pytest.fixture(scope='function')
+@pytest.fixture(scope='session')
 def setup_folder_qlipp_pipeline():
     temp_folder = os.getcwd() + '/pytest_temp'
     if not os.path.isdir(temp_folder):
@@ -18,9 +19,9 @@ def setup_folder_qlipp_pipeline():
         print(f"Error while deleting temp folder: {e.strerror}")
 
 @pytest.fixture(scope="session")
-def setup_mm2gamma_ome_tiffs():
+def setup_test_data():
     temp_folder = os.getcwd() + '/pytest_temp'
-    temp_gamma = os.path.join(temp_folder, 'mm2gamma')
+    temp_gamma = os.path.join(temp_folder, 'pipeline_test')
     if not os.path.isdir(temp_folder):
         os.mkdir(temp_folder)
         print("\nsetting up temp folder")
@@ -29,25 +30,22 @@ def setup_mm2gamma_ome_tiffs():
     # 'https://drive.google.com/file/d/1UWSr4GQ6Kpj5irq2TicvDLULfWjKhh0b/view?usp=sharing'
 
     # DO NOT ADJUST THIS VALUE
-    mm2gamma_ometiffs = '1UWSr4GQ6Kpj5irq2TicvDLULfWjKhh0b'
+    recOrder_pytest = '1_FoKVyl4Qa4F-4_vaREq_fqxODEU5neU'
 
     # download files to temp folder
-    output = temp_gamma + "/mm2gamma_ometiffs.zip"
-    gdd.download_file_from_google_drive(file_id=mm2gamma_ometiffs,
+    output = temp_gamma + "/recOrder_pytest.zip"
+    gdd.download_file_from_google_drive(file_id=recOrder_pytest,
                                         dest_path=output,
                                         unzip=True,
                                         showsize=True,
                                         overwrite=True)
 
-    src = os.path.join(temp_gamma, 'ome-tiffs')
-    subfolders = [f for f in os.listdir(src) if os.path.isdir(join(src, f))]
+    src = os.path.join(temp_gamma, '2021_06_11_recOrder_pytest_20x_04NA')
+    data = os.path.join(src, '2T_3P_81Z_231Y_498X_Kazansky_2')
+    bg = os.path.join(src, 'BG')
+    calib = os.path.join(src, 'calib_metadata.txt')
 
-    # specific folder
-    one_folder = join(src, subfolders[0])
-    # random folder
-    rand_folder = join(src, random.choice(subfolders))
-    # return path to unzipped folder containing test images as well as specific folder paths
-    yield src, one_folder, rand_folder
+    yield src, data, bg, calib
 
     # breakdown files
     try:
@@ -55,7 +53,7 @@ def setup_mm2gamma_ome_tiffs():
         os.remove(output)
 
         # remove unzipped folder
-        shutil.rmtree(os.path.join(temp_gamma, 'ome-tiffs'))
+        shutil.rmtree(os.path.join(temp_gamma, '2021_06_11_recOrder_pytest_20x_04NA'))
 
         # remove temp folder
         shutil.rmtree(temp_folder)

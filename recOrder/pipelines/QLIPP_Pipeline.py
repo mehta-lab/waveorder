@@ -58,7 +58,7 @@ class qlipp_pipeline(Pipeline_Structure):
         self.calib_meta = json.load(open(self.config.calibration_metadata)) \
             if self.config.calibration_metadata else None
         self.bg_path = self.config.background if self.config.background else None
-        self.bg_roi = self.calib_meta['Summary']['ROI Used (x ,y, width, height)'] if self.calib_meta else None
+        self.bg_roi = self.calib_meta['Summary']['ROI Used (x , y, width, height)'] if self.calib_meta else None
 
         self.s0_idx, self.s1_idx, \
         self.s2_idx, self.s3_idx, \
@@ -85,7 +85,7 @@ class qlipp_pipeline(Pipeline_Structure):
                                                  self.mode, self.config.use_gpu, self.config.gpu_id)
 
         # Compute BG stokes if necessary
-        if self.config.bg_correction != None:
+        if self.config.background_correction != None:
             bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
             self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
             self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
