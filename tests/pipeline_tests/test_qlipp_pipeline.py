@@ -62,24 +62,24 @@ def test_qlipp_pipeline_initiate():
     assert(pipeline.reconstructor is not None)
     assert(pipeline.bg_stokes is not None)
 
-def test_pipeline_daemon_run():
-
-    # folder = setup_folder_qlipp_pipeline()
-    # test = setup_test_data()
-
-    folder = '/Users/cameron.foltz/recOrder/pytest_temp/pipeline_test/2021_06_11_recOrder_pytest_20x_04NA'
-
-    data = os.path.join(folder, '2T_3P_81Z_231Y_498X_Kazansky_2')
-
-    config = ConfigReader('/Users/cameron.foltz/recOrder/tests/pipeline_tests/config_full_pytest.yml',
-                          data_dir=data, save_dir=folder)
-
-    daemon = PipelineDaemon(config)
-    daemon.run()
-
-    store = zarr.open(os.path.join(folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'))
-
-    assert(store['Pos_000.zarr']['physical_data']['array'].shape)
+# def test_pipeline_daemon_run():
+#
+#     # folder = setup_folder_qlipp_pipeline()
+#     # test = setup_test_data()
+#
+#     folder = '/Users/cameron.foltz/recOrder/pytest_temp/pipeline_test/2021_06_11_recOrder_pytest_20x_04NA'
+#
+#     data = os.path.join(folder, '2T_3P_81Z_231Y_498X_Kazansky_2')
+#
+#     config = ConfigReader('/Users/cameron.foltz/recOrder/tests/pipeline_tests/config_full_pytest.yml',
+#                           data_dir=data, save_dir=folder)
+#
+#     daemon = PipelineDaemon(config)
+#     daemon.run()
+#
+#     store = zarr.open(os.path.join(folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'))
+#
+#     assert(store['Pos_000.zarr']['physical_data']['array'].shape)
 
 
 
