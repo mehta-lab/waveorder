@@ -27,13 +27,13 @@ class PipelineDaemon:
             self.pipeline = qlipp_pipeline(self.config, self.data, self.config.save_dir,
                                            self.config.data_save_name, self.config.mode, self.num_t)
 
-        elif self.config.mode == 'denoise':
+        elif self.config.method == 'denoise':
             raise NotImplementedError
 
-        elif self.config.mode == 'UPTI':
+        elif self.config.method == 'UPTI':
             raise NotImplementedError
 
-        elif self.config.mode == 'IPS':
+        elif self.config.method == 'IPS':
             raise NotImplementedError
 
 
@@ -158,10 +158,9 @@ class PipelineDaemon:
             self.pipeline.writer.create_position(pt[0])
             self.pipeline.writer.init_array(self.pipeline.data_shape,
                                             self.pipeline.chunk_size,
-                                            self.pipeline.channels)
+                                            self.pipeline.output_channels)
         except:
             self.pipeline.writer.open_position(pt[0])
-
 
     #TODO: use arbol print statements
     def run(self):

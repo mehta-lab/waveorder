@@ -38,9 +38,10 @@ class qlipp_pipeline(Pipeline_Structure):
         # Dimension Parameters
         self.t = num_t
         self.output_channels = self.config.output_channels
-        if len(self.output_channels) == 1:
-            if 'Phase3D' in self.output_channels or 'Phase2D' in self.output_channels:
-                self.phase_only = True
+
+        self.phase_only = False
+        self.stokes_only = False
+        self._check_output_channels(self.output_channels)
 
         if self.data.channels < 4:
             raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
@@ -71,7 +72,7 @@ class qlipp_pipeline(Pipeline_Structure):
         self.writer.create_zarr_root(f'{self.name}.zarr')
         self.writer.store.attrs.put(self.config.yaml_dict)
 
-        #TODO: read step size from metadata
+        #TODO: read step size from metadata, figure out how to place in config
 
         # Initialize Reconstructor
         self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
@@ -89,6 +90,18 @@ class qlipp_pipeline(Pipeline_Structure):
             bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
             self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
             self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
+
+    def _check_output_channels(self, output_channels):
+        for channel in output_channels:
+            if 'Phase3D' in channel or 'Phase2D' in channel:
+                self.phase_only == True
+            elif 'S0' in channel or 'S1' in channel or 'S2' in channel or 'S3' in channel:
+                self.stokes_only = True
+            elif 'Retardance' in channel or 'Orientation' in channel or 'Brightfield' in channel:
+                self.stokes_only = False
+                self.phase_only = False
+            else:
+                continue
 
     def reconstruct_stokes_volume(self, data):
         """
@@ -198,6 +211,8 @@ class qlipp_pipeline(Pipeline_Structure):
             elif 'Brightfield' in self.output_channels[chan]:
                 self.writer.write(birefringence[2], t=t, c=chan)
             elif 'Phase3D' in self.output_channels[chan]:
+                self.writer.write(phase, t=t, c=chan)
+            elif 'Phase2D' in self.output_channels:
                 self.writer.write(phase, t=t, c=chan)
             elif 'S0' in self.output_channels[chan]:
                 self.writer.write(stokes[:, 0], t=t, c=chan)
