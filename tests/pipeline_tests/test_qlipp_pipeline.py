@@ -3,6 +3,7 @@ from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_daemon import PipelineDaemon
 from recOrder.pipelines.QLIPP_Pipeline import qlipp_pipeline
 from waveorder.io.writer import WaveorderWriter
+from os.path import dirname, abspath
 import os
 import zarr
 import shutil
@@ -11,8 +12,8 @@ def test_pipeline_daemon_initiate(setup_test_data):
 
     folder, data = setup_test_data
 
-    config = ConfigReader('/Users/cameron.foltz/recOrder/tests/pipeline_tests/config_full_pytest.yml',
-                          data_dir=data, save_dir=folder)
+    path_to_config = os.path.join(dirname(abspath(__file__)), 'config_full_pytest.yml')
+    config = ConfigReader(path_to_config, data_dir=data, save_dir=folder)
 
     daemon = PipelineDaemon(config)
     assert(daemon.config is not None)
@@ -26,8 +27,8 @@ def test_pipeline_daemon_initiate(setup_test_data):
 def test_qlipp_pipeline_initiate(setup_test_data):
     folder, data = setup_test_data
 
-    config = ConfigReader('/Users/cameron.foltz/recOrder/tests/pipeline_tests/config_full_pytest.yml',
-                          data_dir=data, save_dir=folder)
+    path_to_config = os.path.join(dirname(abspath(__file__)), 'config_full_pytest.yml')
+    config = ConfigReader(path_to_config, data_dir=data, save_dir=folder)
 
     daemon = PipelineDaemon(config)
 
@@ -66,8 +67,8 @@ def test_pipeline_daemon_run(setup_test_data):
 
     folder, data = setup_test_data
 
-    config = ConfigReader('/Users/cameron.foltz/recOrder/tests/pipeline_tests/config_full_pytest.yml',
-                          data_dir=data, save_dir=folder)
+    path_to_config = os.path.join(dirname(abspath(__file__)), 'config_full_pytest.yml')
+    config = ConfigReader(path_to_config, data_dir=data, save_dir=folder)
 
     daemon = PipelineDaemon(config)
     daemon.run()
