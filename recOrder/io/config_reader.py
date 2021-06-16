@@ -81,29 +81,29 @@ class ConfigReader(object):
 
     def __init__(self, cfg_path=None, data_dir=None, save_dir=None, method=None, mode=None, name=None):
 
-        self.__set_attr(self, 'preprocessing', Object())
-        self.__set_attr(self, 'postprocessing', Object())
+        self.preprocessing = Object()
+        self.postprocessing = Object()
 
         # initialize defaults
         for key, value in DATASET.items():
-            self.__set_attr(self, key, value)
+            setattr(self, key, value)
 
         for key, value in PREPROCESSING.items():
             if isinstance(value, dict):
                 for key_child, value_child in PREPROCESSING[key].items():
-                    self.__set_attr(self.preprocessing, f'{key}_{key_child}', value_child)
+                    setattr(self.preprocessing, f'{key}_{key_child}', value_child)
             else:
-                self.__set_attr(self.preprocessing, key, value)
+                setattr(self.preprocessing, key, value)
 
         for key, value in PROCESSING.items():
-            self.__set_attr(self, key, value)
+            setattr(self, key, value)
 
         for key, value in POSTPROCESSING.items():
             if isinstance(value, dict):
                 for key_child, value_child in POSTPROCESSING[key].items():
-                    self.__set_attr(self.postprocessing, f'{key}_{key_child}', value_child)
+                    setattr(self.postprocessing, f'{key}_{key_child}', value_child)
             else:
-                self.__set_attr(self.postprocessing, key, value)
+                setattr(self.postprocessing, key, value)
 
         # parse config
         if cfg_path:
@@ -111,22 +111,19 @@ class ConfigReader(object):
             self.read_config(cfg_path, data_dir, save_dir, method, mode, name)
 
         # Create yaml dict to save in save_dir
-        self.__set_attr(self, 'yaml_dict', self._create_yaml_dict())
+        setattr(self, 'yaml_dict', self._create_yaml_dict())
         self._save_yaml()
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
 
     # Override set attribute function to disallow changes after init
     def __setattr__(self, name, value):
-        raise AttributeError("Attempting to change immutable object")
+        if hasattr(self, name):
+            raise AttributeError("Attempting to change immutable object")
+        else:
+            super().__setattr__(name, value)
 
     # Custom set attr function to initially set attributes before its overridden
-    def __set_attr(self, object_, name, value):
-        object.__setattr__(object_, name, value)
+    # def __set_attr(self, object_, name, value):
+    #     object.__setattr__(object_, name, value)
 
     def _check_assertions(self, data_dir, save_dir, method, mode, name):
 
@@ -224,19 +221,19 @@ class ConfigReader(object):
 
     def _use_default_name(self):
         path = pathlib.PurePath(self.data_dir)
-        self.__set_attr(self, 'data_save_name', path.name)
+        super().__setattr__('data_save_name', path.name)
 
     def _parse_cli(self, data_dir, save_dir, method, mode, name):
         if data_dir:
-            self.__set_attr(self, 'data_dir', data_dir)
+            super().__setattr__('data_dir', data_dir)
         if save_dir:
-            self.__set_attr(self, 'save_dir', save_dir)
+            super().__setattr__('save_dir', save_dir)
         if method:
-            self.__set_attr(self, 'method', method)
+            super().__setattr__('method', method)
         if mode:
-            self.__set_attr(self, 'mode', mode)
+            super().__setattr__('mode', mode)
         if name:
-            self.__set_attr(self, 'data_save_name', name)
+            super().__setattr__('data_save_name', name)
 
     def _parse_dataset(self):
         for key, value in self.config['dataset'].items():
@@ -249,24 +246,24 @@ class ConfigReader(object):
                 elif key == 'positions' or key == 'timepoints':
                     if isinstance(value, str):
                         if value == 'all':
-                            self.__set_attr(self, key, [value])
+                            super().__setattr__(key, [value])
                         else:
                             raise KeyError(f'{key} value {value} not understood,\
                                        please specify a list or "all"')
                     elif isinstance(value, int):
-                        self.__set_attr(self, key, [value])
+                        super().__setattr__(key, [value])
                     elif isinstance(value, tuple):
                         if len(value) == 2:
-                            self.__set_attr(self, key, value)
+                            super().__setattr__(key, value)
                         else:
                             raise KeyError(f'{key} value {value} is not a tuple with length of 2')
                     elif isinstance(value, list):
-                        self.__set_attr(self, key, value)
+                        super().__setattr__(key, value)
                     else:
                         raise KeyError(f'{key} value {value} format not understood. \
                                        Must be list with nested tuple or list or "all"')
                 else:
-                    self.__set_attr(self, key, value)
+                    super().__setattr__(key, value)
 
             else:
                 warnings.warn(f'yaml DATASET config field {key} is not recognized')
@@ -276,7 +273,7 @@ class ConfigReader(object):
             if key in PREPROCESSING.keys():
                 for key_child, value_child in self.config['pre_processing'][key].items():
                     if key_child in PREPROCESSING[key].keys():
-                        self.__set_attr(self.preprocessing, f'{key}_{key_child}', value_child)
+                        setattr(self.preprocessing, f'{key}_{key_child}', value_child)
                     else:
                         warnings.warn(f'yaml PREPROCESSING config field {key}, {key_child} is not recognized')
             else:
@@ -285,19 +282,19 @@ class ConfigReader(object):
     def _parse_processing(self):
         for key, value in self.config['processing'].items():
             if key in PROCESSING.keys():
-                self.__set_attr(self, key, value)
+                super().__setattr__(key, value)
             else:
                 warnings.warn(f'yaml PROCESSING config field {key} is not recognized')
 
         if 'Phase3D' not in self.output_channels and 'Phase2D' not in self.output_channels:
-            self.__set_attr(self, 'qlipp_birefringence_only', True)
+            super().__setattr__('qlipp_birefringence_only', True)
 
     def _parse_postprocessing(self):
         for key, value in self.config['post_processing'].items():
             if key in POSTPROCESSING.keys():
                 for key_child, value_child in self.config['post_processing'][key].items():
                     if key_child in POSTPROCESSING[key].keys():
-                        self.__set_attr(self.postprocessing, f'{key}_{key_child}', value_child)
+                        setattr(self.postprocessing, f'{key}_{key_child}', value_child)
                     else:
                         warnings.warn(f'yaml POSTPROCESSING config field {key}, {key_child} is not recognized')
             else:
@@ -305,7 +302,7 @@ class ConfigReader(object):
 
     def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
 
-        self.__set_attr(self, 'config', yaml.full_load(open(cfg_path)))
+        self.config = yaml.full_load(open(cfg_path))
 
         self._check_assertions(data_dir, save_dir, method, mode, name)
         self._parse_cli(data_dir, save_dir, method, mode, name)
@@ -314,5 +311,5 @@ class ConfigReader(object):
         self._parse_processing()
         self._parse_postprocessing()
 
-        if self.data_save_name == None:
+        if not self.data_save_name:
             self._use_default_name()

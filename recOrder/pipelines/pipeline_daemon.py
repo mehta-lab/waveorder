@@ -163,6 +163,7 @@ class PipelineDaemon:
             self.pipeline.writer.open_position(pt[0])
 
     #TODO: use arbol print statements
+    #TODO: Refactor Birefringence to Anisotropy
     def run(self):
 
         print(f'Beginning Reconstruction...')

@@ -15,8 +15,6 @@ class qlipp_pipeline(Pipeline_Structure):
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
     """
 
-    #todo: clean up init
-    #todo: make sure if only computing phase that birefringence isn't computed
     def __init__(self, config: ConfigReader, data: MicromanagerReader, save_dir: str, name: str, mode: str, num_t: int):
         """
         Parameters
