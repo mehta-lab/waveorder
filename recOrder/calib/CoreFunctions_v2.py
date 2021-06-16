@@ -36,19 +36,21 @@ def get_lc(mmc, device_property: str) -> float:
     return float(mmc.getProperty('MeadowlarkLcOpenSource', device_property))
 
 
-def define_lc_state(mmc, PROPERTIES, device_property: str):
+def define_lc_state(mmc, state, lca, lcb, PROPERTIES: dict):
     """
     defines the state based on current LCA - LCB settings
     :param device_property: str
         'State0', 'State1', 'State2' ....
     :return: None
     """
-    lca_ext = get_lc(mmc, PROPERTIES['LCA'])
-    lcb_ext = get_lc(mmc, PROPERTIES['LCB'])
-    print("setting LCA = "+str(lca_ext))
-    print("setting LCB = "+str(lcb_ext))
+    set_lc(mmc, lca, PROPERTIES['LCA'])
+    set_lc(mmc, lca, PROPERTIES['LCB'])
+
+    print("setting LCA = "+str(lca))
+    print("setting LCB = "+str(lcb))
     print("\n")
-    mmc.setProperty('MeadowlarkLcOpenSource', device_property, 0)
+
+    mmc.setProperty('MeadowlarkLcOpenSource', PROPERTIES[state], 0)
     mmc.waitForDevice('MeadowlarkLcOpenSource')
 
 
