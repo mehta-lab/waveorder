@@ -1,1 +1,1 @@
-from .QLIPP_compute import *
+from .qlipp_compute import *

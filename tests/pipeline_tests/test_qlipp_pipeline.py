@@ -1,7 +1,7 @@
 import pytest
 from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_manager import PipelineManager
-from recOrder.pipelines.QLIPP_Pipeline import qlipp_pipeline
+from recOrder.pipelines.qlipp_pipeline import qlipp_pipeline
 from waveorder.io.writer import WaveorderWriter
 from os.path import dirname, abspath
 import os

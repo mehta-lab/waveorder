@@ -105,7 +105,7 @@ def initialize_reconstructor(image_dim, wavelength, swing, N_channel, anistropy_
     return recon
 
 
-def reconstruct_QLIPP_stokes(data, recon, bg_stokes):
+def reconstruct_qlipp_stokes(data, recon, bg_stokes):
     """
     From intensity data, use the waveorder.waveorder_microscopy (recon) to build a stokes array
         if recon background correction flag is selected, will also perform backgroudn correction
@@ -146,7 +146,7 @@ def reconstruct_QLIPP_stokes(data, recon, bg_stokes):
     return np.asarray(stokes_stack)
 
 
-def reconstruct_QLIPP_birefringence(stokes, recon):
+def reconstruct_qlipp_birefringence(stokes, recon):
     """
     From stokes data, use waveorder.waveorder_microscopy (recon) to build a birefringence array
 

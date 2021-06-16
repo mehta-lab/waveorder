@@ -1,7 +1,7 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import MicromanagerReader
 import time
-from recOrder.pipelines.QLIPP_Pipeline import qlipp_pipeline
+from recOrder.pipelines.qlipp_pipeline import qlipp_pipeline
 from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_processing import *
 

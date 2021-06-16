@@ -2,10 +2,10 @@ from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import MicromanagerReader
 from waveorder.io.writer import WaveorderWriter
 from recOrder.io.utils import load_bg
-from recOrder.compute.QLIPP_compute import *
+from recOrder.compute.qlipp_compute import *
 import json
 import numpy as np
-from recOrder.pipelines.Pipeline_ABC import Pipeline_Structure
+from recOrder.pipelines.pipeline_base import Pipeline_Structure
 
 
 
@@ -125,7 +125,7 @@ class qlipp_pipeline(Pipeline_Structure):
         LF_array[2] = data[self.s2_idx]
         LF_array[3] = data[self.s3_idx]
 
-        stokes = reconstruct_QLIPP_stokes(LF_array, self.reconstructor, self.bg_stokes)
+        stokes = reconstruct_qlipp_stokes(LF_array, self.reconstructor, self.bg_stokes)
 
         return stokes
 
@@ -190,7 +190,7 @@ class qlipp_pipeline(Pipeline_Structure):
         if self.phase_only or self.stokes_only:
             return None
         else:
-            birefringence = reconstruct_QLIPP_birefringence(stokes[slice(None) if self.slices != 1 else self.focus_slice],
+            birefringence = reconstruct_qlipp_birefringence(stokes[slice(None) if self.slices != 1 else self.focus_slice],
                                                             self.reconstructor)
             return birefringence
 
