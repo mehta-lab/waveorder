@@ -1,6 +1,11 @@
 import numpy as np
 from scipy import optimize
-from recOrder.calib.CoreFunctions import set_lc, get_lc, snap_image
+import os, sys
+p = os.path.abspath('../..')
+if p not in sys.path:
+    sys.path.append(p)
+
+from recOrder.recOrder.calib.CoreFunctions import set_lc, get_lc, snap_image
 
 class BrentOptimizer:
 
@@ -216,7 +221,7 @@ class MinScalarOptimizer:
 
         return [lca, lcb, abs_intensity, difference]
 
-    def optimize(self, state, lca_bound, lcb_bound, reference, thresh=None, num_itr=None):
+    def optimize(self, state, lca_bound, lcb_bound, reference, thresh=None, n_iter=None):
 
         lca_lower_bound, lca_upper_bound, lcb_lower_bound, lcb_upper_bound = self._check_bounds(lca_bound, lcb_bound)
 
@@ -239,10 +244,12 @@ class MinScalarOptimizer:
 
             # ============BEGIN FINE SEARCH=================
 
+            if self.calib.print_details:
+                print(f'\n\tBeginning Finer Search\n')
             lca_lower_bound = results_lcb[0] - .01
             lca_upper_bound = results_lcb[0] + .01
             lcb_lower_bound = results_lcb[1] - .01
-            lcb_upper_bound = results_lcb[0] + .01
+            lcb_upper_bound = results_lcb[1] + .01
 
             results_lca = self.opt_lca(self.calib.opt_lc, lca_lower_bound, lca_upper_bound,
                                        reference, (self.calib.PROPERTIES['LCA'], reference))

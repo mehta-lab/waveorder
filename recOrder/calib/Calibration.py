@@ -1,10 +1,14 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import os, sys
+p = os.path.abspath('../..')
+if p not in sys.path:
+    sys.path.append(p)
 import tifffile as tiff
 import time
-from recOrder.calib.CoreFunctions import define_lc_state, snap_image, set_lc, get_lc, set_lc_state
-from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer, optimize_grid
+from recOrder.recOrder.calib.CoreFunctions import define_lc_state, snap_image, set_lc, get_lc, set_lc_state
+from recOrder.recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer, optimize_grid
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import json
 import os
@@ -30,9 +34,9 @@ class QLIPP_Calibration:
 
         #Optimizer
         if optimization == 'min_scalar':
-            self.optimizer = MinScalarOptimizer
+            self.optimizer = MinScalarOptimizer(self)
         elif optimization == 'brent':
-            self.optimizer = BrentOptimizer
+            self.optimizer = BrentOptimizer(self)
         else:
             raise ModuleNotFoundError(f'No optimizer named {optimization}')
 
@@ -65,8 +69,6 @@ class QLIPP_Calibration:
         self.I_Ext = None
         self.I_Ref = None
         self.I_Elliptical = None
-        self.lca_elliptical = None
-        self.lcb_elliptical = None
         self.inten = []
         self.swing0 = None
         self.swing45 = None
@@ -210,11 +212,11 @@ class QLIPP_Calibration:
         # Perform brent optimization around results of 2nd grid search
         # threshold not very necessary here as intensity value will
         # vary between exposure/lamp intensities
-        lca, lcb, I_ext = self.optimizer.optimize('ext', lca_bound=0.1, lcb_bound=0.1,
-                                                  reference=self.I_Black, thresh = 1)
+        lca, lcb, I_ext = self.optimizer.optimize(state='ext', lca_bound=0.1, lcb_bound=0.1,
+                                                  reference=self.I_Black, thresh=1)
 
         # Set the Extinction state to values output from optimization
-        define_lc_state(self.mmc, 'State0', lca, lcb, self.calib.PROPERTIES)
+        define_lc_state(self.mmc, 'State0', lca, lcb, self.PROPERTIES)
 
         self.lca_ext = lca
         self.lcb_ext = lcb
@@ -247,7 +249,7 @@ class QLIPP_Calibration:
 
         print('\nCalibrating State1 (I0)...')
 
-        define_lc_state(self.mmc, 'State1', self.lca_ext - self.swing, self.lcb_ext, self.calib.PROPERTIES)
+        define_lc_state(self.mmc, 'State1', self.lca_ext - self.swing, self.lcb_ext, self.PROPERTIES)
 
         image = snap_image(self.mmc)
         ref = np.mean(image)
@@ -275,15 +277,16 @@ class QLIPP_Calibration:
         intensity value at optimized state
 
         """
+        self.inten = []
         print('\nCalibrating State2 (I45)...')
 
         set_lc(self.mmc, self.lca_ext, self.PROPERTIES['LCA'])
         set_lc(self.mmc, self.lcb_ext - self.swing, self.PROPERTIES['LCB'])
 
-        self.lca_45, self.lcb_45, intensity = self.optimizer.optimize('60', lca_bound, lcb_bound, reference=self.I_Elliptical,
-                                                  n_iter=5, thresh=.01)
+        self.lca_45, self.lcb_45, intensity = self.optimizer.optimize('60', lca_bound, lcb_bound,
+                                                                      reference=self.I_Elliptical, n_iter=5, thresh=.01)
 
-        define_lc_state(self.mmc, 'State2', self.lca_45, self.lcb_45, self.calib.PROPERTIES)
+        define_lc_state(self.mmc, 'State2', self.lca_45, self.lcb_45, self.PROPERTIES)
 
         self.swing45 = np.sqrt((self.lcb_45 - self.lcb_ext) ** 2 + (self.lca_45 - self.lca_ext) ** 2)
 
@@ -310,11 +313,13 @@ class QLIPP_Calibration:
         intensity value at optimized state
 
         """
+        self.inten = []
+
         print('\nCalibrating State2 (I60)...')
 
         # Calculate Initial Swing for initial guess to optimize around
         # Based on ratio calculated from ellpiticity/orientation of LC simulation
-        swing_ell = np.sqrt((self.lca_ext - self.lca_elliptical) ** 2 + (self.lcb_ext - self.lcb_elliptical) ** 2)
+        swing_ell = np.sqrt((self.lca_ext - self.lca_0) ** 2 + (self.lcb_ext - self.lcb_0) ** 2)
         lca_swing = np.sqrt(swing_ell ** 2 / (1 + self.ratio ** 2))
         lcb_swing = self.ratio * lca_swing
 
@@ -326,7 +331,7 @@ class QLIPP_Calibration:
                                                                       reference=self.I_Elliptical,
                                                                       n_iter=5, thresh=.01)
 
-        define_lc_state(self.mmc, 'State2', self.lca_60, self.lcb_60, self.calib.PROPERTIES)
+        define_lc_state(self.mmc, 'State2', self.lca_60, self.lcb_60, self.PROPERTIES)
 
         self.swing60 = np.sqrt((self.lcb_60 - self.lcb_ext) ** 2 + (self.lca_60 - self.lca_ext) ** 2)
 
@@ -363,6 +368,8 @@ class QLIPP_Calibration:
 
         """
         print('\nCalibrating State3 (I90)...')
+        self.inten = []
+
         set_lc(self.mmc, self.lca_ext + self.swing, self.PROPERTIES['LCA'])
         set_lc(self.mmc, self.lcb_ext, self.PROPERTIES['LCB'])
 
@@ -370,9 +377,9 @@ class QLIPP_Calibration:
                                                                       reference=self.I_Elliptical,
                                                                       n_iter=5, thresh=.01)
 
-        define_lc_state(self.mmc, 'State3', self.lca_90, self.lcb_90, self.calib.PROPERTIES)
+        define_lc_state(self.mmc, 'State3', self.lca_90, self.lcb_90, self.PROPERTIES)
 
-        self.swing45 = np.sqrt((self.lcb_90 - self.lcb_ext) ** 2 + (self.lca_90 - self.lca_ext) ** 2)
+        self.swing90 = np.sqrt((self.lcb_90 - self.lcb_ext) ** 2 + (self.lca_90 - self.lca_ext) ** 2)
 
         if self.print_details:
             I = np.copy(self.inten)
@@ -399,10 +406,11 @@ class QLIPP_Calibration:
 
         """
         print('\nCalibrating State3 (I120)...\n')
+        self.inten = []
 
         # Calculate Initial Swing for initial guess to optimize around
         # Based on ratio calculated from ellpiticity/orientation of LC simulation
-        swing_ell = np.sqrt((self.lca_ext - self.lca_elliptical) ** 2 + (self.lcb_ext - self.lcb_elliptical) ** 2)
+        swing_ell = np.sqrt((self.lca_ext - self.lca_0) ** 2 + (self.lcb_ext - self.lcb_0) ** 2)
         lca_swing = np.sqrt(swing_ell ** 2 / (1 + self.ratio ** 2))
         lcb_swing = self.ratio * lca_swing
 
@@ -414,9 +422,9 @@ class QLIPP_Calibration:
                                                                       reference=self.I_Elliptical,
                                                                       n_iter=5, thresh=.01)
 
-        define_lc_state(self.mmc, 'State3', self.lca_120, self.lcb_120, self.calib.PROPERTIES)
+        define_lc_state(self.mmc, 'State3', self.lca_120, self.lcb_120, self.PROPERTIES)
 
-        self.swing60 = np.sqrt((self.lcb_120 - self.lcb_ext) ** 2 + (self.lca_120 - self.lca_ext) ** 2)
+        self.swing120 = np.sqrt((self.lcb_120 - self.lcb_ext) ** 2 + (self.lca_120 - self.lca_ext) ** 2)
 
         # Print comparison of target swing, target ratio
         # Ratio determines the orientation of the elliptical state
@@ -450,6 +458,7 @@ class QLIPP_Calibration:
 
         """
         print('\nCalibrating State4 (I135)...')
+        self.inten = []
 
         set_lc(self.mmc, self.lca_ext, self.PROPERTIES['LCA'])
         set_lc(self.mmc, self.lcb_ext + self.swing, self.PROPERTIES['LCB'])
@@ -458,9 +467,9 @@ class QLIPP_Calibration:
                                                                       reference=self.I_Elliptical,
                                                                       n_iter=5, thresh=.01)
 
-        define_lc_state(self.mmc, 'State3', self.lca_135, self.lcb_135, self.calib.PROPERTIES)
+        define_lc_state(self.mmc, 'State3', self.lca_135, self.lcb_135, self.PROPERTIES)
 
-        self.swing60 = np.sqrt((self.lcb_135 - self.lcb_ext) ** 2 + (self.lca_135 - self.lca_ext) ** 2)
+        self.swing135 = np.sqrt((self.lcb_135 - self.lcb_ext) ** 2 + (self.lca_135 - self.lca_ext) ** 2)
 
         # plot details of brent optimization
         if self.print_details:
@@ -509,7 +518,7 @@ class QLIPP_Calibration:
 
         cont = input('Would You Like to Calibrate Using this ROI? (Yes/No): \t')
 
-        if cont in ['Yes', 'Y', 'yes', 'ye', 'y']:
+        if cont in ['Yes', 'Y', 'yes', 'ye', 'y', '']:
             return True
 
         if cont in ['No', 'N', 'no', 'n']:
@@ -525,7 +534,7 @@ class QLIPP_Calibration:
         """
         self.swing = param[0]
         self.wavelength = param[1]
-        self.directory = param[2]
+        self.meta_file = param[2]
         use_full_FOV = param[3]
 
         # Get Image Parameters
@@ -564,7 +573,7 @@ class QLIPP_Calibration:
         self.extinction_ratio = self.calculate_extinction()
 
         # Write Metadata
-        self.write_metadata(5, self.directory)
+        self.write_metadata(5)
 
         # Return ROI to full FOV
         if use_full_FOV is False:
@@ -581,7 +590,7 @@ class QLIPP_Calibration:
         """
         self.swing = param[0]
         self.wavelength = param[1]
-        self.directory = param[2]
+        self.meta_file = param[2]
         use_full_FOV = param[3]
 
         # Get Image Parameters
@@ -619,7 +628,7 @@ class QLIPP_Calibration:
         self.extinction_ratio = self.calculate_extinction()
 
         # Write Metadata
-        self.write_metadata(4, self.directory)
+        self.write_metadata(4)
 
         # Return ROI to full FOV
         if use_full_FOV is False:
@@ -640,7 +649,7 @@ class QLIPP_Calibration:
             raise ValueError('Please define the calibration scheme')
 
     def calculate_extinction(self):
-        return (1 / np.sin(np.pi * self.swing) ** 2) * (self.i_elliptical - self.I_Black) / (self.i_ext - self.I_Black)
+        return (1 / np.sin(np.pi * self.swing) ** 2) * (self.I_Elliptical - self.I_Black) / (self.I_Ext - self.I_Black)
 
     def calc_inst_matrix(self, n_states):
 
@@ -666,7 +675,7 @@ class QLIPP_Calibration:
 
             return inst_mat
 
-    def write_metadata(self, n_states, directory):
+    def write_metadata(self, n_states):
         """ Function to write a metadata file for calibration.
             This follows the PolAcqu metadata file format and is compatible with
             reconstruct-order
@@ -743,7 +752,10 @@ class QLIPP_Calibration:
                                 }
                     }
 
-        with open(directory + 'metadata.txt', 'w') as metafile:
+        if not self.meta_file.endswith('.txt'):
+            self.meta_file += '.txt'
+
+        with open(self.meta_file, 'w') as metafile:
             json.dump(data, metafile, indent=1)
 
     def add_colorbar(self, mappable):
@@ -782,7 +794,7 @@ class QLIPP_Calibration:
 
         state0 = np.mean(state0, axis=(0))
 
-        tiff.imsave(directory + 'State0.tif', state0)
+        tiff.imsave(os.path.join(directory, 'State0.tif'), state0)
 
         set_lc_state(self.mmc, 'State1')
 
@@ -792,7 +804,7 @@ class QLIPP_Calibration:
 
         state1 = np.mean(state1, axis=(0))
 
-        tiff.imsave(directory + 'State1.tif', state1)
+        tiff.imsave(os.path.join(directory, 'State1.tif'), state1)
 
         set_lc_state(self.mmc, 'State2')
 
@@ -802,7 +814,7 @@ class QLIPP_Calibration:
 
         state2 = np.mean(state2, axis=(0))
 
-        tiff.imsave(directory + 'State2.tif', state2)
+        tiff.imsave(os.path.join(directory, 'State2.tif'), state2)
 
         set_lc_state(self.mmc, 'State3')
 
@@ -812,7 +824,7 @@ class QLIPP_Calibration:
 
         state3 = np.mean(state3, axis=(0))
 
-        tiff.imsave(directory + 'State3.tif', state3)
+        tiff.imsave(os.path.join(directory, 'State3.tif'), state3)
 
         if n_states == 5:
             set_lc_state(self.mmc, 'State4')
@@ -822,7 +834,7 @@ class QLIPP_Calibration:
 
             state4 = np.mean(state4, axis=(0))
 
-            tiff.imsave(directory + 'State4.tif', state4)
+            tiff.imsave(os.path.join(directory, 'State4.tif'), state4)
 
             fig, ax = plt.subplots(3, 2, figsize=(20, 20))
 

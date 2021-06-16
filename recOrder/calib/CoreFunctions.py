@@ -44,7 +44,7 @@ def define_lc_state(mmc, state, lca, lcb, PROPERTIES: dict):
     :return: None
     """
     set_lc(mmc, lca, PROPERTIES['LCA'])
-    set_lc(mmc, lca, PROPERTIES['LCB'])
+    set_lc(mmc, lcb, PROPERTIES['LCB'])
 
     print("setting LCA = "+str(lca))
     print("setting LCB = "+str(lcb))
