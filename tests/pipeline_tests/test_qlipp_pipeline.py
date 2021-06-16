@@ -12,7 +12,7 @@ def test_pipeline_daemon_initiate(setup_test_data):
 
     folder, data = setup_test_data
 
-    path_to_config = os.path.join(dirname(abspath(__file__)), 'config_full_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=folder)
 
     manager = PipelineManager(config)
@@ -27,7 +27,7 @@ def test_pipeline_daemon_initiate(setup_test_data):
 def test_qlipp_pipeline_initiate(setup_test_data):
     folder, data = setup_test_data
 
-    path_to_config = os.path.join(dirname(abspath(__file__)), 'config_full_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=folder)
 
     manager = PipelineManager(config)
@@ -67,7 +67,7 @@ def test_pipeline_daemon_run(setup_test_data):
 
     folder, data = setup_test_data
 
-    path_to_config = os.path.join(dirname(abspath(__file__)), 'config_full_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=folder)
 
     manager = PipelineManager(config)
