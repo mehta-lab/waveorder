@@ -5,7 +5,7 @@ from recOrder.pipelines.QLIPP_Pipeline import qlipp_pipeline
 from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_processing import *
 
-class PipelineDaemon:
+class PipelineManager:
     """
     This will pull the necessary pipeline based off the config default.
     """

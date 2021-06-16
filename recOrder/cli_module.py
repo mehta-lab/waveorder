@@ -1,7 +1,7 @@
 import click
 import os
 from recOrder.io.config_reader import ConfigReader
-from recOrder.pipelines.pipeline_daemon import PipelineDaemon
+from recOrder.pipelines.pipeline_manager import PipelineManager
 
 @click.command()
 @click.option('--method', required=False, type=str, help='mode of reconstruction: \
@@ -38,5 +38,5 @@ def main():
     else:
         config = ConfigReader(None, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name)
 
-    daemon = PipelineDaemon(config)
+    daemon = PipelineManager(config)
     daemon.run()
