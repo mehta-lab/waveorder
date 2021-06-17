@@ -65,6 +65,8 @@ class qlipp_pipeline(PipelineInterface):
         # Writer Parameters
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
+        self._file_writer = None
+
         self.writer = WaveorderWriter(self.save_dir, 'physical')
         self.writer.create_zarr_root(f'{self.name}.zarr')
         self.writer.store.attrs.put(self.config.yaml_dict)
@@ -229,6 +231,14 @@ class qlipp_pipeline(PipelineInterface):
                 else:
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], t=t, c=chan)
                     fluor_idx += 1
+
+    @property
+    def writer(self):
+        return self._file_writer
+
+    @writer.setter
+    def writer(self, writer_object: WaveorderWriter):
+        self._file_writer = writer_object
 
     def parse_channel_idx(self, channel_list):
         fluor_idx = []
