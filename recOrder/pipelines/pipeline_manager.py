@@ -5,6 +5,7 @@ from recOrder.pipelines.qlipp_pipeline import qlipp_pipeline
 from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_processing import *
 
+
 class PipelineManager:
     """
     This will pull the necessary pipeline based off the config default.
@@ -36,8 +37,7 @@ class PipelineManager:
         elif self.config.method == 'IPS':
             raise NotImplementedError
 
-
-    def _get_preprocessing(self):
+    def _get_preprocessing_params(self):
         """
         method to get pre-processing functions and parameters.
         Only supports denoising at the moment
@@ -63,7 +63,7 @@ class PipelineManager:
         else:
             return None
 
-    def _get_postprocessing(self):
+    def _get_postprocessing_params(self):
         """
         Method to gather parameters for post_processing functions.
         Currently only supports denoising, registration
@@ -191,13 +191,13 @@ class PipelineManager:
 
     def pre_processing(self, stokes):
 
-        denoise_params = self._get_preprocessing()
+        denoise_params = self._get_preprocessing_params()
 
         return preproc_denoise(stokes, denoise_params) if denoise_params else stokes
 
     def post_processing(self, pt_data, phase, birefringence):
 
-        denoise_params, registration_params = self._get_postprocessing()
+        denoise_params, registration_params = self._get_postprocessing_params()
 
         phase_denoise = np.copy(phase)
         birefringence_denoise = np.copy(birefringence)
@@ -222,7 +222,3 @@ class PipelineManager:
             registered_stacks = None
 
         return birefringence_denoise, phase_denoise, registered_stacks
-
-
-
-
