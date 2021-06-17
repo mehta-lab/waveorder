@@ -58,14 +58,15 @@ class qlipp_pipeline(PipelineInterface):
         self.bg_path = self.config.background if self.config.background else None
         self.bg_roi = self.calib_meta['Summary']['ROI Used (x , y, width, height)'] if self.calib_meta else None
 
+        # identify the image indicies corresponding to each polarization orientation
         self.s0_idx, self.s1_idx, \
         self.s2_idx, self.s3_idx, \
         self.fluor_idxs = self.parse_channel_idx(self.data.channel_names)
 
         # Writer Parameters
+        self._file_writer = None
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
-        self._file_writer = None
 
         self.writer = WaveorderWriter(self.save_dir, 'physical')
         self.writer.create_zarr_root(f'{self.name}.zarr')
@@ -117,7 +118,6 @@ class qlipp_pipeline(PipelineInterface):
                                     where C is the stokes channels (S0..S3 + DOP)
 
         """
-
 
         LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
 
