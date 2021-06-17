@@ -92,7 +92,7 @@ class qlipp_pipeline(Pipeline_Structure):
     def _check_output_channels(self, output_channels):
         for channel in output_channels:
             if 'Phase3D' in channel or 'Phase2D' in channel:
-                self.phase_only == True
+                self.phase_only = True
             elif 'S0' in channel or 'S1' in channel or 'S2' in channel or 'S3' in channel:
                 self.stokes_only = True
             elif 'Retardance' in channel or 'Orientation' in channel or 'Brightfield' in channel:
@@ -147,6 +147,9 @@ class qlipp_pipeline(Pipeline_Structure):
 
         """
 
+        phase3D = None
+        phase2D = None
+
         if 'Phase3D' in self.output_channels:
             phase3D = self.reconstructor.Phase_recon_3D(np.transpose(stokes[:, 0], (1, 2, 0)),
                                                    method=self.config.phase_denoiser_3D,
@@ -154,7 +157,8 @@ class qlipp_pipeline(Pipeline_Structure):
                                                    lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D,
                                                    verbose=False)
 
-            return np.transpose(phase3D, (2, 0, 1))
+            phase3D = np.transpose(phase3D, (2, 0, 1))
+
 
         if 'Phase2D' in self.output_channels:
             _, phase2D = self.reconstructor.Phase_recon(np.transpose(stokes[:, 0], (1, 2, 0)),
@@ -165,10 +169,7 @@ class qlipp_pipeline(Pipeline_Structure):
                                                         lambda_p=self.config.TV_reg_ph_2D, itr=self.config.itr_2D,
                                                         verbose=False)
 
-            return phase2D
-
-        else:
-            return None
+        return phase2D, phase3D
 
 
     def reconstruct_birefringence_volume(self, stokes):
@@ -195,7 +196,7 @@ class qlipp_pipeline(Pipeline_Structure):
             return birefringence
 
     #todo: think about better way to write fluor/registered data?
-    def write_data(self, pt, pt_data, stokes, birefringence, phase, registered_stacks):
+    def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
 
         t = pt[1]
         fluor_idx = 0
@@ -209,9 +210,9 @@ class qlipp_pipeline(Pipeline_Structure):
             elif 'Brightfield' in self.output_channels[chan]:
                 self.writer.write(birefringence[2], t=t, c=chan)
             elif 'Phase3D' in self.output_channels[chan]:
-                self.writer.write(phase, t=t, c=chan)
+                self.writer.write(phase3D, t=t, c=chan)
             elif 'Phase2D' in self.output_channels:
-                self.writer.write(phase, t=t, c=chan)
+                self.writer.write(phase2D, t=t, c=chan)
             elif 'S0' in self.output_channels[chan]:
                 self.writer.write(stokes[:, 0], t=t, c=chan)
             elif 'S1' in self.output_channels[chan]:

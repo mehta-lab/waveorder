@@ -180,11 +180,12 @@ class PipelineManager:
             stokes = self.pre_processing(stokes)
 
             birefringence = self.pipeline.reconstruct_birefringence_volume(stokes)
-            phase = self.pipeline.reconstruct_phase_volume(stokes)
 
-            birefringence, phase, registered_data = self.post_processing(pt_data, phase, birefringence)
+            phase2D, phase3D = self.pipeline.reconstruct_phase_volume(stokes)
 
-            self.pipeline.write_data(pt, pt_data, stokes, birefringence, phase, registered_data)
+            birefringence, phase2D, phase3D, registered_data = self.post_processing(pt_data, phase, birefringence)
+
+            self.pipeline.write_data(pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_data)
 
             end_time = time.time()
             print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f}) min')
@@ -195,11 +196,12 @@ class PipelineManager:
 
         return preproc_denoise(stokes, denoise_params) if denoise_params else stokes
 
-    def post_processing(self, pt_data, phase, birefringence):
+    def post_processing(self, pt_data, phase2D, phase3D, birefringence):
 
         denoise_params, registration_params = self._get_postprocessing_params()
 
-        phase_denoise = np.copy(phase)
+        phase2D_denoise = np.copy(phase2D)
+        phase3D_denoise = np.copy(phase2D)
         birefringence_denoise = np.copy(birefringence)
         if denoise_params:
             for chan_param in denoise_params:
@@ -209,8 +211,10 @@ class PipelineManager:
                     birefringence_denoise[1] = post_proc_denoise(birefringence[1], chan_param)
                 elif 'Brightfield' in chan_param[0]:
                     birefringence_denoise[2] = post_proc_denoise(birefringence[2], chan_param)
-                elif 'Phase' in chan_param[0]:
-                    phase_denoise = post_proc_denoise(phase, chan_param)
+                elif 'Phase2D' in chan_param[0]:
+                    phase2D_denoise = post_proc_denoise(phase3D, chan_param)
+                elif 'Phase3D' in chan_param[0]:
+                    phase3D_denoise = post_proc_denoise(phase3D, chan_param)
                 else:
                     raise ValueError(f'Didnt understand post_proc denoise channel {chan_param[0]}')
 
@@ -221,4 +225,4 @@ class PipelineManager:
         else:
             registered_stacks = None
 
-        return birefringence_denoise, phase_denoise, registered_stacks
+        return birefringence_denoise, phase2D_denoise, phase3D_denoise, registered_stacks

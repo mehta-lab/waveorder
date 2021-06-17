@@ -11,9 +11,11 @@ import tifffile as tiff
 def post_proc_denoise(data_volume, params):
 
     data_volume_denoised = np.copy(data_volume)
-    for z in range(len(data_volume)):
-        data_volume_denoised[z, :, :] = wavelet_softThreshold(data_volume[z], 'db8',
-                                                            params[1], params[2])
+    if len(data_volume) == 1:
+        data_volume_denoised = wavelet_softThreshold(data_volume[z], 'db8', params[1], params[2])
+    else:
+        for z in range(len(data_volume)):
+            data_volume_denoised[z, :, :] = wavelet_softThreshold(data_volume[z], 'db8', params[1], params[2])
 
     return data_volume_denoised
 
