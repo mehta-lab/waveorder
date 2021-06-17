@@ -5,11 +5,10 @@ from recOrder.io.utils import load_bg
 from recOrder.compute.qlipp_compute import *
 import json
 import numpy as np
-from recOrder.pipelines.pipeline_base import Pipeline_Structure
+from recOrder.pipelines.pipeline_interface import PipelineInterface
 
 
-
-class qlipp_pipeline(Pipeline_Structure):
+class qlipp_pipeline(PipelineInterface):
 
     """
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
