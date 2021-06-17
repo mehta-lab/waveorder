@@ -276,7 +276,7 @@ class MinScalarOptimizer:
             results = optimal[opt][0]
 
         if state == '45' or state == '135':
-            results = self.opt_lcb(self.calib.opt_lc, lca_lower_bound, lca_upper_bound,
+            results = self.opt_lcb(self.calib.opt_lc, lcb_lower_bound, lcb_upper_bound,
                                    reference, (self.calib.PROPERTIES['LCB'], reference))
 
             lca = results[0]

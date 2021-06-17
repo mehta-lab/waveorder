@@ -283,7 +283,7 @@ class QLIPP_Calibration:
         set_lc(self.mmc, self.lca_ext, self.PROPERTIES['LCA'])
         set_lc(self.mmc, self.lcb_ext - self.swing, self.PROPERTIES['LCB'])
 
-        self.lca_45, self.lcb_45, intensity = self.optimizer.optimize('60', lca_bound, lcb_bound,
+        self.lca_45, self.lcb_45, intensity = self.optimizer.optimize('45', lca_bound, lcb_bound,
                                                                       reference=self.I_Elliptical, n_iter=5, thresh=.01)
 
         define_lc_state(self.mmc, 'State2', self.lca_45, self.lcb_45, self.PROPERTIES)
@@ -565,9 +565,9 @@ class QLIPP_Calibration:
 
         self.opt_Iext()
         self.opt_I0()
-        self.opt_I45(0.02, 0.02)
-        self.opt_I90(0.02, 0.02)
-        self.opt_I135(0.02, 0.02)
+        self.opt_I45(0.05, 0.05)
+        self.opt_I90(0.05, 0.05)
+        self.opt_I135(0.05, 0.05)
 
         # Calculate Extinction
         self.extinction_ratio = self.calculate_extinction()
@@ -621,8 +621,8 @@ class QLIPP_Calibration:
 
         self.opt_Iext()
         self.opt_I0()
-        self.opt_I60(0.02, 0.02)
-        self.opt_I120(0.02, 0.02)
+        self.opt_I60(0.05, 0.05)
+        self.opt_I120(0.05, 0.05)
 
         # Calculate Extinction
         self.extinction_ratio = self.calculate_extinction()
@@ -691,14 +691,14 @@ class QLIPP_Calibration:
         inst_mat = inst_mat.tolist()
 
         if n_states == 4:
-            data = {'Summary': {'~ Acquired Using': '4-Frame Extinction',
-                                '~ Swing (fraction)': self.swing,
-                                '~ Wavelength (nm)': self.wavelength,
-                                '~ BlackLevel': self.I_Black,
+            data = {'Summary': {'Acquired Using': '4-Frame Extinction',
+                                'Swing (fraction)': self.swing,
+                                'Wavelength (nm)': self.wavelength,
+                                'BlackLevel': self.I_Black,
                                 'ChNames': ["State0", "State1", "State2", "State3"],
                                 '[LCA_Ext, LCB_Ext]': [self.lca_ext, self.lcb_ext],
                                 '[LCA_0, LCB_120]': [self.lca_0, self.lcb_0],
-                                '[LCA_60, LCB_120]': [self.lca_60, self.lcb_60],
+                                '[LCA_60, LCB_60]': [self.lca_60, self.lcb_60],
                                 '[LCA_120, LCB_120]': [self.lca_120, self.lcb_120],
                                 'Swing0': self.swing0,
                                 'Swing60': self.swing60,
@@ -721,14 +721,14 @@ class QLIPP_Calibration:
                     }
 
         elif n_states == 5:
-            data = {'Summary': {'~ Acquired Using': '5-Frame',
-                                '~ Swing (fraction)': self.swing,
-                                '~ Wavelength (nm)': self.wavelength,
-                                '~ BlackLevel': self.I_Black,
+            data = {'Summary': {'Acquired Using': '5-Frame',
+                                'Swing (fraction)': self.swing,
+                                'Wavelength (nm)': self.wavelength,
+                                'BlackLevel': self.I_Black,
                                 'ChNames': ["State0", "State1", "State2", "State3", "State4"],
                                 '[LCA_Ext, LCB_Ext]': [self.lca_ext, self.lcb_ext],
-                                '[LCA_0, LCB_120]': [self.lca_0, self.lcb_0],
-                                '[LCA_60, LCB_120]': [self.lca_45, self.lcb_45],
+                                '[LCA_0, LCB_0]': [self.lca_0, self.lcb_0],
+                                '[LCA_45, LCB_45]': [self.lca_45, self.lcb_45],
                                 '[LCA_90, LCB_90]': [self.lca_90, self.lcb_90],
                                 '[LCA_135, LCB_135]': [self.lca_135, self.lcb_135],
                                 'Swing0': self.swing0,
@@ -852,9 +852,11 @@ class QLIPP_Calibration:
 
             im = ax[1, 1].imshow(state3, 'gray')
             ax[1, 1].set_title('State3')
+            self.add_colorbar(im)
 
             im = ax[2, 0].imshow(state4, 'gray')
             ax[2, 0].set_title('State4')
+            self.add_colorbar(im)
 
             fig.delaxes(ax[2, 1])
             plt.show()
