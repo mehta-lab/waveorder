@@ -63,6 +63,8 @@ def test_qlipp_pipeline_initiate(setup_test_data):
 
     shutil.rmtree(os.path.join(folder, config.data_save_name+'.zarr'))
 
+#TODO: in this test compute channels independently with qlipp_compute.py functions, then
+# check if the written data closely matches this data
 def test_pipeline_daemon_run(setup_test_data):
 
     folder, data = setup_test_data
