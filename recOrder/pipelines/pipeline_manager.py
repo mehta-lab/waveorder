@@ -183,7 +183,7 @@ class PipelineManager:
 
             phase2D, phase3D = self.pipeline.reconstruct_phase_volume(stokes)
 
-            birefringence, phase2D, phase3D, registered_data = self.post_processing(pt_data, phase, birefringence)
+            birefringence, phase2D, phase3D, registered_data = self.post_processing(pt_data, phase2D, phase3D, birefringence)
 
             self.pipeline.write_data(pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_data)
 
