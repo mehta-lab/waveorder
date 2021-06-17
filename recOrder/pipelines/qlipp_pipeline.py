@@ -121,7 +121,6 @@ class qlipp_pipeline(PipelineInterface):
 
         """
 
-
         if self.calib_scheme == '4-State Extinction':
             LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
 
@@ -137,7 +136,6 @@ class qlipp_pipeline(PipelineInterface):
             LF_array[2] = data[self.s2_idx]
             LF_array[3] = data[self.s3_idx]
             LF_array[3] = data[self.s4_idx]
-
 
         stokes = reconstruct_qlipp_stokes(LF_array, self.reconstructor, self.bg_stokes)
 
@@ -173,7 +171,6 @@ class qlipp_pipeline(PipelineInterface):
 
             phase3D = np.transpose(phase3D, (2, 0, 1))
 
-
         if 'Phase2D' in self.output_channels:
             _, phase2D = self.reconstructor.Phase_recon(np.transpose(stokes[:, 0], (1, 2, 0)),
                                                         method=self.config.phase_denoiser_2D,
@@ -184,7 +181,6 @@ class qlipp_pipeline(PipelineInterface):
                                                         verbose=False)
 
         return phase2D, phase3D
-
 
     def reconstruct_birefringence_volume(self, stokes):
         """
@@ -209,7 +205,7 @@ class qlipp_pipeline(PipelineInterface):
                                                             self.reconstructor)
             return birefringence
 
-    #todo: think about better way to write fluor/registered data?
+    # todo: think about better way to write fluor/registered data?
     def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
 
         t = pt[1]
