@@ -55,13 +55,16 @@ class qlipp_pipeline(PipelineInterface):
         self.chan_names = self.data.channel_names
         self.calib_meta = json.load(open(self.config.calibration_metadata)) \
             if self.config.calibration_metadata else None
+        #todo: re-structure reading calib metadata when finalized
+        self.calib_scheme = self.calib_meta['Summary']['~ Acquired Using'] if self.calib_meta \
+            else '4-Frame Extinction'
         self.bg_path = self.config.background if self.config.background else None
         self.bg_roi = self.calib_meta['Summary']['ROI Used (x , y, width, height)'] if self.calib_meta else None
 
         # identify the image indicies corresponding to each polarization orientation
         self.s0_idx, self.s1_idx, \
         self.s2_idx, self.s3_idx, \
-        self.fluor_idxs = self.parse_channel_idx(self.data.channel_names)
+        self.s4_idx, self.fluor_idxs = self.parse_channel_idx(self.data.channel_names)
 
         # Writer Parameters
         self._file_writer = None
@@ -72,7 +75,7 @@ class qlipp_pipeline(PipelineInterface):
         self.writer.create_zarr_root(f'{self.name}.zarr')
         self.writer.store.attrs.put(self.config.yaml_dict)
 
-        #TODO: read step size from metadata, figure out how to place in config
+        #TODO: place step_size in config?
 
         # Initialize Reconstructor
         self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
@@ -80,7 +83,7 @@ class qlipp_pipeline(PipelineInterface):
                                                  len(self.calib_meta['Summary']['ChNames']),
                                                  self.config.qlipp_birefringence_only,
                                                  self.config.NA_objective, self.config.NA_condenser,
-                                                 self.config.magnification, self.data.slices, self.config.z_step,
+                                                 self.config.magnification, self.data.slices, self.data.z_step_size,
                                                  self.config.pad_z, self.config.pixel_size,
                                                  self.config.background_correction, self.config.n_objective_media,
                                                  self.mode, self.config.use_gpu, self.config.gpu_id)
@@ -119,12 +122,24 @@ class qlipp_pipeline(PipelineInterface):
 
         """
 
-        LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
+        if self.calib_scheme == '4-State Extinction':
+            LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
 
-        LF_array[0] = data[self.s0_idx]
-        LF_array[1] = data[self.s1_idx]
-        LF_array[2] = data[self.s2_idx]
-        LF_array[3] = data[self.s3_idx]
+            LF_array[0] = data[self.s0_idx]
+            LF_array[1] = data[self.s1_idx]
+            LF_array[2] = data[self.s2_idx]
+            LF_array[3] = data[self.s3_idx]
+
+        elif self.calib_scheme == '5-Frame':
+            LF_array = np.zeros([5, self.data.slices, self.data.height, self.data.width])
+            LF_array[0] = data[self.s0_idx]
+            LF_array[1] = data[self.s1_idx]
+            LF_array[2] = data[self.s2_idx]
+            LF_array[3] = data[self.s3_idx]
+            LF_array[3] = data[self.s4_idx]
+
+        else:
+            raise NotImplementedError(f"calibration scheme {self.calib_scheme} not implemented")
 
         stokes = reconstruct_qlipp_stokes(LF_array, self.reconstructor, self.bg_stokes)
 
@@ -160,7 +175,6 @@ class qlipp_pipeline(PipelineInterface):
 
             phase3D = np.transpose(phase3D, (2, 0, 1))
 
-
         if 'Phase2D' in self.output_channels:
             _, phase2D = self.reconstructor.Phase_recon(np.transpose(stokes[:, 0], (1, 2, 0)),
                                                         method=self.config.phase_denoiser_2D,
@@ -171,7 +185,6 @@ class qlipp_pipeline(PipelineInterface):
                                                         verbose=False)
 
         return phase2D, phase3D
-
 
     def reconstruct_birefringence_volume(self, stokes):
         """
@@ -196,7 +209,7 @@ class qlipp_pipeline(PipelineInterface):
                                                             self.reconstructor)
             return birefringence
 
-    #todo: think about better way to write fluor/registered data?
+    # todo: think about better way to write fluor/registered data?
     def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
 
         t = pt[1]
@@ -242,6 +255,7 @@ class qlipp_pipeline(PipelineInterface):
 
     def parse_channel_idx(self, channel_list):
         fluor_idx = []
+        s4_idx = None
         for channel in range(len(channel_list)):
             if 'State0' in channel_list[channel]:
                 s0_idx = channel
@@ -251,9 +265,11 @@ class qlipp_pipeline(PipelineInterface):
                 s2_idx = channel
             elif 'State3' in channel_list[channel]:
                 s3_idx = channel
+            elif 'State3' in channel_list[channel]:
+                s4_idx = channel
             else:
                 fluor_idx.append(channel)
 
-        return s0_idx, s1_idx, s2_idx, s3_idx, fluor_idx
+        return s0_idx, s1_idx, s2_idx, s3_idx, s4_idx, fluor_idx
 
 
