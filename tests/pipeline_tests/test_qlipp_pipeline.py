@@ -9,7 +9,6 @@ from os.path import dirname, abspath
 import numpy as np
 import os
 import zarr
-import shutil
 
 def test_pipeline_daemon_initiate(setup_test_data, setup_data_save_folder):
 
