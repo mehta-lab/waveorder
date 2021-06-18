@@ -31,7 +31,6 @@ PROCESSING = {
     'output_channels': None,
     'qlipp_birefringence_only': False,
     'background_correction': 'None',
-    'flatfield_correction': None,
     'use_gpu': False,
     'gpu_id': 0,
     'wavelength':None,
@@ -162,7 +161,7 @@ class ConfigReader(object):
                     raise KeyError(f'Both Phase3D and Phase2D cannot be specified in {key}.  Please compute separately')
 
             elif key == 'background_correction':
-                if self.config['processing'][key] =='None' or 'local_filter':
+                if self.config['processing'][key] == 'None' or self.config['processing'][key] == 'local_filter':
                     pass
                 else:
                     assert self.config['dataset']['background'] is not None, \

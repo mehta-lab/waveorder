@@ -1,45 +1,51 @@
 dataset:
-  data_type: 'ome_tiff'
+  method: 'QLIPP'
+  # Reconstruction Method: 'QLIPP' only implemented for now.
+
+  mode: '2D'
+  # Mode for reconstruction, '2D' or '3D'
+
+  data_type: 'ometiff'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
 
-  positions: 'all'
-  # (str or list) Positions within all of sample folders that are to be analyzed.
+  positions: [1]
+  # (str or list) Positions within the dataset that are to be analyzed.
   ##   'all'
-  ##   ['Pos1', 'Pos2', 'Pos3']
-  ##   [['all'], ['Pos1', 'Pos2']], in which case all positions from Sample1 and Pos1 and Pos2 from Sample2 will be analyzed
+  ##   !!python/tuple [0, N] for pos 0 through N
+  ##   [0, 1, 5] for pos 0, 1, and 5
+  ##   [!!python/tuple [0, 15], [19, 25]] for pos 0 through 15, 19, and 25
 
-  # The full path to the data is  data_dir/sample[n]/positions[m].
-
-  z_slices: 'all'
-  # (str, list, or range) Z slices to be analyzed.
-  # The same set of z-slices will be analyzed for all positions and timepoints within a given sample
-  # If the data do not contain z slices, leave out this parameter or set to 'all'
+  timepoints: [0]
+  # (str or list) timepoints within the dataset that are to be analyzed.
   ##   'all'
-  ##   [0, 10, 20]
-  ##   !!python/object/apply:builtins.range [10, 50, 5], in which case z slices in range(10,50,5) will be analyzed
-  ##   [['all'], [0, 10, 20]], in which case all z slices from Sample1 and slices 0, 10, and 20 from Sample2 will be analyzed
+  ##   !!python/tuple [0, N] for pos 0 through N
+  ##   [0, 1, 5] for pos 0, 1, and 5
+  ##   [!!python/tuple [0, 15], [19, 25]] for timepoints 0 through 15, 19, and 25
 
-  timepoints: 'all'
-  # (str, list, or range) Timepoints to be analyzed.
-  # The same set of timepoints will be analyzed for all positions and z-slices within a given sample
-  # If the data do not contain z slices, leave out this parameter or set to 'all'
-  ##   'all'
-  ##   [0, 10, 20]
-  ##   !!python/object/apply:builtins.range [10, 50, 5], in which case timepoints in range(10,50,5) will be analyzed
-  ##   [['all'], [0, 10, 20]], in which case all timepoints from Sample1 and timepoints 0, 10, and 20 from Sample2 will be analyzed
+  background: './pytest_temp/pipeline_test/2021_06_11_recOrder_pytest_20x_04NA/BG'
+  # (str) Background folder within the experiment folder
 
-  background: '/gpfs/CompMicro/Spinningdisk/RawData/virtualstaining/2019_02_15_kidney_slice/BG'
+  calibration_metadata: './pytest_temp/pipeline_test/2021_06_11_recOrder_pytest_20x_04NA/calib_metadata.txt'
+  # (str) path to the qlipp calibration metadata file
 
-    # (str or list) Background folder(s) within the experiment folder
-    # a list, e.g. ['/path/to/bg_1', '/path/to/bg_2'], of one background dataset per sample
+pre_processing:
+  denoise:
+    use: False
+    channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
+    threshold: [0.1, 0.1, 0.1, 0.1] # Must match length of channels
+    level: [1, 1, 1, 1] # must match length of channels
 
-  calibration_metadata: '/gpfs/CompMicro/Spinningdisk/RawData/virtualstaining/2019_02_15_kidney_slice/metadata.txt'
 
 processing:
-  output_channels: ['Brightfield_computed', 'Retardance', 'Orientation', 'Phase3D']
+  output_channels: ['Retardance', 'Orientation', 'Brightfield', 'Phase2D', 'S0', 'S1', 'S2', 'S3']
 
   # (list) Any combination of the following values.
-  ##    'Brightfield', 'Retardance', 'Orientation', 'Phase3D', 'Phase2D'
+  #    'Retardance', 'Orientation','Brightfield', 'Phase3D'. 'S0', 'S1', 'S2', 'S3'
+  #     order of the channels specifies the order in which they will be written
+
+  #    can also specify custom names of fluorescence channels 'GFP' or 'DAPI' or 'Nuclei'.
+  #    The order in which fluor channels are listed corresponds to their order in
+  #    the acquisition.  Specified name stored in the ome-zarr metadata.
 
   background_correction: 'local_fit'
   # (str) Background correction method, one of the following
@@ -47,9 +53,6 @@ processing:
   ##   'local': for estimating background with scipy uniform filter
   ##   'local_fit': for estimating background with polynomial fit
   ##   'global': for normal background subtraction with the provided background
-
-  flatfield_correction: False
-  # (bool) perform flat-field correction on fluorescence images if True
 
   use_gpu: False
   # (bool) Option to use GPU processing if True (require cupy to be installed)
@@ -61,67 +64,31 @@ processing:
   #    PHASE RECONSTRUCTION PARAMETERS   #
   ########################################
 
+  wavelength: 532
+  # (int) wavelength of the illumination in nm
+
   pixel_size: 6.5
   # (float) Camera pixel size in the unit of um
 
-  magnification: 63
+  magnification: 20
   # (float) Magnification of the objective
 
-  NA_objective: 1.47
+  NA_objective: 0.55
   # (float) Numerical aperture of the objective
 
-  NA_condenser: 0.9
+  NA_condenser: 0.4
   # (float) Numerical aperture of the condenser
 
-  n_objective_media: 1.512
+  n_objective_media: 1.0
   # (float) Refractive index of the objective immersion oil
 
-  z_step: 0.25
-  # (int) Step size of the z-dimension in um
+  focus_zidx: 40
+  # (int) Index of the focused z slice of the dataset for 2D phase reconstruction
 
-  pad_z: 5
+  pad_z: 0
   # (int) Number of z slices padded above and below the dataset for 3D phase reconstruction to avoid boundary artifacts
 
   ## Denoiser parameters ##
-
-  # ------- 2D ------- #
-
-  phase_denoiser_2D: 'Tikhonov'
-  # (str) Options of denoiser for 2D phase reconstruction
-  ##   'Tikhonov' or 'TV' (total variation)
-
-  #### 2D Tikhonov parameter ####
-  # if noise is higher raise the regularization parameter an order of magnitude to see if the recon is better
-
-  Tik_reg_abs_2D: 1.0e-2
-  # (float) Tikhonov regularization parameter for 2D absorption
-  ##   1.0e-3 should work generally when noise is low
-
-  Tik_reg_ph_2D: 1.0e-2
-  # (float) Tikhonov regularization parameter for 2D phase
-  ##   1.0e-3 should work generally when noise is low
-
-  #### 2D TV parameter ####
-  # ADMM formulation: 0.5 * || A*x - b ||_2^2 + lambda * || z ||_1 + 0.5 * rho * || D*x - z + u ||_2^2
-  # For more noisy data, raise TV_reg to enforce stronger denoising effect
-
-  rho_2D: 1
-  # (float) rho parameters in the 2D ADMM formulation
-  ##   1 is generally good, no need to tune
-
-  itr_2D: 50
-  # (int) Number of iterations for 2D TV denoiser
-  ##   50 is generally good, no need to tune
-
-  TV_reg_abs_2D: 1.0e-3
-  # (float) TV regularization parameter for 2D absorption
-  ##   1e-4 is generally good
-
-  TV_reg_ph_2D: 1.0e-5
-  # (float) TV regularization parameter for 2D phase
-  ##   1e-4 is generally good
-
-  # ------- 3D ------- #
 
   phase_denoiser_3D: 'Tikhonov'
   # (str) Options of denoiser for 3D phase reconstruction
@@ -149,44 +116,14 @@ processing:
   # (float) TV regularization parameter for 3D phase
   ##   5.0e-5 is generally good
 
-
-# Default values of keys when not specified #
-#===========================================#
-
-##  dataset parameters
-#   positions: 'all'
-#   z_slices: 'all'
-#   timepoints: 'all'
-#   ROI: [0, 0, size_of_image_in_y, size_of_image_in_x]
-
-##  processing parameters
-#   output_channels: ['Brightfield', 'Retardance', 'Orientation', 'Polarization']
-#   circularity: 'rcp'
-#   background_correction: 'None'
-#   flatfield_correction: False
-#   azimuth_offset: 0
-#   separate_positions: True
-#   use_gpu: False
-#   gpu_id: 0
-#   phase_denoiser_2D: 'Tikhonov'
-#   Tik_reg_abs_2D: 1.0e-6
-#   Tik_reg_ph_2D: 1.0e-6
-#   rho_2D: 1
-#   itr_2D: 50
-#   TV_reg_abs_2D: 1.0e-3
-#   TV_reg_ph_2D : 1.0e-5
-#   phase_denoiser_3D = 'Tikhonov'
-#   rho_3D: 1e-3
-#   itr_3D: 50
-#   Tik_reg_ph_3D: 1.0e-4
-#   TV_reg_ph_3D: 5.0e-5
-#   pad_z = 0
-
-##  plotting parameters
-#   normalize_color_images: True
-#   save_birefringence_fig: False
-#   save_stokes_fig: False
-#   transmission_scaling: 1E4
-#   retardance_scaling: 1E3
-#   phase_2D_scaling: 1
-#   phase_3D_scaling: 1
+post_processing:
+  denoise:
+    use: False # set to true if you want to denoise the data before writing
+    channels: ['Retardance', 'Phase3D'] # Choose which channels to denoise.
+    threshold: [0.1, 0.1] # Must match length of channels
+    level: [1, 1] # must match length of channels
+  registration:
+    use: False # set to true if you want to register a channel before writing
+    channel_idx: [3] # Index of desired channel to register.  Index corresponds to its position in raw data
+                     # if multiple channels, must match order of the fluorescence channels in output_channels
+    shift: [[0, 50, -50]] # up and to the right [0, +y, -x].  Must match length of channels

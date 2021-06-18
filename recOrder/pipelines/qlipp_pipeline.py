@@ -73,8 +73,6 @@ class qlipp_pipeline(PipelineInterface):
         self.writer.create_zarr_root(f'{self.name}.zarr')
         self.writer.store.attrs.put(self.config.yaml_dict)
 
-        #TODO: place step_size in config?
-
         # Initialize Reconstructor
         self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
                                                  self.calib_meta['Summary']['~ Swing (fraction)'],
