@@ -3,6 +3,7 @@ from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_manager import PipelineManager
 from recOrder.pipelines.qlipp_pipeline import qlipp_pipeline
 from waveorder.io.writer import WaveorderWriter
+from recOrder.compute.qlipp_compute import reconstruct_qlipp_stokes, reconstruct_qlipp_birefringence
 from os.path import dirname, abspath
 import os
 import zarr
@@ -85,6 +86,25 @@ def test_pipeline_daemon_run(setup_test_data):
     assert(array.shape == (2, 4, 81, manager.data.height, manager.data.width))
 
     shutil.rmtree(os.path.join(folder, config.data_save_name+'.zarr'))
+
+def test_full_reconstruction(setup_test_data):
+    folder, data = setup_test_data
+
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'config_qlipp_full_pytest.yml')
+    config = ConfigReader(path_to_config, data_dir=data, save_dir=folder)
+
+    manager = PipelineManager(config)
+    manager.run()
+
+    stokes =
+    birefringence =
+
+    store = zarr.open(os.path.join(folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'))
+    array = store['Pos_000.zarr']['physical_data']['array']
+
+
+
+
 
 
 

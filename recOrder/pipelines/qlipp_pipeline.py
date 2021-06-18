@@ -2,7 +2,8 @@ from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import MicromanagerReader
 from waveorder.io.writer import WaveorderWriter
 from recOrder.io.utils import load_bg
-from recOrder.compute.qlipp_compute import *
+from recOrder.compute.qlipp_compute import reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, \
+    reconstruct_qlipp_phase2D, reconstruct_qlipp_phase3D, initialize_reconstructor
 import json
 import numpy as np
 from recOrder.pipelines.pipeline_interface import PipelineInterface
@@ -163,22 +164,17 @@ class qlipp_pipeline(PipelineInterface):
         phase2D = None
 
         if 'Phase3D' in self.output_channels:
-            phase3D = self.reconstructor.Phase_recon_3D(np.transpose(stokes[:, 0], (1, 2, 0)),
-                                                   method=self.config.phase_denoiser_3D,
-                                                   reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
-                                                   lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D,
-                                                   verbose=False)
-
-            phase3D = np.transpose(phase3D, (2, 0, 1))
+            phase3D = reconstruct_qlipp_phase3D(np.transpose(stokes[:, 0], (1, 2, 0)),self.reconstructor,
+                                                method=self.config.phase_denoiser_3D,
+                                                reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
+                                                lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D)
 
         if 'Phase2D' in self.output_channels:
-            _, phase2D = self.reconstructor.Phase_recon(np.transpose(stokes[:, 0], (1, 2, 0)),
-                                                        method=self.config.phase_denoiser_2D,
-                                                        reg_u=self.config.Tik_reg_abs_2D,
-                                                        reg_p=self.config.Tik_reg_ph_2D,
-                                                        rho=self.config.rho_2D, lambda_u=self.config.TV_reg_abs_2D,
-                                                        lambda_p=self.config.TV_reg_ph_2D, itr=self.config.itr_2D,
-                                                        verbose=False)
+
+            phase2D = reconstruct_qlipp_phase2D(np.transpose(stokes[:, 0], (1, 2, 0)), self.reconstructor,
+                                                method=self.config.phase_denoiser_2D, reg_p=self.config.Tik_reg_ph_2D,
+                                                rho=self.config.rho_2D, lambda_p=self.config.TV_reg_ph_2D,
+                                                itr=self.config.itr_2D)
 
         return phase2D, phase3D
 
@@ -222,7 +218,10 @@ class qlipp_pipeline(PipelineInterface):
             elif 'Phase3D' in self.output_channels[chan]:
                 self.writer.write(phase3D, t=t, c=chan)
             elif 'Phase2D' in self.output_channels:
-                self.writer.write(phase2D, t=t, c=chan)
+                if self.mode == '3D':
+                    self.writer.write(phase2D, t=t, c=chan, z=self.focus_slice)
+                else:
+                    self.writer.write(phase2D, t=t, c=chan)
             elif 'S0' in self.output_channels[chan]:
                 self.writer.write(stokes[:, 0], t=t, c=chan)
             elif 'S1' in self.output_channels[chan]:
