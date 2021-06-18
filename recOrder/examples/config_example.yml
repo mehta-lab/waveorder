@@ -5,8 +5,17 @@ dataset:
   mode: '2D'
   # Mode for reconstruction, '2D' or '3D'
 
+  'data_dir': '/path/to/raw/data'
+  # (str) path to the raw data directory (folder which holds .tif files)
+
+  'save_dir': '/path/to/save/directory'
+  # (str) path to the directory in which the data will be saved
+
   data_type: 'ometiff'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
+
+  'data_save_name': 'Test_Data'
+  # (str) Name of the zarr dataset that will be written.
 
   positions: [1]
   # (str or list) Positions within the dataset that are to be analyzed.
