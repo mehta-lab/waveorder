@@ -158,8 +158,8 @@ class ConfigReader(object):
                     assert 'NA_objective' in self.config['processing'], 'NA_objective required for phase reconstruction'
                     assert 'NA_condenser' in self.config['processing'], 'NA_condenser required for phase reconstruction'
 
-                elif 'Phase3D' in self.config['processing'][key] and 'Phase2D' in self.config['processing'][key]:
-                    raise KeyError(f'Both Phase3D and Phase2D cannot be specified in {key}')
+                if 'Phase3D' in self.config['processing'][key] and 'Phase2D' in self.config['processing'][key]:
+                    raise KeyError(f'Both Phase3D and Phase2D cannot be specified in {key}.  Please compute separately')
 
             elif key == 'background_correction':
                 if self.config['processing'][key] =='None' or 'local_filter':

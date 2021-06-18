@@ -36,9 +36,6 @@ class qlipp_pipeline(PipelineInterface):
         # Dimension Parameters
         self.t = num_t
         self.output_channels = self.config.output_channels
-
-        self.phase_only = False
-        self.stokes_only = False
         self._check_output_channels(self.output_channels)
 
         if self.data.channels < 4:
@@ -95,14 +92,10 @@ class qlipp_pipeline(PipelineInterface):
             self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
 
     def _check_output_channels(self, output_channels):
+        self.no_birefringence = True
         for channel in output_channels:
-            if 'Phase3D' in channel or 'Phase2D' in channel:
-                self.phase_only = True
-            elif 'S0' in channel or 'S1' in channel or 'S2' in channel or 'S3' in channel:
-                self.stokes_only = True
-            elif 'Retardance' in channel or 'Orientation' in channel or 'Brightfield' in channel:
-                self.stokes_only = False
-                self.phase_only = False
+            if 'Retardance' in channel or 'Orientation' in channel or 'Brightfield' in channel:
+                self.no_birefringence = False
             else:
                 continue
 
@@ -122,7 +115,7 @@ class qlipp_pipeline(PipelineInterface):
 
         """
 
-        if self.calib_scheme == '4-State Extinction':
+        if self.calib_scheme == '4-Frame Extinction':
             LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
 
             LF_array[0] = data[self.s0_idx]
@@ -159,9 +152,8 @@ class qlipp_pipeline(PipelineInterface):
         phase2D:            (nd-array) 2D phase image of (Y, X)
 
         """
-
-        phase3D = None
         phase2D = None
+        phase3D = None
 
         if 'Phase3D' in self.output_channels:
             phase3D = reconstruct_qlipp_phase3D(np.transpose(stokes[:, 0], (1, 2, 0)),self.reconstructor,
@@ -170,11 +162,11 @@ class qlipp_pipeline(PipelineInterface):
                                                 lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D)
 
         if 'Phase2D' in self.output_channels:
-
             phase2D = reconstruct_qlipp_phase2D(np.transpose(stokes[:, 0], (1, 2, 0)), self.reconstructor,
                                                 method=self.config.phase_denoiser_2D, reg_p=self.config.Tik_reg_ph_2D,
                                                 rho=self.config.rho_2D, lambda_p=self.config.TV_reg_ph_2D,
                                                 itr=self.config.itr_2D)
+
 
         return phase2D, phase3D
 
@@ -194,7 +186,7 @@ class qlipp_pipeline(PipelineInterface):
 
         """
 
-        if self.phase_only or self.stokes_only:
+        if self.no_birefringence:
             return None
         else:
             birefringence = reconstruct_qlipp_birefringence(stokes[slice(None) if self.slices != 1 else self.focus_slice],
@@ -205,39 +197,38 @@ class qlipp_pipeline(PipelineInterface):
     def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
 
         t = pt[1]
+        z = 0 if self.mode == '2D' else None
         fluor_idx = 0
+        birefringence = np.copy(birefringence[:, 0]) if self.mode == '2D' else birefringence
 
         for chan in range(len(self.output_channels)):
             if 'Retardance' in self.output_channels[chan]:
                 ret = birefringence[0] / (2 * np.pi) * self.config.wavelength
-                self.writer.write(ret, t=t, c=chan)
+                self.writer.write(ret, t=t, c=chan, z=z)
             elif 'Orientation' in self.output_channels[chan]:
-                self.writer.write(birefringence[1], t=t, c=chan)
+                self.writer.write(birefringence[1], t=t, c=chan, z=z)
             elif 'Brightfield' in self.output_channels[chan]:
-                self.writer.write(birefringence[2], t=t, c=chan)
+                self.writer.write(birefringence[2], t=t, c=chan, z=z)
             elif 'Phase3D' in self.output_channels[chan]:
-                self.writer.write(phase3D, t=t, c=chan)
+                self.writer.write(phase3D, t=t, c=chan, z=z)
             elif 'Phase2D' in self.output_channels:
-                if self.mode == '3D':
-                    self.writer.write(phase2D, t=t, c=chan, z=self.focus_slice)
-                else:
-                    self.writer.write(phase2D, t=t, c=chan)
+                self.writer.write(phase2D, t=t, c=chan, z=z)
             elif 'S0' in self.output_channels[chan]:
-                self.writer.write(stokes[:, 0], t=t, c=chan)
+                self.writer.write(stokes[:, 0], t=t, c=chan, z=z)
             elif 'S1' in self.output_channels[chan]:
-                self.writer.write(stokes[:, 1], t=t, c=chan)
+                self.writer.write(stokes[:, 1], t=t, c=chan, z=z)
             elif 'S2' in self.output_channels[chan]:
-                self.writer.write(stokes[:, 2], t=t, c=chan)
+                self.writer.write(stokes[:, 2], t=t, c=chan, z=z)
             elif 'S3' in self.output_channels[chan]:
-                self.writer.write(stokes[:, 3], t=t, c=chan)
+                self.writer.write(stokes[:, 3], t=t, c=chan, z=z)
 
             # Assume any other output channel in config is fluorescence
             else:
                 if self.config.postprocessing.registration_use:
-                    self.writer.write(registered_stacks[fluor_idx], t=t, c=chan)
+                    self.writer.write(registered_stacks[fluor_idx], t=t, c=chan, z=z)
                     fluor_idx += 1
                 else:
-                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], t=t, c=chan)
+                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], t=t, c=chan, z=z)
                     fluor_idx += 1
 
     @property

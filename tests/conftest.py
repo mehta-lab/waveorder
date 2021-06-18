@@ -18,6 +18,22 @@ def setup_folder_qlipp_pipeline():
     except OSError as e:
         print(f"Error while deleting temp folder: {e.strerror}")
 
+@pytest.fixture(scope='function')
+def setup_data_save_folder():
+    temp_folder = os.getcwd() + '/pytest_temp'
+    data_save_folder = os.path.join(temp_folder, 'data_save')
+    if not os.path.isdir(data_save_folder):
+        os.mkdir(data_save_folder)
+        print("\nsetting up data_save folder")
+
+    yield data_save_folder
+
+    try:
+        # remove temp folder
+        shutil.rmtree(data_save_folder)
+    except OSError as e:
+        print(f"Error while deleting temp folder: {e.strerror}")
+
 @pytest.fixture(scope="session")
 def setup_test_data():
     temp_folder = os.getcwd() + '/pytest_temp'

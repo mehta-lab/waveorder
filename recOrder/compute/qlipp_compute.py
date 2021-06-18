@@ -177,6 +177,7 @@ def reconstruct_qlipp_birefringence(stokes, recon):
 
     return np.transpose(recon_data, (1,0,2,3))
 
+
 def reconstruct_qlipp_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
                               lambda_p=1e-4, itr=50):
 

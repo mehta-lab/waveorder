@@ -201,7 +201,7 @@ class PipelineManager:
         denoise_params, registration_params = self._get_postprocessing_params()
 
         phase2D_denoise = np.copy(phase2D)
-        phase3D_denoise = np.copy(phase2D)
+        phase3D_denoise = np.copy(phase3D)
         birefringence_denoise = np.copy(birefringence)
         if denoise_params:
             for chan_param in denoise_params:
@@ -212,7 +212,7 @@ class PipelineManager:
                 elif 'Brightfield' in chan_param[0]:
                     birefringence_denoise[2] = post_proc_denoise(birefringence[2], chan_param)
                 elif 'Phase2D' in chan_param[0]:
-                    phase2D_denoise = post_proc_denoise(phase3D, chan_param)
+                    phase2D_denoise = post_proc_denoise(phase2D, chan_param)
                 elif 'Phase3D' in chan_param[0]:
                     phase3D_denoise = post_proc_denoise(phase3D, chan_param)
                 else:

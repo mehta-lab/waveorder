@@ -1,7 +1,7 @@
 dataset:
   method: 'QLIPP'
 
-  mode: '3D'
+  mode: '2D'
 
   data_type: 'ometiff'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
@@ -34,7 +34,7 @@ pre_processing:
 
 
 processing:
-  output_channels: ['Retardance', 'Orientation', 'Brightfield', 'Phase3D', 'S0', 'S1', 'S2', 'S3']
+  output_channels: ['Retardance', 'Orientation', 'Brightfield', 'Phase2D', 'S0', 'S1', 'S2', 'S3']
 
   # (list) Any combination of the following values.
   #    'Retardance', 'Orientation','Brightfield', 'Phase3D'
