@@ -1,2 +1,1 @@
-# compute and deconvolution module.
-name = "compute"
+from .qlipp_compute import *

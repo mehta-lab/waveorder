@@ -1,2 +1,1 @@
-# post-processing algorithms: stitching, averaging, ...
-name = "postproc"
+from .post_processing import *

@@ -1,2 +1,1 @@
-# pre-processing algorithms: e.g., denoising
-name = "preproc"
+from .pre_processing import *
