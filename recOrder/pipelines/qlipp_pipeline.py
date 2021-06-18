@@ -59,14 +59,15 @@ class qlipp_pipeline(PipelineInterface):
         self.bg_path = self.config.background if self.config.background else None
         self.bg_roi = self.calib_meta['Summary']['ROI Used (x , y, width, height)'] if self.calib_meta else None
 
+        # identify the image indicies corresponding to each polarization orientation
         self.s0_idx, self.s1_idx, \
         self.s2_idx, self.s3_idx, \
         self.s4_idx, self.fluor_idxs = self.parse_channel_idx(self.data.channel_names)
 
         # Writer Parameters
+        self._file_writer = None
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
-        self._file_writer = None
 
         self.writer = WaveorderWriter(self.save_dir, 'physical')
         self.writer.create_zarr_root(f'{self.name}.zarr')
@@ -123,13 +124,16 @@ class qlipp_pipeline(PipelineInterface):
             LF_array[2] = data[self.s2_idx]
             LF_array[3] = data[self.s3_idx]
 
-        if self.calib_scheme == '5-Frame':
+        elif self.calib_scheme == '5-Frame':
             LF_array = np.zeros([5, self.data.slices, self.data.height, self.data.width])
             LF_array[0] = data[self.s0_idx]
             LF_array[1] = data[self.s1_idx]
             LF_array[2] = data[self.s2_idx]
             LF_array[3] = data[self.s3_idx]
             LF_array[3] = data[self.s4_idx]
+
+        else:
+            raise NotImplementedError(f"calibration scheme {self.calib_scheme} not implemented")
 
         stokes = reconstruct_qlipp_stokes(LF_array, self.reconstructor, self.bg_stokes)
 

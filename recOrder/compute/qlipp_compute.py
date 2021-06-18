@@ -113,7 +113,7 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes):
     Parameters
     ----------
         data                : np.ndarray or zarr array
-                              intensity data
+                              intensity data of shape: (C, Z, Y, X)
 
         recon               : waveorder.waveorder_microscopy object
                               initialized by initialize_reconstructor
@@ -125,6 +125,7 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes):
     -------
         stokes_stack        : np.ndarray
                               array representing stokes array
+                              has shape: (Z, C, Y, X), where C = 5
 
     """
 
