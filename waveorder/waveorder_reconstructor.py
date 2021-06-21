@@ -26,13 +26,6 @@ def instrument_matrix_and_source_calibration(I_cali_mean, handedness = 'RCP'):
     
     _, N_cali = I_cali_mean.shape
     
-    # locate the index for zero-degree polarizer
-    idx = np.argsort(I_cali_mean[0]/np.sum(I_cali_mean, axis=0))[-1]
-
-    # align the calibration curve 
-    zero_idx = -idx
-    I_cali_mean = np.roll(I_cali_mean,zero_idx,axis=1)
-    
     # Source intensity
     I_tot = np.sum(I_cali_mean,axis=0)
 
@@ -41,9 +34,15 @@ def instrument_matrix_and_source_calibration(I_cali_mean, handedness = 'RCP'):
     theta = np.r_[0:N_cali]/N_cali*2*np.pi
     C_matrix = np.array([np.ones((N_cali,)), np.cos(2*theta), np.sin(2*theta)])
     
+    # offset calibration
+    I_cali_norm = I_cali_mean/I_tot
+    offset_est = np.transpose(np.linalg.pinv(C_matrix.transpose()).dot(np.transpose(I_cali_norm[0,:])))
+    alpha = np.arctan2(-offset_est[2], offset_est[1])/2
+
     # Source calibration
+    C_matrix_offset = np.array([np.ones((N_cali,)), np.cos(2*(theta+alpha)), np.sin(2*(theta+alpha))])
     
-    S_source = np.linalg.pinv(C_matrix.transpose()).dot(I_tot[:,np.newaxis])
+    S_source = np.linalg.pinv(C_matrix_offset.transpose()).dot(I_tot[:,np.newaxis])
     S_source_norm = S_source/S_source[0]
     
     Ax = np.sqrt((S_source_norm[0]+S_source_norm[1])/2)
@@ -58,41 +57,43 @@ def instrument_matrix_and_source_calibration(I_cali_mean, handedness = 'RCP'):
         raise TypeError("handedness type must be 'LCP' or 'RCP'")
         
     # Instrument matrix calibration
-    I_cali_norm = I_cali_mean/I_tot
-    A_matrix = np.transpose(np.linalg.pinv(C_matrix.transpose()).dot(np.transpose(I_cali_norm)))
+    A_matrix = np.transpose(np.linalg.pinv(C_matrix_offset.transpose()).dot(np.transpose(I_cali_norm)))
+    
+    theta_fine = np.r_[0:360]/360*2*np.pi
+    C_matrix_offset_fine = np.array([np.ones((360,)), np.cos(2*(theta_fine+alpha)), np.sin(2*(theta_fine+alpha))])
     
     print('Calibrated source field:\n' + str(np.round(E_in,4)))
     print('Calibrated instrument matrix:\n' + str(np.round(A_matrix,4)))
     
     fig,ax = plt.subplots(2,2,figsize=(20,20))
-    ax[0,0].plot(np.transpose(I_cali_mean))
+    ax[0,0].plot(theta/np.pi*180,np.transpose(I_cali_mean))
     ax[0,0].legend(['$I_0$', '$I_{45}$', '$I_{90}$', '$I_{135}$'])
     ax[0,0].set_title('Calibration curve without normalization')
     ax[0,0].set_xlabel('Orientation of LP (deg)')
     ax[0,0].set_ylabel('Raw intensity')
 
-    ax[0,1].plot(I_tot)
-    ax[0,1].plot(np.transpose(C_matrix).dot(S_source))
+    ax[0,1].plot(theta/np.pi*180,I_tot)
+    ax[0,1].plot(theta_fine/np.pi*180,np.transpose(C_matrix_offset_fine).dot(S_source))
     ax[0,1].legend(['Mean source intensity', 'Fitted source intensity'])
     ax[0,1].set_title('Source calibration curve')
     ax[0,1].set_xlabel('Orientation of LP (deg)')
     ax[0,1].set_ylabel('Mean intensity from 4 linear channels')
 
 
-    ax[1,0].plot(np.transpose(I_cali_mean/I_tot))
+    ax[1,0].plot(theta/np.pi*180,np.transpose(I_cali_mean/I_tot))
     ax[1,0].legend(['$I_0$', '$I_{45}$', '$I_{90}$', '$I_{135}$'])
     ax[1,0].set_title('Normalized calibration curve')
     ax[1,0].set_xlabel('Orientation of LP (deg)')
     ax[1,0].set_ylabel('Normalized intensity')
     
-    ax[1,1].plot(np.transpose(I_cali_norm))
-    ax[1,1].plot(np.transpose(A_matrix.dot(C_matrix)))
+    ax[1,1].plot(theta/np.pi*180,np.transpose(I_cali_norm))
+    ax[1,1].plot(theta_fine/np.pi*180,np.transpose(A_matrix.dot(C_matrix_offset_fine)))
     ax[1,1].legend(['$I_0$', '$I_{45}$', '$I_{90}$', '$I_{135}$'])
     ax[1,1].set_xlabel('Orientation of LP (deg)')
     ax[1,1].set_ylabel('Normalized intensity')
     ax[1,1].set_title('Fitted calibration curves')
     
-    return E_in, A_matrix, I_cali_mean
+    return E_in, A_matrix, np.transpose(A_matrix.dot(C_matrix_offset_fine))
     
     
 
