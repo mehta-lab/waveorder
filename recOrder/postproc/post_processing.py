@@ -1,7 +1,4 @@
-from scipy.ndimage import affine_transform, sobel
-from skimage.feature import register_translation
-import os
-import json
+from scipy.ndimage import affine_transform
 import numpy as np
 from waveorder.util import wavelet_softThreshold
 import matplotlib.pyplot as plt

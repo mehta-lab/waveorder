@@ -1,6 +1,6 @@
 dataset:
   method: 'QLIPP'
-  # Reconstruction Method: 'QLIPP' only implemented for now.
+  # Reconstruction Method 'QLIPP' only implemented for now.
 
   mode: '2D'
   # Mode for reconstruction, '2D' or '3D'

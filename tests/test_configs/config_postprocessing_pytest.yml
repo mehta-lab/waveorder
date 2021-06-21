@@ -2,8 +2,6 @@ dataset:
   method: 'QLIPP'
 
   mode: '3D'
-  data_dir: './'
-  save_dir: './'
 
   data_type: 'ometiff'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
@@ -29,14 +27,14 @@ dataset:
 
 pre_processing:
   denoise:
-    use: True
+    use: False
     channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
     threshold: [0.5, 0.5, 0.5, 0.5]
     level: [1, 1, 1, 1]
 
 
 processing:
-  output_channels: ['S0', 'S1', 'S2', 'S3','Retardance', 'DAPI']
+  output_channels: ['Retardance', 'DAPI']
 
   # (list) Any combination of the following values.
   #    'Retardance', 'Orientation','Brightfield', 'Phase3D'
@@ -71,11 +69,11 @@ processing:
   # (float) Refractive index of the objective immersion oil
 post_processing:
   denoise:
-    use: False
+    use: True
     channels: ['Retardance'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [5]
+    threshold: [0.1]
     level: [1]
   registration:
-    use: False
+    use: True
     channel_idx: [1] # if multiple channels, must match order of the fluorescence channels
     shift: [[0, -100, -100]] # up and to the right [0, +y, -x]
