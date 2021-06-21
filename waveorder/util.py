@@ -340,8 +340,27 @@ def wavelet_softThreshold(img, wavelet, threshold, level = 1):
                     denoised image or volume in nD space
     
     '''
-    
-    coeffs = pywt.wavedecn(img, wavelet, level=level)
+    shape = np.shape(img)
+
+    padding = []
+    unpadding = []
+    for dim in shape:
+        # No padding
+        if dim % 2 == 0:
+            padding.append((0, 0))
+            unpadding.append(slice(None))
+
+        # pad dimension
+        else:
+            padding.append((0, 1))
+            unpadding.append(slice(0, -1))
+
+    padding = tuple(padding)
+    unpadding = tuple(unpadding)
+
+    img_padded = np.pad(img, padding, 'edge')
+
+    coeffs = pywt.wavedecn(img_padded, wavelet, level=level)
     
     for i in range(level+1):
         if i == 0:
@@ -352,7 +371,7 @@ def wavelet_softThreshold(img, wavelet, threshold, level = 1):
 
     img_thres = pywt.waverecn(coeffs, wavelet)
     
-    return img_thres
+    return img_thres[unpadding]
 
 
 def array_based_4x4_det(a):
