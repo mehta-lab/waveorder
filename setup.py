@@ -58,6 +58,7 @@ if __name__ == '__main__':
         classifiers=CLASSIFIERS,
         install_requires=INSTALL_REQUIRES,
         python_requires=f'>={MIN_PY_VER}',
+        dependency_links=['https://github.com/mehta-lab/waveorder.git#egg=waveorder'],
         packages=PACKAGES,
         include_package_data=True,
         entry_points={
