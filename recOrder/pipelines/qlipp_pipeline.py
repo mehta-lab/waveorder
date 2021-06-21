@@ -244,6 +244,12 @@ class qlipp_pipeline(PipelineInterface):
     def parse_channel_idx(self, channel_list):
         fluor_idx = []
         s4_idx = None
+        try:
+            self.calib_meta['Summary']['PolScope_Plugin_Version']
+            open_pol = True
+        except:
+            open_pol = False
+
         for channel in range(len(channel_list)):
             if 'State0' in channel_list[channel]:
                 s0_idx = channel
@@ -253,10 +259,13 @@ class qlipp_pipeline(PipelineInterface):
                 s2_idx = channel
             elif 'State3' in channel_list[channel]:
                 s3_idx = channel
-            elif 'State3' in channel_list[channel]:
+            elif 'State4' in channel_list[channel]:
                 s4_idx = channel
             else:
                 fluor_idx.append(channel)
+
+        if open_pol:
+            s1_idx, s2_idx, s3_idx, s4_idx = s4_idx, s3_idx, s1_idx, s2_idx
 
         return s0_idx, s1_idx, s2_idx, s3_idx, s4_idx, fluor_idx
 
