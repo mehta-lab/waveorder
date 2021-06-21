@@ -12,7 +12,9 @@ with open("README.md", "r") as fh:
 LICENSE = 'Chan Zuckerberg Biohub Software License'
 
 INSTALL_REQUIRES = ['numpy', 'scipy', 'matplotlib', 'pycromanager']
+REQUIRES = []
 
+# todo: modify for python dependency
 CLASSIFIERS = [
     'License :: OSI Approved :: BSD License',
     'Programming Language :: Python',
