@@ -1,7 +1,4 @@
-from scipy.ndimage import affine_transform, sobel
-from skimage.feature import register_translation
-import os
-import json
+from scipy.ndimage import affine_transform
 import numpy as np
 from waveorder.util import wavelet_softThreshold
 import matplotlib.pyplot as plt
@@ -11,6 +8,7 @@ import tifffile as tiff
 def post_proc_denoise(data_volume, params):
 
     data_volume_denoised = np.copy(data_volume)
+
     if len(data_volume) == 1:
         data_volume_denoised = wavelet_softThreshold(data_volume[0], 'db8', params[1], params[2])
     else:

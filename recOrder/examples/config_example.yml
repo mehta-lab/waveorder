@@ -1,6 +1,6 @@
 dataset:
   method: 'QLIPP'
-  # Reconstruction Method: 'QLIPP' only implemented for now.
+  # Reconstruction Method 'QLIPP' only implemented for now.
 
   mode: '2D'
   # Mode for reconstruction, '2D' or '3D'
@@ -98,6 +98,38 @@ processing:
   # (int) Number of z slices padded above and below the dataset for 3D phase reconstruction to avoid boundary artifacts
 
   ## Denoiser parameters ##
+  phase_denoiser_2D: 'Tikhonov'
+    # (str) Options of denoiser for 2D phase reconstruction
+    ##   'Tikhonov' or 'TV' (total variation)
+
+  #### 2D Tikhonov parameter ####
+  # if noise is higher raise the regularization parameter an order of magnitude to see if the recon is better
+
+  Tik_reg_abs_2D: 1.0e-4
+  # (float) Tikhonov regularization parameter for 2D absorption
+  ##   1.0e-3 should work generally when noise is low
+
+  Tik_reg_ph_2D: 1.0e-4
+  # (float) Tikhonov regularization parameter for 2D phase
+  ##   1.0e-3 should work generally when noise is low
+
+  rho_2D: 1
+  # (float) rho parameters in the 2D ADMM formulation
+  ##   1 is generally good, no need to tune
+
+  itr_2D: 50
+  # (int) Number of iterations for 2D TV denoiser
+  ##   50 is generally good, no need to tune
+
+  TV_reg_abs_2D: 1.0e-4
+  # (float) TV regularization parameter for 2D absorption
+  ##   1e-4 is generally good
+
+  TV_reg_ph_2D: 1.0e-4
+  # (float) TV regularization parameter for 2D phase
+  ##   1e-4 is generally good
+
+  # -------- 3D ---------
 
   phase_denoiser_3D: 'Tikhonov'
   # (str) Options of denoiser for 3D phase reconstruction

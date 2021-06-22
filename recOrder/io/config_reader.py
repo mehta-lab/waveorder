@@ -56,8 +56,6 @@ PROCESSING = {
     'pad_z': 0
 }
 
-
-
 POSTPROCESSING = {
     'denoise':{
         'use': False,
@@ -182,6 +180,8 @@ class ConfigReader(object):
                             f'User must specify {key_child} to use for {key}'
 
     def _save_yaml(self):
+        if not os.path.exists(self.save_dir):
+            os.mkdir(self.save_dir)
         with open(os.path.join(self.save_dir, f'config_{self.data_save_name}.yml'), 'w') as file:
             yaml.dump(self.yaml_dict, file)
 
