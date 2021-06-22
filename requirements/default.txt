@@ -6,3 +6,6 @@ ipywidgets>=7.5.1
 tifffile>=2020.11.26
 zarr>=2.6.1
 natsort>=7.1.1
+scikit-image>=0.18.1
+click>=8.0.1
+pyyaml>=5.4.1
