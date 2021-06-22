@@ -14,6 +14,7 @@ def test_constructor_mm2gamma(setup_mm2gamma_ome_tiffs):
     mmr = MicromanagerOmeTiffReader(one_folder, extract_data=False)
 
     assert(mmr.mm_meta is not None)
+    assert(mmr.z_step_size is not None)
     assert(mmr.width is not 0)
     assert(mmr.height is not 0)
     assert(mmr.frames is not 0)
@@ -36,6 +37,23 @@ def test_output_dims_mm2gamma(setup_mm2gamma_ome_tiffs):
     assert(mmr.get_zarr(0).shape[2] == mmr.slices)
     assert(mmr.get_zarr(0).shape[3] == mmr.height)
     assert(mmr.get_zarr(0).shape[4] == mmr.width)
+
+
+def test_output_dims_mm2gamma_incomplete(setup_mm2gamma_ome_tiffs_incomplete):
+    """
+    test that output dimensions are correct for interrupted data
+    """
+
+    # choose a random folder
+    folder = setup_mm2gamma_ome_tiffs_incomplete
+    mmr = MicromanagerOmeTiffReader(folder, extract_data=True)
+
+    assert(mmr.get_zarr(0).shape[0] == mmr.frames)
+    assert(mmr.get_zarr(0).shape[1] == mmr.channels)
+    assert(mmr.get_zarr(0).shape[2] == mmr.slices)
+    assert(mmr.get_zarr(0).shape[3] == mmr.height)
+    assert(mmr.get_zarr(0).shape[4] == mmr.width)
+    assert(mmr.get_zarr(0).shape[0] == 11)
 
 
 def test_get_zarr_mm2gamma(setup_mm2gamma_ome_tiffs):
@@ -75,6 +93,7 @@ def test_constructor_mm1422(setup_mm1422_ome_tiffs):
     mmr = MicromanagerOmeTiffReader(one_folder, extract_data=False)
 
     assert(mmr.mm_meta is not None)
+    assert(mmr.z_step_size is not None)
     assert(mmr.width is not 0)
     assert(mmr.height is not 0)
     assert(mmr.frames is not 0)
