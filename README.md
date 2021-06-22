@@ -71,9 +71,6 @@ In the following, we demonstrate how to run `recOrder` for reconstruction. <br>
 >  ```
 
 3) Open `config_example.yml` and modify the parameters to match your dataset:
->  ```buildoutcfg
->  jupyter notebook
->  ```
 
 3) Run reconstruction with the path to your config file
 >  ```buildoutcfg
