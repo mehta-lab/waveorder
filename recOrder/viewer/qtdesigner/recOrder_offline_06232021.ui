@@ -1,0 +1,1044 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>Form</class>
+ <widget class="QWidget" name="Form">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>645</width>
+    <height>683</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <widget class="QProgressBar" name="progressBar_runReconstruction">
+   <property name="geometry">
+    <rect>
+     <x>178</x>
+     <y>648</y>
+     <width>281</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="value">
+    <number>0</number>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="qbutton_browse_config_file">
+   <property name="geometry">
+    <rect>
+     <x>517</x>
+     <y>26</y>
+     <width>116</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Browse</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="label_path_to_config">
+   <property name="geometry">
+    <rect>
+     <x>6</x>
+     <y>0</y>
+     <width>158</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Read configuration from...</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="qbutton_load_default_config">
+   <property name="geometry">
+    <rect>
+     <x>172</x>
+     <y>61</y>
+     <width>293</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Load Default Config Values</string>
+   </property>
+  </widget>
+  <widget class="QTabWidget" name="ConfigFile_tab">
+   <property name="geometry">
+    <rect>
+     <x>6</x>
+     <y>95</y>
+     <width>621</width>
+     <height>536</height>
+    </rect>
+   </property>
+   <property name="currentIndex">
+    <number>2</number>
+   </property>
+   <widget class="QWidget" name="Dataset_tab">
+    <attribute name="title">
+     <string>Dataset</string>
+    </attribute>
+    <layout class="QGridLayout" name="gridLayout_2">
+     <property name="leftMargin">
+      <number>5</number>
+     </property>
+     <property name="topMargin">
+      <number>5</number>
+     </property>
+     <property name="rightMargin">
+      <number>5</number>
+     </property>
+     <property name="bottomMargin">
+      <number>5</number>
+     </property>
+     <property name="verticalSpacing">
+      <number>-1</number>
+     </property>
+     <item row="0" column="0" alignment="Qt::AlignTop">
+      <widget class="QScrollArea" name="scrollarea_dataset">
+       <property name="sizeAdjustPolicy">
+        <enum>QAbstractScrollArea::AdjustToContents</enum>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+       </property>
+       <widget class="QWidget" name="scrollarea_dataset_contents">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>603</width>
+          <height>248</height>
+         </rect>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_3">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetDefaultConstraint</enum>
+         </property>
+         <property name="leftMargin">
+          <number>5</number>
+         </property>
+         <property name="topMargin">
+          <number>5</number>
+         </property>
+         <property name="rightMargin">
+          <number>5</number>
+         </property>
+         <property name="bottomMargin">
+          <number>5</number>
+         </property>
+         <property name="verticalSpacing">
+          <number>-1</number>
+         </property>
+         <item row="5" column="1">
+          <widget class="QLineEdit" name="le_timepoints">
+           <property name="text">
+            <string>'all'</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="le_background"/>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="le_samples"/>
+         </item>
+         <item row="6" column="1">
+          <widget class="QLineEdit" name="le_processed_dir"/>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="label_timepoints">
+           <property name="text">
+            <string>timepoints</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="0">
+          <widget class="QLabel" name="label_processed_dir">
+           <property name="text">
+            <string>processed directory</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="le_data_dir"/>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLineEdit" name="le_z_slices">
+           <property name="text">
+            <string>'all'</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label_positions">
+           <property name="text">
+            <string>positions</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_zslices">
+           <property name="text">
+            <string>z_slices</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_samples">
+           <property name="text">
+            <string>samples</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_data_dir">
+           <property name="text">
+            <string>data directory</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLineEdit" name="le_positions">
+           <property name="text">
+            <string>'all'</string>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="0">
+          <widget class="QLabel" name="label_roi">
+           <property name="text">
+            <string>ROI</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_background">
+           <property name="text">
+            <string>background</string>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="1">
+          <widget class="QLineEdit" name="le_roi"/>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="Processing_tab">
+    <attribute name="title">
+     <string>Processing</string>
+    </attribute>
+    <layout class="QGridLayout" name="gridLayout_6">
+     <property name="leftMargin">
+      <number>5</number>
+     </property>
+     <property name="topMargin">
+      <number>5</number>
+     </property>
+     <property name="rightMargin">
+      <number>5</number>
+     </property>
+     <property name="bottomMargin">
+      <number>5</number>
+     </property>
+     <item row="0" column="0">
+      <widget class="QScrollArea" name="scrollarea_processing">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>0</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="verticalScrollBarPolicy">
+        <enum>Qt::ScrollBarAlwaysOn</enum>
+       </property>
+       <property name="sizeAdjustPolicy">
+        <enum>QAbstractScrollArea::AdjustToContents</enum>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="scrollarea_processing_contents">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>436</width>
+          <height>875</height>
+         </rect>
+        </property>
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>0</width>
+          <height>875</height>
+         </size>
+        </property>
+        <property name="focusPolicy">
+         <enum>Qt::NoFocus</enum>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_5">
+         <property name="leftMargin">
+          <number>5</number>
+         </property>
+         <property name="topMargin">
+          <number>5</number>
+         </property>
+         <property name="rightMargin">
+          <number>5</number>
+         </property>
+         <property name="bottomMargin">
+          <number>5</number>
+         </property>
+         <property name="verticalSpacing">
+          <number>5</number>
+         </property>
+         <item row="25" column="0">
+          <widget class="QLabel" name="label_tik_reg_abs_2d">
+           <property name="text">
+            <string>Tikhonov reg. abs.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="22" column="0" colspan="2">
+          <widget class="QLabel" name="subtitle_phase2D">
+           <property name="font">
+            <font>
+             <family>Sans Serif</family>
+             <pointsize>13</pointsize>
+             <weight>75</weight>
+             <italic>true</italic>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>2D Phase</string>
+           </property>
+          </widget>
+         </item>
+         <item row="25" column="1">
+          <widget class="QLineEdit" name="le_tik_reg_abs_2d"/>
+         </item>
+         <item row="24" column="1" colspan="3">
+          <widget class="QComboBox" name="cb_phase_denoiser_2d">
+           <property name="editable">
+            <bool>false</bool>
+           </property>
+           <property name="currentText">
+            <string>Total Variation</string>
+           </property>
+           <property name="currentIndex">
+            <number>1</number>
+           </property>
+           <property name="maxVisibleItems">
+            <number>2</number>
+           </property>
+           <item>
+            <property name="text">
+             <string>Tikhonov</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Total Variation</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="37" column="0">
+          <widget class="QLabel" name="label_gpu_id">
+           <property name="text">
+            <string>gpu_id</string>
+           </property>
+          </widget>
+         </item>
+         <item row="20" column="1" colspan="3">
+          <widget class="QLineEdit" name="le_n_slice_local_bg"/>
+         </item>
+         <item row="19" column="0">
+          <widget class="QLabel" name="label_flatfield_correction">
+           <property name="text">
+            <string>flatfield_correction</string>
+           </property>
+          </widget>
+         </item>
+         <item row="37" column="1">
+          <widget class="QLineEdit" name="le_gpu_id">
+           <property name="text">
+            <string/>
+           </property>
+          </widget>
+         </item>
+         <item row="26" column="1">
+          <widget class="QLineEdit" name="le_tik_reg_ph_2d"/>
+         </item>
+         <item row="27" column="0">
+          <widget class="QLabel" name="label_tv_reg_abs_2d">
+           <property name="text">
+            <string>Total Variation reg. abs.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="20" column="0">
+          <widget class="QLabel" name="label_n_slice_local_bg">
+           <property name="text">
+            <string>local background avg (# z)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="24" column="0">
+          <widget class="QLabel" name="label_phase_denoiser_2d">
+           <property name="text">
+            <string>phase denoiser 2D</string>
+           </property>
+          </widget>
+         </item>
+         <item row="36" column="1">
+          <widget class="QRadioButton" name="rb_use_gpu">
+           <property name="text">
+            <string>Use GPU for Phase</string>
+           </property>
+          </widget>
+         </item>
+         <item row="18" column="1" colspan="3">
+          <widget class="QLineEdit" name="le_local_fit_order"/>
+         </item>
+         <item row="26" column="0">
+          <widget class="QLabel" name="label_tik_reg_ph_2d">
+           <property name="text">
+            <string>Tikhonov reg. ph</string>
+           </property>
+          </widget>
+         </item>
+         <item row="27" column="1">
+          <widget class="QLineEdit" name="le_tv_reg_abs"/>
+         </item>
+         <item row="19" column="1" colspan="3">
+          <widget class="QLineEdit" name="le_flatfield_correction">
+           <property name="text">
+            <string>False</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0" colspan="4">
+          <widget class="Line" name="line_2">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="subtitle_imaging">
+           <property name="font">
+            <font>
+             <family>Sans Serif</family>
+             <pointsize>13</pointsize>
+             <weight>75</weight>
+             <italic>true</italic>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Imaging Parameters</string>
+           </property>
+           <property name="scaledContents">
+            <bool>false</bool>
+           </property>
+           <property name="margin">
+            <number>0</number>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1" colspan="3">
+          <widget class="QLineEdit" name="le_binning"/>
+         </item>
+         <item row="36" column="0">
+          <widget class="QLabel" name="label_use_gpu">
+           <property name="text">
+            <string>use_gpu</string>
+           </property>
+          </widget>
+         </item>
+         <item row="35" column="0">
+          <widget class="QLabel" name="label_pad_z">
+           <property name="text">
+            <string>pad z</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_binning">
+           <property name="text">
+            <string>binning</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1" colspan="3">
+          <widget class="QLineEdit" name="le_separate_positions">
+           <property name="text">
+            <string>True</string>
+           </property>
+          </widget>
+         </item>
+         <item row="18" column="0">
+          <widget class="QLabel" name="label_local_fit_order">
+           <property name="text">
+            <string>local_fit_order</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1" colspan="3">
+          <widget class="QLineEdit" name="le_output_channels">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="toolTip">
+            <string>   (list) Any combination of the following values.
+  #    'Brightfield', 'Brightfield_computed', 'Retardance', 'Orientation', 'Polarization',
+  #    'Orientation_x', 'Orientation_y',
+  #    'Pol_State_0', 'Pol_State_1', 'Pol_State_2', 'Pol_State_3', 'Pol_State_4',
+  #    'Stokes_0', 'Stokes_1', 'Stokes_2', 'Stokes_3',
+  #    '405', '488', '568', '640', 'ex561em700'
+  #    'Retardance+Orientation', 'Polarization+Orientation',
+  #    'Brightfield+Retardance+Orientation',
+  #    'Retardance+Fluorescence', 'Retardance+Fluorescence_all'</string>
+           </property>
+           <property name="text">
+            <string>['Brightfield', 'Retardance', 'Orientation', 'Polarization']</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="separate_positions">
+           <property name="text">
+            <string>separate_positions</string>
+           </property>
+          </widget>
+         </item>
+         <item row="35" column="3">
+          <widget class="QLineEdit" name="le_tv_itr_3d"/>
+         </item>
+         <item row="35" column="2">
+          <widget class="QLabel" name="label_itr_3d">
+           <property name="text">
+            <string>iterations</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_output_channels">
+           <property name="text">
+            <string>output_channels</string>
+           </property>
+          </widget>
+         </item>
+         <item row="34" column="3">
+          <widget class="QLineEdit" name="le_tv_rho_3d"/>
+         </item>
+         <item row="35" column="1">
+          <widget class="QLineEdit" name="le_pad_z"/>
+         </item>
+         <item row="34" column="2">
+          <widget class="QLabel" name="label_rho_3d">
+           <property name="text">
+            <string>rho</string>
+           </property>
+          </widget>
+         </item>
+         <item row="15" column="0">
+          <widget class="QLabel" name="label_azimuth_offset">
+           <property name="text">
+            <string>azimuth_offset</string>
+           </property>
+          </widget>
+         </item>
+         <item row="27" column="2">
+          <widget class="QLabel" name="label_rho_2d">
+           <property name="text">
+            <string>rho</string>
+           </property>
+          </widget>
+         </item>
+         <item row="9" column="1">
+          <widget class="QLineEdit" name="le_na_condensor"/>
+         </item>
+         <item row="17" column="1" colspan="3">
+          <widget class="QLineEdit" name="le_background_correction">
+           <property name="text">
+            <string>'None'</string>
+           </property>
+          </widget>
+         </item>
+         <item row="8" column="0">
+          <widget class="QLabel" name="label_na_objective">
+           <property name="text">
+            <string>NA objective</string>
+           </property>
+          </widget>
+         </item>
+         <item row="32" column="0">
+          <widget class="QLabel" name="label_phase_denoiser_3d">
+           <property name="text">
+            <string>phase denoiser 3D</string>
+           </property>
+          </widget>
+         </item>
+         <item row="33" column="1">
+          <widget class="QLineEdit" name="le_tik_reg_ph_3d"/>
+         </item>
+         <item row="10" column="1">
+          <widget class="QLineEdit" name="le_n_objective_media"/>
+         </item>
+         <item row="28" column="0">
+          <widget class="QLabel" name="label_tv_reg_ph_2d">
+           <property name="text">
+            <string>Total Variation reg. ph.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="15" column="1" colspan="3">
+          <widget class="QLineEdit" name="le_azimuth_offset">
+           <property name="text">
+            <string>0</string>
+           </property>
+          </widget>
+         </item>
+         <item row="32" column="1" colspan="3">
+          <widget class="QComboBox" name="cb_phase_denoiser_3d">
+           <item>
+            <property name="text">
+             <string>Tikhonov</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>Total Variation</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+         <item row="33" column="0">
+          <widget class="QLabel" name="label_tik_reg_ph_3d">
+           <property name="text">
+            <string>Tikhonov reg. ph.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="28" column="3">
+          <widget class="QLineEdit" name="le_tv_itr_2d"/>
+         </item>
+         <item row="28" column="1">
+          <widget class="QLineEdit" name="le_tv_reg_ph"/>
+         </item>
+         <item row="27" column="3">
+          <widget class="QLineEdit" name="le_tv_rho_2d"/>
+         </item>
+         <item row="7" column="1">
+          <widget class="QLineEdit" name="le_magnification"/>
+         </item>
+         <item row="13" column="0" colspan="4">
+          <widget class="Line" name="line_5">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="10" column="0">
+          <widget class="QLabel" name="label_n_objective_media">
+           <property name="text">
+            <string>n objective media</string>
+           </property>
+          </widget>
+         </item>
+         <item row="28" column="2">
+          <widget class="QLabel" name="label_itr_2d">
+           <property name="text">
+            <string>iterations</string>
+           </property>
+          </widget>
+         </item>
+         <item row="30" column="0" colspan="2">
+          <widget class="QLabel" name="subtitle_phase3D">
+           <property name="font">
+            <font>
+             <family>Sans Serif</family>
+             <pointsize>13</pointsize>
+             <weight>75</weight>
+             <italic>true</italic>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>3D Phase</string>
+           </property>
+          </widget>
+         </item>
+         <item row="11" column="0">
+          <widget class="QLabel" name="label_focus_z_index">
+           <property name="toolTip">
+            <string>focus z index:</string>
+           </property>
+           <property name="toolTipDuration">
+            <number>-1</number>
+           </property>
+           <property name="text">
+            <string>focus z index</string>
+           </property>
+          </widget>
+         </item>
+         <item row="17" column="0">
+          <widget class="QLabel" name="label_background_correction">
+           <property name="text">
+            <string>background_correction</string>
+           </property>
+          </widget>
+         </item>
+         <item row="9" column="0">
+          <widget class="QLabel" name="label_na_condensor">
+           <property name="text">
+            <string>NA condensor</string>
+           </property>
+          </widget>
+         </item>
+         <item row="16" column="1" colspan="3">
+          <widget class="QLineEdit" name="le_circularity">
+           <property name="toolTip">
+            <string>   ('lcp' or 'rcp') the circularity of the analyzer looking from the detector's point of view.
+      Changing this flag will flip the slow axis horizontally.</string>
+           </property>
+           <property name="text">
+            <string>'rcp'</string>
+           </property>
+          </widget>
+         </item>
+         <item row="16" column="0">
+          <widget class="QLabel" name="label_circularity">
+           <property name="toolTip">
+            <string>   ('lcp' or 'rcp') the circularity of the analyzer looking from the detector's point of view.
+      Changing this flag will flip the slow axis horizontally.</string>
+           </property>
+           <property name="text">
+            <string>circularity</string>
+           </property>
+          </widget>
+         </item>
+         <item row="8" column="1">
+          <widget class="QLineEdit" name="le_na_objective"/>
+         </item>
+         <item row="14" column="0">
+          <widget class="QLabel" name="subtitle_retardance">
+           <property name="font">
+            <font>
+             <family>Sans Serif</family>
+             <pointsize>13</pointsize>
+             <weight>75</weight>
+             <italic>true</italic>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Retardance and Orientation</string>
+           </property>
+          </widget>
+         </item>
+         <item row="11" column="1">
+          <widget class="QLineEdit" name="le_focus_z_index"/>
+         </item>
+         <item row="34" column="1">
+          <widget class="QLineEdit" name="le_tv_reg_ph_3d"/>
+         </item>
+         <item row="34" column="0">
+          <widget class="QLabel" name="label_tv_reg_ph_3d">
+           <property name="text">
+            <string>Total Variation reg. ph.</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1">
+          <widget class="QLineEdit" name="le_pixel_size"/>
+         </item>
+         <item row="7" column="0">
+          <widget class="QLabel" name="label_magnification">
+           <property name="text">
+            <string>magnification</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="0">
+          <widget class="QLabel" name="label_pixel_size">
+           <property name="text">
+            <string>pixel size</string>
+           </property>
+          </widget>
+         </item>
+         <item row="21" column="0" colspan="4">
+          <widget class="Line" name="line_3">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+         <item row="29" column="0" colspan="4">
+          <widget class="Line" name="line_4">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QWidget" name="Plotting_tab">
+    <attribute name="title">
+     <string>Export</string>
+    </attribute>
+    <layout class="QGridLayout" name="gridLayout_7">
+     <property name="leftMargin">
+      <number>5</number>
+     </property>
+     <property name="topMargin">
+      <number>5</number>
+     </property>
+     <property name="rightMargin">
+      <number>5</number>
+     </property>
+     <property name="bottomMargin">
+      <number>5</number>
+     </property>
+     <item row="0" column="0" alignment="Qt::AlignTop">
+      <widget class="QScrollArea" name="scrollarea_plotting">
+       <property name="sizeAdjustPolicy">
+        <enum>QAbstractScrollArea::AdjustToContents</enum>
+       </property>
+       <property name="widgetResizable">
+        <bool>true</bool>
+       </property>
+       <widget class="QWidget" name="scrollarea_plotting_contents">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>603</width>
+          <height>279</height>
+         </rect>
+        </property>
+        <layout class="QGridLayout" name="gridLayout_8">
+         <property name="leftMargin">
+          <number>5</number>
+         </property>
+         <property name="topMargin">
+          <number>5</number>
+         </property>
+         <property name="rightMargin">
+          <number>5</number>
+         </property>
+         <property name="bottomMargin">
+          <number>5</number>
+         </property>
+         <property name="verticalSpacing">
+          <number>-1</number>
+         </property>
+         <item row="0" column="0">
+          <widget class="QLabel" name="label_normalize_color_images">
+           <property name="text">
+            <string>normalize_color_images</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLineEdit" name="le_normalize_color_images">
+           <property name="text">
+            <string>True</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="label_transmission_scaling">
+           <property name="text">
+            <string>transmission_scaling</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLineEdit" name="le_transmission_scaling">
+           <property name="text">
+            <string>1E4</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="label_retardance_scaling">
+           <property name="text">
+            <string>retardance_scaling</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLineEdit" name="le_retardance_scaling">
+           <property name="text">
+            <string>1E3</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="0">
+          <widget class="QLabel" name="label_save_birefringence_fig">
+           <property name="text">
+            <string>save_birefringence_fig</string>
+           </property>
+          </widget>
+         </item>
+         <item row="3" column="1">
+          <widget class="QLineEdit" name="le_save_birefringence_fig">
+           <property name="text">
+            <string>False</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="0">
+          <widget class="QLabel" name="label_save_stokes_fig">
+           <property name="text">
+            <string>save_stokes_fig</string>
+           </property>
+          </widget>
+         </item>
+         <item row="4" column="1">
+          <widget class="QLineEdit" name="le_save_stokes_fig">
+           <property name="text">
+            <string>False</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="0">
+          <widget class="QLabel" name="label_save_polarization_fig">
+           <property name="text">
+            <string>save_polarization_fig</string>
+           </property>
+          </widget>
+         </item>
+         <item row="5" column="1">
+          <widget class="QLineEdit" name="le_save_polarization_fig"/>
+         </item>
+         <item row="6" column="0">
+          <widget class="QLabel" name="label_save_micromanager_fig">
+           <property name="text">
+            <string>save_micromanager_fig</string>
+           </property>
+          </widget>
+         </item>
+         <item row="6" column="1">
+          <widget class="QLineEdit" name="le_save_micromanager_fig"/>
+         </item>
+         <item row="7" column="0">
+          <widget class="QLabel" name="label_phase_2d_scaling">
+           <property name="text">
+            <string>phase 2D scaling</string>
+           </property>
+          </widget>
+         </item>
+         <item row="7" column="1">
+          <widget class="QLineEdit" name="le_phase_2d_scaling"/>
+         </item>
+         <item row="8" column="0">
+          <widget class="QLabel" name="label_phase_3d_scaling">
+           <property name="text">
+            <string>phase 3D scaling</string>
+           </property>
+          </widget>
+         </item>
+         <item row="8" column="1">
+          <widget class="QLineEdit" name="le_phase_3d_scaling"/>
+         </item>
+        </layout>
+       </widget>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QPushButton" name="qbutton_loadconfig">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>61</y>
+     <width>170</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Load Config</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="qbutton_stopReconstruction">
+   <property name="geometry">
+    <rect>
+     <x>467</x>
+     <y>643</y>
+     <width>166</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Stop Reconstruction</string>
+   </property>
+  </widget>
+  <widget class="QLineEdit" name="le_path_to_config">
+   <property name="geometry">
+    <rect>
+     <x>6</x>
+     <y>30</y>
+     <width>480</width>
+     <height>21</height>
+    </rect>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="qbutton_save_config">
+   <property name="geometry">
+    <rect>
+     <x>517</x>
+     <y>61</y>
+     <width>116</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Save Config</string>
+   </property>
+  </widget>
+  <widget class="QPushButton" name="qbutton_runReconstruction">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>643</y>
+     <width>170</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Run Reconstruction</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
