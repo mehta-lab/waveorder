@@ -2387,10 +2387,10 @@ class waveorder_microscopy:
 class fluorescence_microscopy:
     '''
 
-    fluorescence_microscopy contains methods to compute weak object transfer function
+    fluorescence_microscopy contains methods to compute object transfer function (OTF)
     for fluorescence images:
 
-    1) 3D Deconvolution of Fluorescence
+    1) 3D Deconvolution of widefield fluorescence microscopy
 
 
     Parameters
@@ -2398,8 +2398,8 @@ class fluorescence_microscopy:
         img_dim              : tuple
                                shape of the computed 2D space with size of (N, M, Z)
 
-        lambda_emiss          : float
-                               wavelength of the fluorescence emmission
+        lambda_emiss          : list
+                                list of wavelength of the fluorescence emmission
 
         ps                   : float
                                xy pixel size of the image space
@@ -2412,6 +2412,10 @@ class fluorescence_microscopy:
 
         n_media              : float
                                refractive index of the immersing media
+                               
+        deconv_mode          : str
+                               '2D-WF' refers to 2D deconvolution of the widefield fluorescence microscopy
+                               '3D-WF' refers to 3D deconvolution of the widefield fluorescence microscopy
 
         pad_z                : int
                                number of z-layers to pad (reflection boundary condition) for 3D deconvolution
@@ -2425,7 +2429,7 @@ class fluorescence_microscopy:
 
     '''
 
-    def __init__(self, img_dim, lambda_emiss, ps, psz, NA_obj, n_media=1, pad_z=0, use_gpu=False, gpu_id=0):
+    def __init__(self, img_dim, lambda_emiss, ps, psz, NA_obj, n_media=1, deconv_mode='3D-WF', pad_z=0, use_gpu=False, gpu_id=0):
 
         '''
 
@@ -2447,29 +2451,52 @@ class fluorescence_microscopy:
         # Basic parameter
         self.N, self.M, self.N_defocus = img_dim
         self.n_media = n_media
-        self.lambda_emiss = lambda_emiss / self.n_media
+        self.lambda_emiss = np.array(lambda_emiss) / self.n_media
         self.ps = ps
         self.psz = psz
         self.pad_z = pad_z
         self.NA_obj = NA_obj / n_media
-        self.N_defocus_3D = self.N_defocus + 2 * self.pad_z
-
-        #TODO: Implement z-padding?
-        self.z = ifftshift((np.r_[0:self.N_defocus] - self.N_defocus // 2) * self.psz)
+        self.N_wavelength = len(lambda_emiss)
 
         # setup microscocpe variables
         self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
-        self.Pupil_obj = gen_Pupil(self.fxx, self.fyy, self.NA_obj, self.lambda_emiss)
-        self.Pupil_support = self.Pupil_obj.copy()
 
         # Setup defocus kernel
-        self.Hz_det = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support, self.lambda_emiss, self.z)
+        self.Hz_det_setup(deconv_mode)
 
         # Set up PSF and OTF for 3D deconvolution
-        self.fluor_deconv_setup(self.Hz_det)
+        self.fluor_deconv_setup(deconv_mode)
+    
+    def Hz_det_setup(self, deconv_mode):
+        
+        """
+        Initiate the defocus kernel
+        
+        Parameters
+        ----------
+            deconv_mode : str
+                          '2D-WF' refers to 2D deconvolution of the widefield fluorescence microscopy
+                          '3D-WF' refers to 3D deconvolution of the widefield fluorescence microscopy
 
-
-    def fluor_deconv_setup(self, Hz_det):
+        """
+        self.Pupil_obj = np.zeros((self.N_wavelength, self.N, self.M))
+        
+        for i in range(self.N_wavelength):
+            self.Pupil_obj[i] = gen_Pupil(self.fxx, self.fyy, self.NA_obj, self.lambda_emiss[i])
+        self.Pupil_support = self.Pupil_obj.copy()
+        
+        
+        if deconv_mode == '3D-WF':
+            
+            self.N_defocus_3D = self.N_defocus + 2 * self.pad_z
+            self.z = ifftshift((np.r_[0:self.N_defocus_3D] - self.N_defocus_3D // 2) * self.psz)
+            
+            self.Hz_det = np.zeros((self.N_wavelength, self.N, self.M, self.N_defocus_3D), complex)
+            
+            for i in range(self.N_wavelength):
+                self.Hz_det[i] = gen_Hz_stack(self.fxx, self.fyy, self.Pupil_support[i], self.lambda_emiss[i], self.z)
+    
+    def fluor_deconv_setup(self, deconv_mode):
 
         """
         Set up the PSF and OTF for 3D deconvolution
@@ -2482,61 +2509,122 @@ class fluorescence_microscopy:
         -------
 
         """
-
-        self.PSF_3D = np.abs(ifft2(Hz_det, axes=(0,1)))**2
-        self.OTF_3D = fftn(self.PSF_3D, axes=(0, 1, 2))
-
-    def deconvolve_fluor_3D(self, I_fluor, bg_level, method='Tikhonov', reg_re = 1e-4,\
-                                rho = 1e-5, lambda_re = 1e-3, itr = 20, verbose=True):
+        
+        
+        
+        if deconv_mode == '2D-WF':
+            self.PSF_WF_2D = np.abs(ifft2(self.Pupil_obj, axes=(1,2)))**2
+            self.OTF_WF_2D = fft2(self.PSF_WF_2D, axes=(1, 2))
+            self.OTF_WF_2D /= (np.max(np.abs(self.OTF_WF_2D),axis=(1,2)))[:,np.newaxis,np.newaxis]
+        
+        if deconv_mode == '3D-WF':
+            self.PSF_WF_3D = np.abs(ifft2(self.Hz_det, axes=(1,2)))**2
+            self.OTF_WF_3D = fftn(self.PSF_WF_3D, axes=(1, 2, 3))
+            self.OTF_WF_3D /= (np.max(np.abs(self.OTF_WF_3D),axis=(1,2,3)))[:,np.newaxis,np.newaxis,np.newaxis]
+            
+    def deconvolve_fluor_2D(self, I_fluor, bg_level, reg):
         """
 
         Performs deconvolution with Tikhonov regularization on raw fluorescence stack.
 
         Parameters
         ----------
-            I_fluor         : nd-array
-                              Raw fluorescence intensity stack in dimensions (N, M, Z)
+            I_fluor         : numpy.ndarray
+                              Raw fluorescence intensity stack in dimensions (N_wavelength, N, M) or (N, M)
 
-            bg_level        : float
-                              Estimated background intensity level
+            bg_level        : list or numpy.ndarray
+                              Estimated background intensity level in dimensions (N_wavelength,)
 
-            method           : str
-                               denoiser for 3D phase reconstruction
-                               'Tikhonov' for Tikhonov denoiser
-                               'TV'       for TV denoiser
-
-            reg_re           : float
-                               Tikhonov regularization parameter for Deconvolution
-
-            rho              : float
-                               augmented Lagrange multiplier for 3D ADMM algorithm
-
-            lambda_re        : float
-                               TV regularization parameter for deconvolution
-
-            itr              : int
-                               number of iterations for 3D ADMM algorithm
-
-            verbose          : bool
-                               option to display detailed progress of computations or not
-
+            reg             : list or numpy.array
+                              an array of Tikhonov regularization parameters in dimensions (N_wavelength,)
 
         Returns
         -------
-            I_fluor_deconv  : (nd-array) Deconvolved fluoresence stack in dimensions (N, M, Z)
+            I_fluor_deconv  : numpy.ndarray 
+                              2D deconvolved fluoresence image in dimensions (N_wavelength, N, M)
 
         """
+        
+        if I_fluor.ndim == 2:
+            I_fluor_process = I_fluor[np.newaxis,:,:].copy()
+        elif I_fluor.ndim == 3:
+            I_fluor_process = I_fluor.copy()
+            
+        I_fluor_deconv = np.zeros_like(I_fluor_process)
+        
+        for i in range(self.N_wavelength):
+            
+            I_fluor_minus_bg = np.maximum(0, I_fluor_process[i] - bg_level[i])
+            
+            if self.use_gpu:
 
-        I_fluor = np.maximum(0, I_fluor - bg_level)
+                I_fluor_f = cp.fft.fft2(cp.array(I_fluor_minus_bg.astype('float32')), axes=(-2,-1))
+                H_eff      = cp.array(self.OTF_WF_2D[i].astype('complex64'))
 
-        if method == 'Tikhonov':
+                I_fluor_deconv[i] = cp.asnumpy(np.maximum(cp.real(cp.fft.ifft2(I_fluor_f * cp.conj(H_eff) / (cp.abs(H_eff)**2 + reg[i]),axes=(-2,-1))),0))
+            else:
+                I_fluor_f = fft2(I_fluor_minus_bg, axes=(-2,-1))
+                I_fluor_deconv[i] = np.maximum(np.real(ifftn(I_fluor_f * np.conj(self.OTF_WF_2D[i]) / (np.abs(self.OTF_WF_2D[i])**2 + reg[i]),axes=(-2,-1))),0)
+                                               
+        return np.squeeze(I_fluor_deconv)
+        
+        
+        
+        
 
-            I_fluor_deconv = Single_variable_Tikhonov_deconv_3D(I_fluor, self.OTF_3D, reg_re, use_gpu=self.use_gpu,
-                                                        gpu_id=self.gpu_id)
+    def deconvolve_fluor_3D(self, I_fluor, bg_level, reg):
+        """
 
-        elif method == 'TV':
+        Performs deconvolution with Tikhonov regularization on raw fluorescence stack.
 
-            I_fluor_deconv = Single_variable_ADMM_TV_deconv_3D(I_fluor, self.OTF_3D, rho, reg_re, lambda_re, itr, verbose,
-                                                       use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+        Parameters
+        ----------
+            I_fluor         : numpy.ndarray
+                              Raw fluorescence intensity stack in dimensions (N_wavelength, N, M, Z) or (N, M, Z)
 
-        return np.abs(I_fluor_deconv)
+            bg_level        : list or numpy.ndarray
+                              Estimated background intensity level in dimensions (N_wavelength,)
+
+            reg             : list or numpy.array
+                              an array of Tikhonov regularization parameters in dimensions (N_wavelength,)
+
+        Returns
+        -------
+            I_fluor_deconv  : numpy.ndarray 
+                              3D deconvolved fluoresence stack in dimensions (N_wavelength, N, M, Z)
+
+        """
+        
+        if I_fluor.ndim == 3:
+            I_fluor_process = I_fluor[np.newaxis,:,:,:].copy()
+        elif I_fluor.ndim == 4:
+            I_fluor_process = I_fluor.copy()
+        
+        
+        if self.pad_z != 0:
+            I_fluor_pad = np.pad(I_fluor_process,((0,0),(0,0),(0,0),(self.pad_z,self.pad_z)), mode='constant',constant_values=0)
+            if self.pad_z < self.N_defocus:
+                I_fluor_pad[:,:,:,:self.pad_z] = (I_fluor_process[:,:,:,:self.pad_z])[:,:,:,::-1]
+                I_fluor_pad[:,:,:,-self.pad_z:] = (I_fluor_process[:,:,:,-self.pad_z:])[:,:,:,::-1]
+            else:
+                print('pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding')
+                
+        else:
+            I_fluor_pad = I_fluor_process
+        
+        
+        I_fluor_deconv = np.zeros_like(I_fluor_process)
+        
+        for i in range(self.N_wavelength):
+        
+            I_fluor_minus_bg = np.maximum(0, I_fluor_pad[i] - bg_level[i])
+            I_fluor_deconv_pad = Single_variable_Tikhonov_deconv_3D(I_fluor_minus_bg, self.OTF_WF_3D[i], reg[i], use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+
+                
+            if self.pad_z != 0:
+                I_fluor_deconv[i] = np.maximum(I_fluor_deconv_pad[...,self.pad_z:-(self.pad_z)],0)
+            else:
+                I_fluor_deconv[i] = np.maximum(I_fluor_deconv_pad,0)
+            
+
+        return np.squeeze(I_fluor_deconv)
