@@ -62,7 +62,8 @@ if __name__ == '__main__':
         packages=PACKAGES,
         include_package_data=True,
         entry_points={
-            'console_scripts': ['recOrder.reconstruct = recOrder.cli_module:main'],
+            'console_scripts': ['recOrder.reconstruct = recOrder.cli_module:main',
+                                'recOrder-napari = scripts.launch_napari:main'],
             'napari.plugin': 'plugin_name = recOrder.viewer.napari_plugin_entry_point'
         }
     )
