@@ -1,4 +1,17 @@
 
+# each of these dictionaries contains mappings between pyqt widget names, action type, and connecting function name
+# {key: value} = {pyqt_widget_name : [action_type, function_name]}
+
+OFFLINE = \
+    {
+        'qbutton_browse_config_file':   ['clicked', 'set_config_load_path'],
+        'qbutton_loadconfig':           ['clicked', 'load_configuration_file'],
+        'qbutton_load_default_config':  ['clicked', 'load_default_config'],
+        'qbutton_save_config':          ['clicked', 'save_configuration_file'],
+        'qbutton_runReconstruction':    ['clicked', 'run_reconstruction'],
+        'qbutton_stopReconstruction':   ['clicked', 'stop_reconstruction'],
+    }
+
 
 class SignalManager:
     """
@@ -12,15 +25,10 @@ class SignalManager:
         if module_type == "offline":
 
             # OFFLINE RECONSTRUCTION TAB SIGNALS
-            module.qbutton_browse_config_file.clicked[bool].connect(funcs_module.set_config_load_path)
-            # module.le_path_to_config_savepath.editingFinished.connect(self._handle_save_config_path_changed)
-            # module.qbutton_savepath_config_file.clicked[bool].connect(self.set_config_save_path)
-            module.qbutton_loadconfig.clicked[bool].connect(funcs_module.load_configuration_file)
-            module.qbutton_load_default_config.clicked[bool].connect(funcs_module.load_default_config)
-            module.qbutton_save_config.clicked[bool].connect(funcs_module.save_configuration_file)
-
-            module.qbutton_runReconstruction.clicked[bool].connect(funcs_module.run_reconstruction)
-            module.qbutton_stopReconstruction.clicked[bool].connect(funcs_module.stop_reconstruction)
+            for widget in OFFLINE.items():
+                m = getattr(module, widget[0])
+                m_action = getattr(m, widget[1][0])
+                m_action.connect(getattr(funcs_module, widget[1][1]))
 
         elif module_type == "acquisition":
             # ONLINE RECON TAB SIGNALS
