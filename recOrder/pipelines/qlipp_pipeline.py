@@ -57,7 +57,8 @@ class qlipp_pipeline(PipelineInterface):
         self.calib_scheme = self.calib_meta['Summary']['~ Acquired Using'] if self.calib_meta \
             else '4-Frame Extinction'
         self.bg_path = self.config.background if self.config.background else None
-        self.bg_roi = self.calib_meta['Summary']['ROI Used (x , y, width, height)'] if self.calib_meta else None
+        #todo: fix typo
+        self.bg_roi = self.calib_meta['Summary']['ROI Used (x, y, width, height)'] if self.calib_meta else None
 
         # identify the image indicies corresponding to each polarization orientation
         self.s0_idx, self.s1_idx, \
