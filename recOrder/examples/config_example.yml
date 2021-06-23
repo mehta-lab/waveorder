@@ -5,10 +5,10 @@ dataset:
   mode: '2D'
   # Mode for reconstruction, '2D' or '3D'
 
-  'data_dir': '/path/to/raw/data'
+  data_dir: '/path/to/raw/data'
   # (str) path to the raw data directory (folder which holds .tif files)
 
-  'save_dir': '/path/to/save/directory'
+  save_dir: '/path/to/save/directory'
   # (str) path to the directory in which the data will be saved
 
   data_type: 'ometiff'
