@@ -14,7 +14,7 @@ dataset:
   data_type: 'ometiff'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
 
-  'data_save_name': 'Test_Data'
+  data_save_name: 'Test_Data'
   # (str) Name of the zarr dataset that will be written.
 
   positions: [1]
