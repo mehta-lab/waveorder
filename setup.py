@@ -7,5 +7,5 @@ setup(  name             = 'waveorder',
         author_email     = 'lihao.yeh@czbiohub.org',
         license          = 'BSD License',
         packages         = find_packages(),
-        install_requires = ['numpy', 'matplotlib', 'scipy', 'ipywidgets', 'opencv-python']
+        install_requires = ['numpy', 'matplotlib', 'scipy', 'ipywidgets']
      )

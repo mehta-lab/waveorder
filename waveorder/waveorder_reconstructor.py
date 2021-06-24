@@ -2390,7 +2390,7 @@ class fluorescence_microscopy:
     fluorescence_microscopy contains methods to compute object transfer function (OTF)
     for fluorescence images:
 
-    1) 3D Deconvolution of widefield fluorescence microscopy
+    1) 2D/3D Deconvolution of widefield fluorescence microscopy
 
 
     Parameters
@@ -2398,8 +2398,9 @@ class fluorescence_microscopy:
         img_dim              : tuple
                                shape of the computed 2D space with size of (N, M, Z)
 
-        lambda_emiss          : list
-                                list of wavelength of the fluorescence emmission
+        lambda_emiss         : list
+                               list of wavelength of the fluorescence emmission
+                               the order of the emission wavelength should match the order of the first index of the fluorescence intensity
 
         ps                   : float
                                xy pixel size of the image space
@@ -2531,12 +2532,15 @@ class fluorescence_microscopy:
         ----------
             I_fluor         : numpy.ndarray
                               Raw fluorescence intensity stack in dimensions (N_wavelength, N, M) or (N, M)
+                              the order of the first index of I_fluor should match the order of the emission wavelengths 
 
             bg_level        : list or numpy.ndarray
                               Estimated background intensity level in dimensions (N_wavelength,)
+                              the order of the bg value should match the order of the first index of I_fluor
 
             reg             : list or numpy.array
                               an array of Tikhonov regularization parameters in dimensions (N_wavelength,)
+                              the order of the reg value should match the order of the first index of I_fluor
 
         Returns
         -------
@@ -2581,12 +2585,16 @@ class fluorescence_microscopy:
         ----------
             I_fluor         : numpy.ndarray
                               Raw fluorescence intensity stack in dimensions (N_wavelength, N, M, Z) or (N, M, Z)
+                              the order of the first index of I_fluor should match the order of the emission wavelengths
 
             bg_level        : list or numpy.ndarray
                               Estimated background intensity level in dimensions (N_wavelength,)
+                              the order of the bg value should match the order of the first index of I_fluor
+                              
 
             reg             : list or numpy.array
                               an array of Tikhonov regularization parameters in dimensions (N_wavelength,)
+                              the order of the reg value should match the order of the first index of I_fluor
 
         Returns
         -------
