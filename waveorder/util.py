@@ -5,6 +5,7 @@ import time
 
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from scipy.ndimage import uniform_filter
+from collections import namedtuple
 
 
 import re
@@ -871,52 +872,171 @@ def Dual_variable_ADMM_TV_deconv_2D(AHA, b_vec, rho, lambda_u, lambda_p, itr, ve
     return mu_sample, phi_sample
 
 
-
-def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, gpu_id=0):
+def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, gpu_id=0, autotune=False, epsilon_auto=0.5, search_range_auto=6, verbose=True):
     
     '''
     
-    3D Tikhonov deconvolution to solve for phase with weak object transfer function
+    Single variable 3D Tikhonov deconvolution to solve for 3D phase (from defocus, with weak object transfer function) or 3D fluorescence.
     
     Parameters
     ----------
-        S0_stack : numpy.ndarray
-                   S0 z-stack for 3D phase deconvolution with size of (Ny, Nx, Nz)
+        S0_stack         : numpy.ndarray
+                           S0 z-stack for 3D phase deconvolution with size of (Ny, Nx, Nz)
                   
-        H_eff    : numpy.ndarray
-                   effective transfer function with size of (Ny, Nx, Nz)
+        H_eff            : numpy.ndarray
+                           effective transfer function with size of (Ny, Nx, Nz)
                      
-        reg_re   : float
-                   Tikhonov regularization parameter
+        reg_re           : float
+                           Tikhonov regularization parameter
         
-        use_gpu  : bool
-                   option to use gpu or not
+        use_gpu          : bool
+                           option to use gpu or not
         
-        gpu_id   : int
-                   number refering to which gpu will be used
+        gpu_id           : int
+                           number refering to which gpu will be used
+        
+        autotune         :  bool
+                           option to use L-curve to automatically choose regularization parameter
+        
+        epsilon_auto     : float
+                           (if using autotune) the tolerance on the regularization parameter for the stopping condition of iterating along the L curve (in log10 units)
+                           
+        search_range_auto: float
+                           (if using autotune) L-curve search will occur on the range of reg_re +/- search_range_auto
+                           
+        verbose          : bool
+                           option to display detailed progress of computations or not
     
     Returns
     -------
-        f_real   : numpy.ndarray
-                   3D unscaled phase reconstruction with the size of (Ny, Nx, Nz)
+        f_real           : numpy.ndarray
+                           3D unscaled phase reconstruction with the size of (Ny, Nx, Nz)
     '''
-    
-    if use_gpu:
-        
+    if use_gpu:     
         globals()['cp'] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
-        
-        S0_stack_f = cp.fft.fftn(cp.array(S0_stack.astype('float32')), axes=(-3,-2,-1))
-        H_eff      = cp.array(H_eff.astype('complex64'))
-        
-        f_real     = cp.asnumpy(cp.real(cp.fft.ifftn(S0_stack_f * cp.conj(H_eff) / (cp.abs(H_eff)**2 + reg_re),axes=(-3,-2,-1))))
+        S0_stack = cp.array(S0_stack.astype('float32'))
+        H_eff = cp.array(H_eff.astype('complex64'))
+        xp = cp
     else:
+        xp = np
+    
+    S0_stack_f = xp.fft.fftn(S0_stack, axes=(-3,-2,-1))
+    N,M,L = S0_stack_f.shape
+    
+    # a "named tuple" representing a point on the L curve
+        # allows for dot notation to access attributes
+    Point_L_curve = namedtuple("Point_L_curve", "reg_x reg data_norm reg_norm f_real_f")
+    
+    def menger_curvature(points):
+        # x is data norm, y is reg norm
+        x, y = xp.zeros(3), xp.zeros(3)
+        for i in range(3):
+            x[i] = points[i].data_norm
+            y[i] = points[i].reg_norm
+        d0 = ((x[1]-x[0])**2+(y[1]-y[0])**2)**(1/2)
+        d1 = ((x[2]-x[1])**2+(y[2]-y[1])**2)**(1/2)
+        d2 = ((x[2]-x[0])**2+(y[2]-y[0])**2)**(1/2)
+
+        signed_area = 0.5*( (x[1]-x[2])*(y[1]-y[0])-(x[1]-x[0])*(y[1]-y[2]) )
+
+        return 4*signed_area / (d0*d1*d2)
+    
+    # evaluate the L curve at a specific lambda
+        # returns a new Point_L_curve() tuple.
+        # this function is the only place where new points are instantiated
+    def eval_L_curve(reg_x):
+        reg_coeff = 10**reg_x
+        H_eff_abs_square = xp.abs(H_eff)**2
+        H_eff_conj = xp.conj(H_eff)
+
+        # FT{f} (f=scattering potential (whose real part is (scaled) phase))
+        f_real_f = S0_stack_f * H_eff_conj / (H_eff_abs_square + reg_coeff)
+        S0_est_stack_f = H_eff * f_real_f # Ax (put estimate through forward model)
+
+        data_norm_eval = xp.log(xp.linalg.norm(S0_est_stack_f - S0_stack_f)**2 /N/M/L)
+        reg_norm_eval = xp.log(xp.linalg.norm(f_real_f)**2 /N/M/L)
+
+        return Point_L_curve(reg_x, reg_coeff, data_norm_eval, reg_norm_eval, f_real_f)
+
+    # creates return value of the whole function
+        # (scaled) phase = real part of inverse FT {scattering potential}
+    def ifft_f_real(f_real_f):
+        f_real = xp.real(xp.fft.ifftn(f_real_f, axes=(-3,-2,-1)))
+        if use_gpu:
+            return cp.asnumpy(f_real)
+        else:
+            return f_real
+    
+    def calc_golden_x(a, b):
+        gs_ratio = (1+xp.sqrt(5))/2
+        return (a*gs_ratio + b) / (1 + gs_ratio)
+    
+    if autotune:
+        # initialize golden section search
+        reg_x_cent = xp.log10(reg_re)  # reg_re becomes middle of search range
+        reg_x = xp.zeros(4)
+        reg_x[0] = reg_x_cent - search_range_auto  # search range = reg_x_cent +/- search_range_auto
+        reg_x[3] = reg_x_cent + search_range_auto
+        reg_x[1] = calc_golden_x(reg_x[0], reg_x[3])
+        reg_x[2] = reg_x[0] + (reg_x[3]-reg_x[1])
+
+        # holds the 4 current points
+        curr_pts = []
+        for i in range(4):
+            curr_pts.append(eval_L_curve(reg_x[i]))
         
-        S0_stack_f = fftn(S0_stack, axes=(-3,-2,-1))
+        opt_list = [] # save optimal point from each iteration
+        itr = 0
+        search_range = curr_pts[3].reg_x - curr_pts[0].reg_x
+        while search_range > epsilon_auto:
+            C1 = menger_curvature(curr_pts[:3])
+            C2 = menger_curvature(curr_pts[1:])
+            
+            # make sure right curvature is positive!
+                # keep moving the right edge inwards (and adjusting the middle points accordingly)
+            while C2 < 0:
+                new_reg_x = calc_golden_x(curr_pts[0].reg_x, curr_pts[2].reg_x)
+                curr_pts[3] = curr_pts[2]
+                curr_pts[2] = curr_pts[1]
+                curr_pts[1] = eval_L_curve(new_reg_x)
+                C2 = menger_curvature(curr_pts[1:])
+            C1 = menger_curvature(curr_pts[:3])
+
+            # case 1: left 3 points are better
+                # [a, b, c, d] --> [a, (a*phi+c)/(1+phi), b, c]
+            if C1 > C2:
+                opt_list.append(curr_pts[1])
+                new_reg_x = calc_golden_x(curr_pts[0].reg_x, curr_pts[2].reg_x)
+                curr_pts[3] = curr_pts[2]
+                curr_pts[2] = curr_pts[1]
+                curr_pts[1] = eval_L_curve(new_reg_x)
+            
+            # case 2: right 3 points are better
+                # [a, b, c, d] --> [b, c, b+d-c, d]
+            else:
+                opt_list.append(curr_pts[2])
+                new_reg_x = curr_pts[1].reg_x + curr_pts[3].reg_x - curr_pts[2].reg_x
+                curr_pts[0] = curr_pts[1]
+                curr_pts[1] = curr_pts[2]
+                curr_pts[2] = eval_L_curve(new_reg_x)
+            
+            itr += 1
+            search_range = curr_pts[3].reg_x - curr_pts[0].reg_x
+            if verbose:
+                print('Iteration: %d, deviation of the regularization interval: %.2e'%(itr, search_range))
         
-        f_real     = np.real(ifftn(S0_stack_f * np.conj(H_eff) / (np.abs(H_eff)**2 + reg_re),axes=(-3,-2,-1)))
-        
+        if verbose:
+            print('Final regularization parameter chosen: %.2e' % opt_list[-1].reg)
+            
+        f_real = ifft_f_real(opt_list[-1].f_real_f)
+    
+    else:
+        chosen_pt = eval_L_curve(xp.log10(reg_re))
+        f_real = ifft_f_real(chosen_pt.f_real_f)
+    
     return f_real
+#     return f_real, opt_list # We can think about whether to have some kind of plotting option
 
 
 def Dual_variable_Tikhonov_deconv_3D(AHA, b_vec, determinant=None, use_gpu=False, gpu_id=0, move_cpu=True):

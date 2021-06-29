@@ -2236,7 +2236,7 @@ class waveorder_microscopy:
             
         
     
-    def Phase_recon_3D(self, S0_stack, absorption_ratio=0.0, method='Tikhonov', reg_re = 1e-4, reg_im = 1e-4,\
+    def Phase_recon_3D(self, S0_stack, absorption_ratio=0.0, method='Tikhonov', reg_re = 1e-4, autotune_re=False, reg_im = 1e-4,\
                        rho = 1e-5, lambda_re = 1e-3, lambda_im = 1e-3, itr = 20, verbose=True):
         
         '''
@@ -2258,6 +2258,9 @@ class waveorder_microscopy:
                              
             reg_re           : float
                                Tikhonov regularization parameter for 3D phase
+                               
+            autotune_re      : bool
+                               option to automatically choose Tikhonov regularization parameter for 3D phase, with search centered around reg_re
                         
             reg_im           : float
                                Tikhonov regularization parameter for 3D absorption
@@ -2314,7 +2317,7 @@ class waveorder_microscopy:
 
             if method == 'Tikhonov':
 
-                f_real = Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+                f_real = Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=self.use_gpu, gpu_id=self.gpu_id, autotune=autotune_re, verbose=verbose)
 
             elif method == 'TV':
 
@@ -2572,11 +2575,8 @@ class fluorescence_microscopy:
                                                
         return np.squeeze(I_fluor_deconv)
         
-        
-        
-        
 
-    def deconvolve_fluor_3D(self, I_fluor, bg_level, reg):
+    def deconvolve_fluor_3D(self, I_fluor, bg_level, reg, autotune=False, verbose=True):
         """
 
         Performs deconvolution with Tikhonov regularization on raw fluorescence stack.
@@ -2595,6 +2595,12 @@ class fluorescence_microscopy:
             reg             : list or numpy.array
                               an array of Tikhonov regularization parameters in dimensions (N_wavelength,)
                               the order of the reg value should match the order of the first index of I_fluor
+            autotune        : bool
+                              option to automatically choose Tikhonov regularization parameter, with search centered around reg
+                              
+            verbose         : bool
+                             option to display detailed progress of computations or not
+                              
 
         Returns
         -------
@@ -2626,7 +2632,8 @@ class fluorescence_microscopy:
         for i in range(self.N_wavelength):
         
             I_fluor_minus_bg = np.maximum(0, I_fluor_pad[i] - bg_level[i])
-            I_fluor_deconv_pad = Single_variable_Tikhonov_deconv_3D(I_fluor_minus_bg, self.OTF_WF_3D[i], reg[i], use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+
+            I_fluor_deconv_pad = Single_variable_Tikhonov_deconv_3D(I_fluor_minus_bg, self.OTF_WF_3D[i], reg[i], use_gpu=self.use_gpu, gpu_id=self.gpu_id, autotune=autotune, verbose=verbose)
 
                 
             if self.pad_z != 0:
