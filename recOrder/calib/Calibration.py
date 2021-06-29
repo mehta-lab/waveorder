@@ -2,13 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os, sys
-p = os.path.abspath('../..')
-if p not in sys.path:
-    sys.path.append(p)
 import tifffile as tiff
 import time
-from recOrder.recOrder.calib.CoreFunctions import define_lc_state, snap_image, set_lc, get_lc, set_lc_state
-from recOrder.recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer, optimize_grid
+from recOrder.calib.CoreFunctions import define_lc_state, snap_image, set_lc, get_lc, set_lc_state
+from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer, optimize_grid
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import json
 import os

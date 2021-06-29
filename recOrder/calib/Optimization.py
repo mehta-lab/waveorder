@@ -1,11 +1,7 @@
 import numpy as np
 from scipy import optimize
 import os, sys
-p = os.path.abspath('../..')
-if p not in sys.path:
-    sys.path.append(p)
-
-from recOrder.recOrder.calib.CoreFunctions import set_lc, get_lc, snap_image
+from recOrder.calib.CoreFunctions import set_lc, get_lc, snap_image
 
 class BrentOptimizer:
 
