@@ -2285,6 +2285,7 @@ class waveorder_microscopy:
         -------
             scaled f_real    : numpy.ndarray
                                3D reconstruction of phase (in the unit of rad) with the size of (N, M, N_defocus)
+                               if autotune_re is True, returns 3 reconstructions from different regularization parameters, size (3, N, M, N_defocus)
                   
             scaled f_imag    : numpy.ndarray
                                3D reconstruction of absorption with the size of (N, M, N_defocus)
@@ -2606,6 +2607,7 @@ class fluorescence_microscopy:
         -------
             I_fluor_deconv  : numpy.ndarray 
                               3D deconvolved fluoresence stack in dimensions (N_wavelength, N, M, Z)
+                              if autotune is True, returns 3 deconvolved stacks for each channel, for 3 diff
 
         """
         
@@ -2626,8 +2628,12 @@ class fluorescence_microscopy:
         else:
             I_fluor_pad = I_fluor_process
         
-        
-        I_fluor_deconv = np.zeros_like(I_fluor_process)
+        if autotune:
+            N, M, Z = I_fluor_process.shape[1:]
+            I_fluor_deconv = np.zeros((self.N_wavelength, 3, N, M, Z))
+        else:
+            I_fluor_deconv = np.zeros_like(I_fluor_process)
+        print('I_fluor_pad', I_fluor_pad.shape, 'I_fluor_deconv', I_fluor_deconv.shape)
         
         for i in range(self.N_wavelength):
         

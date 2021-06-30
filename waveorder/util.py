@@ -911,6 +911,7 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
     -------
         f_real           : numpy.ndarray
                            3D unscaled phase reconstruction with the size of (Ny, Nx, Nz)
+                           (if using autotune) reconstruction for the automatically chosen parameter, plus two others around that parameter value, size (3, Ny, Nx, Nz)
     '''
     if use_gpu:     
         globals()['cp'] = __import__("cupy")
@@ -1029,13 +1030,21 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
         if verbose:
             print('Final regularization parameter chosen: %.2e' % opt_list[-1].reg)
             
-        f_real = ifft_f_real(opt_list[-1].f_real_f)
+        # Return 3 solutions: the parameter chosen by the L-curve +/- epsilon
+        f_real = []
+        pt_left = eval_L_curve(opt_list[-1].reg_x - epsilon_auto)
+        pt_right = eval_L_curve(opt_list[-1].reg_x + epsilon_auto)
+        f_real.append(ifft_f_real(pt_left.f_real_f))
+        f_real.append(ifft_f_real(opt_list[-1].f_real_f))
+        f_real.append(ifft_f_real(pt_right.f_real_f))
+        
+        return np.array(f_real)
     
     else:
         chosen_pt = eval_L_curve(xp.log10(reg_re))
         f_real = ifft_f_real(chosen_pt.f_real_f)
+        return f_real
     
-    return f_real
 #     return f_real, opt_list # We can think about whether to have some kind of plotting option
 
 
