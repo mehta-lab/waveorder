@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-import os, sys
 import tifffile as tiff
 import time
 from recOrder.calib.CoreFunctions import define_lc_state, snap_image, set_lc, get_lc, set_lc_state
@@ -29,7 +28,10 @@ class QLIPP_Calibration:
         self.mm = mm
         self.mmc = mmc
 
-        #Optimizer
+        # GUI Emitter
+        self.emitter = None
+
+        # Optimizer
         if optimization == 'min_scalar':
             self.optimizer = MinScalarOptimizer(self)
         elif optimization == 'brent':
@@ -86,6 +88,8 @@ class QLIPP_Calibration:
 
         data = snap_image(self.mmc)
         mean = np.mean(data)
+
+        self.emitter.emit(mean)
         self.inten.append(mean)
 
         if normalize:
