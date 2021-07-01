@@ -9,6 +9,10 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import json
 import os
 
+#todo: save metadata without overwriting existing file?
+#todo: clean up plotting
+#todo: enable logging
+
 #TODO: Docstrings
 class QLIPP_Calibration:
     # Meadowlark LC Device Adapter Property Names
@@ -29,7 +33,8 @@ class QLIPP_Calibration:
         self.mmc = mmc
 
         # GUI Emitter
-        self.emitter = None
+        self.intensity_emitter = None
+        self.log_emitter = None
 
         # Optimizer
         if optimization == 'min_scalar':
@@ -102,7 +107,6 @@ class QLIPP_Calibration:
             print(f'F-Value:{val - ref}\n')
             return val - ref
 
-
         else:
             return np.abs(mean - reference)
 
@@ -129,6 +133,7 @@ class QLIPP_Calibration:
         else:
             mean = np.mean(data)
             # TODO: Change to just plotting mean?
+            self.intensity_emitter.emit(mean)
             self.inten.append(mean - reference)
 
             return np.abs(mean - reference)
@@ -145,9 +150,10 @@ class QLIPP_Calibration:
             set_lc(self.mmc, self.lcb_ext - swing, self.PROPERTIES['LCB'])
 
         data = snap_image(self.mmc)
-
         mean = np.mean(data)
+
         # append to intensity array for plotting later
+        self.intensity_emitter.emit(mean)
         self.inten.append(mean - reference)
 
         return np.abs(mean - reference)

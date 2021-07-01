@@ -13,8 +13,8 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     mm_status_changed = pyqtSignal(bool)
     progress_changed = pyqtSignal(int)
-    extinction_changed = pyqtSignal(int)
     intensity_changed = pyqtSignal(float)
+    log_changed = pyqtSignal(str)
 
     def __init__(self, napari_viewer):
         super().__init__()
@@ -25,8 +25,13 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.setupUi(self)
 
         # Setup Connections between elements
-        ## Recievers
+
+        # Recievers
+        # =================================
+        # Connect to Micromanager
         self.ui.qbutton_mm_connect.clicked[bool].connect(self.connect_to_mm)
+
+        # Calibration Parameters
         self.ui.qbutton_browse.clicked[bool].connect(self.browse_dir_path)
         self.ui.le_directory.editingFinished.connect(self.enter_dir_path)
         self.ui.le_swing.editingFinished.connect(self.enter_swing)
@@ -34,12 +39,17 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.cb_calib_scheme.currentIndexChanged[int].connect(self.enter_calib_scheme)
         self.ui.chb_use_roi.stateChanged[int].connect(self.enter_use_cropped_roi)
         # self.ui.run_calib.clicked[bool].connect(self.run_calibration)
+
+        # Capture Background
+        self.ui.le_bg_folder.editingFinished.connect(self.enter_bg_folder_name)
+        self.ui.le_n_avg.editingFinished.connect(self.enter_n_avg)
         self.ui.qbutton_capture_bg.clicked[bool].connect(self.plot)
 
-        ## Emitters
+        # Emitters
+        # =================================#
         self.mm_status_changed.connect(self.handle_mm_status_update)
         self.progress_changed.connect(self.handle_progress_update)
-        self.extinction_changed.connect(self.handle_extinction_update)
+        # self.extinction_changed.connect(self.handle_extinction_update)
 
         #Other Properties:
         self.mm = None
@@ -59,7 +69,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
         # Init Logger
         self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
-        # self.ui.te_log.setBackgroundVisible(True)
 
     @pyqtSlot(bool)
     def connect_to_mm(self):
@@ -173,8 +182,16 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
     def handle_progress_update(self, value):
         self.ui.progress_bar.setValue(value)
 
-    def handle_extinction_update(self):
-        pass
+    @pyqtSlot()
+    def enter_bg_folder_name(self):
+        self.bg_folder_name = self.ui.le_bg_folder.text()
+
+    @pyqtSlot()
+    def enter_bg_folder_name(self):
+        self.n_avg = self.ui.le_n_avg.text()
+
+    def handle_extinction_update(self, value):
+        self.ui.le_extinction.setText(value)
 
     def _open_file_dialog(self, default_path):
         return self._open_dialog("select a directory",
