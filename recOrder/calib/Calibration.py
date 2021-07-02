@@ -35,6 +35,7 @@ class QLIPP_Calibration:
         # GUI Emitter
         self.intensity_emitter = None
         self.log_emitter = None
+        self.img_emitter = None
 
         # Optimizer
         if optimization == 'min_scalar':
@@ -52,6 +53,7 @@ class QLIPP_Calibration:
         self.ROI = None
         self.ratio = 1.793
         self.print_details = print_details
+        self.calib_scheme = '4-State'
 
         # LC States
         self.lca_ext = None
@@ -160,31 +162,6 @@ class QLIPP_Calibration:
 
     # ========== Optimization wrappers =============
     # ==============================================
-
-    def calc_blacklevel(self):
-
-        auto_shutter = self.mmc.getAutoShutter()
-        shutter = self.mmc.getShutterOpen()
-
-        self.mmc.setAutoShutter(False)
-        self.mmc.setShutterOpen(False)
-
-        n_avg = 20
-        avgs = []
-        for i in range(n_avg):
-            img = snap_image(self.mmc)
-            # print(np.mean(img))
-            avgs.append(np.mean(img))
-
-        blacklevel = np.mean(avgs)
-
-        self.mmc.setAutoShutter(auto_shutter)
-
-        if not auto_shutter:
-            self.mmc.setShutterOpen(shutter)
-
-        return blacklevel
-
     def opt_Iext(self):
         print('Calibrating State0 (Extinction)...')
 
@@ -474,7 +451,7 @@ class QLIPP_Calibration:
                                                                       reference=self.I_Elliptical,
                                                                       n_iter=5, thresh=.01)
 
-        define_lc_state(self.mmc, 'State3', self.lca_135, self.lcb_135, self.PROPERTIES)
+        define_lc_state(self.mmc, 'State4', self.lca_135, self.lcb_135, self.PROPERTIES)
 
         self.swing135 = np.sqrt((self.lcb_135 - self.lcb_ext) ** 2 + (self.lca_135 - self.lca_ext) ** 2)
 
@@ -487,6 +464,38 @@ class QLIPP_Calibration:
             plt.show()
 
         print("--------done--------")
+
+    def calc_blacklevel(self):
+
+        auto_shutter = self.mmc.getAutoShutter()
+        shutter = self.mmc.getShutterOpen()
+
+        self.mmc.setAutoShutter(False)
+        self.mmc.setShutterOpen(False)
+
+        n_avg = 20
+        avgs = []
+        for i in range(n_avg):
+            img = snap_image(self.mmc)
+            # print(np.mean(img))
+            avgs.append(np.mean(img))
+
+        blacklevel = np.mean(avgs)
+
+        self.mmc.setAutoShutter(auto_shutter)
+
+        if not auto_shutter:
+            self.mmc.setShutterOpen(shutter)
+
+        self.I_black = blacklevel
+        return blacklevel
+
+    def get_full_roi(self):
+        # Get Image Parameters
+        self.mmc.snapImage()
+        self.mmc.getImage()
+        self.height, self.width = self.mmc.getImageHeight(), self.mmc.getImageWidth()
+        self.ROI = (0, 0, self.width, self.height)
 
     def check_and_get_roi(self):
 
@@ -693,70 +702,47 @@ class QLIPP_Calibration:
             Directory to save metadata file.
 
         """
-
         inst_mat = self.calc_inst_matrix(n_states)
         inst_mat = inst_mat.tolist()
 
         if n_states == 4:
-            data = {'Summary': {'Acquired Using': '4-Frame Extinction',
-                                'Swing (fraction)': self.swing,
-                                'Wavelength (nm)': self.wavelength,
-                                'BlackLevel': self.I_Black,
-                                'ChNames': ["State0", "State1", "State2", "State3"],
-                                '[LCA_Ext, LCB_Ext]': [self.lca_ext, self.lcb_ext],
-                                '[LCA_0, LCB_120]': [self.lca_0, self.lcb_0],
-                                '[LCA_60, LCB_60]': [self.lca_60, self.lcb_60],
-                                '[LCA_120, LCB_120]': [self.lca_120, self.lcb_120],
-                                'Swing0': self.swing0,
-                                'Swing60': self.swing60,
-                                'Swing120': self.swing120,
-                                'Extinction Ratio': self.extinction_ratio,
-                                'ROI Used (x ,y, width, height)': self.ROI
-
-                                # Edit out later
-                                #  "MicroManagerVersion": "1.4.22",
-                                #  "Prefix": "Background Images",
-                                #  "Positions": 1,
-                                #  "Frames": 1,
-                                #  "Slices": 1,
-                                #  "z-step_um": 0,
-                                #  "InitialPositionList": "null",
-                                #  "Height": self.height, "Width": self.width,
-                                #  "Time": 0,
-                                # 'Instrument Matrix': inst_mat
-                                }
+            data = {'Summary':
+                    {'Acquired Using': '4-Frame Extinction',
+                     'Swing (fraction)': self.swing,
+                     'Wavelength (nm)': self.wavelength,
+                     'BlackLevel': self.I_Black,
+                     'ChNames': ["State0", "State1", "State2", "State3"],
+                     '[LCA_Ext, LCB_Ext]': [self.lca_ext, self.lcb_ext],
+                     '[LCA_0, LCB_120]': [self.lca_0, self.lcb_0],
+                     '[LCA_60, LCB_60]': [self.lca_60, self.lcb_60],
+                     '[LCA_120, LCB_120]': [self.lca_120, self.lcb_120],
+                     'Swing0': self.swing0,
+                     'Swing60': self.swing60,
+                     'Swing120': self.swing120,
+                     'Extinction Ratio': self.extinction_ratio,
+                     'ROI Used (x, y, width, height)': self.ROI,
+                     'Instrument_Matrix': inst_mat}
                     }
 
         elif n_states == 5:
-            data = {'Summary': {'Acquired Using': '5-Frame',
-                                'Swing (fraction)': self.swing,
-                                'Wavelength (nm)': self.wavelength,
-                                'BlackLevel': self.I_Black,
-                                'ChNames': ["State0", "State1", "State2", "State3", "State4"],
-                                '[LCA_Ext, LCB_Ext]': [self.lca_ext, self.lcb_ext],
-                                '[LCA_0, LCB_0]': [self.lca_0, self.lcb_0],
-                                '[LCA_45, LCB_45]': [self.lca_45, self.lcb_45],
-                                '[LCA_90, LCB_90]': [self.lca_90, self.lcb_90],
-                                '[LCA_135, LCB_135]': [self.lca_135, self.lcb_135],
-                                'Swing0': self.swing0,
-                                'Swing45': self.swing45,
-                                'Swing90': self.swing90,
-                                'Swing135': self.swing135,
-                                'Extinction Ratio': self.extinction_ratio,
-                                'ROI Used (x ,y, width, height)': self.ROI
-
-                                # Edit out later
-                                #  "MicroManagerVersion": "1.4.22",
-                                #  "Prefix": "Background Images",
-                                #  "Positions": 1,
-                                #  "Frames": 1,
-                                #  "Slices": 1,
-                                #  "z-step_um": 0,
-                                #  "InitialPositionList": "null",
-                                #  "Height": self.height, "Width": self.width,
-                                #  "Time": 0,
-                                # 'Instrument Matrix': inst_mat}
-                                }
+            data = {'Summary':
+                    {'Acquired Using': '5-Frame',
+                     'Swing (fraction)': self.swing,
+                     'Wavelength (nm)': self.wavelength,
+                     'BlackLevel': self.I_Black,
+                     'ChNames': ["State0", "State1", "State2", "State3", "State4"],
+                     '[LCA_Ext, LCB_Ext]': [self.lca_ext, self.lcb_ext],
+                     '[LCA_0, LCB_0]': [self.lca_0, self.lcb_0],
+                     '[LCA_45, LCB_45]': [self.lca_45, self.lcb_45],
+                     '[LCA_90, LCB_90]': [self.lca_90, self.lcb_90],
+                     '[LCA_135, LCB_135]': [self.lca_135, self.lcb_135],
+                     'Swing0': self.swing0,
+                     'Swing45': self.swing45,
+                     'Swing90': self.swing90,
+                     'Swing135': self.swing135,
+                     'Extinction Ratio': self.extinction_ratio,
+                     'ROI Used (x, y, width, height)': self.ROI,
+                     'Instrument_Matrix': inst_mat}
                     }
 
         if not self.meta_file.endswith('.txt'):
@@ -765,7 +751,7 @@ class QLIPP_Calibration:
         with open(self.meta_file, 'w') as metafile:
             json.dump(data, metafile, indent=1)
 
-    def add_colorbar(self, mappable):
+    def _add_colorbar(self, mappable):
         last_axes = plt.gca()
         ax = mappable.axes
         fig = ax.figure
@@ -775,7 +761,36 @@ class QLIPP_Calibration:
         plt.sca(last_axes)
         return cbar
 
-    def capture_bg(self, n_avg, n_states, directory):
+    def _capture_state(self, state, n_avg):
+        set_lc_state(self.mmc, state)
+
+        state0 = []
+        for i in range(n_avg):
+            state0.append(np.reshape(snap_image(self.mmc), newshape=(self.height, self.width)))
+
+        return np.mean(state0, axis=(0))
+
+    def _plot_bg_images(self, imgs):
+
+        img_names = ['Extinction', '0', '60', '120'] if len(imgs) == 4 else ['Extinction', '0', '45', '90', 135]
+        fig, ax = plt.subplots(2, 2, figsize=(20, 20)) if len(imgs) == 4 else plt.subplots(3, 2, figsize=(20, 20))
+
+        img_idx = 0
+        for ax1 in range(len(ax[:, 0])):
+            for ax2 in range(len(ax[0, :])):
+                if img_idx < len(imgs):
+                    im = ax[ax1, ax2].imshow(imgs[img_idx], 'gray')
+                    ax[ax1, ax2].set_title(img_names[img_idx])
+                    self._add_colorbar(im)
+                else:
+                    try:
+                        fig.delaxes(ax[2, 1])
+                    except:
+                        break
+        plt.show()
+
+
+    def capture_bg(self, n_avg, directory):
         """"
         This function will capture an image at every state
         and save to specified directory
@@ -793,98 +808,26 @@ class QLIPP_Calibration:
             os.makedirs(directory)
 
         self.height, self.width = self.mmc.getImageHeight(), self.mmc.getImageWidth()
-        set_lc_state(self.mmc, 'State0')
 
-        state0 = []
-        for i in range(n_avg):
-            state0.append(np.reshape(snap_image(self.mmc), newshape=(self.height, self.width)))
-
-        state0 = np.mean(state0, axis=(0))
-
+        state0 = self._capture_state('State0', n_avg)
         tiff.imsave(os.path.join(directory, 'State0.tif'), state0)
 
-        set_lc_state(self.mmc, 'State1')
-
-        state1 = []
-        for i in range(n_avg):
-            state1.append(np.reshape(snap_image(self.mmc), newshape=(self.height, self.width)))
-
-        state1 = np.mean(state1, axis=(0))
-
+        state1 = self._capture_state('State1', n_avg)
         tiff.imsave(os.path.join(directory, 'State1.tif'), state1)
 
-        set_lc_state(self.mmc, 'State2')
-
-        state2 = []
-        for i in range(n_avg):
-            state2.append(np.reshape(snap_image(self.mmc), newshape=(self.height, self.width)))
-
-        state2 = np.mean(state2, axis=(0))
-
+        state2 = self._capture_state('State2', n_avg)
         tiff.imsave(os.path.join(directory, 'State2.tif'), state2)
 
-        set_lc_state(self.mmc, 'State3')
-
-        state3 = []
-        for i in range(n_avg):
-            state3.append(np.reshape(snap_image(self.mmc), newshape=(self.height, self.width)))
-
-        state3 = np.mean(state3, axis=(0))
-
+        state3 = self._capture_state('State3', n_avg)
         tiff.imsave(os.path.join(directory, 'State3.tif'), state3)
 
-        if n_states == 5:
-            set_lc_state(self.mmc, 'State4')
-            state4 = []
-            for i in range(n_avg):
-                state4.append(np.reshape(snap_image(self.mmc), newshape=(self.height, self.width)))
+        imgs = [state0, state1, state2, state3]
 
-            state4 = np.mean(state4, axis=(0))
-
+        if self.calib_scheme == '5-State':
+            state4 = self._capture_state('State4', n_avg)
             tiff.imsave(os.path.join(directory, 'State4.tif'), state4)
+            imgs.append(state4)
 
-            fig, ax = plt.subplots(3, 2, figsize=(20, 20))
+        self._plot_bg_images(np.asarray(imgs))
 
-            im = ax[0, 0].imshow(state0, 'gray', )
-            ax[0, 0].set_title('Extinction')
-            self.add_colorbar(im)
-
-            im = ax[0, 1].imshow(state1, 'gray')
-            ax[0, 1].set_title('State1')
-            self.add_colorbar(im)
-
-            im = ax[1, 0].imshow(state2, 'gray')
-            ax[1, 0].set_title('State2')
-            self.add_colorbar(im)
-
-            im = ax[1, 1].imshow(state3, 'gray')
-            ax[1, 1].set_title('State3')
-            self.add_colorbar(im)
-
-            im = ax[2, 0].imshow(state4, 'gray')
-            ax[2, 0].set_title('State4')
-            self.add_colorbar(im)
-
-            fig.delaxes(ax[2, 1])
-            plt.show()
-
-        if n_states == 4:
-            fig, ax = plt.subplots(2, 2, figsize=(20, 20))
-
-            im = ax[0, 0].imshow(state0, 'gray', )
-            ax[0, 0].set_title('Extinction')
-            self.add_colorbar(im)
-
-            im = ax[0, 1].imshow(state1, 'gray')
-            ax[0, 1].set_title('State1')
-            self.add_colorbar(im)
-
-            im = ax[1, 0].imshow(state2, 'gray')
-            ax[1, 0].set_title('State2')
-            self.add_colorbar(im)
-
-            im = ax[1, 1].imshow(state3, 'gray')
-            ax[1, 1].set_title('State3')
-            self.add_colorbar(im)
-
-            plt.show()
+        return np.asarray(imgs)

@@ -5,6 +5,7 @@ from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from qtpy.QtWidgets import QWidget, QFileDialog
 from recOrder.plugin.qtdesigner import recOrder_calibration_v4
 from pathlib import Path
+from napari import Viewer
 import os
 import numpy as np
 
@@ -16,7 +17,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
     intensity_changed = pyqtSignal(float)
     log_changed = pyqtSignal(str)
 
-    def __init__(self, napari_viewer):
+    def __init__(self, napari_viewer: Viewer):
         super().__init__()
         self.viewer = napari_viewer
 
@@ -43,7 +44,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         # Capture Background
         self.ui.le_bg_folder.editingFinished.connect(self.enter_bg_folder_name)
         self.ui.le_n_avg.editingFinished.connect(self.enter_n_avg)
-        self.ui.qbutton_capture_bg.clicked[bool].connect(self.plot)
+        self.ui.qbutton_capture_bg.clicked[bool].connect(self.capture_bg)
 
         # Emitters
         # =================================#
@@ -60,6 +61,8 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.wavelength = 532
         self.calib_scheme = '4-State'
         self.use_cropped_roi = False
+        self.bg_folder_name = 'BG'
+        self.n_avg = 20
 
         # Init Plot
         plot_item = self.ui.plot_widget.getPlotItem()
@@ -117,7 +120,11 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot()
     def enter_calib_scheme(self):
-        self.calib_scheme = self.ui.cb_calib_scheme.currentIndex()
+        index = self.ui.cb_calib_scheme.currentIndex()
+        if index == 0:
+            self.calib_scheme = '4-State'
+        else:
+            self.calib_scheme = '5-State'
 
     @pyqtSlot()
     def enter_use_cropped_roi(self):
@@ -130,53 +137,61 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot()
     def run_calibration(self):
+        self.progress_changed.emit(0)
         self.calib = QLIPP_Calibration(self.mmc, self.mm)
         self.calib.swing = self.swing
         self.calib.wavelength = self.wavelength
+        self.calib.get_full_roi()
 
-        # Get Image Parameters
-        self.mmc.snapImage()
-        self.mmc.getImage()
-        self.height, self.width = self.mmc.getImageHeight(), self.mmc.getImageWidth()
-        self.ROI = (0, 0, self.width, self.height)
+        #TODO: Decide if displaying ROI is useful feature,
+        # include in a pop-up window or napari window?  How to prompt to continue?
 
         # Check if change of ROI is needed
-        if use_full_FOV is False:
-            rect = self.check_and_get_roi()
-            cont = self.display_and_check_ROI(rect)
+        if self.use_cropped_roi:
+            rect = self.calib.check_and_get_roi()
+            cont = self.calib.display_and_check_ROI(rect)
 
             if not cont:
                 print('\n---------Stopping Calibration---------\n')
                 return
             else:
                 self.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
-                self.ROI = (rect.x, rect.y, rect.width, rect.height)
+                self.calib.ROI = (rect.x, rect.y, rect.width, rect.height)
 
         # Calculate Blacklevel
         print('Calculating Blacklevel ...')
-        self.I_Black = self.calc_blacklevel()
+        self.calib.calc_blacklevel()
         print(f'Blacklevel: {self.I_Black}\n')
+        self.progress_changed.emit(10)
 
         # Set LC Wavelength:
         self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
 
-        self.opt_Iext()
-        self.opt_I0()
-        self.opt_I60(0.05, 0.05)
-        self.opt_I120(0.05, 0.05)
-
-        # Calculate Extinction
-        self.extinction_ratio = self.calculate_extinction()
+        # Optimize States
+        self._calibrate_4state() if self.calib_scheme == '4-State' else self._calibrate_5state()
 
         # Write Metadata
-        self.write_metadata(4)
+        self.calib.write_metadata(4)
 
         # Return ROI to full FOV
-        if use_full_FOV is False:
+        if self.use_cropped_roi:
             self.mmc.clearROI()
+
+        # Calculate Extinction
+        self.calib.extinction_ratio = self.calculate_extinction()
+        self.ui.le_extinction.setText(str(self.extinction_ratio))
+        self.progress_changed.emit(100)
 
         print("\n=======Finished Calibration=======\n")
         print(f"EXTINCTION = {self.extinction_ratio}")
+
+    @pyqtSlot(bool)
+    def capture_bg(self):
+        imgs = self.calib.capture_bg(self.n_avg)
+        if self.viewer.layers['Background Images']:
+            self.viewer.layers['Background Images'].data = imgs
+        else:
+            self.viewer.add_image(imgs, name='Background Images', colormap='gray')
 
     @pyqtSlot(int)
     def handle_progress_update(self, value):
@@ -206,6 +221,31 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
                                                 ref,
                                                 options=options)
         return path
+
+    def _calibrate_4state(self):
+
+        self.calib.opt_Iext()
+        self.progress_changed.emit(60)
+        self.calib.opt_I0()
+        self.progress_changed.emit(65)
+        self.calib.opt_I60(0.05, 0.05)
+        self.progress_changed.emit(75)
+        self.calib.opt_I120(0.05, 0.05)
+        self.progress_changed.emit(85)
+
+    def _calibrate_5state(self):
+
+        self.calib.opt_Iext()
+        self.progress_changed.emit(50)
+        self.calib.opt_I0()
+        self.progress_changed.emit(55)
+        self.calib.opt_I45(0.05, 0.05)
+        self.progress_changed.emit(65)
+        self.calib.opt_I90(0.05, 0.05)
+        self.progress_changed.emit(75)
+        self.calib.opt_I135(0.05, 0.05)
+        self.progress_changed.emit(85)
+
 
     @pyqtSlot(bool)
     def plot(self):
