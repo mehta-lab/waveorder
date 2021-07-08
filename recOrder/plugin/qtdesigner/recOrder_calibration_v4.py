@@ -171,7 +171,7 @@ class Ui_Form(object):
         self.label_progress.setObjectName("label_progress")
         self.verticalLayout_2.addWidget(self.label_progress)
         self.progress_bar = QtWidgets.QProgressBar(self.run_calib)
-        self.progress_bar.setProperty("value", 24)
+        self.progress_bar.setProperty("value", 0)
         self.progress_bar.setObjectName("progress_bar")
         self.verticalLayout_2.addWidget(self.progress_bar)
         self.label_extinction = QtWidgets.QLabel(self.run_calib)

@@ -13,7 +13,6 @@ import numpy as np
 class recOrder_Calibration(QWidget, QtCore.QObject):
 
     mm_status_changed = pyqtSignal(bool)
-    progress_changed = pyqtSignal(int)
     intensity_changed = pyqtSignal(float)
     log_changed = pyqtSignal(str)
 
@@ -39,7 +38,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.le_wavelength.editingFinished.connect(self.enter_wavelength)
         self.ui.cb_calib_scheme.currentIndexChanged[int].connect(self.enter_calib_scheme)
         self.ui.chb_use_roi.stateChanged[int].connect(self.enter_use_cropped_roi)
-        # self.ui.run_calib.clicked[bool].connect(self.run_calibration)
+        self.ui.qbutton_calibrate.clicked[bool].connect(self.run_calibration)
 
         # Capture Background
         self.ui.le_bg_folder.editingFinished.connect(self.enter_bg_folder_name)
@@ -49,8 +48,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         # Emitters
         # =================================#
         self.mm_status_changed.connect(self.handle_mm_status_update)
-        self.progress_changed.connect(self.handle_progress_update)
-        # self.extinction_changed.connect(self.handle_extinction_update)
+        # self.progress_changed.connect(self.handle_progress_update)
 
         #Other Properties:
         self.mm = None
@@ -116,7 +114,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot()
     def enter_wavelength(self):
-        self.wavelength = self.ui.le_directory.text()
+        self.wavelength = self.ui.le_wavelength.text()
 
     @pyqtSlot()
     def enter_calib_scheme(self):
@@ -133,11 +131,15 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
             self.use_cropped_roi = True
         elif state == 0:
             self.use_cropped_roi = False
-        print(self.use_cropped_roi)
 
     @pyqtSlot()
+    def enter_n_avg(self):
+        self.n_avg = self.ui.le_n_avg.text()
+
+    @pyqtSlot(bool)
     def run_calibration(self):
-        self.progress_changed.emit(0)
+        print('Starting Calibration')
+        self.ui.progress_bar.setValue(0)
         self.calib = QLIPP_Calibration(self.mmc, self.mm)
         self.calib.swing = self.swing
         self.calib.wavelength = self.wavelength
@@ -161,8 +163,8 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         # Calculate Blacklevel
         print('Calculating Blacklevel ...')
         self.calib.calc_blacklevel()
-        print(f'Blacklevel: {self.I_Black}\n')
-        self.progress_changed.emit(10)
+        print(f'Blacklevel: {self.calib.I_Black}\n')
+        self.ui.progress_bar.setValue(10)
 
         # Set LC Wavelength:
         self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
@@ -171,7 +173,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self._calibrate_4state() if self.calib_scheme == '4-State' else self._calibrate_5state()
 
         # Write Metadata
-        self.calib.write_metadata(4)
+        self.calib.write_metadata()
 
         # Return ROI to full FOV
         if self.use_cropped_roi:
@@ -179,8 +181,8 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
         # Calculate Extinction
         self.calib.extinction_ratio = self.calculate_extinction()
-        self.ui.le_extinction.setText(str(self.extinction_ratio))
-        self.progress_changed.emit(100)
+        self.ui.le_extinction.setText(str(self.calib.extinction_ratio))
+        self.ui.progress_bar.setValue(100)
 
         print("\n=======Finished Calibration=======\n")
         print(f"EXTINCTION = {self.extinction_ratio}")
@@ -193,10 +195,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         else:
             self.viewer.add_image(imgs, name='Background Images', colormap='gray')
 
-    @pyqtSlot(int)
-    def handle_progress_update(self, value):
-        self.ui.progress_bar.setValue(value)
-
     @pyqtSlot()
     def enter_bg_folder_name(self):
         self.bg_folder_name = self.ui.le_bg_folder.text()
@@ -204,9 +202,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
     @pyqtSlot()
     def enter_bg_folder_name(self):
         self.n_avg = self.ui.le_n_avg.text()
-
-    def handle_extinction_update(self, value):
-        self.ui.le_extinction.setText(value)
 
     def _open_file_dialog(self, default_path):
         return self._open_dialog("select a directory",
@@ -225,26 +220,26 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
     def _calibrate_4state(self):
 
         self.calib.opt_Iext()
-        self.progress_changed.emit(60)
+        self.ui.progress_bar.setValue(60)
         self.calib.opt_I0()
-        self.progress_changed.emit(65)
+        self.ui.progress_bar.setValue(65)
         self.calib.opt_I60(0.05, 0.05)
-        self.progress_changed.emit(75)
+        self.ui.progress_bar.setValue(75)
         self.calib.opt_I120(0.05, 0.05)
-        self.progress_changed.emit(85)
+        self.ui.progress_bar.setValue(85)
 
     def _calibrate_5state(self):
 
         self.calib.opt_Iext()
-        self.progress_changed.emit(50)
+        self.ui.progress_bar.setValue(50)
         self.calib.opt_I0()
-        self.progress_changed.emit(55)
+        self.ui.progress_bar.setValue(55)
         self.calib.opt_I45(0.05, 0.05)
-        self.progress_changed.emit(65)
+        self.ui.progress_bar.setValue(65)
         self.calib.opt_I90(0.05, 0.05)
-        self.progress_changed.emit(75)
+        self.ui.progress_bar.setValue(75)
         self.calib.opt_I135(0.05, 0.05)
-        self.progress_changed.emit(85)
+        self.ui.progress_bar.setValue(85)
 
 
     @pyqtSlot(bool)

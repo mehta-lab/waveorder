@@ -14,7 +14,7 @@ import os
 #todo: enable logging
 
 #TODO: Docstrings
-class QLIPP_Calibration:
+class QLIPP_Calibration():
     # Meadowlark LC Device Adapter Property Names
     PROPERTIES = {'LCA': 'Retardance LC-A [in waves]',
                   'LCB': 'Retardance LC-B [in waves]',
