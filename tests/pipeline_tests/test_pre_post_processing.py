@@ -32,14 +32,14 @@ def test_pre_processing(setup_test_data, setup_data_save_folder):
     array = store['Pos_001.zarr']['physical_data']['array']
 
     # Check Stokes
-    assert (np.sum(np.abs(stokes_denoise[z, 0] - array[0, 0, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[z, 0])) ** 2 < 0.1)
-    assert (np.sum(np.abs(stokes_denoise[z, 1] - array[0, 1, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[z, 1])) ** 2 < 0.1)
-    assert (np.sum(np.abs(stokes_denoise[z, 2] - array[0, 2, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[z, 2])) ** 2 < 0.1)
-    assert (np.sum(np.abs(stokes_denoise[z, 3] - array[0, 3, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[z, 3])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes_denoise[0, :, :, z] - array[0, 0, z]) ** 2) / np.sum(
+        np.abs(stokes_denoise[0, :, :, z])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes_denoise[1, :, :, z] - array[0, 1, z]) ** 2) / np.sum(
+        np.abs(stokes_denoise[1, :, :, z])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes_denoise[2, :, :, z] - array[0, 2, z]) ** 2) / np.sum(
+        np.abs(stokes_denoise[2, :, :, z])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes_denoise[3, :, :, z] - array[0, 3, z]) ** 2) / np.sum(
+        np.abs(stokes_denoise[3, :, :, z])) ** 2 < 0.1)
 
 
 def test_post_processing(setup_test_data, setup_data_save_folder):

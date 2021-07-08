@@ -99,11 +99,8 @@ def test_3D_reconstruction(setup_test_data, setup_data_save_folder):
 
     stokes = reconstruct_qlipp_stokes(data[t], recon, manager.pipeline.bg_stokes)
     birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-    phase3D = reconstruct_qlipp_phase3D(np.transpose(stokes[:, 0], (1, 2, 0)),recon,
-                                                method=config.phase_denoiser_3D,
-                                                reg_re=config.Tik_reg_ph_3D, rho=config.rho_3D,
-                                                lambda_re=config.TV_reg_ph_3D, itr=config.itr_3D)
-
+    phase3D = reconstruct_qlipp_phase3D(stokes[0],recon, method=config.phase_denoiser_3D, reg_re=config.Tik_reg_ph_3D,
+                                        rho=config.rho_3D, lambda_re=config.TV_reg_ph_3D, itr=config.itr_3D)
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'))
     array = store['Pos_001.zarr']['physical_data']['array']
 
@@ -111,10 +108,10 @@ def test_3D_reconstruction(setup_test_data, setup_data_save_folder):
     assert(array.shape == (1, len(config.output_channels), 81, 231, 498))
 
     # Check Stokes
-    assert(np.sum(np.abs(stokes[z, 0] - array[0, 4, z]) ** 2) / np.sum(np.abs(stokes[z, 0])**2) < 0.1)
-    assert(np.sum(np.abs(stokes[z, 1] - array[0, 5, z]) ** 2) / np.sum(np.abs(stokes[z, 1])**2) < 0.1)
-    assert(np.sum(np.abs(stokes[z, 2] - array[0, 6, z]) ** 2) / np.sum(np.abs(stokes[z, 2])**2) < 0.1)
-    assert(np.sum(np.abs(stokes[z, 3] - array[0, 7, z]) ** 2) / np.sum(np.abs(stokes[z, 3])**2) < 0.1)
+    assert(np.sum(np.abs(stokes[0, :, :, z] - array[0, 4, z]) ** 2) / np.sum(np.abs(stokes[0, :, :, z])**2) < 0.1)
+    assert(np.sum(np.abs(stokes[1, :, :, z] - array[0, 5, z]) ** 2) / np.sum(np.abs(stokes[1, :, :, z])**2) < 0.1)
+    assert(np.sum(np.abs(stokes[2, :, :, z] - array[0, 6, z]) ** 2) / np.sum(np.abs(stokes[2, :, :, z])**2) < 0.1)
+    assert(np.sum(np.abs(stokes[3, :, :, z] - array[0, 7, z]) ** 2) / np.sum(np.abs(stokes[3, :, :, z])**2) < 0.1)
 
     # Check Birefringence
     assert(np.sum(np.abs((birefringence[0, z]/(2 * np.pi)*config.wavelength) - array[0, 0, z]) ** 2)
@@ -142,9 +139,8 @@ def test_2D_reconstruction(setup_test_data, setup_data_save_folder):
     recon = manager.pipeline.reconstructor
 
     stokes = reconstruct_qlipp_stokes(data[t], recon, manager.pipeline.bg_stokes)
-    birefringence = reconstruct_qlipp_birefringence(stokes[z], recon)
-    phase2D = reconstruct_qlipp_phase2D(np.transpose(stokes[:, 0], (1, 2, 0)), recon,
-                                        method=config.phase_denoiser_2D, reg_p=config.Tik_reg_ph_2D,
+    birefringence = reconstruct_qlipp_birefringence(stokes[:, :, :, z], recon)
+    phase2D = reconstruct_qlipp_phase2D(stokes[0], recon, method=config.phase_denoiser_2D, reg_p=config.Tik_reg_ph_2D,
                                         rho=config.rho_2D, lambda_p=config.TV_reg_ph_2D, itr=config.itr_2D)
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'))
     array = store['Pos_001.zarr']['physical_data']['array']
@@ -153,19 +149,19 @@ def test_2D_reconstruction(setup_test_data, setup_data_save_folder):
     assert(array.shape == (1, len(config.output_channels), 1, 231, 498))
 
     # Check Stokes
-    assert(np.sum(np.abs(stokes[z, 0] - array[0, 4, 0]) ** 2) / np.sum(np.abs(stokes[z, 0]))**2 < 0.1)
-    assert(np.sum(np.abs(stokes[z, 1] - array[0, 5, 0]) ** 2) / np.sum(np.abs(stokes[z, 1]))**2 < 0.1)
-    assert(np.sum(np.abs(stokes[z, 2] - array[0, 6, 0]) ** 2) / np.sum(np.abs(stokes[z, 2]))**2 < 0.1)
-    assert(np.sum(np.abs(stokes[z, 3] - array[0, 7, 0]) ** 2) / np.sum(np.abs(stokes[z, 3]))**2 < 0.1)
+    assert(np.sum(np.abs(stokes[0, :, :, z] - array[0, 4, 0]) ** 2) / np.sum(np.abs(stokes[0, :, :, z]))**2 < 0.1)
+    assert(np.sum(np.abs(stokes[1, :, :, z] - array[0, 5, 0]) ** 2) / np.sum(np.abs(stokes[1, :, :, z]))**2 < 0.1)
+    assert(np.sum(np.abs(stokes[2, :, :, z] - array[0, 6, 0]) ** 2) / np.sum(np.abs(stokes[2, :, :, z]))**2 < 0.1)
+    assert(np.sum(np.abs(stokes[3, :, :, z] - array[0, 7, 0]) ** 2) / np.sum(np.abs(stokes[3, :, :, z]))**2 < 0.1)
 
     # Check Birefringence
-    assert(np.sum(np.abs((birefringence[0, 0]/(2 * np.pi)*config.wavelength) - array[0, 0, 0]) ** 2)
-           / np.sum(np.abs(birefringence[0, 0]/(2 * np.pi)*config.wavelength)**2) < 0.1)
-    assert (np.sum(np.abs(birefringence[1, 0] - array[0, 1, 0]) ** 2) / np.sum(np.abs(birefringence[1, 0])**2) < 0.1)
-    assert (np.sum(np.abs(birefringence[2, 0] - array[0, 2, 0]) ** 2) / np.sum(np.abs(birefringence[2, 0])**2) < 0.1)
+
+    assert(np.sum(np.abs((birefringence[0]/(2 * np.pi)*config.wavelength) - array[0, 0, 0]) ** 2)
+           / np.sum(np.abs(birefringence[0]/(2 * np.pi)*config.wavelength)**2) < 0.1)
+    assert (np.sum(np.abs(birefringence[1] - array[0, 1, 0]) ** 2) / np.sum(np.abs(birefringence[1])**2) < 0.1)
+    assert (np.sum(np.abs(birefringence[2] - array[0, 2, 0]) ** 2) / np.sum(np.abs(birefringence[2])**2) < 0.1)
 
     # Check Phase
     assert (np.sum(np.abs(phase2D - array[0, 3, 0]) ** 2) / np.sum(np.abs(phase2D)**2) < 0.1)
 
-#TODO: Add Tests for Pre/Post Processing?
 #TODO: Add tests/test data for 5 state reconstruction
