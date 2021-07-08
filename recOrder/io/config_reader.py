@@ -4,6 +4,8 @@ import os
 import warnings
 import re
 
+#TODO: Make CLI override config reader
+
 DATASET = {
     'method': None,
     'mode': None,
