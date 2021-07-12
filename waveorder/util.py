@@ -943,22 +943,28 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
 
         return 4*signed_area / (d0*d1*d2)
     
-    # evaluate the L curve at a specific lambda
-        # returns a new Point_L_curve() tuple.
-        # this function is the only place where new points are instantiated
-    def eval_L_curve(reg_x):
+    # computes f_real_f for a specific lambda
+        # used for both autotuning and non-autotuning situation
+    def compute_f_real_f(reg_x):
         reg_coeff = 10**reg_x
         H_eff_abs_square = xp.abs(H_eff)**2
         H_eff_conj = xp.conj(H_eff)
 
         # FT{f} (f=scattering potential (whose real part is (scaled) phase))
         f_real_f = S0_stack_f * H_eff_conj / (H_eff_abs_square + reg_coeff)
+        return f_real_f
+    
+    # evaluate the L curve at a specific lambda
+        # returns a new Point_L_curve() tuple.
+        # this function is the only place where new points are instantiated
+    def eval_L_curve(reg_x):
+        f_real_f = compute_f_real_f(reg_x)
         S0_est_stack_f = H_eff * f_real_f # Ax (put estimate through forward model)
 
         data_norm_eval = xp.log(xp.linalg.norm(S0_est_stack_f - S0_stack_f)**2 /N/M/L)
         reg_norm_eval = xp.log(xp.linalg.norm(f_real_f)**2 /N/M/L)
 
-        return Point_L_curve(reg_x, reg_coeff, data_norm_eval, reg_norm_eval, f_real_f)
+        return Point_L_curve(reg_x, 10**reg_x, data_norm_eval, reg_norm_eval, f_real_f)
 
     # creates return value of the whole function
         # (scaled) phase = real part of inverse FT {scattering potential}
@@ -1032,17 +1038,17 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
             
         # Return 3 solutions: the parameter chosen by the L-curve +/- epsilon
         f_real = []
-        pt_left = eval_L_curve(opt_list[-1].reg_x - epsilon_auto)
-        pt_right = eval_L_curve(opt_list[-1].reg_x + epsilon_auto)
-        f_real.append(ifft_f_real(pt_left.f_real_f))
+        left = compute_f_real_f(opt_list[-1].reg_x - epsilon_auto)
+        right = compute_f_real_f(opt_list[-1].reg_x + epsilon_auto)
+        f_real.append(ifft_f_real(left))
         f_real.append(ifft_f_real(opt_list[-1].f_real_f))
-        f_real.append(ifft_f_real(pt_right.f_real_f))
+        f_real.append(ifft_f_real(right))
         
         return np.array(f_real)
     
     else:
-        chosen_pt = eval_L_curve(xp.log10(reg_re))
-        f_real = ifft_f_real(chosen_pt.f_real_f)
+        f_real_f = compute_f_real_f(xp.log10(reg_re))
+        f_real = ifft_f_real(f_real_f)
         return f_real
     
 #     return f_real, opt_list # We can think about whether to have some kind of plotting option
