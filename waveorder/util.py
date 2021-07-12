@@ -924,6 +924,8 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
     
     S0_stack_f = xp.fft.fftn(S0_stack, axes=(-3,-2,-1))
     N,M,L = S0_stack_f.shape
+    H_eff_abs_square = xp.abs(H_eff)**2
+    H_eff_conj = xp.conj(H_eff)
     
     # a "named tuple" representing a point on the L curve
         # allows for dot notation to access attributes
@@ -947,8 +949,6 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
         # used for both autotuning and non-autotuning situation
     def compute_f_real_f(reg_x):
         reg_coeff = 10**reg_x
-        H_eff_abs_square = xp.abs(H_eff)**2
-        H_eff_conj = xp.conj(H_eff)
 
         # FT{f} (f=scattering potential (whose real part is (scaled) phase))
         f_real_f = S0_stack_f * H_eff_conj / (H_eff_abs_square + reg_coeff)
