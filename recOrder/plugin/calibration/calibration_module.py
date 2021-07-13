@@ -1,7 +1,7 @@
 from recOrder.calib.Calibration import QLIPP_Calibration
 from pycromanager import Bridge
 from PyQt5 import QtCore
-from PyQt5.QtCore import pyqtSlot, pyqtSignal
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QThread
 from qtpy.QtWidgets import QWidget, QFileDialog
 from recOrder.plugin.qtdesigner import recOrder_calibration_v4
 from pathlib import Path
@@ -24,8 +24,9 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui = recOrder_calibration_v4.Ui_Form()
         self.ui.setupUi(self)
 
-        # Setup Connections between elements
+        # Setup threads
 
+        # Setup Connections between elements
         # Recievers
         # =================================
         # Connect to Micromanager
@@ -93,6 +94,14 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
             self.ui.le_mm_status.setStyleSheet("background-color: red;")
             # self.ui.le_mm_status.setStyleSheet("border: 1px solid red;")
 
+    @pyqtSlot(int)
+    def handle_progress_update(self, value):
+        self.ui.progress_bar.setValue(value)
+
+    @pyqtSlot(str)
+    def handle_extinction_update(self, value):
+        self.ui.le_extinction.setText(value)
+
     @pyqtSlot(bool)
     def browse_dir_path(self):
         # self.ui.le_directory.setFocus()
@@ -143,49 +152,21 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.calib = QLIPP_Calibration(self.mmc, self.mm)
         self.calib.swing = self.swing
         self.calib.wavelength = self.wavelength
-        self.calib.get_full_roi()
 
-        #TODO: Decide if displaying ROI is useful feature,
-        # include in a pop-up window or napari window?  How to prompt to continue?
+        self.thread = QThread()
+        self.worker = Worker(self.calib, self)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.run_calibration)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.worker.progress_update.connect(self.handle_progress_update)
+        self.thread.start()
+        self.ui.qbutton_calibrate.setEnabled(False)
+        self.thread.finished.connect(
+            lambda: self.ui.qbutton_calibrate.setEnabled(True)
+        )
 
-        # Check if change of ROI is needed
-        if self.use_cropped_roi:
-            rect = self.calib.check_and_get_roi()
-            cont = self.calib.display_and_check_ROI(rect)
-
-            if not cont:
-                print('\n---------Stopping Calibration---------\n')
-                return
-            else:
-                self.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
-                self.calib.ROI = (rect.x, rect.y, rect.width, rect.height)
-
-        # Calculate Blacklevel
-        print('Calculating Blacklevel ...')
-        self.calib.calc_blacklevel()
-        print(f'Blacklevel: {self.calib.I_Black}\n')
-        self.ui.progress_bar.setValue(10)
-
-        # Set LC Wavelength:
-        self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
-
-        # Optimize States
-        self._calibrate_4state() if self.calib_scheme == '4-State' else self._calibrate_5state()
-
-        # Write Metadata
-        self.calib.write_metadata()
-
-        # Return ROI to full FOV
-        if self.use_cropped_roi:
-            self.mmc.clearROI()
-
-        # Calculate Extinction
-        self.calib.extinction_ratio = self.calculate_extinction()
-        self.ui.le_extinction.setText(str(self.calib.extinction_ratio))
-        self.ui.progress_bar.setValue(100)
-
-        print("\n=======Finished Calibration=======\n")
-        print(f"EXTINCTION = {self.extinction_ratio}")
 
     @pyqtSlot(bool)
     def capture_bg(self):
@@ -217,38 +198,13 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
                                                 options=options)
         return path
 
-    def _calibrate_4state(self):
-
-        self.calib.opt_Iext()
-        self.ui.progress_bar.setValue(60)
-        self.calib.opt_I0()
-        self.ui.progress_bar.setValue(65)
-        self.calib.opt_I60(0.05, 0.05)
-        self.ui.progress_bar.setValue(75)
-        self.calib.opt_I120(0.05, 0.05)
-        self.ui.progress_bar.setValue(85)
-
-    def _calibrate_5state(self):
-
-        self.calib.opt_Iext()
-        self.ui.progress_bar.setValue(50)
-        self.calib.opt_I0()
-        self.ui.progress_bar.setValue(55)
-        self.calib.opt_I45(0.05, 0.05)
-        self.ui.progress_bar.setValue(65)
-        self.calib.opt_I90(0.05, 0.05)
-        self.ui.progress_bar.setValue(75)
-        self.calib.opt_I135(0.05, 0.05)
-        self.ui.progress_bar.setValue(85)
-
-
     @pyqtSlot(bool)
     def plot(self):
         print('here')
         x = range(0, 10)
         y = range(0, 20, 2)
 
-        self.ui.plot_widget.plot(x,y)
+        self.ui.plot_widget.plot(x, y)
         self.ui.plot_widget.getPlotItem().autoRange()
         self.ui.te_log.appendPlainText('')
 
@@ -258,3 +214,86 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
     def _update_plot(self, value):
         pass
 
+
+class Worker(QtCore.QObject):
+
+    progress_update = pyqtSignal(int)
+    extinction_update = pyqtSignal(float)
+    finish = pyqtSignal()
+
+    def __init__(self, calib_window, calib):
+        super().__init__()
+        self.calib_window = calib_window
+        self.calib = calib
+
+
+    def run_calibration(self):
+
+        self.calib.get_full_roi()
+
+        # TODO: Decide if displaying ROI is useful feature,
+        # include in a pop-up window or napari window?  How to prompt to continue?
+
+        # Check if change of ROI is needed
+        if self.calib_window.use_cropped_roi:
+            rect = self.calib.check_and_get_roi()
+            cont = self.calib.display_and_check_ROI(rect)
+
+            if not cont:
+                print('\n---------Stopping Calibration---------\n')
+                return
+            else:
+                self.calib_window.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
+                self.calib.ROI = (rect.x, rect.y, rect.width, rect.height)
+
+        # Calculate Blacklevel
+        print('Calculating Blacklevel ...')
+        self.calib.calc_blacklevel()
+        print(f'Blacklevel: {self.calib.I_Black}\n')
+        self.calib_window.ui.progress_bar.setValue(10)
+
+        # Set LC Wavelength:
+        self.calib_window.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
+
+        # Optimize States
+        self._calibrate_4state() if self.calib_window.calib_scheme == '4-State' else self._calibrate_5state()
+
+        # Write Metadata
+        self.calib.write_metadata()
+
+        # Return ROI to full FOV
+        if self.calib_window.use_cropped_roi:
+            self.calib_window.mmc.clearROI()
+
+        # Calculate Extinction
+        extinction_ratio = self.calculate_extinction()
+        self.extinction_update.emit(str(extinction_ratio))
+        self.progress_update.emit(100)
+
+        print("\n=======Finished Calibration=======\n")
+        print(f"EXTINCTION = {extinction_ratio}")
+        self.finish.emit()
+
+    def _calibrate_4state(self):
+
+        self.calib.opt_Iext()
+        self.progress_update.emit(60)
+        self.calib.opt_I0()
+        self.progress_update.emit(65)
+        self.calib.opt_I60(0.05, 0.05)
+        self.progress_update.emit(75)
+        self.calib.opt_I120(0.05, 0.05)
+        self.progress_update.emit(85)
+
+    def _calibrate_5state(self):
+
+        self.calib.opt_Iext()
+        self.progress_update.emit(50)
+        self.calib.opt_I0()
+        self.progress_update.emit(55)
+        self.calib.opt_I45(0.05, 0.05)
+        self.progress_update.emit(65)
+        self.calib.opt_I90(0.05, 0.05)
+        self.progress_update.emit(75)
+        self.calib.opt_I135(0.05, 0.05)
+        self.progress_update.emit(85)

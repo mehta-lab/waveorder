@@ -9,9 +9,10 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import json
 import os
 
-#todo: save metadata without overwriting existing file?
+#todo: save metadata without overwriting existing file
 #todo: clean up plotting
 #todo: enable logging
+
 
 #TODO: Docstrings
 class QLIPP_Calibration():
