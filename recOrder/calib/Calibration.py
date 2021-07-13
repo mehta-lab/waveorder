@@ -97,7 +97,6 @@ class QLIPP_Calibration():
         data = snap_image(self.mmc)
         mean = np.mean(data)
 
-        self.emitter.emit(mean)
         self.inten.append(mean)
 
         if normalize:
@@ -215,12 +214,12 @@ class QLIPP_Calibration():
         print("Intensity = " + str(I_ext))
 
         # plot optimization details
-        if self.print_details:
-            I = np.copy(self.inten)
-            plt.plot(I)
-            plt.title('Intensity - Extinction')
-            plt.ylabel('I - Ref')
-            plt.show()
+        # if self.print_details:
+        #     I = np.copy(self.inten)
+        #     plt.plot(I)
+        #     plt.title('Intensity - Extinction')
+        #     plt.ylabel('I - Ref')
+        #     plt.show()
 
         print("--------done--------\n")
 
@@ -275,12 +274,12 @@ class QLIPP_Calibration():
 
         self.swing45 = np.sqrt((self.lcb_45 - self.lcb_ext) ** 2 + (self.lca_45 - self.lca_ext) ** 2)
 
-        if self.print_details:
-            I = np.copy(self.inten)
-            plt.plot(I)
-            plt.title('Intensity - State2')
-            plt.ylabel('I - Ref')
-            plt.show()
+        # if self.print_details:
+        #     I = np.copy(self.inten)
+        #     plt.plot(I)
+        #     plt.title('Intensity - State2')
+        #     plt.ylabel('I - Ref')
+        #     plt.show()
 
         print("--------done--------")
 
@@ -330,11 +329,11 @@ class QLIPP_Calibration():
                   | target ratio: {-self.ratio}')
             print(f'total swing = {self.swing60:.4f} | target = {swing_ell}')
 
-            I = np.copy(self.inten)
-            plt.plot(I)
-            plt.title('Intensity - State60')
-            plt.ylabel('I - Ref')
-            plt.show()
+            # I = np.copy(self.inten)
+            # plt.plot(I)
+            # plt.title('Intensity - State60')
+            # plt.ylabel('I - Ref')
+            # plt.show()
 
         print("--------done--------")
 
@@ -366,12 +365,12 @@ class QLIPP_Calibration():
 
         self.swing90 = np.sqrt((self.lcb_90 - self.lcb_ext) ** 2 + (self.lca_90 - self.lca_ext) ** 2)
 
-        if self.print_details:
-            I = np.copy(self.inten)
-            plt.plot(I)
-            plt.title('Intensity - State3')
-            plt.ylabel('I - Ref')
-            plt.show()
+        # if self.print_details:
+        #     I = np.copy(self.inten)
+        #     plt.plot(I)
+        #     plt.title('Intensity - State3')
+        #     plt.ylabel('I - Ref')
+        #     plt.show()
 
         print("--------done--------")
 
@@ -420,11 +419,11 @@ class QLIPP_Calibration():
              | target ratio: {self.ratio}')
             print(f'total swing = {self.swing120:.4f} | target = {swing_ell}')
 
-            I = np.copy(self.inten)
-            plt.plot(I)
-            plt.title('Intensity - State120')
-            plt.ylabel('I - Ref')
-            plt.show()
+            # I = np.copy(self.inten)
+            # plt.plot(I)
+            # plt.title('Intensity - State120')
+            # plt.ylabel('I - Ref')
+            # plt.show()
 
         print("--------done--------")
 
@@ -457,12 +456,12 @@ class QLIPP_Calibration():
         self.swing135 = np.sqrt((self.lcb_135 - self.lcb_ext) ** 2 + (self.lca_135 - self.lca_ext) ** 2)
 
         # plot details of brent optimization
-        if self.print_details:
-            I = np.copy(self.inten)
-            plt.plot(I)
-            plt.title('Intensity - State4')
-            plt.ylabel('I - Ref')
-            plt.show()
+        # if self.print_details:
+        #     I = np.copy(self.inten)
+        #     plt.plot(I)
+        #     plt.title('Intensity - State4')
+        #     plt.ylabel('I - Ref')
+        #     plt.show()
 
         print("--------done--------")
 
@@ -488,7 +487,7 @@ class QLIPP_Calibration():
         if not auto_shutter:
             self.mmc.setShutterOpen(shutter)
 
-        self.I_black = blacklevel
+        self.I_Black = blacklevel
         return blacklevel
 
     def get_full_roi(self):
@@ -706,9 +705,9 @@ class QLIPP_Calibration():
         inst_mat = self.calc_inst_matrix(n_states)
         inst_mat = inst_mat.tolist()
 
-        if n_states == 4:
+        if self.calib_scheme == '4-State':
             data = {'Summary':
-                    {'Acquired Using': '4-Frame Extinction',
+                    {'Acquired Using': '4-State',
                      'Swing (fraction)': self.swing,
                      'Wavelength (nm)': self.wavelength,
                      'BlackLevel': self.I_Black,
@@ -725,9 +724,9 @@ class QLIPP_Calibration():
                      'Instrument_Matrix': inst_mat}
                     }
 
-        elif n_states == 5:
+        elif self.calib_scheme == '5-State':
             data = {'Summary':
-                    {'Acquired Using': '5-Frame',
+                    {'Acquired Using': '5-State',
                      'Swing (fraction)': self.swing,
                      'Wavelength (nm)': self.wavelength,
                      'BlackLevel': self.I_Black,

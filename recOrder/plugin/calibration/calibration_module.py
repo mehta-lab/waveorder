@@ -49,7 +49,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         # Emitters
         # =================================#
         self.mm_status_changed.connect(self.handle_mm_status_update)
-        # self.progress_changed.connect(self.handle_progress_update)
 
         #Other Properties:
         self.mm = None
@@ -62,6 +61,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.use_cropped_roi = False
         self.bg_folder_name = 'BG'
         self.n_avg = 20
+        self.intensity_monitor = []
 
         # Init Plot
         plot_item = self.ui.plot_widget.getPlotItem()
@@ -101,6 +101,12 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
     @pyqtSlot(str)
     def handle_extinction_update(self, value):
         self.ui.le_extinction.setText(value)
+
+    @pyqtSlot(object)
+    def handle_plot_update(self, value):
+        self.intensity_monitor.append(value)
+        self.ui.plot_widget.plot(self.intensity_monitor)
+        self.ui.plot_widget.getPlotItem().autoRange()
 
     @pyqtSlot(bool)
     def browse_dir_path(self):
@@ -152,21 +158,23 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.calib = QLIPP_Calibration(self.mmc, self.mm)
         self.calib.swing = self.swing
         self.calib.wavelength = self.wavelength
+        self.calib.meta_file = self.directory
 
         self.thread = QThread()
-        self.worker = Worker(self.calib, self)
+        self.worker = Worker(self, self.calib)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run_calibration)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
         self.worker.progress_update.connect(self.handle_progress_update)
+        self.worker.extinction_update.connect(self.handle_extinction_update)
+        self.worker.intensity_update.connect(self.handle_plot_update)
         self.thread.start()
         self.ui.qbutton_calibrate.setEnabled(False)
         self.thread.finished.connect(
             lambda: self.ui.qbutton_calibrate.setEnabled(True)
         )
-
 
     @pyqtSlot(bool)
     def capture_bg(self):
@@ -218,8 +226,10 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 class Worker(QtCore.QObject):
 
     progress_update = pyqtSignal(int)
-    extinction_update = pyqtSignal(float)
-    finish = pyqtSignal()
+    extinction_update = pyqtSignal(str)
+    intensity_update = pyqtSignal(object)
+    finished = pyqtSignal()
+
 
     def __init__(self, calib_window, calib):
         super().__init__()
@@ -229,7 +239,9 @@ class Worker(QtCore.QObject):
 
     def run_calibration(self):
 
+        self.calib.intensity_emitter = self.intensity_update
         self.calib.get_full_roi()
+        self.progress_update.emit(1)
 
         # TODO: Decide if displaying ROI is useful feature,
         # include in a pop-up window or napari window?  How to prompt to continue?
@@ -250,10 +262,10 @@ class Worker(QtCore.QObject):
         print('Calculating Blacklevel ...')
         self.calib.calc_blacklevel()
         print(f'Blacklevel: {self.calib.I_Black}\n')
-        self.calib_window.ui.progress_bar.setValue(10)
+        self.progress_update.emit(10)
 
         # Set LC Wavelength:
-        self.calib_window.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
+        self.calib_window.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.calib_window.wavelength)
 
         # Optimize States
         self._calibrate_4state() if self.calib_window.calib_scheme == '4-State' else self._calibrate_5state()
