@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>442</width>
-    <height>978</height>
+    <height>805</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -25,7 +25,7 @@
         <x>0</x>
         <y>0</y>
         <width>416</width>
-        <height>1101</height>
+        <height>1173</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout">
@@ -305,10 +305,17 @@
              </sizepolicy>
             </property>
             <property name="text">
-             <string>Calibrate LC</string>
+             <string>Run Calibration</string>
             </property>
             <property name="autoDefault">
              <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="qbutton_stop_calibrate">
+            <property name="text">
+             <string>Stop Calibration</string>
             </property>
            </widget>
           </item>
@@ -343,6 +350,13 @@
             </property>
             <property name="readOnly">
              <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="qbutton_calc_extinction">
+            <property name="text">
+             <string>Calculate Extinction</string>
             </property>
            </widget>
           </item>

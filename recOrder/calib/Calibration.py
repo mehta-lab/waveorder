@@ -664,8 +664,9 @@ class QLIPP_Calibration():
         else:
             raise ValueError('Please define the calibration scheme')
 
-    def calculate_extinction(self):
-        return (1 / np.sin(np.pi * self.swing) ** 2) * (self.I_Elliptical - self.I_Black) / (self.I_Ext - self.I_Black)
+    def calculate_extinction(self, swing, black_level, intensity_extinction, intensity_elliptical):
+        return (1 / np.sin(np.pi * swing) ** 2) * \
+               (intensity_elliptical - black_level) / (intensity_extinction - black_level)
 
     def calc_inst_matrix(self, n_states):
 

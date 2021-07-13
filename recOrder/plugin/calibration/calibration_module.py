@@ -6,6 +6,7 @@ from qtpy.QtWidgets import QWidget, QFileDialog
 from recOrder.plugin.qtdesigner import recOrder_calibration_v4
 from pathlib import Path
 from napari import Viewer
+from recOrder.calib.CoreFunctions import snap_image, set_lc_state
 import os
 import numpy as np
 
@@ -24,8 +25,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui = recOrder_calibration_v4.Ui_Form()
         self.ui.setupUi(self)
 
-        # Setup threads
-
         # Setup Connections between elements
         # Recievers
         # =================================
@@ -40,6 +39,8 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.cb_calib_scheme.currentIndexChanged[int].connect(self.enter_calib_scheme)
         self.ui.chb_use_roi.stateChanged[int].connect(self.enter_use_cropped_roi)
         self.ui.qbutton_calibrate.clicked[bool].connect(self.run_calibration)
+        self.ui.qbutton_stop_calibrate.clicked[bool].connect(self.stop_calibration)
+        self.ui.qbutton_calc_extinction.clicked[bool].connect(self.calculate_extinction)
 
         # Capture Background
         self.ui.le_bg_folder.editingFinished.connect(self.enter_bg_folder_name)
@@ -177,6 +178,22 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         )
 
     @pyqtSlot(bool)
+    def stop_calibration(self):
+        #todo: add try, except
+        self.worker.stop()
+        self.worker.killthread()
+        self.worker.finished.emit()
+
+    @pyqtSlot(bool)
+    def calc_extinction(self):
+        set_lc_state('State0')
+        extinction = np.mean(snap_image(self.mmc))
+        set_lc_state('State1')
+        state1 = np.mean(snap_image(self.mmc))
+        extinction = self.calib.calculate_extinction(self.swing, self.calib.I_Black, extinction, state1)
+        self.ui.le_extinction.setText(str(extinction))
+
+    @pyqtSlot(bool)
     def capture_bg(self):
         imgs = self.calib.capture_bg(self.n_avg)
         if self.viewer.layers['Background Images']:
@@ -216,12 +233,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.plot_widget.getPlotItem().autoRange()
         self.ui.te_log.appendPlainText('')
 
-    def _init_plot(self):
-        pass
-
-    def _update_plot(self, value):
-        pass
-
 
 class Worker(QtCore.QObject):
 
@@ -236,6 +247,12 @@ class Worker(QtCore.QObject):
         self.calib_window = calib_window
         self.calib = calib
 
+    def stop(self):
+        self.threadactive = False
+        self.wait()
+
+    def killthread(self):
+        self.thread.stop()
 
     def run_calibration(self):
 
