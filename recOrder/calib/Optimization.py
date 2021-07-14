@@ -2,6 +2,7 @@ import numpy as np
 from scipy import optimize
 import os, sys
 from recOrder.calib.CoreFunctions import set_lc, get_lc, snap_image
+import logging
 
 class BrentOptimizer:
 
@@ -38,12 +39,11 @@ class BrentOptimizer:
         abs_intensity = fval + reference
         difference = fval / reference * 100
 
-        if self.calib.print_details:
-            print('\tOptimize lca ...')
-            print(f"\tlca = {lca:.5f}")
-            print(f"\tlcb = {lcb:.5f}")
-            print(f'\tIntensity = {abs_intensity}')
-            print(f'\tIntensity Difference = {difference:.4f}%')
+        logging.debug('\tOptimize lca ...')
+        logging.debug(f"\tlca = {lca:.5f}")
+        logging.debug(f"\tlcb = {lcb:.5f}")
+        logging.debug(f'\tIntensity = {abs_intensity}')
+        logging.debug(f'\tIntensity Difference = {difference:.4f}%')
 
         return [lca, lcb, abs_intensity, difference]
 
@@ -61,12 +61,11 @@ class BrentOptimizer:
         abs_intensity = fval + reference
         difference = fval / reference * 100
 
-        if self.calib.print_details:
-            print('\tOptimize lcb ...')
-            print(f"\tlca = {lca:.5f}")
-            print(f"\tlcb = {lcb:.5f}")
-            print(f'\tIntensity = {abs_intensity}')
-            print(f'\tIntensity Difference = {difference:.4f}%')
+        logging.debug('\tOptimize lcb ...')
+        logging.debug(f"\tlca = {lca:.5f}")
+        logging.debug(f"\tlcb = {lcb:.5f}")
+        logging.debug(f'\tIntensity = {abs_intensity}')
+        logging.debug(f'\tIntensity Difference = {difference:.4f}%')
 
         return [lca, lcb, abs_intensity, difference]
 
@@ -78,8 +77,7 @@ class BrentOptimizer:
         optimal = []
 
         while not converged:
-            if self.calib.print_details:
-                print(f'iteration: {iteration}')
+            logging.debug(f'iteration: {iteration}')
 
             lca_lower_bound, lca_upper_bound,\
             lcb_lower_bound, lcb_upper_bound = self._check_bounds(lca_bound, lcb_bound)
@@ -144,15 +142,13 @@ class BrentOptimizer:
 
             # if loop preforms more than n_iter iterations, stop
             elif iteration >= n_iter:
-                if self.calib.print_details:
-                    print(f'Exceeded {n_iter} Iterations: Search discontinuing')
+                logging.debug(f'Exceeded {n_iter} Iterations: Search discontinuing')
 
                 converged = True
                 optimal = np.asarray(optimal)
                 opt = np.where(optimal == np.min(np.abs(optimal[:, 0])))[0]
 
-                if self.calib.print_details:
-                    print(f'Lowest Inten: {optimal[opt, 0]}, lca = {optimal[opt, 1]}, lcb = {optimal[opt, 2]}')
+                logging.debug(f'Lowest Inten: {optimal[opt, 0]}, lca = {optimal[opt, 1]}, lcb = {optimal[opt, 2]}')
 
                 return optimal[-1, 0], optimal[-1, 1], optimal[-1, 2]
 
@@ -189,12 +185,11 @@ class MinScalarOptimizer:
         abs_intensity = res.fun + reference
         difference = res.fun / reference * 100
 
-        if self.calib.print_details:
-            print('\tOptimize lca ...')
-            print(f"\tlca = {lca:.5f}")
-            print(f"\tlcb = {lcb:.5f}")
-            print(f'\tIntensity = {abs_intensity}')
-            print(f'\tIntensity Difference = {difference:.4f}%')
+        logging.debug('\tOptimize lca ...')
+        logging.debug(f"\tlca = {lca:.5f}")
+        logging.debug(f"\tlcb = {lcb:.5f}")
+        logging.debug(f'\tIntensity = {abs_intensity}')
+        logging.debug(f'\tIntensity Difference = {difference:.4f}%')
 
         return [lca, lcb, abs_intensity, difference]
 
@@ -208,12 +203,11 @@ class MinScalarOptimizer:
         abs_intensity = res.fun + reference
         difference = res.fun / reference * 100
 
-        if self.calib.print_details:
-            print('\tOptimize lcb ...')
-            print(f"\tlca = {lca:.5f}")
-            print(f"\tlcb = {lcb:.5f}")
-            print(f'\tIntensity = {abs_intensity}')
-            print(f'\tIntensity Difference = {difference:.4f}%')
+        logging.debug('\tOptimize lcb ...')
+        logging.debug(f"\tlca = {lca:.5f}")
+        logging.debug(f"\tlcb = {lcb:.5f}")
+        logging.debug(f'\tIntensity = {abs_intensity}')
+        logging.debug(f'\tIntensity Difference = {difference:.4f}%')
 
         return [lca, lcb, abs_intensity, difference]
 
@@ -240,8 +234,7 @@ class MinScalarOptimizer:
 
             # ============BEGIN FINE SEARCH=================
 
-            if self.calib.print_details:
-                print(f'\n\tBeginning Finer Search\n')
+            logging.debug(f'\n\tBeginning Finer Search\n')
             lca_lower_bound = results_lcb[0] - .01
             lca_upper_bound = results_lcb[0] + .01
             lcb_lower_bound = results_lcb[1] - .01
@@ -264,7 +257,6 @@ class MinScalarOptimizer:
             # Sometimes this optimization can drift away from the minimum,
             # this makes sure we use the lowest iteration
             optimal = np.asarray(optimal)
-            #todo: figure out where the extra optimal[opt][0] indexing comes from
             opt = np.where(optimal == np.min(optimal[:][2]))[0]
 
             lca = float(optimal[opt][0][0])
@@ -346,14 +338,12 @@ def optimize_grid(calib, a_min, a_max, b_min, b_max, step):
                 better_lca = lca
                 better_lcb = lcb
                 min_int = current_int
-                if calib.print_details:
-                    print("update (%f, %f, %f)" % (min_int, better_lca, better_lcb))
+                logging.debug("update (%f, %f, %f)" % (min_int, better_lca, better_lcb))
 
-    if calib.print_details:
-        print("coarse search done")
-        print("better lca = " + str(better_lca))
-        print("better lcb = " + str(better_lcb))
-        print("better int = " + str(min_int))
+    logging.debug("coarse search done")
+    logging.debug("better lca = " + str(better_lca))
+    logging.debug("better lcb = " + str(better_lcb))
+    logging.debug("better int = " + str(min_int))
 
     best_lca = better_lca
     best_lcb = better_lcb

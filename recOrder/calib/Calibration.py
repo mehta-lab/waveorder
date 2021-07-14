@@ -11,9 +11,6 @@ import os
 import logging
 
 #todo: save metadata without overwriting existing file
-#todo: clean up plotting
-#todo: enable logging
-
 
 #TODO: Docstrings
 class QLIPP_Calibration():
@@ -27,7 +24,6 @@ class QLIPP_Calibration():
                   'State4': 'Pal. elem. 04; enter 0 to define; 1 to activate',
                   }
 
-    #todo: include wavelength, full_fov, etc. in init?
     def __init__(self, mmc, mm, optimization='min_scalar', print_details=True):
 
         # Micromanager API
@@ -136,7 +132,6 @@ class QLIPP_Calibration():
         else:
             mean = np.mean(data)
             logging.debug(str(mean))
-            # TODO: Change to just plotting mean?
             self.intensity_emitter.emit(mean)
             self.inten.append(mean - reference)
 
@@ -214,15 +209,6 @@ class QLIPP_Calibration():
         logging.debug("LCB State0 (Extinction) = " + str(lcb))
         logging.info("Intensity (Extinction) = " + str(I_ext))
         logging.debug("Intensity (Extinction) = " + str(I_ext))
-
-
-        # plot optimization details
-        # if self.print_details:
-        #     I = np.copy(self.inten)
-        #     plt.plot(I)
-        #     plt.title('Intensity - Extinction')
-        #     plt.ylabel('I - Ref')
-        #     plt.show()
 
         logging.debug("--------done--------")
         logging.info("--------done--------")
@@ -335,8 +321,6 @@ class QLIPP_Calibration():
         # Print comparison of target swing, target ratio
         # Ratio determines the orientation of the elliptical state
         # should be close to target.  Swing will vary to optimize ellipticity
-        #todo: remove targets from detailed print?
-        # We know that the theoretical targets do not reflect true LC state accurate
         logging.debug(f'ratio: swing_LCB / swing_LCA = {(self.lcb_ext - self.lcb_60) / (self.lca_ext - self.lca_60):.4f} \
               | target ratio: {-self.ratio}')
         logging.debug(f'total swing = {self.swing60:.4f} | target = {swing_ell}')
@@ -428,7 +412,6 @@ class QLIPP_Calibration():
         # Print comparison of target swing, target ratio
         # Ratio determines the orientation of the elliptical state
         # should be close to target.  Swing will vary to optimize ellipticity
-        #todo: remove targets?
         logging.debug(f'ratio: swing_LCB / swing_LCA = {(self.lcb_ext - self.lcb_120) / (self.lca_ext - self.lca_120):.4f}\
              | target ratio: {self.ratio}')
         logging.debug(f'total swing = {self.swing120:.4f} | target = {swing_ell}')
