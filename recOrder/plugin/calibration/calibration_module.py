@@ -163,7 +163,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot(bool)
     def run_calibration(self):
-        print('Starting Calibration')
+        logging.info('Starting Calibration')
         self.ui.progress_bar.setValue(0)
         self.calib = QLIPP_Calibration(self.mmc, self.mm)
         self.calib.swing = self.swing
@@ -295,19 +295,17 @@ class Worker(QtCore.QObject):
         # Check if change of ROI is needed
         if self.calib_window.use_cropped_roi:
             rect = self.calib.check_and_get_roi()
-            cont = self.calib.display_and_check_ROI(rect)
-
-            if not cont:
-                print('\n---------Stopping Calibration---------\n')
-                return
-            else:
-                self.calib_window.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
-                self.calib.ROI = (rect.x, rect.y, rect.width, rect.height)
+            # cont = self.calib.display_and_check_ROI(rect)
+            self.calib_window.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
+            self.calib.ROI = (rect.x, rect.y, rect.width, rect.height)
 
         # Calculate Blacklevel
-        print('Calculating Blacklevel ...')
+        logging.info('Calculating Blacklevel ...')
+        logging.debug('Calculating Blacklevel ...')
         self.calib.calc_blacklevel()
-        print(f'Blacklevel: {self.calib.I_Black}\n')
+        logging.info(f'Blacklevel: {self.calib.I_Black}\n')
+        logging.debug(f'Blacklevel: {self.calib.I_Black}\n')
+
         self.progress_update.emit(10)
 
         # Set LC Wavelength:
@@ -328,8 +326,10 @@ class Worker(QtCore.QObject):
         self.extinction_update.emit(str(extinction_ratio))
         self.progress_update.emit(100)
 
-        print("\n=======Finished Calibration=======\n")
-        print(f"EXTINCTION = {extinction_ratio}")
+        logging.info("\n=======Finished Calibration=======\n")
+        logging.info(f"EXTINCTION = {extinction_ratio}")
+        logging.debug("\n=======Finished Calibration=======\n")
+        logging.debug(f"EXTINCTION = {extinction_ratio}")
         self.finish.emit()
 
     def _calibrate_4state(self):

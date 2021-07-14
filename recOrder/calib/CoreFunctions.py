@@ -1,4 +1,5 @@
 import time
+import logging
 import numpy as np
 
 def snap_image(mmc):
@@ -46,9 +47,8 @@ def define_lc_state(mmc, state, lca, lcb, PROPERTIES: dict):
     set_lc(mmc, lca, PROPERTIES['LCA'])
     set_lc(mmc, lcb, PROPERTIES['LCB'])
 
-    print("setting LCA = "+str(lca))
-    print("setting LCB = "+str(lcb))
-    print("\n")
+    logging.debug("setting LCA = "+str(lca))
+    logging.debug("setting LCB = "+str(lcb))
 
     mmc.setProperty('MeadowlarkLcOpenSource', PROPERTIES[state], 0)
     mmc.waitForDevice('MeadowlarkLcOpenSource')

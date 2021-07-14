@@ -8,6 +8,7 @@ from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer, opti
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import json
 import os
+import logging
 
 #todo: save metadata without overwriting existing file
 #todo: clean up plotting
@@ -90,7 +91,7 @@ class QLIPP_Calibration():
 
     def opt_lc_simul(self, x, reference, normalize=False):
 
-        print(f'LCA, LCB: {x[0], x[1]}')
+        logging.debug(f'LCA, LCB: {x[0], x[1]}')
         set_lc(self.mmc, x[0], self.PROPERTIES['LCA'])
         set_lc(self.mmc, x[1], self.PROPERTIES['LCB'])
 
@@ -128,12 +129,13 @@ class QLIPP_Calibration():
             val = (np.mean(data) - min_) / (max_ - min_)
             ref = (reference - min_) / (max_ - min_)
 
-            print(f'LC-Value: {x}')
-            print(f'F-Value:{val - ref}\n')
+            logging.debug(f'LC-Value: {x}')
+            logging.debug(f'F-Value:{val - ref}\n')
             return val - ref
 
         else:
             mean = np.mean(data)
+            logging.debug(str(mean))
             # TODO: Change to just plotting mean?
             self.intensity_emitter.emit(mean)
             self.inten.append(mean - reference)
@@ -153,6 +155,7 @@ class QLIPP_Calibration():
 
         data = snap_image(self.mmc)
         mean = np.mean(data)
+        logging.debug(str(mean))
 
         # append to intensity array for plotting later
         self.intensity_emitter.emit(mean)
@@ -163,7 +166,8 @@ class QLIPP_Calibration():
     # ========== Optimization wrappers =============
     # ==============================================
     def opt_Iext(self):
-        print('Calibrating State0 (Extinction)...')
+        logging.info('Calibrating State0 (Extinction)...')
+        logging.debug('Calibrating State0 (Extinction)...')
 
         set_lc_state(self.mmc, 'State0')
         time.sleep(2)
@@ -172,26 +176,23 @@ class QLIPP_Calibration():
         # 0.01 < LCA < 0.5
         # 0.25 < LCB < 0.75
         step = 0.1
-        if self.print_details:
-            print(f"\n================================")
-            print(f"Starting first grid search, step = {step}")
-            print(f"================================")
+        logging.debug(f"================================")
+        logging.debug(f"Starting first grid search, step = {step}")
+        logging.debug(f"================================")
 
         best_lca, best_lcb, i_ext_ = optimize_grid(self, 0.01, 0.5, 0.25, 0.75, step)
 
-        if self.print_details:
-            print("grid search done")
-            print("lca = " + str(best_lca))
-            print("lcb = " + str(best_lcb))
-            print("intensity = " + str(i_ext_))
+        logging.debug("grid search done")
+        logging.debug("lca = " + str(best_lca))
+        logging.debug("lcb = " + str(best_lcb))
+        logging.debug("intensity = " + str(i_ext_))
 
         set_lc(self.mmc, best_lca, self.PROPERTIES['LCA'])
         set_lc(self.mmc, best_lcb, self.PROPERTIES['LCB'])
 
-        if self.print_details:
-            print(f"\n================================")
-            print(f"Starting fine search")
-            print(f"================================")
+        logging.debug(f"================================")
+        logging.debug(f"Starting fine search")
+        logging.debug(f"================================")
 
         # Perform brent optimization around results of 2nd grid search
         # threshold not very necessary here as intensity value will
@@ -206,12 +207,14 @@ class QLIPP_Calibration():
         self.lcb_ext = lcb
         self.I_Ext = I_ext
 
-        if self.print_details:
-            print("fine search done")
+        logging.debug("fine search done")
+        logging.info("LCA State0 (Extinction) = " + str(lca))
+        logging.debug("LCA State0 (Extinction) = " + str(lca))
+        logging.info("LCB State0 (Extinction) = " + str(lcb))
+        logging.debug("LCB State0 (Extinction) = " + str(lcb))
+        logging.info("Intensity (Extinction) = " + str(I_ext))
+        logging.debug("Intensity (Extinction) = " + str(I_ext))
 
-        print("LCA Exinction = " + str(lca))
-        print("LCB Exintction = " + str(lcb))
-        print("Intensity = " + str(I_ext))
 
         # plot optimization details
         # if self.print_details:
@@ -221,7 +224,9 @@ class QLIPP_Calibration():
         #     plt.ylabel('I - Ref')
         #     plt.show()
 
-        print("--------done--------\n")
+        logging.debug("--------done--------")
+        logging.info("--------done--------")
+
 
     def opt_I0(self):
         """
@@ -231,7 +236,8 @@ class QLIPP_Calibration():
             mean of image
         """
 
-        print('\nCalibrating State1 (I0)...')
+        logging.info('Calibrating State1 (I0)...')
+        logging.debug('Calibrating State1 (I0)...')
 
         define_lc_state(self.mmc, 'State1', self.lca_ext - self.swing, self.lcb_ext, self.PROPERTIES)
 
@@ -243,9 +249,14 @@ class QLIPP_Calibration():
         self.I_Elliptical = ref
         self.swing0 = np.sqrt((self.lcb_0 - self.lcb_ext) ** 2 + (self.lca_0 - self.lca_ext) ** 2)
 
-        print(f'Intensity = {ref}')
-
-        print("--------done--------")
+        logging.info("LCA State1 (I0) = " + str(self.lca_0))
+        logging.debug("LCA State1 (I0) = " + str(self.lca_0))
+        logging.info("LCB State1 (I0) = " + str(self.lcb_0))
+        logging.debug("LCB State1 (I0) = " + str(self.lcb_0))
+        logging.info(f'Intensity (I0) = {ref}')
+        logging.debug(f'Intensity (I0) = {ref}')
+        logging.info("--------done--------")
+        logging.debug("--------done--------")
 
     def opt_I45(self, lca_bound, lcb_bound):
         """
@@ -262,7 +273,8 @@ class QLIPP_Calibration():
 
         """
         self.inten = []
-        print('\nCalibrating State2 (I45)...')
+        logging.info('Calibrating State2 (I45)...')
+        logging.debug('Calibrating State2 (I45)...')
 
         set_lc(self.mmc, self.lca_ext, self.PROPERTIES['LCA'])
         set_lc(self.mmc, self.lcb_ext - self.swing, self.PROPERTIES['LCB'])
@@ -274,14 +286,14 @@ class QLIPP_Calibration():
 
         self.swing45 = np.sqrt((self.lcb_45 - self.lcb_ext) ** 2 + (self.lca_45 - self.lca_ext) ** 2)
 
-        # if self.print_details:
-        #     I = np.copy(self.inten)
-        #     plt.plot(I)
-        #     plt.title('Intensity - State2')
-        #     plt.ylabel('I - Ref')
-        #     plt.show()
-
-        print("--------done--------")
+        logging.info("LCA State2 (I45) = " + str(self.lca_45))
+        logging.debug("LCA State2 (I45) = " + str(self.lca_45))
+        logging.info("LCB State2 (I45) = " + str(self.lcb_45))
+        logging.debug("LCB State2 (I45) = " + str(self.lcb_45))
+        logging.info(f'Intensity (I45) = {intensity}')
+        logging.debug(f'Intensity (I45) = {intensity}')
+        logging.info("--------done--------")
+        logging.debug("--------done--------")
 
     def opt_I60(self, lca_bound, lcb_bound):
         """
@@ -299,7 +311,8 @@ class QLIPP_Calibration():
         """
         self.inten = []
 
-        print('\nCalibrating State2 (I60)...')
+        logging.info('Calibrating State2 (I60)...')
+        logging.debug('Calibrating State2 (I60)...')
 
         # Calculate Initial Swing for initial guess to optimize around
         # Based on ratio calculated from ellpiticity/orientation of LC simulation
@@ -324,18 +337,18 @@ class QLIPP_Calibration():
         # should be close to target.  Swing will vary to optimize ellipticity
         #todo: remove targets from detailed print?
         # We know that the theoretical targets do not reflect true LC state accurate
-        if self.print_details:
-            print(f'ratio: swing_LCB / swing_LCA = {(self.lcb_ext - self.lcb_60) / (self.lca_ext - self.lca_60):.4f} \
-                  | target ratio: {-self.ratio}')
-            print(f'total swing = {self.swing60:.4f} | target = {swing_ell}')
+        logging.debug(f'ratio: swing_LCB / swing_LCA = {(self.lcb_ext - self.lcb_60) / (self.lca_ext - self.lca_60):.4f} \
+              | target ratio: {-self.ratio}')
+        logging.debug(f'total swing = {self.swing60:.4f} | target = {swing_ell}')
 
-            # I = np.copy(self.inten)
-            # plt.plot(I)
-            # plt.title('Intensity - State60')
-            # plt.ylabel('I - Ref')
-            # plt.show()
-
-        print("--------done--------")
+        logging.info("LCA State2 (I60) = " + str(self.lca_60))
+        logging.debug("LCA State2 (I60) = " + str(self.lca_60))
+        logging.info("LCB State2 (I60) = " + str(self.lcb_60))
+        logging.debug("LCB State2 (I60) = " + str(self.lcb_60))
+        logging.info(f'Intensity (I60) = {intensity}')
+        logging.debug(f'Intensity (I60) = {intensity}')
+        logging.info("--------done--------")
+        logging.debug("--------done--------")
 
     def opt_I90(self, lca_bound, lcb_bound):
         """
@@ -351,7 +364,9 @@ class QLIPP_Calibration():
         intensity value at optimized state
 
         """
-        print('\nCalibrating State3 (I90)...')
+        logging.info('Calibrating State3 (I90)...')
+        logging.debug('Calibrating State3 (I90)...')
+
         self.inten = []
 
         set_lc(self.mmc, self.lca_ext + self.swing, self.PROPERTIES['LCA'])
@@ -365,14 +380,14 @@ class QLIPP_Calibration():
 
         self.swing90 = np.sqrt((self.lcb_90 - self.lcb_ext) ** 2 + (self.lca_90 - self.lca_ext) ** 2)
 
-        # if self.print_details:
-        #     I = np.copy(self.inten)
-        #     plt.plot(I)
-        #     plt.title('Intensity - State3')
-        #     plt.ylabel('I - Ref')
-        #     plt.show()
-
-        print("--------done--------")
+        logging.info("LCA State3 (I90) = " + str(self.lca_90))
+        logging.debug("LCA State3 (I90) = " + str(self.lca_90))
+        logging.info("LCB State3 (I90) = " + str(self.lcb_90))
+        logging.debug("LCB State3 (I90) = " + str(self.lcb_90))
+        logging.info(f'Intensity (I90) = {intensity}')
+        logging.debug(f'Intensity (I90) = {intensity}')
+        logging.info("--------done--------")
+        logging.debug("--------done--------")
 
     def opt_I120(self, lca_bound, lcb_bound):
         """
@@ -389,8 +404,8 @@ class QLIPP_Calibration():
         intensity value at optimized state
 
         """
-        print('\nCalibrating State3 (I120)...\n')
-        self.inten = []
+        logging.info('Calibrating State3 (I120)...')
+        logging.debug('Calibrating State3 (I120)...')
 
         # Calculate Initial Swing for initial guess to optimize around
         # Based on ratio calculated from ellpiticity/orientation of LC simulation
@@ -414,18 +429,17 @@ class QLIPP_Calibration():
         # Ratio determines the orientation of the elliptical state
         # should be close to target.  Swing will vary to optimize ellipticity
         #todo: remove targets?
-        if self.print_details:
-            print(f'ratio: swing_LCB / swing_LCA = {(self.lcb_ext - self.lcb_120) / (self.lca_ext - self.lca_120):.4f}\
+        logging.debug(f'ratio: swing_LCB / swing_LCA = {(self.lcb_ext - self.lcb_120) / (self.lca_ext - self.lca_120):.4f}\
              | target ratio: {self.ratio}')
-            print(f'total swing = {self.swing120:.4f} | target = {swing_ell}')
-
-            # I = np.copy(self.inten)
-            # plt.plot(I)
-            # plt.title('Intensity - State120')
-            # plt.ylabel('I - Ref')
-            # plt.show()
-
-        print("--------done--------")
+        logging.debug(f'total swing = {self.swing120:.4f} | target = {swing_ell}')
+        logging.info("LCA State3 (I120) = " + str(self.lca_120))
+        logging.debug("LCA State3 (I120) = " + str(self.lca_120))
+        logging.info("LCB State3 (I120) = " + str(self.lcb_120))
+        logging.debug("LCB State3 (I120) = " + str(self.lcb_120))
+        logging.info(f'Intensity (I120) = {intensity}')
+        logging.debug(f'Intensity (I120) = {intensity}')
+        logging.info("--------done--------")
+        logging.debug("--------done--------")
 
     def opt_I135(self, lca_bound, lcb_bound):
         """
@@ -441,7 +455,7 @@ class QLIPP_Calibration():
         intensity value at optimized state
 
         """
-        print('\nCalibrating State4 (I135)...')
+        print('Calibrating State4 (I135)...')
         self.inten = []
 
         set_lc(self.mmc, self.lca_ext, self.PROPERTIES['LCA'])
@@ -455,15 +469,14 @@ class QLIPP_Calibration():
 
         self.swing135 = np.sqrt((self.lcb_135 - self.lcb_ext) ** 2 + (self.lca_135 - self.lca_ext) ** 2)
 
-        # plot details of brent optimization
-        # if self.print_details:
-        #     I = np.copy(self.inten)
-        #     plt.plot(I)
-        #     plt.title('Intensity - State4')
-        #     plt.ylabel('I - Ref')
-        #     plt.show()
-
-        print("--------done--------")
+        logging.info("LCA State4 (I135) = " + str(self.lca_135))
+        logging.debug("LCA State4 (I135) = " + str(self.lca_135))
+        logging.info("LCB State4 (I135) = " + str(self.lcb_135))
+        logging.debug("LCB State4 (I135) = " + str(self.lcb_135))
+        logging.info(f'Intensity (I135) = {intensity}')
+        logging.debug(f'Intensity (I135) = {intensity}')
+        logging.info("--------done--------")
+        logging.debug("--------done--------")
 
     def calc_blacklevel(self):
 
@@ -572,9 +585,9 @@ class QLIPP_Calibration():
                 self.ROI = (rect.x, rect.y, rect.width, rect.height)
 
         # Calculate Blacklevel
-        print('Calculating Blacklevel ...')
+        logging.debug('Calculating Blacklevel ...')
         self.I_Black = self.calc_blacklevel()
-        print(f'Blacklevel: {self.I_Black}\n')
+        logging.debug(f'Blacklevel: {self.I_Black}\n')
 
         # Set LC Wavelength:
         self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
@@ -595,8 +608,10 @@ class QLIPP_Calibration():
         if use_full_FOV is False:
             self.mmc.clearROI()
 
-        print("\n=======Finished Calibration=======\n")
-        print(f"EXTINCTION = {self.extinction_ratio}")
+        logging.info("\n=======Finished Calibration=======\n")
+        logging.info(f"EXTINCTION = {self.extinction_ratio}")
+        logging.debug("\n=======Finished Calibration=======\n")
+        logging.debug(f"EXTINCTION = {self.extinction_ratio}")
 
     def run_4state_calibration(self, param):
         """
