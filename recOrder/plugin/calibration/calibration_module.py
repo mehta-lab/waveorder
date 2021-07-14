@@ -3,12 +3,15 @@ from pycromanager import Bridge
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QThread
 from qtpy.QtWidgets import QWidget, QFileDialog
-from recOrder.plugin.qtdesigner import recOrder_calibration_v4
+from recOrder.plugin.qtdesigner import recOrder_calibration_v4, recOrder_calibration_v5
+from recOrder.compute.qlipp_compute import initialize_reconstructor, \
+    reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
 from pathlib import Path
 from napari import Viewer
 from recOrder.calib.CoreFunctions import snap_image, set_lc_state
 import os
 import numpy as np
+import logging
 
 
 class recOrder_Calibration(QWidget, QtCore.QObject):
@@ -40,12 +43,18 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.chb_use_roi.stateChanged[int].connect(self.enter_use_cropped_roi)
         self.ui.qbutton_calibrate.clicked[bool].connect(self.run_calibration)
         self.ui.qbutton_stop_calibrate.clicked[bool].connect(self.stop_calibration)
-        self.ui.qbutton_calc_extinction.clicked[bool].connect(self.calculate_extinction)
+        self.ui.qbutton_calc_extinction.clicked[bool].connect(self.calc_extinction)
 
         # Capture Background
         self.ui.le_bg_folder.editingFinished.connect(self.enter_bg_folder_name)
         self.ui.le_n_avg.editingFinished.connect(self.enter_n_avg)
         self.ui.qbutton_capture_bg.clicked[bool].connect(self.capture_bg)
+
+        # Logging
+        log_box = QtLogger(self.ui.te_log)
+        log_box.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        logging.getLogger().addHandler(log_box)
+        logging.getLogger().setLevel(logging.INFO)
 
         # Emitters
         # =================================#
@@ -195,11 +204,31 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot(bool)
     def capture_bg(self):
-        imgs = self.calib.capture_bg(self.n_avg)
+        bg_path = os.path.join(self.directory, self.ui.le_bg_folder.text())
+        if not os.path.exists(bg_path):
+            os.mkdir(bg_path)
+        imgs = self.calib.capture_bg(self.n_avg, bg_path)
+        img_dim = (imgs.shape[-2], imgs.shape[-1])
+        N_channel = 4 if self.calib_scheme == '4-State' else 5
+
+        recon = initialize_reconstructor(img_dim, self.wavelength, self.swing, N_channel, True,
+                                         None, None, None, None, None, None, None, bg_option='None')
+
+        stokes = reconstruct_qlipp_stokes(imgs, recon, None)
+        birefringence = reconstruct_qlipp_birefringence(stokes, recon)
+        retardance = birefringence[0] / (2 * np.pi) * self.wavelength
+
         if self.viewer.layers['Background Images']:
             self.viewer.layers['Background Images'].data = imgs
+        elif self.viewer.layers['Background Retardance']:
+            self.viewer.layers['Background Retardance'].data = retardance
+        elif self.viewer.layers['Background Orientation']:
+            self.viewer.layers['Background Orientation'].data = birefringence[1]
         else:
             self.viewer.add_image(imgs, name='Background Images', colormap='gray')
+            self.viewer.add_image(retardance, name='Background Retardance', colormap='gray')
+            self.viewer.add_image(birefringence[1], name='Background Orientation', colormap='gray')
+
 
     @pyqtSlot()
     def enter_bg_folder_name(self):
@@ -326,3 +355,14 @@ class Worker(QtCore.QObject):
         self.progress_update.emit(75)
         self.calib.opt_I135(0.05, 0.05)
         self.progress_update.emit(85)
+
+
+class QtLogger(logging.Handler):
+
+    def __init__(self, widget):
+        super().__init__()
+        self.widget = widget
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.widget.appendPlainText(msg)

@@ -108,7 +108,7 @@ def initialize_reconstructor(image_dim, wavelength, swing, N_channel, anistropy_
 def reconstruct_qlipp_stokes(data, recon, bg_stokes):
     """
     From intensity data, use the waveorder.waveorder_microscopy (recon) to build a stokes array
-        if recon background correction flag is selected, will also perform backgroudn correction
+        if recon background correction flag is selected, will also perform background correction
 
     Parameters
     ----------
@@ -174,7 +174,6 @@ def reconstruct_qlipp_birefringence(stokes, recon):
 
     for z in range(slices):
         recon_data[z, :, :, :] = recon.Polarization_recon(stokes[z] if slices != 1 else stokes)
-
 
     return np.transpose(recon_data, (1,0,2,3))
 

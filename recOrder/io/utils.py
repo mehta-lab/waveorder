@@ -3,16 +3,6 @@ import os
 import tifffile as tiff
 import numpy as np
 
-def gather_sub_dir(self, dir_):
-    files = glob.glob(dir_ + '*')
-
-    dirs = []
-    for direc in files:
-        if os.path.isdir(direc):
-            dirs.append(direc)
-
-    return dirs
-
 def load_bg(bg_path, height, width, ROI=None):
     """
     Parameters
