@@ -54,11 +54,11 @@ class qlipp_pipeline(PipelineInterface):
         self.calib_meta = json.load(open(self.config.calibration_metadata)) \
             if self.config.calibration_metadata else None
         #todo: re-structure reading calib metadata when finalized
-        self.calib_scheme = self.calib_meta['Summary']['~ Acquired Using'] if self.calib_meta \
-            else '4-Frame Extinction'
+        self.calib_scheme = self.calib_meta['Summary']['Acquired Using'] if self.calib_meta \
+            else '4-Frame'
         self.bg_path = self.config.background if self.config.background else None
         #todo: fix typo
-        self.bg_roi = self.calib_meta['Summary']['ROI Used (x , y, width, height)'] if self.calib_meta else None
+        self.bg_roi = self.calib_meta['Summary']['ROI Used (x, y, width, height)'] if self.calib_meta else None
 
         # identify the image indicies corresponding to each polarization orientation
         self.s0_idx, self.s1_idx, \
@@ -76,7 +76,7 @@ class qlipp_pipeline(PipelineInterface):
 
         # Initialize Reconstructor
         self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
-                                                 self.calib_meta['Summary']['~ Swing (fraction)'],
+                                                 self.calib_meta['Summary']['Swing (fraction)'],
                                                  len(self.calib_meta['Summary']['ChNames']),
                                                  self.config.qlipp_birefringence_only,
                                                  self.config.NA_objective, self.config.NA_condenser,
@@ -115,7 +115,7 @@ class qlipp_pipeline(PipelineInterface):
 
         """
 
-        if self.calib_scheme == '4-Frame Extinction':
+        if self.calib_scheme == '4-Frame':
             LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
 
             LF_array[0] = data[self.s0_idx]
@@ -201,7 +201,6 @@ class qlipp_pipeline(PipelineInterface):
         slice_ = self.focus_slice if self.mode == '2D' else slice(None)
         stokes = np.transpose(stokes, (3, 0, 1, 2)) if len(stokes.shape) == 4 else stokes
         fluor_idx = 0
-
 
         for chan in range(len(self.output_channels)):
             if 'Retardance' in self.output_channels[chan]:
