@@ -666,9 +666,9 @@ class QLIPP_Calibration():
         return (1 / np.sin(np.pi * swing) ** 2) * \
                (intensity_elliptical - black_level) / (intensity_extinction - black_level)
 
-    def calc_inst_matrix(self, n_states):
+    def calc_inst_matrix(self):
 
-        if n_states == 4:
+        if self.calib_scheme == '4-State':
             chi = self.swing
             inst_mat = np.array([[1, 0, 0, -1],
                                  [1, np.sin(2 * np.pi * chi), 0, -np.cos(2 * np.pi * chi)],
@@ -679,7 +679,7 @@ class QLIPP_Calibration():
 
             return inst_mat
 
-        if n_states == 5:
+        if self.calib_scheme == '5-State':
             chi = self.swing * 2 * np.pi
 
             inst_mat = np.array([[1, 0, 0, -1],
@@ -690,7 +690,7 @@ class QLIPP_Calibration():
 
             return inst_mat
 
-    def write_metadata(self, n_states):
+    def write_metadata(self):
         """ Function to write a metadata file for calibration.
             This follows the PolAcqu metadata file format and is compatible with
             reconstruct-order
@@ -701,7 +701,7 @@ class QLIPP_Calibration():
             Directory to save metadata file.
 
         """
-        inst_mat = self.calc_inst_matrix(n_states)
+        inst_mat = self.calc_inst_matrix()
         inst_mat = inst_mat.tolist()
 
         if self.calib_scheme == '4-State':
@@ -827,6 +827,6 @@ class QLIPP_Calibration():
             tiff.imsave(os.path.join(directory, 'State4.tif'), state4)
             imgs.append(state4)
 
-        self._plot_bg_images(np.asarray(imgs))
+        # self._plot_bg_images(np.asarray(imgs))
 
         return np.asarray(imgs)

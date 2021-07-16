@@ -159,7 +159,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot()
     def enter_n_avg(self):
-        self.n_avg = self.ui.le_n_avg.text()
+        self.n_avg = int(self.ui.le_n_avg.text())
 
     @pyqtSlot(bool)
     def run_calibration(self):
@@ -186,57 +186,42 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
             lambda: self.ui.qbutton_calibrate.setEnabled(True)
         )
 
+    #todo: Figure out how to kill thread
     @pyqtSlot(bool)
     def stop_calibration(self):
         #todo: add try, except
-        self.worker.stop()
-        self.worker.killthread()
+        self.thread.threadactive=False
+        self.thread.wait()
+        self.thread.stop()
         self.worker.finished.emit()
 
     @pyqtSlot(bool)
     def calc_extinction(self):
-        set_lc_state('State0')
+        set_lc_state(self.mmc, 'State0')
         extinction = np.mean(snap_image(self.mmc))
-        set_lc_state('State1')
+        set_lc_state(self.mmc, 'State1')
         state1 = np.mean(snap_image(self.mmc))
         extinction = self.calib.calculate_extinction(self.swing, self.calib.I_Black, extinction, state1)
         self.ui.le_extinction.setText(str(extinction))
 
     @pyqtSlot(bool)
     def capture_bg(self):
-        bg_path = os.path.join(self.directory, self.ui.le_bg_folder.text())
-        if not os.path.exists(bg_path):
-            os.mkdir(bg_path)
-        imgs = self.calib.capture_bg(self.n_avg, bg_path)
-        img_dim = (imgs.shape[-2], imgs.shape[-1])
-        N_channel = 4 if self.calib_scheme == '4-State' else 5
-
-        recon = initialize_reconstructor(img_dim, self.wavelength, self.swing, N_channel, True,
-                                         None, None, None, None, None, None, None, bg_option='None')
-
-        stokes = reconstruct_qlipp_stokes(imgs, recon, None)
-        birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-        retardance = birefringence[0] / (2 * np.pi) * self.wavelength
-
-        if self.viewer.layers['Background Images']:
-            self.viewer.layers['Background Images'].data = imgs
-        elif self.viewer.layers['Background Retardance']:
-            self.viewer.layers['Background Retardance'].data = retardance
-        elif self.viewer.layers['Background Orientation']:
-            self.viewer.layers['Background Orientation'].data = birefringence[1]
-        else:
-            self.viewer.add_image(imgs, name='Background Images', colormap='gray')
-            self.viewer.add_image(retardance, name='Background Retardance', colormap='gray')
-            self.viewer.add_image(birefringence[1], name='Background Orientation', colormap='gray')
-
+        self.thread = QThread()
+        self.worker = Worker(self, self.calib)
+        self.worker.moveToThread(self.thread)
+        self.thread.started.connect(self.worker.capture_bg)
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.thread.start()
+        self.ui.qbutton_capture_bg.setEnabled(False)
+        self.thread.finished.connect(
+            lambda: self.ui.qbutton_capture_bg.setEnabled(True)
+        )
 
     @pyqtSlot()
     def enter_bg_folder_name(self):
         self.bg_folder_name = self.ui.le_bg_folder.text()
-
-    @pyqtSlot()
-    def enter_bg_folder_name(self):
-        self.n_avg = self.ui.le_n_avg.text()
 
     def _open_file_dialog(self, default_path):
         return self._open_dialog("select a directory",
@@ -251,17 +236,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
                                                 ref,
                                                 options=options)
         return path
-
-    @pyqtSlot(bool)
-    def plot(self):
-        print('here')
-        x = range(0, 10)
-        y = range(0, 20, 2)
-
-        self.ui.plot_widget.plot(x, y)
-        self.ui.plot_widget.getPlotItem().autoRange()
-        self.ui.te_log.appendPlainText('')
-
 
 class Worker(QtCore.QObject):
 
@@ -314,23 +288,54 @@ class Worker(QtCore.QObject):
         # Optimize States
         self._calibrate_4state() if self.calib_window.calib_scheme == '4-State' else self._calibrate_5state()
 
-        # Write Metadata
-        self.calib.write_metadata()
-
         # Return ROI to full FOV
         if self.calib_window.use_cropped_roi:
             self.calib_window.mmc.clearROI()
 
         # Calculate Extinction
-        extinction_ratio = self.calculate_extinction()
+        extinction_ratio = self.calib.calculate_extinction(self.calib.swing, self.calib.I_Black, self.calib.I_Ext,
+                                                           self.calib.I_Elliptical)
+        self.calib.extinction_ratio = extinction_ratio
         self.extinction_update.emit(str(extinction_ratio))
+
+        # Write Metadata
+        self.calib.write_metadata()
         self.progress_update.emit(100)
 
         logging.info("\n=======Finished Calibration=======\n")
         logging.info(f"EXTINCTION = {extinction_ratio}")
         logging.debug("\n=======Finished Calibration=======\n")
         logging.debug(f"EXTINCTION = {extinction_ratio}")
-        self.finish.emit()
+        self.finished.emit()
+
+    def capture_bg(self):
+        bg_path = os.path.join(self.calib_window.directory, self.calib_window.ui.le_bg_folder.text())
+        if not os.path.exists(bg_path):
+            os.mkdir(bg_path)
+        imgs = self.calib.capture_bg(self.calib_window.n_avg, bg_path)
+        img_dim = (imgs.shape[-2], imgs.shape[-1])
+        N_channel = 4 if self.calib_window.calib_scheme == '4-State' else 5
+
+        recon = initialize_reconstructor(img_dim, self.calib_window.wavelength, self.calib_window.swing, N_channel,
+                                         True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
+
+        #todo: this will work once the new pipeline changes are approved in the recent PR
+        stokes = reconstruct_qlipp_stokes(imgs, recon, None)
+        birefringence = reconstruct_qlipp_birefringence(stokes, recon)
+        retardance = birefringence[0] / (2 * np.pi) * self.wavelength
+
+        if self.calib_window.viewer.layers['Background Images']:
+            self.calib_window.viewer.layers['Background Images'].data = imgs
+        elif self.calib_window.viewer.layers['Background Retardance']:
+            self.calib_window.viewer.layers['Background Retardance'].data = retardance
+        elif self.calib_window.viewer.layers['Background Orientation']:
+            self.calib_window.viewer.layers['Background Orientation'].data = birefringence[1]
+        else:
+            self.calib_window.viewer.add_image(imgs, name='Background Images', colormap='gray')
+            self.calib_window.viewer.add_image(retardance, name='Background Retardance', colormap='gray')
+            self.calib_window.viewer.add_image(birefringence[1], name='Background Orientation', colormap='gray')
+        self.finished.emit()
+
 
     def _calibrate_4state(self):
 
