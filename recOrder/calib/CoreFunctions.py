@@ -4,10 +4,15 @@ import numpy as np
 
 def snap_image(mmc):
 
-    #TODO: calculate mean in java before returning?
     mmc.snapImage()
 
     return mmc.getImage()
+
+def snap_and_avergae(snap_manager, display=True):
+
+    snap_manager.snap(display)
+
+    return snap_manager.getDisplay().getImagePlus().getStatistics().umean
 
 # =========== Methods to set/get LC properties ===============
 
