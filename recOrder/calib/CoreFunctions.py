@@ -8,9 +8,19 @@ def snap_image(mmc):
 
     return mmc.getImage()
 
-def snap_and_avergae(snap_manager, display=True):
+def snap_and_get_image(snap_manager):
+    snap_manager.snap(True)
+    time.sleep(0.1)
+    height = snap_manager.getDisplay().getDisplayedImages().get(0).getHeight()
+    width = snap_manager.getDisplay().getDisplayedImages().get(0).getWidth()
+    array = snap_manager.getDisplay().getDisplayedImages().get(0).getRawPixels()
+
+    return np.reshape(array, (height,width))
+
+def snap_and_average(snap_manager, display=True):
 
     snap_manager.snap(display)
+    time.sleep(0.1)
 
     return snap_manager.getDisplay().getImagePlus().getStatistics().umean
 

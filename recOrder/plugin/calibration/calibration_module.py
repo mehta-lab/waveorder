@@ -8,7 +8,7 @@ from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
 from pathlib import Path
 from napari import Viewer
-from recOrder.calib.CoreFunctions import snap_image, set_lc_state
+from recOrder.calib.CoreFunctions import snap_image, set_lc_state, snap_and_average
 import os
 import numpy as np
 import logging
@@ -54,7 +54,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         log_box = QtLogger(self.ui.te_log)
         log_box.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         logging.getLogger().addHandler(log_box)
-        logging.getLogger().setLevel(logging.INFO)
+        logging.getLogger().setLevel(logging.DEBUG)
 
         # Emitters
         # =================================#
@@ -135,11 +135,11 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot()
     def enter_swing(self):
-        self.swing = self.ui.le_swing.text()
+        self.swing = float(self.ui.le_swing.text())
 
     @pyqtSlot()
     def enter_wavelength(self):
-        self.wavelength = self.ui.le_wavelength.text()
+        self.wavelength = int(self.ui.le_wavelength.text())
 
     @pyqtSlot()
     def enter_calib_scheme(self):
@@ -198,9 +198,9 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
     @pyqtSlot(bool)
     def calc_extinction(self):
         set_lc_state(self.mmc, 'State0')
-        extinction = np.mean(snap_image(self.mmc))
+        extinction = snap_and_average(self.calib.snap_manager)
         set_lc_state(self.mmc, 'State1')
-        state1 = np.mean(snap_image(self.mmc))
+        state1 = snap_and_average(self.calib.snap_manager)
         extinction = self.calib.calculate_extinction(self.swing, self.calib.I_Black, extinction, state1)
         self.ui.le_extinction.setText(str(extinction))
 
@@ -319,21 +319,22 @@ class Worker(QtCore.QObject):
         recon = initialize_reconstructor(img_dim, self.calib_window.wavelength, self.calib_window.swing, N_channel,
                                          True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
 
-        #todo: this will work once the new pipeline changes are approved in the recent PR
         stokes = reconstruct_qlipp_stokes(imgs, recon, None)
         birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-        retardance = birefringence[0] / (2 * np.pi) * self.wavelength
+        retardance = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
 
-        if self.calib_window.viewer.layers['Background Images']:
-            self.calib_window.viewer.layers['Background Images'].data = imgs
-        elif self.calib_window.viewer.layers['Background Retardance']:
-            self.calib_window.viewer.layers['Background Retardance'].data = retardance
-        elif self.calib_window.viewer.layers['Background Orientation']:
-            self.calib_window.viewer.layers['Background Orientation'].data = birefringence[1]
-        else:
-            self.calib_window.viewer.add_image(imgs, name='Background Images', colormap='gray')
-            self.calib_window.viewer.add_image(retardance, name='Background Retardance', colormap='gray')
-            self.calib_window.viewer.add_image(birefringence[1], name='Background Orientation', colormap='gray')
+        # if self.calib_window.viewer.layers['Background Images']:
+        #     self.calib_window.viewer.layers['Background Images'].data = imgs
+        # elif self.calib_window.viewer.layers['Background Retardance']:
+        #     self.calib_window.viewer.layers['Background Retardance'].data = retardance
+        # elif self.calib_window.viewer.layers['Background Orientation']:
+        #     self.calib_window.viewer.layers['Background Orientation'].data = birefringence[1]
+        # else:
+
+        #TODO: EMIT THESE IMAGES AND THEN PLOT OUTSIDE OF THREAD
+        self.calib_window.viewer.add_image(imgs, name='Background Images', colormap='gray')
+        self.calib_window.viewer.add_image(retardance, name='Background Retardance', colormap='gray')
+        self.calib_window.viewer.add_image(birefringence[1], name='Background Orientation', colormap='gray')
         self.finished.emit()
 
 

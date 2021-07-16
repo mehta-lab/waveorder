@@ -4,47 +4,34 @@ import numpy as np
 import time
 
 
-def initialize_reconstructor(image_dim, wavelength, swing, N_channel, anistropy_only, NA_obj, NA_illu, mag, N_slices,
-                             z_step, pad_z,pixel_size, bg_option='local_fit', n_media=1.0, mode='3D',
-                             use_gpu=False, gpu_id=0):
+def initialize_reconstructor(image_dim, wavelength, swing, N_channel, anistropy_only, NA_obj, NA_illu, mag, N_slices, z_step, pad_z,
+                             pixel_size, bg_option='local_fit', n_media=1.0, mode='3D', use_gpu=False, gpu_id=0):
     """
     Initialize the QLIPP reconstructor for downstream tasks
-
         Parameters
         ----------
-
             image_dim         : tuple
                                 (height, width) of images in pixels
-
             wavelength        : int
                                 wavelength of illumination in nm
-
             swing             : float
                                 swing used for calibration in waves
-
             N_channel         : int
                                 number of label-free channels used in acquisition
-
             anisotropy_only   : bool
                                 True if only want to process Ret, Ori, BF.  False if phase processing
-
             NA_obj            : float
                                 numerical aperture of the detection objective
             NA_illu           : float
                                 numerical aperture of the illumination condenser
-
             mag               : float
                                 magnification used for imaging (e.g. 20 for 20x)
-
             N_slices          : int
                                 number of slices in the z-stack
-
             z_step            : float
                                 z step size of the image space
-
             pad_z             : float
                                 how many padding slices to add for phase computation
-
             pixel_size        : float
                                 pixel size of the camera in um
             bg_option         : str
@@ -52,22 +39,16 @@ def initialize_reconstructor(image_dim, wavelength, swing, N_channel, anistropy_
                                 'local_fit' for estimating background with polynomial fit
                                 'None' for no BG correction
                                 'Global' for normal background subtraction with the provided background
-
             n_media           : float
                                 refractive index of the immersing media
-
             use_gpu           : bool
                                 option to use gpu or not
-
             gpu_id            : int
                                 number refering to which gpu will be used
-
-
         Returns
         -------
             reconstructor     : object
                                 reconstruction object initialized with reconstruction parameters
-
         """
 
     lambda_illu = wavelength / 1000
@@ -109,74 +90,56 @@ def initialize_reconstructor(image_dim, wavelength, swing, N_channel, anistropy_
 def reconstruct_qlipp_stokes(data, recon, bg_stokes):
     """
     From intensity data, use the waveorder.waveorder_microscopy (recon) to build a stokes array
-        if recon background correction flag is selected, will also perform background correction
-
+        if recon background correction flag is selected, will also perform backgroudn correction
     Parameters
     ----------
         data                : np.ndarray or zarr array
                               intensity data of shape: (C, Z, Y, X)
-
         recon               : waveorder.waveorder_microscopy object
                               initialized by initialize_reconstructor
-
         bg_stokes           : np.ndarray
                               stokes array representing background data
-
     Returns
     -------
         stokes_stack        : np.ndarray
                               array representing stokes array
-                              has shape: (Z, C, Y, X), where C = 5
-
+                              has shape: (C, Y, X, Z), where C = 5
+                              or (C, Y, X) if not reconstructing a z-stack
     """
 
-    stokes_stack = []
-    raw_stack = np.transpose(data, (1, 0, 2, 3))
+    stokes_data = recon.Stokes_recon(data)
+    stokes_data = recon.Stokes_transform(stokes_data)
 
-    for z in range(data.shape[1]):
-        stokes_data = recon.Stokes_recon(raw_stack[z])
-        stokes_data = recon.Stokes_transform(stokes_data)
+    if recon.bg_option == 'None':
+        return stokes_data
 
-        if recon.bg_option != 'None':
-
-            S_image_tm = recon.Polscope_bg_correction(stokes_data, bg_stokes)
-            stokes_stack.append(S_image_tm)
-
+    else:
+        if len(np.shape(stokes_data)) == 4:
+            s_image = recon.Polscope_bg_correction(np.transpose(stokes_data, (0, 2, 3, 1)), bg_stokes)
         else:
-            stokes_stack.append(stokes_data)
+            s_image = recon.Polscope_bg_correction(stokes_data, bg_stokes)
 
-    return np.asarray(stokes_stack)
-
+        return s_image
 
 def reconstruct_qlipp_birefringence(stokes, recon):
     """
     From stokes data, use waveorder.waveorder_microscopy (recon) to build a birefringence array
-
     Parameters
     ----------
     stokes                  : np.ndarray or zarr array
                               stokes array generated by reconstruct_qlipp_stokes
-
+                              dimensions: (C, Y, X, Z) or (C, Y, X)
     recon                   : waveorder.waveorder_microscopy object
                               initialized by initialize_reconstructor
-
     Returns
     -------
         recon_data          : np.ndarray
-                              volume of shape (Z, C, Y, X) containing reconstructed birefringence data.
+                              volume of shape (C, Z, Y, X) or (C, Y, X) containing reconstructed birefringence data.
     """
 
-    if len(stokes.shape) == 4:
-        slices = stokes.shape[0]
-        recon_data = np.zeros([slices, 4, stokes.shape[-2], stokes.shape[-1]])
-    elif len(stokes.shape) == 3:
-        slices = 1
-        recon_data = np.zeros([1, 4, stokes.shape[-2], stokes.shape[-1]])
+    birefringence = recon.Polarization_recon(stokes)
 
-    for z in range(slices):
-        recon_data[z, :, :, :] = recon.Polarization_recon(stokes[z] if slices != 1 else stokes)
-
-    return np.transpose(recon_data, (1,0,2,3))
+    return np.transpose(birefringence, (0, 3, 1, 2)) if len(birefringence.shape) == 4 else birefringence
 
 
 def reconstruct_qlipp_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,

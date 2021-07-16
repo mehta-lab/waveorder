@@ -3,7 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import tifffile as tiff
 import time
-from recOrder.calib.CoreFunctions import define_lc_state, snap_image, set_lc, set_lc_state
+from recOrder.calib.CoreFunctions import define_lc_state, snap_image, set_lc, set_lc_state, snap_and_average, \
+    snap_and_get_image
 from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer, optimize_grid
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import json
@@ -29,6 +30,7 @@ class QLIPP_Calibration():
         # Micromanager API
         self.mm = mm
         self.mmc = mmc
+        self.snap_manager = mm.getSnapLiveManager()
 
         # GUI Emitter
         self.intensity_emitter = None
@@ -52,6 +54,7 @@ class QLIPP_Calibration():
         self.ratio = 1.793
         self.print_details = print_details
         self.calib_scheme = '4-State'
+
 
         # LC States
         self.lca_ext = None
@@ -91,8 +94,7 @@ class QLIPP_Calibration():
         set_lc(self.mmc, x[0], self.PROPERTIES['LCA'])
         set_lc(self.mmc, x[1], self.PROPERTIES['LCB'])
 
-        data = snap_image(self.mmc)
-        mean = np.mean(data)
+        mean = snap_and_average(self.snap_manager)
 
         self.inten.append(mean)
 
@@ -116,13 +118,13 @@ class QLIPP_Calibration():
 
         set_lc(self.mmc, x, device_property)
 
-        data = snap_image(self.mmc)
+        mean = snap_and_average(self.snap_manager)
 
         if normalize:
             max_ = 65335
             min_ = self.I_Black
 
-            val = (np.mean(data) - min_) / (max_ - min_)
+            val = (mean - min_) / (max_ - min_)
             ref = (reference - min_) / (max_ - min_)
 
             logging.debug(f'LC-Value: {x}')
@@ -130,7 +132,6 @@ class QLIPP_Calibration():
             return val - ref
 
         else:
-            mean = np.mean(data)
             logging.debug(str(mean))
             self.intensity_emitter.emit(mean)
             self.inten.append(mean - reference)
@@ -148,8 +149,7 @@ class QLIPP_Calibration():
         if mode == '120':
             set_lc(self.mmc, self.lcb_ext - swing, self.PROPERTIES['LCB'])
 
-        data = snap_image(self.mmc)
-        mean = np.mean(data)
+        mean = snap_and_average(self.snap_manager)
         logging.debug(str(mean))
 
         # append to intensity array for plotting later
@@ -227,8 +227,7 @@ class QLIPP_Calibration():
 
         define_lc_state(self.mmc, 'State1', self.lca_ext - self.swing, self.lcb_ext, self.PROPERTIES)
 
-        image = snap_image(self.mmc)
-        ref = np.mean(image)
+        ref = snap_and_average(self.snap_manager)
 
         self.lca_0 = self.lca_ext - self.swing
         self.lcb_0 = self.lcb_ext
@@ -472,9 +471,8 @@ class QLIPP_Calibration():
         n_avg = 20
         avgs = []
         for i in range(n_avg):
-            img = snap_image(self.mmc)
-            # print(np.mean(img))
-            avgs.append(np.mean(img))
+            mean = snap_and_average(self.snap_manager)
+            avgs.append(mean)
 
         blacklevel = np.mean(avgs)
 
@@ -763,11 +761,11 @@ class QLIPP_Calibration():
     def _capture_state(self, state, n_avg):
         set_lc_state(self.mmc, state)
 
-        state0 = []
+        imgs = []
         for i in range(n_avg):
-            state0.append(np.reshape(snap_image(self.mmc), newshape=(self.height, self.width)))
+            imgs.append(snap_and_get_image(self.snap_manager))
 
-        return np.mean(state0, axis=(0))
+        return np.mean(imgs, axis=0)
 
     def _plot_bg_images(self, imgs):
 
@@ -805,8 +803,6 @@ class QLIPP_Calibration():
 
         if not os.path.exists(directory):
             os.makedirs(directory)
-
-        self.height, self.width = self.mmc.getImageHeight(), self.mmc.getImageWidth()
 
         state0 = self._capture_state('State0', n_avg)
         tiff.imsave(os.path.join(directory, 'State0.tif'), state0)

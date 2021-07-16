@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import optimize
 import os, sys
-from recOrder.calib.CoreFunctions import set_lc, get_lc, snap_image
+from recOrder.calib.CoreFunctions import set_lc, get_lc, snap_image, snap_and_average
 import logging
 
 class BrentOptimizer:
@@ -332,7 +332,8 @@ def optimize_grid(calib, a_min, a_max, b_min, b_max, step):
             set_lc(calib.mmc, lca, calib.PROPERTIES['LCA'])
             set_lc(calib.mmc, lcb, calib.PROPERTIES['LCB'])
 
-            current_int = np.mean(snap_image(calib.mmc))
+            # current_int = np.mean(snap_image(calib.mmc))
+            current_int = snap_and_average(calib.snap_manager)
 
             if current_int < min_int:
                 better_lca = lca
