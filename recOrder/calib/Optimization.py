@@ -98,6 +98,8 @@ class BrentOptimizer:
 
                 optimal.append(results_lcb)
 
+                results = results_lcb
+
             if state == '45' or state == '135':
 
                 results = self.opt_lcb(self.calib.opt_lc, lca_lower_bound, lca_upper_bound,

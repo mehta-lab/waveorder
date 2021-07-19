@@ -193,7 +193,7 @@ class QLIPP_Calibration():
         # threshold not very necessary here as intensity value will
         # vary between exposure/lamp intensities
         lca, lcb, I_ext = self.optimizer.optimize(state='ext', lca_bound=0.1, lcb_bound=0.1,
-                                                  reference=self.I_Black, thresh=1)
+                                                  reference=self.I_Black, thresh=1, n_iter=5)
 
         # Set the Extinction state to values output from optimization
         define_lc_state(self.mmc, 'State0', lca, lcb, self.PROPERTIES)
