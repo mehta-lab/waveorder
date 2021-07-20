@@ -64,6 +64,6 @@ if __name__ == '__main__':
         entry_points={
             'console_scripts': ['recOrder.reconstruct = recOrder.cli_module:main',
                                 'recOrder-napari = scripts.launch_napari:main'],
-            'napari.plugin': 'plugin_name = recOrder.plugin.napari_plugin_entry_point'
+            'napari.plugin': 'recOrder-Calibration = recOrder.plugin.napari_plugin_entry_point'
         }
     )
