@@ -8,7 +8,7 @@ from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
 from pathlib import Path
 from napari import Viewer
-from recOrder.calib.CoreFunctions import snap_image, set_lc_state, snap_and_average
+from recOrder.calib.CoreFunctions import set_lc_state, snap_and_average
 import os
 import numpy as np
 import logging
@@ -63,6 +63,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         #Other Properties:
         self.mm = None
         self.mmc = None
+        self.calib = QLIPP_Calibration(self.mmc, self.mm)
         self.home_path = str(Path.home())
         self.directory = None
         self.swing = 0.1
@@ -174,7 +175,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
     def run_calibration(self):
         logging.info('Starting Calibration')
         self.ui.progress_bar.setValue(0)
-        self.calib = QLIPP_Calibration(self.mmc, self.mm)
         self.calib.swing = self.swing
         self.calib.wavelength = self.wavelength
         self.calib.meta_file = self.directory
