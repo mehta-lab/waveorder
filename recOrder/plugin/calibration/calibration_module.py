@@ -63,7 +63,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         #Other Properties:
         self.mm = None
         self.mmc = None
-        self.calib = QLIPP_Calibration(self.mmc, self.mm)
         self.home_path = str(Path.home())
         self.directory = None
         self.swing = 0.1
@@ -89,6 +88,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
             bridge = Bridge(convert_camel_case=False)
             self.mmc = bridge.get_core()
             self.mm = bridge.get_studio()
+            self.calib = QLIPP_Calibration(self.mmc, self.mm)
 
             self.mm_status_changed.emit(True)
         except:
@@ -121,12 +121,24 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot(object)
     def handle_bg_image_update(self, value):
-        self.calib_window.viewer.add_image(value, name='Background Images', colormap='gray')
+        print(self.viewer.layers)
+        if 'Background Images' in self.viewer.layers:
+            self.viewer.layers['Background Images'].data = value
+        else:
+            self.viewer.add_image(value, name='Background Images', colormap='gray')
 
     @pyqtSlot(object)
     def handle_bire_image_update(self, value):
-        self.viewer.add_image(value[0], name='Background Retardance', colormap='gray')
-        self.viewer.add_image(value[1], name='Background Orientation', colormap='gray')
+
+        if 'Background Retardance' in self.viewer.layers:
+            self.viewer.layers['Background Retardance'].data = value[0]
+        else:
+            self.viewer.add_image(value[0], name='Background Retardance', colormap='gray')
+
+        if 'Background Orientation' in self.viewer.layers:
+            self.viewer.layers['Background Orientation'].data = value[1]
+        else:
+            self.viewer.add_image(value[1], name='Background Orientation', colormap='gray')
 
     @pyqtSlot(bool)
     def browse_dir_path(self):
@@ -177,18 +189,19 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.progress_bar.setValue(0)
         self.calib.swing = self.swing
         self.calib.wavelength = self.wavelength
-        self.calib.meta_file = self.directory
+        self.calib.meta_file = os.path.join(self.directory, 'calibration_metadata.txt')
 
         self.calibration_thread = QThread()
         self.calib_worker = CalibrationWorker(self, self.calib)
         self.calib_worker.moveToThread(self.calibration_thread)
-        self.thread.started.connect(self.calib_worker.run)
+        self.calibration_thread.started.connect(self.calib_worker.run)
         self.calib_worker.finished.connect(self.calibration_thread.quit)
         self.calib_worker.finished.connect(self.calib_worker.deleteLater)
-        self.calibration_thread.finished.connect(self.thread.deleteLater)
+        self.calibration_thread.finished.connect(self.calibration_thread.deleteLater)
         self.calib_worker.progress_update.connect(self.handle_progress_update)
         self.calib_worker.extinction_update.connect(self.handle_extinction_update)
         self.calib_worker.intensity_update.connect(self.handle_plot_update)
+        self.calibration_thread.setTerminationEnabled(True)
         self.calibration_thread.start()
 
         self._disable_buttons()
@@ -196,7 +209,8 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot(bool)
     def stop_calibration(self):
-        self._stop_thread()
+        self.calibration_thread.terminate()
+        self.calibration_thread.wait()
 
     @pyqtSlot(bool)
     def calc_extinction(self):
@@ -212,7 +226,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.capture_bg_thread = QThread()
         self.capture_bg_worker = BackgroundCaptureWorker(self, self.calib)
         self.capture_bg_worker.moveToThread(self.capture_bg_thread)
-        self.capture_bg_thread.started.connect(self.capture_bg_worker.capture_bg)
+        self.capture_bg_thread.started.connect(self.capture_bg_worker.run)
         self.capture_bg_worker.bg_image_emitter.connect(self.handle_bg_image_update)
         self.capture_bg_worker.bire_image_emitter.connect(self.handle_bire_image_update)
         self.capture_bg_worker.finished.connect(self.capture_bg_thread.quit)
@@ -252,7 +266,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.qbutton_calc_extinction.setEnabled(True)
 
     def _stop_thread(self):
-        self.calib_worker.stop()
+        self.calib_worker._running = False
         self.calibration_thread.quit()
         self.calibration_thread.wait()
 
@@ -275,57 +289,55 @@ class CalibrationWorker(QtCore.QObject):
 
     def run(self):
 
-        while self._running:
+        self.calib.intensity_emitter = self.intensity_update
+        self.calib.get_full_roi()
+        self.progress_update.emit(1)
 
-            self.calib.intensity_emitter = self.intensity_update
-            self.calib.get_full_roi()
-            self.progress_update.emit(1)
+        # TODO: Decide if displaying ROI is useful feature,
+        # include in a pop-up window or napari window?  How to prompt to continue?
 
-            # TODO: Decide if displaying ROI is useful feature,
-            # include in a pop-up window or napari window?  How to prompt to continue?
+        # Check if change of ROI is needed
+        if self.calib_window.use_cropped_roi:
+            rect = self.calib.check_and_get_roi()
+            # cont = self.calib.display_and_check_ROI(rect)
+            self.calib_window.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
+            self.calib.ROI = (rect.x, rect.y, rect.width, rect.height)
 
-            # Check if change of ROI is needed
-            if self.calib_window.use_cropped_roi:
-                rect = self.calib.check_and_get_roi()
-                # cont = self.calib.display_and_check_ROI(rect)
-                self.calib_window.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
-                self.calib.ROI = (rect.x, rect.y, rect.width, rect.height)
+        # Calculate Blacklevel
+        logging.info('Calculating Blacklevel ...')
+        logging.debug('Calculating Blacklevel ...')
+        self.calib.calc_blacklevel()
+        logging.info(f'Blacklevel: {self.calib.I_Black}\n')
+        logging.debug(f'Blacklevel: {self.calib.I_Black}\n')
 
-            # Calculate Blacklevel
-            logging.info('Calculating Blacklevel ...')
-            logging.debug('Calculating Blacklevel ...')
-            self.calib.calc_blacklevel()
-            logging.info(f'Blacklevel: {self.calib.I_Black}\n')
-            logging.debug(f'Blacklevel: {self.calib.I_Black}\n')
+        self.progress_update.emit(10)
 
-            self.progress_update.emit(10)
+        # Set LC Wavelength:
+        self.calib_window.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.calib_window.wavelength)
 
-            # Set LC Wavelength:
-            self.calib_window.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.calib_window.wavelength)
+        # Optimize States
+        self._calibrate_4state() if self.calib_window.calib_scheme == '4-State' else self._calibrate_5state()
 
-            # Optimize States
-            self._calibrate_4state() if self.calib_window.calib_scheme == '4-State' else self._calibrate_5state()
+        # Return ROI to full FOV
+        if self.calib_window.use_cropped_roi:
+            self.calib_window.mmc.clearROI()
 
-            # Return ROI to full FOV
-            if self.calib_window.use_cropped_roi:
-                self.calib_window.mmc.clearROI()
+        # Calculate Extinction
+        extinction_ratio = self.calib.calculate_extinction(self.calib.swing, self.calib.I_Black, self.calib.I_Ext,
+                                                           self.calib.I_Elliptical)
+        self.calib.extinction_ratio = extinction_ratio
+        self.extinction_update.emit(str(extinction_ratio))
 
-            # Calculate Extinction
-            extinction_ratio = self.calib.calculate_extinction(self.calib.swing, self.calib.I_Black, self.calib.I_Ext,
-                                                               self.calib.I_Elliptical)
-            self.calib.extinction_ratio = extinction_ratio
-            self.extinction_update.emit(str(extinction_ratio))
+        # Write Metadata
+        self.calib.write_metadata()
+        self.progress_update.emit(100)
 
-            # Write Metadata
-            self.calib.write_metadata()
-            self.progress_update.emit(100)
-
-            logging.info("\n=======Finished Calibration=======\n")
-            logging.info(f"EXTINCTION = {extinction_ratio}")
-            logging.debug("\n=======Finished Calibration=======\n")
-            logging.debug(f"EXTINCTION = {extinction_ratio}")
-            self.finished.emit()
-            self._running = False
+        logging.info("\n=======Finished Calibration=======\n")
+        logging.info(f"EXTINCTION = {extinction_ratio}")
+        logging.debug("\n=======Finished Calibration=======\n")
+        logging.debug(f"EXTINCTION = {extinction_ratio}")
+        self.finished.emit()
+        self._running = False
 
     def _calibrate_4state(self):
 
@@ -361,10 +373,6 @@ class BackgroundCaptureWorker(QtCore.QObject):
         super().__init__()
         self.calib_window = calib_window
         self.calib = calib
-        self._running = True
-
-    def stop(self):
-        self._running = False
 
     def run(self):
 
@@ -395,32 +403,6 @@ class BackgroundCaptureWorker(QtCore.QObject):
         self.bg_image_emitter.emit(imgs)
         self.bire_image_emitter.emit([retardance, birefringence[1]])
         self.finished.emit()
-
-
-    def _calibrate_4state(self):
-
-        self.calib.opt_Iext()
-        self.progress_update.emit(60)
-        self.calib.opt_I0()
-        self.progress_update.emit(65)
-        self.calib.opt_I60(0.05, 0.05)
-        self.progress_update.emit(75)
-        self.calib.opt_I120(0.05, 0.05)
-        self.progress_update.emit(85)
-
-    def _calibrate_5state(self):
-
-        self.calib.opt_Iext()
-        self.progress_update.emit(50)
-        self.calib.opt_I0()
-        self.progress_update.emit(55)
-        self.calib.opt_I45(0.05, 0.05)
-        self.progress_update.emit(65)
-        self.calib.opt_I90(0.05, 0.05)
-        self.progress_update.emit(75)
-        self.calib.opt_I135(0.05, 0.05)
-        self.progress_update.emit(85)
-
 
 class QtLogger(logging.Handler):
 
