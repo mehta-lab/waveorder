@@ -1,7 +1,7 @@
 import numpy as np
 from recOrder.calib.CoreFunctions import set_lc_state, snap_and_get_image
 
-def acquire_2D(mm, mmc, mode, scheme, snap_manager=None):
+def acquire_2D(mm, mmc, scheme, snap_manager=None):
 
     if not snap_manager:
         snap_manager = mm.getSnapLiveManager()
@@ -27,7 +27,7 @@ def acquire_2D(mm, mmc, mode, scheme, snap_manager=None):
         return np.asarray([state0, state1, state2, state3])
 
 
-def acquire_3D(mm, mmc, scheme, z_start, z_step, z_end, snap_manager=None):
+def acquire_3D(mm, mmc, scheme, z_start, z_end, z_step, snap_manager=None):
 
     if not snap_manager:
         snap_manager = mm.getSnapLiveManager()

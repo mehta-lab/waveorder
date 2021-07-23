@@ -6,6 +6,7 @@ from qtpy.QtWidgets import QWidget, QFileDialog
 from recOrder.plugin.qtdesigner import recOrder_calibration_v4, recOrder_calibration_v5
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
+from recOrder.acq.acq_single_stack import acquire_2D, acquire_3D
 from pathlib import Path
 from napari import Viewer
 from recOrder.calib.CoreFunctions import set_lc_state, snap_and_average
@@ -42,7 +43,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.cb_calib_scheme.currentIndexChanged[int].connect(self.enter_calib_scheme)
         self.ui.chb_use_roi.stateChanged[int].connect(self.enter_use_cropped_roi)
         self.ui.qbutton_calibrate.clicked[bool].connect(self.run_calibration)
-        # self.ui.qbutton_stop_calibrate.clicked[bool].connect(self.stop_calibration)
         self.ui.qbutton_calc_extinction.clicked[bool].connect(self.calc_extinction)
 
         # Capture Background
@@ -51,7 +51,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.qbutton_capture_bg.clicked[bool].connect(self.capture_bg)
 
         # Advanced
-        self.ui.cb_loglevel.stateChanged[int].connect(self.enter_log_level)
+        self.ui.cb_loglevel.currentIndexChanged[int].connect(self.enter_log_level)
 
         ######### Acquisition Tab #########
         self.ui.qbutton_browse_save_path.clicked[bool].connect(self.browse_save_path)
@@ -68,7 +68,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         log_box = QtLogger(self.ui.te_log)
         log_box.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
         logging.getLogger().addHandler(log_box)
-        logging.getLogger().setLevel(logging.DEBUG)
+        logging.getLogger().setLevel(logging.INFO)
 
         # Emitters
         # =================================#
@@ -89,9 +89,9 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.save_imgs = False
         self.birefringence_dim = '2D'
         self.phase_dim = '2D'
-        self.zstart = None
-        self.zend = None
-        self.zstep = None
+        self.z_start = None
+        self.z_end = None
+        self.z_step = None
 
         # Init Plot
         plot_item = self.ui.plot_widget.getPlotItem()
@@ -214,6 +214,13 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
     def enter_n_avg(self):
         self.n_avg = int(self.ui.le_n_avg.text())
 
+    def enter_log_level(self):
+        index = self.ui.cb_loglevel.currentIndex()
+        if index == 0:
+            logging.getLogger().setLevel(logging.INFO)
+        else:
+            logging.getLogger().setLevel(logging.DEBUG)
+
     @pyqtSlot()
     def enter_save_imgs(self):
         state = self.ui.chb_save_imgs.checkState()
@@ -224,15 +231,15 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot()
     def enter_zstart(self):
-        self.zstart = int(self.ui.le_zstart.text())
+        self.z_start = int(self.ui.le_zstart.text())
 
     @pyqtSlot()
     def enter_zend(self):
-        self.zend = int(self.ui.le_zend.text())
+        self.z_end = int(self.ui.le_zend.text())
 
     @pyqtSlot()
     def enter_zstep(self):
-        self.zstep = int(self.ui.le_zstep.text())
+        self.z_step = int(self.ui.le_zstep.text())
 
     @pyqtSlot()
     def enter_birefringence_dim(self):
@@ -274,11 +281,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self._disable_buttons()
         self.calibration_thread.finished.connect(self._enable_buttons)
 
-    # @pyqtSlot(bool)
-    # def stop_calibration(self):
-    #     self.calibration_thread.terminate()
-    #     self.calibration_thread.wait()
-
     @pyqtSlot(bool)
     def calc_extinction(self):
         set_lc_state(self.mmc, 'State0')
@@ -306,6 +308,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot(bool)
     def acq_birefringence(self):
+
         self.acq_thread = QThread()
         self.acq_worker = AcquisitionWorker(self, self.calib)
         self.capture_bg_worker.moveToThread(self.capture_bg_thread)
@@ -466,60 +469,53 @@ class BackgroundCaptureWorker(QtCore.QObject):
         birefringence = reconstruct_qlipp_birefringence(stokes, recon)
         retardance = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
 
-        # if self.calib_window.viewer.layers['Background Images']:
-        #     self.calib_window.viewer.layers['Background Images'].data = imgs
-        # elif self.calib_window.viewer.layers['Background Retardance']:
-        #     self.calib_window.viewer.layers['Background Retardance'].data = retardance
-        # elif self.calib_window.viewer.layers['Background Orientation']:
-        #     self.calib_window.viewer.layers['Background Orientation'].data = birefringence[1]
-        # else:
-
-        #TODO: EMIT THESE IMAGES AND THEN PLOT OUTSIDE OF THREAD
-
         self.bg_image_emitter.emit(imgs)
         self.bire_image_emitter.emit([retardance, birefringence[1]])
         self.finished.emit()
 
-
+#todo: potentially switch to thread pooling now, want to reuse thread so phase reconstructor can be
+# computed once
 class AcquisitionWorker(QtCore.QObject):
 
     phase_image_emitter = pyqtSignal(object)
     bire_image_emitter = pyqtSignal(object)
     finished = pyqtSignal()
 
-    def __init__(self, calib_window):
+    def __init__(self, calib_window, calib, mode):
         super().__init__()
         self.calib_window = calib_window
+        self.calib = calib
+        self.mode = mode
+
+        if self.mode == 'birefringence' and self.calib_window.birefringence_dim == '2D':
+            self.dim = '2D'
+        else:
+            self.dim = '3D'
 
     def run(self):
 
-        bg_path = os.path.join(self.calib_window.directory, self.calib_window.ui.le_bg_folder.text())
-        if not os.path.exists(bg_path):
-            os.mkdir(bg_path)
-        imgs = self.calib.capture_bg(self.calib_window.n_avg, bg_path)
-        img_dim = (imgs.shape[-2], imgs.shape[-1])
-        N_channel = 4 if self.calib_window.calib_scheme == '4-State' else 5
+        if self.dim == '2D':
+            stack = acquire_2D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
+                               self.calib.snap_manager)
 
-        recon = initialize_reconstructor(img_dim, self.calib_window.wavelength, self.calib_window.swing, N_channel,
-                                         True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
+        elif self.dim == '3D':
+            stack = acquire_3D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
+                               self.calib_window.z_start, self.calib_window.z_end, self.calib_window.z_step)
 
-        stokes = reconstruct_qlipp_stokes(imgs, recon, None)
-        birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-        retardance = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
+    def _reconstruct(self, stack):
+        if self.mode == 'phase' or 'all':
+            recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
+                                             self.calib_window.swing, stack.shape[0], False,
+                                             1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
 
-        # if self.calib_window.viewer.layers['Background Images']:
-        #     self.calib_window.viewer.layers['Background Images'].data = imgs
-        # elif self.calib_window.viewer.layers['Background Retardance']:
-        #     self.calib_window.viewer.layers['Background Retardance'].data = retardance
-        # elif self.calib_window.viewer.layers['Background Orientation']:
-        #     self.calib_window.viewer.layers['Background Orientation'].data = birefringence[1]
-        # else:
+        else:
+            recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
+                                             self.calib_window.swing, stack.shape[0],
+                                             True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
 
-        #TODO: EMIT THESE IMAGES AND THEN PLOT OUTSIDE OF THREAD
+    def _save_imgs(self, birefringence, phase):
+        pass
 
-        self.bg_image_emitter.emit(imgs)
-        self.bire_image_emitter.emit([retardance, birefringence[1]])
-        self.finished.emit()
 
 class QtLogger(logging.Handler):
 
