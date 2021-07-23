@@ -25,7 +25,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.viewer = napari_viewer
 
         # Setup GUI Elements
-        self.ui = recOrder_calibration_v4.Ui_Form()
+        self.ui = recOrder_calibration_v5.Ui_Form()
         self.ui.setupUi(self)
 
         # Setup Connections between elements
@@ -42,13 +42,27 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.cb_calib_scheme.currentIndexChanged[int].connect(self.enter_calib_scheme)
         self.ui.chb_use_roi.stateChanged[int].connect(self.enter_use_cropped_roi)
         self.ui.qbutton_calibrate.clicked[bool].connect(self.run_calibration)
-        self.ui.qbutton_stop_calibrate.clicked[bool].connect(self.stop_calibration)
+        # self.ui.qbutton_stop_calibrate.clicked[bool].connect(self.stop_calibration)
         self.ui.qbutton_calc_extinction.clicked[bool].connect(self.calc_extinction)
 
         # Capture Background
         self.ui.le_bg_folder.editingFinished.connect(self.enter_bg_folder_name)
         self.ui.le_n_avg.editingFinished.connect(self.enter_n_avg)
         self.ui.qbutton_capture_bg.clicked[bool].connect(self.capture_bg)
+
+        # Advanced
+        self.ui.cb_loglevel.stateChanged[int].connect(self.enter_log_level)
+
+        ######### Acquisition Tab #########
+        self.ui.qbutton_browse_save_path.clicked[bool].connect(self.browse_save_path)
+        self.ui.chb_save_imgs.stateChanged[int].connect(self.enter_save_imgs)
+        self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
+        self.ui.le_zend.editingFinished.connect(self.enter_zend)
+        self.ui.le_zstep.editingFinished.connect(self.enter_zstep)
+        self.ui.cb_birefringence.currentIndexChanged[int].connect(self.enter_birefringence_dim)
+        self.ui.cb_phase.currentIndexChanged[int].connect(self.enter_phase_dim)
+        self.ui.qbutton_acq_birefringence.clicked[bool].connect(self.acq_birefringence)
+        self.ui.qbutton_acq_phase.clicked[bool].connect(self.acq_phase)
 
         # Logging
         log_box = QtLogger(self.ui.te_log)
@@ -72,6 +86,12 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.bg_folder_name = 'BG'
         self.n_avg = 20
         self.intensity_monitor = []
+        self.save_imgs = False
+        self.birefringence_dim = '2D'
+        self.phase_dim = '2D'
+        self.zstart = None
+        self.zend = None
+        self.zstep = None
 
         # Init Plot
         plot_item = self.ui.plot_widget.getPlotItem()
@@ -147,6 +167,13 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.directory = result
         self.ui.le_directory.setText(result)
 
+    @pyqtSlot(bool)
+    def browse_save_path(self):
+        # self.ui.le_directory.setFocus()
+        result = self._open_file_dialog(self.home_path)
+        self.directory = result
+        self.ui.le_save_path.setText(result)
+
     @pyqtSlot()
     def enter_dir_path(self):
         path = self.ui.le_directory.text()
@@ -180,8 +207,48 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
             self.use_cropped_roi = False
 
     @pyqtSlot()
+    def enter_bg_folder_name(self):
+        self.bg_folder_name = self.ui.le_bg_folder.text()
+
+    @pyqtSlot()
     def enter_n_avg(self):
         self.n_avg = int(self.ui.le_n_avg.text())
+
+    @pyqtSlot()
+    def enter_save_imgs(self):
+        state = self.ui.chb_save_imgs.checkState()
+        if state == 2:
+            self.save_imgs = True
+        elif state == 0:
+            self.save_imgs = False
+
+    @pyqtSlot()
+    def enter_zstart(self):
+        self.zstart = int(self.ui.le_zstart.text())
+
+    @pyqtSlot()
+    def enter_zend(self):
+        self.zend = int(self.ui.le_zend.text())
+
+    @pyqtSlot()
+    def enter_zstep(self):
+        self.zstep = int(self.ui.le_zstep.text())
+
+    @pyqtSlot()
+    def enter_birefringence_dim(self):
+        state = self.ui.cb_birefringence.checkState()
+        if state == 2:
+            self.birefringence_dim = '2D'
+        elif state == 0:
+            self.birefringence_dim = '3D'
+
+    @pyqtSlot()
+    def enter_phase_dim(self):
+        state = self.ui.cb_phase.checkState()
+        if state == 2:
+            self.phase_dim = '2D'
+        elif state == 0:
+            self.phase_dim = '3D'
 
     @pyqtSlot(bool)
     def run_calibration(self):
@@ -207,10 +274,10 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self._disable_buttons()
         self.calibration_thread.finished.connect(self._enable_buttons)
 
-    @pyqtSlot(bool)
-    def stop_calibration(self):
-        self.calibration_thread.terminate()
-        self.calibration_thread.wait()
+    # @pyqtSlot(bool)
+    # def stop_calibration(self):
+    #     self.calibration_thread.terminate()
+    #     self.calibration_thread.wait()
 
     @pyqtSlot(bool)
     def calc_extinction(self):
@@ -237,9 +304,18 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self._disable_buttons()
         self.capture_bg_thread.finished.connect(self._enable_buttons)
 
-    @pyqtSlot()
-    def enter_bg_folder_name(self):
-        self.bg_folder_name = self.ui.le_bg_folder.text()
+    @pyqtSlot(bool)
+    def acq_birefringence(self):
+        self.acq_thread = QThread()
+        self.acq_worker = AcquisitionWorker(self, self.calib)
+        self.capture_bg_worker.moveToThread(self.capture_bg_thread)
+        self.capture_bg_thread.started.connect(self.capture_bg_worker.run)
+        self.capture_bg_worker.bg_image_emitter.connect(self.handle_bg_image_update)
+        self.capture_bg_worker.bire_image_emitter.connect(self.handle_bire_image_update)
+        self.capture_bg_worker.finished.connect(self.capture_bg_thread.quit)
+        self.capture_bg_worker.finished.connect(self.capture_bg_worker.deleteLater)
+        self.capture_bg_thread.finished.connect(self.capture_bg_thread.deleteLater)
+        self.capture_bg_thread.start()
 
     def _open_file_dialog(self, default_path):
         return self._open_dialog("select a directory",
@@ -373,6 +449,47 @@ class BackgroundCaptureWorker(QtCore.QObject):
         super().__init__()
         self.calib_window = calib_window
         self.calib = calib
+
+    def run(self):
+
+        bg_path = os.path.join(self.calib_window.directory, self.calib_window.ui.le_bg_folder.text())
+        if not os.path.exists(bg_path):
+            os.mkdir(bg_path)
+        imgs = self.calib.capture_bg(self.calib_window.n_avg, bg_path)
+        img_dim = (imgs.shape[-2], imgs.shape[-1])
+        N_channel = 4 if self.calib_window.calib_scheme == '4-State' else 5
+
+        recon = initialize_reconstructor(img_dim, self.calib_window.wavelength, self.calib_window.swing, N_channel,
+                                         True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
+
+        stokes = reconstruct_qlipp_stokes(imgs, recon, None)
+        birefringence = reconstruct_qlipp_birefringence(stokes, recon)
+        retardance = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
+
+        # if self.calib_window.viewer.layers['Background Images']:
+        #     self.calib_window.viewer.layers['Background Images'].data = imgs
+        # elif self.calib_window.viewer.layers['Background Retardance']:
+        #     self.calib_window.viewer.layers['Background Retardance'].data = retardance
+        # elif self.calib_window.viewer.layers['Background Orientation']:
+        #     self.calib_window.viewer.layers['Background Orientation'].data = birefringence[1]
+        # else:
+
+        #TODO: EMIT THESE IMAGES AND THEN PLOT OUTSIDE OF THREAD
+
+        self.bg_image_emitter.emit(imgs)
+        self.bire_image_emitter.emit([retardance, birefringence[1]])
+        self.finished.emit()
+
+
+class AcquisitionWorker(QtCore.QObject):
+
+    phase_image_emitter = pyqtSignal(object)
+    bire_image_emitter = pyqtSignal(object)
+    finished = pyqtSignal()
+
+    def __init__(self, calib_window):
+        super().__init__()
+        self.calib_window = calib_window
 
     def run(self):
 

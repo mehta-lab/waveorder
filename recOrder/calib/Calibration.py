@@ -804,22 +804,34 @@ class QLIPP_Calibration():
         if not os.path.exists(directory):
             os.makedirs(directory)
 
+        logging.info('Capturing Background')
+        logging.debug('Capturing Bacckground State0')
+
         state0 = self._capture_state('State0', n_avg)
+        logging.debug('Saving Bacckground State0')
         tiff.imsave(os.path.join(directory, 'State0.tif'), state0)
 
+        logging.debug('Capturing Bacckground State1')
         state1 = self._capture_state('State1', n_avg)
+        logging.debug('Saving Bacckground State1')
         tiff.imsave(os.path.join(directory, 'State1.tif'), state1)
 
+        logging.debug('Capturing Bacckground State2')
         state2 = self._capture_state('State2', n_avg)
+        logging.debug('Saving Bacckground State2')
         tiff.imsave(os.path.join(directory, 'State2.tif'), state2)
 
+        logging.debug('Capturing Bacckground State3')
         state3 = self._capture_state('State3', n_avg)
+        logging.debug('Saving Bacckground State3')
         tiff.imsave(os.path.join(directory, 'State3.tif'), state3)
 
         imgs = [state0, state1, state2, state3]
 
         if self.calib_scheme == '5-State':
+            logging.debug('Capturing Bacckground State4')
             state4 = self._capture_state('State4', n_avg)
+            logging.debug('Saving Bacckground State4')
             tiff.imsave(os.path.join(directory, 'State4.tif'), state4)
             imgs.append(state4)
 
