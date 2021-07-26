@@ -93,6 +93,9 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.z_end = None
         self.z_step = None
 
+        # Assessment attributes
+        self.calib_assessment_level = None
+
         # Init Plot
         plot_item = self.ui.plot_widget.getPlotItem()
         plot_item.enableAutoRange()
@@ -138,6 +141,24 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.intensity_monitor.append(value)
         self.ui.plot_widget.plot(self.intensity_monitor)
         self.ui.plot_widget.getPlotItem().autoRange()
+
+    @pyqtSlot(str)
+    def handle_calibration_assessment_update(self, value):
+        self.calib_assessment_level = value
+
+
+    @pyqtSlot(str)
+    def handle_calibration_assessment_msg_update(self, value):
+        self.ui.le_calib_assessment.setText(value)
+
+        if self.calib_assessment_level == 'good':
+            self.ui.le_calib_assessment.setStyleSheet("background-color: green;")
+        elif self.calib_assessment_level == 'okay':
+            self.ui.le_calib_assessment.setStyleSheet("background-color: yellow;")
+        elif self.calib_assessment_level == 'bad':
+            self.ui.le_calib_assessment.setStyleSheet("background-color: red;")
+        else:
+            pass
 
     @pyqtSlot(object)
     def handle_bg_image_update(self, value):
@@ -354,6 +375,8 @@ class CalibrationWorker(QtCore.QObject):
     progress_update = pyqtSignal(int)
     extinction_update = pyqtSignal(str)
     intensity_update = pyqtSignal(object)
+    calib_assessment = pyqtSignal(str)
+    calib_assessment_msg = pyqtSignal(str)
     finished = pyqtSignal()
 
     def __init__(self, calib_window, calib):
@@ -410,6 +433,7 @@ class CalibrationWorker(QtCore.QObject):
         # Write Metadata
         self.calib.write_metadata()
         self.progress_update.emit(100)
+        self._assess_calibration()
 
         logging.info("\n=======Finished Calibration=======\n")
         logging.info(f"EXTINCTION = {extinction_ratio}")
@@ -441,6 +465,29 @@ class CalibrationWorker(QtCore.QObject):
         self.progress_update.emit(75)
         self.calib.opt_I135(0.05, 0.05)
         self.progress_update.emit(85)
+
+    def _assess_calibration(self):
+
+        if 0.22 < self.calib.lca_ext < 0.32:
+            if 0.47 < self.calib.lcb_ext < 0.62:
+                if self.calib.extinction_ratio >= 100:
+                    self.calib_assessment.emit('good')
+                    self.calib_assessment_msg.emit('Sucessful Calibration')
+                elif 80 <= self.calib.extinction_ratio < 100:
+                    self.calib_assessment.emit('okay')
+                    self.calib_assessment_msg.emit('Sucessful Calibration, Okay Extinction Ratio')
+                else:
+                    self.calib_assessment('bad')
+                    self.calib_assessment_msg.emit('Poor Extinction, try tuning the linear polarizer to be \
+                                                   perpendicular to the long edge of the LC housing')
+            else:
+                self.calib_assessment('bad')
+                self.calib_assessment_msg.emit('Wrong handed analyzer or linear polarizer 90 degrees off')
+        else:
+            self.calib_assessment('bad')
+            self.calib_assessment_msg.emit('Light path is incorrect, unknown origin of issue')
+
+
 
 class BackgroundCaptureWorker(QtCore.QObject):
 
