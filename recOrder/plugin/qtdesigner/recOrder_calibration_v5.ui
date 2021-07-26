@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>580</width>
-    <height>795</height>
+    <width>522</width>
+    <height>985</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -63,7 +63,7 @@
       <enum>QTabWidget::North</enum>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>0</number>
      </property>
      <property name="elideMode">
       <enum>Qt::ElideRight</enum>
@@ -119,7 +119,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>540</width>
+            <width>482</width>
             <height>1041</height>
            </rect>
           </property>
@@ -169,7 +169,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>500</width>
+                    <width>442</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -218,8 +218,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>112</width>
-                    <height>252</height>
+                    <width>410</width>
+                    <height>300</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -924,7 +924,7 @@
             <property name="currentIndex">
              <number>0</number>
             </property>
-            <widget class="QWidget" name="tab">
+            <widget class="QWidget" name="general">
              <attribute name="title">
               <string>General</string>
              </attribute>
@@ -942,31 +942,31 @@
                <number>4</number>
               </property>
               <item row="0" column="0" alignment="Qt::AlignTop">
-               <widget class="QLabel" name="label_7">
+               <widget class="QLabel" name="label_bg_method">
                 <property name="text">
                  <string>BG Correction</string>
                 </property>
                </widget>
               </item>
               <item row="1" column="1" colspan="2">
-               <widget class="QLineEdit" name="lineEdit_7"/>
+               <widget class="QLineEdit" name="le_bg_path"/>
               </item>
               <item row="1" column="3">
-               <widget class="QPushButton" name="pushButton">
+               <widget class="QPushButton" name="le_browse_bg_path">
                 <property name="text">
                  <string>Browse</string>
                 </property>
                </widget>
               </item>
               <item row="1" column="0">
-               <widget class="QLabel" name="label_8">
+               <widget class="QLabel" name="label_bg_path">
                 <property name="text">
                  <string>Background Path</string>
                 </property>
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QComboBox" name="comboBox">
+               <widget class="QComboBox" name="cb_bg_method">
                 <item>
                  <property name="text">
                   <string>None</string>
@@ -985,7 +985,7 @@
                </widget>
               </item>
               <item row="3" column="0">
-               <widget class="QLabel" name="label_9">
+               <widget class="QLabel" name="label_gpu_id">
                 <property name="text">
                  <string>GPU ID</string>
                 </property>
@@ -995,7 +995,7 @@
                </widget>
               </item>
               <item row="3" column="1">
-               <widget class="QLineEdit" name="lineEdit_8">
+               <widget class="QLineEdit" name="le_gpu_id">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -1005,7 +1005,7 @@
                </widget>
               </item>
               <item row="3" column="2">
-               <widget class="QCheckBox" name="checkBox">
+               <widget class="QCheckBox" name="chb_use_gpu">
                 <property name="text">
                  <string>Use GPU</string>
                 </property>
@@ -1013,7 +1013,7 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_2">
+            <widget class="QWidget" name="phase_only">
              <attribute name="title">
               <string>Phase Only</string>
              </attribute>
@@ -1031,72 +1031,72 @@
                <number>4</number>
               </property>
               <item row="0" column="0">
-               <widget class="QLabel" name="label">
+               <widget class="QLabel" name="label_obj_na">
                 <property name="text">
                  <string>Objective NA</string>
                 </property>
                </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QLineEdit" name="lineEdit"/>
+               <widget class="QLineEdit" name="le_obj_na"/>
               </item>
               <item row="0" column="2">
-               <widget class="QLabel" name="label_2">
+               <widget class="QLabel" name="label_ps">
                 <property name="text">
                  <string>Camera Pixel Size</string>
                 </property>
                </widget>
               </item>
               <item row="0" column="3">
-               <widget class="QLineEdit" name="lineEdit_2">
+               <widget class="QLineEdit" name="le_ps">
                 <property name="text">
                  <string/>
                 </property>
                </widget>
               </item>
               <item row="1" column="0">
-               <widget class="QLabel" name="label_3">
+               <widget class="QLabel" name="label_cond_na">
                 <property name="text">
                  <string>Condenser NA</string>
                 </property>
                </widget>
               </item>
               <item row="1" column="1">
-               <widget class="QLineEdit" name="lineEdit_3"/>
+               <widget class="QLineEdit" name="le_cond_na"/>
               </item>
               <item row="1" column="2">
-               <widget class="QLabel" name="label_4">
+               <widget class="QLabel" name="label_n_media">
                 <property name="text">
                  <string>RI of Obj. Media</string>
                 </property>
                </widget>
               </item>
               <item row="1" column="3">
-               <widget class="QLineEdit" name="lineEdit_4">
+               <widget class="QLineEdit" name="le_n_media">
                 <property name="text">
                  <string>1.003</string>
                 </property>
                </widget>
               </item>
               <item row="2" column="0">
-               <widget class="QLabel" name="label_5">
+               <widget class="QLabel" name="label_mag">
                 <property name="text">
                  <string>Magnification</string>
                 </property>
                </widget>
               </item>
               <item row="2" column="1">
-               <widget class="QLineEdit" name="lineEdit_5"/>
+               <widget class="QLineEdit" name="le_mag"/>
               </item>
               <item row="2" column="2">
-               <widget class="QLabel" name="label_6">
+               <widget class="QLabel" name="label_pad_z">
                 <property name="text">
                  <string>Z Padding</string>
                 </property>
                </widget>
               </item>
               <item row="2" column="3">
-               <widget class="QLineEdit" name="lineEdit_6">
+               <widget class="QLineEdit" name="le_pad_z">
                 <property name="text">
                  <string>0</string>
                 </property>
