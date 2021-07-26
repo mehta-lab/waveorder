@@ -14,6 +14,16 @@ import os
 import numpy as np
 import logging
 
+#TODO
+# Error Handling on the Calibration Thread
+# Automatically Shut off live mode
+# Logging for acquisition features
+# Clear buffer before calibration?
+# Clear plot before every calibration run
+# Move the calibration button to the run calibration button
+# center acquisition tab
+# move the workers to a different file?
+# add handler for bg option and background loader and use gpu
 
 class recOrder_Calibration(QWidget, QtCore.QObject):
 
@@ -63,6 +73,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.cb_phase.currentIndexChanged[int].connect(self.enter_phase_dim)
         self.ui.qbutton_acq_birefringence.clicked[bool].connect(self.acq_birefringence)
         self.ui.qbutton_acq_phase.clicked[bool].connect(self.acq_phase)
+        self.ui.qbutton_acq_birefringence_phase.clicked[bool].connect(self.acq_birefringence_phase)
 
         # Logging
         log_box = QtLogger(self.ui.te_log)
@@ -132,7 +143,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
             self.ui.le_mm_status.setStyleSheet("background-color: green;")
         else:
             self.ui.le_mm_status.setText('Failed.')
-            self.ui.le_mm_status.setStyleSheet("background-color: red;")
+            self.ui.le_mm_status.setStyleSheet("background-color: rgb(200,0,0);")
             # self.ui.le_mm_status.setStyleSheet("border: 1px solid red;")
 
     @pyqtSlot(int)
@@ -158,11 +169,11 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.le_calib_assessment.setText(value)
 
         if self.calib_assessment_level == 'good':
-            self.ui.le_calib_assessment.setStyleSheet("background-color: green;")
+            self.ui.le_calib_assessment.setStyleSheet("border: 1px solid green;")
         elif self.calib_assessment_level == 'okay':
-            self.ui.le_calib_assessment.setStyleSheet("background-color: yellow;")
+            self.ui.le_calib_assessment.setStyleSheet("border: 1px solid rgb(252,190,3);")
         elif self.calib_assessment_level == 'bad':
-            self.ui.le_calib_assessment.setStyleSheet("background-color: red;")
+            self.ui.le_calib_assessment.setStyleSheet("border: 1px solid rgb(200,0,0);")
         else:
             pass
 
@@ -175,7 +186,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
             self.viewer.add_image(value, name='Background Images', colormap='gray')
 
     @pyqtSlot(object)
-    def handle_bire_image_update(self, value):
+    def handle_bg_bire_image_update(self, value):
 
         if 'Background Retardance' in self.viewer.layers:
             self.viewer.layers['Background Retardance'].data = value[0]
@@ -186,6 +197,28 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
             self.viewer.layers['Background Orientation'].data = value[1]
         else:
             self.viewer.add_image(value[1], name='Background Orientation', colormap='gray')
+
+    @pyqtSlot(object)
+    def handle_bire_image_update(self, value):
+        name = 'Birefringence2D' if self.birefringence_dim == '2D' else 'Birefringence3D'
+
+        if name in self.viewer.layers:
+            self.viewer.layers[name].data = value
+        else:
+            self.viewer.add_image(value, name=name, colormap='gray')
+
+    @pyqtSlot(object)
+    def handle_phase_image_update(self, value):
+        name = 'Phase2D' if self.phase_dim == '2D' else 'Phase3D'
+
+        if name in self.viewer.layers:
+            self.viewer.layers[name].data = value
+        else:
+            self.viewer.add_image(value, name=name, colormap='gray')
+
+    @pyqtSlot(object)
+    def handle_reconstructor_update(self, value):
+        self.phase_reconstructor = value
 
     @pyqtSlot(bool)
     def browse_dir_path(self):
@@ -270,18 +303,18 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
 
     @pyqtSlot()
     def enter_birefringence_dim(self):
-        state = self.ui.cb_birefringence.checkState()
-        if state == 2:
+        state = self.ui.cb_birefringence.currentIndex()
+        if state == 0:
             self.birefringence_dim = '2D'
-        elif state == 0:
+        elif state == 1:
             self.birefringence_dim = '3D'
 
     @pyqtSlot()
     def enter_phase_dim(self):
-        state = self.ui.cb_phase.checkState()
-        if state == 2:
+        state = self.ui.cb_phase.currentIndex()
+        if state == 0:
             self.phase_dim = '2D'
-        elif state == 0:
+        elif state == 1:
             self.phase_dim = '3D'
 
     @pyqtSlot()
@@ -306,9 +339,9 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.calib_worker.progress_update.connect(self.handle_progress_update)
         self.calib_worker.extinction_update.connect(self.handle_extinction_update)
         self.calib_worker.intensity_update.connect(self.handle_plot_update)
-        self.calibration_thread.setTerminationEnabled(True)
+        self.calib_worker.calib_assessment.connect(self.handle_calibration_assessment_update)
+        self.calib_worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
         self.calibration_thread.start()
-
         self._disable_buttons()
         self.calibration_thread.finished.connect(self._enable_buttons)
 
@@ -328,7 +361,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.capture_bg_worker.moveToThread(self.capture_bg_thread)
         self.capture_bg_thread.started.connect(self.capture_bg_worker.run)
         self.capture_bg_worker.bg_image_emitter.connect(self.handle_bg_image_update)
-        self.capture_bg_worker.bire_image_emitter.connect(self.handle_bire_image_update)
+        self.capture_bg_worker.bire_image_emitter.connect(self.handle_bg_bire_image_update)
         self.capture_bg_worker.finished.connect(self.capture_bg_thread.quit)
         self.capture_bg_worker.finished.connect(self.capture_bg_worker.deleteLater)
         self.capture_bg_thread.finished.connect(self.capture_bg_thread.deleteLater)
@@ -341,15 +374,46 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
     def acq_birefringence(self):
 
         self.acq_thread = QThread()
-        self.acq_worker = AcquisitionWorker(self, self.calib)
-        self.capture_bg_worker.moveToThread(self.capture_bg_thread)
-        self.capture_bg_thread.started.connect(self.capture_bg_worker.run)
-        self.capture_bg_worker.bg_image_emitter.connect(self.handle_bg_image_update)
-        self.capture_bg_worker.bire_image_emitter.connect(self.handle_bire_image_update)
-        self.capture_bg_worker.finished.connect(self.capture_bg_thread.quit)
-        self.capture_bg_worker.finished.connect(self.capture_bg_worker.deleteLater)
-        self.capture_bg_thread.finished.connect(self.capture_bg_thread.deleteLater)
-        self.capture_bg_thread.start()
+        self.acq_worker = AcquisitionWorker(self, self.calib, 'birefringence')
+        self.acq_worker.moveToThread(self.acq_thread)
+        self.acq_thread.started.connect(self.acq_worker.run)
+        self.acq_worker.phase_image_emitter.connect(self.handle_phase_image_update)
+        self.acq_worker.bire_image_emitter.connect(self.handle_bire_image_update)
+        self.acq_worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
+        self.acq_worker.finished.connect(self.acq_thread.quit)
+        self.acq_worker.finished.connect(self.acq_worker.deleteLater)
+        self.acq_thread.finished.connect(self.acq_thread.deleteLater)
+        self.acq_thread.start()
+
+    @pyqtSlot(bool)
+    def acq_phase(self):
+
+        self.acq_thread = QThread()
+        self.acq_worker = AcquisitionWorker(self, self.calib, 'birefringence')
+        self.acq_worker.moveToThread(self.acq_thread)
+        self.acq_thread.started.connect(self.acq_worker.run)
+        self.acq_worker.phase_image_emitter.connect(self.handle_phase_image_update)
+        self.acq_worker.bire_image_emitter.connect(self.handle_bire_image_update)
+        self.acq_worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
+        self.acq_worker.finished.connect(self.acq_thread.quit)
+        self.acq_worker.finished.connect(self.acq_worker.deleteLater)
+        self.acq_thread.finished.connect(self.acq_thread.deleteLater)
+        self.acq_thread.start()
+
+    @pyqtSlot(bool)
+    def acq_birefringence_phase(self):
+
+        self.acq_thread = QThread()
+        self.acq_worker = AcquisitionWorker(self, self.calib, 'all')
+        self.acq_worker.moveToThread(self.acq_thread)
+        self.acq_thread.started.connect(self.acq_worker.run)
+        self.acq_worker.phase_image_emitter.connect(self.handle_phase_image_update)
+        self.acq_worker.bire_image_emitter.connect(self.handle_bire_image_update)
+        self.acq_worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
+        self.acq_worker.finished.connect(self.acq_thread.quit)
+        self.acq_worker.finished.connect(self.acq_worker.deleteLater)
+        self.acq_thread.finished.connect(self.acq_thread.deleteLater)
+        self.acq_thread.start()
 
     def _open_file_dialog(self, default_path):
         return self._open_dialog("select a directory",
@@ -369,11 +433,18 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.qbutton_calibrate.setEnabled(False)
         self.ui.qbutton_capture_bg.setEnabled(False)
         self.ui.qbutton_calc_extinction.setEnabled(False)
+        self.ui.qbutton_acq_birefringence.setEnabled(False)
+        self.ui.qbutton_acq_phase.setEnabled(False)
+        self.ui.qbutton_acq_birefringence_phase.setEnabled(False)
+
 
     def _enable_buttons(self):
         self.ui.qbutton_calibrate.setEnabled(True)
         self.ui.qbutton_capture_bg.setEnabled(True)
         self.ui.qbutton_calc_extinction.setEnabled(True)
+        self.ui.qbutton_acq_birefringence.setEnabled(True)
+        self.ui.qbutton_acq_phase.setEnabled(True)
+        self.ui.qbutton_acq_birefringence_phase.setEnabled(True)
 
     def _stop_thread(self):
         self.calib_worker._running = False
@@ -478,8 +549,8 @@ class CalibrationWorker(QtCore.QObject):
 
     def _assess_calibration(self):
 
-        if 0.22 < self.calib.lca_ext < 0.32:
-            if 0.47 < self.calib.lcb_ext < 0.62:
+        if 0.22 < self.calib.lca_ext < 0.34:
+            if 0.45 < self.calib.lcb_ext < 0.65:
                 if self.calib.extinction_ratio >= 100:
                     self.calib_assessment.emit('good')
                     self.calib_assessment_msg.emit('Sucessful Calibration')
@@ -487,15 +558,15 @@ class CalibrationWorker(QtCore.QObject):
                     self.calib_assessment.emit('okay')
                     self.calib_assessment_msg.emit('Sucessful Calibration, Okay Extinction Ratio')
                 else:
-                    self.calib_assessment('bad')
-                    self.calib_assessment_msg.emit('Poor Extinction, try tuning the linear polarizer to be \
-                                                   perpendicular to the long edge of the LC housing')
+                    self.calib_assessment.emit('bad')
+                    self.calib_assessment_msg.emit('Poor Extinction, try tuning the linear polarizer to be '
+                                                   'perpendicular to the long edge of the LC housing')
             else:
-                self.calib_assessment('bad')
-                self.calib_assessment_msg.emit('Wrong handed analyzer or linear polarizer 90 degrees off')
+                self.calib_assessment.emit('bad')
+                self.calib_assessment_msg.emit('Wrong analyzer handedness or linear polarizer 90 degrees off')
         else:
-            self.calib_assessment('bad')
-            self.calib_assessment_msg.emit('Light path is incorrect, unknown origin of issue')
+            self.calib_assessment.emit('bad')
+            self.calib_assessment_msg.emit('Calibration Failed, unknown origin of issue')
 
 
 
@@ -555,15 +626,17 @@ class AcquisitionWorker(QtCore.QObject):
         if self.dim == '2D':
             stack = acquire_2D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
                                self.calib.snap_manager)
+            self.n_slices = 1
 
         elif self.dim == '3D':
             stack = acquire_3D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
                                self.calib_window.z_start, self.calib_window.z_end, self.calib_window.z_step)
 
-        self.n_slices = len(range(self.calib_window.z_start, self.calib_window.z_end+self.calib_window.z_step,
-                                  self.calib_window.z_step))
+            self.n_slices = len(range(self.calib_window.z_start, self.calib_window.z_end+self.calib_window.z_step,
+                                      self.calib_window.z_step))
 
         birefringence, phase = self._reconstruct(stack)
+        self.finished.emit()
 
     def _reconstruct(self, stack):
         if self.mode == 'phase' or 'all':
@@ -609,6 +682,7 @@ class AcquisitionWorker(QtCore.QObject):
         else:
             raise ValueError('Reconstruction Mode Not Understood')
 
+        birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
         return birefringence, phase
 
     def _save_imgs(self, birefringence, phase):
