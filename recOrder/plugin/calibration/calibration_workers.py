@@ -153,6 +153,8 @@ class BackgroundCaptureWorker(QtCore.QObject):
         birefringence = reconstruct_qlipp_birefringence(stokes, recon)
         retardance = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
 
+        self.calib.meta_file = os.path.join(bg_path, 'calibration_metadata.txt')
+        self.calib.write_metadata()
         self.bg_image_emitter.emit(imgs)
         self.bire_image_emitter.emit([retardance, birefringence[1]])
         self.finished.emit()

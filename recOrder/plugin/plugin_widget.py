@@ -18,7 +18,7 @@ import logging
 # Logging for acquisition features
 # Clear buffer before calibration?
 # Clear plot before every calibration run
-# add handler for bg option and background loader and use gpu
+# add background load and correction for acquisition
 
 class recOrder_Widget(QWidget, QtCore.QObject):
 
@@ -80,7 +80,7 @@ class recOrder_Widget(QWidget, QtCore.QObject):
 
         # Logging
         log_box = QtLogger(self.ui.te_log)
-        log_box.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        log_box.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
         logging.getLogger().addHandler(log_box)
         logging.getLogger().setLevel(logging.INFO)
 

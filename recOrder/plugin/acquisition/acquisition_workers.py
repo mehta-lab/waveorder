@@ -3,8 +3,11 @@ from PyQt5.QtCore import pyqtSignal
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, reconstruct_qlipp_phase2D, reconstruct_qlipp_phase3D
 from recOrder.acq.acq_single_stack import acquire_2D, acquire_3D
+from recOrder.io.utils import load_bg
 import logging
+import json
 import numpy as np
+import os
 
 
 class AcquisitionWorker(QtCore.QObject):
@@ -68,11 +71,17 @@ class AcquisitionWorker(QtCore.QObject):
                                              self.calib_window.swing, stack.shape[0],
                                              True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
 
-        bg_stokes = self._load_bg() if self.bg_option != 'None' else None
-        stokes = reconstruct_qlipp_stokes(stack, recon, bg_stokes)
+        if self.bg_option != 'None':
+            bg_data = self._load_bg(self.calib_window.acq_bg_directory)
+            bg_stokes = recon.Stokes_recon(bg_data)
+            bg_stokes = recon.Stokes_transform(bg_stokes)
+        else:
+            bg_stokes = None
 
+        stokes = reconstruct_qlipp_stokes(stack, recon, bg_stokes)
         birefringence = None
         phase = None
+
         if self.mode == 'all':
             birefringence = reconstruct_qlipp_birefringence(stokes, recon)
             phase = reconstruct_qlipp_phase2D(stokes[0], recon) if self.dim == '2D' \
@@ -93,8 +102,17 @@ class AcquisitionWorker(QtCore.QObject):
     def _save_imgs(self, birefringence, phase):
         pass
 
-    def _load_bg(self):
-        pass
+    def _load_bg(self, path, height, width):
+
+        try:
+            meta_path = open(os.path.join(path,'calibration_metadata.txt'))
+            roi = json.load(meta_path)['Summary']['ROI Used (x, y, width, height)']
+        except:
+            roi = None
+
+        bg_data = load_bg(path, height, width, roi)
+
+        return bg_data
 
     def _reconstructor_changed(self):
         changed = None
