@@ -31,12 +31,15 @@ class AcquisitionWorker(QtCore.QObject):
 
     def run(self):
 
+        logging.info('Running Acquisition...')
         if self.dim == '2D':
+            logging.debug('Acquiring 2D stack')
             stack = acquire_2D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
                                self.calib.snap_manager)
             self.n_slices = 1
 
         else:
+            logging.debug('Acquiring 3D stack')
             stack = acquire_3D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
                                self.calib_window.z_start, self.calib_window.z_end, self.calib_window.z_step)
 
@@ -45,13 +48,17 @@ class AcquisitionWorker(QtCore.QObject):
 
         birefringence, phase = self._reconstruct(stack)
         if self.calib_window.save_images:
+            logging.debug('Saving Images')
             self._save_imgs(birefringence, phase)
 
+        logging.info('Finished Acquisition')
+        logging.debug('Finished Acquisition')
         self.finished.emit()
 
     def _reconstruct(self, stack):
         if self.mode == 'phase' or 'all':
             if not self.calib_window.phase_reconstructor:
+                logging.debug('Using previous reconstruction settings')
                 recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
                                                  self.calib_window.swing, stack.shape[0], False,
                                                  self.calib_window.obj_na, self.calib_window.cond_na,
@@ -61,6 +68,7 @@ class AcquisitionWorker(QtCore.QObject):
                 self.phase_reconstructor_emitter.emit(recon)
             else:
                 if self._reconstructor_changed():
+                    logging.debug('Reconstruction settings changed, updating reconstructor')
                     recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
                                                      self.calib_window.swing, stack.shape[0], False,
                                                      self.calib_window.obj_na, self.calib_window.cond_na,
@@ -71,17 +79,21 @@ class AcquisitionWorker(QtCore.QObject):
                     recon = self.calib_window.phase_reconstructor
 
         else:
+            logging.debug('Creating birefringence only reconstructor')
             recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
                                              self.calib_window.swing, stack.shape[0],
                                              True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
 
         if self.bg_option != 'None':
+            logging.debug('Loading BG Data')
             bg_data = self._load_bg(self.calib_window.acq_bg_directory, stack.shape[-2], stack.shape[-1])
             bg_stokes = recon.Stokes_recon(bg_data)
             bg_stokes = recon.Stokes_transform(bg_stokes)
         else:
+            logging.debug('No Background Correction method chosen')
             bg_stokes = None
 
+        logging.debug('Reconstructing...')
         stokes = reconstruct_qlipp_stokes(stack, recon, bg_stokes)
         birefringence = None
         phase = None

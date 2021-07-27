@@ -15,10 +15,8 @@ import logging
 
 #TODO
 # Error Handling on the Calibration Thread
-# Logging for acquisition features
 # Clear buffer before calibration?
 # Clear plot before every calibration run
-# add background load and correction for acquisition
 
 class recOrder_Widget(QWidget, QtCore.QObject):
 
@@ -103,6 +101,7 @@ class recOrder_Widget(QWidget, QtCore.QObject):
         self.intensity_monitor = []
         self.save_imgs = False
         self.save_directory = None
+        self.bg_option = 'None'
         self.birefringence_dim = '2D'
         self.phase_dim = '2D'
         self.z_start = None
@@ -346,6 +345,16 @@ class recOrder_Widget(QWidget, QtCore.QObject):
         result = self._open_file_dialog(self.home_path)
         self.acq_bg_directory = result
         self.ui.le_bg_path.setText(result)
+
+    @pyqtSlot()
+    def enter_bg_correction(self):
+        state = self.ui.cb_bg_method.currentIndex()
+        if state == 0:
+            self.bg_option = 'None'
+        elif state == 1:
+            self.bg_option = 'global'
+        elif state == 2:
+            self.bg_option = 'local'
 
     @pyqtSlot()
     def enter_gpu_id(self):
