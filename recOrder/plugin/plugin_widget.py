@@ -3,10 +3,9 @@ from pycromanager import Bridge
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, QThread
 from qtpy.QtWidgets import QWidget, QFileDialog
+from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker
+from recOrder.plugin.acquisition.acquisition_workers import AcquisitionWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v4, recOrder_calibration_v5
-from recOrder.compute.qlipp_compute import initialize_reconstructor, \
-    reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, reconstruct_qlipp_phase2D, reconstruct_qlipp_phase3D
-from recOrder.acq.acq_single_stack import acquire_2D, acquire_3D
 from pathlib import Path
 from napari import Viewer
 from recOrder.calib.CoreFunctions import set_lc_state, snap_and_average
@@ -16,16 +15,12 @@ import logging
 
 #TODO
 # Error Handling on the Calibration Thread
-# Automatically Shut off live mode
 # Logging for acquisition features
 # Clear buffer before calibration?
 # Clear plot before every calibration run
-# Move the calibration button to the run calibration button
-# center acquisition tab
-# move the workers to a different file?
 # add handler for bg option and background loader and use gpu
 
-class recOrder_Calibration(QWidget, QtCore.QObject):
+class recOrder_Widget(QWidget, QtCore.QObject):
 
     mm_status_changed = pyqtSignal(bool)
     intensity_changed = pyqtSignal(float)
@@ -69,6 +64,14 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
         self.ui.le_zend.editingFinished.connect(self.enter_zend)
         self.ui.le_zstep.editingFinished.connect(self.enter_zstep)
+        self.ui.chb_use_gpu.stateChanged[int].connect(self.enter_use_gpu)
+        self.ui.le_gpu_id.editingFinished.connect(self.enter_gpu_id)
+        self.ui.le_obj_na.editingFinished.connect(self.enter_obj_na)
+        self.ui.le_cond_na.editingFinished.connect(self.enter_cond_na)
+        self.ui.le_mag.editingFinished.connect(self.enter_mag)
+        self.ui.le_ps.editingFinished.connect(self.enter_ps)
+        self.ui.le_n_media.editingFinished.connect(self.enter_n_media)
+        self.ui.le_pad_z.editingFinished.connect(self.enter_pad_z)
         self.ui.cb_birefringence.currentIndexChanged[int].connect(self.enter_birefringence_dim)
         self.ui.cb_phase.currentIndexChanged[int].connect(self.enter_phase_dim)
         self.ui.qbutton_acq_birefringence.clicked[bool].connect(self.acq_birefringence)
@@ -103,6 +106,8 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.z_start = None
         self.z_end = None
         self.z_step = None
+        self.gpu_id = 0
+        self.use_gpu = False
         self.obj_na = None
         self.cond_na = None
         self.mag = None
@@ -110,6 +115,7 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.n_media = 1.003
         self.pad_z = 0
         self.phase_reconstructor = None
+        self.acq_bg_directory = None
 
         # Assessment attributes
         self.calib_assessment_level = None
@@ -318,8 +324,54 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
             self.phase_dim = '3D'
 
     @pyqtSlot()
+    def enter_acq_bg_path(self):
+        path = self.ui.le_bg_path.text()
+        if os.path.exists(path):
+            self.acq_bg_directory = path
+        else:
+            self.ui.le_bg_path.setText('Path Does Not Exist')
+
+    @pyqtSlot(bool)
+    def browse_acq_bg_path(self):
+        result = self._open_file_dialog(self.home_path)
+        self.acq_bg_directory = result
+        self.ui.le_bg_path.setText(result)
+
+    @pyqtSlot()
+    def enter_gpu_id(self):
+        self.gpu_id = self.ui.le_gpu_id
+
+    @pyqtSlot()
+    def enter_use_gpu(self):
+        state = self.ui.chb_use_gpu.checkState()
+        if state == 2:
+            self.use_gpu = True
+        elif state == 0:
+            self.use_gpu = False
+
+    @pyqtSlot()
     def enter_obj_na(self):
-        self.obj_na = self.ui.le
+        self.obj_na = int(self.ui.le_obj_na.getText())
+
+    @pyqtSlot()
+    def enter_cond_na(self):
+        self.cond_na = int(self.ui.le_cond_na.getText())
+
+    @pyqtSlot()
+    def enter_mag(self):
+        self.mag = int(self.ui.le_mag.getText())
+
+    @pyqtSlot()
+    def enter_ps(self):
+        self.ps = int(self.ui.le_ps.getText())
+
+    @pyqtSlot()
+    def enter_n_media(self):
+        self.n_media = int(self.ui.le_n_media.getText())
+
+    @pyqtSlot()
+    def enter_pad_z(self):
+        self.pad_z = int(self.ui.le_pad_z.getText())
 
     @pyqtSlot(bool)
     def run_calibration(self):
@@ -328,6 +380,8 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.calib.swing = self.swing
         self.calib.wavelength = self.wavelength
         self.calib.meta_file = os.path.join(self.directory, 'calibration_metadata.txt')
+        if self.calib.snap_manager.isLiveModeOn():
+            self.calib.snap_manager.setLiveModeOn(False)
 
         self.calibration_thread = QThread()
         self.calib_worker = CalibrationWorker(self, self.calib)
@@ -450,281 +504,6 @@ class recOrder_Calibration(QWidget, QtCore.QObject):
         self.calib_worker._running = False
         self.calibration_thread.quit()
         self.calibration_thread.wait()
-
-class CalibrationWorker(QtCore.QObject):
-
-    progress_update = pyqtSignal(int)
-    extinction_update = pyqtSignal(str)
-    intensity_update = pyqtSignal(object)
-    calib_assessment = pyqtSignal(str)
-    calib_assessment_msg = pyqtSignal(str)
-    finished = pyqtSignal()
-
-    def __init__(self, calib_window, calib):
-        super().__init__()
-        self.calib_window = calib_window
-        self.calib = calib
-        self._running = True
-
-    def stop(self):
-        self._running = False
-        self.finished.emit()
-
-    def run(self):
-
-        self.calib.intensity_emitter = self.intensity_update
-        self.calib.get_full_roi()
-        self.progress_update.emit(1)
-
-        # TODO: Decide if displaying ROI is useful feature,
-        # include in a pop-up window or napari window?  How to prompt to continue?
-
-        # Check if change of ROI is needed
-        if self.calib_window.use_cropped_roi:
-            rect = self.calib.check_and_get_roi()
-            # cont = self.calib.display_and_check_ROI(rect)
-            self.calib_window.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
-            self.calib.ROI = (rect.x, rect.y, rect.width, rect.height)
-
-        # Calculate Blacklevel
-        logging.info('Calculating Blacklevel ...')
-        logging.debug('Calculating Blacklevel ...')
-        self.calib.calc_blacklevel()
-        logging.info(f'Blacklevel: {self.calib.I_Black}\n')
-        logging.debug(f'Blacklevel: {self.calib.I_Black}\n')
-
-        self.progress_update.emit(10)
-
-        # Set LC Wavelength:
-        self.calib_window.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.calib_window.wavelength)
-
-        # Optimize States
-        self._calibrate_4state() if self.calib_window.calib_scheme == '4-State' else self._calibrate_5state()
-
-        # Return ROI to full FOV
-        if self.calib_window.use_cropped_roi:
-            self.calib_window.mmc.clearROI()
-
-        # Calculate Extinction
-        extinction_ratio = self.calib.calculate_extinction(self.calib.swing, self.calib.I_Black, self.calib.I_Ext,
-                                                           self.calib.I_Elliptical)
-        self.calib.extinction_ratio = extinction_ratio
-        self.extinction_update.emit(str(extinction_ratio))
-
-        # Write Metadata
-        self.calib.write_metadata()
-        self.progress_update.emit(100)
-        self._assess_calibration()
-
-        logging.info("\n=======Finished Calibration=======\n")
-        logging.info(f"EXTINCTION = {extinction_ratio}")
-        logging.debug("\n=======Finished Calibration=======\n")
-        logging.debug(f"EXTINCTION = {extinction_ratio}")
-        self.finished.emit()
-        self._running = False
-
-    def _calibrate_4state(self):
-
-        self.calib.opt_Iext()
-        self.progress_update.emit(60)
-        self.calib.opt_I0()
-        self.progress_update.emit(65)
-        self.calib.opt_I60(0.05, 0.05)
-        self.progress_update.emit(75)
-        self.calib.opt_I120(0.05, 0.05)
-        self.progress_update.emit(85)
-
-    def _calibrate_5state(self):
-
-        self.calib.opt_Iext()
-        self.progress_update.emit(50)
-        self.calib.opt_I0()
-        self.progress_update.emit(55)
-        self.calib.opt_I45(0.05, 0.05)
-        self.progress_update.emit(65)
-        self.calib.opt_I90(0.05, 0.05)
-        self.progress_update.emit(75)
-        self.calib.opt_I135(0.05, 0.05)
-        self.progress_update.emit(85)
-
-    def _assess_calibration(self):
-
-        if 0.22 < self.calib.lca_ext < 0.34:
-            if 0.45 < self.calib.lcb_ext < 0.65:
-                if self.calib.extinction_ratio >= 100:
-                    self.calib_assessment.emit('good')
-                    self.calib_assessment_msg.emit('Sucessful Calibration')
-                elif 80 <= self.calib.extinction_ratio < 100:
-                    self.calib_assessment.emit('okay')
-                    self.calib_assessment_msg.emit('Sucessful Calibration, Okay Extinction Ratio')
-                else:
-                    self.calib_assessment.emit('bad')
-                    self.calib_assessment_msg.emit('Poor Extinction, try tuning the linear polarizer to be '
-                                                   'perpendicular to the long edge of the LC housing')
-            else:
-                self.calib_assessment.emit('bad')
-                self.calib_assessment_msg.emit('Wrong analyzer handedness or linear polarizer 90 degrees off')
-        else:
-            self.calib_assessment.emit('bad')
-            self.calib_assessment_msg.emit('Calibration Failed, unknown origin of issue')
-
-
-
-class BackgroundCaptureWorker(QtCore.QObject):
-
-    bg_image_emitter = pyqtSignal(object)
-    bire_image_emitter = pyqtSignal(object)
-    finished = pyqtSignal()
-
-    def __init__(self, calib_window, calib):
-        super().__init__()
-        self.calib_window = calib_window
-        self.calib = calib
-
-    def run(self):
-
-        bg_path = os.path.join(self.calib_window.directory, self.calib_window.ui.le_bg_folder.text())
-        if not os.path.exists(bg_path):
-            os.mkdir(bg_path)
-        imgs = self.calib.capture_bg(self.calib_window.n_avg, bg_path)
-        img_dim = (imgs.shape[-2], imgs.shape[-1])
-        N_channel = 4 if self.calib_window.calib_scheme == '4-State' else 5
-
-        recon = initialize_reconstructor(img_dim, self.calib_window.wavelength, self.calib_window.swing, N_channel,
-                                         True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
-
-        stokes = reconstruct_qlipp_stokes(imgs, recon, None)
-        birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-        retardance = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
-
-        self.bg_image_emitter.emit(imgs)
-        self.bire_image_emitter.emit([retardance, birefringence[1]])
-        self.finished.emit()
-
-
-class AcquisitionWorker(QtCore.QObject):
-
-    phase_image_emitter = pyqtSignal(object)
-    bire_image_emitter = pyqtSignal(object)
-    phase_reconstructor_emitter = pyqtSignal(object)
-    finished = pyqtSignal()
-
-    def __init__(self, calib_window, calib, mode):
-        super().__init__()
-        self.calib_window = calib_window
-        self.calib = calib
-        self.mode = mode
-        self.n_slices = None
-
-        if self.mode == 'birefringence' and self.calib_window.birefringence_dim == '2D':
-            self.dim = '2D'
-        else:
-            self.dim = '3D'
-
-    def run(self):
-
-        if self.dim == '2D':
-            stack = acquire_2D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
-                               self.calib.snap_manager)
-            self.n_slices = 1
-
-        elif self.dim == '3D':
-            stack = acquire_3D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
-                               self.calib_window.z_start, self.calib_window.z_end, self.calib_window.z_step)
-
-            self.n_slices = len(range(self.calib_window.z_start, self.calib_window.z_end+self.calib_window.z_step,
-                                      self.calib_window.z_step))
-
-        birefringence, phase = self._reconstruct(stack)
-        self.finished.emit()
-
-    def _reconstruct(self, stack):
-        if self.mode == 'phase' or 'all':
-            if not self.calib_window.phase_reconstructor:
-                recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
-                                                 self.calib_window.swing, stack.shape[0], False,
-                                                 self.calib_window.obj_na, self.calib_window.cond_na, self.calib_window.mag,
-                                                 self.n_slices, self.calib_window.z_step, self.calib_window.pad_z,
-                                                 self.calib_window.ps, self.calib_window.bg_option, mode=self.dim)
-                self.phase_reconstructor_emitter.emit(recon)
-            else:
-                if self._reconstructor_changed():
-                    recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
-                                                     self.calib_window.swing, stack.shape[0], False,
-                                                     self.calib_window.obj_na, self.calib_window.cond_na,
-                                                     self.calib_window.mag,
-                                                     self.n_slices, self.calib_window.z_step, self.calib_window.pad_z,
-                                                     self.calib_window.ps, self.calib_window.bg_option, mode=self.dim)
-                else:
-                    recon = self.calib_window.phase_reconstructor
-
-        else:
-            recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
-                                             self.calib_window.swing, stack.shape[0],
-                                             True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
-
-        bg_stokes = self._load_bg() if self.bg_option != 'None' else None
-        stokes = reconstruct_qlipp_stokes(stack, recon, bg_stokes)
-
-        birefringence = None
-        phase = None
-        if self.mode == 'all':
-            birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-            phase = reconstruct_qlipp_phase2D(stokes[0], recon) if self.dim == '2D' \
-                else reconstruct_qlipp_phase3D(stokes[0], recon)
-
-        elif self.mode == 'phase':
-            phase = reconstruct_qlipp_phase2D(stokes[0], recon) if self.dim == '2D' \
-                else reconstruct_qlipp_phase3D(stokes[0], recon)
-        elif self.mode == 'birefringence':
-            birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-
-        else:
-            raise ValueError('Reconstruction Mode Not Understood')
-
-        birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
-        return birefringence, phase
-
-    def _save_imgs(self, birefringence, phase):
-        pass
-
-    def _load_bg(self):
-        pass
-
-    def _reconstructor_changed(self):
-        changed = None
-
-        attr_list = {'phase_dim': 'mode',
-                     'n_slices': 'N_defocus',
-                     'mag': 'mag',
-                     'pad_z': 'pad_z',
-                     'n_media': 'n_media',
-                     'ps': 'ps',
-                     'swing': 'chi',
-                     'bg_option': 'bg_option'
-                    }
-        attr_modified_list = {'obj_na': 'NA_obj',
-                             'cond_na': 'NA_illu',
-                            }
-
-        for key, value in attr_list.items():
-            if getattr(self.calib_window, key) != getattr(self.calib_window.phase_reconstructor, value):
-                changed = True
-            else:
-                changed = False
-        for key, value in attr_modified_list.items():
-            if getattr(self.calib_window, key)/self.calib_window.n_media != getattr(self.calib_window.phase_reconstructor, value):
-                changed = True
-            else:
-                changed = False
-
-        if self.calib_window.wavelength * 1e-3 / self.calib_window.n_media != self.calib_window.phase_reconstructor.lambda_illu:
-            changed = True
-        else:
-            changed = False
-
-        return changed
-
 
 class QtLogger(logging.Handler):
 
