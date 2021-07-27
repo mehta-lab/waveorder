@@ -61,6 +61,7 @@ class recOrder_Widget(QWidget, QtCore.QObject):
         ######### Acquisition Tab #########
         self.ui.qbutton_browse_save_path.clicked[bool].connect(self.browse_save_path)
         self.ui.chb_save_imgs.stateChanged[int].connect(self.enter_save_imgs)
+        self.ui.le_save_path.editingFinished.connect(self.enter_save_path)
         self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
         self.ui.le_zend.editingFinished.connect(self.enter_zend)
         self.ui.le_zstep.editingFinished.connect(self.enter_zstep)
@@ -101,6 +102,7 @@ class recOrder_Widget(QWidget, QtCore.QObject):
         self.n_avg = 20
         self.intensity_monitor = []
         self.save_imgs = False
+        self.save_directory = None
         self.birefringence_dim = '2D'
         self.phase_dim = '2D'
         self.z_start = None
@@ -237,7 +239,7 @@ class recOrder_Widget(QWidget, QtCore.QObject):
     def browse_save_path(self):
         # self.ui.le_directory.setFocus()
         result = self._open_file_dialog(self.home_path)
-        self.directory = result
+        self.save_directory = result
         self.ui.le_save_path.setText(result)
 
     @pyqtSlot()
@@ -294,6 +296,14 @@ class recOrder_Widget(QWidget, QtCore.QObject):
             self.save_imgs = True
         elif state == 0:
             self.save_imgs = False
+
+    @pyqtSlot()
+    def enter_save_path(self):
+        path = self.ui.le_save_path.text()
+        if os.path.exists(path):
+            self.save_directory = path
+        else:
+            self.ui.le_directory.setText('Path Does Not Exist')
 
     @pyqtSlot()
     def enter_zstart(self):

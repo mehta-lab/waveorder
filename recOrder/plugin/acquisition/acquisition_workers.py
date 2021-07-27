@@ -5,10 +5,10 @@ from recOrder.compute.qlipp_compute import initialize_reconstructor, \
 from recOrder.acq.acq_single_stack import acquire_2D, acquire_3D
 from recOrder.io.utils import load_bg
 import logging
+from waveorder.io.writer import WaveorderWriter
 import json
 import numpy as np
 import os
-
 
 class AcquisitionWorker(QtCore.QObject):
 
@@ -36,7 +36,7 @@ class AcquisitionWorker(QtCore.QObject):
                                self.calib.snap_manager)
             self.n_slices = 1
 
-        elif self.dim == '3D':
+        else:
             stack = acquire_3D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
                                self.calib_window.z_start, self.calib_window.z_end, self.calib_window.z_step)
 
@@ -44,6 +44,9 @@ class AcquisitionWorker(QtCore.QObject):
                                       self.calib_window.z_step))
 
         birefringence, phase = self._reconstruct(stack)
+        if self.calib_window.save_images:
+            self._save_imgs(birefringence, phase)
+
         self.finished.emit()
 
     def _reconstruct(self, stack):
@@ -51,18 +54,19 @@ class AcquisitionWorker(QtCore.QObject):
             if not self.calib_window.phase_reconstructor:
                 recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
                                                  self.calib_window.swing, stack.shape[0], False,
-                                                 self.calib_window.obj_na, self.calib_window.cond_na, self.calib_window.mag,
-                                                 self.n_slices, self.calib_window.z_step, self.calib_window.pad_z,
-                                                 self.calib_window.ps, self.calib_window.bg_option, mode=self.dim)
+                                                 self.calib_window.obj_na, self.calib_window.cond_na,
+                                                 self.calib_window.mag, self.n_slices, self.calib_window.z_step,
+                                                 self.calib_window.pad_z, self.calib_window.ps,
+                                                 self.calib_window.bg_option, mode=self.dim)
                 self.phase_reconstructor_emitter.emit(recon)
             else:
                 if self._reconstructor_changed():
                     recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
                                                      self.calib_window.swing, stack.shape[0], False,
                                                      self.calib_window.obj_na, self.calib_window.cond_na,
-                                                     self.calib_window.mag,
-                                                     self.n_slices, self.calib_window.z_step, self.calib_window.pad_z,
-                                                     self.calib_window.ps, self.calib_window.bg_option, mode=self.dim)
+                                                     self.calib_window.mag, self.n_slices, self.calib_window.z_step,
+                                                     self.calib_window.pad_z, self.calib_window.ps,
+                                                     self.calib_window.bg_option, mode=self.dim)
                 else:
                     recon = self.calib_window.phase_reconstructor
 
@@ -72,7 +76,7 @@ class AcquisitionWorker(QtCore.QObject):
                                              True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
 
         if self.bg_option != 'None':
-            bg_data = self._load_bg(self.calib_window.acq_bg_directory)
+            bg_data = self._load_bg(self.calib_window.acq_bg_directory, stack.shape[-2], stack.shape[-1])
             bg_stokes = recon.Stokes_recon(bg_data)
             bg_stokes = recon.Stokes_transform(bg_stokes)
         else:
@@ -100,7 +104,23 @@ class AcquisitionWorker(QtCore.QObject):
         return birefringence, phase
 
     def _save_imgs(self, birefringence, phase):
-        pass
+        writer = WaveorderWriter(self.calib_window.save_directory, 'physical')
+
+        if birefringence:
+            i = 0
+            while os.path.exists(os.path.join(self.calib_window.save_directory, f'Birefringence_Snap_{i}.zarr')):
+                i += 1
+            writer.create_zarr_root(f'Birefringence_Snap_{i}.zarr')
+            writer.create_position(0)
+            writer.write(birefringence)
+
+        if phase:
+            i = 0
+            while os.path.exists(os.path.join(self.calib_window.save_directory, f'Phase_Snap_{i}.zarr')):
+                i += 1
+            writer.create_zarr_root(f'Phase_Snap_{i}.zarr')
+            writer.create_position(0)
+            writer.write(birefringence)
 
     def _load_bg(self, path, height, width):
 
@@ -125,10 +145,11 @@ class AcquisitionWorker(QtCore.QObject):
                      'ps': 'ps',
                      'swing': 'chi',
                      'bg_option': 'bg_option'
-                    }
+                     }
         attr_modified_list = {'obj_na': 'NA_obj',
-                             'cond_na': 'NA_illu',
-                            }
+                              'cond_na': 'NA_illu',
+                              'wavelength': 'lambda_illu'
+                              }
 
         for key, value in attr_list.items():
             if getattr(self.calib_window, key) != getattr(self.calib_window.phase_reconstructor, value):
@@ -136,14 +157,16 @@ class AcquisitionWorker(QtCore.QObject):
             else:
                 changed = False
         for key, value in attr_modified_list.items():
-            if getattr(self.calib_window, key)/self.calib_window.n_media != getattr(self.calib_window.phase_reconstructor, value):
+            if key == 'wavelength':
+                if self.calib_window.wavelength * 1e-3 / self.calib_window.n_media != \
+                        self.calib_window.phase_reconstructor.lambda_illu:
+                    changed = True
+                else:
+                    changed = False
+            elif getattr(self.calib_window, key)/self.calib_window.n_media != \
+                    getattr(self.calib_window.phase_reconstructor, value):
                 changed = True
             else:
                 changed = False
-
-        if self.calib_window.wavelength * 1e-3 / self.calib_window.n_media != self.calib_window.phase_reconstructor.lambda_illu:
-            changed = True
-        else:
-            changed = False
 
         return changed
