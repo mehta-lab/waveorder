@@ -55,7 +55,7 @@ class qlipp_pipeline(PipelineInterface):
             if self.config.calibration_metadata else None
         #todo: re-structure reading calib metadata when finalized
         self.calib_scheme = self.calib_meta['Summary']['Acquired Using'] if self.calib_meta \
-            else '4-Frame'
+            else '4-State'
         self.bg_path = self.config.background if self.config.background else None
         #todo: fix typo
         self.bg_roi = self.calib_meta['Summary']['ROI Used (x, y, width, height)'] if self.calib_meta else None
@@ -115,7 +115,7 @@ class qlipp_pipeline(PipelineInterface):
 
         """
 
-        if self.calib_scheme == '4-Frame':
+        if self.calib_scheme == '4-State':
             LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
 
             LF_array[0] = data[self.s0_idx]
@@ -123,7 +123,7 @@ class qlipp_pipeline(PipelineInterface):
             LF_array[2] = data[self.s2_idx]
             LF_array[3] = data[self.s3_idx]
 
-        elif self.calib_scheme == '5-Frame':
+        elif self.calib_scheme == '5-State':
             LF_array = np.zeros([5, self.data.slices, self.data.height, self.data.width])
             LF_array[0] = data[self.s0_idx]
             LF_array[1] = data[self.s1_idx]
