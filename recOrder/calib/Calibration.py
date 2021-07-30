@@ -10,6 +10,7 @@ from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 import json
 import os
 import logging
+from recOrder.io.utils import MockEmitter
 
 #todo: save metadata without overwriting existing file
 
@@ -33,9 +34,7 @@ class QLIPP_Calibration():
         self.snap_manager = mm.getSnapLiveManager()
 
         # GUI Emitter
-        self.intensity_emitter = None
-        self.log_emitter = None
-        self.img_emitter = None
+        self.intensity_emitter = MockEmitter()
 
         # Optimizer
         if optimization == 'min_scalar':

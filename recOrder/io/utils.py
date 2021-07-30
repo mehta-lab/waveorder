@@ -31,3 +31,7 @@ def load_bg(bg_path, height, width, ROI=None):
             bg_data[i, :, :] = img
 
     return bg_data
+
+class MockEmitter:
+    def emit(self):
+        pass

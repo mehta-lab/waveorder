@@ -1,6 +1,6 @@
 from recOrder.calib.Calibration import QLIPP_Calibration
 from pycromanager import Bridge
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, QThread
+from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QFileDialog
 from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker
 from recOrder.plugin.acquisition.acquisition_workers import AcquisitionWorker
@@ -16,6 +16,9 @@ import logging
 # Error Handling on the Calibration Thread
 # Clear buffer before calibration?
 # Create Thread Worker
+# Make emitter optional so the individual code can be used
+# Check out using the 5state scheme individually
+
 
 class recOrder_Widget(QWidget):
 
