@@ -15,10 +15,7 @@ import logging
 #TODO
 # Error Handling on the Calibration Thread
 # Clear buffer before calibration?
-# Create Thread Worker
-# Make emitter optional so the individual code can be used
 # Check out using the 5state scheme individually
-
 
 class recOrder_Widget(QWidget):
 
