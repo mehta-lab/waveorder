@@ -16,6 +16,8 @@ import logging
 # Error Handling on the Calibration Thread
 # Clear buffer before calibration?
 # Check out using the 5state scheme individually
+# Figure out background button?
+#
 
 class recOrder_Widget(QWidget):
 
@@ -72,6 +74,7 @@ class recOrder_Widget(QWidget):
         self.ui.le_pad_z.editingFinished.connect(self.enter_pad_z)
         self.ui.cb_birefringence.currentIndexChanged[int].connect(self.enter_birefringence_dim)
         self.ui.cb_phase.currentIndexChanged[int].connect(self.enter_phase_dim)
+        # self.ui.qbu
         self.ui.qbutton_acq_birefringence.clicked[bool].connect(self.acq_birefringence)
         self.ui.qbutton_acq_phase.clicked[bool].connect(self.acq_phase)
         self.ui.qbutton_acq_birefringence_phase.clicked[bool].connect(self.acq_birefringence_phase)
@@ -309,15 +312,15 @@ class recOrder_Widget(QWidget):
 
     @pyqtSlot()
     def enter_zstart(self):
-        self.z_start = int(self.ui.le_zstart.text())
+        self.z_start = float(self.ui.le_zstart.text())
 
     @pyqtSlot()
     def enter_zend(self):
-        self.z_end = int(self.ui.le_zend.text())
+        self.z_end = float(self.ui.le_zend.text())
 
     @pyqtSlot()
     def enter_zstep(self):
-        self.z_step = int(self.ui.le_zstep.text())
+        self.z_step = float(self.ui.le_zstep.text())
 
     @pyqtSlot()
     def enter_birefringence_dim(self):
@@ -373,27 +376,27 @@ class recOrder_Widget(QWidget):
 
     @pyqtSlot()
     def enter_obj_na(self):
-        self.obj_na = int(self.ui.le_obj_na.getText())
+        self.obj_na = int(self.ui.le_obj_na.text())
 
     @pyqtSlot()
     def enter_cond_na(self):
-        self.cond_na = int(self.ui.le_cond_na.getText())
+        self.cond_na = int(self.ui.le_cond_na.text())
 
     @pyqtSlot()
     def enter_mag(self):
-        self.mag = int(self.ui.le_mag.getText())
+        self.mag = int(self.ui.le_mag.text())
 
     @pyqtSlot()
     def enter_ps(self):
-        self.ps = int(self.ui.le_ps.getText())
+        self.ps = int(self.ui.le_ps.text())
 
     @pyqtSlot()
     def enter_n_media(self):
-        self.n_media = int(self.ui.le_n_media.getText())
+        self.n_media = int(self.ui.le_n_media.text())
 
     @pyqtSlot()
     def enter_pad_z(self):
-        self.pad_z = int(self.ui.le_pad_z.getText())
+        self.pad_z = int(self.ui.le_pad_z.text())
 
     @pyqtSlot(bool)
     def calc_extinction(self):
@@ -412,69 +415,76 @@ class recOrder_Widget(QWidget):
         self.calib.swing = self.swing
         self.calib.wavelength = self.wavelength
         self.calib.meta_file = os.path.join(self.directory, 'calibration_metadata.txt')
-        if self.calib.snap_manager.isLiveModeOn():
+
+
+        if self.calib.snap_manager.getIsLiveModeOn():
             self.calib.snap_manager.setLiveModeOn(False)
 
 
         worker = CalibrationWorker(self, self.calib)
-        thread_worker = ThreadWorker(self, worker)
-        thread_worker.initalize()
+        self.thread_worker = ThreadWorker(self, worker)
+        self.thread_worker.initalize()
 
-        thread_worker.worker.progress_update.connect(self.handle_progress_update)
-        thread_worker.worker.extinction_update.connect(self.handle_extinction_update)
-        thread_worker.worker.intensity_update.connect(self.handle_plot_update)
-        thread_worker.worker.calib_assessment.connect(self.handle_calibration_assessment_update)
-        thread_worker.worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
+        self.thread_worker.worker.progress_update.connect(self.handle_progress_update)
+        self.thread_worker.worker.extinction_update.connect(self.handle_extinction_update)
+        self.thread_worker.worker.intensity_update.connect(self.handle_plot_update)
+        self.thread_worker.worker.calib_assessment.connect(self.handle_calibration_assessment_update)
+        self.thread_worker.worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
 
-        thread_worker.thread.start()
+        self.thread_worker._disable_buttons()
+        self.thread_worker.thread.start()
 
     @pyqtSlot(bool)
     def capture_bg(self):
 
         worker = BackgroundCaptureWorker(self, self.calib)
-        thread_worker = ThreadWorker(self, worker)
-        thread_worker.initalize()
+        self.thread_worker = ThreadWorker(self, worker)
+        self.thread_worker.initalize()
 
-        thread_worker.worker.bg_image_emitter.connect(self.handle_bg_image_update)
-        thread_worker.worker.bire_image_emitter.connect(self.handle_bg_bire_image_update)
+        self.thread_worker.worker.bg_image_emitter.connect(self.handle_bg_image_update)
+        self.thread_worker.worker.bire_image_emitter.connect(self.handle_bg_bire_image_update)
 
-        thread_worker.thread.start()
+        self.thread_worker._disable_buttons()
+        self.thread_worker.thread.start()
 
     @pyqtSlot(bool)
     def acq_birefringence(self):
 
         worker = AcquisitionWorker(self, self.calib, 'birefringence')
-        thread_worker = ThreadWorker(self, worker)
-        thread_worker.initalize()
+        self.thread_worker = ThreadWorker(self, worker)
+        self.thread_worker.initalize()
 
-        thread_worker.worker.bire_image_emitter.connect(self.handle_bire_image_update)
+        self.thread_worker.worker.bire_image_emitter.connect(self.handle_bire_image_update)
 
-        thread_worker.thread.start()
+        self.thread_worker._disable_buttons()
+        self.thread_worker.thread.start()
 
     @pyqtSlot(bool)
     def acq_phase(self):
 
         worker = AcquisitionWorker(self, self.calib, 'phase')
-        thread_worker = ThreadWorker(self, worker)
-        thread_worker.initalize()
+        self.thread_worker = ThreadWorker(self, worker)
+        self.thread_worker.initalize()
 
-        thread_worker.worker.phase_image_emitter.connect(self.handle_phase_image_update)
-        thread_worker.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
+        self.thread_worker.worker.phase_image_emitter.connect(self.handle_phase_image_update)
+        self.thread_worker.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
 
-        thread_worker.thread.start()
+        self.thread_worker._disable_buttons()
+        self.thread_worker.thread.start()
 
     @pyqtSlot(bool)
     def acq_birefringence_phase(self):
 
         worker = AcquisitionWorker(self, self.calib, 'all')
-        thread_worker = ThreadWorker(self, worker)
-        thread_worker.initalize()
+        self.thread_worker = ThreadWorker(self, worker)
+        self.thread_worker.initalize()
 
-        thread_worker.worker.phase_image_emitter.connect(self.handle_phase_image_update)
-        thread_worker.worker.bire_image_emitter.connect(self.handle_bire_image_update)
-        thread_worker.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
+        self.thread_worker.worker.phase_image_emitter.connect(self.handle_phase_image_update)
+        self.thread_worker.worker.bire_image_emitter.connect(self.handle_bire_image_update)
+        self.thread_worker.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
 
-        thread_worker.thread.start()
+        self.thread_worker._disable_buttons()
+        self.thread_worker.thread.start()
 
     def _open_file_dialog(self, default_path):
         return self._open_dialog("select a directory",

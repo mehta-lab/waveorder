@@ -105,8 +105,8 @@ class CalibrationWorker(QtCore.QObject):
 
     def _assess_calibration(self):
 
-        if 0.22 < self.calib.lca_ext < 0.34:
-            if 0.45 < self.calib.lcb_ext < 0.65:
+        if 0.2 < self.calib.lca_ext < 0.4:
+            if 0.4 < self.calib.lcb_ext < 0.7:
                 if self.calib.extinction_ratio >= 100:
                     self.calib_assessment.emit('good')
                     self.calib_assessment_msg.emit('Sucessful Calibration')

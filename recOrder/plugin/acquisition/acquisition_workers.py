@@ -47,16 +47,18 @@ class AcquisitionWorker(QtCore.QObject):
                                       self.calib_window.z_step))
 
         birefringence, phase = self._reconstruct(stack)
-        if self.calib_window.save_images:
+        if self.calib_window.save_imgs:
             logging.debug('Saving Images')
             self._save_imgs(birefringence, phase)
 
         logging.info('Finished Acquisition')
         logging.debug('Finished Acquisition')
+        self.bire_image_emitter.emit(birefringence)
+        self.phase_image_emitter.emit(phase)
         self.finished.emit()
 
     def _reconstruct(self, stack):
-        if self.mode == 'phase' or 'all':
+        if self.mode == 'phase' or self.mode == 'all':
             if not self.calib_window.phase_reconstructor:
                 logging.debug('Using previous reconstruction settings')
                 recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
@@ -82,9 +84,9 @@ class AcquisitionWorker(QtCore.QObject):
             logging.debug('Creating birefringence only reconstructor')
             recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
                                              self.calib_window.swing, stack.shape[0],
-                                             True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
+                                             True, 1, 1, 1, 1, 1, 0, 1, bg_option=self.calib_window.bg_option, mode='2D')
 
-        if self.bg_option != 'None':
+        if self.calib_window.bg_option != 'None':
             logging.debug('Loading BG Data')
             bg_data = self._load_bg(self.calib_window.acq_bg_directory, stack.shape[-2], stack.shape[-1])
             bg_stokes = recon.Stokes_recon(bg_data)
@@ -118,15 +120,16 @@ class AcquisitionWorker(QtCore.QObject):
     def _save_imgs(self, birefringence, phase):
         writer = WaveorderWriter(self.calib_window.save_directory, 'physical')
 
-        if birefringence:
+        if birefringence is not None:
             i = 0
             while os.path.exists(os.path.join(self.calib_window.save_directory, f'Birefringence_Snap_{i}.zarr')):
                 i += 1
             writer.create_zarr_root(f'Birefringence_Snap_{i}.zarr')
             writer.create_position(0)
+            writer.init_array()
             writer.write(birefringence)
 
-        if phase:
+        if phase is not None:
             i = 0
             while os.path.exists(os.path.join(self.calib_window.save_directory, f'Phase_Snap_{i}.zarr')):
                 i += 1
