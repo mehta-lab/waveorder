@@ -10,6 +10,7 @@ import json
 import numpy as np
 import os
 
+# TODO: Change Acquisition to Using MDA?  This would allow for easy sequencing...
 class AcquisitionWorker(QtCore.QObject):
 
     phase_image_emitter = pyqtSignal(object)

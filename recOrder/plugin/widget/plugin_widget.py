@@ -16,8 +16,6 @@ import logging
 # Error Handling on the Calibration Thread
 # Clear buffer before calibration?
 # Check out using the 5state scheme individually
-# Figure out background button?
-#
 
 class recOrder_Widget(QWidget):
 
@@ -76,6 +74,7 @@ class recOrder_Widget(QWidget):
         self.ui.cb_phase.currentIndexChanged[int].connect(self.enter_phase_dim)
         self.ui.cb_bg_method.currentIndexChanged[int].connect(self.enter_bg_correction)
         self.ui.le_bg_path.editingFinished.connect(self.enter_acq_bg_path)
+        self.ui.qbutton_browse_bg_path.clicked[bool].connect(self.browse_acq_bg_path)
         self.ui.qbutton_acq_birefringence.clicked[bool].connect(self.acq_birefringence)
         self.ui.qbutton_acq_phase.clicked[bool].connect(self.acq_phase)
         self.ui.qbutton_acq_birefringence_phase.clicked[bool].connect(self.acq_birefringence_phase)
