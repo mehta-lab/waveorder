@@ -39,11 +39,12 @@ def acquire_3D(mm, mmc, scheme, z_start, z_end, z_step, snap_manager=None):
     for c in range(n_channels):
         set_lc_state(mmc, f'State{c}')
         z_stack = []
-
-        for z in range(current_z-z_start, current_z+z_end+z_step, z_step):
+        for z in np.arange(current_z+z_start, current_z+z_end+z_step, z_step):
             mmc.setPosition(stage, z)
             z_stack.append(snap_and_get_image(snap_manager))
 
         stack.append(z_stack)
+
+    mmc.setPosition(stage, current_z)
 
     return np.asarray(stack)

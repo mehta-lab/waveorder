@@ -74,7 +74,8 @@ class recOrder_Widget(QWidget):
         self.ui.le_pad_z.editingFinished.connect(self.enter_pad_z)
         self.ui.cb_birefringence.currentIndexChanged[int].connect(self.enter_birefringence_dim)
         self.ui.cb_phase.currentIndexChanged[int].connect(self.enter_phase_dim)
-        # self.ui.qbu
+        self.ui.cb_bg_method.currentIndexChanged[int].connect(self.enter_bg_correction)
+        self.ui.le_bg_path.editingFinished.connect(self.enter_acq_bg_path)
         self.ui.qbutton_acq_birefringence.clicked[bool].connect(self.acq_birefringence)
         self.ui.qbutton_acq_phase.clicked[bool].connect(self.acq_phase)
         self.ui.qbutton_acq_birefringence_phase.clicked[bool].connect(self.acq_birefringence_phase)
@@ -376,27 +377,27 @@ class recOrder_Widget(QWidget):
 
     @pyqtSlot()
     def enter_obj_na(self):
-        self.obj_na = int(self.ui.le_obj_na.text())
+        self.obj_na = float(self.ui.le_obj_na.text())
 
     @pyqtSlot()
     def enter_cond_na(self):
-        self.cond_na = int(self.ui.le_cond_na.text())
+        self.cond_na = float(self.ui.le_cond_na.text())
 
     @pyqtSlot()
     def enter_mag(self):
-        self.mag = int(self.ui.le_mag.text())
+        self.mag = float(self.ui.le_mag.text())
 
     @pyqtSlot()
     def enter_ps(self):
-        self.ps = int(self.ui.le_ps.text())
+        self.ps = float(self.ui.le_ps.text())
 
     @pyqtSlot()
     def enter_n_media(self):
-        self.n_media = int(self.ui.le_n_media.text())
+        self.n_media = float(self.ui.le_n_media.text())
 
     @pyqtSlot()
     def enter_pad_z(self):
-        self.pad_z = int(self.ui.le_pad_z.text())
+        self.pad_z = float(self.ui.le_pad_z.text())
 
     @pyqtSlot(bool)
     def calc_extinction(self):

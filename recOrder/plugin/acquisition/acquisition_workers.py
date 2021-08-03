@@ -43,8 +43,8 @@ class AcquisitionWorker(QtCore.QObject):
             stack = acquire_3D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
                                self.calib_window.z_start, self.calib_window.z_end, self.calib_window.z_step)
 
-            self.n_slices = len(range(self.calib_window.z_start, self.calib_window.z_end+self.calib_window.z_step,
-                                      self.calib_window.z_step))
+            self.n_slices = int(len(np.arange(self.calib_window.z_start, self.calib_window.z_end+self.calib_window.z_step,
+                                      self.calib_window.z_step)))
 
         birefringence, phase = self._reconstruct(stack)
         if self.calib_window.save_imgs:
@@ -60,7 +60,7 @@ class AcquisitionWorker(QtCore.QObject):
     def _reconstruct(self, stack):
         if self.mode == 'phase' or self.mode == 'all':
             if not self.calib_window.phase_reconstructor:
-                logging.debug('Using previous reconstruction settings')
+                logging.debug('Computing new reconstructor')
                 recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
                                                  self.calib_window.swing, stack.shape[0], False,
                                                  self.calib_window.obj_na, self.calib_window.cond_na,
@@ -78,6 +78,7 @@ class AcquisitionWorker(QtCore.QObject):
                                                      self.calib_window.pad_z, self.calib_window.ps,
                                                      self.calib_window.bg_option, mode=self.dim)
                 else:
+                    logging.debug('Using previous reconstruction settings')
                     recon = self.calib_window.phase_reconstructor
 
         else:
@@ -121,21 +122,36 @@ class AcquisitionWorker(QtCore.QObject):
         writer = WaveorderWriter(self.calib_window.save_directory, 'physical')
 
         if birefringence is not None:
+            chunk_size = (1,1,1,birefringence.shape[-2],birefringence.shape[-1])
             i = 0
             while os.path.exists(os.path.join(self.calib_window.save_directory, f'Birefringence_Snap_{i}.zarr')):
                 i += 1
             writer.create_zarr_root(f'Birefringence_Snap_{i}.zarr')
             writer.create_position(0)
-            writer.init_array()
-            writer.write(birefringence)
+            if len(birefringence.shape) == 3:
+                writer.init_array((1,4,1,birefringence.shape[-2], birefringence.shape[-1]),
+                                  chunk_size, ['Retardance', 'Orientation', 'BF', 'Pol'])
+                z=0
+            else:
+                writer.init_array((1, 4, birefringence.shape[-3], birefringence.shape[-2], birefringence.shape[-1]),
+                                  chunk_size, ['Retardance', 'Orientation', 'BF', 'Pol'])
+                z = [0,birefringence.shape[-3]]
+            writer.write(birefringence, t=0, c=[0,4], z=z)
 
         if phase is not None:
+            chunk_size = (1,1,1,phase.shape[-2],phase.shape[-1])
             i = 0
             while os.path.exists(os.path.join(self.calib_window.save_directory, f'Phase_Snap_{i}.zarr')):
                 i += 1
             writer.create_zarr_root(f'Phase_Snap_{i}.zarr')
             writer.create_position(0)
-            writer.write(birefringence)
+            if len(phase.shape) == 3:
+                writer.init_array((1,1,1,phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase2D'])
+                z=0
+            else:
+                writer.init_array((1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase3D'])
+                z = [0,birefringence.shape[-3]]
+            writer.write(phase, t=0, c=0, z=z)
 
     def _load_bg(self, path, height, width):
 
