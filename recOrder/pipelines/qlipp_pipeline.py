@@ -208,7 +208,7 @@ class qlipp_pipeline(PipelineInterface):
         birefringence:      (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
         phase2D:            (nd-array) None or nd-array w/ dimensions (Y, X)
         phase3D:            (nd-array) None or nd-array w/ dimensions (Z, Y, X)
-        registered_stacks
+        registered_stacks:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
 
         Returns
         -------
