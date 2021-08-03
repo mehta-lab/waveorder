@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>522</width>
-    <height>985</height>
+    <height>803</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -321,7 +321,7 @@
                  </font>
                 </property>
                 <property name="text">
-                 <string>Success!</string>
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -955,20 +955,6 @@
               <item row="1" column="1" colspan="2">
                <widget class="QLineEdit" name="le_bg_path"/>
               </item>
-              <item row="1" column="3">
-               <widget class="QPushButton" name="le_browse_bg_path">
-                <property name="text">
-                 <string>Browse</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_bg_path">
-                <property name="text">
-                 <string>Background Path</string>
-                </property>
-               </widget>
-              </item>
               <item row="0" column="1">
                <widget class="QComboBox" name="cb_bg_method">
                 <item>
@@ -988,13 +974,10 @@
                 </item>
                </widget>
               </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_gpu_id">
+              <item row="1" column="3">
+               <widget class="QPushButton" name="qbutton_browse_bg_path">
                 <property name="text">
-                 <string>GPU ID</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                 <string>Browse</string>
                 </property>
                </widget>
               </item>
@@ -1008,10 +991,27 @@
                 </property>
                </widget>
               </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_gpu_id">
+                <property name="text">
+                 <string>GPU ID</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
               <item row="3" column="2">
                <widget class="QCheckBox" name="chb_use_gpu">
                 <property name="text">
                  <string>Use GPU</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_bg_path">
+                <property name="text">
+                 <string>Background Path</string>
                 </property>
                </widget>
               </item>
