@@ -195,6 +195,26 @@ class qlipp_pipeline(PipelineInterface):
 
     # todo: think about better way to write fluor/registered data?
     def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
+        """
+        This function will iteratively write the data into its proper position, time, channel, z index.
+        If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
+        in the data.  Dimensions differ between data type to make compute easier with waveOrder backend.
+
+        Parameters
+        ----------
+        pt:                 (tuple) tuple containing position and time indicies.
+        pt_data:            (nd-array) raw data nd-array at p,t index with dimensions (C, Z, Y, X)
+        stokes:             (nd-array) None or nd-array w/ dimensions (Z, C, Y, X)
+        birefringence:      (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
+        phase2D:            (nd-array) None or nd-array w/ dimensions (Y, X)
+        phase3D:            (nd-array) None or nd-array w/ dimensions (Z, Y, X)
+        registered_stacks
+
+        Returns
+        -------
+        Writes a zarr array to to given save directory.
+
+        """
 
         t = pt[1]
         z = 0 if self.mode == '2D' else None
