@@ -46,7 +46,7 @@ def setup_test_data():
     # 'https://drive.google.com/file/d/1UWSr4GQ6Kpj5irq2TicvDLULfWjKhh0b/view?usp=sharing'
 
     # DO NOT ADJUST THIS VALUE
-    recOrder_pytest = '1_FoKVyl4Qa4F-4_vaREq_fqxODEU5neU'
+    recOrder_pytest = '1Pwrk8Me0m5VYdqa8T3WxETwbgHsgVADC'
 
     # download files to temp folder
     output = temp_pipeline + "/recOrder_pytest.zip"
