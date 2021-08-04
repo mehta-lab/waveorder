@@ -112,11 +112,12 @@ class AcquisitionWorker(QtCore.QObject):
                 else reconstruct_qlipp_phase3D(stokes[0], recon)
         elif self.mode == 'birefringence':
             birefringence = reconstruct_qlipp_birefringence(stokes, recon)
+            birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
 
         else:
             raise ValueError('Reconstruction Mode Not Understood')
 
-        birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
+
         return birefringence, phase
 
     def _save_imgs(self, birefringence, phase):
@@ -146,12 +147,13 @@ class AcquisitionWorker(QtCore.QObject):
                 i += 1
             writer.create_zarr_root(f'Phase_Snap_{i}.zarr')
             writer.create_position(0)
-            if len(phase.shape) == 3:
+            if len(phase.shape) == 2:
                 writer.init_array((1,1,1,phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase2D'])
                 z=0
             else:
                 writer.init_array((1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase3D'])
-                z = [0,birefringence.shape[-3]]
+                print(np.shape(phase))
+                z = [0,phase.shape[-3]]
             writer.write(phase, t=0, c=0, z=z)
 
     def _load_bg(self, path, height, width):
@@ -169,7 +171,7 @@ class AcquisitionWorker(QtCore.QObject):
     def _reconstructor_changed(self):
         changed = None
 
-        attr_list = {'phase_dim': 'mode',
+        attr_list = {'phase_dim': 'phase_deconv',
                      'n_slices': 'N_defocus',
                      'mag': 'mag',
                      'pad_z': 'pad_z',
