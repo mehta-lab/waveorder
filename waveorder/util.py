@@ -957,12 +957,15 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
     # evaluate the L curve at a specific lambda
         # returns a new Point_L_curve() tuple.
         # this function is the only place where new points are instantiated
-    def eval_L_curve(reg_x):
+    def eval_L_curve(reg_x, keep_f_real_f=False):
         f_real_f = compute_f_real_f(reg_x)
         S0_est_stack_f = H_eff * f_real_f # Ax (put estimate through forward model)
 
         data_norm_eval = xp.log(xp.linalg.norm(S0_est_stack_f - S0_stack_f)**2 /N/M/L)
         reg_norm_eval = xp.log(xp.linalg.norm(f_real_f)**2 /N/M/L)
+        
+        if not keep_f_real_f:
+            f_real_f = None
 
         return Point_L_curve(reg_x, 10**reg_x, data_norm_eval, reg_norm_eval, f_real_f)
 
@@ -993,7 +996,7 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
         for i in range(4):
             curr_pts.append(eval_L_curve(reg_x[i]))
         
-        opt_list = [] # save optimal point from each iteration
+        last_opt = None # only save the last point to save GPU memory
         itr = 0
         search_range = curr_pts[3].reg_x - curr_pts[0].reg_x
         while search_range > epsilon_auto:
@@ -1013,7 +1016,7 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
             # case 1: left 3 points are better
                 # [a, b, c, d] --> [a, (a*phi+c)/(1+phi), b, c]
             if C1 > C2:
-                opt_list.append(curr_pts[1])
+                last_opt = curr_pts[1]
                 new_reg_x = calc_golden_x(curr_pts[0].reg_x, curr_pts[2].reg_x)
                 curr_pts[3] = curr_pts[2]
                 curr_pts[2] = curr_pts[1]
@@ -1022,7 +1025,7 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
             # case 2: right 3 points are better
                 # [a, b, c, d] --> [b, c, b+d-c, d]
             else:
-                opt_list.append(curr_pts[2])
+                last_opt = curr_pts[2]
                 new_reg_x = curr_pts[1].reg_x + curr_pts[3].reg_x - curr_pts[2].reg_x
                 curr_pts[0] = curr_pts[1]
                 curr_pts[1] = curr_pts[2]
@@ -1034,15 +1037,15 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
                 print('Iteration: %d, deviation of the regularization interval: %.2e'%(itr, search_range))
         
         if verbose:
-            print('Final regularization parameter chosen: %.2e' % opt_list[-1].reg)
+            print('Final regularization parameter chosen: %.2e' % last_opt.reg)
+        
             
         # Return 3 solutions: the parameter chosen by the L-curve +/- epsilon
+            # try to not keep intermediate values in memory
         f_real = []
-        left = compute_f_real_f(opt_list[-1].reg_x - epsilon_auto)
-        right = compute_f_real_f(opt_list[-1].reg_x + epsilon_auto)
-        f_real.append(ifft_f_real(left))
-        f_real.append(ifft_f_real(opt_list[-1].f_real_f))
-        f_real.append(ifft_f_real(right))
+        f_real.append(ifft_f_real(compute_f_real_f(last_opt.reg_x - epsilon_auto)))
+        f_real.append(ifft_f_real(compute_f_real_f(last_opt.reg_x)))
+        f_real.append(ifft_f_real(compute_f_real_f(last_opt.reg_x + epsilon_auto)))
         
         return np.array(f_real)
     
@@ -1051,7 +1054,7 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
         f_real = ifft_f_real(f_real_f)
         return f_real
     
-#     return f_real, opt_list # We can think about whether to have some kind of plotting option
+#     return f_real, opt_list # if wanted some kind of plotting option, could save all points visited
 
 
 def Dual_variable_Tikhonov_deconv_3D(AHA, b_vec, determinant=None, use_gpu=False, gpu_id=0, move_cpu=True):

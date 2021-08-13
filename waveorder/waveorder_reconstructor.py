@@ -2325,7 +2325,7 @@ class waveorder_microscopy:
                 f_real = Single_variable_ADMM_TV_deconv_3D(S0_stack, H_eff, rho, reg_re, lambda_re, itr, verbose, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
             
             if self.pad_z != 0:
-                f_real = f_real[:,:,self.pad_z:-(self.pad_z)]
+                f_real = f_real[...,self.pad_z:-(self.pad_z)]
             
             return -f_real*self.psz/4/np.pi*self.lambda_illu
         
@@ -2382,8 +2382,8 @@ class waveorder_microscopy:
                 
             
             if self.pad_z != 0:
-                f_real = f_real[:,:,self.pad_z:-(self.pad_z)]
-                f_imag = f_imag[:,:,self.pad_z:-(self.pad_z)]
+                f_real = f_real[...,self.pad_z:-(self.pad_z)]
+                f_imag = f_imag[...,self.pad_z:-(self.pad_z)]
             
             return -f_real*self.psz/4/np.pi*self.lambda_illu, f_imag*self.psz/4/np.pi*self.lambda_illu
 
