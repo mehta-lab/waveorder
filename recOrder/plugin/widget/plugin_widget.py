@@ -5,10 +5,10 @@ from PyQt5.QtWidgets import QWidget, QFileDialog
 from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker
 from recOrder.plugin.acquisition.acquisition_workers import AcquisitionWorker
 from recOrder.plugin.widget.thread_worker import ThreadWorker
-from recOrder.plugin.qtdesigner import recOrder_calibration_v4, recOrder_calibration_v5
+from recOrder.plugin.qtdesigner import recOrder_calibration_v5
 from pathlib import Path
 from napari import Viewer
-from recOrder.calib.CoreFunctions import set_lc_state, snap_and_average
+from recOrder.io.CoreFunctions import set_lc_state, snap_and_average
 import os
 import logging
 
@@ -487,6 +487,7 @@ class recOrder_Widget(QWidget):
         self.thread_worker.thread.start()
 
     def _open_file_dialog(self, default_path):
+        # TODO: Save the last opened directory to use as default path for next time
         return self._open_dialog("select a directory",
                                  default_path)
 

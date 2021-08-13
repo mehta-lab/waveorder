@@ -1,5 +1,5 @@
 import numpy as np
-from recOrder.calib.CoreFunctions import set_lc_state, snap_and_get_image
+from recOrder.io.CoreFunctions import set_lc_state, snap_and_get_image
 
 def acquire_2D(mm, mmc, scheme, snap_manager=None):
 
