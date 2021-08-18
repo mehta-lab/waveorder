@@ -364,7 +364,7 @@ class recOrder_Widget(QWidget):
 
     @pyqtSlot()
     def enter_gpu_id(self):
-        self.gpu_id = self.ui.le_gpu_id
+        self.gpu_id = int(self.ui.le_gpu_id.text())
 
     @pyqtSlot()
     def enter_use_gpu(self):
@@ -409,6 +409,7 @@ class recOrder_Widget(QWidget):
 
     @pyqtSlot(bool)
     def run_calibration(self):
+        #TODO: clear calibration plot
         logging.info('Starting Calibration')
         self.ui.progress_bar.setValue(0)
         self.intensity_monitor = []

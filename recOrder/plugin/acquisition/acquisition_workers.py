@@ -11,6 +11,7 @@ import numpy as np
 import os
 
 # TODO: Change Acquisition to Using MDA?  This would allow for easy sequencing...
+# TODO::
 class AcquisitionWorker(QtCore.QObject):
 
     phase_image_emitter = pyqtSignal(object)
@@ -170,6 +171,9 @@ class AcquisitionWorker(QtCore.QObject):
 
     def _reconstructor_changed(self):
         changed = None
+
+
+        #TODO: phase_deconv not attr of reconstructor class, check if the 2D/3D has changes
 
         attr_list = {'phase_dim': 'phase_deconv',
                      'n_slices': 'N_defocus',
