@@ -6,15 +6,20 @@ import json
 import numpy as np
 from numcodecs import Blosc
 import shutil
+from scripts.md5_check_sum import gen_stats_file, md5
 
 class ZarrConverter:
 
     def __init__(self, save_directory, save_name=None):
 
+        # Attempt MM Connections
+        self._connect_and_setup_mm()
+
         # Init File IO Properties
         self.version = 'recOrder Converter version=0.0'
         self.save_directory = save_directory
-        self.save_name = save_name
+        self.data_name = self.summary_metadata.getPrefix()
+        self.save_name = self.data_name if not save_name else save_name
         self.array = None
         self.zarr_store = None
         self.temp_directory = os.path.join(os.path.expanduser('~'), 'recOrder_temp')
@@ -24,11 +29,8 @@ class ZarrConverter:
         self.java_path = None
         if not os.path.exists(self.temp_directory): os.mkdir(self.temp_directory)
 
-        # Attempt MM Connections
-        self._connect_and_setup_mm()
-
         # Generate Data Specific Properties
-        self.data_name = self.summary_metadata.getPrefix()
+        self.coords = None
         self.dtype = self._get_dtype()
         self.p = self.data_provider.getMaxIndices().getP()+1
         self.t = self.data_provider.getMaxIndices().getT()+1
@@ -98,7 +100,6 @@ class ZarrConverter:
 
         self.temp_path = os.path.join(self.temp_directory, 'meta.json')
         self.java_path = self.bridge.construct_java_object('java.io.File', args=[self.temp_path])
-        print(self.java_path)
         PropertyMap = self.summary_metadata.toPropertyMap()
         PropertyMap.saveJSON(self.java_path, True, False)
 
@@ -182,7 +183,6 @@ class ZarrConverter:
 
         """
 
-        print('Setting up Zarr Store...')
         src = os.path.join(self.save_directory, self.save_name if self.save_name else self.data_name)
 
         if not src.endswith('.zarr'):
@@ -214,14 +214,14 @@ class ZarrConverter:
         # Run setup
         print('Running Conversion...')
         self._generate_summary_metadata()
-        coords = self._gen_coordset()
+        self.coords = self._gen_coordset()
         self.setup_zarr()
 
         #Format bar for CLI display
         bar_format = 'Status: |{bar}|{n_fmt}/{total_fmt} (Time Remaining: {remaining}), {rate_fmt}{postfix}]'
 
         # Run through every coordinate and convert image + grab image metadata, statistics
-        for coord in tqdm(coords, bar_format=bar_format):
+        for coord in tqdm(self.coords, bar_format=bar_format):
             
             img = self.get_image_object(coord)
             
@@ -237,10 +237,28 @@ class ZarrConverter:
         self.stats_file.close()
         shutil.rmtree(self.temp_directory)
 
-        # Run
-        self.run_random_img_test(20)
+        # Run Tests
+        print('Running Tests...')
+        total_images = self.p * self.t * self.c * self.z
+        self.run_random_img_test(total_images//4) # test 25% of total images
+        self.run_md5_check_sum_test()
 
-    def run_random_img_test(self, n_rounds=10):
+    def run_md5_check_sum_test(self):
+
+        zarr_path = os.path.join(self.save_directory, self.save_name)
+        if not zarr_path.endswith('.zarr'): zarr_path += '.zarr'
+        zarr_stats_path = gen_stats_file(zarr_path, self.save_directory)
+
+        raw_md5 = md5(self.stats_path)
+        converted_md5 = md5(zarr_stats_path)
+
+        if raw_md5 != converted_md5:
+            print('MD5 check sum failed.  Potential Error in Conversion')
+        else:
+            print('MD5 check sum passed. Conversion successful')
+
+
+    def run_random_img_test(self, n_rounds=1):
         """
         Grab random image and check against saved zarr image.  If MSE between raw image and converted
         image != 0, conversion failed.
@@ -254,18 +272,26 @@ class ZarrConverter:
 
         """
 
+        choices = np.arange(0, len(self.coords), dtype='int')
+        failed = False
         for i in range(n_rounds):
-            image_object = self.data_provider.getAnyImage()
-            coord_object = image_object.getCoords()
 
-            coord = (coord_object.getP(), coord_object.getT(), coord_object.getC(), coord_object.getZ())
+            rand_int = np.random.choice(choices, replace=False)
+            coord = self.coords[rand_int]
+            image_object = self.get_image_object(coord)
+
             img_raw = image_object.getRawPixels().reshape(self.x, self.y)
             img_saved = self.array[coord[0], coord[1], coord[2], coord[3]]
 
             mse = ((img_raw - img_saved)**2).mean(axis=None)
             if mse != 0:
-                print(f'coordinate {coord} does not match raw data.  Conversion Failed. DO NOT DELETE ORIGINAL DATA')
-                break
+                failed = True
+
+        if failed:
+            print(f'Images do not match. Conversion Failed. DO NOT DELETE ORIGINAL DATA')
+        else:
+            print(f'Random Image Check Passed. Conversion Successful')
+
 
 
 
