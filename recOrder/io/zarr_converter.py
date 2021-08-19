@@ -244,6 +244,15 @@ class ZarrConverter:
         self.run_md5_check_sum_test()
 
     def run_md5_check_sum_test(self):
+        """
+        run MD5 check sum on two statistics files, one from zarr and one from raw data,
+        which contain mean,median,std for every image.  If the md5's are not equivalent,
+        the files are not equivalent, meaning the statistics of the images are different.
+
+        Returns
+        -------
+
+        """
 
         zarr_path = os.path.join(self.save_directory, self.save_name)
         if not zarr_path.endswith('.zarr'): zarr_path += '.zarr'
