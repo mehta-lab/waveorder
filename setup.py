@@ -63,7 +63,8 @@ if __name__ == '__main__':
         include_package_data=True,
         entry_points={
             'console_scripts': [
-                'recOrder.reconstruct = recOrder.cli_module:main'
+                'recOrder.reconstruct = recOrder.cli_module:main',
+                'recOrder.convert = scripts.convert_tiff_to_zarr:main'
             ]
         }
     )
