@@ -3,7 +3,9 @@ import os
 import zarr
 from tqdm import tqdm
 import json
+import numpy as np
 from numcodecs import Blosc
+import shutil
 
 class ZarrConverter:
 
@@ -30,6 +32,8 @@ class ZarrConverter:
         self.metadata = dict()
 
         self.temp_directory = os.path.join(os.path.expanduser('~'),'recOrder_temp')
+        self.stats_path = os.path.join(self.save_directory, self.save_name+'_Statistics.txt')
+        self.stats_file = open(self.stats_path, 'w')
         self.temp_path = None
         self.java_path = None
         if not os.path.exists(self.temp_directory): os.mkdir(self.temp_directory)
@@ -84,6 +88,13 @@ class ZarrConverter:
 
         return str(self.data_provider.getAnyImage().getRawPixels().dtype)
 
+    def _save_image_stats(self, image, coord):
+
+        mean = np.mean(image)
+        median = np.median(image)
+        std = np.std(image)
+        self.stats_file.write(f'Coord: {coord}, Mean: {mean}, Median: {median}, Std: {std}\n')
+
     def get_image_object(self, coord):
         self.CoordBuilder.p(coord[0])
         self.CoordBuilder.t(coord[1])
@@ -120,9 +131,31 @@ class ZarrConverter:
             img = self.get_image_object(coord)
             
             self.metadata['ImagePlaneMetadata'][f'{coord}'] = self._generate_plane_metadata(img)
-            self.array[coord[0], coord[1], coord[2], coord[3]] = img.getRawPixels().reshape(self.y, self.x)
+            img_raw = img.getRawPixels().reshape(self.y, self.x)
+            self.array[coord[0], coord[1], coord[2], coord[3]] = img_raw
+            self._save_image_stats(img_raw)
 
         self.zarr_store.attrs.put(self.metadata)
+        self.stats_file.close()
+        shutil.rmtree(self.temp_directory)
+
+
+    def run_random_img_test(self, n_rounds = 10):
+
+        for i in range(n_rounds):
+            image_object = self.data_provider.getAnyImage()
+            coord_object = image_object.getCoords()
+
+            coord = (coord_object.getP(), coord_object.getT(), coord_object.getC(), coord_object.getZ())
+            img_raw = image_object.getRawPixels.reshape(self.x, self.y)
+            img_saved = self.array[coord[0], coord[1], coord[2], coord[3]]
+
+            if img_raw != img_saved:
+
+                print(f'coordinate {coord} does not match raw data.  Conversion Failed. DO NOT DELETE ORIGINAL DATA')
+                break
+
+
 
 
 
