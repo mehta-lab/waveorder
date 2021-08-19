@@ -10,14 +10,24 @@ import shutil
 class ZarrConverter:
 
     def __init__(self, save_directory, save_name=None):
+
+        # Init File IO Properties
         self.version = 'recOrder Converter version=0.0'
         self.save_directory = save_directory
         self.save_name = save_name
         self.array = None
         self.zarr_store = None
+        self.temp_directory = os.path.join(os.path.expanduser('~'), 'recOrder_temp')
+        self.stats_path = os.path.join(self.save_directory, self.save_name + '_Statistics.txt')
+        self.stats_file = open(self.stats_path, 'w')
+        self.temp_path = None
+        self.java_path = None
+        if not os.path.exists(self.temp_directory): os.mkdir(self.temp_directory)
 
+        # Attempt MM Connections
         self._connect_and_setup_mm()
 
+        # Generate Data Specific Properties
         self.data_name = self.summary_metadata.getPrefix()
         self.dtype = self._get_dtype()
         self.p = self.data_provider.getMaxIndices().getP()+1
@@ -29,22 +39,34 @@ class ZarrConverter:
         self.dim = (self.p, self.t, self.c, self.z, self.y, self.x)
         print(f'Found Dataset {self.data_name} w/ dimensions (P, T, C, Z, Y, X): {self.dim}')
 
+        # Initialize Coordinate Builder
         self.CoordBuilder = self.data_provider.getAnyImage().getCoords().copyBuilder()
 
+        # Initialize Metadata Dictionary
         self.metadata = dict()
 
-        self.temp_directory = os.path.join(os.path.expanduser('~'),'recOrder_temp')
-        self.stats_path = os.path.join(self.save_directory, self.data_name+'_Statistics.txt')
-        self.stats_file = open(self.stats_path, 'w')
-        self.temp_path = None
-        self.java_path = None
-        if not os.path.exists(self.temp_directory): os.mkdir(self.temp_directory)
-
     def _gen_coordset(self):
+        """
+        generates a coordinate set for (p, t, c, z).
+
+        Returns
+        -------
+        list(tuples) w/ dimensions [N_images]
+
+        """
 
         return [(p, t, c, z) for p in range(self.p) for t in range(self.t) for c in range(self.c) for z in range(self.z)]
 
     def _connect_and_setup_mm(self):
+        """
+        Attempts MM connection and checks to make sure only one dataset is opened.
+        If failed, prompts user to open MM, close other datasets.
+        If Successful, get the necessary data providers.
+
+        Returns
+        -------
+
+        """
         try:
             self.bridge = Bridge(convert_camel_case=False)
             self.mmc = self.bridge.get_core()
@@ -64,6 +86,15 @@ class ZarrConverter:
 
 
     def _generate_summary_metadata(self):
+        """
+        generates the summary metadata by saving the existing java PropertyMap as JSON into a temp directory,
+        loads the JSON, and then convert into python dictionary.  This is the most straightforward way to grab all
+        of the metadata due to poor pycromanager API / Java layer interaction.
+
+        Returns
+        -------
+
+        """
 
         self.temp_path = os.path.join(self.temp_directory, 'meta.json')
         self.java_path = self.bridge.construct_java_object('java.io.File', args=[self.temp_path])
@@ -79,6 +110,22 @@ class ZarrConverter:
         self.metadata['ImagePlaneMetadata'] = dict()
 
     def _generate_plane_metadata(self, image):
+        """
+        generates the img plane metadata by saving the existing java PropertyMap as JSON into a temp directory,
+        loads the JSON, and then convert into python dictionary.  This is the most straightforward way to grab all
+        of the metadata due to poor pycromanager API / Java layer interaction.
+
+        This image-plane data houses information of the config when the image was acquired.
+
+        Parameters
+        ----------
+        image:          (pycromanager-object) MM Image Object at specific coordinate which houses data/metadata.
+
+        Returns
+        -------
+        image_metadata:     (dict) Dictionary of the image-plane metadata
+
+        """
 
         PropertyMap = image.getMetadata().toPropertyMap()
         PropertyMap.saveJSON(self.java_path, True, False)
@@ -101,6 +148,19 @@ class ZarrConverter:
         self.stats_file.write(f'Coord: {coord}, Mean: {mean}, Median: {median}, Std: {std}\n')
 
     def get_image_object(self, coord):
+        """
+        Uses the coordinate builder to construct MM compatible coordinates, which get passed to the data provider
+        in order to grab a specific MM image object.
+
+        Parameters
+        ----------
+        coord:      (tuple) Coordinates of dimension (P, T, C, Z)
+
+        Returns
+        -------
+        image_object:   (pycromanager-object) MM Image object at coordinate (P, T, C, Z)
+
+        """
         self.CoordBuilder.p(coord[0])
         self.CoordBuilder.t(coord[1])
         self.CoordBuilder.c(coord[2])
@@ -110,6 +170,17 @@ class ZarrConverter:
         return self.data_provider.getImage(mm_coord)
 
     def setup_zarr(self):
+        """
+        Initiates the zarr store.  Will create a zarr store with user-specified name or original name of data
+        if not provided.  Store will contain a group called 'array' with contains an array of original
+        data dtype of dimensions (P, T, C, Z, Y, X).
+
+        Current compressor is Blosc zstd w/ bitshuffle (high compression, faster compression)
+
+        Returns
+        -------
+
+        """
 
         print('Setting up Zarr Store...')
         src = os.path.join(self.save_directory, self.save_name if self.save_name else self.data_name)
@@ -130,13 +201,26 @@ class ZarrConverter:
                                             dtype=self.dtype)
 
     def run_conversion(self):
+        """
+        Runs the data conversion and performs a random image check to make sure conversion did not
+        alter any data values.
 
+
+        Returns
+        -------
+
+        """
+
+        # Run setup
         print('Running Conversion...')
         self._generate_summary_metadata()
         coords = self._gen_coordset()
         self.setup_zarr()
+
+        #Format bar for CLI display
         bar_format = 'Status: |{bar}|{n_fmt}/{total_fmt} (Time Remaining: {remaining}), {rate_fmt}{postfix}]'
 
+        # Run through every coordinate and convert image + grab image metadata, statistics
         for coord in tqdm(coords, bar_format=bar_format):
             
             img = self.get_image_object(coord)
@@ -144,14 +228,31 @@ class ZarrConverter:
             self.metadata['ImagePlaneMetadata'][f'{coord}'] = self._generate_plane_metadata(img)
             img_raw = img.getRawPixels().reshape(self.y, self.x)
             self.array[coord[0], coord[1], coord[2], coord[3]] = img_raw
+
+            # Statistics file can be used later for MD5 check sum
             self._save_image_stats(img_raw, coord)
 
+        # Put metadata into zarr store and cleanup
         self.zarr_store.attrs.put(self.metadata)
         self.stats_file.close()
         shutil.rmtree(self.temp_directory)
+
+        # Run
         self.run_random_img_test(20)
 
     def run_random_img_test(self, n_rounds=10):
+        """
+        Grab random image and check against saved zarr image.  If MSE between raw image and converted
+        image != 0, conversion failed.
+
+        Parameters
+        ----------
+        n_rounds:   (int) number of random images to check
+
+        Returns
+        -------
+
+        """
 
         for i in range(n_rounds):
             image_object = self.data_provider.getAnyImage()
