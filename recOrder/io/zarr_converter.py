@@ -10,18 +10,20 @@ import shutil
 class ZarrConverter:
 
     def __init__(self, save_directory, save_name=None):
-        self.version = 'ZC 0.0'
+        self.version = 'recOrder Converter version=0.0'
         self.save_directory = save_directory
         self.save_name = save_name
+        self.array = None
+        self.zarr_store = None
 
         self._connect_and_setup_mm()
 
         self.data_name = self.summary_metadata.getPrefix()
-        self.dtype = self.get_dtype()
-        self.p = self.data_provider.getMaxIndices().getP()
-        self.t = self.data_provider.getMaxIndices().getT()
-        self.c = self.data_provider.getMaxIndices().getC()
-        self.z = self.data_provider.getMaxIndices().getZ()
+        self.dtype = self._get_dtype()
+        self.p = self.data_provider.getMaxIndices().getP()+1
+        self.t = self.data_provider.getMaxIndices().getT()+1
+        self.c = self.data_provider.getMaxIndices().getC()+1
+        self.z = self.data_provider.getMaxIndices().getZ()+1
         self.y = self.data_provider.getAnyImage().getHeight()
         self.x = self.data_provider.getAnyImage().getWidth()
         self.dim = (self.p, self.t, self.c, self.z, self.y, self.x)
@@ -32,14 +34,15 @@ class ZarrConverter:
         self.metadata = dict()
 
         self.temp_directory = os.path.join(os.path.expanduser('~'),'recOrder_temp')
-        self.stats_path = os.path.join(self.save_directory, self.save_name+'_Statistics.txt')
+        self.stats_path = os.path.join(self.save_directory, self.data_name+'_Statistics.txt')
         self.stats_file = open(self.stats_path, 'w')
         self.temp_path = None
         self.java_path = None
         if not os.path.exists(self.temp_directory): os.mkdir(self.temp_directory)
 
     def _gen_coordset(self):
-        return [(p,t,c,z) for p in range(self.p) for t in range(self.t) for c in range(self.t) for z in range(self.z)]
+
+        return [(p, t, c, z) for p in range(self.p) for t in range(self.t) for c in range(self.c) for z in range(self.z)]
 
     def _connect_and_setup_mm(self):
         try:
@@ -48,22 +51,23 @@ class ZarrConverter:
             self.mm = self.bridge.get_studio()
 
             data_viewers = self.mm.getDisplayManager().getAllDataViewers()
-            if data_viewers.size != 0:
-                raise ValueError(f'Detected {data_viewers.size()} data viewers \
-                Make sure the only dataviewer opened is your desired dataset')
-            else:
-                self.data_viewer = self.mm.getDisplayManager().getAllDataViewers().get(0)
-                self.data_provider = self.data_viewer.getDataProvider()
-                self.summary_metadata = self.data_provider.getSummaryMetadata()
         except:
             raise ValueError('Please make sure MM is running and the data is opened')
+
+        if data_viewers.size() != 1:
+            raise ValueError(f'Detected {data_viewers.size()} data viewers \
+            Make sure the only dataviewer opened is your desired dataset')
+        else:
+            self.data_viewer = self.mm.getDisplayManager().getAllDataViewers().get(0)
+            self.data_provider = self.data_viewer.getDataProvider()
+            self.summary_metadata = self.data_provider.getSummaryMetadata()
 
 
     def _generate_summary_metadata(self):
 
         self.temp_path = os.path.join(self.temp_directory, 'meta.json')
-        self.java_path = self.bridge.construct_java_object('java.io.File', args=[temp_path])
-
+        self.java_path = self.bridge.construct_java_object('java.io.File', args=[self.temp_path])
+        print(self.java_path)
         PropertyMap = self.summary_metadata.toPropertyMap()
         PropertyMap.saveJSON(self.java_path, True, False)
 
@@ -72,6 +76,7 @@ class ZarrConverter:
         f.close()
 
         self.metadata['Summary'] = dict_
+        self.metadata['ImagePlaneMetadata'] = dict()
 
     def _generate_plane_metadata(self, image):
 
@@ -106,7 +111,11 @@ class ZarrConverter:
 
     def setup_zarr(self):
 
+        print('Setting up Zarr Store...')
         src = os.path.join(self.save_directory, self.save_name if self.save_name else self.data_name)
+
+        if not src.endswith('.zarr'):
+            src += '.zarr'
 
         self.zarr_store = zarr.open(src)
         self.array = self.zarr_store.create('array',
@@ -116,15 +125,17 @@ class ZarrConverter:
                                                    self.z if self.z != 0 else 1,
                                                    self.y,
                                                    self.x),
-                                            chunk_size=(1, 1, 1, 1, self.y, self.x),
+                                            chunks=(1, 1, 1, 1, self.y, self.x),
                                             compressor=Blosc('zstd', clevel=3, shuffle=Blosc.BITSHUFFLE),
-                                            dtype=self.dtype,
-                                            read_only=True)
+                                            dtype=self.dtype)
 
     def run_conversion(self):
 
-        coords = self.gen_coordset()
-        bar_format = 'Status: |{bar}|{n_fmt}/{total_fmt} (Time Remaining: {remaining} s), {rate_fmt}{postfix}]'
+        print('Running Conversion...')
+        self._generate_summary_metadata()
+        coords = self._gen_coordset()
+        self.setup_zarr()
+        bar_format = 'Status: |{bar}|{n_fmt}/{total_fmt} (Time Remaining: {remaining}), {rate_fmt}{postfix}]'
 
         for coord in tqdm(coords, bar_format=bar_format):
             
@@ -133,25 +144,25 @@ class ZarrConverter:
             self.metadata['ImagePlaneMetadata'][f'{coord}'] = self._generate_plane_metadata(img)
             img_raw = img.getRawPixels().reshape(self.y, self.x)
             self.array[coord[0], coord[1], coord[2], coord[3]] = img_raw
-            self._save_image_stats(img_raw)
+            self._save_image_stats(img_raw, coord)
 
         self.zarr_store.attrs.put(self.metadata)
         self.stats_file.close()
         shutil.rmtree(self.temp_directory)
+        self.run_random_img_test(20)
 
-
-    def run_random_img_test(self, n_rounds = 10):
+    def run_random_img_test(self, n_rounds=10):
 
         for i in range(n_rounds):
             image_object = self.data_provider.getAnyImage()
             coord_object = image_object.getCoords()
 
             coord = (coord_object.getP(), coord_object.getT(), coord_object.getC(), coord_object.getZ())
-            img_raw = image_object.getRawPixels.reshape(self.x, self.y)
+            img_raw = image_object.getRawPixels().reshape(self.x, self.y)
             img_saved = self.array[coord[0], coord[1], coord[2], coord[3]]
 
-            if img_raw != img_saved:
-
+            mse = ((img_raw - img_saved)**2).mean(axis=None)
+            if mse != 0:
                 print(f'coordinate {coord} does not match raw data.  Conversion Failed. DO NOT DELETE ORIGINAL DATA')
                 break
 

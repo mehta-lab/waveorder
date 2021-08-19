@@ -3,6 +3,7 @@ import zarr
 import os
 import numpy as np
 import pathlib as path
+import click
 
 @click.command()
 @click.option('--zarr_path', required=True, type=str, help='path to the save directory')
@@ -26,34 +27,35 @@ def md5(fname):
 
 def gen_stats_file(zarr_path, save_path):
 
-    name = path.PurePath(zarr_path).name.removesuffix('.zarr')
+    name = path.PurePath(zarr_path).name
+    if name.endswith('.zarr'):
+        name = name[:-5]
     file_name = os.path.join(save_path, name+'_ZarrStatistics.txt')
     file = open(file_name, 'w')
 
-    z = zarr.open(zarr_path, 'r')['array']
-    shape = z.shape
+    zstore = zarr.open(zarr_path, 'r')['array']
+    shape = zstore.shape
 
-    for p in range(shape(0)):
-        for t in range(shape(1)):
-            for c in range(shape(2)):
-                for z in range(shape(3)):
+    for p in range(shape[0]):
+        for t in range(shape[1]):
+            for c in range(shape[2]):
+                for z in range(shape[3]):
 
-                    image = z[p, t, c, z]
+                    image = zstore[p, t, c, z]
                     mean = np.mean(image)
                     median = np.median(image)
                     std = np.std(image)
-                    file.write(f'Coord: {coord}, Mean: {mean}, Median: {median}, Std: {std}\n')
+                    file.write(f'Coord: {(p, t, c, z)}, Mean: {mean}, Median: {median}, Std: {std}\n')
 
     file.close()
     return file_name
 
 
-def main():
+if __name__ == "__main__":
 
     Args = parse_args(standalone_mode=False)
 
-    save_path = path.PurePath(Args.raw_stats_path).parent.name
-
+    save_path = str(path.PurePath(Args.raw_stats_path).parent)
     conv_stats_path = gen_stats_file(Args.zarr_path, save_path)
 
     raw_md5 = md5(Args.raw_stats_path)
