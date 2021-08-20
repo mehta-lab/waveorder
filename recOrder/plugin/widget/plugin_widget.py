@@ -124,9 +124,9 @@ class recOrder_Widget(QWidget):
         self.calib_assessment_level = None
 
         # Init Plot
-        plot_item = self.ui.plot_widget.getPlotItem()
-        plot_item.enableAutoRange()
-        plot_item.setLabel('left', 'Intensity')
+        self.plot_item = self.ui.plot_widget.getPlotItem()
+        self.plot_item.enableAutoRange()
+        self.plot_item.setLabel('left', 'Intensity')
         self.ui.plot_widget.setBackground((32, 34, 40))
 
         # Init Logger
@@ -420,6 +420,7 @@ class recOrder_Widget(QWidget):
 
         # Initialize displays + parameters for calibration
         self.ui.progress_bar.setValue(0)
+        self.plot_item.clear()
         self.intensity_monitor = []
         self.calib.swing = self.swing
         self.calib.wavelength = self.wavelength
