@@ -8,7 +8,11 @@ import logging
 
 
 class CalibrationWorker(QtCore.QObject):
+    """
+    Class to execute calibration
+    """
 
+    # Initialize signals that emit to widget handlers
     progress_update = pyqtSignal(int)
     extinction_update = pyqtSignal(str)
     intensity_update = pyqtSignal(object)
@@ -20,20 +24,19 @@ class CalibrationWorker(QtCore.QObject):
         super().__init__()
         self.calib_window = calib_window
         self.calib = calib
-        self._running = True
-
-    def stop(self):
-        self._running = False
-        self.finished.emit()
 
     def run(self):
+        """
+        Runs the full calibration algorithm and emits necessary signals.
+
+        Returns
+        -------
+
+        """
 
         self.calib.intensity_emitter = self.intensity_update
         self.calib.get_full_roi()
         self.progress_update.emit(1)
-
-        # TODO: Decide if displaying ROI is useful feature,
-        # include in a pop-up window or napari window?  How to prompt to continue?
 
         # Check if change of ROI is needed
         if self.calib_window.use_cropped_roi:
@@ -76,8 +79,9 @@ class CalibrationWorker(QtCore.QObject):
         logging.info(f"EXTINCTION = {extinction_ratio}")
         logging.debug("\n=======Finished Calibration=======\n")
         logging.debug(f"EXTINCTION = {extinction_ratio}")
+
+        # Let thread know that it can finish + deconstruct
         self.finished.emit()
-        self._running = False
 
     def _calibrate_4state(self):
 
@@ -106,7 +110,7 @@ class CalibrationWorker(QtCore.QObject):
     def _assess_calibration(self):
 
         if 0.2 < self.calib.lca_ext < 0.4:
-            if 0.4 < self.calib.lcb_ext < 0.7:
+            if 0.4 < self.calib.lcb_ext < 0.75:
                 if self.calib.extinction_ratio >= 100:
                     self.calib_assessment.emit('good')
                     self.calib_assessment_msg.emit('Sucessful Calibration')
@@ -125,9 +129,12 @@ class CalibrationWorker(QtCore.QObject):
             self.calib_assessment_msg.emit('Calibration Failed, unknown origin of issue')
 
 
-
 class BackgroundCaptureWorker(QtCore.QObject):
+    """
+    Class to execute background capture.
+    """
 
+    # Initialize signals to emit to widget handlers
     bg_image_emitter = pyqtSignal(object)
     bire_image_emitter = pyqtSignal(object)
     finished = pyqtSignal()
@@ -139,22 +146,30 @@ class BackgroundCaptureWorker(QtCore.QObject):
 
     def run(self):
 
+        # Make the background folder
         bg_path = os.path.join(self.calib_window.directory, self.calib_window.ui.le_bg_folder.text())
         if not os.path.exists(bg_path):
             os.mkdir(bg_path)
+
+        # capture and return background images
         imgs = self.calib.capture_bg(self.calib_window.n_avg, bg_path)
         img_dim = (imgs.shape[-2], imgs.shape[-1])
-        N_channel = 4 if self.calib_window.calib_scheme == '4-State' else 5
 
+        # Prep parameters + initialize reconstructor
+        N_channel = 4 if self.calib_window.calib_scheme == '4-State' else 5
         recon = initialize_reconstructor(img_dim, self.calib_window.wavelength, self.calib_window.swing, N_channel,
                                          True, 1, 1, 1, 1, 1, 0, 1, bg_option='None', mode='2D')
 
+        # Reconstruct birefringence from BG images
         stokes = reconstruct_qlipp_stokes(imgs, recon, None)
         birefringence = reconstruct_qlipp_birefringence(stokes, recon)
         retardance = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
 
+        # Save metadata file and emit imgs
         self.calib.meta_file = os.path.join(bg_path, 'calibration_metadata.txt')
         self.calib.write_metadata()
         self.bg_image_emitter.emit(imgs)
         self.bire_image_emitter.emit([retardance, birefringence[1]])
+
+        # Let thread know that it can finish + deconstruct
         self.finished.emit()

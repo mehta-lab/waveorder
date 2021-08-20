@@ -1,7 +1,22 @@
 import numpy as np
-from recOrder.io.CoreFunctions import set_lc_state, snap_and_get_image
+from recOrder.io.core_functions import set_lc_state, snap_and_get_image
 
 def acquire_2D(mm, mmc, scheme, snap_manager=None):
+    """
+    Acquire a 2D stack with pycromanager (data transfer over ZMQ) given the acquisition scheme.
+
+    Parameters
+    ----------
+    mm:             (object) MM studio object
+    mmc:            (object) MM Core object
+    scheme:         (str) '5-state' or '4-State'
+    snap_manager:   (object) MM Snap Live Window object
+
+    Returns
+    -------
+    image_stack:    (nd-array) nd-array of size (4, Y, X) or (5, Y, X)
+
+    """
 
     if not snap_manager:
         snap_manager = mm.getSnapLiveManager()
@@ -28,6 +43,24 @@ def acquire_2D(mm, mmc, scheme, snap_manager=None):
 
 
 def acquire_3D(mm, mmc, scheme, z_start, z_end, z_step, snap_manager=None):
+    """
+    Acquire a 3D stack with pycromanager (data transfer over ZMQ) given the acquisition scheme.
+
+    Parameters
+    ----------
+    mm:             (object) MM studio object
+    mmc:            (object) MM Core object
+    scheme:         (str) '5-state' or '4-State'
+    z_start:        (float) relative z-start location [um]
+    z_end:          (float) relative z-end location [um]
+    z_step:         (float) z-step [um]
+    snap_manager:   (object) MM Snap Live Window object
+
+    Returns
+    -------
+    image_stack:    (nd-array) nd-array of size (Z, 4, Y, X) or (Z, 5, Y, X)
+
+    """
 
     if not snap_manager:
         snap_manager = mm.getSnapLiveManager()
