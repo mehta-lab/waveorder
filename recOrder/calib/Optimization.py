@@ -1,7 +1,6 @@
 import numpy as np
 from scipy import optimize
-import os, sys
-from recOrder.calib.CoreFunctions import set_lc, get_lc, snap_image, snap_and_average
+from recOrder.io.CoreFunctions import set_lc, get_lc, snap_and_average
 import logging
 
 class BrentOptimizer:

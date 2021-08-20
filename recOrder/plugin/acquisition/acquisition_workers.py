@@ -11,7 +11,7 @@ import numpy as np
 import os
 
 # TODO: Change Acquisition to Using MDA?  This would allow for easy sequencing...
-# TODO::
+# TODO: Cache common OTF's on local computers and use those for reconstruction
 class AcquisitionWorker(QtCore.QObject):
 
     phase_image_emitter = pyqtSignal(object)
