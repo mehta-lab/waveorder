@@ -407,7 +407,6 @@ class recOrder_Widget(QWidget):
 
     @pyqtSlot(bool)
     def run_calibration(self):
-        #TODO: clear calibration plot
         """
         Wrapper function to create calibration worker and move that worker to a thread.
         Calibration is then executed by the calibration worker
