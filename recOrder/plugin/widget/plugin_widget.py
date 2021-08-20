@@ -8,7 +8,7 @@ from recOrder.plugin.widget.thread_worker import ThreadWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
 from pathlib import Path
 from napari import Viewer
-from recOrder.io.CoreFunctions import set_lc_state, snap_and_average
+from recOrder.io.core_functions import set_lc_state, snap_and_average
 import os
 import logging
 
@@ -151,12 +151,10 @@ class recOrder_Widget(QWidget):
     def handle_mm_status_update(self, value):
         if value:
             self.ui.le_mm_status.setText('Sucess!')
-            # self.ui.le_mm_status.setStyleSheet("border: 1px solid green;")
             self.ui.le_mm_status.setStyleSheet("background-color: green;")
         else:
             self.ui.le_mm_status.setText('Failed.')
             self.ui.le_mm_status.setStyleSheet("background-color: rgb(200,0,0);")
-            # self.ui.le_mm_status.setStyleSheet("border: 1px solid red;")
 
     @pyqtSlot(int)
     def handle_progress_update(self, value):
@@ -409,22 +407,33 @@ class recOrder_Widget(QWidget):
 
     @pyqtSlot(bool)
     def run_calibration(self):
+        """
+        Wrapper function to create calibration worker and move that worker to a thread.
+        Calibration is then executed by the calibration worker
+
+        Returns
+        -------
+
+        """
         logging.info('Starting Calibration')
+
+        # Initialize displays + parameters for calibration
         self.ui.progress_bar.setValue(0)
         self.intensity_monitor = []
         self.calib.swing = self.swing
         self.calib.wavelength = self.wavelength
         self.calib.meta_file = os.path.join(self.directory, 'calibration_metadata.txt')
 
-
+        # Make sure Live Mode is off
         if self.calib.snap_manager.getIsLiveModeOn():
             self.calib.snap_manager.setLiveModeOn(False)
 
-
+        # Init Worker and Thread
         worker = CalibrationWorker(self, self.calib)
         self.thread_worker = ThreadWorker(self, worker)
         self.thread_worker.initalize()
 
+        # Connect Handlers
         self.thread_worker.worker.progress_update.connect(self.handle_progress_update)
         self.thread_worker.worker.extinction_update.connect(self.handle_extinction_update)
         self.thread_worker.worker.intensity_update.connect(self.handle_plot_update)
@@ -432,58 +441,103 @@ class recOrder_Widget(QWidget):
         self.thread_worker.worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
 
         self.thread_worker._disable_buttons()
+
+        # Start Calibration
         self.thread_worker.thread.start()
 
     @pyqtSlot(bool)
     def capture_bg(self):
+        """
+        Wrapper function to capture a set of background images.  Will snap images and display reconstructed
+        birefringence.  Check connected handlers for napari display.
 
+        Returns
+        -------
+
+        """
+
+        # Init worker and thread
         worker = BackgroundCaptureWorker(self, self.calib)
         self.thread_worker = ThreadWorker(self, worker)
         self.thread_worker.initalize()
 
+        # Connect Handlers
         self.thread_worker.worker.bg_image_emitter.connect(self.handle_bg_image_update)
         self.thread_worker.worker.bire_image_emitter.connect(self.handle_bg_bire_image_update)
 
         self.thread_worker._disable_buttons()
+
+        # Start Capture Background Thread
         self.thread_worker.thread.start()
 
     @pyqtSlot(bool)
     def acq_birefringence(self):
+        """
+        Wrapper function to acquire birefringence stack/image and plot in napari
 
+        Returns
+        -------
+
+        """
+
+        # Init Worker and thread
         worker = AcquisitionWorker(self, self.calib, 'birefringence')
         self.thread_worker = ThreadWorker(self, worker)
         self.thread_worker.initalize()
 
+        # Connect Handler
         self.thread_worker.worker.bire_image_emitter.connect(self.handle_bire_image_update)
 
         self.thread_worker._disable_buttons()
+
+        # Start Thread
         self.thread_worker.thread.start()
 
     @pyqtSlot(bool)
     def acq_phase(self):
+        """
+         Wrapper function to acquire phase stack and plot in napari
 
+         Returns
+         -------
+         """
+
+        # Init worker and thread
         worker = AcquisitionWorker(self, self.calib, 'phase')
         self.thread_worker = ThreadWorker(self, worker)
         self.thread_worker.initalize()
 
+        # Connect Handlers
         self.thread_worker.worker.phase_image_emitter.connect(self.handle_phase_image_update)
         self.thread_worker.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
 
         self.thread_worker._disable_buttons()
+
+        # Start thread
         self.thread_worker.thread.start()
 
     @pyqtSlot(bool)
     def acq_birefringence_phase(self):
+        """
+         Wrapper function to acquire both birefringence and phase stack and plot in napari
 
+         Returns
+         -------
+         """
+
+        # Init worker
         worker = AcquisitionWorker(self, self.calib, 'all')
         self.thread_worker = ThreadWorker(self, worker)
         self.thread_worker.initalize()
 
+        # connect handlers
         self.thread_worker.worker.phase_image_emitter.connect(self.handle_phase_image_update)
         self.thread_worker.worker.bire_image_emitter.connect(self.handle_bire_image_update)
         self.thread_worker.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
 
         self.thread_worker._disable_buttons()
+
+        # Start Thread
         self.thread_worker.thread.start()
 
     def _open_file_dialog(self, default_path):
@@ -503,11 +557,15 @@ class recOrder_Widget(QWidget):
 
 
 class QtLogger(logging.Handler):
+    """
+    Class to changing logging handler to the napari log output display
+    """
 
     def __init__(self, widget):
         super().__init__()
         self.widget = widget
 
+    # necessary to be a logging handler
     def emit(self, record):
         msg = self.format(record)
         self.widget.appendPlainText(msg)
