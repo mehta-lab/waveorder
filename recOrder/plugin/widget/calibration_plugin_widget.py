@@ -16,6 +16,7 @@ import logging
 # Error Handling on the Calibration Thread
 # Clear buffer before calibration?
 # Check out using the 5state scheme individually
+# Print status of where you are in the acquisition
 
 class recOrder_Widget(QWidget):
 
