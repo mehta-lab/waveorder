@@ -1,7 +1,6 @@
 import numpy as np
 from waveorder.util import wavelet_softThreshold
 
-
 def preproc_denoise(stokes, params):
 
     stokes_denoised = np.copy(stokes)
@@ -45,3 +44,4 @@ def find_focus(stack):
     focus_idx_max = np.where(focus_scores == np.max(focus_scores))[0][0]
 
     return focus_idx_max, focus_idx_min
+
