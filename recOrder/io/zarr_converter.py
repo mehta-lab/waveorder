@@ -240,8 +240,9 @@ class ZarrConverter:
         # Run Tests
         print('Running Tests...')
         total_images = self.p * self.t * self.c * self.z
-        self.run_random_img_test(total_images//4) # test 25% of total images
+        self.run_random_img_test(total_images//10) # test 10% of total images
         self.run_md5_check_sum_test()
+        os.rmdir(self.stats_path)
 
     def run_md5_check_sum_test(self):
         """
@@ -266,15 +267,17 @@ class ZarrConverter:
         else:
             print('MD5 check sum passed. Conversion successful')
 
+        os.rmdir(zarr_stats_path)
 
-    def run_random_img_test(self, n_rounds=1):
+
+    def run_random_img_test(self, n_images=1):
         """
         Grab random image and check against saved zarr image.  If MSE between raw image and converted
         image != 0, conversion failed.
 
         Parameters
         ----------
-        n_rounds:   (int) number of random images to check
+        n_images:   (int) number of random images to check
 
         Returns
         -------
@@ -283,7 +286,7 @@ class ZarrConverter:
 
         choices = np.arange(0, len(self.coords), dtype='int')
         failed = False
-        for i in range(n_rounds):
+        for i in range(n_images):
 
             rand_int = np.random.choice(choices, replace=False)
             coord = self.coords[rand_int]
