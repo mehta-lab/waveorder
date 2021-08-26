@@ -16,18 +16,19 @@ class ZarrConverter:
         self._connect_and_setup_mm()
 
         # Init File IO Properties
-        self.version = 'recOrder Converter version=0.0'
+        self.version = 'recOrder Converter version=0.1'
         self.save_directory = save_directory
         self.data_name = self.summary_metadata.getPrefix()
         self.save_name = self.data_name if not save_name else save_name
         self.array = None
         self.zarr_store = None
         self.temp_directory = os.path.join(os.path.expanduser('~'), 'recOrder_temp')
-        self.stats_path = os.path.join(self.save_directory, self.save_name + '_Statistics.txt')
-        self.stats_file = open(self.stats_path, 'w')
+        # self.stats_path = os.path.join(self.save_directory, self.save_name + '_Statistics.txt')
+        # self.stats_file = open(self.stats_path, 'w')
         self.temp_path = None
         self.java_path = None
-        if not os.path.exists(self.temp_directory): os.mkdir(self.temp_directory)
+        if not os.path.exists(self.temp_directory):
+            os.mkdir(self.temp_directory)
 
         # Generate Data Specific Properties
         self.coords = None
@@ -141,12 +142,11 @@ class ZarrConverter:
 
         return str(self.data_provider.getAnyImage().getRawPixels().dtype)
 
-    def _save_image_stats(self, image, coord):
+    def _preform_image_check(self, tiff_image, coord):
 
-        mean = np.mean(image)
-        median = np.median(image)
-        std = np.std(image)
-        self.stats_file.write(f'Coord: {coord}, Mean: {mean}, Median: {median}, Std: {std}\n')
+        zarr_img = self.array[coord[0], coord[1], coord[2], coord[3]]
+
+        return np.array_equal(zarr_img, tiff_image)
 
     def get_image_object(self, coord):
         """
@@ -229,46 +229,12 @@ class ZarrConverter:
             img_raw = img.getRawPixels().reshape(self.y, self.x)
             self.array[coord[0], coord[1], coord[2], coord[3]] = img_raw
 
-            # Statistics file can be used later for MD5 check sum
-            self._save_image_stats(img_raw, coord)
+            if not self._preform_image_check(img_raw, coord):
+                raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
 
         # Put metadata into zarr store and cleanup
         self.zarr_store.attrs.put(self.metadata)
-        self.stats_file.close()
         shutil.rmtree(self.temp_directory)
-
-        # Run Tests
-        print('Running Tests...')
-        total_images = self.p * self.t * self.c * self.z
-        self.run_random_img_test(total_images//10) # test 10% of total images
-        self.run_md5_check_sum_test()
-        os.rmdir(self.stats_path)
-
-    def run_md5_check_sum_test(self):
-        """
-        run MD5 check sum on two statistics files, one from zarr and one from raw data,
-        which contain mean,median,std for every image.  If the md5's are not equivalent,
-        the files are not equivalent, meaning the statistics of the images are different.
-
-        Returns
-        -------
-
-        """
-
-        zarr_path = os.path.join(self.save_directory, self.save_name)
-        if not zarr_path.endswith('.zarr'): zarr_path += '.zarr'
-        zarr_stats_path = gen_stats_file(zarr_path, self.save_directory)
-
-        raw_md5 = md5(self.stats_path)
-        converted_md5 = md5(zarr_stats_path)
-
-        if raw_md5 != converted_md5:
-            print('MD5 check sum failed.  Potential Error in Conversion')
-        else:
-            print('MD5 check sum passed. Conversion successful')
-
-        os.rmdir(zarr_stats_path)
-
 
     def run_random_img_test(self, n_images=1):
         """
