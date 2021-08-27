@@ -952,6 +952,8 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
 
         # FT{f} (f=scattering potential (whose real part is (scaled) phase))
         f_real_f = S0_stack_f * H_eff_conj / (H_eff_abs_square + reg_coeff)
+        cp.get_default_memory_pool().free_all_blocks()
+        
         return f_real_f
     
     # evaluate the L curve at a specific lambda
@@ -966,6 +968,8 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
         
         if not keep_f_real_f:
             f_real_f = None
+        if use_gpu:
+            cp.get_default_memory_pool().free_all_blocks()
 
         return Point_L_curve(reg_x, 10**reg_x, data_norm_eval, reg_norm_eval, f_real_f)
 
@@ -974,6 +978,7 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
     def ifft_f_real(f_real_f):
         f_real = xp.real(xp.fft.ifftn(f_real_f, axes=(-3,-2,-1)))
         if use_gpu:
+            cp.get_default_memory_pool().free_all_blocks()
             return cp.asnumpy(f_real)
         else:
             return f_real
