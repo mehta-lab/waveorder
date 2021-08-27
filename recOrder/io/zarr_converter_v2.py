@@ -6,7 +6,7 @@ import json
 import numpy as np
 from numcodecs import Blosc
 import shutil
-from scripts.md5_check_sum import gen_stats_file, md5
+from waveorder.io.writer import WaveorderWriter
 
 class ZarrConverter:
 
