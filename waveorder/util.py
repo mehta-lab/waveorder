@@ -952,7 +952,8 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
 
         # FT{f} (f=scattering potential (whose real part is (scaled) phase))
         f_real_f = S0_stack_f * H_eff_conj / (H_eff_abs_square + reg_coeff)
-        cp.get_default_memory_pool().free_all_blocks()
+        if use_gpu:
+            cp.get_default_memory_pool().free_all_blocks()
         
         return f_real_f
     
