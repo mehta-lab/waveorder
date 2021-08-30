@@ -11,7 +11,7 @@ from recOrder.preproc.pre_processing import get_autocontrast_limits
 
 class ZarrConverter:
 
-    def __init__(self, data_directory, save_directory, save_name=None):
+    def __init__(self, data_directory, save_directory, save_name=None, append_position_names=False):
 
         # Attempt MM Connections
         self._connect_and_setup_mm()
@@ -22,6 +22,7 @@ class ZarrConverter:
         self.save_directory = save_directory
         self.data_name = self.summary_metadata.getPrefix()
         self.save_name = self.data_name if not save_name else save_name
+        self.append_position_names = append_position_names
         self.array = None
         self.zarr_store = None
         self.temp_directory = os.path.join(os.path.expanduser('~'), 'recOrder_temp')
@@ -46,6 +47,7 @@ class ZarrConverter:
         self.x = self.data_provider.getAnyImage().getWidth()
         self.dim = (self.p, self.t, self.c, self.z, self.y, self.x)
         self.focus_z = self.z // 2
+        self.prefix_list = []
         print(f'Found Dataset {self.data_name} w/ dimensions (P, T, C, Z, Y, X): {self.dim}')
 
         # Initialize Coordinate Builder
@@ -221,6 +223,10 @@ class ZarrConverter:
 
         return chan_names
 
+    def _get_position_name(self, image_meta):
+
+        return image_meta['map']['PositionName']['scalar'] if self.append_position_names else None
+
     def check_file_update_page(self, last_file, current_file, current_page):
         """
         function to check whether or not the tiff page # should be incremented.  If it detects that the file
@@ -285,10 +291,10 @@ class ZarrConverter:
         image_object:   (pycromanager-object) MM Image object at coordinate (P, T, C, Z)
 
         """
-        self.CoordBuilder.p(coord[self.dim_order.index('position')])
-        self.CoordBuilder.t(coord[self.dim_order.index('time')])
-        self.CoordBuilder.c(coord[self.dim_order.index('channel')])
-        self.CoordBuilder.z(coord[self.dim_order.index('z')])
+        self.CoordBuilder.p(coord[0])
+        self.CoordBuilder.t(coord[1])
+        self.CoordBuilder.c(coord[2])
+        self.CoordBuilder.z(coord[3])
         mm_coord = self.CoordBuilder.build()
 
         return self.data_provider.getImage(mm_coord)
@@ -350,7 +356,11 @@ class ZarrConverter:
         chan_names = self._get_channel_names()
 
         for pos in range(self.p):
-            self.writer.create_position(pos)
+            img = self.get_image_object((pos, 0, 0, 0))
+            metadata = self._generate_plane_metadata(img)
+
+            self.prefix_list.append(self._get_position_name(metadata))
+            self.writer.create_position(pos, prefix=self.prefix_list[pos])
             self.writer.init_array(data_shape=(self.t if self.t != 0 else 1,
                                                self.c if self.c != 0 else 1,
                                                self.z if self.z != 0 else 1,
@@ -376,11 +386,10 @@ class ZarrConverter:
         self._generate_summary_metadata()
         self.coords = self._gen_coordset()
         self.init_zarr_structure()
-        self.writer.open_position(0)
+        self.writer.open_position(0, prefix=self.prefix_list[0])
         current_pos = 0
         current_page = 0
         last_file = None
-        p_dim = self.dim_order.index('position')
 
         #Format bar for CLI display
         bar_format = 'Status: |{bar}|{n_fmt}/{total_fmt} (Time Remaining: {remaining}), {rate_fmt}{postfix}]'
@@ -388,20 +397,25 @@ class ZarrConverter:
         # Run through every coordinate and convert image + grab image metadata, statistics
         for coord in tqdm(self.coords, bar_format=bar_format):
 
-            # Open the new position if the position index has changed
-            if current_pos != coord[p_dim]:
-                self.writer.open_position(coord[p_dim])
-                current_pos = coord[p_dim]
-
             # get the image object
-            img = self.get_image_object(coord)
+            coord_reorder = [coord[self.dim_order.index('position')],
+                             coord[self.dim_order.index('time')],
+                             coord[self.dim_order.index('channel')],
+                             coord[self.dim_order.index('z')]]
+            img = self.get_image_object(coord_reorder)
 
             # Get the metadata
-            self.metadata['ImagePlaneMetadata'][f'{coord}'] = self._generate_plane_metadata(img)
-            data_file = self.metadata['ImagePlaneMetadata'][f'{coord}']['map']['FileName']['scalar']
+            self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = self._generate_plane_metadata(img)
+            data_file = self.metadata['ImagePlaneMetadata'][f'{coord_reorder}']['map']['FileName']['scalar']
 
             # get the memory mapped image
             img_raw = self.get_image_array(data_file, current_page)
+
+            # Open the new position if the position index has changed
+            if current_pos != coord[self.dim_order.index('position')]:
+                self.writer.open_position(coord[self.dim_order.index('position')],
+                                          prefix=self.prefix_list[coord[self.dim_order.index('position')]])
+                current_pos = coord[self.dim_order.index('position')]
 
             # Write the data
             self.writer.write(img_raw, coord[self.dim_order.index('time')],
@@ -419,40 +433,6 @@ class ZarrConverter:
         # Put metadata into zarr store and cleanup
         self.writer.store.attrs.put(self.metadata)
         shutil.rmtree(self.temp_directory)
-
-    def run_random_img_test(self, n_images=1):
-        """
-        Grab random image and check against saved zarr image.  If MSE between raw image and converted
-        image != 0, conversion failed.
-
-        Parameters
-        ----------
-        n_images:   (int) number of random images to check
-
-        Returns
-        -------
-
-        """
-
-        choices = np.arange(0, len(self.coords), dtype='int')
-        failed = False
-        for i in range(n_images):
-
-            rand_int = np.random.choice(choices, replace=False)
-            coord = self.coords[rand_int]
-            image_object = self.get_image_object(coord)
-
-            img_raw = image_object.getRawPixels().reshape(self.x, self.y)
-            img_saved = self.array[coord[0], coord[1], coord[2], coord[3]]
-
-            mse = ((img_raw - img_saved)**2).mean(axis=None)
-            if mse != 0:
-                failed = True
-
-        if failed:
-            print(f'Images do not match. Conversion Failed. DO NOT DELETE ORIGINAL DATA')
-        else:
-            print(f'Random Image Check Passed. Conversion Successful')
 
 
 
