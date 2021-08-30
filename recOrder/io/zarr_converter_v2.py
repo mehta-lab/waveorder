@@ -56,7 +56,7 @@ class ZarrConverter:
         self.metadata['recOrder_Converter_Version'] = self.version
 
         # Initialize writer
-        self.writer = WaveorderWriter(self.save_directory, datatype='raw')
+        self.writer = WaveorderWriter(self.save_directory, datatype='raw', silence=True)
         self.writer.create_zarr_root(self.save_name)
 
     def _gen_coordset(self):
@@ -85,6 +85,8 @@ class ZarrConverter:
                 dims.append(hashmap[self.dim_order[i]])
             else:
                 dims.append(1)
+
+        self.dim_order.reverse()
 
         return [(dim3, dim2, dim1, dim0) for dim3 in range(dims[3]) for dim2 in range(dims[2])
                 for dim1 in range(dims[1]) for dim0 in range(dims[0])]
@@ -170,12 +172,15 @@ class ZarrConverter:
 
     def _get_dtype(self):
 
-        return str(self.data_provider.getAnyImage().getRawPixels().dtype)
+        dt = self.data_provider.getAnyImage().getRawPixels().dtype
+        return dt.name
 
     def _preform_image_check(self, tiff_image, coord):
 
         zarr_array = self.writer.store[self.writer.get_current_group()]['raw_data']['array']
-        zarr_img = zarr_array[coord[0], coord[1], coord[2], coord[3]]
+        zarr_img = zarr_array[coord[self.dim_order.index('time')],
+                              coord[self.dim_order.index('channel')],
+                              coord[self.dim_order.index('z')]]
 
         return np.array_equal(zarr_img, tiff_image)
 
@@ -218,10 +223,10 @@ class ZarrConverter:
         image_object:   (pycromanager-object) MM Image object at coordinate (P, T, C, Z)
 
         """
-        self.CoordBuilder.p(coord[0])
-        self.CoordBuilder.t(coord[1])
-        self.CoordBuilder.c(coord[2])
-        self.CoordBuilder.z(coord[3])
+        self.CoordBuilder.p(coord[self.dim_order.index('position')])
+        self.CoordBuilder.t(coord[self.dim_order.index('time')])
+        self.CoordBuilder.c(coord[self.dim_order.index('channel')])
+        self.CoordBuilder.z(coord[self.dim_order.index('z')])
         mm_coord = self.CoordBuilder.build()
 
         return self.data_provider.getImage(mm_coord)
@@ -261,13 +266,12 @@ class ZarrConverter:
 
         for pos in range(self.p):
             self.writer.create_position(pos)
-            self.writer.init_array(data_shape=(self.p if self.p != 0 else 1,
-                                               self.t if self.t != 0 else 1,
+            self.writer.init_array(data_shape=(self.t if self.t != 0 else 1,
                                                self.c if self.c != 0 else 1,
                                                self.z if self.z != 0 else 1,
                                                self.y,
                                                self.x),
-                                   chunk_size=(1, 1, 1, 1, self.y, self.x),
+                                   chunk_size=(1, 1, 1, self.y, self.x),
                                    chan_names=chan_names,
                                    clims=clims,
                                    dtype=self.dtype)
@@ -292,7 +296,7 @@ class ZarrConverter:
         current_pos = 0
         current_page = 0
         last_file = None
-        p_dim = np.where(self.dim_order.index('position'))
+        p_dim = self.dim_order.index('position')
 
         #Format bar for CLI display
         bar_format = 'Status: |{bar}|{n_fmt}/{total_fmt} (Time Remaining: {remaining}), {rate_fmt}{postfix}]'
@@ -307,19 +311,19 @@ class ZarrConverter:
             img = self.get_image_object(coord)
             
             self.metadata['ImagePlaneMetadata'][f'{coord}'] = self._generate_plane_metadata(img)
-            data_file = self.metadata['ImagePlanMetadata'][f'{coord}']['map']['FileName']['scalar']
+            data_file = self.metadata['ImagePlaneMetadata'][f'{coord}']['map']['FileName']['scalar']
 
             img_raw = self.get_image_array(data_file, current_page)
-            # img_raw = img.getRawPixels().reshape(self.y, self.x)
 
-            self.writer.write(img_raw, coord[1], coord[2], coord[3])
+            self.writer.write(img_raw, coord[self.dim_order.index('time')],
+                              coord[self.dim_order.index('channel')],
+                              coord[self.dim_order.index('z')])
 
             if not self._preform_image_check(img_raw, coord):
                 raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
 
             current_page = self.check_file_update_page(last_file, data_file, current_page)
             last_file = data_file
-
 
         # Put metadata into zarr store and cleanup
         self.writer.store.attrs.put(self.metadata)

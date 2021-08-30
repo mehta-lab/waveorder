@@ -51,7 +51,7 @@ def get_autocontrast_limits(img, clip = .01):
     #TODO: Figure out how to do this for float images (ret, phase, etc.)
     # current only works for uint8, uint16, etc.
 
-    data_type = np.dtype(img)
+    data_type = img.dtype
 
     # Will raise an error if dtype is float, in that case cap the n_bins at 65536
     try:
@@ -59,7 +59,7 @@ def get_autocontrast_limits(img, clip = .01):
     except:
         n_bins = 65536
 
-    hist = cv2.calcHist([img], [0], None, [n_bins], [0, n_bins])
+    hist = cv2.calcHist([img.astype(data_type.name)], [0], None, [n_bins], [0, n_bins])
     cdf = np.cumsum(hist)
 
     maximum = cdf[-1]

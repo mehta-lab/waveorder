@@ -1,11 +1,12 @@
 from recOrder.io.zarr_converter_v2 import ZarrConverter
 import click
 
+
 @click.command()
 @click.option('--data_dir', required=True, type=str, help='path to the raw data directory')
 @click.option('--save_dir', required=True, type=str, help='path to the save directory')
 @click.option('--save_name', required=False, type=str, help='name to use for saving the data')
-def parse_args(save_dir, save_name):
+def parse_args(data_dir, save_dir, save_name):
     """parse command line arguments and return class with the arguments"""
 
     class Args():
@@ -14,7 +15,7 @@ def parse_args(save_dir, save_name):
             self.save_dir = save_dir
             self.save_name = save_name
 
-    return Args(save_dir, save_name)
+    return Args(data_dir, save_dir, save_name)
 
 def main():
 
