@@ -86,8 +86,10 @@ class ZarrConverter:
             else:
                 dims.append(1)
 
+        # Reverse the dimension order for easier calling later
         self.dim_order.reverse()
 
+        # return array of coordinate tuples with innermost dimension being the first dim acquired
         return [(dim3, dim2, dim1, dim0) for dim3 in range(dims[3]) for dim2 in range(dims[2])
                 for dim1 in range(dims[1]) for dim0 in range(dims[0])]
 
@@ -171,11 +173,33 @@ class ZarrConverter:
         return image_metadata
 
     def _get_dtype(self):
+        """
+        gets the datatype from the raw data array
+
+        Returns
+        -------
+
+        """
 
         dt = self.data_provider.getAnyImage().getRawPixels().dtype
+
         return dt.name
 
     def _preform_image_check(self, tiff_image, coord):
+        """
+        checks to make sure the memory mapped image matches the saved zarr image to ensure
+        a successful conversion.
+
+        Parameters
+        ----------
+        tiff_image:     (nd-array) memory mapped array
+        coord:          (tuple) coordinate of the image location
+
+        Returns
+        -------
+        True/False:     (bool) True if arrays are equal, false otherwise
+
+        """
 
         zarr_array = self.writer.store[self.writer.get_current_group()]['raw_data']['array']
         zarr_img = zarr_array[coord[self.dim_order.index('time')],
@@ -185,12 +209,34 @@ class ZarrConverter:
         return np.array_equal(zarr_img, tiff_image)
 
     def _get_channel_names(self):
+        """
+        gets the chan names from the summary metadata (in order in which they were acquired)
+
+        Returns
+        -------
+
+        """
 
         chan_names = self.metadata['Summary']['map']['ChNames']['array']
 
         return chan_names
 
     def check_file_update_page(self, last_file, current_file, current_page):
+        """
+        function to check whether or not the tiff page # should be incremented.  If it detects that the file
+        has changed then reset the counter back to 0.
+
+        Parameters
+        ----------
+        last_file:          (str) filename of the last file looked at
+        current_file:       (str) filename of the current file
+        current_page:       (int) current tiff page #
+
+        Returns
+        -------
+        current page:       (int) updated page number
+
+        """
 
         if last_file != current_file or not last_file:
             current_page = 0
@@ -200,9 +246,25 @@ class ZarrConverter:
         return current_page
 
     def get_image_array(self, data_file, current_page):
+        """
+        Grabs the image array through memory mapping.  We must first find the byte offset which is located in the
+        tiff page tag.  We then use that to quickly grab the bytes corresponding to the desired image.
+
+        Parameters
+        ----------
+        data_file:          (str) path of the data-file to look at
+        current_page:       (int) current tiff page
+
+        Returns
+        -------
+        array:              (nd-array) image array of shape (Y, X)
+
+        """
 
         file = os.path.join(self.data_directory, data_file)
         tf = tiff.TiffFile(file)
+
+        # get byte offset from tiff tag metadata
         byte_offset = self.get_byte_offset(tf, current_page)
 
         array = np.memmap(file, dtype=self.dtype, mode='r', offset=byte_offset, shape=(self.y, self.x))
@@ -233,6 +295,15 @@ class ZarrConverter:
 
 
     def get_channel_clims(self):
+        """
+        generate contrast limits for each channel.  Grabs the middle image of the stack to compute contrast limits
+        Default clim is to ignore 1% of pixels on either end
+
+        Returns
+        -------
+        clims:      [list]: list of tuples corresponding to the (min, max) contrast limits
+
+        """
 
         clims = []
         for chan in range(self.c):
@@ -242,6 +313,20 @@ class ZarrConverter:
         return clims
 
     def get_byte_offset(self, tiff_file, page):
+        """
+        Gets the byte offset from the tiff tag metadata
+
+        Parameters
+        ----------
+        tiff_file:          (Tiff-File object) Opened tiff file
+        page:               (int) Page to look at for the tag
+
+        Returns
+        -------
+        byte offset:        (int) byte offset for the image array
+
+        """
+
         for tag in tiff_file.pages[page].tags.values():
             if 'StripOffset' in tag.name:
                 return tag.value[0]
@@ -278,9 +363,8 @@ class ZarrConverter:
 
     def run_conversion(self):
         """
-        Runs the data conversion and performs a random image check to make sure conversion did not
+        Runs the data conversion through memory mapping and performs an image check to make sure conversion did not
         alter any data values.
-
 
         Returns
         -------
@@ -304,24 +388,31 @@ class ZarrConverter:
         # Run through every coordinate and convert image + grab image metadata, statistics
         for coord in tqdm(self.coords, bar_format=bar_format):
 
+            # Open the new position if the position index has changed
             if current_pos != coord[p_dim]:
                 self.writer.open_position(coord[p_dim])
                 current_pos = coord[p_dim]
 
+            # get the image object
             img = self.get_image_object(coord)
-            
+
+            # Get the metadata
             self.metadata['ImagePlaneMetadata'][f'{coord}'] = self._generate_plane_metadata(img)
             data_file = self.metadata['ImagePlaneMetadata'][f'{coord}']['map']['FileName']['scalar']
 
+            # get the memory mapped image
             img_raw = self.get_image_array(data_file, current_page)
 
+            # Write the data
             self.writer.write(img_raw, coord[self.dim_order.index('time')],
                               coord[self.dim_order.index('channel')],
                               coord[self.dim_order.index('z')])
 
+            # Perform image check
             if not self._preform_image_check(img_raw, coord):
                 raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
 
+            # Update current file and page
             current_page = self.check_file_update_page(last_file, data_file, current_page)
             last_file = data_file
 
