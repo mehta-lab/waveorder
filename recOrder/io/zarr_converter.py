@@ -6,7 +6,7 @@ import json
 import numpy as np
 from numcodecs import Blosc
 import shutil
-from scripts.md5_check_sum import gen_stats_file, md5
+import time
 
 class ZarrConverter:
 
@@ -220,9 +220,9 @@ class ZarrConverter:
 
         # Run through every coordinate and convert image + grab image metadata, statistics
         for coord in tqdm(self.coords, bar_format=bar_format):
-            
+
             img = self.get_image_object(coord)
-            
+
             self.metadata['ImagePlaneMetadata'][f'{coord}'] = self._generate_plane_metadata(img)
             img_raw = img.getRawPixels().reshape(self.y, self.x)
             self.array[coord[0], coord[1], coord[2], coord[3]] = img_raw

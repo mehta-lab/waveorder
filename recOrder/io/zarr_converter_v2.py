@@ -4,19 +4,21 @@ import zarr
 from tqdm import tqdm
 import json
 import numpy as np
-from numcodecs import Blosc
+import tifffile as tiff
 import shutil
 from waveorder.io.writer import WaveorderWriter
+from recOrder.preproc.pre_processing import get_autocontrast_limits
 
 class ZarrConverter:
 
-    def __init__(self, save_directory, save_name=None):
+    def __init__(self, data_directory, save_directory, save_name=None):
 
         # Attempt MM Connections
         self._connect_and_setup_mm()
 
         # Init File IO Properties
         self.version = 'recOrder Converter version=0.1'
+        self.data_directory = data_directory
         self.save_directory = save_directory
         self.data_name = self.summary_metadata.getPrefix()
         self.save_name = self.data_name if not save_name else save_name
@@ -30,6 +32,11 @@ class ZarrConverter:
 
         # Generate Data Specific Properties
         self.coords = None
+        self.dim_order = None
+        self.p_dim = None
+        self.t_dim = None
+        self.c_dim = None
+        self.z_dim = None
         self.dtype = self._get_dtype()
         self.p = self.data_provider.getMaxIndices().getP()+1
         self.t = self.data_provider.getMaxIndices().getT()+1
@@ -38,6 +45,7 @@ class ZarrConverter:
         self.y = self.data_provider.getAnyImage().getHeight()
         self.x = self.data_provider.getAnyImage().getWidth()
         self.dim = (self.p, self.t, self.c, self.z, self.y, self.x)
+        self.focus_z = self.z // 2
         print(f'Found Dataset {self.data_name} w/ dimensions (P, T, C, Z, Y, X): {self.dim}')
 
         # Initialize Coordinate Builder
@@ -45,18 +53,42 @@ class ZarrConverter:
 
         # Initialize Metadata Dictionary
         self.metadata = dict()
+        self.metadata['recOrder_Converter_Version'] = self.version
+
+        # Initialize writer
+        self.writer = WaveorderWriter(self.save_directory, datatype='raw')
+        self.writer.create_zarr_root(self.save_name)
 
     def _gen_coordset(self):
         """
-        generates a coordinate set for (p, t, c, z).
+        generates a coordinate set in the dimensional order to which the data was acquired.
+        This is important for keeping track of where we are in the tiff file during conversion
 
         Returns
         -------
-        list(tuples) w/ dimensions [N_images]
+        list(tuples) w/ length [N_images]
 
         """
 
-        return [(p, t, c, z) for p in range(self.p) for t in range(self.t) for c in range(self.c) for z in range(self.z)]
+        # 4 possible dimensions: p, c, t, z
+        n_dim = 4
+        hashmap = {'position': self.p,
+                   'time': self.t,
+                   'channel': self.c,
+                   'z': self.z}
+
+        self.dim_order = self.metadata['Summary']['map']['AxisOrder']['array']
+
+        dims = []
+        for i in range(n_dim):
+            if i < len(self.dim_order):
+                dims.append(hashmap[self.dim_order[i]])
+            else:
+                dims.append(1)
+
+        return [(dim3, dim2, dim1, dim0) for dim3 in range(dims[3]) for dim2 in range(dims[2])
+                for dim1 in range(dims[1]) for dim0 in range(dims[0])]
+
 
     def _connect_and_setup_mm(self):
         """
@@ -142,9 +174,35 @@ class ZarrConverter:
 
     def _preform_image_check(self, tiff_image, coord):
 
-        zarr_img = self.array[coord[0], coord[1], coord[2], coord[3]]
+        zarr_array = self.writer.store[self.writer.get_current_group()]['raw_data']['array']
+        zarr_img = zarr_array[coord[0], coord[1], coord[2], coord[3]]
 
         return np.array_equal(zarr_img, tiff_image)
+
+    def _get_channel_names(self):
+
+        chan_names = self.metadata['Summary']['map']['ChNames']['array']
+
+        return chan_names
+
+    def check_file_update_page(self, last_file, current_file, current_page):
+
+        if last_file != current_file or not last_file:
+            current_page = 0
+        else:
+            current_page += 1
+
+        return current_page
+
+    def get_image_array(self, data_file, current_page):
+
+        file = os.path.join(self.data_directory, data_file)
+        tf = tiff.TiffFile(file)
+        byte_offset = self.get_byte_offset(tf, current_page)
+
+        array = np.memmap(file, dtype=self.dtype, mode='r', offset=byte_offset, shape=(self.y, self.x))
+
+        return array
 
     def get_image_object(self, coord):
         """
@@ -168,11 +226,28 @@ class ZarrConverter:
 
         return self.data_provider.getImage(mm_coord)
 
-    def setup_zarr(self):
+
+    def get_channel_clims(self):
+
+        clims = []
+        for chan in range(self.c):
+            img = self.get_image_object((0, 0, chan, self.focus_z))
+            clims.append(get_autocontrast_limits(img.getRawPixels().reshape(self.y, self.x)))
+
+        return clims
+
+    def get_byte_offset(self, tiff_file, page):
+        for tag in tiff_file.pages[page].tags.values():
+            if 'StripOffset' in tag.name:
+                return tag.value[0]
+            else:
+                continue
+
+    def init_zarr_structure(self):
         """
         Initiates the zarr store.  Will create a zarr store with user-specified name or original name of data
         if not provided.  Store will contain a group called 'array' with contains an array of original
-        data dtype of dimensions (P, T, C, Z, Y, X).
+        data dtype of dimensions (T, C, Z, Y, X).  Appends OME-zarr metadata with clims,chan_names
 
         Current compressor is Blosc zstd w/ bitshuffle (high compression, faster compression)
 
@@ -181,22 +256,21 @@ class ZarrConverter:
 
         """
 
-        src = os.path.join(self.save_directory, self.save_name if self.save_name else self.data_name)
+        clims = self.get_channel_clims()
+        chan_names = self._get_channel_names()
 
-        if not src.endswith('.zarr'):
-            src += '.zarr'
-
-        self.zarr_store = zarr.open(src)
-        self.array = self.zarr_store.create('array',
-                                            shape=(self.p if self.p != 0 else 1,
-                                                   self.t if self.t != 0 else 1,
-                                                   self.c if self.c != 0 else 1,
-                                                   self.z if self.z != 0 else 1,
-                                                   self.y,
-                                                   self.x),
-                                            chunks=(1, 1, 1, 1, self.y, self.x),
-                                            compressor=Blosc('zstd', clevel=3, shuffle=Blosc.BITSHUFFLE),
-                                            dtype=self.dtype)
+        for pos in range(self.p):
+            self.writer.create_position(pos)
+            self.writer.init_array(data_shape=(self.p if self.p != 0 else 1,
+                                               self.t if self.t != 0 else 1,
+                                               self.c if self.c != 0 else 1,
+                                               self.z if self.z != 0 else 1,
+                                               self.y,
+                                               self.x),
+                                   chunk_size=(1, 1, 1, 1, self.y, self.x),
+                                   chan_names=chan_names,
+                                   clims=clims,
+                                   dtype=self.dtype)
 
     def run_conversion(self):
         """
@@ -213,25 +287,42 @@ class ZarrConverter:
         print('Running Conversion...')
         self._generate_summary_metadata()
         self.coords = self._gen_coordset()
-        self.setup_zarr()
+        self.init_zarr_structure()
+        self.writer.open_position(0)
+        current_pos = 0
+        current_page = 0
+        last_file = None
+        p_dim = np.where(self.dim_order.index('position'))
 
         #Format bar for CLI display
         bar_format = 'Status: |{bar}|{n_fmt}/{total_fmt} (Time Remaining: {remaining}), {rate_fmt}{postfix}]'
 
         # Run through every coordinate and convert image + grab image metadata, statistics
         for coord in tqdm(self.coords, bar_format=bar_format):
-            
+
+            if current_pos != coord[p_dim]:
+                self.writer.open_position(coord[p_dim])
+                current_pos = coord[p_dim]
+
             img = self.get_image_object(coord)
             
             self.metadata['ImagePlaneMetadata'][f'{coord}'] = self._generate_plane_metadata(img)
-            img_raw = img.getRawPixels().reshape(self.y, self.x)
-            self.array[coord[0], coord[1], coord[2], coord[3]] = img_raw
+            data_file = self.metadata['ImagePlanMetadata'][f'{coord}']['map']['FileName']['scalar']
+
+            img_raw = self.get_image_array(data_file, current_page)
+            # img_raw = img.getRawPixels().reshape(self.y, self.x)
+
+            self.writer.write(img_raw, coord[1], coord[2], coord[3])
 
             if not self._preform_image_check(img_raw, coord):
                 raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
 
+            current_page = self.check_file_update_page(last_file, data_file, current_page)
+            last_file = data_file
+
+
         # Put metadata into zarr store and cleanup
-        self.zarr_store.attrs.put(self.metadata)
+        self.writer.store.attrs.put(self.metadata)
         shutil.rmtree(self.temp_directory)
 
     def run_random_img_test(self, n_images=1):
