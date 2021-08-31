@@ -154,11 +154,11 @@ Ex. for a 20 um thick cell, the user would first focus in the middle of the cell
 
  
 
-<center> Z Start: 	-12 </center>
+​									`Z Start: 	-12` 
 
-<center> Z End:	 12 </center>
+​									 `Z End:	 12`
 
-<center> Z Step:	 0.25 </center>
+​									`Z Step:	 0.25` 
 
 
 
@@ -174,7 +174,7 @@ User can then choose whether they want to acquire a 2D or 3D Birefringence/Phase
 
 These settings are solely for reconstructing the acquired image / image volume. The *Phase Only* parameters are only needed for reconstructing phase. The user is able to specify the use of a GPU for reconstruction (requires CuPy / CudaToolKit) if present, otherwise leave blank.
 
-![reconstruct_acq](/Users/cameron.foltz/recOrder/docs/images/reconstruct_acq.png)
+![reconstruct_acq](./images/reconstruct_acq.png)
 
 Explanation of background correction methods:
 
@@ -215,4 +215,3 @@ The acquired data will then be displayed in the Napari window. Note that phase r
 
 
 ### recOrder Reconstruction
-
