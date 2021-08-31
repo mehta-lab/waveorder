@@ -9,6 +9,7 @@ import shutil
 from waveorder.io.writer import WaveorderWriter
 from recOrder.preproc.pre_processing import get_autocontrast_limits
 
+#TODO: Drop MM Dependency altogether?
 class ZarrConverter:
 
     def __init__(self, data_directory, save_directory, save_name=None, append_position_names=False):
@@ -388,7 +389,7 @@ class ZarrConverter:
         self.init_zarr_structure()
         self.writer.open_position(0, prefix=self.prefix_list[0])
         current_pos = 0
-        current_page = 0
+        current_page = -1
         last_file = None
 
         #Format bar for CLI display
@@ -406,7 +407,12 @@ class ZarrConverter:
 
             # Get the metadata
             self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = self._generate_plane_metadata(img)
+
             data_file = self.metadata['ImagePlaneMetadata'][f'{coord_reorder}']['map']['FileName']['scalar']
+
+            # Update current file and page
+            current_page = self.check_file_update_page(last_file, data_file, current_page)
+            last_file = data_file
 
             # get the memory mapped image
             img_raw = self.get_image_array(data_file, current_page)
@@ -425,10 +431,6 @@ class ZarrConverter:
             # Perform image check
             if not self._preform_image_check(img_raw, coord):
                 raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
-
-            # Update current file and page
-            current_page = self.check_file_update_page(last_file, data_file, current_page)
-            last_file = data_file
 
         # Put metadata into zarr store and cleanup
         self.writer.store.attrs.put(self.metadata)
