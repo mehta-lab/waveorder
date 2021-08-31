@@ -56,9 +56,8 @@ The recOrder dependencies specify a specific version of *pycromanager* which rel
 
 1. You will need to enable port access so that micromanager can communicate with recOrder through the pycromanager bridge. To do so open MM and navigate to *Tools > Options* and check the box that says Run server on port 4827
 
-![run_port](./images/run_port.png?raw=True)
+![run_port](/images/run_port.png?raw=True)
 
- 
 
 2. Create a new channel group called “Channel” and add find the property *MeadowlarkLcOpenSource-String send to -.* Feel free to add any other relevant properties, but this is the bare minimum needed for calibration. Hit “OK” when finished.
 
