@@ -94,19 +94,19 @@ Once finished, you will get a calibration assessment and an extinction value. Th
 
  
 
-<u>Extinction 0 – 50:</u>  Very poor. The alignment of the universal compensator may be off or the sample chamber may be highly birefringent.
+> *<u>Extinction 0 – 50:</u>*  Very poor. The alignment of the universal compensator may be off or the sample chamber may be highly birefringent.
 
  
 
-<u>Extinction 50-100:</u> Okay extinction, could be okay for tissue imaging and strong anisotropic structures. Most likely not suitable for cell imaging
+> <u>*Extinction 50-100:*</u> Okay extinction, could be okay for tissue imaging and strong anisotropic structures. Most likely not suitable for cell imaging
 
  
 
-<u>Extinction 100-200:</u> Good Extinction. These are the typical values we get on our microscopes.
+> *<u>Extinction 100-200:</u>* Good Extinction. These are the typical values we get on our microscopes.
 
  
 
-<u>Extinction 200+:</u> Phenomenal. Indicates a very well-aligned and clean light path.
+> <u>*Extinction 200+:*</u> Phenomenal. Indicates a very well-aligned and clean light path.
 
 
 
@@ -180,15 +180,15 @@ Explanation of background correction methods:
 
  
 
-<u>None:</u> No Background correction is performed. Not necessary to specify a background folder.
+> <u>*None:*</u> No Background correction is performed. Not necessary to specify a background folder.
 
  
 
-<u>Global:</u> A Global background correction is performed on every image by subtracting the background images from the sample in the stokes space.
+> <u>*Global:*</u> A Global background correction is performed on every image by subtracting the background images from the sample in the stokes space.
 
  
 
-<u>Local Fit:</u> A global background correction is formed and an additional estimation of local background is computed with a polynomial surface fit.
+> <u>*Local Fit:*</u> A global background correction is formed and an additional estimation of local background is computed with a polynomial surface fit.
 
  
 
@@ -196,17 +196,17 @@ An explanation of phase reconstruction parameters:
 
  
 
-<u>Objective NA:</u> Numerical Aperture of Objective, typically found next to magnification
+> <u>*Objective NA:*</u> Numerical Aperture of Objective, typically found next to magnification
 
-<u>Condenser NA:</u> Numerical Aperture of Condenser
+> <u>*Condenser NA:*</u> Numerical Aperture of Condenser
 
-<u>Magnification:</u> Magnfication of the objective
+> <u>*Magnification:*</u> Magnfication of the objective
 
-<u>Camera Pixel Size:</u> Pixel size of the camera in microns (ex. 6.5)
+>  <u>*Camera Pixel Size:*</u> Pixel size of the camera in microns (ex. 6.5)
 
-<u>RI of Obj, Media:</u> Refractive Index of the objective media. Defaults to air (1.003). Typical values also include 1.512 (oil) or 1.473 (glycerol).
+>  <u>*RI of Obj, Media:*</u> Refractive Index of the objective media. Defaults to air (1.003). Typical values also include 1.512 (oil) or 1.473 (glycerol).
 
-<u>Z Padding:</u> The number of slices to pad on either end of the stack in order to correct for edge reflection artifacts. Necessary if the sample is not fully out of focus on either end of the stack.
+>  <u>*Z Padding:*</u> The number of slices to pad on either end of the stack in order to correct for edge reflection artifacts. Necessary if the sample is not fully out of focus on either end of the stack.
 
  
 
