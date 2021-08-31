@@ -44,6 +44,8 @@ After pressing “Connect to MM” and choosing a directory, the first step in c
 
 
 
+
+
 **Deciding Swing** 
 
 Swing can be thought of as the deviation away from a perfectly circular illumination state. The greater the swing, the more elliptical the state becomes, until finally reaching a linear state at *swing = 0.25*. Picking a swing is dependent on the anisotropy of the sample. Typical swing values rang from *0.1 to 0.03.* Follow the guidelines below for an ideal swing setting.
@@ -60,15 +62,21 @@ We recommend using a swing of **0.1**  for most tissue samples and **0.05** for 
 
  
 
+
+
 **Illumination Scheme**
 
 The illumination scheme decides which polarization states to calibrate and use. We recommend sticking with the *4-State (Ext, 0, 60, 120)* scheme as it requires one less illumination state than the *5-State* scheme.
 
  
 
+
+
 **Use Cropped ROI**
 
 Calibration should be run on an empty field-of-view or “background” FOV in order to ensure that we are only compensating for the optical effects of the microscope and sample chamber. If you cannot find a fully empty FOV, you can draw a bounding box, or ROI, on the “Live Window” in MicroManager and check the *Use Cropped ROI* box
+
+
 
 
 
@@ -110,6 +118,8 @@ Once finished, you will get a calibration assessment and an extinction value. Th
 
 
 
+
+
  **Capturing Background**
 
 The next important step in the calibration process. This will later serve in reconstruction to correct for any local and global background anisotropy. ![cap_bg](./images/cap_bg.png)
@@ -121,6 +131,8 @@ Choose the name of the folder to which to save your background images (will be p
 *NOTE: If you wish the capture multiple background sets, please change the folder name in between captures as specifying the same name will overwrite previous data.*
 
  
+
+
 
 **Advanced Tab**
 
@@ -139,6 +151,8 @@ This acquisition module is designed to take single image volumes for both phase 
 **Save Path**
 
 User specifies the directory in which the images will be saved. Needed if the *Save Images* box is checked.
+
+
 
 
 
@@ -167,6 +181,8 @@ For phase reconstruction, the stack should have sufficient defocus along the top
  
 
 User can then choose whether they want to acquire a 2D or 3D Birefringence/Phase stack. Note that even for a 2D phase stack, a full image volume is required for reconstruction purposes.
+
+
 
 
 
