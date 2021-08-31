@@ -56,7 +56,7 @@ The recOrder dependencies specify a specific version of *pycromanager* which rel
 
 1. You will need to enable port access so that micromanager can communicate with recOrder through the pycromanager bridge. To do so open MM and navigate to *Tools > Options* and check the box that says Run server on port 4827
 
-![run_port](./images/run_port.png)
+![run_port](./images/run_port.png?raw=True)
 
  
 
