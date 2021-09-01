@@ -1,8 +1,6 @@
-from pycromanager import Bridge
 import os
 import zarr
 from tqdm import tqdm
-import json
 import numpy as np
 import tifffile as tiff
 from tifffile import TiffFile
@@ -10,6 +8,7 @@ import shutil
 from waveorder.io.writer import WaveorderWriter
 from recOrder.preproc.pre_processing import get_autocontrast_limits
 from xml.etree import ElementTree as etree
+import glob
 
 #TODO: Drop MM Dependency altogether?
 class ZarrConverter:
@@ -19,15 +18,15 @@ class ZarrConverter:
         # Init File IO Properties
         self.version = 'recOrder Converter version=0.2'
         self.data_directory = data_directory
-        self.master_ome = self._get_master_ome_tiff(data_directory)
+        self.save_directory = save_directory
+        self.files = glob.glob(os.path.join(self.data_directory, '*.ome.tif'))
         self.summary_metadata = self._generate_summary_metadata()
         self.data_name = self.summary_metadata['Prefix']
-        self.save_directory = save_directory
         self.save_name = self.data_name if not save_name else save_name
         self.append_position_names = append_position_names
         self.array = None
         self.zarr_store = None
-        self.file_dict = dict()
+        self.coord_map = dict()
 
         # Generate Data Specific Properties
         self.coords = None
@@ -91,84 +90,37 @@ class ZarrConverter:
         return [(dim3, dim2, dim1, dim0) for dim3 in range(dims[3]) for dim2 in range(dims[2])
                 for dim1 in range(dims[1]) for dim0 in range(dims[0])]
 
-    def _get_filenames(self):
-
-        filenames = []
-        root = etree.fromstring(self.master_tiff_opened.pages[0].description)
-        for val in root.iter():
-            if val.tag.endswith('UUID'):
-                fname = val.attrib['FileName']
-            if val.tag.endswith('TiffData'):
-                page = val.attrib['IFD']
-
-            filenames.append((fname, page))
-
-
-        return filenames
-
-    #TODO: Potentially reduce memory overhead, will be a dict of len(N_Images)
-    def _create_file_dict(self):
-        filenames = self._get_filenames()
-
-        cnt = 0
-        for coord in self.coords:
-            self.file_dict[coord] = {'filename': filenames[cnt][0],
-                                     'page': filenames[cnt][1]}
-
-    def _get_master_ome_tiff(self, folder_):
+    def _gather_index_maps(self):
         """
-        given either a single ome.tiff or a folder of ome.tiffs
-            load the omexml metadata for a single file and
-            search for the element attribute corresponding to the master file
-        Parameters
-        ----------
-        folder_:        (str) full path to folder containing images
+        Will return a dictionary of {coord: (filepath, page)} of length(N_Images) to later query
+
         Returns
         -------
-        path:           (str) full path to master-ome tiff
+
         """
 
-        ome_master = None
+        self.p_dim = self.dim_order.index('position')
+        self.t_dim = self.dim_order.index('time')
+        self.c_dim = self.dim_order.index('channel')
+        self.z_dim = self.dim_order.index('z')
 
-        if os.path.isdir(folder_):
-            dirname = folder_
-            file = [f for f in os.listdir(folder_) if ".ome.tif" in f][0]
-        elif os.path.isfile(folder_) and folder_.endswith('.ome.tif'):
-            dirname = os.path.dirname(folder_)
-            file = folder_
-        else:
-            raise ValueError("supplied path contains no ome.tif or is itself not an ome.tif")
+        for file in self.files:
+            tf = tiff.TiffFile(file)
+            meta = tf.micromanager_metadata['IndexMap']
 
-        with TiffFile(os.path.join(dirname, file)) as tiff:
-            omexml = tiff.pages[0].description
-            # get omexml root from first page
-            try:
-                root = etree.fromstring(omexml)
-            except etree.ParseError as exc:
-                try:
-                    omexml = omexml.decode(errors='ignore').encode()
-                    root = etree.fromstring(omexml)
-                except Exception as ex:
-                    raise Exception(f"Exception while parsing root from omexml: {ex}")
+            for page in range(len(meta['Channels'])):
+                coord = [0, 0, 0, 0]
+                coord[self.p_dim] = meta['Position'][page]
+                coord[self.t_dim] = meta['Frame'][page]
+                coord[self.c_dim] = meta['Channel'][page]
+                coord[self.z_dim] = meta['Slice'][page]
 
-            # search all elements for tags that identify ome-master tiff
-            for element in root:
-                # MetadataFile attribute identifies master-ome from a BinaryOnly non-master file
-                if element.tag.endswith('BinaryOnly'):
-                    ome_master = element.attrib['MetadataFile']
-                    return os.path.join(dirname, ome_master)
-                # Name attribute identifies master-ome from a master-ome file.
-                elif element.tag.endswith("Image"):
-                    ome_master = element.attrib['Name'] + ".ome.tif"
-                    return os.path.join(dirname, ome_master)
-
-            if not ome_master:
-                raise AttributeError("no ome-master file found")
+                self.coord_map[tuple(coord)] = (file, page)
 
 
     def _generate_summary_metadata(self):
         """
-        generates the summary metadata by opening the master file and loading the micromanager_metadata
+        generates the summary metadata by opening any file and loading the micromanager_metadata
 
         Returns
         -------
@@ -176,8 +128,8 @@ class ZarrConverter:
 
         """
 
-        self.master_tiff_opened = TiffFile(self.master_ome)
-        return self.master_tiff_opened.micromanager_metadata['Summary']
+        tf = tiff.TiffFile(self.files[0])
+        return tf.micromanager_metadata['Summary']
 
     def _generate_plane_metadata(self, tiff_file, page):
         """
@@ -210,7 +162,8 @@ class ZarrConverter:
 
         """
 
-        image_data = self._generate_plane_metadata(self.master_tiff_opened, 0)
+        tf = tiff.TiffFile(self.files[0])
+        image_data = self._generate_plane_metadata(tf, 0)
         bit_depth = image_data['BitDepth']
 
         dtype = f'uint{bit_depth}'
@@ -257,31 +210,27 @@ class ZarrConverter:
 
         return image_meta['map']['PositionName']['scalar'] if self.append_position_names else None
 
-    def check_file_update_page(self, last_file, current_file, current_page):
+    def check_file_changed(self, last_file, current_file):
         """
-        function to check whether or not the tiff page # should be incremented.  If it detects that the file
-        has changed then reset the counter back to 0.
+        function to check whether or not the tiff file has changed.
 
         Parameters
         ----------
         last_file:          (str) filename of the last file looked at
         current_file:       (str) filename of the current file
-        current_page:       (int) current tiff page #
 
         Returns
         -------
-        current page:       (int) updated page number
+        True/False:       (bool) updated page number
 
         """
 
         if last_file != current_file or not last_file:
-            current_page = 0
+            return True
         else:
-            current_page += 1
+            return False
 
-        return current_page
-
-    def get_image_array(self, data_file, current_page):
+    def get_image_array(self, coord, opened_tiff):
         """
         Grabs the image array through memory mapping.  We must first find the byte offset which is located in the
         tiff page tag.  We then use that to quickly grab the bytes corresponding to the desired image.
@@ -296,17 +245,17 @@ class ZarrConverter:
         array:              (nd-array) image array of shape (Y, X)
 
         """
-
-        file = os.path.join(self.data_directory, data_file)
-        tf = tiff.TiffFile(file)
+        file = coord[0]
+        page = coord[1]
 
         # get byte offset from tiff tag metadata
-        byte_offset = self.get_byte_offset(tf, current_page)
+        byte_offset = self.get_byte_offset(opened_tiff, page)
 
         array = np.memmap(file, dtype=self.dtype, mode='r', offset=byte_offset, shape=(self.y, self.x))
 
         return array
 
+    # todo: update this func for new coordinate structure
     def get_channel_clims(self):
         """
         generate contrast limits for each channel.  Grabs the middle image of the stack to compute contrast limits
@@ -346,6 +295,7 @@ class ZarrConverter:
             else:
                 continue
 
+    #TODO: get position names from summary metadata and update this function
     def init_zarr_structure(self):
         """
         Initiates the zarr store.  Will create a zarr store with user-specified name or original name of data
@@ -394,8 +344,6 @@ class ZarrConverter:
         self.coords = self._gen_coordset()
         self.init_zarr_structure()
         self.writer.open_position(0, prefix=self.prefix_list[0])
-        current_pos = 0
-        current_page = 0
         last_file = None
 
         #Format bar for CLI display
@@ -409,14 +357,17 @@ class ZarrConverter:
                              coord[self.dim_order.index('time')],
                              coord[self.dim_order.index('channel')],
                              coord[self.dim_order.index('z')]]
-            img = self.get_image_object(coord_reorder)
+
+            # Only load tiff file if it has changed from previous run
+            current_file = self.coord_map[coord][0]
+            if self.check_file_changed(last_file, current_file):
+                tf = tiff.TiffFile(current_file)
 
             # Get the metadata
-            self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = self._generate_plane_metadata(img)
-            data_file = self.metadata['ImagePlaneMetadata'][f'{coord_reorder}']['map']['FileName']['scalar']
+            self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = self._generate_plane_metadata(tf)
 
             # get the memory mapped image
-            img_raw = self.get_image_array(data_file, current_page)
+            img_raw = self.get_image_array(self.coord_map[coord], tf)
 
             # Open the new position if the position index has changed
             if current_pos != coord[self.dim_order.index('position')]:
@@ -432,10 +383,6 @@ class ZarrConverter:
             # Perform image check
             if not self._preform_image_check(img_raw, coord):
                 raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
-
-            # Update current file and page
-            current_page = self.check_file_update_page(last_file, data_file, current_page)
-            last_file = data_file
 
         # Put metadata into zarr store and cleanup
         self.writer.store.attrs.put(self.metadata)
