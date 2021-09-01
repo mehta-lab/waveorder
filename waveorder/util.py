@@ -872,7 +872,8 @@ def Dual_variable_ADMM_TV_deconv_2D(AHA, b_vec, rho, lambda_u, lambda_p, itr, ve
     return mu_sample, phi_sample
 
 
-def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, gpu_id=0, autotune=False, epsilon_auto=0.5, search_range_auto=6, verbose=True):
+def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, gpu_id=0, autotune=False,
+                                       epsilon_auto=0.5, output_lambda = False, search_range_auto=6, verbose=True):
     
     '''
     
@@ -898,6 +899,9 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
         autotune         :  bool
                            option to use L-curve to automatically choose regularization parameter
         
+        output_lambda   : bool
+                          option to return the optimal L-curve value after assessment
+
         epsilon_auto     : float
                            (if using autotune) the tolerance on the regularization parameter for the stopping condition of iterating along the L curve (in log10 units)
                            
@@ -1046,8 +1050,11 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
         f_real.append(ifft_f_real(compute_f_real_f(last_opt.reg_x - epsilon_auto)))
         f_real.append(ifft_f_real(compute_f_real_f(last_opt.reg_x)))
         f_real.append(ifft_f_real(compute_f_real_f(last_opt.reg_x + epsilon_auto)))
-        
-        return np.array(f_real)
+
+        if output_lambda:
+            return np.array(f_real), last_opt.reg_x
+        else:
+            return np.array(f_real)
     
     else:
         f_real_f = compute_f_real_f(xp.log10(reg_re))
