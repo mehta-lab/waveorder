@@ -1,16 +1,14 @@
 import os
-import zarr
 from tqdm import tqdm
 import numpy as np
 import tifffile as tiff
-from tifffile import TiffFile
-import shutil
 from waveorder.io.writer import WaveorderWriter
 from recOrder.preproc.pre_processing import get_autocontrast_limits
-from xml.etree import ElementTree as etree
 import glob
 
-#TODO: Drop MM Dependency altogether?
+
+#TODO: Add catch for incomplete datasets (datasets stopped early)
+#TODO: Add option for multi-well ome-format
 class ZarrConverter:
 
     def __init__(self, data_directory, save_directory, save_name=None, append_position_names=False):
@@ -145,6 +143,7 @@ class ZarrConverter:
         Parameters
         ----------
         tiff_file:          (TiffFile Object) Opened TiffFile Object
+        page:               (int) Page corresponding to the desired image plane
 
         Returns
         -------
@@ -158,9 +157,10 @@ class ZarrConverter:
             else:
                 continue
 
+    #todo: make this more robust
     def _get_dtype(self):
         """
-        gets the datatype from the raw data array
+        gets the datatype from any image plane metadata
 
         Returns
         -------
@@ -212,6 +212,13 @@ class ZarrConverter:
         return chan_names
 
     def _get_position_names(self):
+        """
+        Append a list of pos_names in ascending order (order in which they were acquired)
+
+        Returns
+        -------
+
+        """
 
         for p in range(self.p):
 
@@ -245,8 +252,8 @@ class ZarrConverter:
 
         Parameters
         ----------
-        data_file:          (str) path of the data-file to look at
-        current_page:       (int) current tiff page
+        coord:              (tuple) coordinate map entry containing file / page info
+        opened_tiff:        (TiffFile Object) current opened tiffile
 
         Returns
         -------
@@ -263,7 +270,6 @@ class ZarrConverter:
 
         return array
 
-    #todo: make sure this looks right
     def get_channel_clims(self):
         """
         generate contrast limits for each channel.  Grabs the middle image of the stack to compute contrast limits
@@ -318,7 +324,7 @@ class ZarrConverter:
         if not provided.  Store will contain a group called 'array' with contains an array of original
         data dtype of dimensions (T, C, Z, Y, X).  Appends OME-zarr metadata with clims,chan_names
 
-        Current compressor is Blosc zstd w/ bitshuffle (high compression, faster compression)
+        Current compressor is Blosc zstd w/ bitshuffle (~1.5x compression, faster compared to best 1.6x compressor)
 
         Returns
         -------
@@ -367,9 +373,10 @@ class ZarrConverter:
         bar_format = 'Status: |{bar}|{n_fmt}/{total_fmt} (Time Remaining: {remaining}), {rate_fmt}{postfix}]'
 
         # Run through every coordinate and convert image + grab image metadata, statistics
+        # loop is done in order in which the images were acquired
         for coord in tqdm(self.coords, bar_format=bar_format):
 
-            # get the image object
+            # re-order coordinates into zarr format
             coord_reorder = (coord[self.p_dim],
                              coord[self.t_dim],
                              coord[self.c_dim],
@@ -379,6 +386,7 @@ class ZarrConverter:
             current_file = self.coord_map[coord][0]
             if self.check_file_changed(last_file, current_file):
                 tf = tiff.TiffFile(current_file)
+                last_file = current_file
 
             # Get the metadata
             page = self.coord_map[coord][1]
