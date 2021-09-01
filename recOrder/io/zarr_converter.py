@@ -1,62 +1,59 @@
-from pycromanager import Bridge
 import os
-import zarr
 from tqdm import tqdm
-import json
 import numpy as np
 import tifffile as tiff
-import shutil
 from waveorder.io.writer import WaveorderWriter
 from recOrder.preproc.pre_processing import get_autocontrast_limits
+import glob
 
-#TODO: Drop MM Dependency altogether?
+
+#TODO: Add catch for incomplete datasets (datasets stopped early)
+#TODO: Add option for multi-well ome-format
 class ZarrConverter:
 
     def __init__(self, data_directory, save_directory, save_name=None, append_position_names=False):
 
-        # Attempt MM Connections
-        self._connect_and_setup_mm()
-
         # Init File IO Properties
-        self.version = 'recOrder Converter version=0.1'
+        self.version = 'recOrder Converter version=0.2'
         self.data_directory = data_directory
         self.save_directory = save_directory
-        self.data_name = self.summary_metadata.getPrefix()
+        self.files = glob.glob(os.path.join(self.data_directory, '*.ome.tif'))
+        self.summary_metadata = self._generate_summary_metadata()
+        self.data_name = self.summary_metadata['Prefix']
         self.save_name = self.data_name if not save_name else save_name
         self.append_position_names = append_position_names
         self.array = None
         self.zarr_store = None
-        self.temp_directory = os.path.join(os.path.expanduser('~'), 'recOrder_temp')
-        self.temp_path = None
-        self.java_path = None
-        if not os.path.exists(self.temp_directory):
-            os.mkdir(self.temp_directory)
+
+        if not os.path.exists(self.save_directory):
+            os.mkdir(self.save_directory)
 
         # Generate Data Specific Properties
         self.coords = None
+        self.coord_map = dict()
+        self.pos_names = []
         self.dim_order = None
         self.p_dim = None
         self.t_dim = None
         self.c_dim = None
         self.z_dim = None
         self.dtype = self._get_dtype()
-        self.p = self.data_provider.getMaxIndices().getP()+1
-        self.t = self.data_provider.getMaxIndices().getT()+1
-        self.c = self.data_provider.getMaxIndices().getC()+1
-        self.z = self.data_provider.getMaxIndices().getZ()+1
-        self.y = self.data_provider.getAnyImage().getHeight()
-        self.x = self.data_provider.getAnyImage().getWidth()
+        self.p = self.summary_metadata['IntendedDimensions']['position']
+        self.t = self.summary_metadata['IntendedDimensions']['time']
+        self.c = self.summary_metadata['IntendedDimensions']['channel']
+        self.z = self.summary_metadata['IntendedDimensions']['z']
+        self.y = self.summary_metadata['Height']
+        self.x = self.summary_metadata['Width']
         self.dim = (self.p, self.t, self.c, self.z, self.y, self.x)
         self.focus_z = self.z // 2
         self.prefix_list = []
         print(f'Found Dataset {self.data_name} w/ dimensions (P, T, C, Z, Y, X): {self.dim}')
 
-        # Initialize Coordinate Builder
-        self.CoordBuilder = self.data_provider.getAnyImage().getCoords().copyBuilder()
-
         # Initialize Metadata Dictionary
         self.metadata = dict()
         self.metadata['recOrder_Converter_Version'] = self.version
+        self.metadata['Summary'] = self.summary_metadata
+        self.metadata['ImagePlaneMetadata'] = dict()
 
         # Initialize writer
         self.writer = WaveorderWriter(self.save_directory, datatype='raw', silence=True)
@@ -80,7 +77,7 @@ class ZarrConverter:
                    'channel': self.c,
                    'z': self.z}
 
-        self.dim_order = self.metadata['Summary']['map']['AxisOrder']['array']
+        self.dim_order = self.summary_metadata['AxisOrder']
 
         dims = []
         for i in range(n_dim):
@@ -96,69 +93,57 @@ class ZarrConverter:
         return [(dim3, dim2, dim1, dim0) for dim3 in range(dims[3]) for dim2 in range(dims[2])
                 for dim1 in range(dims[1]) for dim0 in range(dims[0])]
 
-
-    def _connect_and_setup_mm(self):
+    def _gather_index_maps(self):
         """
-        Attempts MM connection and checks to make sure only one dataset is opened.
-        If failed, prompts user to open MM, close other datasets.
-        If Successful, get the necessary data providers.
+        Will return a dictionary of {coord: (filepath, page)} of length(N_Images) to later query
 
         Returns
         -------
 
         """
-        try:
-            self.bridge = Bridge(convert_camel_case=False)
-            self.mmc = self.bridge.get_core()
-            self.mm = self.bridge.get_studio()
 
-            data_viewers = self.mm.getDisplayManager().getAllDataViewers()
-        except:
-            raise ValueError('Please make sure MM is running and the data is opened')
+        self.p_dim = self.dim_order.index('position')
+        self.t_dim = self.dim_order.index('time')
+        self.c_dim = self.dim_order.index('channel')
+        self.z_dim = self.dim_order.index('z')
 
-        if data_viewers.size() != 1:
-            raise ValueError(f'Detected {data_viewers.size()} data viewers \
-            Make sure the only dataviewer opened is your desired dataset')
-        else:
-            self.data_viewer = self.mm.getDisplayManager().getAllDataViewers().get(0)
-            self.data_provider = self.data_viewer.getDataProvider()
-            self.summary_metadata = self.data_provider.getSummaryMetadata()
+        for file in self.files:
+            tf = tiff.TiffFile(file)
+            meta = tf.micromanager_metadata['IndexMap']
+
+            for page in range(len(meta['Channel'])):
+                coord = [0, 0, 0, 0]
+                coord[self.p_dim] = meta['Position'][page]
+                coord[self.t_dim] = meta['Frame'][page]
+                coord[self.c_dim] = meta['Channel'][page]
+                coord[self.z_dim] = meta['Slice'][page]
+
+                self.coord_map[tuple(coord)] = (file, page)
 
 
     def _generate_summary_metadata(self):
         """
-        generates the summary metadata by saving the existing java PropertyMap as JSON into a temp directory,
-        loads the JSON, and then convert into python dictionary.  This is the most straightforward way to grab all
-        of the metadata due to poor pycromanager API / Java layer interaction.
+        generates the summary metadata by opening any file and loading the micromanager_metadata
 
         Returns
         -------
+        summary_metadata:       (dict) MM Summary Metadata
 
         """
 
-        self.temp_path = os.path.join(self.temp_directory, 'meta.json')
-        self.java_path = self.bridge.construct_java_object('java.io.File', args=[self.temp_path])
-        PropertyMap = self.summary_metadata.toPropertyMap()
-        PropertyMap.saveJSON(self.java_path, True, False)
+        tf = tiff.TiffFile(self.files[0])
+        return tf.micromanager_metadata['Summary']
 
-        f = open(self.temp_path)
-        dict_ = json.load(f)
-        f.close()
-
-        self.metadata['Summary'] = dict_
-        self.metadata['ImagePlaneMetadata'] = dict()
-
-    def _generate_plane_metadata(self, image):
+    def _generate_plane_metadata(self, tiff_file, page):
         """
-        generates the img plane metadata by saving the existing java PropertyMap as JSON into a temp directory,
-        loads the JSON, and then convert into python dictionary.  This is the most straightforward way to grab all
-        of the metadata due to poor pycromanager API / Java layer interaction.
+        generates the img plane metadata by saving the MicroManagerMetadata written in the tiff tags.
 
         This image-plane data houses information of the config when the image was acquired.
 
         Parameters
         ----------
-        image:          (pycromanager-object) MM Image Object at specific coordinate which houses data/metadata.
+        tiff_file:          (TiffFile Object) Opened TiffFile Object
+        page:               (int) Page corresponding to the desired image plane
 
         Returns
         -------
@@ -166,27 +151,29 @@ class ZarrConverter:
 
         """
 
-        PropertyMap = image.getMetadata().toPropertyMap()
-        PropertyMap.saveJSON(self.java_path, True, False)
+        for tag in tiff_file.pages[page].tags.values():
+            if tag.name == 'MicroManagerMetadata':
+                return tag.value
+            else:
+                continue
 
-        f = open(self.temp_path)
-        image_metadata = json.load(f)
-        f.close()
-
-        return image_metadata
-
+    #todo: make this more robust
     def _get_dtype(self):
         """
-        gets the datatype from the raw data array
+        gets the datatype from any image plane metadata
 
         Returns
         -------
 
         """
 
-        dt = self.data_provider.getAnyImage().getRawPixels().dtype
+        tf = tiff.TiffFile(self.files[0])
+        image_data = self._generate_plane_metadata(tf, 0)
+        bit_depth = image_data['BitDepth']
 
-        return dt.name
+        dtype = f'uint{bit_depth}'
+
+        return dtype
 
     def _preform_image_check(self, tiff_image, coord):
         """
@@ -220,88 +207,70 @@ class ZarrConverter:
 
         """
 
-        chan_names = self.metadata['Summary']['map']['ChNames']['array']
+        chan_names = self.metadata['Summary']['ChNames']
 
         return chan_names
 
-    def _get_position_name(self, image_meta):
-
-        return image_meta['map']['PositionName']['scalar'] if self.append_position_names else None
-
-    def check_file_update_page(self, last_file, current_file, current_page):
+    def _get_position_names(self):
         """
-        function to check whether or not the tiff page # should be incremented.  If it detects that the file
-        has changed then reset the counter back to 0.
+        Append a list of pos_names in ascending order (order in which they were acquired)
+
+        Returns
+        -------
+
+        """
+
+        for p in range(self.p):
+
+            name = self.metadata['Summary']['StagePositions'][p]['Label']
+            self.pos_names.append(name)
+
+    def check_file_changed(self, last_file, current_file):
+        """
+        function to check whether or not the tiff file has changed.
 
         Parameters
         ----------
         last_file:          (str) filename of the last file looked at
         current_file:       (str) filename of the current file
-        current_page:       (int) current tiff page #
 
         Returns
         -------
-        current page:       (int) updated page number
+        True/False:       (bool) updated page number
 
         """
 
         if last_file != current_file or not last_file:
-            current_page = 0
+            return True
         else:
-            current_page += 1
+            return False
 
-        return current_page
-
-    def get_image_array(self, data_file, current_page):
+    def get_image_array(self, coord, opened_tiff):
         """
         Grabs the image array through memory mapping.  We must first find the byte offset which is located in the
         tiff page tag.  We then use that to quickly grab the bytes corresponding to the desired image.
 
         Parameters
         ----------
-        data_file:          (str) path of the data-file to look at
-        current_page:       (int) current tiff page
+        coord:              (tuple) coordinate map entry containing file / page info
+        opened_tiff:        (TiffFile Object) current opened tiffile
 
         Returns
         -------
         array:              (nd-array) image array of shape (Y, X)
 
         """
-
-        file = os.path.join(self.data_directory, data_file)
-        tf = tiff.TiffFile(file)
+        file = coord[0]
+        page = coord[1]
 
         # get byte offset from tiff tag metadata
-        byte_offset = self.get_byte_offset(tf, current_page)
+        byte_offset = self.get_byte_offset(opened_tiff, page)
 
         array = np.memmap(file, dtype=self.dtype, mode='r', offset=byte_offset, shape=(self.y, self.x))
 
         return array
 
-    def get_image_object(self, coord):
-        """
-        Uses the coordinate builder to construct MM compatible coordinates, which get passed to the data provider
-        in order to grab a specific MM image object.
-
-        Parameters
-        ----------
-        coord:      (tuple) Coordinates of dimension (P, T, C, Z)
-
-        Returns
-        -------
-        image_object:   (pycromanager-object) MM Image object at coordinate (P, T, C, Z)
-
-        """
-        self.CoordBuilder.p(coord[0])
-        self.CoordBuilder.t(coord[1])
-        self.CoordBuilder.c(coord[2])
-        self.CoordBuilder.z(coord[3])
-        mm_coord = self.CoordBuilder.build()
-
-        return self.data_provider.getImage(mm_coord)
-
-
-    def get_channel_clims(self):
+    def get_channel_clims(self, pos):
         """
         generate contrast limits for each channel.  Grabs the middle image of the stack to compute contrast limits
         Default clim is to ignore 1% of pixels on either end
@@ -313,9 +282,19 @@ class ZarrConverter:
         """
 
         clims = []
+
+        coord = list(self.coords[0])
         for chan in range(self.c):
-            img = self.get_image_object((0, 0, chan, self.focus_z))
-            clims.append(get_autocontrast_limits(img.getRawPixels().reshape(self.y, self.x)))
+
+            coord[self.p_dim] = pos
+            coord[self.c_dim] = chan
+            coord[self.z_dim] = self.focus_z
+
+            fname = self.coord_map[tuple(coord)][0]
+            tf = tiff.TiffFile(fname)
+
+            img = self.get_image_array(self.coord_map[tuple(coord)], tf)
+            clims.append(get_autocontrast_limits(img))
 
         return clims
 
@@ -346,22 +325,22 @@ class ZarrConverter:
         if not provided.  Store will contain a group called 'array' with contains an array of original
         data dtype of dimensions (T, C, Z, Y, X).  Appends OME-zarr metadata with clims,chan_names
 
-        Current compressor is Blosc zstd w/ bitshuffle (high compression, faster compression)
+        Current compressor is Blosc zstd w/ bitshuffle (~1.5x compression, faster compared to best 1.6x compressor)
 
         Returns
         -------
 
         """
 
-        clims = self.get_channel_clims()
+
         chan_names = self._get_channel_names()
+        self._get_position_names()
 
         for pos in range(self.p):
-            img = self.get_image_object((pos, 0, 0, 0))
-            metadata = self._generate_plane_metadata(img)
 
-            self.prefix_list.append(self._get_position_name(metadata))
-            self.writer.create_position(pos, prefix=self.prefix_list[pos])
+            clims = self.get_channel_clims(pos)
+            prefix = self.pos_names[pos] if self.append_position_names else None
+            self.writer.create_position(pos, prefix=prefix)
             self.writer.init_array(data_shape=(self.t if self.t != 0 else 1,
                                                self.c if self.c != 0 else 1,
                                                self.z if self.z != 0 else 1,
@@ -384,49 +363,51 @@ class ZarrConverter:
 
         # Run setup
         print('Running Conversion...')
+        print('Setting up zarr')
         self._generate_summary_metadata()
         self.coords = self._gen_coordset()
+        self._gather_index_maps()
         self.init_zarr_structure()
-        self.writer.open_position(0, prefix=self.prefix_list[0])
-        current_pos = 0
-        current_page = -1
+        self.writer.open_position(0, prefix=self.prefix_list[0] if self.append_position_names else None)
         last_file = None
+        current_pos = 0
 
         #Format bar for CLI display
         bar_format = 'Status: |{bar}|{n_fmt}/{total_fmt} (Time Remaining: {remaining}), {rate_fmt}{postfix}]'
 
         # Run through every coordinate and convert image + grab image metadata, statistics
+        # loop is done in order in which the images were acquired
+        print('Converting Images...')
         for coord in tqdm(self.coords, bar_format=bar_format):
 
-            # get the image object
-            coord_reorder = [coord[self.dim_order.index('position')],
-                             coord[self.dim_order.index('time')],
-                             coord[self.dim_order.index('channel')],
-                             coord[self.dim_order.index('z')]]
-            img = self.get_image_object(coord_reorder)
+            # re-order coordinates into zarr format
+            coord_reorder = (coord[self.p_dim],
+                             coord[self.t_dim],
+                             coord[self.c_dim],
+                             coord[self.z_dim])
+
+            # Only load tiff file if it has changed from previous run
+            current_file = self.coord_map[coord][0]
+            if self.check_file_changed(last_file, current_file):
+                tf = tiff.TiffFile(current_file)
+                last_file = current_file
 
             # Get the metadata
-            self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = self._generate_plane_metadata(img)
-
-            data_file = self.metadata['ImagePlaneMetadata'][f'{coord_reorder}']['map']['FileName']['scalar']
-
-            # Update current file and page
-            current_page = self.check_file_update_page(last_file, data_file, current_page)
-            last_file = data_file
+            page = self.coord_map[coord][1]
+            self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = self._generate_plane_metadata(tf, page)
 
             # get the memory mapped image
-            img_raw = self.get_image_array(data_file, current_page)
+            img_raw = self.get_image_array(self.coord_map[coord], tf)
 
             # Open the new position if the position index has changed
-            if current_pos != coord[self.dim_order.index('position')]:
-                self.writer.open_position(coord[self.dim_order.index('position')],
-                                          prefix=self.prefix_list[coord[self.dim_order.index('position')]])
-                current_pos = coord[self.dim_order.index('position')]
+            if current_pos != coord[self.p_dim]:
+
+                prefix = self.pos_names[coord[self.p_dim]] if self.append_position_names else None
+                self.writer.open_position(coord[self.p_dim], prefix=prefix)
+                current_pos = coord[self.p_dim]
 
             # Write the data
-            self.writer.write(img_raw, coord[self.dim_order.index('time')],
-                              coord[self.dim_order.index('channel')],
-                              coord[self.dim_order.index('z')])
+            self.writer.write(img_raw, coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
 
             # Perform image check
             if not self._preform_image_check(img_raw, coord):
@@ -434,7 +415,6 @@ class ZarrConverter:
 
         # Put metadata into zarr store and cleanup
         self.writer.store.attrs.put(self.metadata)
-        shutil.rmtree(self.temp_directory)
 
 
 
