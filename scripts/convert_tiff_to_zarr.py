@@ -1,4 +1,4 @@
-from recOrder.io.zarr_converter import ZarrConverter
+from recOrder.io.zarr_converter_v3 import ZarrConverter
 import click
 
 

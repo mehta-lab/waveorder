@@ -26,10 +26,14 @@ class ZarrConverter:
         self.append_position_names = append_position_names
         self.array = None
         self.zarr_store = None
-        self.coord_map = dict()
+
+        if not os.path.exists(self.save_directory):
+            os.mkdir(self.save_directory)
 
         # Generate Data Specific Properties
         self.coords = None
+        self.coord_map = dict()
+        self.pos_names = []
         self.dim_order = None
         self.p_dim = None
         self.t_dim = None
@@ -51,6 +55,7 @@ class ZarrConverter:
         self.metadata = dict()
         self.metadata['recOrder_Converter_Version'] = self.version
         self.metadata['Summary'] = self.summary_metadata
+        self.metadata['ImagePlaneMetadata'] = dict()
 
         # Initialize writer
         self.writer = WaveorderWriter(self.save_directory, datatype='raw', silence=True)
@@ -108,7 +113,7 @@ class ZarrConverter:
             tf = tiff.TiffFile(file)
             meta = tf.micromanager_metadata['IndexMap']
 
-            for page in range(len(meta['Channels'])):
+            for page in range(len(meta['Channel'])):
                 coord = [0, 0, 0, 0]
                 coord[self.p_dim] = meta['Position'][page]
                 coord[self.t_dim] = meta['Frame'][page]
@@ -202,13 +207,16 @@ class ZarrConverter:
 
         """
 
-        chan_names = self.metadata['Summary']['map']['ChNames']['array']
+        chan_names = self.metadata['Summary']['ChNames']
 
         return chan_names
 
-    def _get_position_name(self, image_meta):
+    def _get_position_names(self):
 
-        return image_meta['map']['PositionName']['scalar'] if self.append_position_names else None
+        for p in range(self.p):
+
+            name = self.metadata['Summary']['StagePositions'][p]['Label']
+            self.pos_names.append(name)
 
     def check_file_changed(self, last_file, current_file):
         """
@@ -255,7 +263,7 @@ class ZarrConverter:
 
         return array
 
-    # todo: update this func for new coordinate structure
+    #todo: make sure this looks right
     def get_channel_clims(self):
         """
         generate contrast limits for each channel.  Grabs the middle image of the stack to compute contrast limits
@@ -268,9 +276,18 @@ class ZarrConverter:
         """
 
         clims = []
+
+        coord = list(self.coords[0])
         for chan in range(self.c):
-            img = self.get_image_object((0, 0, chan, self.focus_z))
-            clims.append(get_autocontrast_limits(img.getRawPixels().reshape(self.y, self.x)))
+
+            coord[self.dim_order.index('channel')] = chan
+            coord[self.dim_order.index('z')] = self.focus_z
+
+            fname = self.coord_map[tuple(coord)][0]
+            tf = tiff.TiffFile(fname)
+
+            img = self.get_image_array(self.coord_map[tuple(coord)], tf)
+            clims.append(get_autocontrast_limits(img))
 
         return clims
 
@@ -295,7 +312,6 @@ class ZarrConverter:
             else:
                 continue
 
-    #TODO: get position names from summary metadata and update this function
     def init_zarr_structure(self):
         """
         Initiates the zarr store.  Will create a zarr store with user-specified name or original name of data
@@ -311,13 +327,12 @@ class ZarrConverter:
 
         clims = self.get_channel_clims()
         chan_names = self._get_channel_names()
+        self._get_position_names()
 
         for pos in range(self.p):
-            img = self.get_image_object((pos, 0, 0, 0))
-            metadata = self._generate_plane_metadata(img)
 
-            self.prefix_list.append(self._get_position_name(metadata))
-            self.writer.create_position(pos, prefix=self.prefix_list[pos])
+            prefix = self.pos_names[pos] if self.append_position_names else None
+            self.writer.create_position(pos, prefix=prefix)
             self.writer.init_array(data_shape=(self.t if self.t != 0 else 1,
                                                self.c if self.c != 0 else 1,
                                                self.z if self.z != 0 else 1,
@@ -342,9 +357,11 @@ class ZarrConverter:
         print('Running Conversion...')
         self._generate_summary_metadata()
         self.coords = self._gen_coordset()
+        self._gather_index_maps()
         self.init_zarr_structure()
-        self.writer.open_position(0, prefix=self.prefix_list[0])
+        self.writer.open_position(0, prefix=self.prefix_list[0] if self.append_position_names else None)
         last_file = None
+        current_pos = 0
 
         #Format bar for CLI display
         bar_format = 'Status: |{bar}|{n_fmt}/{total_fmt} (Time Remaining: {remaining}), {rate_fmt}{postfix}]'
@@ -353,10 +370,10 @@ class ZarrConverter:
         for coord in tqdm(self.coords, bar_format=bar_format):
 
             # get the image object
-            coord_reorder = [coord[self.dim_order.index('position')],
-                             coord[self.dim_order.index('time')],
-                             coord[self.dim_order.index('channel')],
-                             coord[self.dim_order.index('z')]]
+            coord_reorder = (coord[self.p_dim],
+                             coord[self.t_dim],
+                             coord[self.c_dim],
+                             coord[self.z_dim])
 
             # Only load tiff file if it has changed from previous run
             current_file = self.coord_map[coord][0]
@@ -364,21 +381,21 @@ class ZarrConverter:
                 tf = tiff.TiffFile(current_file)
 
             # Get the metadata
-            self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = self._generate_plane_metadata(tf)
+            page = self.coord_map[coord][1]
+            self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = self._generate_plane_metadata(tf, page)
 
             # get the memory mapped image
             img_raw = self.get_image_array(self.coord_map[coord], tf)
 
             # Open the new position if the position index has changed
-            if current_pos != coord[self.dim_order.index('position')]:
-                self.writer.open_position(coord[self.dim_order.index('position')],
-                                          prefix=self.prefix_list[coord[self.dim_order.index('position')]])
-                current_pos = coord[self.dim_order.index('position')]
+            if current_pos != coord[self.p_dim]:
+
+                prefix = self.pos_names[coord[self.p_dim]] if self.append_position_names else None
+                self.writer.open_position(coord[self.p_dim], prefix=prefix)
+                current_pos = coord[self.p_dim]
 
             # Write the data
-            self.writer.write(img_raw, coord[self.dim_order.index('time')],
-                              coord[self.dim_order.index('channel')],
-                              coord[self.dim_order.index('z')])
+            self.writer.write(img_raw, coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
 
             # Perform image check
             if not self._preform_image_check(img_raw, coord):
@@ -386,7 +403,6 @@ class ZarrConverter:
 
         # Put metadata into zarr store and cleanup
         self.writer.store.attrs.put(self.metadata)
-        shutil.rmtree(self.temp_directory)
 
 
 
