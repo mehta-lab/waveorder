@@ -363,6 +363,7 @@ class ZarrConverter:
 
         # Run setup
         print('Running Conversion...')
+        print('Setting up zarr')
         self._generate_summary_metadata()
         self.coords = self._gen_coordset()
         self._gather_index_maps()
@@ -376,6 +377,7 @@ class ZarrConverter:
 
         # Run through every coordinate and convert image + grab image metadata, statistics
         # loop is done in order in which the images were acquired
+        print('Converting Images...')
         for coord in tqdm(self.coords, bar_format=bar_format):
 
             # re-order coordinates into zarr format
