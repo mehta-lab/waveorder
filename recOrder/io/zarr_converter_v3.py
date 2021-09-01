@@ -270,7 +270,7 @@ class ZarrConverter:
 
         return array
 
-    def get_channel_clims(self):
+    def get_channel_clims(self, pos):
         """
         generate contrast limits for each channel.  Grabs the middle image of the stack to compute contrast limits
         Default clim is to ignore 1% of pixels on either end
@@ -286,8 +286,9 @@ class ZarrConverter:
         coord = list(self.coords[0])
         for chan in range(self.c):
 
-            coord[self.dim_order.index('channel')] = chan
-            coord[self.dim_order.index('z')] = self.focus_z
+            coord[self.p_dim] = pos
+            coord[self.c_dim] = chan
+            coord[self.z_dim] = self.focus_z
 
             fname = self.coord_map[tuple(coord)][0]
             tf = tiff.TiffFile(fname)
@@ -331,12 +332,13 @@ class ZarrConverter:
 
         """
 
-        clims = self.get_channel_clims()
+
         chan_names = self._get_channel_names()
         self._get_position_names()
 
         for pos in range(self.p):
 
+            clims = self.get_channel_clims(pos)
             prefix = self.pos_names[pos] if self.append_position_names else None
             self.writer.create_position(pos, prefix=prefix)
             self.writer.init_array(data_shape=(self.t if self.t != 0 else 1,
