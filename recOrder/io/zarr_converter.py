@@ -5,22 +5,29 @@ import tifffile as tiff
 from waveorder.io.writer import WaveorderWriter
 from recOrder.preproc.pre_processing import get_autocontrast_limits
 import glob
+from pathlib import Path
 
 
+#TODO: All data HCS with grid some determined size
+#TODO: Add position slider for our datasets
 #TODO: Add catch for incomplete datasets (datasets stopped early)
-#TODO: Add option for multi-well ome-format
 class ZarrConverter:
 
-    def __init__(self, data_directory, save_directory, save_name=None, append_position_names=False):
+    def __init__(self, input, output, append_position_names=False):
+
+        # Add Initial Checks
+        if len(glob.glob(os.path.join(input, '*.ome.tif'))) == 0:
+            raise ValueError('Specific input contains no ome.tif files, please specify a valid input directory')
+        if not output.endswith('.zarr'):
+            raise ValueError('Please specify .zarr at the end of your output')
 
         # Init File IO Properties
         self.version = 'recOrder Converter version=0.2'
-        self.data_directory = data_directory
-        self.save_directory = save_directory
+        self.data_directory = input
+        self.save_directory = os.path.dirname(output)
         self.files = glob.glob(os.path.join(self.data_directory, '*.ome.tif'))
         self.summary_metadata = self._generate_summary_metadata()
-        self.data_name = self.summary_metadata['Prefix']
-        self.save_name = self.data_name if not save_name else save_name
+        self.save_name = os.path.basename(output)
         self.append_position_names = append_position_names
         self.array = None
         self.zarr_store = None
@@ -47,7 +54,7 @@ class ZarrConverter:
         self.dim = (self.p, self.t, self.c, self.z, self.y, self.x)
         self.focus_z = self.z // 2
         self.prefix_list = []
-        print(f'Found Dataset {self.data_name} w/ dimensions (P, T, C, Z, Y, X): {self.dim}')
+        print(f'Found Dataset {self.save_name} w/ dimensions (P, T, C, Z, Y, X): {self.dim}')
 
         # Initialize Metadata Dictionary
         self.metadata = dict()
