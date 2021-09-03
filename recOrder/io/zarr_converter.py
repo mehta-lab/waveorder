@@ -228,8 +228,10 @@ class ZarrConverter:
         """
 
         for p in range(self.p):
-
-            name = self.metadata['Summary']['StagePositions'][p]['Label']
+            if self.p > 1:
+                name = self.metadata['Summary']['StagePositions'][p]['Label']
+            else:
+                name = ''
             self.pos_names.append(name)
 
     def check_file_changed(self, last_file, current_file):
