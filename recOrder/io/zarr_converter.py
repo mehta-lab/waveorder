@@ -14,6 +14,7 @@ from pathlib import Path
 class ZarrConverter:
 
     def __init__(self, input, output, append_position_names=False):
+    def __init__(self, input, output, append_position_names=False):
 
         # Add Initial Checks
         if len(glob.glob(os.path.join(input, '*.ome.tif'))) == 0:
@@ -164,7 +165,6 @@ class ZarrConverter:
             else:
                 continue
 
-    #todo: make this more robust
     def _get_dtype(self):
         """
         gets the datatype from any image plane metadata
@@ -175,12 +175,8 @@ class ZarrConverter:
         """
 
         tf = tiff.TiffFile(self.files[0])
-        image_data = self._generate_plane_metadata(tf, 0)
-        bit_depth = image_data['BitDepth']
 
-        dtype = f'uint{bit_depth}'
-
-        return dtype
+        return tf.pages[0].dtype
 
     def _preform_image_check(self, tiff_image, coord):
         """
