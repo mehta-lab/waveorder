@@ -1058,7 +1058,7 @@ def Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=False, g
         f_real.append(ifft_f_real(compute_f_real_f(last_opt.reg_x + epsilon_auto)))
 
         if output_lambda:
-            return np.array(f_real), last_opt.reg_x
+            return np.array(f_real), 10**(last_opt.reg_x)
         else:
             return np.array(f_real)
     
