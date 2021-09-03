@@ -8,12 +8,10 @@ import glob
 from pathlib import Path
 
 
-#TODO: All data HCS with grid some determined size
-#TODO: Add position slider for our datasets
+#TODO: All data HCS with grid some determined size?
 #TODO: Add catch for incomplete datasets (datasets stopped early)
 class ZarrConverter:
 
-    def __init__(self, input, output, append_position_names=False):
     def __init__(self, input, output, append_position_names=False):
 
         # Add Initial Checks
