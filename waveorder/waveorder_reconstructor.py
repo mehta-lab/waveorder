@@ -289,6 +289,7 @@ class waveorder_microscopy:
         self.chi                       = chi
         self.cali                      = cali
         self.bg_option                 = bg_option
+        self.phase_deconv              = phase_deconv
              
 
         if QLIPP_birefringence_only == False:
@@ -303,11 +304,11 @@ class waveorder_microscopy:
 
             # Defocus kernel initialization
 
-            self.Hz_det_setup(phase_deconv, ph_deconv_layer, bire_in_plane_deconv, inc_recon)
+            self.Hz_det_setup(self.phase_deconv, ph_deconv_layer, bire_in_plane_deconv, inc_recon)
 
             # select either 2D or 3D model for phase deconvolution
 
-            self.phase_deconv_setup(phase_deconv)
+            self.phase_deconv_setup(self.phase_deconv)
 
             # instrument matrix for polarization detection
 
