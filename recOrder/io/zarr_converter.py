@@ -5,11 +5,11 @@ import tifffile as tiff
 from waveorder.io.writer import WaveorderWriter
 from recOrder.preproc.pre_processing import get_autocontrast_limits
 import glob
-from pathlib import Path
 
 
 #TODO: All data HCS with grid some determined size?
 #TODO: Add catch for incomplete datasets (datasets stopped early)
+#TODO: add key in metadata to keep track of position index + name so we can fully replace pos names
 class ZarrConverter:
 
     def __init__(self, input, output, append_position_names=False):
@@ -371,7 +371,7 @@ class ZarrConverter:
         self.coords = self._gen_coordset()
         self._gather_index_maps()
         self.init_zarr_structure()
-        self.writer.open_position(0, prefix=self.prefix_list[0] if self.append_position_names else None)
+        self.writer.open_position(0, prefix=self.pos_names[0] if self.append_position_names else None)
         last_file = None
         current_pos = 0
 
@@ -418,49 +418,3 @@ class ZarrConverter:
 
         # Put metadata into zarr store and cleanup
         self.writer.store.attrs.put(self.metadata)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
