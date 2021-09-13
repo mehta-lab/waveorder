@@ -12,7 +12,7 @@ import glob
 #TODO: add key in metadata to keep track of position index + name so we can fully replace pos names
 class ZarrConverter:
 
-    def __init__(self, input, output, append_position_names=False):
+    def __init__(self, input, output, append_position_names=False, format_hcs=False):
 
         # Add Initial Checks
         if len(glob.glob(os.path.join(input, '*.ome.tif'))) == 0:
@@ -21,13 +21,14 @@ class ZarrConverter:
             raise ValueError('Please specify .zarr at the end of your output')
 
         # Init File IO Properties
-        self.version = 'recOrder Converter version=0.2'
+        self.version = 'recOrder Converter version=0.3'
         self.data_directory = input
         self.save_directory = os.path.dirname(output)
         self.files = glob.glob(os.path.join(self.data_directory, '*.ome.tif'))
         self.summary_metadata = self._generate_summary_metadata()
         self.save_name = os.path.basename(output)
         self.append_position_names = append_position_names
+        self.format_hcs = format_hcs
         self.array = None
         self.zarr_store = None
 
@@ -61,8 +62,9 @@ class ZarrConverter:
         self.metadata['Summary'] = self.summary_metadata
         self.metadata['ImagePlaneMetadata'] = dict()
 
-        # Initialize writer
-        self.writer = WaveorderWriter(self.save_directory, datatype='raw', silence=True)
+        # initialize metadata if HCS desired, init writer
+        self.hcs_meta = self._generate_hcs_metadata() if self.format_hcs else None
+        self.writer = WaveorderWriter(self.save_directory, hcs=self.format_hcs, hcs_meta=self.hcs_meta, verbose=False)
         self.writer.create_zarr_root(self.save_name)
 
     def _gen_coordset(self):
@@ -98,6 +100,9 @@ class ZarrConverter:
         # return array of coordinate tuples with innermost dimension being the first dim acquired
         return [(dim3, dim2, dim1, dim0) for dim3 in range(dims[3]) for dim2 in range(dims[2])
                 for dim1 in range(dims[1]) for dim0 in range(dims[0])]
+
+    def _generate_hcs_metadata(self):
+        pass
 
     def _gather_index_maps(self):
         """
@@ -192,7 +197,7 @@ class ZarrConverter:
 
         """
 
-        zarr_array = self.writer.store[self.writer.get_current_group()]['raw_data']['array']
+        zarr_array = self.writer.get_current_pos_group()['array']
         zarr_img = zarr_array[coord[self.dim_order.index('time')],
                               coord[self.dim_order.index('channel')],
                               coord[self.dim_order.index('z')]]
@@ -342,8 +347,8 @@ class ZarrConverter:
         for pos in range(self.p):
 
             clims = self.get_channel_clims(pos)
-            prefix = self.pos_names[pos] if self.append_position_names else None
-            self.writer.create_position(pos, prefix=prefix)
+            name = self.pos_names[pos] if self.append_position_names else None
+            self.writer.create_position(pos, name=name)
             self.writer.init_array(data_shape=(self.t if self.t != 0 else 1,
                                                self.c if self.c != 0 else 1,
                                                self.z if self.z != 0 else 1,
@@ -371,7 +376,7 @@ class ZarrConverter:
         self.coords = self._gen_coordset()
         self._gather_index_maps()
         self.init_zarr_structure()
-        self.writer.open_position(0, prefix=self.pos_names[0] if self.append_position_names else None)
+        self.writer.open_position(0)
         last_file = None
         current_pos = 0
 
@@ -405,8 +410,7 @@ class ZarrConverter:
             # Open the new position if the position index has changed
             if current_pos != coord[self.p_dim]:
 
-                prefix = self.pos_names[coord[self.p_dim]] if self.append_position_names else None
-                self.writer.open_position(coord[self.p_dim], prefix=prefix)
+                self.writer.open_position(coord[self.p_dim])
                 current_pos = coord[self.p_dim]
 
             # Write the data
@@ -417,4 +421,4 @@ class ZarrConverter:
                 raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
 
         # Put metadata into zarr store and cleanup
-        self.writer.store.attrs.put(self.metadata)
+        self.writer.store.attrs.update(self.metadata)
