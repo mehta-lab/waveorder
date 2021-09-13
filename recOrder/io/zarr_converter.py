@@ -5,6 +5,7 @@ import tifffile as tiff
 from waveorder.io.writer import WaveorderWriter
 from recOrder.preproc.pre_processing import get_autocontrast_limits
 import glob
+import warnings
 
 
 #TODO: All data HCS with grid some determined size?
@@ -19,6 +20,10 @@ class ZarrConverter:
             raise ValueError('Specific input contains no ome.tif files, please specify a valid input directory')
         if not output.endswith('.zarr'):
             raise ValueError('Please specify .zarr at the end of your output')
+
+        # ignore tiffile warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', tiff)
 
         # Init File IO Properties
         self.version = 'recOrder Converter version=0.3'
@@ -102,7 +107,10 @@ class ZarrConverter:
                 for dim1 in range(dims[1]) for dim0 in range(dims[0])]
 
     def _generate_hcs_metadata(self):
-        pass
+
+        self.hcs_meta = dict()
+
+
 
     def _gather_index_maps(self):
         """
