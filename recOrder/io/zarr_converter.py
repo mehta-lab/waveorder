@@ -8,12 +8,16 @@ import glob
 import warnings
 
 
-#TODO: All data HCS with grid some determined size?
 #TODO: Add catch for incomplete datasets (datasets stopped early)
-#TODO: add key in metadata to keep track of position index + name so we can fully replace pos names
 class ZarrConverter:
+    """
+    This converter works to convert micromanager ome tiff or single-page tiff stacks into
+    OME-HCS format zarr.  User can specify to fully-format in HCS, in which case it will
+    lay out the positions in a grid-like format based on how the data was acquired (useful
+    for tiled acquisitions)
+    """
 
-    def __init__(self, input, output, append_position_names=False, format_hcs=False):
+    def __init__(self, input, output, replace_position_names=False, format_hcs=False):
 
         # Add Initial Checks
         if len(glob.glob(os.path.join(input, '*.ome.tif'))) == 0:
@@ -32,7 +36,7 @@ class ZarrConverter:
         self.files = glob.glob(os.path.join(self.data_directory, '*.ome.tif'))
         self.summary_metadata = self._generate_summary_metadata()
         self.save_name = os.path.basename(output)
-        self.append_position_names = append_position_names
+        self.replace_position_names = replace_position_names
         self.format_hcs = format_hcs
         self.array = None
         self.zarr_store = None
@@ -99,18 +103,21 @@ class ZarrConverter:
             else:
                 dims.append(1)
 
-        # Reverse the dimension order for easier calling later
+        # Reverse the dimension order and gather dimension indices
         self.dim_order.reverse()
+        self.p_dim = self.dim_order.index('position')
+        self.t_dim = self.dim_order.index('time')
+        self.c_dim = self.dim_order.index('channel')
+        self.z_dim = self.dim_order.index('z')
 
-        # return array of coordinate tuples with innermost dimension being the first dim acquired
-        return [(dim3, dim2, dim1, dim0) for dim3 in range(dims[3]) for dim2 in range(dims[2])
-                for dim1 in range(dims[1]) for dim0 in range(dims[0])]
+        # create array of coordinate tuples with innermost dimension being the first dim acquired
+        self.coords = [(dim3, dim2, dim1, dim0) for dim3 in range(dims[3]) for dim2 in range(dims[2])
+                       for dim1 in range(dims[1]) for dim0 in range(dims[0])]
 
     def _generate_hcs_metadata(self):
 
         self.hcs_meta = dict()
-
-
+        pass
 
     def _gather_index_maps(self):
         """
@@ -120,11 +127,6 @@ class ZarrConverter:
         -------
 
         """
-
-        self.p_dim = self.dim_order.index('position')
-        self.t_dim = self.dim_order.index('time')
-        self.c_dim = self.dim_order.index('channel')
-        self.z_dim = self.dim_order.index('z')
 
         for file in self.files:
             tf = tiff.TiffFile(file)
@@ -189,7 +191,7 @@ class ZarrConverter:
 
         return tf.pages[0].dtype
 
-    def _preform_image_check(self, tiff_image, coord):
+    def _perform_image_check(self, tiff_image, coord):
         """
         checks to make sure the memory mapped image matches the saved zarr image to ensure
         a successful conversion.
@@ -355,7 +357,7 @@ class ZarrConverter:
         for pos in range(self.p):
 
             clims = self.get_channel_clims(pos)
-            name = self.pos_names[pos] if self.append_position_names else None
+            name = self.pos_names[pos] if self.replace_position_names else None
             self.writer.create_position(pos, name=name)
             self.writer.init_array(data_shape=(self.t if self.t != 0 else 1,
                                                self.c if self.c != 0 else 1,
@@ -381,7 +383,7 @@ class ZarrConverter:
         print('Running Conversion...')
         print('Setting up zarr')
         self._generate_summary_metadata()
-        self.coords = self._gen_coordset()
+        self._gen_coordset()
         self._gather_index_maps()
         self.init_zarr_structure()
         self.writer.open_position(0)
@@ -396,12 +398,6 @@ class ZarrConverter:
         print('Converting Images...')
         for coord in tqdm(self.coords, bar_format=bar_format):
 
-            # re-order coordinates into zarr format
-            coord_reorder = (coord[self.p_dim],
-                             coord[self.t_dim],
-                             coord[self.c_dim],
-                             coord[self.z_dim])
-
             # Only load tiff file if it has changed from previous run
             current_file = self.coord_map[coord][0]
             if self.check_file_changed(last_file, current_file):
@@ -410,6 +406,12 @@ class ZarrConverter:
 
             # Get the metadata
             page = self.coord_map[coord][1]
+
+            # re-order coordinates into zarr format
+            coord_reorder = (coord[self.p_dim],
+                             coord[self.t_dim],
+                             coord[self.c_dim],
+                             coord[self.z_dim])
             self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = self._generate_plane_metadata(tf, page)
 
             # get the memory mapped image
@@ -425,7 +427,7 @@ class ZarrConverter:
             self.writer.write(img_raw, coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
 
             # Perform image check
-            if not self._preform_image_check(img_raw, coord):
+            if not self._perform_image_check(img_raw, coord):
                 raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
 
         # Put metadata into zarr store and cleanup
