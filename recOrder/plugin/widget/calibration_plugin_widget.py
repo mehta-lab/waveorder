@@ -395,7 +395,7 @@ class recOrder_Widget(QWidget):
 
     @pyqtSlot()
     def enter_pad_z(self):
-        self.pad_z = float(self.ui.le_pad_z.text())
+        self.pad_z = int(self.ui.le_pad_z.text())
 
     @pyqtSlot(bool)
     def calc_extinction(self):
