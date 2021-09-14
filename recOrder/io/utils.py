@@ -3,16 +3,6 @@ import os
 import tifffile as tiff
 import numpy as np
 
-def gather_sub_dir(self, dir_):
-    files = glob.glob(dir_ + '*')
-
-    dirs = []
-    for direc in files:
-        if os.path.isdir(direc):
-            dirs.append(direc)
-
-    return dirs
-
 def load_bg(bg_path, height, width, ROI=None):
     """
     Parameters
@@ -41,3 +31,7 @@ def load_bg(bg_path, height, width, ROI=None):
             bg_data[i, :, :] = img
 
     return bg_data
+
+#todo: create grid from coordinates
+def create_grid_from_coordinates(xy_coords):
+    pass

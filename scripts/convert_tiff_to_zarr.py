@@ -1,11 +1,5 @@
 from recOrder.io.zarr_converter import ZarrConverter
 import click
-import glob
-import os
-
-#TODO: Make save_dir all the way to .zarr
-#todo: make data_dir be the folder containing ome-tiffs
-# specify --input --output
 
 @click.command()
 @click.option('--input', required=True, type=str, help='path to the raw data folder containing ome.tifs')

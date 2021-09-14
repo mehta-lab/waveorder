@@ -53,11 +53,9 @@ class qlipp_pipeline(PipelineInterface):
         self.chan_names = self.data.channel_names
         self.calib_meta = json.load(open(self.config.calibration_metadata)) \
             if self.config.calibration_metadata else None
-        #todo: re-structure reading calib metadata when finalized
         self.calib_scheme = self.calib_meta['Summary']['Acquired Using'] if self.calib_meta \
             else '4-State'
         self.bg_path = self.config.background if self.config.background else None
-        #todo: fix typo
         self.bg_roi = self.calib_meta['Summary']['ROI Used (x, y, width, height)'] if self.calib_meta else None
 
         # identify the image indicies corresponding to each polarization orientation
@@ -193,7 +191,7 @@ class qlipp_pipeline(PipelineInterface):
                                 stokes[:, :, :, slice(None) if self.slices != 1 else self.focus_slice],
                                 self.reconstructor)
 
-    # todo: think about better way to write fluor/registered data?
+    #todo: think about better way to write fluor/registered data?
     def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
