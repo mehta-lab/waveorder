@@ -2237,7 +2237,7 @@ class waveorder_microscopy:
             
         
     
-    def Phase_recon_3D(self, S0_stack, absorption_ratio=0.0, method='Tikhonov', reg_re = 1e-4, reg_im = 1e-4,\
+    def Phase_recon_3D(self, S0_stack, absorption_ratio=0.0, method='Tikhonov', reg_re = 1e-4, autotune_re=False, reg_im = 1e-4,\
                        rho = 1e-5, lambda_re = 1e-3, lambda_im = 1e-3, itr = 20, verbose=True):
         
         '''
@@ -2259,6 +2259,9 @@ class waveorder_microscopy:
                              
             reg_re           : float
                                Tikhonov regularization parameter for 3D phase
+                               
+            autotune_re      : bool
+                               option to automatically choose Tikhonov regularization parameter for 3D phase, with search centered around reg_re
                         
             reg_im           : float
                                Tikhonov regularization parameter for 3D absorption
@@ -2283,6 +2286,7 @@ class waveorder_microscopy:
         -------
             scaled f_real    : numpy.ndarray
                                3D reconstruction of phase (in the unit of rad) with the size of (N, M, N_defocus)
+                               if autotune_re is True, returns 3 reconstructions from different regularization parameters, size (3, N, M, N_defocus)
                   
             scaled f_imag    : numpy.ndarray
                                3D reconstruction of absorption with the size of (N, M, N_defocus)
@@ -2315,14 +2319,14 @@ class waveorder_microscopy:
 
             if method == 'Tikhonov':
 
-                f_real = Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+                f_real = Single_variable_Tikhonov_deconv_3D(S0_stack, H_eff, reg_re, use_gpu=self.use_gpu, gpu_id=self.gpu_id, autotune=autotune_re, verbose=verbose)
 
             elif method == 'TV':
 
                 f_real = Single_variable_ADMM_TV_deconv_3D(S0_stack, H_eff, rho, reg_re, lambda_re, itr, verbose, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
             
             if self.pad_z != 0:
-                f_real = f_real[:,:,self.pad_z:-(self.pad_z)]
+                f_real = f_real[...,self.pad_z:-(self.pad_z)]
             
             return -f_real*self.psz/4/np.pi*self.lambda_illu
         
@@ -2379,8 +2383,8 @@ class waveorder_microscopy:
                 
             
             if self.pad_z != 0:
-                f_real = f_real[:,:,self.pad_z:-(self.pad_z)]
-                f_imag = f_imag[:,:,self.pad_z:-(self.pad_z)]
+                f_real = f_real[...,self.pad_z:-(self.pad_z)]
+                f_imag = f_imag[...,self.pad_z:-(self.pad_z)]
             
             return -f_real*self.psz/4/np.pi*self.lambda_illu, f_imag*self.psz/4/np.pi*self.lambda_illu
 
@@ -2573,11 +2577,8 @@ class fluorescence_microscopy:
                                                
         return np.squeeze(I_fluor_deconv)
         
-        
-        
-        
 
-    def deconvolve_fluor_3D(self, I_fluor, bg_level, reg):
+    def deconvolve_fluor_3D(self, I_fluor, bg_level, reg, autotune=False, verbose=True):
         """
 
         Performs deconvolution with Tikhonov regularization on raw fluorescence stack.
@@ -2596,11 +2597,18 @@ class fluorescence_microscopy:
             reg             : list or numpy.array
                               an array of Tikhonov regularization parameters in dimensions (N_wavelength,)
                               the order of the reg value should match the order of the first index of I_fluor
+            autotune        : bool
+                              option to automatically choose Tikhonov regularization parameter, with search centered around reg
+                              
+            verbose         : bool
+                             option to display detailed progress of computations or not
+                              
 
         Returns
         -------
             I_fluor_deconv  : numpy.ndarray 
                               3D deconvolved fluoresence stack in dimensions (N_wavelength, N, M, Z)
+                              if autotune is True, returns 3 deconvolved stacks for each channel, for 3 diff
 
         """
         
@@ -2621,13 +2629,18 @@ class fluorescence_microscopy:
         else:
             I_fluor_pad = I_fluor_process
         
-        
-        I_fluor_deconv = np.zeros_like(I_fluor_process)
+        if autotune:
+            N, M, Z = I_fluor_process.shape[1:]
+            I_fluor_deconv = np.zeros((self.N_wavelength, 3, N, M, Z))
+        else:
+            I_fluor_deconv = np.zeros_like(I_fluor_process)
+        print('I_fluor_pad', I_fluor_pad.shape, 'I_fluor_deconv', I_fluor_deconv.shape)
         
         for i in range(self.N_wavelength):
         
             I_fluor_minus_bg = np.maximum(0, I_fluor_pad[i] - bg_level[i])
-            I_fluor_deconv_pad = Single_variable_Tikhonov_deconv_3D(I_fluor_minus_bg, self.OTF_WF_3D[i], reg[i], use_gpu=self.use_gpu, gpu_id=self.gpu_id)
+
+            I_fluor_deconv_pad = Single_variable_Tikhonov_deconv_3D(I_fluor_minus_bg, self.OTF_WF_3D[i], reg[i], use_gpu=self.use_gpu, gpu_id=self.gpu_id, autotune=autotune, verbose=verbose)
 
                 
             if self.pad_z != 0:
