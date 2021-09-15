@@ -5,10 +5,12 @@ import tifffile as tiff
 from waveorder.io.writer import WaveorderWriter
 from recOrder.preproc.pre_processing import get_autocontrast_limits
 import glob
+import json
 import warnings
 
 
 #TODO: Add catch for incomplete datasets (datasets stopped early)
+#TODO: backwards compatibility
 class ZarrConverter:
     """
     This converter works to convert micromanager ome tiff or single-page tiff stacks into
@@ -36,6 +38,8 @@ class ZarrConverter:
         self.files = glob.glob(os.path.join(self.data_directory, '*.ome.tif'))
         self.summary_metadata = self._generate_summary_metadata()
         self.save_name = os.path.basename(output)
+        self.mfile_name = os.path.join(self.save_directory, f'{self.save_name.strip(".zarr")}_ImagePlaneMetadata.txt')
+        self.meta_file = open(self.mfile_name, 'a')
         self.replace_position_names = replace_position_names
         self.format_hcs = format_hcs
         self.array = None
@@ -412,7 +416,18 @@ class ZarrConverter:
                              coord[self.t_dim],
                              coord[self.c_dim],
                              coord[self.z_dim])
-            self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = self._generate_plane_metadata(tf, page)
+
+            meta = dict()
+            plane_meta = self._generate_plane_metadata(tf, page)
+            meta[f'{coord_reorder}'] = plane_meta
+
+            # only write the plane metadata for the first time-point to avoid huge i/o overhead
+            # rest will be placed in json file with the zarr store
+            if coord[self.t_dim] == 0:
+                self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = plane_meta
+                json.dump(meta, self.meta_file, indent=1)
+            else:
+                json.dump(meta, self.meta_file, indent=1)
 
             # get the memory mapped image
             img_raw = self.get_image_array(self.coord_map[coord], tf)
@@ -432,3 +447,4 @@ class ZarrConverter:
 
         # Put metadata into zarr store and cleanup
         self.writer.store.attrs.update(self.metadata)
+        self.meta_file.close()
