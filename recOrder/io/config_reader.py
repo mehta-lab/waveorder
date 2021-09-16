@@ -41,6 +41,7 @@ PROCESSING = {
     'NA_objective': None,
     'NA_condenser': None,
     'n_objective_media': 1.003,
+    'brightfield_channel_idx': 0,
     'z_step': None,
     'focus_zidx': None,
     'phase_denoiser_2D': 'Tikhonov',

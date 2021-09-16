@@ -8,30 +8,15 @@ import json
 import numpy as np
 from recOrder.pipelines.pipeline_interface import PipelineInterface
 
-
-class qlipp_pipeline(PipelineInterface):
-
-    """
-    This class contains methods to reconstruct an entire dataset alongside pre/post-processing
-    """
+class PhaseFromBF(PipelineInterface):
 
     def __init__(self, config: ConfigReader, data: MicromanagerReader, save_dir: str, name: str,
-                 mode: str, num_t: int, use_hcs: bool):
-        """
-        Parameters
-        ----------
-        config:     (Object) initialized ConfigReader object
-        data:       (Object) initialized MicromanagerReader object (data should be extracted already)
-        save_dir:   (str) save directory
-        name:       (str) name of the sample to pass for naming of folders, etc.
-        mode:       (str) mode of operation, can be '2D', '3D', or 'stokes'
-        """
+                 num_t: int, use_hcs: bool):
 
         # Dataset Parameters
         self.config = config
         self.data = data
         self.name = name
-        self.mode = mode
         self.save_dir = save_dir
         self.use_hcs = use_hcs
 
@@ -39,33 +24,20 @@ class qlipp_pipeline(PipelineInterface):
         self.t = num_t
         self.output_channels = self.config.output_channels
         self._check_output_channels(self.output_channels)
-
-        if self.data.channels < 4:
-            raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
+        self.mode = '2D' if 'Phase2D' in self.output_channels else '3D'
+        self.bf_chan_idx = self.config.BF_chan_idx
 
         self.slices = self.data.slices
         self.focus_slice = None
+
         if self.mode == '2D':
             self.slices = 1
             self.focus_slice = self.config.focus_zidx
 
         self.img_dim = (self.data.height, self.data.width, self.data.slices)
 
-        # Metadata
-        self.chan_names = self.data.channel_names
-        self.calib_meta = json.load(open(self.config.calibration_metadata)) \
-            if self.config.calibration_metadata else None
-        self.calib_scheme = self.calib_meta['Summary']['Acquired Using'] if self.calib_meta \
-            else '4-State'
-        self.bg_path = self.config.background if self.config.background else None
-        self.bg_roi = self.calib_meta['Summary']['ROI Used (x, y, width, height)'] if self.calib_meta else None
-
-        # identify the image indicies corresponding to each polarization orientation
-        self.s0_idx, self.s1_idx, \
-        self.s2_idx, self.s3_idx, \
-        self.s4_idx, self.fluor_idxs = self.parse_channel_idx(self.data.channel_names)
-
         # Writer Parameters
+        self._file_writer = None
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
 
@@ -82,67 +54,24 @@ class qlipp_pipeline(PipelineInterface):
 
         # Initialize Reconstructor
         self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
-                                                 self.calib_meta['Summary']['Swing (fraction)'],
-                                                 len(self.calib_meta['Summary']['ChNames']),
-                                                 self.config.qlipp_birefringence_only,
-                                                 self.config.NA_objective, self.config.NA_condenser,
-                                                 self.config.magnification, self.data.slices, self.data.z_step_size,
-                                                 self.config.pad_z, self.config.pixel_size,
-                                                 self.config.background_correction, self.config.n_objective_media,
-                                                 self.mode, self.config.use_gpu, self.config.gpu_id)
+                                                      0, 1, False, self.config.NA_objective, self.config.NA_condenser,
+                                                      self.config.magnification, self.data.slices,
+                                                      self.data.z_step_size, self.config.pad_z, self.config.pixel_size,
+                                                      self.config.background_correction, self.config.n_objective_media,
+                                                      self.mode, self.config.use_gpu, self.config.gpu_id)
 
-        # Compute BG stokes if necessary
-        if self.config.background_correction != None:
-            bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
-            self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
-            self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
 
     def _check_output_channels(self, output_channels):
-        self.no_birefringence = True
+
         for channel in output_channels:
-            if 'Retardance' in channel or 'Orientation' in channel or 'Brightfield' in channel:
-                self.no_birefringence = False
-            else:
+            if 'Phase3D' in channel:
                 continue
-
-    def reconstruct_stokes_volume(self, data):
-        """
-        This method reconstructs a stokes volume from raw data
-
-        Parameters
-        ----------
-        data:           (nd-array) raw data volume at certain position, time.
-                                  dimensions must be (C, Z, Y, X)
-
-        Returns
-        -------
-        stokes:         (nd-array) stokes volume of dimensions (Z, 5, Y, X)
-                                    where C is the stokes channels (S0..S3 + DOP)
-
-        """
-
-        if self.calib_scheme == '4-State':
-            LF_array = np.zeros([4, self.data.slices, self.data.height, self.data.width])
-
-            LF_array[0] = data[self.s0_idx]
-            LF_array[1] = data[self.s1_idx]
-            LF_array[2] = data[self.s2_idx]
-            LF_array[3] = data[self.s3_idx]
-
-        elif self.calib_scheme == '5-State':
-            LF_array = np.zeros([5, self.data.slices, self.data.height, self.data.width])
-            LF_array[0] = data[self.s0_idx]
-            LF_array[1] = data[self.s1_idx]
-            LF_array[2] = data[self.s2_idx]
-            LF_array[3] = data[self.s3_idx]
-            LF_array[4] = data[self.s4_idx]
-
-        else:
-            raise NotImplementedError(f"calibration scheme {self.calib_scheme} not implemented")
-
-        stokes = reconstruct_qlipp_stokes(LF_array, self.reconstructor, self.bg_stokes)
-
-        return stokes
+            elif 'Phase2D' in channel:
+                continue
+            elif 'Phase3D' in channel and 'Phase2D' in channel:
+                raise KeyError('Simultaneous 2D and 3D phase reconstruction not supported')
+            else:
+                raise KeyError(f'Output channel "{channel}" not permitted')
 
     def reconstruct_phase_volume(self, stokes):
         """
@@ -165,7 +94,7 @@ class qlipp_pipeline(PipelineInterface):
         phase3D = None
 
         if 'Phase3D' in self.output_channels:
-            phase3D = reconstruct_qlipp_phase3D(stokes[0],self.reconstructor, method=self.config.phase_denoiser_3D,
+            phase3D = reconstruct_qlipp_phase3D(stokes[0], self.reconstructor, method=self.config.phase_denoiser_3D,
                                                 reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
                                                 lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D)
 
@@ -175,29 +104,6 @@ class qlipp_pipeline(PipelineInterface):
                                                 lambda_p=self.config.TV_reg_ph_2D, itr=self.config.itr_2D)
 
         return phase2D, phase3D
-
-    def reconstruct_birefringence_volume(self, stokes):
-        """
-        This method reconstructs birefringence (Ret, Ori, BF, Pol)
-        for given stokes
-
-        Parameters
-        ----------
-        stokes:             (nd-array) stokes stack of (C, Y, X, Z) or (C, Y, X) where C = stokes channel
-
-        Returns
-        -------
-        birefringence:       (nd-array) birefringence stack of (C, Z, Y, X) or (C, Y, X)
-                                        where C = Retardance, Orientation, BF, Polarization
-
-        """
-
-        if self.no_birefringence:
-            return None
-        else:
-            return reconstruct_qlipp_birefringence(
-                                stokes[:, :, :, slice(None) if self.slices != 1 else self.focus_slice],
-                                self.reconstructor)
 
     # todo: think about better way to write fluor/registered data?
     def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
@@ -258,32 +164,11 @@ class qlipp_pipeline(PipelineInterface):
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], t=t, c=chan, z=z)
                     fluor_idx += 1
 
-    def parse_channel_idx(self, channel_list):
-        fluor_idx = []
-        s4_idx = None
-        try:
-            self.calib_meta['Summary']['PolScope_Plugin_Version']
-            open_pol = True
-        except:
-            open_pol = False
+    def reconstruct_stokes_volume(self, data):
+        return data[self.bf_chan_idx]
 
-        for channel in range(len(channel_list)):
-            if 'State0' in channel_list[channel]:
-                s0_idx = channel
-            elif 'State1' in channel_list[channel]:
-                s1_idx = channel
-            elif 'State2' in channel_list[channel]:
-                s2_idx = channel
-            elif 'State3' in channel_list[channel]:
-                s3_idx = channel
-            elif 'State4' in channel_list[channel]:
-                s4_idx = channel
-            else:
-                fluor_idx.append(channel)
+    def reconstruct_birefringence_volume(self, data):
+        return data
 
-        if open_pol:
-            s1_idx, s2_idx, s3_idx, s4_idx = s4_idx, s3_idx, s1_idx, s2_idx
-
-        return s0_idx, s1_idx, s2_idx, s3_idx, s4_idx, fluor_idx
-
+    #TODO: Finish up dummy functions so pipeline runs, think about how to feed data into reconstruct stokes
 
