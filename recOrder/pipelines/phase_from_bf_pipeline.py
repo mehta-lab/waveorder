@@ -1,10 +1,7 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import MicromanagerReader
 from waveorder.io.writer import WaveorderWriter
-from recOrder.io.utils import load_bg
-from recOrder.compute.qlipp_compute import reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, \
-    reconstruct_qlipp_phase2D, reconstruct_qlipp_phase3D, initialize_reconstructor
-import json
+from recOrder.compute.qlipp_compute import reconstruct_qlipp_phase2D, reconstruct_qlipp_phase3D, initialize_reconstructor
 import numpy as np
 from recOrder.pipelines.pipeline_interface import PipelineInterface
 
@@ -26,6 +23,10 @@ class PhaseFromBF(PipelineInterface):
         self._check_output_channels(self.output_channels)
         self.mode = '2D' if 'Phase2D' in self.output_channels else '3D'
         self.bf_chan_idx = self.config.BF_chan_idx
+        self.fluor_idxs = []
+        # Assume any other channel in the data is fluorescence
+        for i in range(self.data.channels):
+            self.fluor_idxs.append(i if i != self.bf_chan_idx)
 
         self.slices = self.data.slices
         self.focus_slice = None
@@ -73,13 +74,20 @@ class PhaseFromBF(PipelineInterface):
             else:
                 raise KeyError(f'Output channel "{channel}" not permitted')
 
-    def reconstruct_phase_volume(self, stokes):
+
+    def reconstruct_stokes_volume(self, data):
+        return np.transpose(data[self.bf_chan_idx], (1, 2, 0))
+
+    def reconstruct_birefringence_volume(self, data):
+        return data
+
+    def reconstruct_phase_volume(self, bf_data):
         """
         This method reconstructs a phase volume or 2D phase image given stokes stack
 
         Parameters
         ----------
-        stokes:             (nd-array) stokes stack of (C, Y, X, Z) where C = stokes channel
+        bf_data:             (nd-array) Brightfield stack of (Y, X, Z)
 
         Returns
         -------
@@ -94,18 +102,17 @@ class PhaseFromBF(PipelineInterface):
         phase3D = None
 
         if 'Phase3D' in self.output_channels:
-            phase3D = reconstruct_qlipp_phase3D(stokes[0], self.reconstructor, method=self.config.phase_denoiser_3D,
+            phase3D = reconstruct_qlipp_phase3D(bf_data, self.reconstructor, method=self.config.phase_denoiser_3D,
                                                 reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
                                                 lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D)
 
         if 'Phase2D' in self.output_channels:
-            phase2D = reconstruct_qlipp_phase2D(stokes[0], self.reconstructor, method=self.config.phase_denoiser_2D,
+            phase2D = reconstruct_qlipp_phase2D(bf_data, self.reconstructor, method=self.config.phase_denoiser_2D,
                                                 reg_p=self.config.Tik_reg_ph_2D, rho=self.config.rho_2D,
                                                 lambda_p=self.config.TV_reg_ph_2D, itr=self.config.itr_2D)
 
         return phase2D, phase3D
 
-    # todo: think about better way to write fluor/registered data?
     def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
@@ -130,30 +137,13 @@ class PhaseFromBF(PipelineInterface):
 
         t = pt[1]
         z = 0 if self.mode == '2D' else None
-        slice_ = self.focus_slice if self.mode == '2D' else slice(None)
-        stokes = np.transpose(stokes, (3, 0, 1, 2)) if len(stokes.shape) == 4 else stokes
         fluor_idx = 0
 
         for chan in range(len(self.output_channels)):
-            if 'Retardance' in self.output_channels[chan]:
-                ret = birefringence[0] / (2 * np.pi) * self.config.wavelength
-                self.writer.write(ret, t=t, c=chan, z=z)
-            elif 'Orientation' in self.output_channels[chan]:
-                self.writer.write(birefringence[1], t=t, c=chan, z=z)
-            elif 'Brightfield' in self.output_channels[chan]:
-                self.writer.write(birefringence[2], t=t, c=chan, z=z)
-            elif 'Phase3D' in self.output_channels[chan]:
+            if 'Phase3D' in self.output_channels[chan]:
                 self.writer.write(phase3D, t=t, c=chan, z=z)
             elif 'Phase2D' in self.output_channels:
                 self.writer.write(phase2D, t=t, c=chan, z=z)
-            elif 'S0' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 0, :, :], t=t, c=chan, z=z)
-            elif 'S1' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 1, :, :], t=t, c=chan, z=z)
-            elif 'S2' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 2, :, :], t=t, c=chan, z=z)
-            elif 'S3' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 3, :, :], t=t, c=chan, z=z)
 
             # Assume any other output channel in config is fluorescence
             else:
@@ -163,12 +153,3 @@ class PhaseFromBF(PipelineInterface):
                 else:
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], t=t, c=chan, z=z)
                     fluor_idx += 1
-
-    def reconstruct_stokes_volume(self, data):
-        return data[self.bf_chan_idx]
-
-    def reconstruct_birefringence_volume(self, data):
-        return data
-
-    #TODO: Finish up dummy functions so pipeline runs, think about how to feed data into reconstruct stokes
-
