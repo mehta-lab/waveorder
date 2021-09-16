@@ -1,7 +1,9 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import MicromanagerReader
+from waveorder.io.zarrfile import ZarrReader
 import time
-from recOrder.pipelines.qlipp_pipeline import qlipp_pipeline
+from recOrder.pipelines.qlipp_pipeline import QLIPP
+from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
 from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_processing import *
 
@@ -21,15 +23,17 @@ class PipelineManager:
 
         self.config = config
         self.data = data
+        self.use_hcs = True if self.config.data_type == 'zarr' else False
 
         self._gen_coord_set()
 
         if self.config.method == 'QLIPP':
-            self.pipeline = qlipp_pipeline(self.config, self.data, self.config.save_dir,
-                                           self.config.data_save_name, self.config.mode, self.num_t)
+            self.pipeline = QLIPP(self.config, self.data, self.config.save_dir,
+                                  self.config.data_save_name, self.config.mode, self.num_t, self.use_hcs)
 
-        elif self.config.method == 'denoise':
-            raise NotImplementedError
+        elif self.config.method == 'PhaseFromBF':
+            self.pipeline = PhaseFromBF(self.config, self.data, self.config.save_dir,
+                                        self.config.data_save_name, self.config.num_t, self.use_hcs)
 
         elif self.config.method == 'UPTI':
             raise NotImplementedError

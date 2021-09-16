@@ -1,6 +1,6 @@
 dataset:
-  method: 'QLIPP'
-  # Reconstruction Method 'QLIPP' only implemented for now.
+  method: 'PhaseFromBF'
+  # QLIPP or PhaseFromBF
 
   mode: '2D'
   # Mode for reconstruction, '2D' or '3D'
@@ -17,27 +17,19 @@ dataset:
   data_save_name: 'Test_Data'
   # (str) Name of the zarr dataset that will be written.
 
-  positions: [1]
+  positions: 'all'
   # (str or list) Positions within the dataset that are to be analyzed.
   ##   'all'
   ##   !!python/tuple [0, N] for pos 0 through N
   ##   [0, 1, 5] for pos 0, 1, and 5
   ##   [!!python/tuple [0, 15], [19, 25]] for pos 0 through 15, 19, and 25
 
-  timepoints: [0]
+  timepoints: 'all'
   # (str or list) timepoints within the dataset that are to be analyzed.
   ##   'all'
   ##   !!python/tuple [0, N] for pos 0 through N
   ##   [0, 1, 5] for pos 0, 1, and 5
   ##   [!!python/tuple [0, 15], [19, 25]] for timepoints 0 through 15, 19, and 25
-
-pre_processing:
-  denoise:
-    use: False
-    channels: ['BF'] # Choose which channels to denoise: BF
-    threshold: [0.1] # Must match length of channels
-    level: [1] # must match length of channels
-
 
 processing:
   output_channels: ['Phase2D', 'DAPI', 'GFP'] # or 'Phase3D'

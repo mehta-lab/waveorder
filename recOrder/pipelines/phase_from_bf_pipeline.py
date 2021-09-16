@@ -41,14 +41,13 @@ class PhaseFromBF(PipelineInterface):
         self._file_writer = None
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
+        hcs_meta = self.data.hcs_meta if self.use_hcs else None
 
-        if self.use_hcs:
-            hcs_meta = self.data.hcs_meta
-        else:
-            hcs_meta = None
-
+        # Instantiate writer
         self.writer = WaveorderWriter(self.save_dir, hcs=self.use_hcs, hcs_meta=hcs_meta, verbose=True)
         self.writer.create_zarr_root(f'{self.name}.zarr')
+
+        # Add config metadata to zarr attributes
         existing_meta = self.writer.store.attrs.asdict().copy()
         existing_meta['Config'] = self.config.yaml_dict
         self.writer.store.attrs.put(existing_meta)

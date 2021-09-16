@@ -9,7 +9,7 @@ import numpy as np
 from recOrder.pipelines.pipeline_interface import PipelineInterface
 
 
-class qlipp_pipeline(PipelineInterface):
+class QLIPP(PipelineInterface):
 
     """
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing

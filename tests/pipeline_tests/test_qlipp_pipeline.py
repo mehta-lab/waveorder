@@ -1,7 +1,7 @@
 import pytest
 from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_manager import PipelineManager
-from recOrder.pipelines.qlipp_pipeline import qlipp_pipeline
+from recOrder.pipelines.qlipp_pipeline import QLIPP
 from waveorder.io.writer import WaveorderWriter
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_stokes, reconstruct_qlipp_birefringence, \
     reconstruct_qlipp_phase3D, reconstruct_qlipp_phase2D
@@ -23,7 +23,7 @@ def test_pipeline_daemon_initiate(setup_test_data, setup_data_save_folder):
     assert(manager.data is not None)
     assert(manager.data.get_num_positions()*manager.data.frames == len(manager.pt_set))
     assert(manager.pipeline is not None)
-    assert(isinstance(manager.pipeline, qlipp_pipeline))
+    assert(isinstance(manager.pipeline, QLIPP))
 
 def test_qlipp_pipeline_initiate(setup_test_data, setup_data_save_folder):
     folder, data = setup_test_data
