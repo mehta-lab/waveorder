@@ -132,16 +132,16 @@ class waveorder_microscopy_simulator:
             else:
                 self.N_pattern = len(Source)
             
-            self.Source_PolState = np.zeros((self.N_pattern, 2), complex)
-            
-            if Source_PolState.ndim == 1:
-                for i in range(self.N_pattern):
-                    self.Source_PolState[i] = Source_PolState/(np.sum(np.abs(Source_PolState)**2))**(1/2)
-            else:
-                if len(Source_PolState) != self.N_pattern:
-                    raise('The length of Source_PolState needs to be either 1 or the same as N_pattern')
-                for i in range(self.N_pattern):
-                    self.Source_PolState[i] = Source_PolState[i]/(np.sum(np.abs(Source_PolState[i])**2))**(1/2)
+        self.Source_PolState = np.zeros((self.N_pattern, 2), complex)
+
+        if Source_PolState.ndim == 1:
+            for i in range(self.N_pattern):
+                self.Source_PolState[i] = Source_PolState/(np.sum(np.abs(Source_PolState)**2))**(1/2)
+        else:
+            if len(Source_PolState) != self.N_pattern:
+                raise('The length of Source_PolState needs to be either 1 or the same as N_pattern')
+            for i in range(self.N_pattern):
+                self.Source_PolState[i] = Source_PolState[i]/(np.sum(np.abs(Source_PolState[i])**2))**(1/2)
                 
                 
     
