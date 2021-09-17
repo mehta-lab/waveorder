@@ -133,14 +133,14 @@ class PhaseFromBF(PipelineInterface):
         Writes a zarr array to to given save directory.
 
         """
-
+        p = pt[0]
         t = pt[1]
         z = 0 if self.mode == '2D' else None
         fluor_idx = 0
 
         for chan in range(len(self.output_channels)):
             if 'Phase3D' in self.output_channels[chan]:
-                self.writer.write(phase3D, t=t, c=chan, z=z)
+                self.writer.write(phase3D, p=p, t=t, c=chan, z=z)
             elif 'Phase2D' in self.output_channels:
                 self.writer.write(phase2D, t=t, c=chan, z=z)
 
