@@ -211,7 +211,7 @@ class ZarrConverter:
 
         """
 
-        zarr_array = self.writer.get_current_pos_group()['array']
+        zarr_array = self.writer.sub_writer.current_pos_group['array']
         zarr_img = zarr_array[coord[self.dim_order.index('time')],
                               coord[self.dim_order.index('channel')],
                               coord[self.dim_order.index('z')]]
@@ -362,8 +362,8 @@ class ZarrConverter:
 
             clims = self.get_channel_clims(pos)
             name = self.pos_names[pos] if self.replace_position_names else None
-            self.writer.create_position(pos, name=name)
-            self.writer.init_array(data_shape=(self.t if self.t != 0 else 1,
+            self.writer.init_array(pos,
+                                   data_shape=(self.t if self.t != 0 else 1,
                                                self.c if self.c != 0 else 1,
                                                self.z if self.z != 0 else 1,
                                                self.y,
@@ -371,7 +371,8 @@ class ZarrConverter:
                                    chunk_size=(1, 1, 1, self.y, self.x),
                                    chan_names=chan_names,
                                    clims=clims,
-                                   dtype=self.dtype)
+                                   dtype=self.dtype,
+                                   position_name=name)
 
     def run_conversion(self):
         """
@@ -390,7 +391,6 @@ class ZarrConverter:
         self._gen_coordset()
         self._gather_index_maps()
         self.init_zarr_structure()
-        self.writer.open_position(0)
         last_file = None
         current_pos = 0
 
@@ -432,14 +432,8 @@ class ZarrConverter:
             # get the memory mapped image
             img_raw = self.get_image_array(self.coord_map[coord], tf)
 
-            # Open the new position if the position index has changed
-            if current_pos != coord[self.p_dim]:
-
-                self.writer.open_position(coord[self.p_dim])
-                current_pos = coord[self.p_dim]
-
             # Write the data
-            self.writer.write(img_raw, coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
+            self.writer.write(img_raw, coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
 
             # Perform image check
             if not self._perform_image_check(img_raw, coord):
