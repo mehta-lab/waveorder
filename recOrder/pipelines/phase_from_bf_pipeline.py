@@ -1,5 +1,5 @@
 from recOrder.io.config_reader import ConfigReader
-from waveorder.io.reader import MicromanagerReader
+from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_phase2D, reconstruct_qlipp_phase3D, initialize_reconstructor
 import numpy as np
@@ -7,7 +7,7 @@ from recOrder.pipelines.pipeline_interface import PipelineInterface
 
 class PhaseFromBF(PipelineInterface):
 
-    def __init__(self, config: ConfigReader, data: MicromanagerReader, save_dir: str, name: str,
+    def __init__(self, config: ConfigReader, data: WaveorderReader, save_dir: str, name: str,
                  num_t: int, use_hcs: bool):
 
         # Dataset Parameters
@@ -26,7 +26,8 @@ class PhaseFromBF(PipelineInterface):
         self.fluor_idxs = []
         # Assume any other channel in the data is fluorescence
         for i in range(self.data.channels):
-            self.fluor_idxs.append(i if i != self.bf_chan_idx)
+            if i != self.bf_chan_idx:
+                self.fluor_idxs.append(i)
 
         self.slices = self.data.slices
         self.focus_slice = None

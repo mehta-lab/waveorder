@@ -1,5 +1,5 @@
 from recOrder.io.config_reader import ConfigReader
-from waveorder.io.reader import MicromanagerReader
+from waveorder.io.reader import WaveorderReader
 from waveorder.io.zarrfile import ZarrReader
 import time
 from recOrder.pipelines.qlipp_pipeline import QLIPP
@@ -17,7 +17,7 @@ class PipelineManager:
 
         start = time.time()
         print('Reading Data...')
-        data = MicromanagerReader(config.data_dir, config.data_type, extract_data=True)
+        data = WaveorderReader(config.data_dir, config.data_type, extract_data=True)
         end = time.time()
         print(f'Finished Reading Data ({(end - start) / 60 :0.1f} min)')
 

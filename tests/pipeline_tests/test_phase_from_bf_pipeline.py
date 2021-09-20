@@ -15,7 +15,7 @@ def test_pipeline_manager_initiate(setup_test_data, setup_data_save_folder):
     folder, data = setup_test_data
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_phase_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)

@@ -1,5 +1,5 @@
 from recOrder.io.config_reader import ConfigReader
-from waveorder.io.reader import MicromanagerReader
+from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
 from recOrder.io.utils import load_bg
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, \
@@ -15,13 +15,13 @@ class QLIPP(PipelineInterface):
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
     """
 
-    def __init__(self, config: ConfigReader, data: MicromanagerReader, save_dir: str, name: str,
+    def __init__(self, config: ConfigReader, data: WaveorderReader, save_dir: str, name: str,
                  mode: str, num_t: int, use_hcs: bool):
         """
         Parameters
         ----------
         config:     (Object) initialized ConfigReader object
-        data:       (Object) initialized MicromanagerReader object (data should be extracted already)
+        data:       (Object) initialized WaveorderReader object (data should be extracted already)
         save_dir:   (str) save directory
         name:       (str) name of the sample to pass for naming of folders, etc.
         mode:       (str) mode of operation, can be '2D', '3D', or 'stokes'
