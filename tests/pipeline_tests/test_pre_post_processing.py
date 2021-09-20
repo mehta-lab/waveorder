@@ -8,9 +8,9 @@ import numpy as np
 import os
 import zarr
 
-def test_pre_processing(setup_test_data, setup_data_save_folder):
+def test_pre_processing(setup_test_data, setup_data_save_folder_zarr):
     folder, data = setup_test_data
-    save_folder = setup_data_save_folder
+    save_folder = setup_data_save_folder_zarr
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))),
                                   'test_configs/config_preprocessing_pytest.yml')
@@ -42,9 +42,9 @@ def test_pre_processing(setup_test_data, setup_data_save_folder):
         np.abs(stokes_denoise[3, :, :, z])) ** 2 < 0.1)
 
 
-def test_post_processing(setup_test_data, setup_data_save_folder):
+def test_post_processing(setup_test_data, setup_data_save_folder_zarr):
     folder, data = setup_test_data
-    save_folder = setup_data_save_folder
+    save_folder = setup_data_save_folder_zarr
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_postprocessing_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)

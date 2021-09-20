@@ -10,10 +10,10 @@ import numpy as np
 import os
 import zarr
 
-def test_pipeline_manager_initiate(setup_test_data, setup_data_save_folder):
+def test_pipeline_manager_initiate(setup_test_data, setup_data_save_folder_zarr):
 
     folder, data = setup_test_data
-    save_folder = setup_data_save_folder
+    save_folder = setup_data_save_folder_zarr
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
@@ -25,9 +25,9 @@ def test_pipeline_manager_initiate(setup_test_data, setup_data_save_folder):
     assert(manager.pipeline is not None)
     assert(isinstance(manager.pipeline, QLIPP))
 
-def test_qlipp_pipeline_initiate(setup_test_data, setup_data_save_folder):
+def test_qlipp_pipeline_initiate(setup_test_data, setup_data_save_folder_zarr):
     folder, data = setup_test_data
-    save_folder = setup_data_save_folder
+    save_folder = setup_data_save_folder_zarr
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
@@ -62,10 +62,10 @@ def test_qlipp_pipeline_initiate(setup_test_data, setup_data_save_folder):
     assert(pipeline.reconstructor is not None)
     assert(pipeline.bg_stokes is not None)
 
-def test_pipeline_daemon_run(setup_test_data, setup_data_save_folder):
+def test_pipeline_daemon_run(setup_test_data, setup_data_save_folder_zarr):
 
     folder, data = setup_test_data
-    save_folder = setup_data_save_folder
+    save_folder = setup_data_save_folder_zarr
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
@@ -82,9 +82,9 @@ def test_pipeline_daemon_run(setup_test_data, setup_data_save_folder):
     assert(store['Pos_002.zarr'])
     assert(array.shape == (2, 4, 81, manager.data.height, manager.data.width))
 
-def test_3D_reconstruction(setup_test_data, setup_data_save_folder):
+def test_3D_reconstruction(setup_test_data, setup_data_save_folder_zarr):
     folder, data = setup_test_data
-    save_folder = setup_data_save_folder
+    save_folder = setup_data_save_folder_zarr
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_recon_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
@@ -123,9 +123,9 @@ def test_3D_reconstruction(setup_test_data, setup_data_save_folder):
     assert (np.sum(np.abs(phase3D[z] - array[0, 3, z]) ** 2) / np.sum(np.abs(phase3D[z])**2) < 0.1)
 
 
-def test_2D_reconstruction(setup_test_data, setup_data_save_folder):
+def test_2D_reconstruction(setup_test_data, setup_data_save_folder_zarr):
     folder, data = setup_test_data
-    save_folder = setup_data_save_folder
+    save_folder = setup_data_save_folder_zarr
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_2D_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)

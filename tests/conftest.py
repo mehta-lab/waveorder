@@ -19,7 +19,7 @@ def setup_folder_qlipp_pipeline():
         print(f"Error while deleting temp folder: {e.strerror}")
 
 @pytest.fixture(scope='function')
-def setup_data_save_folder():
+def setup_data_save_folder_zarr():
     temp_folder = os.getcwd() + '/pytest_temp'
     data_save_folder = os.path.join(temp_folder, 'data_save')
     if not os.path.isdir(data_save_folder):
@@ -68,6 +68,46 @@ def setup_test_data():
 
         # remove unzipped folder
         shutil.rmtree(os.path.join(temp_pipeline, '2021_06_11_recOrder_pytest_20x_04NA'))
+
+        # remove temp folder
+        shutil.rmtree(temp_folder)
+    except OSError as e:
+        print(f"Error while deleting temp folder: {e.strerror}")
+
+@pytest.fixture(scope="session")
+def setup_test_data_zarr():
+    temp_folder = os.getcwd() + '/pytest_temp'
+    temp_pipeline = os.path.join(temp_folder, 'pipeline_test')
+    if not os.path.isdir(temp_folder):
+        os.mkdir(temp_folder)
+        print("\nsetting up temp folder")
+
+    # shared gdrive
+    # 'https://drive.google.com/file/d/1yDG5NyDCE29KU3oV8qkPNoLw80iPiVdL/view?usp=sharing'
+
+    # DO NOT ADJUST THIS VALUE
+    recOrder_pytest = '1yDG5NyDCE29KU3oV8qkPNoLw80iPiVdL'
+
+    # download files to temp folder
+    output = temp_pipeline + "/2021_06_11_recOrder_pytest_20x_04NA_zarr.zip"
+    gdd.download_file_from_google_drive(file_id=recOrder_pytest,
+                                        dest_path=output,
+                                        unzip=True,
+                                        showsize=True,
+                                        overwrite=True)
+
+    src = os.path.join(temp_pipeline, '2021_06_11_recOrder_pytest_20x_04NA_zarr')
+    data = os.path.join(src, '2T_3P_81Z_231Y_498X_Kazansky.zarr')
+
+    yield temp_pipeline, data
+
+    # breakdown files
+    try:
+        # remove zip file
+        os.remove(output)
+
+        # remove unzipped folder
+        shutil.rmtree(os.path.join(temp_pipeline, '2021_06_11_recOrder_pytest_20x_04NA_zarr'))
 
         # remove temp folder
         shutil.rmtree(temp_folder)
