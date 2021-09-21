@@ -220,8 +220,8 @@ class PipelineManager:
                                             self.pipeline.output_channels)
 
         # assumes array exists already if there is an error thrown
-        except Exception as ex:
-            print(ex)
+        except:
+            pass
 
 
     #TODO: use arbol print statements
