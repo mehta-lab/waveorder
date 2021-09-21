@@ -245,7 +245,25 @@ class QLIPP(PipelineInterface):
                     fluor_idx += 1
 
     def parse_channel_idx(self, channel_list):
+        """
+        Parses the metadata to find which channel each state resides in.  Useful if the acquisition
+        does not have the pol states adjacent to one another.
+
+        Parameters
+        ----------
+        channel_list:       (list) List of strings corresponding to the channel names
+
+        Returns
+        -------
+        s0_idx, s1_idx, s2_idx, s3_idx, s4_idx, fluor_idx:      (int) Index corresponding to where each state
+                                                                        sits in the channel order
+
+        """
         fluor_idx = []
+        s0_idx = None
+        s1_idx = None
+        s2_idx = None
+        s3_idx = None
         s4_idx = None
         try:
             self.calib_meta['Summary']['PolScope_Plugin_Version']

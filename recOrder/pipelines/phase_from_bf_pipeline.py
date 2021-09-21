@@ -7,15 +7,12 @@ from recOrder.pipelines.pipeline_interface import PipelineInterface
 
 class PhaseFromBF(PipelineInterface):
 
-    def __init__(self, config: ConfigReader, data: WaveorderReader, save_dir: str, name: str,
-                 num_t: int, use_hcs: bool):
+    def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderWriter, num_t: int):
 
         # Dataset Parameters
         self.config = config
         self.data = data
-        self.name = name
-        self.save_dir = save_dir
-        self.use_hcs = use_hcs
+        self.writer = writer
 
         # Dimension Parameters
         self.t = num_t
@@ -24,6 +21,7 @@ class PhaseFromBF(PipelineInterface):
         self.mode = '2D' if 'Phase2D' in self.output_channels else '3D'
         self.bf_chan_idx = self.config.BF_chan_idx
         self.fluor_idxs = []
+
         # Assume any other channel in the data is fluorescence
         for i in range(self.data.channels):
             if i != self.bf_chan_idx:
