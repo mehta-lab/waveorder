@@ -1,6 +1,6 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import WaveorderReader
-from waveorder.io.zarrfile import ZarrReader
+from waveorder.io.writer import WaveorderWriter
 import time
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
@@ -8,6 +8,7 @@ from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_processing import *
 
 
+#TODO: add check on number of positions and edit hcs metadata accordingly.
 class PipelineManager:
     """
     This will pull the necessary pipeline based off the config default.
@@ -27,19 +28,61 @@ class PipelineManager:
 
         self._gen_coord_set()
 
+        if self.use_hcs:
+            hcs_meta = self.data.reader.hcs_meta
+            hcs_meta = self._update_hcs_meta_from_config(hcs_meta)
+        else:
+            hcs_meta = None
+
+        self.writer = WaveorderWriter(self.config.save_dir, hcs=self.use_hcs, hcs_meta=hcs_meta, verbose=False)
+        self.writer.create_zarr_root(self.config.data_save_name)
+        existing_meta = self.writer.store.attrs.asdict().copy()
+        existing_meta['Config'] = self.config.yaml_dict
+        self.writer.store.attrs.put(existing_meta)
+
         if self.config.method == 'QLIPP':
-            self.pipeline = QLIPP(self.config, self.data, self.config.save_dir,
-                                  self.config.data_save_name, self.config.mode, self.num_t, self.use_hcs)
+            self.pipeline = QLIPP(self.config, self.data, self.writer, self.config.mode, self.num_t)
 
         elif self.config.method == 'PhaseFromBF':
-            self.pipeline = PhaseFromBF(self.config, self.data, self.config.save_dir,
-                                        self.config.data_save_name, self.config.num_t, self.use_hcs)
+            self.pipeline = PhaseFromBF(self.config, self.data, self.writer, self.config.num_t)
 
         elif self.config.method == 'UPTI':
             raise NotImplementedError
 
         elif self.config.method == 'IPS':
             raise NotImplementedError
+
+    def _update_hcs_meta_from_config(self, hcs_meta):
+
+        wells_new = [None] * (max(self.p_indices) + 1)
+        well_meta_new = [None] * (max(self.p_indices) + 1)
+        meta_new = hcs_meta.copy()
+        for p in self.p_indices:
+            well_meta = meta_new['well']
+            well_meta_new[p] = well_meta[p]
+
+            wells = meta_new['plate']['wells']
+            wells_new[p] = wells[p]
+
+        wells_new = list(filter(None, wells_new))
+        well_meta_new = list(filter(None, well_meta_new))
+
+        rows_new = []
+        cols_new = []
+        for well in wells_new:
+            split = well['path'].split('/')
+            if not {'name': split[0]} in rows_new:
+                rows_new.append({'name': split[0]})
+
+            if not {'name': split[1]} in cols_new:
+                cols_new.append({'name': split[1]})
+
+        meta_new['plate']['rows'] = rows_new
+        meta_new['plate']['columns'] = cols_new
+        meta_new['plate']['wells'] = wells_new
+        meta_new['well'] = well_meta_new
+
+        return meta_new
 
     def _get_preprocessing_params(self):
         """
@@ -114,23 +157,34 @@ class PipelineManager:
 
         """
 
+        # keep track of the order in which the p_indices come in for use later in the writer
+        self.indices_map = dict()
         self.pt_set = set()
         p_indices = set()
         t_indices = set()
 
+        cnt = 0
         for p_entry in self.config.positions:
             if p_entry == 'all':
                 for p in range(self.data.get_num_positions()):
                     p_indices.add(p)
+                    self.indices_map[p] = cnt
+                    cnt += 1
                 break
             elif isinstance(p_entry, int):
                 p_indices.add(p_entry)
+                self.indices_map[p_entry] = cnt
+                cnt += 1
             elif isinstance(p_entry, list):
                 for p in p_entry:
                     p_indices.add(p)
+                    self.indices_map[p_entry] = cnt
+                    cnt += 1
             elif isinstance(p_entry, tuple):
                 for p in range(p_entry[0], p_entry[1]):
                     p_indices.add(p)
+                    self.indices_map[p] = cnt
+                    cnt += 1
             else:
                 raise ValueError(f'Did not understand entry {p_entry} in config specified positions')
 
@@ -152,19 +206,23 @@ class PipelineManager:
 
         self.num_t = len(t_indices)
         self.num_p = len(p_indices)
+        self.p_indices = p_indices
 
         for pos in p_indices:
             for time_point in t_indices:
                 self.pt_set.add((pos, time_point))
 
-    def _create_or_open_group(self, pt):
+    def _try_init_array(self, pt):
         try:
-            self.pipeline.writer.create_position(pt[0])
-            self.pipeline.writer.init_array(self.pipeline.data_shape,
+            self.pipeline.writer.init_array(self.indices_map[pt[0]],
+                                            self.pipeline.data_shape,
                                             self.pipeline.chunk_size,
                                             self.pipeline.output_channels)
-        except:
-            self.pipeline.writer.open_position(pt[0])
+
+        # assumes array exists already if there is an error thrown
+        except Exception as ex:
+            print(ex)
+
 
     #TODO: use arbol print statements
     #TODO: Refactor Birefringence to Anisotropy
@@ -175,7 +233,7 @@ class PipelineManager:
         for pt in self.pt_set:
             start_time = time.time()
 
-            self._create_or_open_group(pt)
+            self._try_init_array(pt)
 
             pt_data = self.data.get_array(pt[0])[pt[1]]
 
@@ -189,7 +247,8 @@ class PipelineManager:
 
             birefringence, phase2D, phase3D, registered_data = self.post_processing(pt_data, phase2D, phase3D, birefringence)
 
-            self.pipeline.write_data(pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_data)
+            self.pipeline.write_data(self.indices_map[pt[0]], pt[1], pt_data, stokes,
+                                     birefringence, phase2D, phase3D, registered_data)
 
             end_time = time.time()
             print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f}) min')

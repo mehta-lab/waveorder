@@ -19,7 +19,7 @@ def setup_folder_qlipp_pipeline():
         print(f"Error while deleting temp folder: {e.strerror}")
 
 @pytest.fixture(scope='function')
-def setup_data_save_folder_zarr():
+def setup_data_save_folder():
     temp_folder = os.getcwd() + '/pytest_temp'
     data_save_folder = os.path.join(temp_folder, 'data_save')
     if not os.path.isdir(data_save_folder):
@@ -83,10 +83,10 @@ def setup_test_data_zarr():
         print("\nsetting up temp folder")
 
     # shared gdrive
-    # 'https://drive.google.com/file/d/1yDG5NyDCE29KU3oV8qkPNoLw80iPiVdL/view?usp=sharing'
+    # 'https://drive.google.com/file/d/1TXZoe0nPeI1Wk3oxtIOIgQh6PQrtvI3P/view?usp=sharing'
 
     # DO NOT ADJUST THIS VALUE
-    recOrder_pytest = '1yDG5NyDCE29KU3oV8qkPNoLw80iPiVdL'
+    recOrder_pytest = '1TXZoe0nPeI1Wk3oxtIOIgQh6PQrtvI3P'
 
     # download files to temp folder
     output = temp_pipeline + "/2021_06_11_recOrder_pytest_20x_04NA_zarr.zip"

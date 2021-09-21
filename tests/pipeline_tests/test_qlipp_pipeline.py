@@ -10,10 +10,10 @@ import numpy as np
 import os
 import zarr
 
-def test_pipeline_manager_initiate(setup_test_data, setup_data_save_folder_zarr):
+def test_pipeline_manager_initiate(setup_test_data_zarr, setup_data_save_folder):
 
-    folder, data = setup_test_data
-    save_folder = setup_data_save_folder_zarr
+    folder, data = setup_test_data_zarr
+    save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
@@ -21,13 +21,23 @@ def test_pipeline_manager_initiate(setup_test_data, setup_data_save_folder_zarr)
     manager = PipelineManager(config)
     assert(manager.config is not None)
     assert(manager.data is not None)
+
+    # check to make sure position mapping is correct
+    list_p = []
+    for i in manager.pt_set:
+        if i[0] not in list_p:
+            list_p.append(i[0])
+    list_p.sort()
+    for idx, p in enumerate(list_p):
+        assert(manager.indices_map[p] == idx)
+
     assert(manager.data.get_num_positions()*manager.data.frames == len(manager.pt_set))
     assert(manager.pipeline is not None)
     assert(isinstance(manager.pipeline, QLIPP))
 
-def test_qlipp_pipeline_initiate(setup_test_data, setup_data_save_folder_zarr):
-    folder, data = setup_test_data
-    save_folder = setup_data_save_folder_zarr
+def test_qlipp_pipeline_initiate(setup_test_data_zarr, setup_data_save_folder):
+    folder, data = setup_test_data_zarr
+    save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
@@ -37,8 +47,8 @@ def test_qlipp_pipeline_initiate(setup_test_data, setup_data_save_folder_zarr):
     pipeline = manager.pipeline
     assert(pipeline.config == manager.config)
     assert(pipeline.data == manager.data)
-    assert(pipeline.config.data_save_name == manager.pipeline.name)
     assert(pipeline.t == manager.num_t)
+    assert(isinstance(pipeline.writer, WaveorderWriter))
     assert(pipeline.mode == '3D')
     assert(pipeline.no_birefringence == False)
     assert(pipeline.slices == manager.data.slices)
@@ -47,9 +57,6 @@ def test_qlipp_pipeline_initiate(setup_test_data, setup_data_save_folder_zarr):
     assert(isinstance(pipeline.calib_meta, dict))
     assert(pipeline.bg_path == manager.config.background)
 
-    #todo: assert bg dimensions when bug is fixed in calibration
-
-    # assert(pipeline.bg_roi == (0, 0, daemon.data.width, daemon.data.height))
     assert(pipeline.s0_idx == 0)
     assert(pipeline.s1_idx == 1)
     assert(pipeline.s2_idx == 2)
@@ -62,10 +69,10 @@ def test_qlipp_pipeline_initiate(setup_test_data, setup_data_save_folder_zarr):
     assert(pipeline.reconstructor is not None)
     assert(pipeline.bg_stokes is not None)
 
-def test_pipeline_daemon_run(setup_test_data, setup_data_save_folder_zarr):
+def test_pipeline_daemon_run(setup_test_data_zarr, setup_data_save_folder):
 
-    folder, data = setup_test_data
-    save_folder = setup_data_save_folder_zarr
+    folder, data = setup_test_data_zarr
+    save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
@@ -73,18 +80,18 @@ def test_pipeline_daemon_run(setup_test_data, setup_data_save_folder_zarr):
     manager = PipelineManager(config)
     manager.run()
 
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'))
-    array = store['Pos_000.zarr']['physical_data']['array']
+    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'))
+    array = store['Row_0']['Col_0']['Pos_000']['array']
 
-    assert(store.attrs.asdict() == config.yaml_dict)
-    assert(store['Pos_000.zarr'])
-    assert(store['Pos_001.zarr'])
-    assert(store['Pos_002.zarr'])
+    assert(store.attrs.asdict()['Config'] == config.yaml_dict)
+    assert(store['Row_0']['Col_0']['Pos_000'])
+    assert(store['Row_0']['Col_1']['Pos_001'])
+    assert(store['Row_0']['Col_2']['Pos_002'])
     assert(array.shape == (2, 4, 81, manager.data.height, manager.data.width))
 
-def test_3D_reconstruction(setup_test_data, setup_data_save_folder_zarr):
-    folder, data = setup_test_data
-    save_folder = setup_data_save_folder_zarr
+def test_3D_reconstruction(setup_test_data_zarr, setup_data_save_folder):
+    folder, data = setup_test_data_zarr
+    save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_recon_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
@@ -99,10 +106,10 @@ def test_3D_reconstruction(setup_test_data, setup_data_save_folder_zarr):
 
     stokes = reconstruct_qlipp_stokes(data[t], recon, manager.pipeline.bg_stokes)
     birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-    phase3D = reconstruct_qlipp_phase3D(stokes[0],recon, method=config.phase_denoiser_3D, reg_re=config.Tik_reg_ph_3D,
+    phase3D = reconstruct_qlipp_phase3D(stokes[0], recon, method=config.phase_denoiser_3D, reg_re=config.Tik_reg_ph_3D,
                                         rho=config.rho_3D, lambda_re=config.TV_reg_ph_3D, itr=config.itr_3D)
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'))
-    array = store['Pos_001.zarr']['physical_data']['array']
+    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'))
+    array = store['Row_0']['Col_1']['Pos_001']['array']
 
     # Check Shape
     assert(array.shape == (1, len(config.output_channels), 81, 231, 498))
@@ -123,9 +130,9 @@ def test_3D_reconstruction(setup_test_data, setup_data_save_folder_zarr):
     assert (np.sum(np.abs(phase3D[z] - array[0, 3, z]) ** 2) / np.sum(np.abs(phase3D[z])**2) < 0.1)
 
 
-def test_2D_reconstruction(setup_test_data, setup_data_save_folder_zarr):
-    folder, data = setup_test_data
-    save_folder = setup_data_save_folder_zarr
+def test_2D_reconstruction(setup_test_data_zarr, setup_data_save_folder):
+    folder, data = setup_test_data_zarr
+    save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_2D_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
@@ -142,8 +149,8 @@ def test_2D_reconstruction(setup_test_data, setup_data_save_folder_zarr):
     birefringence = reconstruct_qlipp_birefringence(stokes[:, :, :, z], recon)
     phase2D = reconstruct_qlipp_phase2D(stokes[0], recon, method=config.phase_denoiser_2D, reg_p=config.Tik_reg_ph_2D,
                                         rho=config.rho_2D, lambda_p=config.TV_reg_ph_2D, itr=config.itr_2D)
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'))
-    array = store['Pos_001.zarr']['physical_data']['array']
+    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'))
+    array = store['Row_0']['Col_1']['Pos_001']['array']
 
     # Check Shapes
     assert(array.shape == (1, len(config.output_channels), 1, 231, 498))
@@ -164,4 +171,4 @@ def test_2D_reconstruction(setup_test_data, setup_data_save_folder_zarr):
     # Check Phase
     assert (np.sum(np.abs(phase2D - array[0, 3, 0]) ** 2) / np.sum(np.abs(phase2D)**2) < 0.1)
 
-#TODO: Add tests/test data for 5 state reconstruction
+#TODO: Add tests/test data for 5 state reconstruction?

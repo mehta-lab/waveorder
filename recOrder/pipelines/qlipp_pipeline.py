@@ -15,14 +15,13 @@ class QLIPP(PipelineInterface):
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
     """
 
-    def __init__(self, config: ConfigReader, data: WaveorderReader, save_dir: str, name: str,
-                 mode: str, num_t: int, use_hcs: bool):
+    def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderReader, mode: str, num_t: int):
         """
         Parameters
         ----------
         config:     (Object) initialized ConfigReader object
         data:       (Object) initialized WaveorderReader object (data should be extracted already)
-        save_dir:   (str) save directory
+        writer:     (Object) initialiazed WaveorderWriter object
         name:       (str) name of the sample to pass for naming of folders, etc.
         mode:       (str) mode of operation, can be '2D', '3D', or 'stokes'
         """
@@ -30,10 +29,8 @@ class QLIPP(PipelineInterface):
         # Dataset Parameters
         self.config = config
         self.data = data
-        self.name = name
+        self.writer = writer
         self.mode = mode
-        self.save_dir = save_dir
-        self.use_hcs = use_hcs
 
         # Dimension Parameters
         self.t = num_t
@@ -68,17 +65,6 @@ class QLIPP(PipelineInterface):
         # Writer Parameters
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
-
-        if self.use_hcs:
-            hcs_meta = self.data.hcs_meta
-        else:
-            hcs_meta = None
-
-        self.writer = WaveorderWriter(self.save_dir, hcs=self.use_hcs, hcs_meta=hcs_meta, verbose=True)
-        self.writer.create_zarr_root(f'{self.name}.zarr')
-        existing_meta = self.writer.store.attrs.asdict().copy()
-        existing_meta['Config'] = self.config.yaml_dict
-        self.writer.store.attrs.put(existing_meta)
 
         # Initialize Reconstructor
         self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
@@ -200,7 +186,7 @@ class QLIPP(PipelineInterface):
                                 self.reconstructor)
 
     # todo: think about better way to write fluor/registered data?
-    def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
+    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
         If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
@@ -208,7 +194,8 @@ class QLIPP(PipelineInterface):
 
         Parameters
         ----------
-        pt:                 (tuple) tuple containing position and time indicies.
+        p:                  (int) Index of the p position to write
+        t:                  (int) Index of the t position to write
         pt_data:            (nd-array) raw data nd-array at p,t index with dimensions (C, Z, Y, X)
         stokes:             (nd-array) None or nd-array w/ dimensions (Z, C, Y, X)
         birefringence:      (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
@@ -222,7 +209,6 @@ class QLIPP(PipelineInterface):
 
         """
 
-        t = pt[1]
         z = 0 if self.mode == '2D' else None
         slice_ = self.focus_slice if self.mode == '2D' else slice(None)
         stokes = np.transpose(stokes, (3, 0, 1, 2)) if len(stokes.shape) == 4 else stokes
@@ -231,23 +217,23 @@ class QLIPP(PipelineInterface):
         for chan in range(len(self.output_channels)):
             if 'Retardance' in self.output_channels[chan]:
                 ret = birefringence[0] / (2 * np.pi) * self.config.wavelength
-                self.writer.write(ret, t=t, c=chan, z=z)
+                self.writer.write(ret, p=p, t=t, c=chan, z=z)
             elif 'Orientation' in self.output_channels[chan]:
-                self.writer.write(birefringence[1], t=t, c=chan, z=z)
+                self.writer.write(birefringence[1], p=p, t=t, c=chan, z=z)
             elif 'Brightfield' in self.output_channels[chan]:
-                self.writer.write(birefringence[2], t=t, c=chan, z=z)
+                self.writer.write(birefringence[2], p=p, t=t, c=chan, z=z)
             elif 'Phase3D' in self.output_channels[chan]:
-                self.writer.write(phase3D, t=t, c=chan, z=z)
+                self.writer.write(phase3D, p=p, t=t, c=chan, z=z)
             elif 'Phase2D' in self.output_channels:
-                self.writer.write(phase2D, t=t, c=chan, z=z)
+                self.writer.write(phase2D, p=p, t=t, c=chan, z=z)
             elif 'S0' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 0, :, :], t=t, c=chan, z=z)
+                self.writer.write(stokes[slice_, 0, :, :], p=p, t=t, c=chan, z=z)
             elif 'S1' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 1, :, :], t=t, c=chan, z=z)
+                self.writer.write(stokes[slice_, 1, :, :], p=p, t=t, c=chan, z=z)
             elif 'S2' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 2, :, :], t=t, c=chan, z=z)
+                self.writer.write(stokes[slice_, 2, :, :], p=p, t=t, c=chan, z=z)
             elif 'S3' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 3, :, :], t=t, c=chan, z=z)
+                self.writer.write(stokes[slice_, 3, :, :], p=p, t=t, c=chan, z=z)
 
             # Assume any other output channel in config is fluorescence
             else:
