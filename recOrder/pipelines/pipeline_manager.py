@@ -34,17 +34,19 @@ class PipelineManager:
         else:
             hcs_meta = None
 
+        # Writer Parameters
         self.writer = WaveorderWriter(self.config.save_dir, hcs=self.use_hcs, hcs_meta=hcs_meta, verbose=False)
         self.writer.create_zarr_root(self.config.data_save_name)
         existing_meta = self.writer.store.attrs.asdict().copy()
         existing_meta['Config'] = self.config.yaml_dict
         self.writer.store.attrs.put(existing_meta)
 
+        # Pipeline Initiation
         if self.config.method == 'QLIPP':
             self.pipeline = QLIPP(self.config, self.data, self.writer, self.config.mode, self.num_t)
 
         elif self.config.method == 'PhaseFromBF':
-            self.pipeline = PhaseFromBF(self.config, self.data, self.writer, self.config.num_t)
+            self.pipeline = PhaseFromBF(self.config, self.data, self.writer, self.num_t)
 
         elif self.config.method == 'UPTI':
             raise NotImplementedError
@@ -235,7 +237,7 @@ class PipelineManager:
 
             self._try_init_array(pt)
 
-            pt_data = self.data.get_array(pt[0])[pt[1]]
+            pt_data = self.data.get_array(pt[0])[pt[1]] # (C, Z, Y, X)
 
             stokes = self.pipeline.reconstruct_stokes_volume(pt_data)
 

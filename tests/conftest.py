@@ -123,10 +123,10 @@ def setup_BF_test_data_zarr():
         print("\nsetting up temp folder")
 
     # shared gdrive
-    # 'https://drive.google.com/file/d/13VFGwIyb7PD8SLztX2OngZMC5-3kWI2y/view?usp=sharing'
+    # 'https://drive.google.com/file/d/1BWENs5Q8XX6N4wSoaEQHpPWsMbl8hO7_/view?usp=sharing'
 
     # DO NOT ADJUST THIS VALUE
-    recOrder_pytest = '13VFGwIyb7PD8SLztX2OngZMC5-3kWI2y'
+    recOrder_pytest = '1BWENs5Q8XX6N4wSoaEQHpPWsMbl8hO7_'
 
     # download files to temp folder
     output = temp_pipeline + "/2021_06_11_recOrder_pytest_20x_04NA_BF_zarr.zip"

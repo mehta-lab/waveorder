@@ -19,7 +19,7 @@ class PhaseFromBF(PipelineInterface):
         self.output_channels = self.config.output_channels
         self._check_output_channels(self.output_channels)
         self.mode = '2D' if 'Phase2D' in self.output_channels else '3D'
-        self.bf_chan_idx = self.config.BF_chan_idx
+        self.bf_chan_idx = self.config.brightfield_channel_idx
         self.fluor_idxs = []
 
         # Assume any other channel in the data is fluorescence
@@ -35,21 +35,8 @@ class PhaseFromBF(PipelineInterface):
             self.focus_slice = self.config.focus_zidx
 
         self.img_dim = (self.data.height, self.data.width, self.data.slices)
-
-        # Writer Parameters
-        self._file_writer = None
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
-        self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
-        hcs_meta = self.data.hcs_meta if self.use_hcs else None
-
-        # Instantiate writer
-        self.writer = WaveorderWriter(self.save_dir, hcs=self.use_hcs, hcs_meta=hcs_meta, verbose=True)
-        self.writer.create_zarr_root(f'{self.name}.zarr')
-
-        # Add config metadata to zarr attributes
-        existing_meta = self.writer.store.attrs.asdict().copy()
-        existing_meta['Config'] = self.config.yaml_dict
-        self.writer.store.attrs.put(existing_meta)
+        self.chunk_size = (1, 1, 1, self.data_shape[-2], self.data_shape[-1])
 
         # Initialize Reconstructor
         self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
@@ -111,7 +98,7 @@ class PhaseFromBF(PipelineInterface):
 
         return phase2D, phase3D
 
-    def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
+    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
         If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
@@ -119,7 +106,8 @@ class PhaseFromBF(PipelineInterface):
 
         Parameters
         ----------
-        pt:                 (tuple) tuple containing position and time indicies.
+        p:                  (int) Index of the p position to write
+        t:                  (int) Index of the t position to write
         pt_data:            (nd-array) raw data nd-array at p,t index with dimensions (C, Z, Y, X)
         stokes:             (nd-array) None or nd-array w/ dimensions (Z, C, Y, X)
         birefringence:      (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
@@ -132,8 +120,6 @@ class PhaseFromBF(PipelineInterface):
         Writes a zarr array to to given save directory.
 
         """
-        p = pt[0]
-        t = pt[1]
         z = 0 if self.mode == '2D' else None
         fluor_idx = 0
 
@@ -141,7 +127,7 @@ class PhaseFromBF(PipelineInterface):
             if 'Phase3D' in self.output_channels[chan]:
                 self.writer.write(phase3D, p=p, t=t, c=chan, z=z)
             elif 'Phase2D' in self.output_channels:
-                self.writer.write(phase2D, t=t, c=chan, z=z)
+                self.writer.write(phase2D, p=p, t=t, c=chan, z=z)
 
             # Assume any other output channel in config is fluorescence
             else:

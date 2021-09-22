@@ -169,6 +169,24 @@ def reconstruct_qlipp_birefringence(stokes, recon):
 
 def reconstruct_qlipp_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
                               lambda_p=1e-4, itr=50):
+    """
+    Reconstruct 2D phase from a given S0 or BF stack.
+
+    Parameters
+    ----------
+    S0:             (nd-array) BF/S0 stack of dimensions (Y, X, Z)
+    recon:          (waveorder_microscopy Object): initialized reconstructor object
+    method:         (str) Regularization method 'Tikhonov' or 'TV'
+    reg_p:          (float) Tikhonov regularization parameters
+    rho:            (float) TV regularization parameter
+    lambda_p:       (float) TV regularization parameter
+    itr:            (int) TV Regularization number of iterations
+
+    Returns
+    -------
+    phase2D:        (nd-array) Phase2D image of size (Y, X)
+
+    """
 
     _, phase2D = recon.Phase_recon(S0, method=method, reg_p=reg_p, rho=rho, lambda_p=lambda_p, itr=itr, verbose=False)
 
@@ -177,6 +195,24 @@ def reconstruct_qlipp_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
 
 def reconstruct_qlipp_phase3D(S0, recon, method='Tikhonov', reg_re=1e-4,
                               rho=1e-3, lambda_re=1e-4, itr=50):
+    """
+        Reconstruct 2D phase from a given S0 or BF stack.
+
+        Parameters
+        ----------
+        S0:             (nd-array) BF/S0 stack of dimensions (Y, X, Z)
+        recon:          (waveorder_microscopy Object): initialized reconstructor object
+        method:         (str) Regularization method 'Tikhonov' or 'TV'
+        reg_p:          (float) Tikhonov regularization parameters
+        rho:            (float) TV regularization parameter
+        lambda_p:       (float) TV regularization parameter
+        itr:            (int) TV Regularization number of iterations
+
+        Returns
+        -------
+        phase3D:        (nd-array) Phase2D image of size (Z, Y, X)
+
+        """
 
     phase3D = recon.Phase_recon_3D(S0, method=method, reg_re=reg_re, rho=rho, lambda_re=lambda_re,
                                    itr=itr, verbose=False)

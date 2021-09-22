@@ -18,20 +18,12 @@ dataset:
   ##   !!python/tuple [0, N] for pos 0 through N
   ## [0, 1, 5] for pos 0, 1, and 5
 
-  background: './pytest_temp/pipeline_test/2021_06_11_recOrder_pytest_20x_04NA_zarr/BG'
-
-  #(str or list) Background folder(s) within the experiment folder
-  ##   a list, e.g. ['/path/to/bg_1', '/path/to/bg_2'], of one background dataset per sample
-
-  calibration_metadata: './pytest_temp/pipeline_test/2021_06_11_recOrder_pytest_20x_04NA_zarr/calib_metadata.txt'
-
 pre_processing:
   denoise:
     use: False
-    channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
+    channels: ['BF'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
     threshold: [0.1, 0.1, 0.1, 0.1]
     level: [1, 1, 1, 1]
-
 
 processing:
   output_channels: ['Phase3D']
@@ -44,15 +36,7 @@ processing:
   #    The order in which fluor channels are listed corresponds to their order in
   #    the acquisition.  Specified name stored in the metadata.
 
-  background_correction: 'local_fit'
-  # (str) Background correction method, one of the following
-  ##   'None': no background correction will be performed
-  ##   'local': for estimating background with scipy uniform filter
-  ##   'local_fit': for estimating background with polynomial fit
-  ##   'global': for normal background subtraction with the provided background
-
-  flatfield_correction: False
-  # (bool) perform flat-field correction on fluorescence images if True
+  brightfield_channel_idx: 0
 
   use_gpu: False
   # (bool) Option to use GPU processing if True (require cupy to be installed)
@@ -85,7 +69,7 @@ processing:
   z_step: 0.25
   # (int) Step size of the z-dimension in um
 
-  focus_zidx: 22
+  focus_zidx: 40
   # (int) Index of the focused z slice of the dataset for 2D phase reconstruction
 
   pad_z: 0
@@ -106,18 +90,6 @@ processing:
 
   #### 3D TV parameters ####
   # For more noisy data, raise TV_reg to enforce stronger denoising effect
-
-  rho_3D: 1.0e-3
-  # (float) rho parameters in the 2D ADMM formulation
-  ##   1.0e-3 is generally good, no need to tune
-
-  itr_3D: 50
-  # (int) Number of iterations for 3D TV denoiser
-  ##   50 is generally good, no need to tune
-
-  TV_reg_ph_3D: 5.0e-5
-  # (float) TV regularization parameter for 3D phase
-  ##   5.0e-5 is generally good
 
 post_processing:
   denoise:

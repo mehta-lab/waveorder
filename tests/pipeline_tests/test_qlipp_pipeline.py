@@ -15,7 +15,7 @@ def test_pipeline_manager_initiate(setup_test_data_zarr, setup_data_save_folder)
     folder, data = setup_test_data_zarr
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)
@@ -39,7 +39,7 @@ def test_qlipp_pipeline_initiate(setup_test_data_zarr, setup_data_save_folder):
     folder, data = setup_test_data_zarr
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)
@@ -69,12 +69,12 @@ def test_qlipp_pipeline_initiate(setup_test_data_zarr, setup_data_save_folder):
     assert(pipeline.reconstructor is not None)
     assert(pipeline.bg_stokes is not None)
 
-def test_pipeline_daemon_run(setup_test_data_zarr, setup_data_save_folder):
+def test_pipeline_manager_run(setup_test_data_zarr, setup_data_save_folder):
 
     folder, data = setup_test_data_zarr
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)
@@ -93,7 +93,7 @@ def test_3D_reconstruction(setup_test_data_zarr, setup_data_save_folder):
     folder, data = setup_test_data_zarr
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_recon_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_full_recon_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)
@@ -134,7 +134,7 @@ def test_2D_reconstruction(setup_test_data_zarr, setup_data_save_folder):
     folder, data = setup_test_data_zarr
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_2D_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_2D_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)

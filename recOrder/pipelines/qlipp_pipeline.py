@@ -15,7 +15,7 @@ class QLIPP(PipelineInterface):
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
     """
 
-    def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderReader, mode: str, num_t: int):
+    def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderWriter, mode: str, num_t: int):
         """
         Parameters
         ----------
@@ -64,7 +64,7 @@ class QLIPP(PipelineInterface):
 
         # Writer Parameters
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
-        self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
+        self.chunk_size = (1, 1, 1, self.data_shape[-2], self.data_shape[-1])
 
         # Initialize Reconstructor
         self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,

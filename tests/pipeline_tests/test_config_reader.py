@@ -6,7 +6,7 @@ import yaml
 def test_config_reader(setup_test_data_zarr):
 
     folder, data = setup_test_data_zarr
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_qlipp_full_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_full_pytest.yml')
 
     raw = yaml.full_load(open(path_to_config))
     config = ConfigReader(path_to_config, data_dir=data, save_dir=folder)
@@ -14,7 +14,7 @@ def test_config_reader(setup_test_data_zarr):
     avoid = ['data_dir', 'save_dir', 'data_save_name', 'positions', 'timepoints',
              'background_ROI', 'qlipp_birefringence_only', 'phase_denoiser_2D',
              'Tik_reg_abs_2D', 'Tik_reg_ph_2D', 'rho_2D', 'itr_2D', 'TV_reg_abs_2D',
-             'TV_reg_ph_2D']
+             'TV_reg_ph_2D', 'brightfield_channel_idx']
 
     for key, value in DATASET.items():
         if key not in avoid:

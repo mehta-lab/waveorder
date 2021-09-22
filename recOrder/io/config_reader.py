@@ -161,7 +161,7 @@ class ConfigReader(object):
                 if 'Phase3D' in self.config['processing'][key] and 'Phase2D' in self.config['processing'][key]:
                     raise KeyError(f'Both Phase3D and Phase2D cannot be specified in {key}.  Please compute separately')
 
-            elif key == 'background_correction':
+            elif key == 'background_correction' and self.config['dataset']['method'] == 'QLIPP':
                 if self.config['processing'][key] == 'None' or self.config['processing'][key] == 'local_filter':
                     pass
                 else:
