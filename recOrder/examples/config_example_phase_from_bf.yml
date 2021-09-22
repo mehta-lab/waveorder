@@ -42,13 +42,6 @@ processing:
 
   # index corresponding to the brightfield channel in the data (typically the order in which it was acquired)
 
-  background_correction: 'local_fit'
-  # (str) Background correction method, one of the following
-  ##   'None': no background correction will be performed
-  ##   'local': for estimating background with scipy uniform filter
-  ##   'local_fit': for estimating background with polynomial fit
-  ##   'global': for normal background subtraction with the provided background
-
   use_gpu: False
   # (bool) Option to use GPU processing if True (require cupy to be installed)
 
