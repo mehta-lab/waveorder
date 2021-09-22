@@ -48,8 +48,6 @@ class ZarrConverter:
         self.meta_file = open(self.mfile_name, 'a')
         self.replace_position_names = replace_position_names
         self.format_hcs = format_hcs
-        self.array = None
-        self.zarr_store = None
 
         if not os.path.exists(self.save_directory):
             os.mkdir(self.save_directory)
