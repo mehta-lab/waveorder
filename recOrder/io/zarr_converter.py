@@ -3,6 +3,7 @@ from tqdm import tqdm
 import numpy as np
 import tifffile as tiff
 from waveorder.io.writer import WaveorderWriter
+from waveorder.io.reader import WaveorderReader
 from recOrder.preproc.pre_processing import get_autocontrast_limits
 import glob
 import json
@@ -19,7 +20,7 @@ class ZarrConverter:
     for tiled acquisitions)
     """
 
-    def __init__(self, input, output, replace_position_names=False, format_hcs=False):
+    def __init__(self, input, output, data_type, replace_position_names=False, format_hcs=False):
 
         # Add Initial Checks
         if len(glob.glob(os.path.join(input, '*.ome.tif'))) == 0:
@@ -28,15 +29,20 @@ class ZarrConverter:
             raise ValueError('Please specify .zarr at the end of your output')
 
         # ignore tiffile warnings
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore', tiff)
+        warnings.filterwarnings('ignore')
 
         # Init File IO Properties
-        self.version = 'recOrder Converter version=0.3'
+        self.version = 'recOrder Converter version=0.4'
         self.data_directory = input
         self.save_directory = os.path.dirname(output)
         self.files = glob.glob(os.path.join(self.data_directory, '*.ome.tif'))
-        self.summary_metadata = self._generate_summary_metadata()
+        self.data_type = data_type
+
+        print('Initializing Data...')
+        self.reader = WaveorderReader(self.data_directory, self.data_type, extract_data=True)
+        print('Finished initializing data')
+
+        self.summary_metadata = self.reader.mm_meta['Summary']
         self.save_name = os.path.basename(output)
         self.mfile_name = os.path.join(self.save_directory, f'{self.save_name.strip(".zarr")}_ImagePlaneMetadata.txt')
         self.meta_file = open(self.mfile_name, 'a')
@@ -57,13 +63,13 @@ class ZarrConverter:
         self.t_dim = None
         self.c_dim = None
         self.z_dim = None
-        self.dtype = self._get_dtype()
-        self.p = self.summary_metadata['IntendedDimensions']['position']
-        self.t = self.summary_metadata['IntendedDimensions']['time']
-        self.c = self.summary_metadata['IntendedDimensions']['channel']
-        self.z = self.summary_metadata['IntendedDimensions']['z']
-        self.y = self.summary_metadata['Height']
-        self.x = self.summary_metadata['Width']
+        self.dtype = self.reader.reader.dtype
+        self.p = self.reader.get_num_positions()
+        self.t = self.reader.frames
+        self.c = self.reader.channels
+        self.z = self.reader.slices
+        self.y = self.reader.height
+        self.x = self.reader.width
         self.dim = (self.p, self.t, self.c, self.z, self.y, self.x)
         self.focus_z = self.z // 2
         self.prefix_list = []
@@ -79,6 +85,26 @@ class ZarrConverter:
         self.hcs_meta = self._generate_hcs_metadata() if self.format_hcs else None
         self.writer = WaveorderWriter(self.save_directory, hcs=self.format_hcs, hcs_meta=self.hcs_meta, verbose=False)
         self.writer.create_zarr_root(self.save_name)
+
+    def _gather_index_maps(self):
+        """
+        Will return a dictionary of {coord: (filepath, page)} of length(N_Images) to later query
+        Returns
+        -------
+        """
+
+        for file in self.files:
+            tf = tiff.TiffFile(file)
+            meta = tf.micromanager_metadata['IndexMap']
+
+            for page in range(len(meta['Channel'])):
+                coord = [0, 0, 0, 0]
+                coord[self.p_dim] = meta['Position'][page]
+                coord[self.t_dim] = meta['Frame'][page]
+                coord[self.c_dim] = meta['Channel'][page]
+                coord[self.z_dim] = meta['Slice'][page]
+
+                self.coord_map[tuple(coord)] = (file, page)
 
     def _gen_coordset(self):
         """
@@ -123,42 +149,6 @@ class ZarrConverter:
         self.hcs_meta = dict()
         pass
 
-    def _gather_index_maps(self):
-        """
-        Will return a dictionary of {coord: (filepath, page)} of length(N_Images) to later query
-
-        Returns
-        -------
-
-        """
-
-        for file in self.files:
-            tf = tiff.TiffFile(file)
-            meta = tf.micromanager_metadata['IndexMap']
-
-            for page in range(len(meta['Channel'])):
-                coord = [0, 0, 0, 0]
-                coord[self.p_dim] = meta['Position'][page]
-                coord[self.t_dim] = meta['Frame'][page]
-                coord[self.c_dim] = meta['Channel'][page]
-                coord[self.z_dim] = meta['Slice'][page]
-
-                self.coord_map[tuple(coord)] = (file, page)
-
-
-    def _generate_summary_metadata(self):
-        """
-        generates the summary metadata by opening any file and loading the micromanager_metadata
-
-        Returns
-        -------
-        summary_metadata:       (dict) MM Summary Metadata
-
-        """
-
-        tf = tiff.TiffFile(self.files[0])
-        return tf.micromanager_metadata['Summary']
-
     def _generate_plane_metadata(self, tiff_file, page):
         """
         generates the img plane metadata by saving the MicroManagerMetadata written in the tiff tags.
@@ -181,19 +171,6 @@ class ZarrConverter:
                 return tag.value
             else:
                 continue
-
-    def _get_dtype(self):
-        """
-        gets the datatype from any image plane metadata
-
-        Returns
-        -------
-
-        """
-
-        tf = tiff.TiffFile(self.files[0])
-
-        return tf.pages[0].dtype
 
     def _perform_image_check(self, tiff_image, coord):
         """
@@ -227,7 +204,7 @@ class ZarrConverter:
 
         """
 
-        chan_names = self.metadata['Summary']['ChNames']
+        chan_names = self.summary_metadata['ChNames']
 
         return chan_names
 
@@ -242,7 +219,7 @@ class ZarrConverter:
 
         for p in range(self.p):
             if self.p > 1:
-                name = self.metadata['Summary']['StagePositions'][p]['Label']
+                name = self.summary_metadata['StagePositions'][p]['Label']
             else:
                 name = ''
             self.pos_names.append(name)
@@ -267,28 +244,29 @@ class ZarrConverter:
         else:
             return False
 
-    def get_image_array(self, coord, opened_tiff):
+    def get_image_array(self, p, t, c, z):
         """
         Grabs the image array through memory mapping.  We must first find the byte offset which is located in the
         tiff page tag.  We then use that to quickly grab the bytes corresponding to the desired image.
 
         Parameters
         ----------
-        coord:              (tuple) coordinate map entry containing file / page info
-        opened_tiff:        (TiffFile Object) current opened tiffile
+        p:                  (int) position coordinate
+        t:                  (int) time coordinate
+        c:                  (int) channel coordinate
+        z:                  (int) z coordinate
 
         Returns
         -------
         array:              (nd-array) image array of shape (Y, X)
 
         """
-        file = coord[0]
-        page = coord[1]
 
-        # get byte offset from tiff tag metadata
-        byte_offset = self.get_byte_offset(opened_tiff, page)
+        # get virtual zarr store at given position
+        zs = self.reader.get_zarr(p)
 
-        array = np.memmap(file, dtype=self.dtype, mode='r', offset=byte_offset, shape=(self.y, self.x))
+        # get image array
+        array = zs[t, c, z]
 
         return array
 
@@ -305,41 +283,14 @@ class ZarrConverter:
 
         clims = []
 
-        coord = list(self.coords[0])
+        zs = self.reader.get_zarr(pos)
+
         for chan in range(self.c):
 
-            coord[self.p_dim] = pos
-            coord[self.c_dim] = chan
-            coord[self.z_dim] = self.focus_z
-
-            fname = self.coord_map[tuple(coord)][0]
-            tf = tiff.TiffFile(fname)
-
-            img = self.get_image_array(self.coord_map[tuple(coord)], tf)
+            img = zs[0, chan, self.focus_z]
             clims.append(get_autocontrast_limits(img))
 
         return clims
-
-    def get_byte_offset(self, tiff_file, page):
-        """
-        Gets the byte offset from the tiff tag metadata
-
-        Parameters
-        ----------
-        tiff_file:          (Tiff-File object) Opened tiff file
-        page:               (int) Page to look at for the tag
-
-        Returns
-        -------
-        byte offset:        (int) byte offset for the image array
-
-        """
-
-        for tag in tiff_file.pages[page].tags.values():
-            if 'StripOffset' in tag.name:
-                return tag.value[0]
-            else:
-                continue
 
     def init_zarr_structure(self):
         """
@@ -387,12 +338,10 @@ class ZarrConverter:
         # Run setup
         print('Running Conversion...')
         print('Setting up zarr')
-        self._generate_summary_metadata()
         self._gen_coordset()
         self._gather_index_maps()
         self.init_zarr_structure()
         last_file = None
-        current_pos = 0
 
         #Format bar for CLI display
         bar_format = 'Status: |{bar}|{n_fmt}/{total_fmt} (Time Remaining: {remaining}), {rate_fmt}{postfix}]'
@@ -430,7 +379,7 @@ class ZarrConverter:
                 json.dump(meta, self.meta_file, indent=1)
 
             # get the memory mapped image
-            img_raw = self.get_image_array(self.coord_map[coord], tf)
+            img_raw = self.get_image_array(coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
 
             # Write the data
             self.writer.write(img_raw, coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
