@@ -34,6 +34,7 @@ class PhaseFromBF(PipelineInterface):
             self.slices = 1
             self.focus_slice = self.config.focus_zidx
 
+        # Set image dimensions / writer parameters
         self.img_dim = (self.data.height, self.data.width, self.data.slices)
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.data_shape[-2], self.data_shape[-1])
@@ -48,6 +49,18 @@ class PhaseFromBF(PipelineInterface):
 
 
     def _check_output_channels(self, output_channels):
+        """
+        Function to make sure that the correct output channels are specified.
+        Does not allow for both 2D and 3D simultaneous reconstruction due to saving formats.
+
+        Parameters
+        ----------
+        output_channels:        (list) List of str output channels
+
+        Returns
+        -------
+
+        """
 
         for channel in output_channels:
             if 'Phase3D' in channel:
@@ -61,9 +74,28 @@ class PhaseFromBF(PipelineInterface):
 
 
     def reconstruct_stokes_volume(self, data):
+        """
+        dummy function that reshapes the data to the traditional "stokes volume" output.
+        Used by the pipeline_manager and feeds into phase reconstruction
+
+        Parameters
+        ----------
+        data:           (nd-array) raw data of dimensions (C, Z, Y, X)
+
+        Returns
+        -------
+        data:           (nd-array) brightfield data of dimensions (Y, X, Z)
+
+        """
         return np.transpose(data[self.bf_chan_idx], (1, 2, 0))
 
     def reconstruct_birefringence_volume(self, data):
+        """
+        dummy function to skip in pipeline_manager.
+        No birefringence compute occuring in this pipeline
+
+        """
+
         return data
 
     def reconstruct_phase_volume(self, bf_data):
