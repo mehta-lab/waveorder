@@ -24,7 +24,7 @@ def main():
 
     Args = parse_args(standalone_mode=False)
 
-    converter = ZarrConverter(Args.input, Args.output, Args.data_type, Args.add_pos_name, Args.format_hcs)
+    converter = ZarrConverter(Args.input, Args.output, Args.data_type, Args.replace_pos_name, Args.format_hcs)
     converter.run_conversion()
 
 

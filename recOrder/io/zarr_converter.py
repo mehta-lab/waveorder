@@ -10,8 +10,7 @@ import json
 import warnings
 
 
-#TODO: Add catch for incomplete datasets (datasets stopped early)
-#TODO: backwards compatibility
+#TODO: Make converter agnostic to metadata present (especially for upti)
 class ZarrConverter:
     """
     This converter works to convert micromanager ome tiff or single-page tiff stacks into
@@ -23,8 +22,8 @@ class ZarrConverter:
     def __init__(self, input, output, data_type, replace_position_names=False, format_hcs=False):
 
         # Add Initial Checks
-        if len(glob.glob(os.path.join(input, '*.ome.tif'))) == 0:
-            raise ValueError('Specific input contains no ome.tif files, please specify a valid input directory')
+        if len(glob.glob(os.path.join(input, '*.tif'))) == 0:
+            raise ValueError('Specific input contains no .tif files, please specify a valid input directory')
         if not output.endswith('.zarr'):
             raise ValueError('Please specify .zarr at the end of your output')
 
@@ -42,7 +41,7 @@ class ZarrConverter:
         self.reader = WaveorderReader(self.data_directory, self.data_type, extract_data=True)
         print('Finished initializing data')
 
-        self.summary_metadata = self.reader.mm_meta['Summary']
+        self.summary_metadata = self.reader.mm_meta['Summary'] if self.reader.mm_meta else None
         self.save_name = os.path.basename(output)
         self.mfile_name = os.path.join(self.save_directory, f'{self.save_name.strip(".zarr")}_ImagePlaneMetadata.txt')
         self.meta_file = open(self.mfile_name, 'a')
@@ -115,28 +114,42 @@ class ZarrConverter:
 
         """
 
-        # 4 possible dimensions: p, c, t, z
-        n_dim = 4
-        hashmap = {'position': self.p,
-                   'time': self.t,
-                   'channel': self.c,
-                   'z': self.z}
+        # if acquisition information is not present, make an arbitrary dimension order
+        if not self.summary_metadata or 'AxisOrder' not in self.summary_metadata.keys():
 
-        self.dim_order = self.summary_metadata['AxisOrder']
+            self.p_dim = 0
+            self.t_dim = 1
+            self.c_dim = 2
+            self.z_dim = 3
 
-        dims = []
-        for i in range(n_dim):
-            if i < len(self.dim_order):
-                dims.append(hashmap[self.dim_order[i]])
-            else:
-                dims.append(1)
+            self.dim_order = ['position', 'time', 'channel', 'z']
 
-        # Reverse the dimension order and gather dimension indices
-        self.dim_order.reverse()
-        self.p_dim = self.dim_order.index('position')
-        self.t_dim = self.dim_order.index('time')
-        self.c_dim = self.dim_order.index('channel')
-        self.z_dim = self.dim_order.index('z')
+            dims = [self.reader.get_num_positions(), self.reader.frames, self.reader.channels, self.reader.slices]
+
+        # get the order in which the data was collected to minimize i/o calls
+        else:
+            # 4 possible dimensions: p, c, t, z
+            n_dim = 4
+            hashmap = {'position': self.p,
+                       'time': self.t,
+                       'channel': self.c,
+                       'z': self.z}
+
+            self.dim_order = self.summary_metadata['AxisOrder']
+
+            dims = []
+            for i in range(n_dim):
+                if i < len(self.dim_order):
+                    dims.append(hashmap[self.dim_order[i]])
+                else:
+                    dims.append(1)
+
+            # Reverse the dimension order and gather dimension indices
+            self.dim_order.reverse()
+            self.p_dim = self.dim_order.index('position')
+            self.t_dim = self.dim_order.index('time')
+            self.c_dim = self.dim_order.index('channel')
+            self.z_dim = self.dim_order.index('z')
 
         # create array of coordinate tuples with innermost dimension being the first dim acquired
         self.coords = [(dim3, dim2, dim1, dim0) for dim3 in range(dims[3]) for dim2 in range(dims[2])
@@ -202,7 +215,7 @@ class ZarrConverter:
 
         """
 
-        chan_names = self.summary_metadata['ChNames']
+        chan_names = self.reader.channel_names
 
         return chan_names
 
