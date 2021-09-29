@@ -396,16 +396,15 @@ class ZarrConverter:
                     json.dump(meta, self.meta_file, indent=1)
                 else:
                     json.dump(meta, self.meta_file, indent=1)
-            else:
-                # get the memory mapped image
-                img_raw = self.get_image_array(coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
+            # get the memory mapped image
+            img_raw = self.get_image_array(coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
 
-                # Write the data
-                self.writer.write(img_raw, coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
+            # Write the data
+            self.writer.write(img_raw, coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
 
-                # Perform image check
-                if not self._perform_image_check(img_raw, coord):
-                    raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
+            # Perform image check
+            if not self._perform_image_check(img_raw, coord):
+                raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
 
         # Put metadata into zarr store and cleanup
         self.writer.store.attrs.update(self.metadata)

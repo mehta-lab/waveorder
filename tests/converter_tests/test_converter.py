@@ -73,7 +73,7 @@ def test_converter_run(setup_data_save_folder, setup_test_data):
                 for z in range(81):
                     coords.append((t, p, c, z))
 
-    assert (converter.coords == coords)
+    assert(converter.coords == coords)
 
     cnt = 0
     for t in range(2):
