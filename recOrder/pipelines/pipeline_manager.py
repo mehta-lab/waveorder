@@ -2,6 +2,8 @@ from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
 import time
+import os
+import shutil
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
 from recOrder.postproc.post_processing import *
@@ -14,7 +16,7 @@ class PipelineManager:
     This will pull the necessary pipeline based off the config default.
     """
 
-    def __init__(self, config: ConfigReader):
+    def __init__(self, config: ConfigReader, overwrite: bool = False):
 
         start = time.time()
         print('Reading Data...')
@@ -33,6 +35,13 @@ class PipelineManager:
             hcs_meta = self._update_hcs_meta_from_config(hcs_meta)
         else:
             hcs_meta = None
+
+        # Delete previous data if overwrite is true
+        if overwrite:
+            path = os.path.join(self.config.save_dir, self.config.data_save_name)
+            path = path+'.zarr' if not path.endswith('.zarr') else path
+            if os.path.exists(path):
+                shutil.rmtree(path)
 
         # Writer Parameters
         self.writer = WaveorderWriter(self.config.save_dir, hcs=self.use_hcs, hcs_meta=hcs_meta, verbose=False)
