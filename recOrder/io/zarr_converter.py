@@ -34,8 +34,9 @@ class ZarrConverter:
         self.version = 'recOrder Converter version=0.4'
         self.data_directory = input
         self.save_directory = os.path.dirname(output)
-        self.files = glob.glob(os.path.join(self.data_directory, '*.ome.tif'))
+        self.files = glob.glob(os.path.join(self.data_directory, '*.tif'))
         self.data_type = data_type
+        self.meta_file = None
 
         print('Initializing Data...')
         self.reader = WaveorderReader(self.data_directory, self.data_type, extract_data=True)
@@ -43,8 +44,10 @@ class ZarrConverter:
 
         self.summary_metadata = self.reader.mm_meta['Summary'] if self.reader.mm_meta else None
         self.save_name = os.path.basename(output)
-        self.mfile_name = os.path.join(self.save_directory, f'{self.save_name.strip(".zarr")}_ImagePlaneMetadata.txt')
-        self.meta_file = open(self.mfile_name, 'a')
+        if self.data_type != 'upti':
+            self.mfile_name = os.path.join(self.save_directory, f'{self.save_name.strip(".zarr")}_ImagePlaneMetadata.txt')
+            self.meta_file = open(self.mfile_name, 'a')
+
         self.replace_position_names = replace_position_names
         self.format_hcs = format_hcs
 
@@ -89,19 +92,21 @@ class ZarrConverter:
         Returns
         -------
         """
+        if self.data_type == 'ometiff':
+            for file in self.files:
+                tf = tiff.TiffFile(file)
+                meta = tf.micromanager_metadata['IndexMap']
 
-        for file in self.files:
-            tf = tiff.TiffFile(file)
-            meta = tf.micromanager_metadata['IndexMap']
+                for page in range(len(meta['Channel'])):
+                    coord = [0, 0, 0, 0]
+                    coord[self.p_dim] = meta['Position'][page]
+                    coord[self.t_dim] = meta['Frame'][page]
+                    coord[self.c_dim] = meta['Channel'][page]
+                    coord[self.z_dim] = meta['Slice'][page]
 
-            for page in range(len(meta['Channel'])):
-                coord = [0, 0, 0, 0]
-                coord[self.p_dim] = meta['Position'][page]
-                coord[self.t_dim] = meta['Frame'][page]
-                coord[self.c_dim] = meta['Channel'][page]
-                coord[self.z_dim] = meta['Slice'][page]
-
-                self.coord_map[tuple(coord)] = (file, page)
+                    self.coord_map[tuple(coord)] = (file, page)
+        else:
+            pass
 
     def _gen_coordset(self):
         """
@@ -124,7 +129,8 @@ class ZarrConverter:
 
             self.dim_order = ['position', 'time', 'channel', 'z']
 
-            dims = [self.reader.get_num_positions(), self.reader.frames, self.reader.channels, self.reader.slices]
+            # Assume data was collected slice first
+            dims = [self.reader.slices, self.reader.channels, self.reader.frames, self.reader.get_num_positions()]
 
         # get the order in which the data was collected to minimize i/o calls
         else:
@@ -362,43 +368,46 @@ class ZarrConverter:
         print('Converting Images...')
         for coord in tqdm(self.coords, bar_format=bar_format):
 
-            # Only load tiff file if it has changed from previous run
-            current_file = self.coord_map[coord][0]
-            if self.check_file_changed(last_file, current_file):
-                tf = tiff.TiffFile(current_file)
-                last_file = current_file
 
-            # Get the metadata
-            page = self.coord_map[coord][1]
+            if self.data_type != 'upti':
+                # Only load tiff file if it has changed from previous run
+                current_file = self.coord_map[coord][0]
+                if self.check_file_changed(last_file, current_file):
+                    tf = tiff.TiffFile(current_file)
+                    last_file = current_file
 
-            # re-order coordinates into zarr format
-            coord_reorder = (coord[self.p_dim],
-                             coord[self.t_dim],
-                             coord[self.c_dim],
-                             coord[self.z_dim])
+                # Get the metadata
+                page = self.coord_map[coord][1]
 
-            meta = dict()
-            plane_meta = self._generate_plane_metadata(tf, page)
-            meta[f'{coord_reorder}'] = plane_meta
+                # re-order coordinates into zarr format
+                coord_reorder = (coord[self.p_dim],
+                                 coord[self.t_dim],
+                                 coord[self.c_dim],
+                                 coord[self.z_dim])
 
-            # only write the plane metadata for the first time-point to avoid huge i/o overhead
-            # rest will be placed in json file with the zarr store
-            if coord[self.t_dim] == 0:
-                self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = plane_meta
-                json.dump(meta, self.meta_file, indent=1)
+                meta = dict()
+                plane_meta = self._generate_plane_metadata(tf, page)
+                meta[f'{coord_reorder}'] = plane_meta
+
+                # only write the plane metadata for the first time-point to avoid huge i/o overhead
+                # rest will be placed in json file with the zarr store
+                if coord[self.t_dim] == 0:
+                    self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = plane_meta
+                    json.dump(meta, self.meta_file, indent=1)
+                else:
+                    json.dump(meta, self.meta_file, indent=1)
             else:
-                json.dump(meta, self.meta_file, indent=1)
+                # get the memory mapped image
+                img_raw = self.get_image_array(coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
 
-            # get the memory mapped image
-            img_raw = self.get_image_array(coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
+                # Write the data
+                self.writer.write(img_raw, coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
 
-            # Write the data
-            self.writer.write(img_raw, coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
-
-            # Perform image check
-            if not self._perform_image_check(img_raw, coord):
-                raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
+                # Perform image check
+                if not self._perform_image_check(img_raw, coord):
+                    raise ValueError('Converted zarr image does not match the raw data. Conversion Failed')
 
         # Put metadata into zarr store and cleanup
         self.writer.store.attrs.update(self.metadata)
-        self.meta_file.close()
+        if self.meta_file:
+            self.meta_file.close()

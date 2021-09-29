@@ -84,3 +84,14 @@ def test_converter_run(setup_data_save_folder, setup_test_data):
                     tiff_image = tf.pages.get(cnt).asarray()
                     assert(np.array_equal(image, tiff_image))
                     cnt += 1
+
+
+def test_converter_upti():
+
+    input = '/Users/cameron.foltz/Desktop/Test_Data/upti/CM_FOV1/data'
+    output = '/Users/cameron.foltz/Desktop/Test_Data/converter_test/CM_FOV1_upti.zarr'
+    if os.path.exists(output):
+        shutil.rmtree(output)
+    data_type = 'upti'
+    converter = ZarrConverter(input, output, data_type)
+    converter.run_conversion()
