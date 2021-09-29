@@ -15,7 +15,7 @@ def test_pipeline_manager_initiate(setup_BF_test_data_zarr, setup_data_save_fold
     folder, data = setup_BF_test_data_zarr
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_phase_full_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/phase/config_phase_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)
@@ -29,7 +29,7 @@ def test_qlipp_pipeline_initiate(setup_BF_test_data_zarr, setup_data_save_folder
     folder, data = setup_BF_test_data_zarr
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_phase_full_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/phase/config_phase_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)
@@ -54,7 +54,7 @@ def test_pipeline_manager_run(setup_BF_test_data_zarr, setup_data_save_folder):
     folder, data = setup_BF_test_data_zarr
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_phase_full_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/phase/config_phase_full_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)
@@ -73,7 +73,7 @@ def test_3D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     folder, data = setup_BF_test_data_zarr
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_phase_3D_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/phase/config_phase_3D_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)
@@ -101,7 +101,7 @@ def test_2D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     folder, data = setup_BF_test_data_zarr
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_phase_2D_pytest.yml')
+    path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/phase/config_phase_2D_pytest.yml')
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)
