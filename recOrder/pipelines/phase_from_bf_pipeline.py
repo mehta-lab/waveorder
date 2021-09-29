@@ -70,8 +70,7 @@ class PhaseFromBF(PipelineInterface):
             elif 'Phase3D' in channel and 'Phase2D' in channel:
                 raise KeyError('Simultaneous 2D and 3D phase reconstruction not supported')
             else:
-                raise KeyError(f'Output channel "{channel}" not permitted')
-
+                continue
 
     def reconstruct_stokes_volume(self, data):
         """
