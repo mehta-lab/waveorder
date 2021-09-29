@@ -10,7 +10,6 @@ from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_processing import *
 
 
-#TODO: add check on number of positions and edit hcs metadata accordingly.
 class PipelineManager:
     """
     This will pull the necessary pipeline based off the config default.
@@ -31,10 +30,10 @@ class PipelineManager:
         self._gen_coord_set()
 
         if self.use_hcs:
-            hcs_meta = self.data.reader.hcs_meta
-            hcs_meta = self._update_hcs_meta_from_config(hcs_meta)
+            self.hcs_meta = self.data.reader.hcs_meta
+            self.hcs_meta = self._update_hcs_meta_from_config(self.hcs_meta)
         else:
-            hcs_meta = None
+            self.hcs_meta = None
 
         # Delete previous data if overwrite is true
         if overwrite:
@@ -44,11 +43,8 @@ class PipelineManager:
                 shutil.rmtree(path)
 
         # Writer Parameters
-        self.writer = WaveorderWriter(self.config.save_dir, hcs=self.use_hcs, hcs_meta=hcs_meta, verbose=False)
+        self.writer = WaveorderWriter(self.config.save_dir, hcs=self.use_hcs, hcs_meta=self.hcs_meta, verbose=False)
         self.writer.create_zarr_root(self.config.data_save_name)
-        existing_meta = self.writer.store.attrs.asdict().copy()
-        existing_meta['Config'] = self.config.yaml_dict
-        self.writer.store.attrs.put(existing_meta)
 
         # Pipeline Initiation
         if self.config.method == 'QLIPP':
@@ -67,6 +63,7 @@ class PipelineManager:
 
         wells_new = [None] * (max(self.p_indices) + 1)
         well_meta_new = [None] * (max(self.p_indices) + 1)
+
         meta_new = hcs_meta.copy()
         for p in self.p_indices:
             well_meta = meta_new['well']
@@ -225,10 +222,19 @@ class PipelineManager:
 
     def _try_init_array(self, pt):
         try:
+
+            # If not doing the full position, we still want semantic information on which positions
+            # were reconstructed, so append the filename to the position (which would have otherwise been arbitrary)
+            if not self.hcs_meta:
+                name = f'Pos_{pt[0]:03d}'
+            else:
+                name = None
+
             self.pipeline.writer.init_array(self.indices_map[pt[0]],
                                             self.pipeline.data_shape,
                                             self.pipeline.chunk_size,
-                                            self.pipeline.output_channels)
+                                            self.pipeline.output_channels,
+                                            position_name=name)
 
         # assumes array exists already if there is an error thrown
         except:
@@ -245,7 +251,7 @@ class PipelineManager:
 
             self._try_init_array(pt)
 
-            pt_data = self.data.get_array(pt[0])[pt[1]] # (C, Z, Y, X)
+            pt_data = self.data.get_zarr(pt[0])[pt[1]] # (C, Z, Y, X) virtual
 
             stokes = self.pipeline.reconstruct_stokes_volume(pt_data)
 
@@ -262,6 +268,10 @@ class PipelineManager:
 
             end_time = time.time()
             print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f}) min')
+
+            existing_meta = self.writer.store.attrs.asdict().copy()
+            existing_meta['Config'] = self.config.yaml_dict
+            self.writer.store.attrs.put(existing_meta)
 
     def pre_processing(self, stokes):
 

@@ -22,8 +22,8 @@ class QLIPP(PipelineInterface):
         config:     (Object) initialized ConfigReader object
         data:       (Object) initialized WaveorderReader object (data should be extracted already)
         writer:     (Object) initialiazed WaveorderWriter object
-        name:       (str) name of the sample to pass for naming of folders, etc.
         mode:       (str) mode of operation, can be '2D', '3D', or 'stokes'
+        num_t:      (int) number of timepoints being analyzed
         """
 
         # Dataset Parameters

@@ -30,7 +30,7 @@ def test_pre_processing(setup_test_data, setup_data_save_folder):
     stokes_denoise = preproc_denoise(stokes, params)
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'), 'r')
-    array = store['Row_0']['Col_0']['Pos_000']['array']
+    array = store['Row_0']['Col_0']['Pos_001']['array']
 
     # Check Stokes
     assert (np.sum(np.abs(stokes_denoise[0, :, :, z] - array[0, 0, z]) ** 2) / np.sum(
@@ -65,7 +65,7 @@ def test_post_processing(setup_test_data, setup_data_save_folder):
     ret_denoise = ret_denoise / (2*np.pi)*config.wavelength
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'), 'r')
-    array = store['Row_0']['Col_0']['Pos_000']['array']
+    array = store['Row_0']['Col_0']['Pos_001']['array']
 
     # Check Birefringence
     assert(np.sum(np.abs(ret_denoise[z] - array[0, 0, z]) ** 2)
