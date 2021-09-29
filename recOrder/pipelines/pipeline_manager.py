@@ -225,14 +225,13 @@ class PipelineManager:
         except:
             pass
 
-
     #TODO: use arbol print statements
     #TODO: Refactor Birefringence to Anisotropy
     def run(self):
 
         print(f'Beginning Reconstruction...')
 
-        for pt in self.pt_set:
+        for pt in sorted(self.pt_set):
             start_time = time.time()
 
             self._try_init_array(pt)
