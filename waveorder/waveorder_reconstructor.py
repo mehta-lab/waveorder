@@ -2578,7 +2578,7 @@ class fluorescence_microscopy:
         return np.squeeze(I_fluor_deconv)
         
 
-    def deconvolve_fluor_3D(self, I_fluor, bg_level, reg, autotune=False, verbose=True):
+    def deconvolve_fluor_3D(self, I_fluor, bg_level, reg, autotune=False, search_range_auto=3, verbose=True):
         """
 
         Performs deconvolution with Tikhonov regularization on raw fluorescence stack.
@@ -2597,9 +2597,13 @@ class fluorescence_microscopy:
             reg             : list or numpy.array
                               an array of Tikhonov regularization parameters in dimensions (N_wavelength,)
                               the order of the reg value should match the order of the first index of I_fluor
+                              
             autotune        : bool
                               option to automatically choose Tikhonov regularization parameter, with search centered around reg
                               
+            search_range_auto : int
+                                the search range of the regularization in terms of the order of magnitude
+            
             verbose         : bool
                              option to display detailed progress of computations or not
                               
@@ -2640,7 +2644,9 @@ class fluorescence_microscopy:
         
             I_fluor_minus_bg = np.maximum(0, I_fluor_pad[i] - bg_level[i])
 
-            I_fluor_deconv_pad = Single_variable_Tikhonov_deconv_3D(I_fluor_minus_bg, self.OTF_WF_3D[i], reg[i], use_gpu=self.use_gpu, gpu_id=self.gpu_id, autotune=autotune, verbose=verbose)
+            I_fluor_deconv_pad = Single_variable_Tikhonov_deconv_3D(I_fluor_minus_bg, self.OTF_WF_3D[i], reg[i], 
+                                                                    use_gpu=self.use_gpu, gpu_id=self.gpu_id, 
+                                                                    autotune=autotune, verbose=verbose, search_range_auto=search_range_auto)
 
                 
             if self.pad_z != 0:
