@@ -29,13 +29,17 @@ class PipelineManager:
 
         self._gen_coord_set()
 
+        # This section creates the HCS metadata that exists from the raw data zarr store and updates
+        # if it you are only doing a subset of positions.  Allows for consistent format between
+        # raw data and processed data
         if self.use_hcs:
             self.hcs_meta = self.data.reader.hcs_meta
             self.hcs_meta = self._update_hcs_meta_from_config(self.hcs_meta)
         else:
             self.hcs_meta = None
 
-        # Delete previous data if overwrite is true
+        # Delete previous data if overwrite is true, helpful for making quick config changes since the writer
+        # doesn't by default allow you to overwrite data
         if overwrite:
             path = os.path.join(self.config.save_dir, self.config.data_save_name)
             path = path+'.zarr' if not path.endswith('.zarr') else path
@@ -60,21 +64,39 @@ class PipelineManager:
             raise NotImplementedError
 
     def _update_hcs_meta_from_config(self, hcs_meta):
+        """
+        If HCS metadata was found in raw data, make sure that it is consistent
+        with the data being requested for reconstruction
 
+        Parameters
+        ----------
+        hcs_meta:       (dict) HCS metadata as needed by the writer
+
+        Returns
+        -------
+        new_meta:       (dict) HCS metadata corresponding to config parameters (or unchanged)
+
+        """
+
+        # make a list of empty wells the size of the # of positions
         wells_new = [None] * (max(self.p_indices) + 1)
         well_meta_new = [None] * (max(self.p_indices) + 1)
 
         meta_new = hcs_meta.copy()
-        for p in self.p_indices:
+        for idx, p in enumerate(self.p_indices):
+
+            # for every position, grab it from the original HCS metadata and place it into new list
             well_meta = meta_new['well']
-            well_meta_new[p] = well_meta[p]
+            well_meta_new[idx] = well_meta[p]
 
             wells = meta_new['plate']['wells']
-            wells_new[p] = wells[p]
+            wells_new[idx] = wells[p]
 
+        # Filter out any blank entries
         wells_new = list(filter(None, wells_new))
         well_meta_new = list(filter(None, well_meta_new))
 
+        # based on new well metadata, grab the rows/columns names
         rows_new = []
         cols_new = []
         for well in wells_new:
@@ -85,6 +107,7 @@ class PipelineManager:
             if not {'name': split[1]} in cols_new:
                 cols_new.append({'name': split[1]})
 
+        # Group all of the metadata together in one dictionary
         meta_new['plate']['rows'] = rows_new
         meta_new['plate']['columns'] = cols_new
         meta_new['plate']['wells'] = wells_new
@@ -171,6 +194,7 @@ class PipelineManager:
         p_indices = set()
         t_indices = set()
 
+        # run through the different possible config specifications (ranges, single entries, 'all', etc.)
         cnt = 0
         for p_entry in self.config.positions:
             if p_entry == 'all':
@@ -196,6 +220,7 @@ class PipelineManager:
             else:
                 raise ValueError(f'Did not understand entry {p_entry} in config specified positions')
 
+        # run through the different possible config specifications (ranges, single entries, 'all', etc.)
         for t_entry in self.config.timepoints:
             if t_entry == 'all':
                 for t in range(self.data.frames):
@@ -216,6 +241,7 @@ class PipelineManager:
         self.num_p = len(p_indices)
         self.p_indices = p_indices
 
+        # create set of all possible pos, time indices
         for pos in p_indices:
             for time_point in t_indices:
                 self.pt_set.add((pos, time_point))
