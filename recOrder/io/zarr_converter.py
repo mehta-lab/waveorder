@@ -5,6 +5,7 @@ import tifffile as tiff
 from waveorder.io.writer import WaveorderWriter
 from waveorder.io.reader import WaveorderReader
 from recOrder.preproc.pre_processing import get_autocontrast_limits
+from recOrder.io.utils import create_grid_from_coordinates
 import glob
 import json
 import warnings
@@ -161,10 +162,47 @@ class ZarrConverter:
         self.coords = [(dim3, dim2, dim1, dim0) for dim3 in range(dims[3]) for dim2 in range(dims[2])
                        for dim1 in range(dims[1]) for dim0 in range(dims[0])]
 
+    def _get_position_coords(self):
+
+        row_max = 0
+        col_max = 0
+        coords_list = []
+
+        #TODO: read rows, cols directly from XY corods
+        for idx, pos in enumerate(self.reader.stage_positions):
+            coords_list.append(pos['XYStage'])
+            row = pos['GridRowIndex']
+            col = pos['GridColumnIndex']
+            row_max = row if row > row_max else row_max
+            col_max = col if col > col_max else col_max
+
+        return coords_list, row_max, col_max
+
     def _generate_hcs_metadata(self):
 
-        self.hcs_meta = dict()
-        pass
+
+        position_list, rows, cols = self._get_position_coords()
+
+        position_grid = create_grid_from_coordinates(position_list, rows, cols)
+
+        # Build metadata based off of position grid
+        hcs_meta = {'plate': {
+            'acquisitions': [{'id': 1,
+                              'maximumfieldcount': 1,
+                              'name': 'Dataset',
+                              'starttime': 0}],
+            'columns': [{'name': f'Col_{i}'} for i in range(cols)],
+
+            'field_count': 1,
+            'name': 'name',
+            'rows': [{'name': f'Row_{i}'} for i in range(rows)],
+            'version': '0.1',
+            'wells': [{'path': f'Row_{i}/Col_{j}'} for i in range(rows) for j in range(cols)]},
+
+            'well': [{'images': [{'path': f'Pos_{pos:03d}'}]} for pos in position_grid.flatten()]
+        }
+
+        self.hcs_meta = hcs_meta
 
     def _generate_plane_metadata(self, tiff_file, page):
         """
