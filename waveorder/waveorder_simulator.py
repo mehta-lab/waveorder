@@ -554,7 +554,7 @@ class waveorder_microscopy_simulator:
         yy = fftshift(self.yy)
 
 
-        f_scat_tensor = np.zeros((3, 3, self.N, self.M, self.N_defocus))
+        f_scat_tensor = np.zeros((3, 3, self.N, self.M, self.N_defocus),complex)
         for p, q in itertools.product(range(3), range(3)):
             if p == q:
                 f_scat_tensor[p,q] = (2*np.pi/self.lambda_illu)**2 * (1 - epsilon_tensor[p,q]/self.n_media**2)
