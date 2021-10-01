@@ -201,7 +201,7 @@ class ZarrConverter:
             'well': [{'images': [{'path': f'Pos_{pos:03d}'}]} for pos in position_grid.flatten()]
         }
 
-        self.hcs_meta = hcs_meta
+        return hcs_meta
 
     def _generate_plane_metadata(self, tiff_file, page):
         """
