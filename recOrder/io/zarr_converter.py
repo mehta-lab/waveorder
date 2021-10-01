@@ -11,7 +11,6 @@ import json
 import warnings
 
 
-#TODO: Make converter agnostic to metadata present (especially for upti)
 class ZarrConverter:
     """
     This converter works to convert micromanager ome tiff or single-page tiff stacks into
@@ -169,6 +168,7 @@ class ZarrConverter:
         coords_list = []
 
         #TODO: read rows, cols directly from XY corods
+        #TODO: account for non MM2gamma meta?
         for idx, pos in enumerate(self.reader.stage_positions):
             coords_list.append(pos['XYStage'])
             row = pos['GridRowIndex']
@@ -179,7 +179,6 @@ class ZarrConverter:
         return coords_list, row_max, col_max
 
     def _generate_hcs_metadata(self):
-
 
         position_list, rows, cols = self._get_position_coords()
 
