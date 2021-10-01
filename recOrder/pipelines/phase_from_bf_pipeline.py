@@ -152,19 +152,20 @@ class PhaseFromBF(PipelineInterface):
 
         """
         z = 0 if self.mode == '2D' else None
+        slice_ = self.focus_slice if self.mode == '2D' else slice(None)
         fluor_idx = 0
 
         for chan in range(len(self.output_channels)):
             if 'Phase3D' in self.output_channels[chan]:
                 self.writer.write(phase3D, p=p, t=t, c=chan, z=z)
-            elif 'Phase2D' in self.output_channels:
+            elif 'Phase2D' in self.output_channels[chan]:
                 self.writer.write(phase2D, p=p, t=t, c=chan, z=z)
 
             # Assume any other output channel in config is fluorescence
             else:
                 if self.config.postprocessing.registration_use:
-                    self.writer.write(registered_stacks[fluor_idx], p=p, t=t, c=chan, z=z)
+                    self.writer.write(registered_stacks[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
                 else:
-                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], p=p, t=t, c=chan, z=z)
+                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx]][slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
