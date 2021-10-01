@@ -1,6 +1,7 @@
 import numpy as np
 from waveorder.util import wavelet_softThreshold
 import cv2
+import warnings
 
 def preproc_denoise(stokes, params):
 
@@ -65,10 +66,9 @@ def get_autocontrast_limits(img, clip = .01):
     maximum = cdf[-1]
     pix_clip = maximum * clip
 
-    # Locate min cut
-    min_val = 0
-
     try:
+        # Locate min cut
+        min_val = 0
         while cdf[min_val] < pix_clip:
             min_val += 1
 
@@ -79,5 +79,5 @@ def get_autocontrast_limits(img, clip = .01):
 
         return min_val, max_val
     except IndexError as ex:
-        UserWarning(f'Pixel Data overexposed, please check the image, Warning Message: {ex}')
+        warnings.warn(UserWarning(f'Pixel Data overexposed, please check the image, Warning Message: {ex}'))
         return 0, 65535

@@ -28,7 +28,7 @@ class ZarrConverter:
             raise ValueError('Please specify .zarr at the end of your output')
 
         # ignore tiffile warnings
-        warnings.filterwarnings('ignore')
+        # warnings.filterwarnings('ignore')
 
         # Init File IO Properties
         self.version = 'recOrder Converter version=0.4'
