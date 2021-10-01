@@ -238,9 +238,12 @@ class QLIPP(PipelineInterface):
             # Assume any other output channel in config is fluorescence
             else:
                 if self.config.postprocessing.registration_use:
+                    print('here1')
                     self.writer.write(registered_stacks[fluor_idx], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
                 else:
+                    print('here2')
+                    print(self.fluor_idxs)
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
 
