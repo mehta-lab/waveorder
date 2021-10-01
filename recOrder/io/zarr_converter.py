@@ -333,7 +333,6 @@ class ZarrConverter:
         clims = []
 
         for chan in range(self.c):
-
             img = self.reader.get_image(pos, t=0, c=chan, z=self.focus_z)
             clims.append(get_autocontrast_limits(img))
 
