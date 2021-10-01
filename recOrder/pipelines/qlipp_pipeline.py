@@ -241,7 +241,7 @@ class QLIPP(PipelineInterface):
                     self.writer.write(registered_stacks[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
                 else:
-                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx], [slice_]], p=p, t=t, c=chan, z=z)
+                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
 
     def parse_channel_idx(self, channel_list):
