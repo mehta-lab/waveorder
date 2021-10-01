@@ -129,7 +129,7 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes):
                               or (C, Y, X) if not reconstructing a z-stack
     """
 
-    stokes_data = recon.Stokes_recon(data)
+    stokes_data = recon.Stokes_recon(np.copy(data))
     stokes_data = recon.Stokes_transform(stokes_data)
 
     if recon.bg_option == 'None':
@@ -162,7 +162,7 @@ def reconstruct_qlipp_birefringence(stokes, recon):
                               volume of shape (C, Z, Y, X) or (C, Y, X) containing reconstructed birefringence data.
     """
 
-    birefringence = recon.Polarization_recon(stokes)
+    birefringence = recon.Polarization_recon(np.copy(stokes))
 
     return np.transpose(birefringence, (0, 3, 1, 2)) if len(birefringence.shape) == 4 else birefringence
 
@@ -188,7 +188,7 @@ def reconstruct_qlipp_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
 
     """
 
-    _, phase2D = recon.Phase_recon(S0, method=method, reg_p=reg_p, rho=rho, lambda_p=lambda_p, itr=itr, verbose=False)
+    _, phase2D = recon.Phase_recon(np.copy(S0), method=method, reg_p=reg_p, rho=rho, lambda_p=lambda_p, itr=itr, verbose=False)
 
     return phase2D
 
@@ -214,7 +214,7 @@ def reconstruct_qlipp_phase3D(S0, recon, method='Tikhonov', reg_re=1e-4,
 
         """
 
-    phase3D = recon.Phase_recon_3D(S0, method=method, reg_re=reg_re, rho=rho, lambda_re=lambda_re,
+    phase3D = recon.Phase_recon_3D(np.copy(S0), method=method, reg_re=reg_re, rho=rho, lambda_re=lambda_re,
                                    itr=itr, verbose=False)
 
     phase3D = np.transpose(phase3D, (2, 0, 1))
