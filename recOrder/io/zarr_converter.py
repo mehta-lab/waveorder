@@ -171,8 +171,8 @@ class ZarrConverter:
         #TODO: account for non MM2gamma meta?
         for idx, pos in enumerate(self.reader.stage_positions):
             coords_list.append(pos['XYStage'])
-            row = pos['GridRowIndex']
-            col = pos['GridColumnIndex']
+            row = pos['GridRow']
+            col = pos['GridCol']
             row_max = row if row > row_max else row_max
             col_max = col if col > col_max else col_max
 

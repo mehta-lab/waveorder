@@ -13,3 +13,4 @@ tqdm>=4.61.1
 numcodecs>=0.7.3
 setuptools>=49.6.0
 opencv-python>=4.5.3.56
+natsort>=7.1.1
