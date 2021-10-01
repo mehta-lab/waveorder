@@ -67,12 +67,17 @@ def get_autocontrast_limits(img, clip = .01):
 
     # Locate min cut
     min_val = 0
-    while cdf[min_val] < pix_clip:
-        min_val += 1
 
-    # Locate max cut
-    max_val = n_bins - 1
-    while cdf[max_val] >= (maximum - pix_clip):
-        max_val -= 1
+    try:
+        while cdf[min_val] < pix_clip:
+            min_val += 1
 
-    return min_val, max_val
+        # Locate max cut
+        max_val = n_bins - 1
+        while cdf[max_val] >= (maximum - pix_clip):
+            max_val -= 1
+
+        return min_val, max_val
+    except IndexError as ex:
+        UserWarning(f'Pixel Data overexposed, please check the image, Warning Message: {ex}')
+        return 0, 65535
