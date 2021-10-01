@@ -54,6 +54,6 @@ def create_grid_from_coordinates(xy_coords, rows, columns):
         for col in range(columns):
 
             # append position index (key) into a final grid by indexed into the coordinate map (values)
-            pos_index_grid[row, col] = keys[vals.index(grid[row, col])]
+            pos_index_grid[row, col] = keys[vals.index(list(grid[row, col]))]
 
     return pos_index_grid
