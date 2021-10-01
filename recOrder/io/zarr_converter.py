@@ -176,7 +176,7 @@ class ZarrConverter:
             row_max = row if row > row_max else row_max
             col_max = col if col > col_max else col_max
 
-        return coords_list, row_max, col_max
+        return coords_list, row_max+1, col_max+1
 
     def _generate_hcs_metadata(self):
 
