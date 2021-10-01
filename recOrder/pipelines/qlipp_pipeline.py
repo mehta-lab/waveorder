@@ -214,7 +214,6 @@ class QLIPP(PipelineInterface):
         stokes = np.transpose(stokes, (3, 0, 1, 2)) if len(stokes.shape) == 4 else stokes
         fluor_idx = 0
 
-        print(self.output_channels)
         for chan in range(len(self.output_channels)):
             if 'Retardance' in self.output_channels[chan]:
                 ret = birefringence[0] / (2 * np.pi) * self.config.wavelength
@@ -225,7 +224,7 @@ class QLIPP(PipelineInterface):
                 self.writer.write(birefringence[2], p=p, t=t, c=chan, z=z)
             elif 'Phase3D' in self.output_channels[chan]:
                 self.writer.write(phase3D, p=p, t=t, c=chan, z=z)
-            elif 'Phase2D' in self.output_channels:
+            elif 'Phase2D' in self.output_channels[chan]:
                 self.writer.write(phase2D, p=p, t=t, c=chan, z=z)
             elif 'S0' in self.output_channels[chan]:
                 self.writer.write(stokes[slice_, 0, :, :], p=p, t=t, c=chan, z=z)
