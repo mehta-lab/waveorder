@@ -317,7 +317,7 @@ class ZarrConverter:
         """
 
         # get image at given coordinate
-        return self.reader.get_image(p, t, c, z)
+        return np.asarray(self.reader.get_image(p, t, c, z))
 
     def get_channel_clims(self, pos):
         """
@@ -333,7 +333,7 @@ class ZarrConverter:
         clims = []
 
         for chan in range(self.c):
-            img = self.reader.get_image(pos, t=0, c=chan, z=self.focus_z)
+            img = self.get_image_array(pos, t=0, c=chan, z=self.focus_z)
             clims.append(get_autocontrast_limits(img))
 
         return clims
