@@ -214,6 +214,7 @@ class QLIPP(PipelineInterface):
         stokes = np.transpose(stokes, (3, 0, 1, 2)) if len(stokes.shape) == 4 else stokes
         fluor_idx = 0
 
+        print(self.output_channels)
         for chan in range(len(self.output_channels)):
             if 'Retardance' in self.output_channels[chan]:
                 ret = birefringence[0] / (2 * np.pi) * self.config.wavelength
@@ -238,12 +239,9 @@ class QLIPP(PipelineInterface):
             # Assume any other output channel in config is fluorescence
             else:
                 if self.config.postprocessing.registration_use:
-                    print('here1')
                     self.writer.write(registered_stacks[fluor_idx], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
                 else:
-                    print('here2')
-                    print(self.fluor_idxs)
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
 
