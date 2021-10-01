@@ -39,7 +39,7 @@ class ZarrConverter:
         self.meta_file = None
 
         print('Initializing Data...')
-        self.reader = WaveorderReader(self.data_directory, self.data_type, extract_data=True)
+        self.reader = WaveorderReader(self.data_directory, self.data_type, extract_data=False)
         print('Finished initializing data')
 
         self.summary_metadata = self.reader.mm_meta['Summary'] if self.reader.mm_meta else None
@@ -316,13 +316,8 @@ class ZarrConverter:
 
         """
 
-        # get virtual zarr store at given position
-        zs = self.reader.get_zarr(p)
-
-        # get image array
-        array = zs[t, c, z]
-
-        return array
+        # get image at given coordinate
+        return self.reader.get_image(p, t, c, z)
 
     def get_channel_clims(self, pos):
         """
