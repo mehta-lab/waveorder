@@ -29,7 +29,6 @@ def test_converter_initialize(setup_data_save_folder, setup_test_data):
     assert(converter.summary_metadata == tf.micromanager_metadata['Summary'])
 
     converter._gen_coordset()
-    converter._gather_index_maps()
     coords = []
     for t in range(2):
         for p in range(3):
@@ -37,7 +36,7 @@ def test_converter_initialize(setup_data_save_folder, setup_test_data):
                 for z in range(81):
                     coords.append((t, p, c, z))
 
-    assert (converter.coords == coords)
+    assert(converter.coords == coords)
     assert(converter.p_dim == 1)
     assert(converter.t_dim == 0)
     assert(converter.c_dim == 2)

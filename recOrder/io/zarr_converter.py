@@ -86,27 +86,27 @@ class ZarrConverter:
         self.writer = WaveorderWriter(self.save_directory, hcs=self.format_hcs, hcs_meta=self.hcs_meta, verbose=False)
         self.writer.create_zarr_root(self.save_name)
 
-    def _gather_index_maps(self):
-        """
-        Will return a dictionary of {coord: (filepath, page)} of length(N_Images) to later query
-        Returns
-        -------
-        """
-        if self.data_type == 'ometiff':
-            for file in self.files:
-                tf = tiff.TiffFile(file)
-                meta = tf.micromanager_metadata['IndexMap']
-
-                for page in range(len(meta['Channel'])):
-                    coord = [0, 0, 0, 0]
-                    coord[self.p_dim] = meta['Position'][page]
-                    coord[self.t_dim] = meta['Frame'][page]
-                    coord[self.c_dim] = meta['Channel'][page]
-                    coord[self.z_dim] = meta['Slice'][page]
-
-                    self.coord_map[tuple(coord)] = (file, page)
-        else:
-            pass
+    # def _gather_index_maps(self):
+    #     """
+    #     Will return a dictionary of {coord: (filepath, page)} of length(N_Images) to later query
+    #     Returns
+    #     -------
+    #     """
+    #     if self.data_type == 'ometiff':
+    #         for file in self.files:
+    #             tf = tiff.TiffFile(file)
+    #             meta = tf.micromanager_metadata['IndexMap']
+    #
+    #             for page in range(len(meta['Channel'])):
+    #                 coord = [0, 0, 0, 0]
+    #                 coord[self.p_dim] = meta['Position'][page]
+    #                 coord[self.t_dim] = meta['Frame'][page]
+    #                 coord[self.c_dim] = meta['Channel'][page]
+    #                 coord[self.z_dim] = meta['Slice'][page]
+    #
+    #                 self.coord_map[tuple(coord)] = (file, page)
+    #     else:
+    #         pass
 
     def _gen_coordset(self):
         """
@@ -388,7 +388,7 @@ class ZarrConverter:
         print('Running Conversion...')
         print('Setting up zarr')
         self._gen_coordset()
-        self._gather_index_maps()
+        # self._gather_index_maps()
         self.init_zarr_structure()
         last_file = None
 
@@ -401,21 +401,21 @@ class ZarrConverter:
         for coord in tqdm(self.coords, bar_format=bar_format):
 
 
-            if self.data_type != 'upti':
-                # Only load tiff file if it has changed from previous run
-                current_file = self.coord_map[coord][0]
-                if self.check_file_changed(last_file, current_file):
-                    tf = tiff.TiffFile(current_file)
-                    last_file = current_file
-
-                # Get the metadata
-                page = self.coord_map[coord][1]
-
+            if self.data_type == 'ometiff':
                 # re-order coordinates into zarr format
                 coord_reorder = (coord[self.p_dim],
                                  coord[self.t_dim],
                                  coord[self.c_dim],
                                  coord[self.z_dim])
+
+                # Only load tiff file if it has changed from previous run
+                current_file = self.reader.reader.coord_map[coord_reorder][0]
+                if self.check_file_changed(last_file, current_file):
+                    tf = tiff.TiffFile(current_file)
+                    last_file = current_file
+
+                # Get the metadata
+                page = self.reader.reader.coord_map[coord_reorder][1]
 
                 meta = dict()
                 plane_meta = self._generate_plane_metadata(tf, page)
