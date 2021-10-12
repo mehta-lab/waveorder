@@ -93,10 +93,10 @@ class recOrder_Widget(QWidget):
         #Other Properties:
         self.mm = None
         self.mmc = None
-        self.home_path = str(Path.home())
-        self.current_dir_path = self.home_path
-        self.current_save_path = self.home_path
-        self.current_bg_path = self.home_path
+        # self.home_path = str(Path.home())
+        self.current_dir_path = str(Path.home())
+        self.current_save_path = str(Path.home())
+        self.current_bg_path = str(Path.home())
         self.directory = None
         self.swing = 0.1
         self.wavelength = 532
