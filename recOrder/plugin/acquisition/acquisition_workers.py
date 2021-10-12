@@ -180,7 +180,7 @@ class AcquisitionWorker(QtCore.QObject):
         -------
 
         """
-        writer = WaveorderWriter(self.calib_window.save_directory, 'physical')
+        writer = WaveorderWriter(self.calib_window.save_directory)
 
         if birefringence is not None:
 
@@ -194,22 +194,20 @@ class AcquisitionWorker(QtCore.QObject):
 
             # create zarr root and position group
             writer.create_zarr_root(f'Birefringence_Snap_{i}.zarr')
-            writer.create_position(0)
-
             # Check if 2D
             if len(birefringence.shape) == 3:
-                writer.init_array((1,4,1,birefringence.shape[-2], birefringence.shape[-1]),
+                writer.init_array(0, (1, 4, 1, birefringence.shape[-2], birefringence.shape[-1]),
                                   chunk_size, ['Retardance', 'Orientation', 'BF', 'Pol'])
                 z = 0
 
             # Check if 3D
             else:
-                writer.init_array((1, 4, birefringence.shape[-3], birefringence.shape[-2], birefringence.shape[-1]),
+                writer.init_array(0, (1, 4, birefringence.shape[-3], birefringence.shape[-2], birefringence.shape[-1]),
                                   chunk_size, ['Retardance', 'Orientation', 'BF', 'Pol'])
                 z = [0, birefringence.shape[-3]]
 
             # Write the data to disk
-            writer.write(birefringence, t=0, c=[0,4], z=z)
+            writer.write(birefringence, p=0, t=0, c=[0, 4], z=z)
 
         if phase is not None:
 
@@ -223,21 +221,19 @@ class AcquisitionWorker(QtCore.QObject):
 
             # create zarr root and position group
             writer.create_zarr_root(f'Phase_Snap_{i}.zarr')
-            writer.create_position(0)
 
             # Check if 2D
             if len(phase.shape) == 2:
-                writer.init_array((1,1,1,phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase2D'])
+                writer.init_array(0, (1, 1, 1, phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase2D'])
                 z = 0
 
             # Check if 3D
             else:
-                writer.init_array((1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase3D'])
-                print(np.shape(phase))
+                writer.init_array(0, (1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase3D'])
                 z = [0, phase.shape[-3]]
 
             # Write data to disk
-            writer.write(phase, t=0, c=0, z=z)
+            writer.write(phase, p=0, t=0, c=0, z=z)
 
     def _load_bg(self, path, height, width):
         """
