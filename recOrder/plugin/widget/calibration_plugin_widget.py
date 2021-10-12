@@ -94,6 +94,9 @@ class recOrder_Widget(QWidget):
         self.mm = None
         self.mmc = None
         self.home_path = str(Path.home())
+        self.current_dir_path = self.home_path
+        self.current_save_path = self.home_path
+        self.current_bg_path = self.home_path
         self.directory = None
         self.swing = 0.1
         self.wavelength = 532
@@ -234,15 +237,17 @@ class recOrder_Widget(QWidget):
     @pyqtSlot(bool)
     def browse_dir_path(self):
         # self.ui.le_directory.setFocus()
-        result = self._open_file_dialog(self.home_path)
+        result = self._open_file_dialog(self.current_dir_path)
         self.directory = result
+        self.current_dir_path = result
         self.ui.le_directory.setText(result)
 
     @pyqtSlot(bool)
     def browse_save_path(self):
         # self.ui.le_directory.setFocus()
-        result = self._open_file_dialog(self.home_path)
+        result = self._open_file_dialog(self.current_save_path)
         self.save_directory = result
+        self.current_save_path = result
         self.ui.le_save_path.setText(result)
 
     @pyqtSlot()
@@ -306,8 +311,9 @@ class recOrder_Widget(QWidget):
         path = self.ui.le_save_path.text()
         if os.path.exists(path):
             self.save_directory = path
+            self.current_save_path = path
         else:
-            self.ui.le_directory.setText('Path Does Not Exist')
+            self.ui.le_save_path.setText('Path Does Not Exist')
 
     @pyqtSlot()
     def enter_zstart(self):
@@ -342,13 +348,15 @@ class recOrder_Widget(QWidget):
         path = self.ui.le_bg_path.text()
         if os.path.exists(path):
             self.acq_bg_directory = path
+            self.current_bg_path = path
         else:
             self.ui.le_bg_path.setText('Path Does Not Exist')
 
     @pyqtSlot(bool)
     def browse_acq_bg_path(self):
-        result = self._open_file_dialog(self.home_path)
+        result = self._open_file_dialog(self.current_bg_path)
         self.acq_bg_directory = result
+        self.current_bg_path = result
         self.ui.le_bg_path.setText(result)
 
     @pyqtSlot()
