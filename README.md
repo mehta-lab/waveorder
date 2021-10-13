@@ -11,9 +11,7 @@ The acquisition, calibration, background correction, reconstruction, and applica
 
 The overall structure of recOrder can be visualized below, highlighting the two different usage modes and their feature: graphical user interface (GUI) through napari and command line interfact (CLI).
 
-```html
 <img src="./docs/images/Flowchart.png" width=100% height=100%>
-```
 
 ![FlowChart](./docs/images/FlowChart.png)
 
