@@ -60,7 +60,7 @@ Install the git version control system git : [link](https://git-scm.com/book/en/
 >    cd recOrder
 >    ```
 >    <br>
->    b) install python library dependencies:
+>    b) install recOrder and dependencies:
 >
 >    ```buildoutcfg
 >    pip install -e .
