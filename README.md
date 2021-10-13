@@ -7,6 +7,16 @@ The acquisition, calibration, background correction, reconstruction, and applica
 
 ``` Syuan-Ming Guo, Li-Hao Yeh, Jenny Folkesson, Ivan E Ivanov, Anitha P Krishnan, Matthew G Keefe, Ezzat Hashemi, David Shin, Bryant B Chhun, Nathan H Cho, Manuel D Leonetti, May H Han, Tomasz J Nowakowski, Shalin B Mehta, "Revealing architectural order with quantitative label-free imaging and deep learning," eLife 2020;9:e55502 DOI: 10.7554/eLife.55502 (2020).```
 
+
+
+The overall structure of recOrder can be visualized below, highlighting the two different usage modes and their feature: graphical user interface (GUI) through napari and command line interfact (CLI).
+
+<p align="center">
+
+<img src="./docs/images/FlowChart.png" width=80% height=80%>
+
+</p>
+
 ## Dataset
 
 [Slides](https://doi.org/10.5281/zenodo.5135889) and [dataset](https://doi.org/10.5281/zenodo.5178487) shared during a workshop on QLIPP and recOrder can be found on Zenodo.
@@ -31,7 +41,7 @@ Install conda package management system by installing anaconda or miniconda ([li
 >```buildoutcfg
 >conda install jupyter
 >```
-    
+
 ### Install `recOrder` and required packages
 Install the git version control system git : [link](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
 
@@ -41,7 +51,7 @@ Install the git version control system git : [link](https://git-scm.com/book/en/
 >```
 
 2) Then, you can install dependencies via pip (python index package) <br>
-  
+
 >    If you are running recOrder on your own machine, <br>
 >
 >    a) navigate to the cloned repository:
@@ -85,7 +95,7 @@ In the following, we demonstrate how to run `recOrder` for reconstruction. <br>
 >  ```buildoutcfg
 >  recOrder.reconstruct --config <path/to/config>
 >  ```
-    
+
 ## License
 Chan Zuckerberg Biohub Software License
 
