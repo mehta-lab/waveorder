@@ -13,8 +13,6 @@ The overall structure of recOrder can be visualized below, highlighting the two 
 
 <img src="./docs/images/FlowChart.png" width=100% height=100%>
 
-![FlowChart](./docs/images/FlowChart.png)
-
 ## Dataset
 
 [Slides](https://doi.org/10.5281/zenodo.5135889) and [dataset](https://doi.org/10.5281/zenodo.5178487) shared during a workshop on QLIPP and recOrder can be found on Zenodo.
