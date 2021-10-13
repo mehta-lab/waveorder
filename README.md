@@ -63,15 +63,9 @@ Install the git version control system git : [link](https://git-scm.com/book/en/
 >    b) install python library dependencies:
 >
 >    ```buildoutcfg
->    pip install -r requirements.txt
+>    pip install -e .
 >    ```
 >    <br>
-
-3) Create a symbolic library link with setup.py:
->
->```buildoutcfg
->python setup.py develop
->```
 
 *`recOrder` supports NVIDIA GPU computation through cupy package, please follow [here](https://github.com/cupy/cupy) for installation (check cupy is properly installed by ```import cupy```). To enable gpu processing, set ```use_gpu=True``` when initializing the simulator/reconstructor class.*
 
