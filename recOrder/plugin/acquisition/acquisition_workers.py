@@ -12,7 +12,7 @@ import os
 
 # TODO: Change Acquisition to Using MDA?  This would allow for easy sequencing...
 # TODO: Cache common OTF's on local computers and use those for reconstruction
-# TODO: Fix bug in dimensionality, 2D/3D doesn't make a difference
+# TODO: Fix bug in dimensionality, 2D/3D doesn't make a difference?
 class AcquisitionWorker(QtCore.QObject):
     """
     Class to execute a birefringence/phase acquisition.  First step is to snap the images follow by a second
