@@ -13,7 +13,7 @@ The overall structure of recOrder can be visualized below, highlighting the two 
 
 
 
-![FlowChart](./docs/images/FlowChart.png)
+![flowchart_resize](./docs/images/flowchart_resize.png)
 
 ## Dataset
 
