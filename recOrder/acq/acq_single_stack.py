@@ -1,19 +1,47 @@
 import numpy as np
 import json
+import os
 from recOrder.io.core_functions import set_lc_state, snap_and_get_image
+from waveorder.io.reader import WaveorderReader
+import glob
 
 def generate_acq_settings(mm, scheme, zstart=None, zend=None, zstep=None, save_dir = None, prefix = None):
+    """
+    This function generates a json file specific to the micromanager SequenceSettings.
+    It has default parameters for a multi-channels z-stack acquisition but does not yet
+    support multi-position or multi-frame acquisitions.
 
+    This also has default values for QLIPP Acquisition.  Can be used as a framework for other types
+    of acquisitions
+
+    Parameters
+    ----------
+    mm:             (object) MM Studio API object
+    scheme:         (str) '4-State' or '5-State'
+    zstart:         (float) relative starting position for the z-stack
+    zend:           (float) relative ending position for the z-stack
+    zstep:          (float) step size for the z-stack
+    save_dir:       (str) path to save directory
+    prefix:         (str) name to save the data under
+
+    Returns
+    -------
+    settings:       (json) json dictionary conforming to MM SequenceSettings
+    """
+
+    # Get API Objects
     am = mm.getAcquisitionManager()
     ss = am.getAcquisitionSettings()
     app = mm.app()
 
+    # Get current SequenceSettings to modify
     original_ss = ss.toJSONStream(ss)
     original_json = json.loads(original_ss).copy()
 
     if zstart:
         do_z = True
 
+    # Structure of the channel properties
     channel_dict = {'channelGroup': 'Channel',
                     'config': None,
                     'exposure': None,
@@ -23,6 +51,7 @@ def generate_acq_settings(mm, scheme, zstart=None, zend=None, zstep=None, save_d
                     'skipFactorFrame': 0,
                     'useChannel': True}
 
+    # Append all the QLIPP channels with their current exposure settings
     channels = []
     for i in range(5):
         #todo: think about how to deal with missing exposure
@@ -36,7 +65,6 @@ def generate_acq_settings(mm, scheme, zstart=None, zend=None, zstep=None, save_d
 
         channels.append(channel)
 
-    print(channels)
     # set other parameters
     original_json['numFrames'] = 1
     original_json['intervalMs'] = 0
@@ -45,6 +73,7 @@ def generate_acq_settings(mm, scheme, zstart=None, zend=None, zstep=None, save_d
     original_json['timeFirst'] = False
     original_json['keepShutterOpenSlices'] = True
     original_json['useAutofocus'] = False
+    original_json['saveMode'] = 'MULTIPAGE_TIFF'
     original_json['save'] = True if save_dir else False
     original_json['root'] = save_dir if save_dir else ''
     original_json['prefix'] = prefix if prefix else 'Untitled'
@@ -63,13 +92,38 @@ def generate_acq_settings(mm, scheme, zstart=None, zend=None, zstep=None, save_d
 
     return original_json
 
-def acquire_from_settings(mm, settings):
+def acquire_from_settings(mm, settings, grab_images = True):
+    """
+    Function to acquire an MDA acquisition with the native MM MDA Engine.
+    Assumes single position acquisition.
+
+    Parameters
+    ----------
+    mm:             (object) MM Studio API object
+    settings:       (json) JSON dictionary conforming to MM SequenceSettings
+    grab_images:    (bool) True/False if you want to return the acquired array
+
+    Returns
+    -------
+
+    """
 
     am = mm.getAcquisitionManager()
     ss = am.getAcquisitionSettings()
 
     ss_new = ss.fromJSONStream(json.dumps(settings))
     am.runAcquisitionWithSettings(ss_new, True)
+
+    #TODO: speed improvements in reading the data
+    if grab_images:
+        # get the most recent acquisition if multiple
+        path = os.path.join(settings['root'], settings['prefix'])
+        files = glob.glob(path+'*')
+        index = max([int(x.strip(path + '_')) for x in files])
+
+        reader = WaveorderReader(path+f'_{index}', 'ometiff', extract_data=True)
+
+        return reader.get_array(0)
 
 def acquire_2D(mm, mmc, scheme, snap_manager=None):
     """
