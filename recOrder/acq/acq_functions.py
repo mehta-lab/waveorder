@@ -85,7 +85,7 @@ def generate_acq_settings(mm, scheme, zstart=None, zend=None, zstep=None, save_d
     original_json['useSlices'] = do_z
     original_json['useFrames'] = False
     original_json['useChannels'] = True
-    original_json['slices'] = list(np.arange(zstart, zend+zstep, zstep)) if zstart else original_json['slices']
+    original_json['slices'] = list(np.arange(float(zstart), float(zend+zstep), float(zstep))) if zstart else original_json['slices']
     original_json['sliceZStepUm'] = zstep
     original_json['sliceZBottomUm'] = zstart
     original_json['sliceZTopUm'] = zend
