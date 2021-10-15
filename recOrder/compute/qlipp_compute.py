@@ -111,7 +111,7 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes):
     stokes_data = recon.Stokes_transform(stokes_data)
 
     if recon.bg_option == 'None':
-        return stokes_data
+        return np.transpose(stokes_data, (0, 2, 3, 1)) if len(np.shape(stokes_data)) == 4 else stokes_data
 
     else:
         if len(np.shape(stokes_data)) == 4:
