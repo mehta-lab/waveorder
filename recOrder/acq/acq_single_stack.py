@@ -1,5 +1,75 @@
 import numpy as np
+import json
 from recOrder.io.core_functions import set_lc_state, snap_and_get_image
+
+def generate_acq_settings(mm, scheme, zstart=None, zend=None, zstep=None, save_dir = None, prefix = None):
+
+    am = mm.getAcquisitionManager()
+    ss = am.getAcquisitionSettings()
+    app = mm.app()
+
+    original_ss = ss.toJSONStream(ss)
+    original_json = json.loads(original_ss).copy()
+
+    if zstart:
+        do_z = True
+
+    channel_dict = {'channelGroup': 'Channel',
+                    'config': None,
+                    'exposure': None,
+                    'zOffset': 0,
+                    'doZStack': do_z,
+                    'color': {'value': -16747854, 'falpha': 0.0},
+                    'skipFactorFrame': 0,
+                    'useChannel': True}
+
+    channels = []
+    for i in range(5):
+        #todo: think about how to deal with missing exposure
+        exposure = app.getChannelExposureTime('Channel', f'State{i}', 10) # sets exposure to 10 if not found
+        channel = channel_dict.copy()
+        channel['config'] = f'State{i}'
+        channel['exposure'] = exposure
+
+        if i == 4 and scheme == '4-State':
+            channel['useChannel'] = False
+
+        channels.append(channel)
+
+    print(channels)
+    # set other parameters
+    original_json['numFrames'] = 1
+    original_json['intervalMs'] = 0
+    original_json['relativeZSlice'] = True
+    original_json['slicesFirst'] = True
+    original_json['timeFirst'] = False
+    original_json['keepShutterOpenSlices'] = True
+    original_json['useAutofocus'] = False
+    original_json['save'] = True if save_dir else False
+    original_json['root'] = save_dir if save_dir else ''
+    original_json['prefix'] = prefix if prefix else 'Untitled'
+    original_json['channels'] = channels
+    original_json['zReference'] = 0.0
+    original_json['channelGroup'] = 'Channel'
+    original_json['usePositionList'] = False
+    original_json['shouldDisplayImages'] = True
+    original_json['useSlices'] = do_z
+    original_json['useFrames'] = False
+    original_json['useChannels'] = True
+    original_json['sliceZStepUm'] = zstep
+    original_json['sliceZBottomUm'] = zstart
+    original_json['sliceZTopUm'] = zend
+    original_json['acqOrderMode'] = 1
+
+    return original_json
+
+def acquire_from_settings(mm, settings):
+
+    am = mm.getAcquisitionManager()
+    ss = am.getAcquisitionSettings()
+
+    ss_new = ss.fromJSONStream(json.dumps(settings))
+    am.runAcquisitionWithSettings(ss_new, True)
 
 def acquire_2D(mm, mmc, scheme, snap_manager=None):
     """
