@@ -5,7 +5,8 @@ from recOrder.io.core_functions import set_lc_state, snap_and_get_image
 from waveorder.io.reader import WaveorderReader
 import glob
 
-def generate_acq_settings(mm, scheme, zstart=None, zend=None, zstep=None, save_dir = None, prefix = None):
+def generate_acq_settings(mm, channel_group, channels, zstart=None, zend=None, zstep=None,
+                          save_dir = None, prefix = None, keep_shutter_open = False):
     """
     This function generates a json file specific to the micromanager SequenceSettings.
     It has default parameters for a multi-channels z-stack acquisition but does not yet
@@ -44,7 +45,7 @@ def generate_acq_settings(mm, scheme, zstart=None, zend=None, zstep=None, save_d
         do_z = False
 
     # Structure of the channel properties
-    channel_dict = {'channelGroup': 'Channel',
+    channel_dict = {'channelGroup': channel_group,
                     'config': None,
                     'exposure': None,
                     'zOffset': 0,
@@ -54,18 +55,15 @@ def generate_acq_settings(mm, scheme, zstart=None, zend=None, zstep=None, save_d
                     'useChannel': True}
 
     # Append all the QLIPP channels with their current exposure settings
-    channels = []
-    for i in range(5):
+    channel_list = []
+    for chan in channels:
         #todo: think about how to deal with missing exposure
-        exposure = app.getChannelExposureTime('Channel', f'State{i}', 10) # sets exposure to 10 if not found
+        exposure = app.getChannelExposureTime(channel_group, chan, 10) # sets exposure to 10 if not found
         channel = channel_dict.copy()
-        channel['config'] = f'State{i}'
+        channel['config'] = chan
         channel['exposure'] = exposure
 
-        if i == 4 and scheme == '4-State':
-            channel['useChannel'] = False
-
-        channels.append(channel)
+        channel_list.append(channel)
 
     # set other parameters
     original_json['numFrames'] = 1
@@ -73,13 +71,13 @@ def generate_acq_settings(mm, scheme, zstart=None, zend=None, zstep=None, save_d
     original_json['relativeZSlice'] = True
     original_json['slicesFirst'] = True
     original_json['timeFirst'] = False
-    original_json['keepShutterOpenSlices'] = True
+    original_json['keepShutterOpenSlices'] = keep_shutter_open
     original_json['useAutofocus'] = False
     original_json['saveMode'] = 'MULTIPAGE_TIFF'
     original_json['save'] = True if save_dir else False
     original_json['root'] = save_dir if save_dir else ''
     original_json['prefix'] = prefix if prefix else 'Untitled'
-    original_json['channels'] = channels
+    original_json['channels'] = channel_list
     original_json['zReference'] = 0.0
     original_json['channelGroup'] = 'Channel'
     original_json['usePositionList'] = False
