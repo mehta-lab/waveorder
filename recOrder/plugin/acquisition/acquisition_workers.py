@@ -4,6 +4,7 @@ from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, reconstruct_qlipp_phase2D, reconstruct_qlipp_phase3D
 from recOrder.acq.acq_functions import generate_acq_settings, acquire_from_settings
 from recOrder.io.utils import load_bg
+import shutil
 import logging
 from waveorder.io.writer import WaveorderWriter
 import json
@@ -44,18 +45,26 @@ class AcquisitionWorker(QtCore.QObject):
         if not os.path.exists(save_dir):
             os.mkdir(save_dir)
 
+        channels = ['State0', 'State1', 'State2', 'State3']
+        if self.calib_window.calib_scheme == '5-State':
+            channels.append('State4')
+
         # Acquire 2D stack
         if self.dim == '2D':
             logging.debug('Acquiring 2D stack')
 
-            settings = generate_acq_settings(self.calib_window.mm, scheme=self.calib_window.calib_scheme,
+            settings = generate_acq_settings(self.calib_window.mm,
+                                             channel_group='Channel',
+                                             channels=channels,
                                              save_dir = save_dir)
             stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True) # (1, 4, 1, Y, X) array
 
         # Acquire 3D stack
         else:
             logging.debug('Acquiring 3D stack')
-            settings = generate_acq_settings(self.calib_window.mm, scheme=self.calib_window.calib_scheme,
+            settings = generate_acq_settings(self.calib_window.mm,
+                                             channel_group='Channel',
+                                             channels = channels,
                                              zstart = self.calib_window.z_start,
                                              zend=self.calib_window.z_end,
                                              z_step = self.calib_window.z_step,
@@ -79,6 +88,7 @@ class AcquisitionWorker(QtCore.QObject):
         self.bire_image_emitter.emit(birefringence)
         self.phase_image_emitter.emit(phase)
         self.finished.emit()
+        shutil.rmtree(save_dir)
 
     def _reconstruct(self, stack):
         """
