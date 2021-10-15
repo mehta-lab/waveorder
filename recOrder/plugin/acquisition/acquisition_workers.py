@@ -41,9 +41,7 @@ class AcquisitionWorker(QtCore.QObject):
     def run(self):
 
         logging.info('Running Acquisition...')
-        save_dir = os.path.join(os.path.expanduser('~'), 'recOrder_temp')
-        if not os.path.exists(save_dir):
-            os.mkdir(save_dir)
+        save_dir = self.calib_window.save_directory if self.calib_window.save_directory else self.calib_window.directory
 
         channels = ['State0', 'State1', 'State2', 'State3']
         if self.calib_window.calib_scheme == '5-State':
