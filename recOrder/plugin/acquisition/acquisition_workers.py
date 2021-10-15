@@ -2,7 +2,7 @@ from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, reconstruct_qlipp_phase2D, reconstruct_qlipp_phase3D
-from recOrder.acq.acq_single_stack import acquire_2D, acquire_3D
+from recOrder.acq.acq_functions import generate_acq_settings, acquire_from_settings
 from recOrder.io.utils import load_bg
 import logging
 from waveorder.io.writer import WaveorderWriter
@@ -40,25 +40,32 @@ class AcquisitionWorker(QtCore.QObject):
     def run(self):
 
         logging.info('Running Acquisition...')
+        save_dir = os.path.join(os.path.expanduser('~'), 'recOrder_temp')
+        if not os.path.exists(save_dir):
+            os.mkdir(save_dir)
 
         # Acquire 2D stack
         if self.dim == '2D':
             logging.debug('Acquiring 2D stack')
-            stack = acquire_2D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
-                               self.calib.snap_manager)
-            self.n_slices = 1
+
+            settings = generate_acq_settings(self.calib_window.mm, scheme=self.calib_window.calib_scheme,
+                                             save_dir = save_dir)
+            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True) # (1, 4, 1, Y, X) array
 
         # Acquire 3D stack
         else:
             logging.debug('Acquiring 3D stack')
-            stack = acquire_3D(self.calib_window.mm, self.calib_window.mmc, self.calib_window.calib_scheme,
-                               self.calib_window.z_start, self.calib_window.z_end, self.calib_window.z_step)
+            settings = generate_acq_settings(self.calib_window.mm, scheme=self.calib_window.calib_scheme,
+                                             zstart = self.calib_window.z_start,
+                                             zend=self.calib_window.z_end,
+                                             z_step = self.calib_window.z_step,
+                                             save_dir=save_dir)
 
-            self.n_slices = int(len(np.arange(self.calib_window.z_start, self.calib_window.z_end+self.calib_window.z_step,
-                                      self.calib_window.z_step)))
+            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)  # (1, 4, Z, Y, X) array
 
         # Reconstruct snapped images
-        birefringence, phase = self._reconstruct(stack)
+        self.n_slices = stack.shape[2]
+        birefringence, phase = self._reconstruct(stack[0])
 
         # Save images if specified
         if self.calib_window.save_imgs:
@@ -81,12 +88,15 @@ class AcquisitionWorker(QtCore.QObject):
 
         Parameters
         ----------
-        stack:          (nd-array) Dimensions are either (Z, C, Y, X) or (C, Y, X)
+        stack:          (nd-array) Dimensions are either (C, Z Y, X)
 
         Returns
         -------
 
         """
+
+        # get rid of z-dimension if 2D acquisition
+        stack = stack[:, 0] if self.n_slices == 1 else stack
 
         # Initialize the heavy reconstuctor
         if self.mode == 'phase' or self.mode == 'all':
@@ -271,9 +281,7 @@ class AcquisitionWorker(QtCore.QObject):
 
         """
 
-
         changed = None
-
 
         #TODO: phase_deconv not attr of reconstructor class, check if the 2D/3D has changes
 
