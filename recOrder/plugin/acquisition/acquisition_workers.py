@@ -86,7 +86,6 @@ class AcquisitionWorker(QtCore.QObject):
         self.bire_image_emitter.emit(birefringence)
         self.phase_image_emitter.emit(phase)
         self.finished.emit()
-        shutil.rmtree(save_dir)
 
     def _reconstruct(self, stack):
         """
