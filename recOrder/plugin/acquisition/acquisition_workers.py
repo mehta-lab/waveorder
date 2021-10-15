@@ -67,7 +67,7 @@ class AcquisitionWorker(QtCore.QObject):
                                              channels = channels,
                                              zstart = self.calib_window.z_start,
                                              zend=self.calib_window.z_end,
-                                             z_step = self.calib_window.z_step,
+                                             zstep = self.calib_window.z_step,
                                              save_dir=save_dir)
 
             stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)  # (1, 4, Z, Y, X) array
