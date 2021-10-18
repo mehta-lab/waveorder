@@ -67,7 +67,7 @@ Install the git version control system git : [link](https://git-scm.com/book/en/
 >    ```
 >    <br>
 
-*`recOrder` supports NVIDIA GPU computation through cupy package, please follow [here](https://github.com/cupy/cupy) for installation (check cupy is properly installed by ```import cupy```). To enable gpu processing, set ```use_gpu=True``` when initializing the simulator/reconstructor class.*
+*`recOrder` supports NVIDIA GPU computation through cupy package, please follow [here](https://github.com/cupy/cupy) for installation (check cupy is properly installed by ```import cupy```). To enable gpu processing, set ```use_gpu: True``` when writing the config file for reconstruction.*
 
 ## Usage and example
 
