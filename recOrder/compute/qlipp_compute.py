@@ -142,6 +142,10 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
     elif calibration_scheme == 'PhaseFromBF':
         inst_mat = None
         n_channel = 1
+    else:
+        inst_mat = None
+        n_channel = 1
+        swing = None
 
     print('Initializing Reconstructor...')
     start_time = time.time()
@@ -232,8 +236,8 @@ def reconstruct_qlipp_birefringence(stokes, recon):
     return np.transpose(birefringence, (0, 3, 1, 2)) if len(birefringence.shape) == 4 else birefringence
 
 
-def reconstruct_qlipp_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
-                              lambda_p=1e-4, itr=50):
+def reconstruct_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
+                        lambda_p=1e-4, itr=50):
     """
     Reconstruct 2D phase from a given S0 or BF stack.
 
@@ -258,8 +262,8 @@ def reconstruct_qlipp_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
     return phase2D
 
 
-def reconstruct_qlipp_phase3D(S0, recon, method='Tikhonov', reg_re=1e-4,
-                              rho=1e-3, lambda_re=1e-4, itr=50):
+def reconstruct_phase3D(S0, recon, method='Tikhonov', reg_re=1e-4,
+                        rho=1e-3, lambda_re=1e-4, itr=50):
     """
         Reconstruct 2D phase from a given S0 or BF stack.
 

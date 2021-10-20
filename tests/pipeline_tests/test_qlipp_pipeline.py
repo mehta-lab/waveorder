@@ -4,7 +4,7 @@ from recOrder.pipelines.pipeline_manager import PipelineManager
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from waveorder.io.writer import WaveorderWriter
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_stokes, reconstruct_qlipp_birefringence, \
-    reconstruct_qlipp_phase3D, reconstruct_qlipp_phase2D
+    reconstruct_phase3D, reconstruct_phase2D
 from os.path import dirname, abspath
 import numpy as np
 import os
@@ -106,8 +106,8 @@ def test_3D_reconstruction(setup_test_data_zarr, setup_data_save_folder):
 
     stokes = reconstruct_qlipp_stokes(data[t], recon, manager.pipeline.bg_stokes)
     birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-    phase3D = reconstruct_qlipp_phase3D(stokes[0], recon, method=config.phase_denoiser_3D, reg_re=config.Tik_reg_ph_3D,
-                                        rho=config.rho_3D, lambda_re=config.TV_reg_ph_3D, itr=config.itr_3D)
+    phase3D = reconstruct_phase3D(stokes[0], recon, method=config.phase_denoiser_3D, reg_re=config.Tik_reg_ph_3D,
+                                  rho=config.rho_3D, lambda_re=config.TV_reg_ph_3D, itr=config.itr_3D)
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'))
     array = store['Row_0']['Col_1']['Pos_001']['array']
 
@@ -147,8 +147,8 @@ def test_2D_reconstruction(setup_test_data_zarr, setup_data_save_folder):
 
     stokes = reconstruct_qlipp_stokes(data[t], recon, manager.pipeline.bg_stokes)
     birefringence = reconstruct_qlipp_birefringence(stokes[:, :, :, z], recon)
-    phase2D = reconstruct_qlipp_phase2D(stokes[0], recon, method=config.phase_denoiser_2D, reg_p=config.Tik_reg_ph_2D,
-                                        rho=config.rho_2D, lambda_p=config.TV_reg_ph_2D, itr=config.itr_2D)
+    phase2D = reconstruct_phase2D(stokes[0], recon, method=config.phase_denoiser_2D, reg_p=config.Tik_reg_ph_2D,
+                                  rho=config.rho_2D, lambda_p=config.TV_reg_ph_2D, itr=config.itr_2D)
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'))
     array = store['Row_0']['Col_1']['Pos_001']['array']
 

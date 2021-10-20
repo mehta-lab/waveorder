@@ -1,7 +1,7 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
-from recOrder.compute.qlipp_compute import reconstruct_qlipp_phase2D, reconstruct_qlipp_phase3D, initialize_reconstructor
+from recOrder.compute.qlipp_compute import reconstruct_phase2D, reconstruct_phase3D, initialize_reconstructor
 import numpy as np
 from recOrder.pipelines.pipeline_interface import PipelineInterface
 
@@ -126,14 +126,14 @@ class PhaseFromBF(PipelineInterface):
         phase3D = None
 
         if 'Phase3D' in self.output_channels:
-            phase3D = reconstruct_qlipp_phase3D(bf_data, self.reconstructor, method=self.config.phase_denoiser_3D,
-                                                reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
-                                                lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D)
+            phase3D = reconstruct_phase3D(bf_data, self.reconstructor, method=self.config.phase_denoiser_3D,
+                                          reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
+                                          lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D)
 
         if 'Phase2D' in self.output_channels:
-            phase2D = reconstruct_qlipp_phase2D(bf_data, self.reconstructor, method=self.config.phase_denoiser_2D,
-                                                reg_p=self.config.Tik_reg_ph_2D, rho=self.config.rho_2D,
-                                                lambda_p=self.config.TV_reg_ph_2D, itr=self.config.itr_2D)
+            phase2D = reconstruct_phase2D(bf_data, self.reconstructor, method=self.config.phase_denoiser_2D,
+                                          reg_p=self.config.Tik_reg_ph_2D, rho=self.config.rho_2D,
+                                          lambda_p=self.config.TV_reg_ph_2D, itr=self.config.itr_2D)
 
         return phase2D, phase3D
 
