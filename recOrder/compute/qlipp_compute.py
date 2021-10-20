@@ -134,14 +134,14 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
                               -np.cos(2 * np.pi * swing)]])
         n_channel = 4
 
-    if calibration_scheme == '5-State':
+    elif calibration_scheme == '5-State':
         swing = swing * 2 * np.pi
         inst_mat = None
         n_channel = 5
 
-    else:
+    elif calibration_scheme == 'PhaseFromBF':
         inst_mat = None
-        n_channel = 4
+        n_channel = 1
 
     print('Initializing Reconstructor...')
     start_time = time.time()
