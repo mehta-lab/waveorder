@@ -193,7 +193,6 @@ class QLIPP(PipelineInterface):
                                 stokes[:, :, :, slice(None) if self.slices != 1 else self.focus_slice],
                                 self.reconstructor)
 
-    # todo: think about better way to write fluor/registered data?
     def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
