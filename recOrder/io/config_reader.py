@@ -11,7 +11,7 @@ DATASET = {
     'mode': None,
     'data_dir': None,
     'save_dir': None,
-    'data_type': 'ometiff',
+    'data_type': 'zarr',
     'data_save_name': None,
     'positions': ['all'],
     'timepoints': ['all'],
@@ -78,6 +78,13 @@ class Object():
     pass
 
 class ConfigReader(object):
+    """
+    @DynamicAttrs # for pycharm
+
+    Config Reader handles all of the requirements necessary for running the pipeline.  Default values
+    are used for those that do not need to be specified.  CLI will always overried config
+
+    """
 
     def __init__(self, cfg_path=None, data_dir=None, save_dir=None, method=None, mode=None, name=None):
 
@@ -120,10 +127,6 @@ class ConfigReader(object):
             raise AttributeError("Attempting to change immutable object")
         else:
             super().__setattr__(name, value)
-
-    # Custom set attr function to initially set attributes before its overridden
-    # def __set_attr(self, object_, name, value):
-    #     object.__setattr__(object_, name, value)
 
     def _check_assertions(self, data_dir, save_dir, method, mode, name):
 
@@ -241,10 +244,16 @@ class ConfigReader(object):
         for key, value in self.config['dataset'].items():
             if key in DATASET.keys():
 
-                # if config has a data_save name, but a user specifies a different name in CLI,
-                # skip and use the user-specified name
+                # This section will prioritize the command line arguments over the
+                # config arguments (data_dir, save_dir, data_save_name)
                 if key == 'name' and self.data_save_name:
                     continue
+                elif key == 'data_dir' and self.data_dir:
+                    continue
+                elif key == 'save_dir' and self.save_dir:
+                    continue
+
+                # this section appends the rest of the dataset parameters specified
                 elif key == 'positions' or key == 'timepoints':
                     if isinstance(value, str):
                         if value == 'all':
