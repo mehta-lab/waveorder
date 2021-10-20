@@ -86,6 +86,8 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
             raise ValueError('Please specify NA_illu in function parameters')
         if not mag:
             raise ValueError('Please specify mag (magnification) in function parameters')
+        if not wavelength_nm:
+            raise ValueError('Please specify the wavelength for reconstruction')
         if not n_slices:
             raise ValueError('Please specify n_slices in function parameters')
         if not z_step_um:
@@ -100,8 +102,6 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
         if pipeline == 'QLIPP':
             if not calibration_scheme:
                 raise ValueError('Please specify qlipp_scheme (calibration scheme) for QLIPP reconstruction')
-            if not wavelength_nm:
-                raise ValueError('Please specify the wavelength for QLIPP reconstruction')
             if not swing:
                 raise ValueError('Please specify swing in function parameters')
 
@@ -142,10 +142,11 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
     elif calibration_scheme == 'PhaseFromBF':
         inst_mat = None
         n_channel = 1
+        swing = 0
     else:
         inst_mat = None
         n_channel = 1
-        swing = None
+        swing = 0
 
     print('Initializing Reconstructor...')
     start_time = time.time()
