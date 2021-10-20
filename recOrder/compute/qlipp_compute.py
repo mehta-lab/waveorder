@@ -126,22 +126,24 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
     cali = True
 
     if calibration_scheme == '4-State':
-        chi = swing
         inst_mat = np.array([[1, 0, 0, -1],
-                             [1, np.sin(2 * np.pi * chi), 0, -np.cos(2 * np.pi * chi)],
-                             [1, -0.5 * np.sin(2 * np.pi * chi), np.sqrt(3) * np.cos(np.pi * chi) * np.sin(np.pi * chi),
-                              -np.cos(2 * np.pi * chi)],
-                             [1, -0.5 * np.sin(2 * np.pi * chi), -np.sqrt(3) / 2 * np.sin(2 * np.pi * chi),
-                              -np.cos(2 * np.pi * chi)]])
+                             [1, np.sin(2 * np.pi * swing), 0, -np.cos(2 * np.pi * swing)],
+                             [1, -0.5 * np.sin(2 * np.pi * swing), np.sqrt(3) * np.cos(np.pi * swing) * np.sin(np.pi * swing),
+                              -np.cos(2 * np.pi * swing)],
+                             [1, -0.5 * np.sin(2 * np.pi * swing), -np.sqrt(3) / 2 * np.sin(2 * np.pi * swing),
+                              -np.cos(2 * np.pi * swing)]])
         n_channel = 4
 
-    else:
-        chi = swing * 2 * np.pi
+    if calibration_scheme == '5-State':
+        swing = swing * 2 * np.pi
         inst_mat = None
         n_channel = 5
 
-    print('Initializing Reconstructor...')
+    else:
+        inst_mat = None
+        n_channel = 4
 
+    print('Initializing Reconstructor...')
     start_time = time.time()
     recon = waveorder_microscopy(img_dim=image_dim,
                                  lambda_illu=lambda_illu,
@@ -149,7 +151,7 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
                                  NA_obj=NA_obj,
                                  NA_illu=NA_illu,
                                  z_defocus=z_defocus,
-                                 chi=chi,
+                                 chi=swing,
                                  n_media=n_obj_media,
                                  cali=cali,
                                  bg_option=bg_correction,
