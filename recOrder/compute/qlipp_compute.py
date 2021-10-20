@@ -174,7 +174,7 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
 
     return recon
 
-def reconstruct_qlipp_stokes(data, recon, bg_stokes):
+def reconstruct_qlipp_stokes(data, recon, bg_stokes=None):
     """
     From intensity data, use the waveorder.waveorder_microscopy (recon) to build a stokes array
         if recon background correction flag is selected, will also perform backgroudn correction
@@ -201,7 +201,7 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes):
     stokes_data = recon.Stokes_recon(np.copy(data))
     stokes_data = recon.Stokes_transform(stokes_data)
 
-    if recon.bg_option == 'None':
+    if recon.bg_option == 'None' or bg_stokes is None:
         return stokes_data
 
     else:
