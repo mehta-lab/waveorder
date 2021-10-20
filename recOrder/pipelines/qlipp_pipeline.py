@@ -67,15 +67,23 @@ class QLIPP(PipelineInterface):
         self.chunk_size = (1, 1, 1, self.data_shape[-2], self.data_shape[-1])
 
         # Initialize Reconstructor
-        self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
-                                                 self.calib_meta['Summary']['Swing (fraction)'],
-                                                 len(self.calib_meta['Summary']['ChNames']),
-                                                 self.config.qlipp_birefringence_only,
-                                                 self.config.NA_objective, self.config.NA_condenser,
-                                                 self.config.magnification, self.data.slices, self.data.z_step_size,
-                                                 self.config.pad_z, self.config.pixel_size,
-                                                 self.config.background_correction, self.config.n_objective_media,
-                                                 self.mode, self.config.use_gpu, self.config.gpu_id)
+        self.reconstructor = initialize_reconstructor(pipeline='QLIPP',
+                                                      image_dim=(self.img_dim[0], self.img_dim[1]),
+                                                      wavelength_nm=self.config.wavelength,
+                                                      swing=self.calib_meta['Summary']['Swing (fraction)'],
+                                                      calibration_scheme=self.calib_scheme,
+                                                      NA_obj=self.config.NA_objective,
+                                                      NA_illu=self.config.NA_condenser,
+                                                      n_obj_media=self.config.n_objective_media,
+                                                      mag=self.config.magnification,
+                                                      n_slices=self.data.slices,
+                                                      z_step_um=self.data.z_step_size,
+                                                      pad_z=self.config.pad_z,
+                                                      pixel_size_um=self.config.pixel_size,
+                                                      bg_correction=self.config.background_correction,
+                                                      mode=self.mode,
+                                                      use_gpu=self.config.use_gpu,
+                                                      gpu_id=self.config.gpu_id)
 
         # Compute BG stokes if necessary
         if self.config.background_correction != None:

@@ -40,12 +40,20 @@ class PhaseFromBF(PipelineInterface):
         self.chunk_size = (1, 1, 1, self.data_shape[-2], self.data_shape[-1])
 
         # Initialize Reconstructor
-        self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
-                                                      0, 1, False, self.config.NA_objective, self.config.NA_condenser,
-                                                      self.config.magnification, self.data.slices,
-                                                      self.data.z_step_size, self.config.pad_z, self.config.pixel_size,
-                                                      self.config.background_correction, self.config.n_objective_media,
-                                                      self.mode, self.config.use_gpu, self.config.gpu_id)
+        self.reconstructor = initialize_reconstructor(pipeline='PhaseFromBF',
+                                                      image_dim=(self.img_dim[0], self.img_dim[1]),
+                                                      wavelength_nm=self.config.wavelength,
+                                                      NA_obj=self.config.NA_objective,
+                                                      NA_illu=self.config.NA_condenser,
+                                                      n_obj_media=self.config.n_objective_media,
+                                                      mag=self.config.magnification,
+                                                      n_slices=self.data.slices,
+                                                      z_step_um=self.data.z_step_size,
+                                                      pad_z=self.config.pad_z,
+                                                      pixel_size_um=self.config.pixel_size,
+                                                      mode=self.mode,
+                                                      use_gpu=self.config.use_gpu,
+                                                      gpu_id=self.config.gpu_id)
 
 
     def _check_output_channels(self, output_channels):

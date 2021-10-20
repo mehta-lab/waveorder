@@ -5,7 +5,7 @@ import time
 
 def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing=None, calibration_scheme=None,
                              NA_obj=None, NA_illu=None, mag=None, n_slices=None, z_step_um=None,
-                             pad_z=None, pixel_size_um=None, bg_option='local_fit', n_obj_media=1.0, mode='3D',
+                             pad_z=None, pixel_size_um=None, bg_correction='local_fit', n_obj_media=1.0, mode='3D',
                              use_gpu=False, gpu_id=0):
     """
     Initialize the QLIPP reconstructor for downstream tasks. See tags next to parameters
@@ -50,7 +50,7 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
             pixel_size_um     : float
                                 pixel size of the camera in um
 
-            bg_option         : str
+            bg_correction      : str
                                 'local' for estimating background with scipy uniform filter
                                 'local_fit' for estimating background with polynomial fit
                                 'None' for no BG correction
@@ -152,7 +152,7 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
                                  chi=chi,
                                  n_media=n_obj_media,
                                  cali=cali,
-                                 bg_option=bg_option,
+                                 bg_option=bg_correction,
                                  A_matrix=inst_mat,
                                  QLIPP_birefringence_only=anisotropy_only,
                                  pad_z=pad_z,
