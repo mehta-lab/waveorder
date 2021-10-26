@@ -6,7 +6,7 @@ from recOrder.compute.qlipp_compute import reconstruct_qlipp_birefringence, reco
     reconstruct_phase2D, reconstruct_phase3D, initialize_reconstructor
 import json
 import numpy as np
-from recOrder.pipelines.pipeline_interface import PipelineInterface
+from recOrder.pipelines.base import PipelineInterface
 
 
 class QLIPP(PipelineInterface):
@@ -138,7 +138,7 @@ class QLIPP(PipelineInterface):
 
         return stokes
 
-    def reconstruct_phase_volume(self, stokes):
+    def deconvolve_volume(self, stokes):
         """
         This method reconstructs a phase volume or 2D phase image given stokes stack
 

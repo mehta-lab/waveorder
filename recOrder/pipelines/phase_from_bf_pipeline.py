@@ -3,7 +3,7 @@ from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
 from recOrder.compute.qlipp_compute import reconstruct_phase2D, reconstruct_phase3D, initialize_reconstructor
 import numpy as np
-from recOrder.pipelines.pipeline_interface import PipelineInterface
+from recOrder.pipelines.base import PipelineInterface
 
 class PhaseFromBF(PipelineInterface):
 
@@ -105,7 +105,7 @@ class PhaseFromBF(PipelineInterface):
 
         return data
 
-    def reconstruct_phase_volume(self, bf_data):
+    def deconvolve_volume(self, bf_data):
         """
         This method reconstructs a phase volume or 2D phase image given stokes stack
 

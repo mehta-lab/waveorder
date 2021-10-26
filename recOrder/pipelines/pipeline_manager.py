@@ -6,6 +6,7 @@ import os
 import shutil
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
+from recOrder.pipelines.fluor_deconv import FluorescenceDeconvolution
 from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_processing import *
 
@@ -58,7 +59,7 @@ class PipelineManager:
             self.pipeline = PhaseFromBF(self.config, self.data, self.writer, self.num_t)
 
         elif self.config.method == 'FluorDeconv':
-            self.pipeline = FluorescenceDeconvolution(self.config, self.data, self.writer, self.num_t)
+            self.pipeline = FluorescenceDeconvolution(self.config, self.data, self.writer, self.config.mode, self.num_t)
 
         elif self.config.method == 'UPTI':
             raise NotImplementedError
@@ -155,7 +156,7 @@ class PipelineManager:
         -------
         denoise_params:         (list) [[channel, threshold, levels]]
 
-        registration_params:    (list) [[channel index, shift]]
+        registration_params:    (list) [[channel, shift]]
 
         """
 
@@ -174,6 +175,10 @@ class PipelineManager:
 
         registration_params = []
         if self.config.postprocessing.registration_use:
+            for i in range(len(self.config.postprocess.registration_processed_channels)):
+                registration_params.append([self.config.postprocessing.registration_processed_chan[i],
+                                            self.config.postprocessing.registration_shift[i]])
+
             for i in range(len(self.config.postprocessing.registration_channel_idx)):
                 registration_params.append([self.config.postprocessing.registration_channel_idx[i],
                                             self.config.postprocessing.registration_shift[i]])
@@ -282,18 +287,24 @@ class PipelineManager:
 
             pt_data = self.data.get_zarr(pt[0])[pt[1]] # (C, Z, Y, X) virtual
 
+            # will return pt_data if the pipeline does not compute stokes
             stokes = self.pipeline.reconstruct_stokes_volume(pt_data)
 
             stokes = self.pre_processing(stokes)
 
+            # will return None if the pipeline doesn't support birefringence reconstruction
             birefringence = self.pipeline.reconstruct_birefringence_volume(stokes)
 
-            phase2D, phase3D = self.pipeline.reconstruct_phase_volume(stokes)
+            # will return either phase or fluorescent deconvolved volumes
+            deconvolve2D, deconvolve3D = self.pipeline.deconvolve_volume(stokes)
 
-            birefringence, phase2D, phase3D, registered_data = self.post_processing(pt_data, phase2D, phase3D, birefringence)
+            birefringence, deconvolve2D, deconvolve3D, registered_data = self.post_processing(pt_data,
+                                                                                              deconvolve2D,
+                                                                                              deconvolve3D,
+                                                                                              birefringence)
 
             self.pipeline.write_data(self.indices_map[pt[0]], pt[1], pt_data, stokes,
-                                     birefringence, phase2D, phase3D, registered_data)
+                                     birefringence, deconvolve2D, deconvolve3D, registered_data)
 
             end_time = time.time()
             print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f}) min')
@@ -308,12 +319,12 @@ class PipelineManager:
 
         return preproc_denoise(stokes, denoise_params) if denoise_params else stokes
 
-    def post_processing(self, pt_data, phase2D, phase3D, birefringence):
+    def post_processing(self, pt_data, deconvolve2D, deconvolve3D, birefringence):
 
         denoise_params, registration_params = self._get_postprocessing_params()
 
-        phase2D_denoise = np.copy(phase2D)
-        phase3D_denoise = np.copy(phase3D)
+        deconvolve2D_denoise = np.copy(deconvolve2D)
+        deconvolve3D_denoise = np.copy(deconvolve3D)
         birefringence_denoise = np.copy(birefringence)
         if denoise_params:
             for chan_param in denoise_params:
@@ -324,17 +335,39 @@ class PipelineManager:
                 elif 'Brightfield' in chan_param[0]:
                     birefringence_denoise[2] = post_proc_denoise(birefringence[2], chan_param)
                 elif 'Phase2D' in chan_param[0]:
-                    phase2D_denoise = post_proc_denoise(phase2D, chan_param)
+                    deconvolve2D_denoise = post_proc_denoise(deconvolve2D, chan_param)
                 elif 'Phase3D' in chan_param[0]:
-                    phase3D_denoise = post_proc_denoise(phase3D, chan_param)
+                    deconvolve3D_denoise = post_proc_denoise(deconvolve3D, chan_param)
                 else:
                     raise ValueError(f'Didnt understand post_proc denoise channel {chan_param[0]}')
 
         if registration_params:
             registered_stacks = []
-            for param in registration_params:
-                registered_stacks.append(translate_3D(pt_data[param[0]], param[1]))
+
+            if isinstance(self.pipeline, FluorescenceDeconvolution):
+
+                for param in registration_params:
+
+                    # NOTE: data can be registered/written in the wrong order if the user does not
+                    # specify the processed channel indexes first in the config file.  In other words,
+                    # registered_stacks doesn't keep track of which stacks sit where in the list, it is
+                    # dependent on the list of indices given in pre_processing config
+
+                    # need to account for the user wanting to register a deconvolved volume
+                    if param[0] in self.pipeline.map:
+                        loc = self.pipeline.map[param[0]]
+                        if self.pipeline.mode == '3D':
+                            registered_stacks.append(translate_3D(deconvolve3D[loc], param[1]))
+                        elif self.pipeline.mode == '2D':
+                            registered_stacks.append(translate_3D(deconvolve2D[loc], param[1]))
+                        else:
+                            raise ValueError('Failed to find deconvolved stack to register.')
+
+                    # this accounts for a user wanting to register a non-processed dataset
+                    else:
+                        registered_stacks.append(translate_3D(pt_data[param[0]], param[1]))
+
         else:
             registered_stacks = None
 
-        return birefringence_denoise, phase2D_denoise, phase3D_denoise, registered_stacks
+        return birefringence_denoise, deconvolve2D_denoise, deconvolve3D_denoise, registered_stacks

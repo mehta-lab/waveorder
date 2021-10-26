@@ -165,6 +165,6 @@ post_processing:
     level: [1, 1] # must match length of channels
   registration:
     use: False # set to true if you want to register a channel before writing
-    channel_idx: [3] # Index of desired channel to register.  Index corresponds to its position in raw data
-                     # if multiple channels, must match order of the fluorescence channels in output_channels
+    channel_idx: [3] # Index of desired raw data channel to register.  Index corresponds to its position in raw data
+                         # if multiple channels, must match order of the fluorescence channels in output_channels
     shift: [[0, 50, -50]] # up and to the right [0, +y, -x].  Must match length of channels
