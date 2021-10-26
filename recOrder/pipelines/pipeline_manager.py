@@ -175,10 +175,6 @@ class PipelineManager:
 
         registration_params = []
         if self.config.postprocessing.registration_use:
-            for i in range(len(self.config.postprocess.registration_processed_channels)):
-                registration_params.append([self.config.postprocessing.registration_processed_chan[i],
-                                            self.config.postprocessing.registration_shift[i]])
-
             for i in range(len(self.config.postprocessing.registration_channel_idx)):
                 registration_params.append([self.config.postprocessing.registration_channel_idx[i],
                                             self.config.postprocessing.registration_shift[i]])
