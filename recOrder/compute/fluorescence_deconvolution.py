@@ -6,7 +6,7 @@ import time
 def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um, z_step_um, NA_obj, mode,
                                           n_obj_media=1.0, pad_z=0, use_gpu=False, gpu_id=0):
 
-    if mode != '2D' or mode != '3D':
+    if mode != '2D' and mode != '3D':
         raise ValueError(f'mode {mode} not understood.  Please specify "2D" or "3D"')
 
     deconv_mode = '2D-WF' if mode == '2D' else '3D-WF'
