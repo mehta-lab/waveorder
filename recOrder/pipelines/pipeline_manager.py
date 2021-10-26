@@ -57,6 +57,9 @@ class PipelineManager:
         elif self.config.method == 'PhaseFromBF':
             self.pipeline = PhaseFromBF(self.config, self.data, self.writer, self.num_t)
 
+        elif self.config.method == 'FluorDeconv':
+            self.pipeline = FluorescenceDeconvolution(self.config, self.data, self.writer, self.num_t)
+
         elif self.config.method == 'UPTI':
             raise NotImplementedError
 
