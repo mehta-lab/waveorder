@@ -1,6 +1,7 @@
 from recOrder.pipelines.base import PipelineInterface
 from recOrder.compute.fluorescence_deconvolution import initialize_fluorescence_reconstructor, \
     deconvolve_fluorescence_2D, deconvolve_fluorescence_3D, calculate_background
+import numpy as np
 
 
 class FluorescenceDeconvolution(PipelineInterface):
@@ -28,25 +29,21 @@ class FluorescenceDeconvolution(PipelineInterface):
         self.output_channels = self.config.output_channels
         self._check_output_channels(self.output_channels)
 
-        # Metadata
-        self.chan_names = self.data.channel_names
+        # check to make sure parameters match data and each other
+        self._check_parameters()
 
-        if isinstance(self.config.fluor_channels, int):
-            self.fluor_idxs = [self.config.fluorescence_channel_indices]
-        else:
-            self.fluor_idxs = self.config.fluorescence_channel_indices
+        # Metadata
 
         self.chan_names = []
         for i in self.fluor_idxs:
             self.chan_names.append(self.data.channel_names[i])
 
-        # Writer Parameters
-        self.img_dim = (len(self.fluor_idxs), self.data.slices, self.data.height, self.data.width)
-        self.data_shape = (self.t, len(self.output_channels), self.data.slices, self.data.height, self.data.width)
-        self.chunk_size = (1, 1, 1, self.data.height, self.data.width)
 
-        # check to make sure parameters match data
-        self._check_parameters(self.fluor_idxs, self.config.wavelength)
+        # Writer Parameters
+        self.slices = 1 if self.mode == '2D' else self.data.slices
+        self.img_dim = (len(self.fluor_idxs), self.data.slices, self.data.height, self.data.width)
+        self.data_shape = (self.t, len(self.output_channels), self.slices, self.data.height, self.data.width)
+        self.chunk_size = (1, 1, 1, self.data.height, self.data.width)
 
         self.map = {self.fluor_idxs[i]: i for i in range(len(self.fluor_idxs))}
 
@@ -67,44 +64,88 @@ class FluorescenceDeconvolution(PipelineInterface):
         idx_set = set()
         for idx in self.config.fluorescence_channel_indices:
             idx_set.add(idx)
-        for idx in self.config.postprocessing.registration_channel_idx:
-            idx_set.add(idx)
+        if self.config.postprocessing.registration_use:
+            for idx in self.config.postprocessing.registration_channel_idx:
+                idx_set.add(idx)
 
         if len(idx_set) != len(output_channels):
             raise ValueError('length of output channels does not equal the number of unique deconvolutions+registrations')
 
-    def _check_parameters(self, fluor_idxs, wavelengths):
+    def _check_parameters(self):
 
-        if isinstance(fluor_idxs, list) and isinstance(wavelengths, list):
-            if len(fluor_idxs) != len(wavelengths):
-                raise ValueError('Config Error: number of fluorescent channels does not match number of wavelengths')
-        elif isinstance(fluor_idxs, int) and isinstance(wavelengths, int):
-            pass
-        elif isinstance(fluor_idxs, int) and isinstance(wavelengths, float):
-            pass
+        if self.mode == '2D':
+            if self.config.focus_zidx is None:
+                raise ValueError('Config Error: focus_zidx must be specified for 2D deconvolution')
+
+            #TODO: potential error here if the user is doing registration of raw data + deconvolution
+            #TODO: could cause length issues or mis-indexing
+            if isinstance(self.config.fluorescence_channel_indices, int):
+                self.focus_slice = [self.config.focus_zidx]*len(self.output_channels)
+            else:
+                if len(self.config.focus_zidx) != len(self.output_channels):
+                    raise ValueError('Config Error: focus_zidx list must match length of output channels')
+                else:
+                    self.focus_slice = self.config.focus_zidx
+
+        if isinstance(self.config.fluorescence_channel_indices, int):
+            self.fluor_idxs = [self.config.fluorescence_channel_indices]
         else:
-            raise ValueError('Config Error: number of fluorescent channels does not match number of wavelengths')
+            self.fluor_idxs = self.config.fluorescence_channel_indices
+
+        if isinstance(self.config.reg, int) or isinstance(self.config.reg, float):
+            self.reg = [self.config.reg]*len(self.fluor_idxs)
+        else:
+            if len(self.config.reg) != len(self.fluor_idxs):
+                raise ValueError('Config Error: reg must be a list the same length as fluor_channels')
+            else:
+                self.reg = self.config.reg
+
+        if isinstance(self.config.wavelength, int) or isinstance(self.config.wavelength, float):
+            if len(self.fluor_idxs) != 1:
+                raise ValueError('Config Error: Wavelengths must be a list if processing more than 1 fluor_channel')
+            else:
+                self.wavelength = [self.config.wavelength]
+        else:
+            if len(self.fluor_idxs) != len(self.config.wavelength):
+                raise ValueError('Config Error: Wavelengths must be a list the same length as fluor_channels')
+            else:
+                self.wavelength = self.config.wavelength
 
     def deconvolve_volume(self, data):
 
-        bg_levels = []
-        for volume in data:
-            bg_levels.append(calculate_background(volume))
+
+        deconvolved3D = None
+        deconvolved2D = None
+
+        bg_levels = calculate_background(data[:, self.data.slices // 2])
 
         if self.mode == '3D':
-            deconvolved_data = deconvolve_fluorescence_3D(data,
-                                                          self.reconstructor,
-                                                          bg_level=bg_levels,
-                                                          reg=self.config.reg)
+
+            deconvolved3D = deconvolve_fluorescence_3D(data,
+                                                       self.reconstructor,
+                                                       bg_level=bg_levels,
+                                                       reg=self.reg)
+
+            if deconvolved3D.ndim == 4:
+                deconvolved3D = np.transpose(deconvolved3D, (0, 3, 1, 2))
+
+            elif deconvolved3D.ndim == 3:
+                deconvolved3D = np.transpose(deconvolved3D, (2, 0, 1))
+
+            else:
+                raise ValueError('deconvolution returned incorrect dimensions')
+
         elif self.mode == '2D':
-            deconvolved_data = deconvolve_fluorescence_2D(data,
-                                                          self.reconstructor,
-                                                          bg_level=bg_levels,
-                                                          reg=self.config.reg)
+            deconvolved2D = deconvolve_fluorescence_2D(data,
+                                                       self.reconstructor,
+                                                       bg_level=bg_levels,
+                                                       reg=self.reg)
+
         else:
             raise ValueError('reconstruction mode not understood')
 
-        return deconvolved_data
+        return deconvolved2D, deconvolved3D
+
 
     def write_data(self, p, t, pt_data, stokes, birefringence, deconvolve2D, deconvolve3D, registered_stacks):
         """
@@ -130,9 +171,19 @@ class FluorescenceDeconvolution(PipelineInterface):
                 """
 
         z = 0 if self.mode == '2D' else None
+        deconvolve3D = deconvolve3D[np.newaxis, :, :, :] if deconvolve3D.ndim == 3 else deconvolve3D
+        deconvolve2D = deconvolve2D[np.newaxis, :, :] if deconvolve2D.ndim == 2 else deconvolve2D
 
-        if len(registered_stacks) > len(self.output_channels):
+        if registered_stacks is None:
+            for chan in range(len(self.output_channels)):
+                if self.mode == '2D':
+                    self.writer.write(deconvolve2D[chan], p=p, t=t, c=chan, z=z)
+                elif self.mode == '3D':
+                    self.writer.write(deconvolve3D[chan], p=p, t=t, c=chan, z=z)
+
+        elif len(registered_stacks) > len(self.output_channels):
             raise IndexError('Registered stacks exceeds length of output channels')
+
         elif len(registered_stacks) == len(self.output_channels):
             for chan in range(len(self.output_channels)):
                 self.writer.write(registered_stacks[chan], p=p, t=t, c=chan, z=z)
@@ -159,7 +210,15 @@ class FluorescenceDeconvolution(PipelineInterface):
                         raise ValueError('reconstruct mode during write not understood.')
 
     def reconstruct_stokes_volume(self, data):
-        return data
+        collected_data = []
+
+        for val, idx in enumerate(self.fluor_idxs):
+            if self.mode == '2D':
+                collected_data.append(data[val, self.focus_slice[idx]])
+            else:
+                collected_data.append(data[val])
+
+        return np.asarray(collected_data)
 
     def reconstruct_birefringence_volume(self, stokes):
         return None

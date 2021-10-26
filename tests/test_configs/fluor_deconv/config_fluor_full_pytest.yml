@@ -2,29 +2,20 @@ dataset:
   method: 'FluorDeconv'
   # Reconstruction Method 'QLIPP' only implemented for now.
 
-  mode: '2D'
+  mode: '3D'
   # Mode for reconstruction, '2D' or '3D'
 
-  data_dir: '/path/to/raw/data'
-  # (str) path to the raw data directory (folder which holds .tif files)
-
-  save_dir: '/path/to/save/directory'
-  # (str) path to the directory in which the data will be saved
-
-  data_type: 'ometiff'
+  data_type: 'zarr'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
 
-  data_save_name: 'Test_Data'
-  # (str) Name of the zarr dataset that will be written.
-
-  positions: [1]
+  positions: 'all'
   # (str or list) Positions within the dataset that are to be analyzed.
   ##   'all'
   ##   !!python/tuple [0, N] for pos 0 through N
   ##   [0, 1, 5] for pos 0, 1, and 5
   ##   [!!python/tuple [0, 15], [19, 25]] for pos 0 through 15, 19, and 25
 
-  timepoints: [0]
+  timepoints: 'all'
   # (str or list) timepoints within the dataset that are to be analyzed.
   ##   'all'
   ##   !!python/tuple [0, N] for pos 0 through N
@@ -39,16 +30,13 @@ pre_processing:
     level: [1, 1, 1, 1] # must match length of channels
 
 processing:
-  output_channels: ['GFP_deconvolved_registered', 'DAPI_registered']
+  output_channels: ['GFP_deconvolved', 'DAPI_deconvolved']
 
   # (list) names of the output channels.  Order matches postprocessing registration.  Length must match
   # unique deconvolutions + unique registrations
 
-  fluorescence_channel_indices: [0, 1, 2]
+  fluorescence_channel_indices: [0, 1]
   # (list) channel index of the fluorophore to deconvolve
-
-  focus_zidx: [20, 20, 20] # 2D ONLY
-  # (list) of focus-slices of the stack.  ONLY NEEDED FOR 2D
 
   use_gpu: False
   # (bool) Option to use GPU processing if True (require cupy to be installed)
@@ -60,21 +48,20 @@ processing:
   #    PHASE RECONSTRUCTION PARAMETERS   #
   ########################################
 
-  wavelength: 532
-  # (int or list) wavelength of the fluorescence emission in nm
+  wavelength: [532, 488]
+  # (int or list) wavelength of the fluorescent
 
   pixel_size: 6.5
   # (float) Camera pixel size in the unit of um
 
-  magnification: 20
+  magnification: 63
   # (float) Magnification of the objective
 
-  NA_objective: 0.55
+  NA_objective: 1.2
   # (float) Numerical aperture of the objective
 
-  n_objective_media: 1.0
+  n_objective_media: 0.4
   # (float) Refractive index of the objective immersion oil
-
 
   pad_z: 0
   # (int) Number of z slices padded above and below the dataset for 3D phase reconstruction to avoid boundary artifacts

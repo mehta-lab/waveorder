@@ -362,6 +362,10 @@ class PipelineManager:
                     # this accounts for a user wanting to register a non-processed dataset
                     else:
                         registered_stacks.append(translate_3D(pt_data[param[0]], param[1]))
+            else:
+                for param in registration_params:
+
+                    registered_stacks.append(translate_3D(pt_data[param[0]], param[1]))
 
         else:
             registered_stacks = None
