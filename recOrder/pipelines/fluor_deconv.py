@@ -1,4 +1,5 @@
 from recOrder.pipelines.pipeline_interface import PipelineInterface
+from recOrder.compute.fluorescence_deconvolution import initialize_fluorescence_reconstructor
 
 
 class FluorescenceDeconvolution(PipelineInterface):
@@ -28,24 +29,15 @@ class FluorescenceDeconvolution(PipelineInterface):
         if self.data.channels < 4:
             raise ValueError(f'Number of Channels is {data.channels}, cannot be less than 4')
 
-        self.slices = self.data.slices
-
-        self.img_dim = (self.data.height, self.data.width, self.data.slices)
-
         # Metadata
         self.chan_names = self.data.channel_names
 
-        # identify the image indicies corresponding to each polarization orientation
-        self.s0_idx, self.s1_idx, \
-        self.s2_idx, self.s3_idx, \
-        self.s4_idx, self.fluor_idxs = self.parse_channel_idx(self.data.channel_names)
-
         # Writer Parameters
-        self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
-        self.chunk_size = (1, 1, 1, self.data_shape[-2], self.data_shape[-1])
+        self.data_shape = (self.t, len(self.output_channels), self.data.slices, self.data.height, self.data.width)
+        self.chunk_size = (1, 1, 1, self.data.height, self.data.width)
 
         # Initialize Reconstructor
-        self.reconstructor = initialize_reconstructor(pipeline='QLIPP',
+        self.reconstructor = initialize_fluorescence_reconstructor(pipeline='QLIPP',
                                                       image_dim=(self.img_dim[0], self.img_dim[1]),
                                                       wavelength_nm=self.config.wavelength,
                                                       swing=self.calib_meta['Summary']['Swing (fraction)'],

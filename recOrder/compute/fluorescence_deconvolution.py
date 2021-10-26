@@ -2,8 +2,13 @@ from waveorder.waveorder_reconstructor import fluorescence_microscopy
 import time
 
 
-def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um, z_step_um, NA_obj, n_obj_media=1.0,
-                                          pad_z=0, use_gpu=False, gpu_id=0):
+def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um, z_step_um, NA_obj, mode,
+                                          n_obj_media=1.0, pad_z=0, use_gpu=False, gpu_id=0):
+
+    if mode != '2D' or mode != '3D':
+        raise ValueError(f'mode {mode} not understood.  Please specify "2D" or "3D"')
+
+    deconv_mode = '2D-WF' if mode == '2D' else '3D-WF'
 
     print('Initializing Reconstructor...')
     start_time = time.time()
@@ -14,7 +19,7 @@ def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um,
                                             psz=z_step_um,
                                             NA_obj=NA_obj,
                                             n_media=n_obj_media,
-                                            deconv_mode='3D-WF',
+                                            deconv_mode=deconv_mode,
                                             pad_z=pad_z,
                                             use_gpu=use_gpu,
                                             gpu_id=gpu_id)
