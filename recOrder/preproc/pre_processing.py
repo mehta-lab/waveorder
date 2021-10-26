@@ -42,8 +42,8 @@ def find_focus(stack):
         focus_score = brenner_gradient(img)
         focus_scores.append(focus_score)
 
-    focus_idx_min = np.where(focus_scores == np.min(focus_scores))[0][0]
-    focus_idx_max = np.where(focus_scores == np.max(focus_scores))[0][0]
+    focus_idx_min = np.argmin(focus_scores)
+    focus_idx_max = np.argmax(focus_scores)
 
     return focus_idx_max, focus_idx_min
 

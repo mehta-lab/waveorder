@@ -1,4 +1,5 @@
 from waveorder.waveorder_reconstructor import fluorescence_microscopy
+from recOrder.preproc.pre_processing import find_focus
 import time
 
 
@@ -31,6 +32,14 @@ def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um,
 
 #TODO: figure out robust background correction method
 def calculate_background(data):
+
+
+    background_values = []
+    for volume in range(data.shape[0]):
+        max, _ = find_focus(data[volume])
+
+
+
     pass
 
 def deconvolve_fluorescence_2D(data, reconstructor: fluorescence_microscopy, bg_level, reg=1e-4):
