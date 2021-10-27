@@ -42,14 +42,14 @@ class FluorescenceDeconvolution(PipelineInterface):
 
         # Writer Parameters
         self.slices = 1 if self.mode == '2D' else self.data.slices
-        self.img_dim = (len(self.fluor_idxs), self.data.slices, self.data.height, self.data.width)
+        self.img_dim = (self.data.height, self.data.width, self.data.slices)
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.data.height, self.data.width)
         self.chunk_size = (1, 1, 1, self.data.height, self.data.width)
 
         self.map = {self.fluor_idxs[i]: i for i in range(len(self.fluor_idxs))}
 
         # Initialize Reconstructor
-        self.reconstructor = initialize_fluorescence_reconstructor(img_dim=self.img_dim[1:],
+        self.reconstructor = initialize_fluorescence_reconstructor(img_dim=self.img_dim,
                                                                    wavelength_nm=self.config.wavelength,
                                                                    pixel_size_um=self.config.pixel_size,
                                                                    z_step_um=self.data.z_step_size,

@@ -69,6 +69,18 @@ POSTPROCESSING = {
         'level': None
     },
 
+    'deconvolution': {
+        'use': False,
+        'channels': None,
+        'wavelength_nm': None,
+        'pixel_size_um': None,
+        'NA_obj': None,
+        'n_objective_media': None,
+        'pad_z': None,
+        'use_gpu': False,
+        'gpu_id': 0
+    },
+
     'registration':{
         'use': False,
         'channel_idx': None,

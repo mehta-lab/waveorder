@@ -30,9 +30,6 @@ def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um,
 
     """
 
-    # transform into waveorder standards
-    img_dim = (img_dim[1], img_dim[2], img_dim[0])
-
     if mode != '2D' and mode != '3D':
         raise ValueError(f'mode {mode} not understood.  Please specify "2D" or "3D"')
 

@@ -7,6 +7,8 @@ import shutil
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
 from recOrder.pipelines.fluor_deconv import FluorescenceDeconvolution
+from recOrder.compute.fluorescence_deconvolution import initialize_fluorescence_reconstructor, \
+    deconvolve_fluorescence_3D, calculate_background
 from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_processing import *
 
@@ -29,6 +31,9 @@ class PipelineManager:
         self.use_hcs = True if self.config.data_type == 'zarr' else False
 
         self._gen_coord_set()
+
+        # PRE/POST-PROCESSING
+        self.deconv_reconstructor = None
 
         # This section creates the HCS metadata that exists from the raw data zarr store and updates
         # if it you are only doing a subset of positions.  Allows for consistent format between
@@ -66,6 +71,20 @@ class PipelineManager:
 
         elif self.config.method == 'IPS':
             raise NotImplementedError
+
+        if self.config.postprocessing.deconvolve_use:
+            _, params, _ = self._get_postprocessing_params()
+
+            self.deconv_reconstructor = initialize_fluorescence_reconstructor(img_dim=self.pipeline.img_dim,
+                                                                              wavelength_nm=params['wavelengths'],
+                                                                              pixel_size_um=params['pixel_size_um'],
+                                                                              z_step_um=self.data.z_step_size,
+                                                                              NA_obj=params['NA_obj'],
+                                                                              mode='3D',
+                                                                              n_obj_media=params['n_media'],
+                                                                              pad_z=params['pad_z'],
+                                                                              use_gpu=params['use_gpu'],
+                                                                              gpu_id=params['gpu_id'])
 
     def _update_hcs_meta_from_config(self, hcs_meta):
         """
@@ -156,6 +175,8 @@ class PipelineManager:
         -------
         denoise_params:         (list) [[channel, threshold, levels]]
 
+        deconvolution_params:   (dict) dictionary of channels, wavelengths, microscope properties, etc.
+
         registration_params:    (list) [[channel, shift]]
 
         """
@@ -173,6 +194,21 @@ class PipelineManager:
         else:
             denoise_params = None
 
+        if self.config.postprocessing.deconvolution_use:
+            deconvolution_params = dict()
+            deconvolution_params['channels'] = self.config.postprocessing.deconvolution_channel_idx
+            deconvolution_params['wavelengths'] = self.config.postprocessing.deconvolution_wavelength_nm
+            deconvolution_params['reg'] = self.config.postprocessing.deconvolution_regularization
+            deconvolution_params['pixel_size_um'] = self.config.postprocessing.deconvolution_pixel_size_um
+            deconvolution_params['NA_obj'] = self.config.postprocessing.deconvolution_NA_obj
+            deconvolution_params['n_media'] = self.config.postprocessing.deconvolution_n_objective_media
+            deconvolution_params['pad_z'] = self.config.postprocessing.deconvolution_pad_z
+            deconvolution_params['use_gpu'] = self.config.postprocessing.deconvolution_use_gpu
+            deconvolution_params['gpu_id'] = self.config.postprocessing.deconvolution_gpu_id
+
+        else:
+            deconvolution_params = None
+
         registration_params = []
         if self.config.postprocessing.registration_use:
             for i in range(len(self.config.postprocessing.registration_channel_idx)):
@@ -181,7 +217,7 @@ class PipelineManager:
         else:
             registration_params = None
 
-        return denoise_params, registration_params
+        return denoise_params, deconvolution_params, registration_params
 
     def _gen_coord_set(self):
         """
@@ -294,10 +330,10 @@ class PipelineManager:
             # will return either phase or fluorescent deconvolved volumes
             deconvolve2D, deconvolve3D = self.pipeline.deconvolve_volume(stokes)
 
-            birefringence, deconvolve2D, deconvolve3D, registered_data = self.post_processing(pt_data,
-                                                                                              deconvolve2D,
-                                                                                              deconvolve3D,
-                                                                                              birefringence)
+            pt_data, birefringence, deconvolve2D, deconvolve3D, registered_data = self.post_processing(pt_data,
+                                                                                                       deconvolve2D,
+                                                                                                       deconvolve3D,
+                                                                                                       birefringence)
 
             self.pipeline.write_data(self.indices_map[pt[0]], pt[1], pt_data, stokes,
                                      birefringence, deconvolve2D, deconvolve3D, registered_data)
@@ -317,11 +353,12 @@ class PipelineManager:
 
     def post_processing(self, pt_data, deconvolve2D, deconvolve3D, birefringence):
 
-        denoise_params, registration_params = self._get_postprocessing_params()
+        denoise_params, deconvolution_params, registration_params = self._get_postprocessing_params()
 
         deconvolve2D_denoise = np.copy(deconvolve2D)
         deconvolve3D_denoise = np.copy(deconvolve3D)
         birefringence_denoise = np.copy(birefringence)
+
         if denoise_params:
             for chan_param in denoise_params:
                 if 'Retardance' in chan_param[0]:
@@ -336,6 +373,24 @@ class PipelineManager:
                     deconvolve3D_denoise = post_proc_denoise(deconvolve3D, chan_param)
                 else:
                     raise ValueError(f'Didnt understand post_proc denoise channel {chan_param[0]}')
+
+        if deconvolution_params:
+
+            process_data = []
+            for channel_idx in deconvolution_params['channels']:
+                process_data.append(pt_data[channel_idx])
+
+            process_data = np.asarray(process_data)
+
+            bg_level = calculate_background(process_data[:, self.data.slices // 2])
+
+            deconvolved_volumes = deconvolve_fluorescence_3D(process_data,
+                                                             self.deconv_reconstructor,
+                                                             bg_level,
+                                                             deconvolution_params['reg'])
+
+            for idx, channel_idx in enumerate(deconvolution_params['channels']):
+                pt_data[channel_idx] = deconvolved_volumes[idx]
 
         if registration_params:
             registered_stacks = []
@@ -370,4 +425,4 @@ class PipelineManager:
         else:
             registered_stacks = None
 
-        return birefringence_denoise, deconvolve2D_denoise, deconvolve3D_denoise, registered_stacks
+        return pt_data, birefringence_denoise, deconvolve2D_denoise, deconvolve3D_denoise, registered_stacks
