@@ -196,9 +196,9 @@ class PipelineManager:
 
         if self.config.postprocessing.deconvolution_use:
             deconvolution_params = dict()
-            deconvolution_params['channels'] = self.config.postprocessing.deconvolution_channel_idx
+            deconvolution_params['channels'] = self.config.postprocessing.deconvolution_channels
             deconvolution_params['wavelengths'] = self.config.postprocessing.deconvolution_wavelength_nm
-            deconvolution_params['reg'] = self.config.postprocessing.deconvolution_regularization
+            deconvolution_params['reg'] = [float(i) for i in self.config.postprocessing.deconvolution_regularization]
             deconvolution_params['pixel_size_um'] = self.config.postprocessing.deconvolution_pixel_size_um
             deconvolution_params['NA_obj'] = self.config.postprocessing.deconvolution_NA_obj
             deconvolution_params['n_media'] = self.config.postprocessing.deconvolution_n_objective_media
@@ -389,11 +389,47 @@ class PipelineManager:
                                                              bg_level,
                                                              deconvolution_params['reg'])
 
+            if deconvolved_volumes.ndim == 4:
+                deconvolved_volumes = np.transpose(deconvolved_volumes, (0, 3, 1, 2))
+            elif deconvolved_volumes.ndim == 3:
+                deconvolved_volumes = np.transpose(deconvolved_volumes, (2, 0, 1))
+            else:
+                raise ValueError('deconvolution returned incorrect shape')
+
             for idx, channel_idx in enumerate(deconvolution_params['channels']):
-                pt_data[channel_idx] = deconvolved_volumes[idx]
+                pt_data[channel_idx] = deconvolved_volumes[idx] if deconvolved_volumes.ndim == 4 else deconvolved_volumes
 
         if registration_params:
             modified_fluor_volumes = []
+
+            if deconvolution_params:
+                full_set = set()
+                d_set = set()
+                r_set = set()
+
+                for chan in deconvolution_params['channels']:
+                    full_set.add(chan)
+                    d_set.add(chan)
+                for param in registration_params:
+                    full_set.add(param[0])
+                    r_set.add(param[0])
+
+                idx_list = list(full_set)
+                idx_list.sort()
+
+                #todo: channel-naming bug  or parameter mismatch when the user lists
+                # channels in non-numerical order in config
+                r_count = 0
+                d_count = 0
+                for chan_idx in idx_list:
+                    if chan_idx in d_set.intersection(r_set):
+                        param = registration_params[r_count]
+                        modified_fluor_volumes.append(translate_3D(pt_data[param[0]], param[1]))
+                        r_count += 1
+                        d_count += 1
+                    else:
+                        modified_fluor_volumes.append(deconvolved_volumes[d_count])
+                        d_count += 1
 
             if isinstance(self.pipeline, FluorescenceDeconvolution):
 
@@ -417,6 +453,7 @@ class PipelineManager:
                     # this accounts for a user wanting to register a non-processed dataset
                     else:
                         modified_fluor_volumes.append(translate_3D(pt_data[param[0]], param[1]))
+
             else:
                 for param in registration_params:
                     modified_fluor_volumes.append(translate_3D(pt_data[param[0]], param[1]))

@@ -95,7 +95,7 @@ def test_3D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     assert(array.shape == (1, len(config.output_channels), 81, 231, 498))
 
     # Check Phase
-    assert (np.sum(np.abs(phase3D[z] - array[0, 0, z]) ** 2) / np.sum(np.abs(phase3D[z])**2) < 0.1)
+    assert(np.sum(np.abs(phase3D[z] - array[0, 0, z]) ** 2) / np.sum(np.abs(phase3D[z])**2) < 0.1)
 
 def test_2D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     folder, data = setup_BF_test_data_zarr

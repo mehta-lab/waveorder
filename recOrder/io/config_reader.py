@@ -62,7 +62,7 @@ PROCESSING = {
 }
 
 POSTPROCESSING = {
-    'denoise':{
+    'denoise': {
         'use': False,
         'channels': None,
         'threshold': None,
@@ -73,6 +73,7 @@ POSTPROCESSING = {
         'use': False,
         'channels': None,
         'wavelength_nm': None,
+        'regularization': None,
         'pixel_size_um': None,
         'NA_obj': None,
         'n_objective_media': None,

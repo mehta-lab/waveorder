@@ -43,7 +43,7 @@ def test_fluor_decon_pipeline_initiate(setup_test_data_zarr, setup_data_save_fol
     assert(pipeline.t == manager.num_t)
     assert(pipeline.mode == '3D')
     assert(pipeline.slices == manager.data.slices)
-    assert(pipeline.img_dim == (2, manager.data.slices, manager.data.height, manager.data.width))
+    assert(pipeline.img_dim == (manager.data.height, manager.data.width, manager.data.slices))
     assert(pipeline.fluor_idxs == [0, 1])
     assert(pipeline.data_shape == (manager.data.frames, len(config.output_channels),
                                    manager.data.slices, manager.data.height, manager.data.width))

@@ -1,6 +1,7 @@
 from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_manager import PipelineManager
-from recOrder.postproc.post_processing import post_proc_denoise, translate_3D
+from recOrder.postproc.post_processing import post_proc_denoise
+from recOrder.compute.fluorescence_deconvolution import calculate_background, deconvolve_fluorescence_3D
 from recOrder.preproc.pre_processing import preproc_denoise
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_stokes, reconstruct_qlipp_birefringence
 from os.path import dirname, abspath
@@ -67,11 +68,18 @@ def test_post_processing(setup_test_data, setup_data_save_folder):
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'), 'r')
     array = store['Row_0']['Col_0']['Pos_001']['array']
 
+    data_decon = np.asarray([data[t, 1], data[t, 2]])
+    bg_level = calculate_background(data_decon[:, z])
+    fluor3D = deconvolve_fluorescence_3D(data_decon, manager.deconv_reconstructor, bg_level, reg=[1e-4, 1e-4])
+    fluor3D = np.transpose(fluor3D, (0, 3, 1, 2))
+
     # Check Birefringence
-    assert(np.sum(np.abs(ret_denoise[z] - array[0, 0, z]) ** 2)
-           / np.sum(np.abs(ret_denoise[z])) < 0.1)
+    assert(np.sum(np.abs(ret_denoise[z] - array[0, 0, z]) ** 2) / np.sum(np.abs(ret_denoise[z])) < 0.1)
+
+    # Check deconvolution
+    assert(np.sum(np.abs(array[0, 2, z] - fluor3D[1, z]) ** 2) / np.sum(np.abs(array[0, 2, z]) ** 2) < 0.1)
 
     # Check Registration
-    assert(np.sum(np.abs(array[0, 1, z, 100:, 100:] - data[t, 1, z, 0:-100, 0:-100])**2)
+    assert(np.sum(np.abs(array[0, 1, z, 100:, 100:] - fluor3D[0, z, 0:-100, 0:-100])**2)
            / np.sum(np.abs(array[0, 1, z, 100:, 100:])**2) < 0.1)
     assert(np.mean(array[0, 1, z, 0:100, 0:100]) == 0.0)

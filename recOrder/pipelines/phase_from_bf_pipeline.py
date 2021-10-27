@@ -171,7 +171,7 @@ class PhaseFromBF(PipelineInterface):
 
             # Assume any other output channel in config is fluorescence
             else:
-                if self.config.postprocessing.registration_use:
+                if self.config.postprocessing.registration_use or self.config.postprocessing.deconvolution_use:
                     self.writer.write(modified_fluor[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
                 else:
