@@ -4,6 +4,18 @@ import cv2
 import warnings
 
 def preproc_denoise(stokes, params):
+    """
+    denoise stokes (only option implemented for now)
+
+    Parameters
+    ----------
+    stokes:         (nd-array) stokes volume of size (5, Z, Y, X) or (5, Y, X)
+    params
+
+    Returns
+    -------
+
+    """
 
     stokes_denoised = np.copy(stokes)
     for chan in range(len(params)):
@@ -48,6 +60,19 @@ def find_focus(stack):
     return focus_idx_max, focus_idx_min
 
 def get_autocontrast_limits(img, clip = .01):
+    """
+    return autocontrast limits where you ignore a certain percentage of pixels on the high/low side (clip)
+
+    Parameters
+    ----------
+    img:            (nd-array) of dimensions (Y, X)
+    clip:           (float) fraction of pixels to clip on either end
+
+    Returns
+    -------
+    low, high:      (int) high / low values corresponding to the clipped intensity values
+
+    """
 
     #TODO: Figure out how to do this for float images (ret, phase, etc.)
     # current only works for uint8, uint16, etc.

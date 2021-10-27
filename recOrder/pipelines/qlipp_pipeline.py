@@ -110,7 +110,7 @@ class QLIPP(PipelineInterface):
 
         Returns
         -------
-        stokes:         (nd-array) stokes volume of dimensions (Z, 5, Y, X)
+        stokes:         (nd-array) stokes volume of dimensions (C, Z, Y, X) w/ C=5
                                     where C is the stokes channels (S0..S3 + DOP)
 
         """

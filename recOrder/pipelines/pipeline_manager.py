@@ -15,7 +15,9 @@ from recOrder.preproc.pre_processing import *
 
 class PipelineManager:
     """
-    This will pull the necessary pipeline based off the config default.
+    This will pull the necessary pipeline based off the config and run through the pipeline.
+    This also handles all pre/post processing.  Managed pipelines must conform to pipeline ABC.
+
     """
 
     def __init__(self, config: ConfigReader, overwrite: bool = False):
@@ -72,6 +74,7 @@ class PipelineManager:
         elif self.config.method == 'IPS':
             raise NotImplementedError
 
+        # instantiate fluor deconvolution reconstructor if deconvolution is specified in post-processing
         if self.config.postprocessing.deconvolution_use:
             _, params, _ = self._get_postprocessing_params()
 
@@ -346,19 +349,55 @@ class PipelineManager:
             self.writer.store.attrs.put(existing_meta)
 
     def pre_processing(self, stokes):
+        """
+        Will denoise stokes values if specified in config (only available preprocessing step at the moment)
+
+        Parameters
+        ----------
+        stokes:         (nd-array) of dimensions (C, Y, X, Z)
+
+        Returns
+        -------
+        stokes:         (nd-array) denoised or unchanged stokes of same input dimensions
+        """
 
         denoise_params = self._get_preprocessing_params()
 
         return preproc_denoise(stokes, denoise_params) if denoise_params else stokes
 
     def post_processing(self, pt_data, deconvolve2D, deconvolve3D, birefringence):
+        """
+        Perform postprocess denoising, deconvolution, and registration.
 
+        Parameters
+        ----------
+        pt_data:            (nd-array) raw data of dimensions (C, Z, Y, X)
+        deconvolve2D:       (nd-array or None) 2D deconvolved data of size (Y, X) or (C, Y, X)
+        deconvolve3D:       (nd-array or None) 3D deconvolved data of size (Z, Y, X) or (C, Z, Y, X)
+        birefringence:      (nd-array or None) birefringence data of size (Z, Y, X) or (C, Z, Y, X)
+
+        Returns
+        -------
+        birefringence_denoise:  (nd-array) denoised birefringence volume or unmodified data.
+                                            same dimensions as birefringence input
+        deconvolve2D_denoise:   (nd-array) denoised 2D deconvolved data or unmodified data.
+                                            same dimensions as deconvolve2D input
+        deconvolve3D_denoise:   (nd-array) denoised 3D deconvolved data or unmodified data.
+                                            same dimensions as deconvolved3D input.
+        modified_fluor_volumes: (nd-array or None) registered and/or deconvolved volumes.  Will be of size
+                                                    (N_fluor_channels_acted_on, Z, Y, X)
+
+        """
+
+        # get postprocessing parameters
         denoise_params, deconvolution_params, registration_params = self._get_postprocessing_params()
 
+        # copy data to later modify
         deconvolve2D_denoise = np.copy(deconvolve2D)
         deconvolve3D_denoise = np.copy(deconvolve3D)
         birefringence_denoise = np.copy(birefringence)
 
+        # denoise data based on denoise params
         if denoise_params:
             for chan_param in denoise_params:
                 if 'Retardance' in chan_param[0]:
@@ -374,21 +413,23 @@ class PipelineManager:
                 else:
                     raise ValueError(f'Didnt understand post_proc denoise channel {chan_param[0]}')
 
+        # deconvolve raw data channels based on deconvolution parameters
         if deconvolution_params:
 
+            # collect channels we wish to deconvolve
             process_data = []
             for channel_idx in deconvolution_params['channels']:
                 process_data.append(pt_data[channel_idx])
-
             process_data = np.asarray(process_data)
 
+            # deconvolve
             bg_level = calculate_background(process_data[:, self.data.slices // 2])
-
             deconvolved_volumes = deconvolve_fluorescence_3D(process_data,
                                                              self.deconv_reconstructor,
                                                              bg_level,
                                                              deconvolution_params['reg'])
 
+            # transpose arrays
             if deconvolved_volumes.ndim == 4:
                 deconvolved_volumes = np.transpose(deconvolved_volumes, (0, 3, 1, 2))
             elif deconvolved_volumes.ndim == 3:
@@ -396,12 +437,16 @@ class PipelineManager:
             else:
                 raise ValueError('deconvolution returned incorrect shape')
 
+            # overwrite raw data with deconvolved data in case it needs to also be registered in the next section
             for idx, channel_idx in enumerate(deconvolution_params['channels']):
                 pt_data[channel_idx] = deconvolved_volumes[idx] if deconvolved_volumes.ndim == 4 else deconvolved_volumes
 
+        # register the data from raw_data channels
         if registration_params:
             modified_fluor_volumes = []
 
+            # account for the case that we have some fluor channels wanting only registration, and some
+            # wanting both registration and deconvolution.
             if deconvolution_params:
                 full_set = set()
                 d_set = set()
@@ -422,6 +467,7 @@ class PipelineManager:
                 r_count = 0
                 d_count = 0
                 for chan_idx in idx_list:
+
                     if chan_idx in d_set.intersection(r_set):
                         param = registration_params[r_count]
                         modified_fluor_volumes.append(translate_3D(pt_data[param[0]], param[1]))
@@ -431,6 +477,8 @@ class PipelineManager:
                         modified_fluor_volumes.append(deconvolved_volumes[d_count])
                         d_count += 1
 
+            # if it is fluorescence deconvolution pipeline, register deconvolved data if desired, or
+            # register raw data if no deconvolution was performed on that channel
             if isinstance(self.pipeline, FluorescenceDeconvolution):
 
                 for param in registration_params:
@@ -458,6 +506,7 @@ class PipelineManager:
                 for param in registration_params:
                     modified_fluor_volumes.append(translate_3D(pt_data[param[0]], param[1]))
 
+        # if no registration, output deconvolved volumes or None
         else:
             if deconvolution_params:
                 modified_fluor_volumes = deconvolved_volumes
