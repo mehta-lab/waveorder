@@ -145,7 +145,8 @@ post_processing:
 
   deconvolution:
     use: False # set to true if you want to deconvolve raw fluorescence channels
-    channels: [1, 2] # specify the index of fluorescent channels you wish to deconvolve
+    channels: [1, 2] # MUST BE IN NUMERICAL ORDER
+                      # specify the index of fluorescent channels you wish to deconvolve in numerical order
     wavelength_nm: [488, 562] # specify the wavelengths of the fluorescence channel emissions (in same order as channels)
     regularization: [1e-4, 1e-4] # regularization parameters to use for each channel
     pixel_size_um: 6.5 # specify pixel size of the camera in um
@@ -157,6 +158,6 @@ post_processing:
 
   registration:
     use: False # set to true if you want to register a channel before writing
-    channel_idx: [3] # Index of desired channel to register.  Index corresponds to its position in raw data
-                     # if multiple channels, must match order of the fluorescence channels in output_channels
+    channel_idx: [3] # MUST BE IN NUMERICAL ORDER
+                     # specify the index of fluorescent channels you wish to deconvolve in numerical order
     shift: [[0, 50, -50]] # up and to the right [0, +y, -x].  Must match length of channels
