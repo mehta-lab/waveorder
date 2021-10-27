@@ -7,6 +7,29 @@ import numpy as np
 def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um, z_step_um, NA_obj, mode,
                                           n_obj_media=1.0, pad_z=0, use_gpu=False, gpu_id=0):
 
+    """
+    Initialize the fluorescence_deconvolution reconstructor for downstream tasks. See tags next to parameters
+    for which parameters are needed for each pipeline
+
+    Parameters
+    ----------
+    img_dim:            (tuple) image dimensions of (Y, X, Z)
+    wavelength_nm:      (list or int) wavelength of the fluorescence emission(s) in nanometer
+    pixel_size_um:      (float) pixel size of the camera in um
+    z_step_um:          (float) step size of the z-stack in um
+    NA_obj:             (float) Numerical Aperture of the objective
+    mode:               (str) '2D' or '3D' depending on what type of reconstruction you desire
+    n_obj_media:        (float) Refractive index of objective immersion media
+    pad_z:              (int) Z-Padding to account for edge artifacts
+    use_gpu:            (bool) True/False
+    gpu_id:             (int) GPU ID
+
+    Returns
+    -------
+    reconstructor:      (waveorder.fluorescence_microscopy) Reconstructor object
+
+    """
+
     # transform into waveorder standards
     img_dim = (img_dim[1], img_dim[2], img_dim[0])
 
@@ -47,6 +70,17 @@ def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um,
 
 #TODO: figure out robust background correction method
 def calculate_background(data):
+    """
+    Calculate the background by averaging bottom 1% of pixels
+
+    Parameters
+    ----------
+    data:           (nd-array) data array of size (N_fluor, Y, X)
+
+    Returns
+    -------
+    background_vals:    (list) list of average background values of size [N_fluor]
+    """
 
     if data.ndim == 3:
         fluors = data.shape[0]
@@ -65,6 +99,21 @@ def calculate_background(data):
 
 
 def deconvolve_fluorescence_2D(data, reconstructor: fluorescence_microscopy, bg_level, reg=1e-4):
+    """
+    Deconvolve 2D fluorescence image(s).  Will loop through multiple fluorescence channels
+
+    Parameters
+    ----------
+    data:               (nd-array) 2D data of size (N_fluor, Y, X) or (Y, X)
+    reconstructor:      (waveorder.fluorescence_microscopy) Initialized reconstructor object
+    bg_level:           (list or int) list/int of background levels of size [N_Fluor] or 1
+    reg:                (list or int) list/int of regularization parameters of size [N_Fluor] or 1
+
+    Returns
+    -------
+    deconvolved_data:   (nd-array) of size (N_fluor, Y, X) or (Y, X)
+
+    """
 
     if data.ndim > 3:
         raise ValueError('invalid input data dimensions.  Data must be (N_fluor, Z, Y, X) or (Z, Y, X)')
@@ -75,6 +124,20 @@ def deconvolve_fluorescence_2D(data, reconstructor: fluorescence_microscopy, bg_
 
 
 def deconvolve_fluorescence_3D(data, reconstructor: fluorescence_microscopy, bg_level, reg=1e-4):
+    """
+    Deconvolve 3D fluorescence volume(s).  Will loop through multiple fluorescence channels
+
+    Parameters
+    ----------
+    data:               (nd-array) 2D data of size (N_fluor, Z, Y, X) or (Z, Y, X)
+    reconstructor:      (waveorder.fluorescence_microscopy) Initialized reconstructor object
+    bg_level:           (list or int) list/int of background levels of size [N_Fluor] or 1
+    reg:                (list or int) list/int of regularization parameters of size [N_Fluor] or 1
+
+    Returns
+    -------
+    deconvolved_data:   (nd-array) of size (N_fluor, Y, X, Z) or (Y, X, Z)
+    """
 
     if data.ndim == 4:
         data_process = np.transpose(data, (0, 2, 3, 1))

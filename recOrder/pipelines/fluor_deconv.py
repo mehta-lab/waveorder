@@ -14,6 +14,7 @@ class FluorescenceDeconvolution(PipelineInterface):
         config:     (Object) initialized ConfigReader object
         data:       (Object) initialized WaveorderReader object (data should be extracted already)
         writer:     (Object) initialiazed WaveorderWriter object
+        mode:       (str) '2D' or '3D'
         num_t:      (int) number of timepoints being analyzed
 
         """
@@ -119,6 +120,7 @@ class FluorescenceDeconvolution(PipelineInterface):
 
         bg_levels = calculate_background(data[:, self.data.slices // 2])
 
+        #todo: move transposing to compute function
         if self.mode == '3D':
 
             deconvolved3D = deconvolve_fluorescence_3D(data,
