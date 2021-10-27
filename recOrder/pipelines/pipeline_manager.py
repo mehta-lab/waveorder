@@ -330,13 +330,13 @@ class PipelineManager:
             # will return either phase or fluorescent deconvolved volumes
             deconvolve2D, deconvolve3D = self.pipeline.deconvolve_volume(stokes)
 
-            pt_data, birefringence, deconvolve2D, deconvolve3D, registered_data = self.post_processing(pt_data,
-                                                                                                       deconvolve2D,
-                                                                                                       deconvolve3D,
-                                                                                                       birefringence)
+            birefringence, deconvolve2D, deconvolve3D, modified_fluor = self.post_processing(pt_data,
+                                                                                             deconvolve2D,
+                                                                                             deconvolve3D,
+                                                                                             birefringence)
 
             self.pipeline.write_data(self.indices_map[pt[0]], pt[1], pt_data, stokes,
-                                     birefringence, deconvolve2D, deconvolve3D, registered_data)
+                                     birefringence, deconvolve2D, deconvolve3D, modified_fluor)
 
             end_time = time.time()
             print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f}) min')
@@ -393,7 +393,7 @@ class PipelineManager:
                 pt_data[channel_idx] = deconvolved_volumes[idx]
 
         if registration_params:
-            registered_stacks = []
+            modified_fluor_volumes = []
 
             if isinstance(self.pipeline, FluorescenceDeconvolution):
 
@@ -401,28 +401,30 @@ class PipelineManager:
 
                     # NOTE: data can be registered/written in the wrong order if the user does not
                     # specify the processed channel indexes first in the config file.  In other words,
-                    # registered_stacks doesn't keep track of which stacks sit where in the list, it is
+                    # modified_fluor doesn't keep track of which stacks sit where in the list, it is
                     # dependent on the list of indices given in pre_processing config
 
                     # need to account for the user wanting to register a deconvolved volume
                     if param[0] in self.pipeline.map:
                         loc = self.pipeline.map[param[0]]
                         if self.pipeline.mode == '3D':
-                            registered_stacks.append(translate_3D(deconvolve3D[loc], param[1]))
+                            modified_fluor_volumes.append(translate_3D(deconvolve3D[loc], param[1]))
                         elif self.pipeline.mode == '2D':
-                            registered_stacks.append(translate_3D(deconvolve2D[loc], param[1]))
+                            modified_fluor_volumes.append(translate_3D(deconvolve2D[loc], param[1]))
                         else:
                             raise ValueError('Failed to find deconvolved stack to register.')
 
                     # this accounts for a user wanting to register a non-processed dataset
                     else:
-                        registered_stacks.append(translate_3D(pt_data[param[0]], param[1]))
+                        modified_fluor_volumes.append(translate_3D(pt_data[param[0]], param[1]))
             else:
                 for param in registration_params:
-
-                    registered_stacks.append(translate_3D(pt_data[param[0]], param[1]))
+                    modified_fluor_volumes.append(translate_3D(pt_data[param[0]], param[1]))
 
         else:
-            registered_stacks = None
+            if deconvolution_params:
+                modified_fluor_volumes = deconvolved_volumes
+            else:
+                modified_fluor_volumes = None
 
-        return pt_data, birefringence_denoise, deconvolve2D_denoise, deconvolve3D_denoise, registered_stacks
+        return birefringence_denoise, deconvolve2D_denoise, deconvolve3D_denoise, modified_fluor_volumes

@@ -149,7 +149,7 @@ class FluorescenceDeconvolution(PipelineInterface):
         return deconvolved2D, deconvolved3D
 
 
-    def write_data(self, p, t, pt_data, stokes, birefringence, deconvolve2D, deconvolve3D, registered_stacks):
+    def write_data(self, p, t, pt_data, stokes, birefringence, deconvolve2D, deconvolve3D, modified_fluor):
         """
                 This function will iteratively write the data into its proper position, time, channel, z index.
                 If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
@@ -164,7 +164,7 @@ class FluorescenceDeconvolution(PipelineInterface):
                 birefringence:      None
                 deconvolve2D:       (nd-array) None or nd-array w/ dimensions (N_wavelength, Y, X)
                 deconvolve3D:       (nd-array) None or nd-array w/ dimensions (N_wavelength, Z, Y, X)
-                registered_stacks:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
+                modified_fluor:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
 
                 Returns
                 -------
@@ -176,19 +176,19 @@ class FluorescenceDeconvolution(PipelineInterface):
         deconvolve3D = deconvolve3D[np.newaxis, :, :, :] if deconvolve3D.ndim == 3 else deconvolve3D
         deconvolve2D = deconvolve2D[np.newaxis, :, :] if deconvolve2D.ndim == 2 else deconvolve2D
 
-        if registered_stacks is None:
+        if modified_fluor is None:
             for chan in range(len(self.output_channels)):
                 if self.mode == '2D':
                     self.writer.write(deconvolve2D[chan], p=p, t=t, c=chan, z=z)
                 elif self.mode == '3D':
                     self.writer.write(deconvolve3D[chan], p=p, t=t, c=chan, z=z)
 
-        elif len(registered_stacks) > len(self.output_channels):
+        elif len(modified_fluor) > len(self.output_channels):
             raise IndexError('Registered stacks exceeds length of output channels')
 
-        elif len(registered_stacks) == len(self.output_channels):
+        elif len(modified_fluor) == len(self.output_channels):
             for chan in range(len(self.output_channels)):
-                self.writer.write(registered_stacks[chan], p=p, t=t, c=chan, z=z)
+                self.writer.write(modified_fluor[chan], p=p, t=t, c=chan, z=z)
 
         # handles the case where we want to register both processed data + raw_data.
         # must be provided in the exact order, with processed data first,
@@ -201,7 +201,7 @@ class FluorescenceDeconvolution(PipelineInterface):
                 # check to see if the processing channel_idx is also in the registration index, if so, use
                 # the registered stack (which should be the deconvolved + registered stack)
                 if mapping[chan] in self.config.postprocessing.registration_channel_idx:
-                    self.writer.write(registered_stacks[reg_count], p=p, t=t, c=chan, z=z)
+                    self.writer.write(modified_fluor[reg_count], p=p, t=t, c=chan, z=z)
                     reg_count += 1
                 else:
                     if self.mode == '3D':

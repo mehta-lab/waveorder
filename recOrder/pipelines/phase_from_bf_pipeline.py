@@ -137,7 +137,7 @@ class PhaseFromBF(PipelineInterface):
 
         return phase2D, phase3D
 
-    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
+    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, modified_fluor):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
         If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
@@ -152,7 +152,7 @@ class PhaseFromBF(PipelineInterface):
         birefringence:      (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
         phase2D:            (nd-array) None or nd-array w/ dimensions (Y, X)
         phase3D:            (nd-array) None or nd-array w/ dimensions (Z, Y, X)
-        registered_stacks:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
+        modified_fluor:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
 
         Returns
         -------
@@ -172,7 +172,7 @@ class PhaseFromBF(PipelineInterface):
             # Assume any other output channel in config is fluorescence
             else:
                 if self.config.postprocessing.registration_use:
-                    self.writer.write(registered_stacks[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
+                    self.writer.write(modified_fluor[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
                 else:
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
