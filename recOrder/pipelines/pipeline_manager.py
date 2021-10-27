@@ -462,7 +462,7 @@ class PipelineManager:
                 idx_list = list(full_set)
                 idx_list.sort()
 
-                if len(idx_list) > self.pipeline.output_channels:
+                if len(idx_list) > len(self.pipeline.output_channels):
                     raise ValueError('Number of registrations/deconvolutions exceeds number of output_channels')
 
                 #todo: channel-naming bug  or parameter mismatch when the user lists
