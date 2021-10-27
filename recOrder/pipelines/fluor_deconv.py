@@ -113,7 +113,18 @@ class FluorescenceDeconvolution(PipelineInterface):
                 self.wavelength = self.config.wavelength
 
     def deconvolve_volume(self, data):
+        """
+        takes an array of raw_data volumes and deconvolves them.
 
+        Parameters
+        ----------
+        data:           (nd-array) raw_data of dimensions (C, Z, Y, X) w/ C=N_fluor
+
+        Returns
+        -------
+        deconvolved2D/3D:   (nd-array) deconvolved data of dimensions (N_fluor, Z, Y, X) or (N_fluor, Y, X)
+                                        if N_fluor == 1 then returns either (Z, Y, X) or (Y, X)
+        """
 
         deconvolved3D = None
         deconvolved2D = None
@@ -151,26 +162,26 @@ class FluorescenceDeconvolution(PipelineInterface):
 
     def write_data(self, p, t, pt_data, stokes, birefringence, deconvolve2D, deconvolve3D, modified_fluor):
         """
-                This function will iteratively write the data into its proper position, time, channel, z index.
-                If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
-                in the data.  Dimensions differ between data type to make compute easier with waveOrder backend.
+        This function will iteratively write the data into its proper position, time, channel, z index.
+        If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
+        in the data.  Dimensions differ between data type to make compute easier with waveOrder backend.
 
-                Parameters
-                ----------
-                p:                  (int) Index of the p position to write
-                t:                  (int) Index of the t position to write
-                pt_data:            (nd-array) raw data nd-array at p,t index with dimensions (C, Z, Y, X)
-                stokes:             None
-                birefringence:      None
-                deconvolve2D:       (nd-array) None or nd-array w/ dimensions (N_wavelength, Y, X)
-                deconvolve3D:       (nd-array) None or nd-array w/ dimensions (N_wavelength, Z, Y, X)
-                modified_fluor:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
+        Parameters
+        ----------
+        p:                  (int) Index of the p position to write
+        t:                  (int) Index of the t position to write
+        pt_data:            (nd-array) raw data nd-array at p,t index with dimensions (C, Z, Y, X)
+        stokes:             None
+        birefringence:      None
+        deconvolve2D:       (nd-array) None or nd-array w/ dimensions (N_wavelength, Y, X)
+        deconvolve3D:       (nd-array) None or nd-array w/ dimensions (N_wavelength, Z, Y, X)
+        modified_fluor:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
 
-                Returns
-                -------
-                Writes a zarr array to to given save directory.
+        Returns
+        -------
+        Writes a zarr array to to given save directory.
 
-                """
+        """
 
         z = 0 if self.mode == '2D' else None
         deconvolve3D = deconvolve3D[np.newaxis, :, :, :] if deconvolve3D.ndim == 3 else deconvolve3D
@@ -190,9 +201,9 @@ class FluorescenceDeconvolution(PipelineInterface):
             for chan in range(len(self.output_channels)):
                 self.writer.write(modified_fluor[chan], p=p, t=t, c=chan, z=z)
 
-        # handles the case where we want to register both processed data + raw_data.
+        # handles the case where we have registered both processed data + raw_data.
         # must be provided in the exact order, with processed data first,
-        # in both pre_processing and processing output_channels
+        # in both post_processing and processing output_channels
         else:
             mapping = dict((v, k) for k, v in self.map.items())
             reg_count = 0
@@ -212,6 +223,18 @@ class FluorescenceDeconvolution(PipelineInterface):
                         raise ValueError('reconstruct mode during write not understood.')
 
     def reconstruct_stokes_volume(self, data):
+        """
+        gathers raw data channels that are going to be deconvolved.
+
+        Parameters
+        ----------
+        data:               (nd-array) raw data of dimensions (C, Z, Y, X)
+
+        Returns
+        -------
+        collected_data:     (nd-array) collected raw data of dimensions (C, Z, Y, X)
+        """
+
         collected_data = []
 
         for val, idx in enumerate(self.fluor_idxs):
