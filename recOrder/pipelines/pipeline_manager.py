@@ -72,7 +72,7 @@ class PipelineManager:
         elif self.config.method == 'IPS':
             raise NotImplementedError
 
-        if self.config.postprocessing.deconvolve_use:
+        if self.config.postprocessing.deconvolution_use:
             _, params, _ = self._get_postprocessing_params()
 
             self.deconv_reconstructor = initialize_fluorescence_reconstructor(img_dim=self.pipeline.img_dim,
