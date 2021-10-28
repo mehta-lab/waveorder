@@ -91,7 +91,7 @@ def test_3D_reconstruction(setup_test_data_zarr, setup_data_save_folder):
 
     print(f'BG LEVEL: {bg_level}')
     fluor3D = deconvolve_fluorescence_3D(data[t, 0], recon, bg_level, [config.reg])
-    fluor3D = np.transpose(fluor3D, (2, 0, 1))
+    fluor3D = np.transpose(fluor3D, (-1, -3, -2))
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'), 'r')
     array = store['Row_0']['Col_1']['Pos_001']['array']
@@ -150,7 +150,7 @@ def test_deconvolution_and_registration(setup_test_data_zarr, setup_data_save_fo
     data_decon = np.asarray([data[t, 0], data[t, 1]])
     bg_level = calculate_background(data_decon[:, z])
     fluor3D = deconvolve_fluorescence_3D(data_decon, recon, bg_level, reg=[config.reg]*2)
-    fluor3D = np.transpose(fluor3D, (0, 3, 1, 2))
+    fluor3D = np.transpose(fluor3D, (-4, -1, -3, -2))
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'), 'r')
     array = store['Row_0']['Col_1']['Pos_001']['array']

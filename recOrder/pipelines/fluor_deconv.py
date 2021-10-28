@@ -140,10 +140,10 @@ class FluorescenceDeconvolution(PipelineInterface):
                                                        reg=self.reg)
 
             if deconvolved3D.ndim == 4:
-                deconvolved3D = np.transpose(deconvolved3D, (0, 3, 1, 2))
+                deconvolved3D = np.transpose(deconvolved3D, (-4, -1, -3, -2))
 
             elif deconvolved3D.ndim == 3:
-                deconvolved3D = np.transpose(deconvolved3D, (2, 0, 1))
+                deconvolved3D = np.transpose(deconvolved3D, (-1, -3, -2))
 
             else:
                 raise ValueError('deconvolution returned incorrect dimensions')

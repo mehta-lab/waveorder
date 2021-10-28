@@ -71,7 +71,7 @@ def test_post_processing(setup_test_data, setup_data_save_folder):
     data_decon = np.asarray([data[t, 1], data[t, 2]])
     bg_level = calculate_background(data_decon[:, z])
     fluor3D = deconvolve_fluorescence_3D(data_decon, manager.deconv_reconstructor, bg_level, reg=[1e-4, 1e-4])
-    fluor3D = np.transpose(fluor3D, (0, 3, 1, 2))
+    fluor3D = np.transpose(fluor3D, (-4, -1, -3, -2))
 
     # Check Birefringence
     assert(np.sum(np.abs(ret_denoise[z] - array[0, 0, z]) ** 2) / np.sum(np.abs(ret_denoise[z])) < 0.1)

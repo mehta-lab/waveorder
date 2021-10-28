@@ -219,7 +219,7 @@ class QLIPP(PipelineInterface):
 
         z = 0 if self.mode == '2D' else None
         slice_ = self.focus_slice if self.mode == '2D' else slice(None)
-        stokes = np.transpose(stokes, (3, 0, 1, 2)) if len(stokes.shape) == 4 else stokes
+        stokes = np.transpose(stokes, (-1, -4, -3, -2)) if len(stokes.shape) == 4 else stokes
         fluor_idx = 0
 
         for chan in range(len(self.output_channels)):

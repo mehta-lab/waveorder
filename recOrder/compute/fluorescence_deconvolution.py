@@ -137,9 +137,9 @@ def deconvolve_fluorescence_3D(data, reconstructor: fluorescence_microscopy, bg_
     """
 
     if data.ndim == 4:
-        data_process = np.transpose(data, (0, 2, 3, 1))
+        data_process = np.transpose(data, (-4, -2, -1, -3))
     elif data.ndim == 3:
-        data_process = np.transpose(data, (1, 2, 0))
+        data_process = np.transpose(data, (-2, -1, -3))
     else:
         raise ValueError('invalid input data dimensions.  Data must be (N_fluor, Z, Y, X) or (Z, Y, X)')
 

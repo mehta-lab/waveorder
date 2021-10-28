@@ -431,9 +431,9 @@ class PipelineManager:
 
             # transpose arrays
             if deconvolved_volumes.ndim == 4:
-                deconvolved_volumes = np.transpose(deconvolved_volumes, (0, 3, 1, 2))
+                deconvolved_volumes = np.transpose(deconvolved_volumes, (-4, -1, -3, -2))
             elif deconvolved_volumes.ndim == 3:
-                deconvolved_volumes = np.transpose(deconvolved_volumes, (2, 0, 1))
+                deconvolved_volumes = np.transpose(deconvolved_volumes, (-1, -3, -2))
             else:
                 raise ValueError('deconvolution returned incorrect shape')
 
