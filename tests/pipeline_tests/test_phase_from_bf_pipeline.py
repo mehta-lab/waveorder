@@ -25,7 +25,7 @@ def test_pipeline_manager_initiate(setup_BF_test_data_zarr, setup_data_save_fold
     assert(manager.pipeline is not None)
     assert(isinstance(manager.pipeline, PhaseFromBF))
 
-def test_qlipp_pipeline_initiate(setup_BF_test_data_zarr, setup_data_save_folder):
+def test_bf_pipeline_initiate(setup_BF_test_data_zarr, setup_data_save_folder):
     folder, data = setup_BF_test_data_zarr
     save_folder = setup_data_save_folder
 
