@@ -2,7 +2,7 @@ from recOrder.io.zarr_converter import ZarrConverter
 import click
 
 @click.command()
-@click.option('--input', required=True, type=str, help='path to the raw data folder containing ome.tifs')
+@click.option('--input', required=True, type=click.Path(exists=True), help='path to the raw data folder containing ome.tifs')
 @click.option('--output', required=True, type=str, help='full path to save the zarr store (../../Experiment.zarr')
 @click.option('--data_type', required=True, type=str, help='Data type, "ometiff", "upti", "zarr"')
 @click.option('--replace_pos_name', required=False, type=bool, help='whether or not to append position name to data')
