@@ -3,6 +3,7 @@ import json
 import os
 from recOrder.io.core_functions import set_lc_state, snap_and_get_image
 from waveorder.io.reader import WaveorderReader
+import time
 import glob
 
 def generate_acq_settings(mm, channel_group, channels, zstart=None, zend=None, zstep=None,
@@ -114,6 +115,8 @@ def acquire_from_settings(mm, settings, grab_images = True):
 
     ss_new = ss.fromJSONStream(json.dumps(settings))
     am.runAcquisitionWithSettings(ss_new, True)
+
+    time.sleep(3)
 
     #TODO: speed improvements in reading the data
     if grab_images:

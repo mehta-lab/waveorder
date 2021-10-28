@@ -294,7 +294,6 @@ class AcquisitionWorker(QtCore.QObject):
 
         # Attributes that are directly equivalent to worker attributes
         attr_list = {'phase_dim': 'phase_deconv',
-                     'n_slices': 'N_defocus',
                      'mag': 'mag',
                      'pad_z': 'pad_z',
                      'n_media': 'n_media',
@@ -306,7 +305,8 @@ class AcquisitionWorker(QtCore.QObject):
         # attributes that are modified upon passing them to reconstructor
         attr_modified_list = {'obj_na': 'NA_obj',
                               'cond_na': 'NA_illu',
-                              'wavelength': 'lambda_illu'
+                              'wavelength': 'lambda_illu',
+                              'n_slices': 'N_defocus',
                               }
 
         # check if equivalent attributes have diverged
@@ -324,6 +324,12 @@ class AcquisitionWorker(QtCore.QObject):
                     changed = True
                 else:
                     changed = False
+            elif key == 'n_slices':
+                if getattr(self, key) != getattr(self.calib_window.phase_reconstructor, value):
+                    changed = True
+                else:
+                    changed = False
+
             elif getattr(self.calib_window, key)/self.calib_window.n_media != \
                     getattr(self.calib_window.phase_reconstructor, value):
                 changed = True
