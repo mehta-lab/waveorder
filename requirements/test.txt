@@ -1,2 +1,5 @@
 pytest>=5.0.0
 googledrivedownloader>=0.4
+waveorder @ git+https://github.com/mehta-lab/waveorder.git
+requests>=2.22.0
+tifffile

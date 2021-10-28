@@ -21,7 +21,7 @@ class PipelineInterface:
     def reconstruct_birefringence_volume(self, stokes):
         pass
 
-    def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
+    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
         pass
 
     def writer(self):

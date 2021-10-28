@@ -73,3 +73,83 @@ def setup_test_data():
         shutil.rmtree(temp_folder)
     except OSError as e:
         print(f"Error while deleting temp folder: {e.strerror}")
+
+@pytest.fixture(scope="session")
+def setup_test_data_zarr():
+    temp_folder = os.getcwd() + '/pytest_temp'
+    temp_pipeline = os.path.join(temp_folder, 'pipeline_test')
+    if not os.path.isdir(temp_folder):
+        os.mkdir(temp_folder)
+        print("\nsetting up temp folder")
+
+    # shared gdrive
+    # 'https://drive.google.com/file/d/1TXZoe0nPeI1Wk3oxtIOIgQh6PQrtvI3P/view?usp=sharing'
+
+    # DO NOT ADJUST THIS VALUE
+    recOrder_pytest = '1TXZoe0nPeI1Wk3oxtIOIgQh6PQrtvI3P'
+
+    # download files to temp folder
+    output = temp_pipeline + "/2021_06_11_recOrder_pytest_20x_04NA_zarr.zip"
+    gdd.download_file_from_google_drive(file_id=recOrder_pytest,
+                                        dest_path=output,
+                                        unzip=True,
+                                        showsize=True,
+                                        overwrite=True)
+
+    src = os.path.join(temp_pipeline, '2021_06_11_recOrder_pytest_20x_04NA_zarr')
+    data = os.path.join(src, '2T_3P_81Z_231Y_498X_Kazansky.zarr')
+
+    yield temp_pipeline, data
+
+    # breakdown files
+    try:
+        # remove zip file
+        os.remove(output)
+
+        # remove unzipped folder
+        shutil.rmtree(os.path.join(temp_pipeline, '2021_06_11_recOrder_pytest_20x_04NA_zarr'))
+
+        # remove temp folder
+        shutil.rmtree(temp_folder)
+    except OSError as e:
+        print(f"Error while deleting temp folder: {e.strerror}")
+
+@pytest.fixture(scope="session")
+def setup_BF_test_data_zarr():
+    temp_folder = os.getcwd() + '/pytest_temp'
+    temp_pipeline = os.path.join(temp_folder, 'pipeline_test')
+    if not os.path.isdir(temp_folder):
+        os.mkdir(temp_folder)
+        print("\nsetting up temp folder")
+
+    # shared gdrive
+    # 'https://drive.google.com/file/d/1BWENs5Q8XX6N4wSoaEQHpPWsMbl8hO7_/view?usp=sharing'
+
+    # DO NOT ADJUST THIS VALUE
+    recOrder_pytest = '1BWENs5Q8XX6N4wSoaEQHpPWsMbl8hO7_'
+
+    # download files to temp folder
+    output = temp_pipeline + "/2021_06_11_recOrder_pytest_20x_04NA_BF_zarr.zip"
+    gdd.download_file_from_google_drive(file_id=recOrder_pytest,
+                                        dest_path=output,
+                                        unzip=True,
+                                        showsize=True,
+                                        overwrite=True)
+
+    src = os.path.join(temp_pipeline, '2021_06_11_recOrder_pytest_20x_04NA_BF_zarr')
+    data = os.path.join(src, '2T_3P_81Z_231Y_498X_Kazansky.zarr')
+
+    yield temp_pipeline, data
+
+    # breakdown files
+    try:
+        # remove zip file
+        os.remove(output)
+
+        # remove unzipped folder
+        shutil.rmtree(os.path.join(temp_pipeline, '2021_06_11_recOrder_pytest_20x_04NA_BF_zarr'))
+
+        # remove temp folder
+        shutil.rmtree(temp_folder)
+    except OSError as e:
+        print(f"Error while deleting temp folder: {e.strerror}")
