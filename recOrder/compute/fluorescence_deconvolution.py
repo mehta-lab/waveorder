@@ -4,7 +4,7 @@ import time
 import numpy as np
 
 
-def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um, z_step_um, NA_obj, mode,
+def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um, z_step_um, NA_obj, magnification, mode,
                                           n_obj_media=1.0, pad_z=0, use_gpu=False, gpu_id=0):
 
     """
@@ -18,6 +18,7 @@ def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um,
     pixel_size_um:      (float) pixel size of the camera in um
     z_step_um:          (float) step size of the z-stack in um
     NA_obj:             (float) Numerical Aperture of the objective
+    magnification:      (float) Effective magnification
     mode:               (str) '2D' or '3D' depending on what type of reconstruction you desire
     n_obj_media:        (float) Refractive index of objective immersion media
     pad_z:              (int) Z-Padding to account for edge artifacts
@@ -50,7 +51,7 @@ def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um,
 
     reconstructor = fluorescence_microscopy(img_dim=img_dim,
                                             lambda_emiss=wavelength_nm/1000,
-                                            ps=pixel_size_um,
+                                            ps=pixel_size_um/magnification,
                                             psz=z_step_um,
                                             NA_obj=NA_obj,
                                             n_media=n_obj_media,

@@ -54,6 +54,7 @@ class FluorescenceDeconvolution(PipelineInterface):
                                                                    pixel_size_um=self.config.pixel_size,
                                                                    z_step_um=self.data.z_step_size,
                                                                    NA_obj=self.config.NA_objective,
+                                                                   magnification=self.config.magnification,
                                                                    mode=self.mode,
                                                                    n_obj_media=self.config.n_objective_media,
                                                                    pad_z=self.config.pad_z,

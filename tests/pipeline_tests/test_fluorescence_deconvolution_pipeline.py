@@ -89,7 +89,6 @@ def test_3D_reconstruction(setup_test_data_zarr, setup_data_save_folder):
     bg_level = calculate_background(data[t, 0, manager.data.slices // 2])
     recon = manager.pipeline.reconstructor
 
-    print(f'BG LEVEL: {bg_level}')
     fluor3D = deconvolve_fluorescence_3D(data[t, 0], recon, bg_level, [config.reg])
     fluor3D = np.transpose(fluor3D, (-1, -3, -2))
 

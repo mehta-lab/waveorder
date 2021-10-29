@@ -83,6 +83,7 @@ class PipelineManager:
                                                                               pixel_size_um=params['pixel_size_um'],
                                                                               z_step_um=self.data.z_step_size,
                                                                               NA_obj=params['NA_obj'],
+                                                                              magnification=params['magnification'],
                                                                               mode='3D',
                                                                               n_obj_media=params['n_media'],
                                                                               pad_z=params['pad_z'],
@@ -204,6 +205,7 @@ class PipelineManager:
             deconvolution_params['reg'] = [float(i) for i in self.config.postprocessing.deconvolution_regularization]
             deconvolution_params['pixel_size_um'] = self.config.postprocessing.deconvolution_pixel_size_um
             deconvolution_params['NA_obj'] = self.config.postprocessing.deconvolution_NA_obj
+            deconvolution_params['magnification'] = self.config.postprocessing.deconvolution_magnification
             deconvolution_params['n_media'] = self.config.postprocessing.deconvolution_n_objective_media
             deconvolution_params['pad_z'] = self.config.postprocessing.deconvolution_pad_z
             deconvolution_params['use_gpu'] = self.config.postprocessing.deconvolution_use_gpu

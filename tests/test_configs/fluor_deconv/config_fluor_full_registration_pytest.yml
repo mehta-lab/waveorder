@@ -60,7 +60,7 @@ processing:
   NA_objective: 1.2
   # (float) Numerical aperture of the objective
 
-  n_objective_media: 0.4
+  n_objective_media: 1.51
   # (float) Refractive index of the objective immersion oil
 
   pad_z: 0
