@@ -151,6 +151,7 @@ post_processing:
     regularization: [1e-4, 1e-4] # regularization parameters to use for each channel
     pixel_size_um: 6.5 # specify pixel size of the camera in um
     NA_obj: 0.4 # specify the numerical aperture of the objective
+    magnification: 20 # effective magnification
     n_objective_media: 1.0 # specify the refractive index of objective immersion media (1.0 for air)
     pad_z: 0 # specify padding to eliminate potential boundary artifacts
     use_gpu: False
