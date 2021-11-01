@@ -3,7 +3,7 @@ from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_manager import PipelineManager
 from recOrder.pipelines.fluor_deconv import FluorescenceDeconvolution
 from waveorder.io.writer import WaveorderWriter
-from recOrder.compute.fluorescence_deconvolution import calculate_background, deconvolve_fluorescence_3D, \
+from recOrder.compute.fluorescence_compute import calculate_background, deconvolve_fluorescence_3D, \
     deconvolve_fluorescence_2D
 
 from os.path import dirname, abspath

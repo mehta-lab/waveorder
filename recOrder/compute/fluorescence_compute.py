@@ -1,5 +1,5 @@
 from waveorder.waveorder_reconstructor import fluorescence_microscopy
-from recOrder.preproc.pre_processing import get_autocontrast_limits
+from recOrder.io.utils import get_unimodal_threshold
 import time
 import numpy as np
 
@@ -69,7 +69,7 @@ def initialize_fluorescence_reconstructor(img_dim, wavelength_nm, pixel_size_um,
 #TODO: figure out robust background correction method
 def calculate_background(data):
     """
-    Calculate the background by averaging bottom 1% of pixels
+    Calculate the background with uni-modal thresholding
 
     Parameters
     ----------
@@ -90,8 +90,7 @@ def calculate_background(data):
 
     background_vals = []
     for i in range(fluors):
-        min_, max_ = get_autocontrast_limits(data[i], clip=0.01)
-        background_vals.append(np.average(data[i], weights=(data[i] < min_)))
+        background_vals.append(get_unimodal_threshold(data[i]))
 
     return background_vals
 

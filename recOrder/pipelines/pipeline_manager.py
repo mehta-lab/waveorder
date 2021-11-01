@@ -7,7 +7,7 @@ import shutil
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
 from recOrder.pipelines.fluor_deconv import FluorescenceDeconvolution
-from recOrder.compute.fluorescence_deconvolution import initialize_fluorescence_reconstructor, \
+from recOrder.compute.fluorescence_compute import initialize_fluorescence_reconstructor, \
     deconvolve_fluorescence_3D, calculate_background
 from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_processing import *

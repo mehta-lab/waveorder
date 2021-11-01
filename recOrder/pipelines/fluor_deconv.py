@@ -1,5 +1,5 @@
 from recOrder.pipelines.base import PipelineInterface
-from recOrder.compute.fluorescence_deconvolution import initialize_fluorescence_reconstructor, \
+from recOrder.compute.fluorescence_compute import initialize_fluorescence_reconstructor, \
     deconvolve_fluorescence_2D, deconvolve_fluorescence_3D, calculate_background
 import numpy as np
 
