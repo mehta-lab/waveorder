@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>580</width>
-    <height>980</height>
+    <height>1015</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -36,7 +36,7 @@
       </property>
       <layout class="QGridLayout" name="gridLayout_12">
        <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox_4">
+        <widget class="QGroupBox" name="autoreg">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
            <horstretch>0</horstretch>
@@ -55,34 +55,34 @@
          </property>
          <layout class="QGridLayout" name="gridLayout_16">
           <item row="2" column="0">
-           <widget class="QLabel" name="label_37">
+           <widget class="QLabel" name="label_n_results">
             <property name="text">
              <string>Num. Results</string>
             </property>
            </widget>
           </item>
           <item row="0" column="0">
-           <widget class="QLabel" name="label_33">
+           <widget class="QLabel" name="label_position">
             <property name="text">
              <string>Position</string>
             </property>
            </widget>
           </item>
           <item row="0" column="4">
-           <widget class="QLabel" name="label_35">
+           <widget class="QLabel" name="label_channel">
             <property name="text">
              <string>Channel</string>
             </property>
            </widget>
           </item>
           <item row="0" column="5">
-           <widget class="QLineEdit" name="lineEdit_28"/>
+           <widget class="QLineEdit" name="le_channel"/>
           </item>
           <item row="0" column="3">
-           <widget class="QLineEdit" name="lineEdit_27"/>
+           <widget class="QLineEdit" name="le_timepoint"/>
           </item>
           <item row="2" column="1">
-           <widget class="QLineEdit" name="lineEdit_29">
+           <widget class="QLineEdit" name="le_n_results">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -96,24 +96,24 @@
            </widget>
           </item>
           <item row="0" column="2">
-           <widget class="QLabel" name="label_34">
+           <widget class="QLabel" name="label_timepoint">
             <property name="text">
              <string>Timepoint</string>
             </property>
            </widget>
           </item>
           <item row="6" column="0">
-           <widget class="QLabel" name="label_39">
+           <widget class="QLabel" name="label_best_result">
             <property name="text">
              <string>Best Result</string>
             </property>
            </widget>
           </item>
           <item row="6" column="1" colspan="2">
-           <widget class="QComboBox" name="comboBox_3"/>
+           <widget class="QComboBox" name="cb_best_result"/>
           </item>
           <item row="1" column="1" colspan="2">
-           <widget class="QComboBox" name="comboBox_2">
+           <widget class="QComboBox" name="cb_dtype">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -139,7 +139,7 @@
            </widget>
           </item>
           <item row="5" column="0" colspan="6">
-           <widget class="QPushButton" name="pushButton_4">
+           <widget class="QPushButton" name="qb_regularize">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -159,24 +159,24 @@
            </widget>
           </item>
           <item row="0" column="1">
-           <widget class="QLineEdit" name="lineEdit_26"/>
+           <widget class="QLineEdit" name="le_position"/>
           </item>
           <item row="1" column="0">
-           <widget class="QLabel" name="label_36">
+           <widget class="QLabel" name="label_dtype">
             <property name="text">
              <string>Data Type</string>
             </property>
            </widget>
           </item>
           <item row="3" column="0">
-           <widget class="QLabel" name="label_38">
+           <widget class="QLabel" name="label_step_size">
             <property name="text">
              <string>Step Size</string>
             </property>
            </widget>
           </item>
           <item row="3" column="1">
-           <widget class="QLineEdit" name="lineEdit_30">
+           <widget class="QLineEdit" name="le_step_size">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -190,7 +190,7 @@
            </widget>
           </item>
           <item row="6" column="3" colspan="3">
-           <widget class="QPushButton" name="pushButton_10">
+           <widget class="QPushButton" name="qb_add_to_config">
             <property name="text">
              <string>Add to Config</string>
             </property>
@@ -224,7 +224,7 @@
           <property name="verticalSpacing">
            <number>-1</number>
           </property>
-          <item row="0" column="0" colspan="2" alignment="Qt::AlignTop">
+          <item row="0" column="0" colspan="2">
            <widget class="QTabWidget" name="tabWidget_4">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -240,7 +240,7 @@
              </font>
             </property>
             <property name="currentIndex">
-             <number>2</number>
+             <number>4</number>
             </property>
             <property name="documentMode">
              <bool>false</bool>
@@ -253,371 +253,398 @@
               <property name="verticalSpacing">
                <number>-1</number>
               </property>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_bg_corr">
-                <property name="text">
-                 <string>Background Correction</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="le_positions">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
+              <item row="0" column="0" alignment="Qt::AlignTop">
+               <widget class="QGroupBox" name="groupBox_8">
+                <property name="title">
                  <string/>
                 </property>
-                <property name="placeholderText">
-                 <string>all or 1, 2, or [0, 10]</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLineEdit" name="le_timepoints">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="placeholderText">
-                 <string>all or 1, 2, or [0, 10]</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_timepoints">
-                <property name="text">
-                 <string>Timepoints</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_positions">
-                <property name="text">
-                 <string>Positions</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1">
-               <widget class="QComboBox" name="cb_bg_corr">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>None</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Global</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Local Fit</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item row="5" column="1">
-               <widget class="QLabel" name="label_chan_desc">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Retardance, Orientation, BF, Phase3D, Phase2D, Fluor1, Fluor2 (ex. DAPI, GFP), S0, S1, S2, S3</string>
-                </property>
-                <property name="wordWrap">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="1">
-               <widget class="QLineEdit" name="le_gpu_id">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="inputMask">
-                 <string/>
-                </property>
-                <property name="text">
-                 <string notr="true"/>
-                </property>
-                <property name="frame">
-                 <bool>true</bool>
-                </property>
-                <property name="echoMode">
-                 <enum>QLineEdit::Normal</enum>
-                </property>
-                <property name="cursorPosition">
-                 <number>0</number>
-                </property>
-                <property name="placeholderText">
-                 <string>GPU ID</string>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="0">
-               <widget class="QCheckBox" name="chb_use_gpu">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Use GPU</string>
-                </property>
-                <property name="tristate">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_output_channels">
-                <property name="text">
-                 <string>Output Channels</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="1">
-               <widget class="QLineEdit" name="le_output_channels">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="minimumSize">
-                 <size>
-                  <width>30</width>
-                  <height>0</height>
-                 </size>
-                </property>
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="placeholderText">
-                 <string>Retardance, Orientation, BF, Phase3D</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_pipeline">
-                <property name="text">
-                 <string>Pipeline</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QComboBox" name="cb_pipeline">
-                <item>
-                 <property name="text">
-                  <string>QLIPP</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>PhaseFromBF</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Fluorescence Deconvolution</string>
-                 </property>
-                </item>
+                <layout class="QGridLayout" name="gridLayout_7">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_pipeline">
+                   <property name="text">
+                    <string>Pipeline</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QComboBox" name="cb_pipeline">
+                   <item>
+                    <property name="text">
+                     <string>QLIPP</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>PhaseFromBF</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Fluorescence Deconvolution</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="label_positions">
+                   <property name="text">
+                    <string>Positions</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLineEdit" name="le_positions">
+                   <property name="font">
+                    <font>
+                     <weight>50</weight>
+                     <italic>false</italic>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="placeholderText">
+                    <string>all or 1, 2, or [0, 10]</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_timepoints">
+                   <property name="text">
+                    <string>Timepoints</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLineEdit" name="le_timepoints">
+                   <property name="font">
+                    <font>
+                     <weight>50</weight>
+                     <italic>false</italic>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="placeholderText">
+                    <string>all or 1, 2, or [0, 10]</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QLabel" name="label_bg_corr">
+                   <property name="text">
+                    <string>Background Correction</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="1">
+                  <widget class="QComboBox" name="cb_bg_corr">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <weight>50</weight>
+                     <italic>false</italic>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>None</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Global</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Local Fit</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item row="4" column="0">
+                  <widget class="QLabel" name="label_output_channels">
+                   <property name="text">
+                    <string>Output Channels</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="1">
+                  <widget class="QLineEdit" name="le_output_channels">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>30</width>
+                     <height>0</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <weight>50</weight>
+                     <italic>false</italic>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Retardance, Orientation, BF, Phase3D</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="1">
+                  <widget class="QLabel" name="label_chan_desc">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Retardance, Orientation, BF, Phase3D, Phase2D, Fluor1, Fluor2 (ex. DAPI, GFP), S0, S1, S2, S3</string>
+                   </property>
+                   <property name="wordWrap">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QCheckBox" name="chb_use_gpu">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="text">
+                    <string>Use GPU</string>
+                   </property>
+                   <property name="tristate">
+                    <bool>false</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="1">
+                  <widget class="QLineEdit" name="le_gpu_id">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <weight>50</weight>
+                     <italic>false</italic>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="inputMask">
+                    <string/>
+                   </property>
+                   <property name="text">
+                    <string notr="true"/>
+                   </property>
+                   <property name="frame">
+                    <bool>true</bool>
+                   </property>
+                   <property name="echoMode">
+                    <enum>QLineEdit::Normal</enum>
+                   </property>
+                   <property name="cursorPosition">
+                    <number>0</number>
+                   </property>
+                   <property name="placeholderText">
+                    <string>GPU ID</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
              </layout>
             </widget>
             <widget class="QWidget" name="Physical">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
              <attribute name="title">
               <string>Physical Parameters</string>
              </attribute>
-             <layout class="QGridLayout" name="gridLayout_2">
-              <item row="5" column="1" colspan="2">
-               <widget class="QLineEdit" name="le_n_media">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
+             <layout class="QGridLayout" name="gridLayout_2" columnstretch="0">
+              <property name="verticalSpacing">
+               <number>-1</number>
+              </property>
+              <item row="0" column="0" alignment="Qt::AlignTop">
+               <widget class="QGroupBox" name="groupBox_9">
+                <property name="title">
+                 <string/>
                 </property>
-                <property name="placeholderText">
-                 <string>Phase Only</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1" colspan="2">
-               <widget class="QLineEdit" name="le_mag">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="frame">
-                 <bool>true</bool>
-                </property>
-                <property name="placeholderText">
-                 <string>Phase Only</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_wavelength">
-                <property name="text">
-                 <string>Wavelength (nm)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1" colspan="2">
-               <widget class="QLineEdit" name="le_wavelength">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="placeholderText">
-                 <string>532</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_na_cond">
-                <property name="text">
-                 <string>NA Condenser</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_na_obj">
-                <property name="text">
-                 <string>NA Objective</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_mag">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="text">
-                 <string>Magnification</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="0">
-               <widget class="QLabel" name="label_n_media">
-                <property name="text">
-                 <string>RI of Objective Media</string>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="1" colspan="2">
-               <widget class="QLineEdit" name="le_z_index">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="placeholderText">
-                 <string>Optional</string>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="0">
-               <widget class="QLabel" name="label_z_index">
-                <property name="text">
-                 <string>Focused Z-index</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="1" colspan="2">
-               <widget class="QLineEdit" name="le_na_obj_2">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="placeholderText">
-                 <string>Phase Only</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="1" colspan="2">
-               <widget class="QLineEdit" name="le_na_obj">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="placeholderText">
-                 <string>Phase Only</string>
-                </property>
+                <layout class="QGridLayout" name="gridLayout_8">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_wavelength">
+                   <property name="text">
+                    <string>Wavelength (nm)</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QLineEdit" name="le_wavelength">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="placeholderText">
+                    <string>532</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="label_mag">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="text">
+                    <string>Magnification</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="1">
+                  <widget class="QLineEdit" name="le_mag">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="frame">
+                    <bool>true</bool>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Phase Only</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_na_obj">
+                   <property name="text">
+                    <string>NA Objective</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLineEdit" name="le_na_obj">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Phase Only</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QLabel" name="label_na_cond">
+                   <property name="text">
+                    <string>NA Condenser</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="1">
+                  <widget class="QLineEdit" name="le_na_obj_2">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Phase Only</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0">
+                  <widget class="QLabel" name="label_n_media">
+                   <property name="text">
+                    <string>RI of Objective Media</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="1">
+                  <widget class="QLineEdit" name="le_n_media">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Phase Only</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="0">
+                  <widget class="QLabel" name="label_z_index">
+                   <property name="text">
+                    <string>Focused Z-index</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="1">
+                  <widget class="QLineEdit" name="le_z_index">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <weight>50</weight>
+                     <italic>false</italic>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Optional</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
                </widget>
               </item>
              </layout>
@@ -632,87 +659,106 @@
              <attribute name="title">
               <string>Regularization</string>
              </attribute>
-             <layout class="QGridLayout" name="gridLayout_5">
+             <layout class="QFormLayout" name="formLayout">
               <property name="sizeConstraint">
                <enum>QLayout::SetDefaultConstraint</enum>
               </property>
-              <item row="0" column="0" colspan="2" alignment="Qt::AlignTop">
-               <widget class="QGroupBox" name="groupBox_2">
+              <item row="0" column="0" colspan="2">
+               <widget class="QGroupBox" name="phase">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="title">
                  <string>Phase</string>
                 </property>
-                <layout class="QGridLayout" name="gridLayout_7">
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="label_3">
-                   <property name="text">
-                    <string>Strength</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QComboBox" name="comboBox">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="0" alignment="Qt::AlignTop">
-                  <widget class="QLabel" name="label_2">
+                <layout class="QGridLayout" name="gridLayout_5">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_phase_regularizer">
                    <property name="text">
                     <string>Regularizer</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QLineEdit" name="lineEdit_2"/>
+                  <widget class="QLineEdit" name="le_phase_strength"/>
+                 </item>
+                 <item row="0" column="1">
+                  <widget class="QComboBox" name="cb_regularizer">
+                   <item>
+                    <property name="text">
+                     <string>Tikhonov</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>TV</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item row="3" column="1">
+                  <widget class="QLineEdit" name="le_phase_itr">
+                   <property name="placeholderText">
+                    <string>TV Only</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_phase_rho">
+                   <property name="text">
+                    <string>Rho</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="label_phase_strength">
+                   <property name="text">
+                    <string>Strength</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QLabel" name="label_phase_itr">
+                   <property name="text">
+                    <string>Iterations</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="1">
+                  <widget class="QLineEdit" name="le_phase_rho">
+                   <property name="placeholderText">
+                    <string>TV Only</string>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </widget>
               </item>
-              <item row="1" column="0" colspan="2" alignment="Qt::AlignTop">
-               <widget class="QGroupBox" name="groupBox_3">
+              <item row="1" column="0" colspan="2">
+               <widget class="QGroupBox" name="fluorescence">
                 <property name="title">
                  <string>Fluorescence</string>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_6">
                  <item row="0" column="0">
-                  <widget class="QLabel" name="label">
+                  <widget class="QLabel" name="label_fluor_strength">
                    <property name="text">
-                    <string>Fluorescence</string>
+                    <string>Strength</string>
                    </property>
                   </widget>
                  </item>
                  <item row="0" column="1">
-                  <widget class="QLineEdit" name="lineEdit">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="focusPolicy">
-                    <enum>Qt::TabFocus</enum>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                   </property>
-                   <property name="dragEnabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="clearButtonEnabled">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
+                  <widget class="QLineEdit" name="le_fluor_strength"/>
                  </item>
                 </layout>
                </widget>
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_4">
+            <widget class="QWidget" name="preprocessing">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
                <horstretch>0</horstretch>
@@ -727,7 +773,7 @@
                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
               </property>
               <item row="0" column="0" colspan="2">
-               <widget class="QGroupBox" name="groupBox_5">
+               <widget class="QGroupBox" name="denoising">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -739,21 +785,21 @@
                 </property>
                 <layout class="QGridLayout" name="gridLayout_20">
                  <item row="0" column="0">
-                  <widget class="QCheckBox" name="checkBox_2">
+                  <widget class="QCheckBox" name="chb_preproc_denoise_use">
                    <property name="text">
                     <string>Denoise?</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="0">
-                  <widget class="QLabel" name="label_20">
+                  <widget class="QLabel" name="label_preproc_denoise_channels">
                    <property name="text">
                     <string>Channels</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QLineEdit" name="lineEdit_17">
+                  <widget class="QLineEdit" name="le_preproc_denoise_channels">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
@@ -763,14 +809,14 @@
                   </widget>
                  </item>
                  <item row="2" column="0">
-                  <widget class="QLabel" name="label_21">
+                  <widget class="QLabel" name="label_preproc_denoise_threshold">
                    <property name="text">
                     <string>Threshold</string>
                    </property>
                   </widget>
                  </item>
                  <item row="2" column="1">
-                  <widget class="QLineEdit" name="lineEdit_18">
+                  <widget class="QLineEdit" name="le_preproc_denoise_threshold">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
@@ -783,14 +829,14 @@
                   </widget>
                  </item>
                  <item row="3" column="0">
-                  <widget class="QLabel" name="label_22">
+                  <widget class="QLabel" name="label_preproc_denoise_level">
                    <property name="text">
                     <string>Level</string>
                    </property>
                   </widget>
                  </item>
                  <item row="3" column="1">
-                  <widget class="QLineEdit" name="lineEdit_19">
+                  <widget class="QLineEdit" name="le_preproc_denoise_level">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
@@ -804,13 +850,13 @@
               </item>
              </layout>
             </widget>
-            <widget class="QWidget" name="tab_3">
+            <widget class="QWidget" name="postprocessing">
              <attribute name="title">
               <string>Post Processing</string>
              </attribute>
              <layout class="QGridLayout" name="gridLayout_22">
               <item row="2" column="0">
-               <widget class="QGroupBox" name="groupBox_6">
+               <widget class="QGroupBox" name="denoising_2">
                 <property name="focusPolicy">
                  <enum>Qt::TabFocus</enum>
                 </property>
@@ -819,14 +865,14 @@
                 </property>
                 <layout class="QGridLayout" name="gridLayout_21">
                  <item row="2" column="0">
-                  <widget class="QLabel" name="label_24">
+                  <widget class="QLabel" name="label_postproc_denoise_threshold">
                    <property name="text">
                     <string>Threshold</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QLineEdit" name="lineEdit_20">
+                  <widget class="QLineEdit" name="le_postproc_denoise_channels">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
@@ -836,21 +882,21 @@
                   </widget>
                  </item>
                  <item row="1" column="0">
-                  <widget class="QLabel" name="label_23">
+                  <widget class="QLabel" name="labelpostproc_denoise_channels">
                    <property name="text">
                     <string>Channels</string>
                    </property>
                   </widget>
                  </item>
                  <item row="0" column="0">
-                  <widget class="QCheckBox" name="checkBox_3">
+                  <widget class="QCheckBox" name="cb_postproc_denoise_use">
                    <property name="text">
                     <string>Denoise?</string>
                    </property>
                   </widget>
                  </item>
                  <item row="2" column="1">
-                  <widget class="QLineEdit" name="lineEdit_21">
+                  <widget class="QLineEdit" name="le_postproc_denoise_threshold">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
@@ -863,7 +909,7 @@
                   </widget>
                  </item>
                  <item row="3" column="1">
-                  <widget class="QLineEdit" name="lineEdit_22">
+                  <widget class="QLineEdit" name="le_postproc_denoise_level">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
@@ -873,7 +919,7 @@
                   </widget>
                  </item>
                  <item row="3" column="0">
-                  <widget class="QLabel" name="label_25">
+                  <widget class="QLabel" name="label_postproc_denoise_level">
                    <property name="text">
                     <string>Level</string>
                    </property>
@@ -883,7 +929,7 @@
                </widget>
               </item>
               <item row="1" column="0">
-               <widget class="QGroupBox" name="groupBox_7">
+               <widget class="QGroupBox" name="registration">
                 <property name="focusPolicy">
                  <enum>Qt::TabFocus</enum>
                 </property>
@@ -892,28 +938,28 @@
                 </property>
                 <layout class="QGridLayout" name="gridLayout_23">
                  <item row="2" column="0">
-                  <widget class="QLabel" name="label_19">
+                  <widget class="QLabel" name="label_postproc_reg_channels">
                    <property name="text">
                     <string>Channel Index</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="2">
-                  <widget class="QLabel" name="label_27">
+                  <widget class="QLabel" name="label_postproc_reg_shift_y">
                    <property name="text">
                     <string>Shift Y (px)</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="0">
-                  <widget class="QLabel" name="label_26">
+                  <widget class="QLabel" name="label_postproc_reg_shift_x">
                    <property name="text">
                     <string>Shift X (px)</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QLineEdit" name="lineEdit_24">
+                  <widget class="QLineEdit" name="le_postproc_reg_shift_x">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
@@ -926,14 +972,14 @@
                   </widget>
                  </item>
                  <item row="0" column="0">
-                  <widget class="QCheckBox" name="checkBox_4">
+                  <widget class="QCheckBox" name="chb_postproc_reg_use">
                    <property name="text">
                     <string>Register?</string>
                    </property>
                   </widget>
                  </item>
                  <item row="1" column="3">
-                  <widget class="QLineEdit" name="lineEdit_25">
+                  <widget class="QLineEdit" name="_postproc_reg_shift_y">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
@@ -943,7 +989,7 @@
                   </widget>
                  </item>
                  <item row="2" column="1" colspan="3">
-                  <widget class="QLineEdit" name="lineEdit_23">
+                  <widget class="QLineEdit" name="le_postproc_reg_channels">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
@@ -956,40 +1002,40 @@
                </widget>
               </item>
               <item row="0" column="0">
-               <widget class="QGroupBox" name="groupBox">
+               <widget class="QGroupBox" name="fluor">
                 <property name="title">
                  <string>Fluorescence Deconvolution</string>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_4">
                  <item row="1" column="0">
-                  <widget class="QLabel" name="label_29">
+                  <widget class="QLabel" name="label_postproc_fluor_channel">
                    <property name="text">
                     <string>Channel Index</string>
                    </property>
                   </widget>
                  </item>
                  <item row="0" column="0">
-                  <widget class="QLabel" name="label_28">
+                  <widget class="QLabel" name="label_postproc_fluor_wavelength">
                    <property name="text">
                     <string>Wavelength(s)</string>
                    </property>
                   </widget>
                  </item>
                  <item row="0" column="1">
-                  <widget class="QLineEdit" name="lineEdit_31"/>
+                  <widget class="QLineEdit" name="le_postproc_fluor_wavelength"/>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QLineEdit" name="lineEdit_32"/>
+                  <widget class="QLineEdit" name="le_postproc_fluor_channel"/>
                  </item>
                  <item row="2" column="0">
-                  <widget class="QLabel" name="label_30">
+                  <widget class="QLabel" name="label_postproc_fluor_mode">
                    <property name="text">
                     <string>Mode</string>
                    </property>
                   </widget>
                  </item>
                  <item row="2" column="1">
-                  <widget class="QComboBox" name="comboBox_5">
+                  <widget class="QComboBox" name="cb_postproc_fluor_mode">
                    <item>
                     <property name="text">
                      <string>3D</string>
@@ -1038,19 +1084,6 @@
           <string>File Settings</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_13">
-          <item row="7" column="3">
-           <widget class="QPushButton" name="qb_load_default_config">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Load Default</string>
-            </property>
-           </widget>
-          </item>
           <item row="2" column="2">
            <widget class="QLineEdit" name="le_save_name">
             <property name="sizePolicy">
@@ -1140,26 +1173,6 @@
             </property>
            </widget>
           </item>
-          <item row="7" column="0" colspan="2">
-           <widget class="QPushButton" name="qb_load_config">
-            <property name="text">
-             <string>Load Config</string>
-            </property>
-           </widget>
-          </item>
-          <item row="7" column="2">
-           <widget class="QPushButton" name="qb_save_config">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="text">
-             <string>Save Config</string>
-            </property>
-           </widget>
-          </item>
           <item row="2" column="0">
            <widget class="QLabel" name="label_save_name">
             <property name="text">
@@ -1206,6 +1219,39 @@
            <widget class="QLabel" name="label_bg_path">
             <property name="text">
              <string>Background Path</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="0">
+           <widget class="QPushButton" name="qb_load_default_config">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Load Default</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="2">
+           <widget class="QPushButton" name="qb_load_config">
+            <property name="text">
+             <string>Load Config</string>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="3">
+           <widget class="QPushButton" name="qb_save_config">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="text">
+             <string>Save Config</string>
             </property>
            </widget>
           </item>

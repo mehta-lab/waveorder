@@ -18,7 +18,8 @@ import logging
 # Check out using the 5state scheme individually
 # Print status of where you are in the acquisition
 
-class recOrder_Widget(QWidget):
+
+class Calibration(QWidget):
 
     mm_status_changed = pyqtSignal(bool)
     intensity_changed = pyqtSignal(float)
