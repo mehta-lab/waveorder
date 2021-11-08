@@ -31,7 +31,7 @@
         <x>0</x>
         <y>0</y>
         <width>554</width>
-        <height>1015</height>
+        <height>1007</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_12">
@@ -240,7 +240,7 @@
              </font>
             </property>
             <property name="currentIndex">
-             <number>4</number>
+             <number>0</number>
             </property>
             <property name="documentMode">
              <bool>false</bool>
@@ -259,89 +259,8 @@
                  <string/>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_7">
-                 <item row="0" column="0">
-                  <widget class="QLabel" name="label_pipeline">
-                   <property name="text">
-                    <string>Pipeline</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="0" column="1">
-                  <widget class="QComboBox" name="cb_pipeline">
-                   <item>
-                    <property name="text">
-                     <string>QLIPP</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>PhaseFromBF</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>Fluorescence Deconvolution</string>
-                    </property>
-                   </item>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="label_positions">
-                   <property name="text">
-                    <string>Positions</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QLineEdit" name="le_positions">
-                   <property name="font">
-                    <font>
-                     <weight>50</weight>
-                     <italic>false</italic>
-                     <bold>false</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="placeholderText">
-                    <string>all or 1, 2, or [0, 10]</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="label_timepoints">
-                   <property name="text">
-                    <string>Timepoints</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QLineEdit" name="le_timepoints">
-                   <property name="font">
-                    <font>
-                     <weight>50</weight>
-                     <italic>false</italic>
-                     <bold>false</bold>
-                    </font>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="placeholderText">
-                    <string>all or 1, 2, or [0, 10]</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="0">
-                  <widget class="QLabel" name="label_bg_corr">
-                   <property name="text">
-                    <string>Background Correction</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="1">
-                  <widget class="QComboBox" name="cb_bg_corr">
+                 <item row="4" column="2">
+                  <widget class="QComboBox" name="cb_background_correction">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -372,14 +291,118 @@
                    </item>
                   </widget>
                  </item>
-                 <item row="4" column="0">
+                 <item row="5" column="0">
                   <widget class="QLabel" name="label_output_channels">
                    <property name="text">
                     <string>Output Channels</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="4" column="1">
+                 <item row="0" column="0">
+                  <widget class="QLabel" name="label_pipeline">
+                   <property name="text">
+                    <string>Pipeline</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="0" column="2">
+                  <widget class="QComboBox" name="cb_method">
+                   <item>
+                    <property name="text">
+                     <string>QLIPP</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>PhaseFromBF</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Fluorescence Deconvolution</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                 <item row="7" column="0">
+                  <widget class="QCheckBox" name="chb_use_gpu">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="text">
+                    <string>Use GPU</string>
+                   </property>
+                   <property name="tristate">
+                    <bool>false</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="label_mode">
+                   <property name="text">
+                    <string>Mode</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_positions">
+                   <property name="text">
+                    <string>Positions</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="2" column="2">
+                  <widget class="QLineEdit" name="le_positions">
+                   <property name="font">
+                    <font>
+                     <weight>50</weight>
+                     <italic>false</italic>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="placeholderText">
+                    <string>all or 1, 2, or [0, 10]</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QLabel" name="label_timepoints">
+                   <property name="text">
+                    <string>Timepoints</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="4" column="0">
+                  <widget class="QLabel" name="label_bg_corr">
+                   <property name="text">
+                    <string>Background Correction</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="2">
+                  <widget class="QLineEdit" name="le_timepoints">
+                   <property name="font">
+                    <font>
+                     <weight>50</weight>
+                     <italic>false</italic>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string/>
+                   </property>
+                   <property name="placeholderText">
+                    <string>all or 1, 2, or [0, 10]</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="5" column="2">
                   <widget class="QLineEdit" name="le_output_channels">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -408,7 +431,7 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="5" column="1">
+                 <item row="6" column="2">
                   <widget class="QLabel" name="label_chan_desc">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -429,23 +452,7 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="6" column="0">
-                  <widget class="QCheckBox" name="chb_use_gpu">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="text">
-                    <string>Use GPU</string>
-                   </property>
-                   <property name="tristate">
-                    <bool>false</bool>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="6" column="1">
+                 <item row="7" column="2">
                   <widget class="QLineEdit" name="le_gpu_id">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -478,6 +485,20 @@
                    <property name="placeholderText">
                     <string>GPU ID</string>
                    </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="2">
+                  <widget class="QComboBox" name="cb_mode">
+                   <item>
+                    <property name="text">
+                     <string>3D</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>2D</string>
+                    </property>
+                   </item>
                   </widget>
                  </item>
                 </layout>
@@ -542,7 +563,7 @@
                   </widget>
                  </item>
                  <item row="1" column="1">
-                  <widget class="QLineEdit" name="le_mag">
+                  <widget class="QLineEdit" name="le_magnification">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -565,7 +586,7 @@
                   </widget>
                  </item>
                  <item row="2" column="1">
-                  <widget class="QLineEdit" name="le_na_obj">
+                  <widget class="QLineEdit" name="le_NA_objective">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -585,7 +606,7 @@
                   </widget>
                  </item>
                  <item row="3" column="1">
-                  <widget class="QLineEdit" name="le_na_obj_2">
+                  <widget class="QLineEdit" name="le_NA_condenser">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -605,7 +626,7 @@
                   </widget>
                  </item>
                  <item row="4" column="1">
-                  <widget class="QLineEdit" name="le_n_media">
+                  <widget class="QLineEdit" name="le_n_objective_media">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -625,7 +646,7 @@
                   </widget>
                  </item>
                  <item row="5" column="1">
-                  <widget class="QLineEdit" name="le_z_index">
+                  <widget class="QLineEdit" name="le_focus_zidx">
                    <property name="sizePolicy">
                     <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
                      <horstretch>0</horstretch>
@@ -686,7 +707,7 @@
                   <widget class="QLineEdit" name="le_phase_strength"/>
                  </item>
                  <item row="0" column="1">
-                  <widget class="QComboBox" name="cb_regularizer">
+                  <widget class="QComboBox" name="cb_phase_denoiser">
                    <item>
                     <property name="text">
                      <string>Tikhonov</string>
@@ -700,7 +721,7 @@
                   </widget>
                  </item>
                  <item row="3" column="1">
-                  <widget class="QLineEdit" name="le_phase_itr">
+                  <widget class="QLineEdit" name="le_itr">
                    <property name="placeholderText">
                     <string>TV Only</string>
                    </property>
@@ -721,14 +742,14 @@
                   </widget>
                  </item>
                  <item row="3" column="0">
-                  <widget class="QLabel" name="label_phase_itr">
+                  <widget class="QLabel" name="label_itr">
                    <property name="text">
                     <string>Iterations</string>
                    </property>
                   </widget>
                  </item>
                  <item row="2" column="1">
-                  <widget class="QLineEdit" name="le_phase_rho">
+                  <widget class="QLineEdit" name="le_rho">
                    <property name="placeholderText">
                     <string>TV Only</string>
                    </property>
@@ -751,7 +772,7 @@
                   </widget>
                  </item>
                  <item row="0" column="1">
-                  <widget class="QLineEdit" name="le_fluor_strength"/>
+                  <widget class="QLineEdit" name="le_reg"/>
                  </item>
                 </layout>
                </widget>
@@ -938,7 +959,7 @@
                 </property>
                 <layout class="QGridLayout" name="gridLayout_23">
                  <item row="2" column="0">
-                  <widget class="QLabel" name="label_postproc_reg_channels">
+                  <widget class="QLabel" name="label_postproc_reg_channel_idx">
                    <property name="text">
                     <string>Channel Index</string>
                    </property>
@@ -989,7 +1010,7 @@
                   </widget>
                  </item>
                  <item row="2" column="1" colspan="3">
-                  <widget class="QLineEdit" name="le_postproc_reg_channels">
+                  <widget class="QLineEdit" name="le_postproc_reg_channel_idx">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
@@ -1021,32 +1042,11 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="0" column="1">
-                  <widget class="QLineEdit" name="le_postproc_fluor_wavelength"/>
-                 </item>
                  <item row="1" column="1">
-                  <widget class="QLineEdit" name="le_postproc_fluor_channel"/>
+                  <widget class="QLineEdit" name="le_postproc_fluor_channels"/>
                  </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="label_postproc_fluor_mode">
-                   <property name="text">
-                    <string>Mode</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="2" column="1">
-                  <widget class="QComboBox" name="cb_postproc_fluor_mode">
-                   <item>
-                    <property name="text">
-                     <string>3D</string>
-                    </property>
-                   </item>
-                   <item>
-                    <property name="text">
-                     <string>2D</string>
-                    </property>
-                   </item>
-                  </widget>
+                 <item row="0" column="1">
+                  <widget class="QLineEdit" name="le_postproc_fluor_wavelength_nm"/>
                  </item>
                 </layout>
                </widget>
@@ -1085,7 +1085,7 @@
          </property>
          <layout class="QGridLayout" name="gridLayout_13">
           <item row="2" column="2">
-           <widget class="QLineEdit" name="le_save_name">
+           <widget class="QLineEdit" name="le_data_save_name">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
               <horstretch>0</horstretch>
@@ -1112,7 +1112,7 @@
            </widget>
           </item>
           <item row="1" column="2">
-           <widget class="QLineEdit" name="le_save_dir_2"/>
+           <widget class="QLineEdit" name="le_save_dir"/>
           </item>
           <item row="1" column="0">
            <widget class="QLabel" name="label_save_dir">
@@ -1143,7 +1143,7 @@
            </widget>
           </item>
           <item row="3" column="2">
-           <widget class="QLineEdit" name="le_calib_meta">
+           <widget class="QLineEdit" name="le_calibration_metadata">
             <property name="font">
              <font>
               <weight>50</weight>
@@ -1174,7 +1174,7 @@
            </widget>
           </item>
           <item row="2" column="0">
-           <widget class="QLabel" name="label_save_name">
+           <widget class="QLabel" name="label_data_save_name">
             <property name="text">
              <string>Save Name</string>
             </property>
@@ -1202,7 +1202,7 @@
            </widget>
           </item>
           <item row="4" column="2">
-           <widget class="QLineEdit" name="le_bg_path">
+           <widget class="QLineEdit" name="le_background">
             <property name="font">
              <font>
               <weight>50</weight>
