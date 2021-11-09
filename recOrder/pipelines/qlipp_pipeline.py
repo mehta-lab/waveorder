@@ -1,37 +1,36 @@
 from recOrder.io.config_reader import ConfigReader
-from waveorder.io.reader import MicromanagerReader
+from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
 from recOrder.io.utils import load_bg
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, \
-    reconstruct_qlipp_phase2D, reconstruct_qlipp_phase3D, initialize_reconstructor
+    reconstruct_phase2D, reconstruct_phase3D, initialize_reconstructor
 import json
 import numpy as np
 from recOrder.pipelines.pipeline_interface import PipelineInterface
 
 
-class qlipp_pipeline(PipelineInterface):
+class QLIPP(PipelineInterface):
 
     """
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
     """
 
-    def __init__(self, config: ConfigReader, data: MicromanagerReader, save_dir: str, name: str, mode: str, num_t: int):
+    def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderWriter, mode: str, num_t: int):
         """
         Parameters
         ----------
         config:     (Object) initialized ConfigReader object
-        data:       (Object) initialized MicromanagerReader object (data should be extracted already)
-        save_dir:   (str) save directory
-        name:       (str) name of the sample to pass for naming of folders, etc.
+        data:       (Object) initialized WaveorderReader object (data should be extracted already)
+        writer:     (Object) initialiazed WaveorderWriter object
         mode:       (str) mode of operation, can be '2D', '3D', or 'stokes'
+        num_t:      (int) number of timepoints being analyzed
         """
 
         # Dataset Parameters
         self.config = config
         self.data = data
-        self.name = name
+        self.writer = writer
         self.mode = mode
-        self.save_dir = save_dir
 
         # Dimension Parameters
         self.t = num_t
@@ -53,11 +52,9 @@ class qlipp_pipeline(PipelineInterface):
         self.chan_names = self.data.channel_names
         self.calib_meta = json.load(open(self.config.calibration_metadata)) \
             if self.config.calibration_metadata else None
-        #todo: re-structure reading calib metadata when finalized
         self.calib_scheme = self.calib_meta['Summary']['Acquired Using'] if self.calib_meta \
             else '4-State'
         self.bg_path = self.config.background if self.config.background else None
-        #todo: fix typo
         self.bg_roi = self.calib_meta['Summary']['ROI Used (x, y, width, height)'] if self.calib_meta else None
 
         # identify the image indicies corresponding to each polarization orientation
@@ -66,24 +63,27 @@ class qlipp_pipeline(PipelineInterface):
         self.s4_idx, self.fluor_idxs = self.parse_channel_idx(self.data.channel_names)
 
         # Writer Parameters
-        self._file_writer = None
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
-        self.chunk_size = (1, 1, 1, self.img_dim[0], self.img_dim[1])
-
-        self.writer = WaveorderWriter(self.save_dir, 'physical')
-        self.writer.create_zarr_root(f'{self.name}.zarr')
-        self.writer.store.attrs.put(self.config.yaml_dict)
+        self.chunk_size = (1, 1, 1, self.data_shape[-2], self.data_shape[-1])
 
         # Initialize Reconstructor
-        self.reconstructor = initialize_reconstructor((self.img_dim[0], self.img_dim[1]), self.config.wavelength,
-                                                 self.calib_meta['Summary']['Swing (fraction)'],
-                                                 len(self.calib_meta['Summary']['ChNames']),
-                                                 self.config.qlipp_birefringence_only,
-                                                 self.config.NA_objective, self.config.NA_condenser,
-                                                 self.config.magnification, self.data.slices, self.data.z_step_size,
-                                                 self.config.pad_z, self.config.pixel_size,
-                                                 self.config.background_correction, self.config.n_objective_media,
-                                                 self.mode, self.config.use_gpu, self.config.gpu_id)
+        self.reconstructor = initialize_reconstructor(pipeline='QLIPP',
+                                                      image_dim=(self.img_dim[0], self.img_dim[1]),
+                                                      wavelength_nm=self.config.wavelength,
+                                                      swing=self.calib_meta['Summary']['Swing (fraction)'],
+                                                      calibration_scheme=self.calib_scheme,
+                                                      NA_obj=self.config.NA_objective,
+                                                      NA_illu=self.config.NA_condenser,
+                                                      n_obj_media=self.config.n_objective_media,
+                                                      mag=self.config.magnification,
+                                                      n_slices=self.data.slices,
+                                                      z_step_um=self.data.z_step_size,
+                                                      pad_z=self.config.pad_z,
+                                                      pixel_size_um=self.config.pixel_size,
+                                                      bg_correction=self.config.background_correction,
+                                                      mode=self.mode,
+                                                      use_gpu=self.config.use_gpu,
+                                                      gpu_id=self.config.gpu_id)
 
         # Compute BG stokes if necessary
         if self.config.background_correction != None:
@@ -159,14 +159,14 @@ class qlipp_pipeline(PipelineInterface):
         phase3D = None
 
         if 'Phase3D' in self.output_channels:
-            phase3D = reconstruct_qlipp_phase3D(stokes[0],self.reconstructor, method=self.config.phase_denoiser_3D,
-                                                reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
-                                                lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D)
+            phase3D = reconstruct_phase3D(stokes[0], self.reconstructor, method=self.config.phase_denoiser_3D,
+                                          reg_re=self.config.Tik_reg_ph_3D, rho=self.config.rho_3D,
+                                          lambda_re=self.config.TV_reg_ph_3D, itr=self.config.itr_3D)
 
         if 'Phase2D' in self.output_channels:
-            phase2D = reconstruct_qlipp_phase2D(stokes[0], self.reconstructor, method=self.config.phase_denoiser_2D,
-                                                reg_p=self.config.Tik_reg_ph_2D, rho=self.config.rho_2D,
-                                                lambda_p=self.config.TV_reg_ph_2D, itr=self.config.itr_2D)
+            phase2D = reconstruct_phase2D(stokes[0], self.reconstructor, method=self.config.phase_denoiser_2D,
+                                          reg_p=self.config.Tik_reg_ph_2D, rho=self.config.rho_2D,
+                                          lambda_p=self.config.TV_reg_ph_2D, itr=self.config.itr_2D)
 
         return phase2D, phase3D
 
@@ -194,7 +194,7 @@ class qlipp_pipeline(PipelineInterface):
                                 self.reconstructor)
 
     # todo: think about better way to write fluor/registered data?
-    def write_data(self, pt, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
+    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
         If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
@@ -202,7 +202,8 @@ class qlipp_pipeline(PipelineInterface):
 
         Parameters
         ----------
-        pt:                 (tuple) tuple containing position and time indicies.
+        p:                  (int) Index of the p position to write
+        t:                  (int) Index of the t position to write
         pt_data:            (nd-array) raw data nd-array at p,t index with dimensions (C, Z, Y, X)
         stokes:             (nd-array) None or nd-array w/ dimensions (Z, C, Y, X)
         birefringence:      (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
@@ -216,7 +217,6 @@ class qlipp_pipeline(PipelineInterface):
 
         """
 
-        t = pt[1]
         z = 0 if self.mode == '2D' else None
         slice_ = self.focus_slice if self.mode == '2D' else slice(None)
         stokes = np.transpose(stokes, (3, 0, 1, 2)) if len(stokes.shape) == 4 else stokes
@@ -225,43 +225,53 @@ class qlipp_pipeline(PipelineInterface):
         for chan in range(len(self.output_channels)):
             if 'Retardance' in self.output_channels[chan]:
                 ret = birefringence[0] / (2 * np.pi) * self.config.wavelength
-                self.writer.write(ret, t=t, c=chan, z=z)
+                self.writer.write(ret, p=p, t=t, c=chan, z=z)
             elif 'Orientation' in self.output_channels[chan]:
-                self.writer.write(birefringence[1], t=t, c=chan, z=z)
+                self.writer.write(birefringence[1], p=p, t=t, c=chan, z=z)
             elif 'Brightfield' in self.output_channels[chan]:
-                self.writer.write(birefringence[2], t=t, c=chan, z=z)
+                self.writer.write(birefringence[2], p=p, t=t, c=chan, z=z)
             elif 'Phase3D' in self.output_channels[chan]:
-                self.writer.write(phase3D, t=t, c=chan, z=z)
-            elif 'Phase2D' in self.output_channels:
-                self.writer.write(phase2D, t=t, c=chan, z=z)
+                self.writer.write(phase3D, p=p, t=t, c=chan, z=z)
+            elif 'Phase2D' in self.output_channels[chan]:
+                self.writer.write(phase2D, p=p, t=t, c=chan, z=z)
             elif 'S0' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 0, :, :], t=t, c=chan, z=z)
+                self.writer.write(stokes[slice_, 0, :, :], p=p, t=t, c=chan, z=z)
             elif 'S1' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 1, :, :], t=t, c=chan, z=z)
+                self.writer.write(stokes[slice_, 1, :, :], p=p, t=t, c=chan, z=z)
             elif 'S2' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 2, :, :], t=t, c=chan, z=z)
+                self.writer.write(stokes[slice_, 2, :, :], p=p, t=t, c=chan, z=z)
             elif 'S3' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 3, :, :], t=t, c=chan, z=z)
+                self.writer.write(stokes[slice_, 3, :, :], p=p, t=t, c=chan, z=z)
 
             # Assume any other output channel in config is fluorescence
             else:
                 if self.config.postprocessing.registration_use:
-                    self.writer.write(registered_stacks[fluor_idx], t=t, c=chan, z=z)
+                    self.writer.write(registered_stacks[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
                 else:
-                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx]], t=t, c=chan, z=z)
+                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
 
-    @property
-    def writer(self):
-        return self._file_writer
-
-    @writer.setter
-    def writer(self, writer_object: WaveorderWriter):
-        self._file_writer = writer_object
-
     def parse_channel_idx(self, channel_list):
+        """
+        Parses the metadata to find which channel each state resides in.  Useful if the acquisition
+        does not have the pol states adjacent to one another.
+
+        Parameters
+        ----------
+        channel_list:       (list) List of strings corresponding to the channel names
+
+        Returns
+        -------
+        s0_idx, s1_idx, s2_idx, s3_idx, s4_idx, fluor_idx:      (int) Index corresponding to where each state
+                                                                        sits in the channel order
+
+        """
         fluor_idx = []
+        s0_idx = None
+        s1_idx = None
+        s2_idx = None
+        s3_idx = None
         s4_idx = None
         try:
             self.calib_meta['Summary']['PolScope_Plugin_Version']

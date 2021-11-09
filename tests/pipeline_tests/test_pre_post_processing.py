@@ -14,6 +14,7 @@ def test_pre_processing(setup_test_data, setup_data_save_folder):
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))),
                                   'test_configs/config_preprocessing_pytest.yml')
+
     config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
 
     manager = PipelineManager(config)
@@ -28,8 +29,8 @@ def test_pre_processing(setup_test_data, setup_data_save_folder):
     params = [['S0', 0.5, 1], ['S1', 0.5, 1], ['S2', 0.5, 1], ['S3', 0.5, 1]]
     stokes_denoise = preproc_denoise(stokes, params)
 
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'))
-    array = store['Pos_001.zarr']['physical_data']['array']
+    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'), 'r')
+    array = store['Row_0']['Col_0']['Pos_001']['array']
 
     # Check Stokes
     assert (np.sum(np.abs(stokes_denoise[0, :, :, z] - array[0, 0, z]) ** 2) / np.sum(
@@ -63,8 +64,8 @@ def test_post_processing(setup_test_data, setup_data_save_folder):
     ret_denoise = post_proc_denoise(birefringence[0], params)
     ret_denoise = ret_denoise / (2*np.pi)*config.wavelength
 
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'))
-    array = store['Pos_001.zarr']['physical_data']['array']
+    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'), 'r')
+    array = store['Row_0']['Col_0']['Pos_001']['array']
 
     # Check Birefringence
     assert(np.sum(np.abs(ret_denoise[z] - array[0, 0, z]) ** 2)

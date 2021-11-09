@@ -58,10 +58,13 @@ if __name__ == '__main__':
         classifiers=CLASSIFIERS,
         install_requires=INSTALL_REQUIRES,
         python_requires=f'>={MIN_PY_VER}',
+        dependency_links=['https://github.com/mehta-lab/waveorder.git#egg=waveorder'],
         packages=PACKAGES,
         include_package_data=True,
-        entry_points={'napari.plugin': 'recorder = recOrder.plugin.widget.napari_plugin_entry_point',
-            'console_scripts': ['recOrder.reconstruct = recOrder.cli_module:main',
-                                'recOrder-napari = scripts.launch_napari:main']
+        entry_points={
+            'console_scripts': [
+                'recOrder.reconstruct = recOrder.cli_module:main',
+                'recOrder.convert = scripts.convert_tiff_to_zarr:main'
+            ]
         }
     )

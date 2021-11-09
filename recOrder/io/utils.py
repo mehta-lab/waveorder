@@ -32,6 +32,28 @@ def load_bg(bg_path, height, width, ROI=None):
 
     return bg_data
 
-class MockEmitter:
-    def emit(self):
-        pass
+def create_grid_from_coordinates(xy_coords, rows, columns):
+
+    coords = dict()
+    coords_list = []
+    for idx, pos in enumerate(xy_coords):
+        coords[idx] = pos
+        coords_list.append(pos)
+
+    # sort by X and then by Y
+    coords_list.sort(key=lambda x: x[0])
+    coords_list.sort(key=lambda x: x[1])
+
+    # reshape XY coordinates into their proper 2D shape
+    grid = np.reshape(coords_list, (rows, columns, 2))
+    pos_index_grid = np.zeros((rows,columns), 'uint16')
+    keys = list(coords.keys())
+    vals = list(coords.values())
+
+    for row in range(rows):
+        for col in range(columns):
+
+            # append position index (key) into a final grid by indexed into the coordinate map (values)
+            pos_index_grid[row, col] = keys[vals.index(list(grid[row, col]))]
+
+    return pos_index_grid

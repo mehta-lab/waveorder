@@ -1,9 +1,7 @@
 from scipy.ndimage import affine_transform
 import numpy as np
 from waveorder.util import wavelet_softThreshold
-import matplotlib.pyplot as plt
-import zarr
-import tifffile as tiff
+
 
 def post_proc_denoise(data_volume, params):
 
