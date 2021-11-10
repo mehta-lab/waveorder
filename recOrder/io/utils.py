@@ -3,6 +3,7 @@ import os
 import tifffile as tiff
 import numpy as np
 
+
 def load_bg(bg_path, height, width, ROI=None):
     """
     Parameters
@@ -32,6 +33,7 @@ def load_bg(bg_path, height, width, ROI=None):
 
     return bg_data
 
+
 def create_grid_from_coordinates(xy_coords, rows, columns):
 
     coords = dict()
@@ -57,3 +59,8 @@ def create_grid_from_coordinates(xy_coords, rows, columns):
             pos_index_grid[row, col] = keys[vals.index(list(grid[row, col]))]
 
     return pos_index_grid
+
+
+class MockEmitter:
+    def emit(self):
+        pass

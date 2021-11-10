@@ -1,7 +1,7 @@
 from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
-    reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, reconstruct_qlipp_phase2D, reconstruct_qlipp_phase3D
+    reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, reconstruct_phase2D, reconstruct_phase3D
 from recOrder.acq.acq_functions import generate_acq_settings, acquire_from_settings
 from recOrder.io.utils import load_bg
 import shutil
@@ -164,13 +164,13 @@ class AcquisitionWorker(QtCore.QObject):
         # reconstruct both phase and birefringence
         if self.mode == 'all':
             birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-            phase = reconstruct_qlipp_phase2D(stokes[0], recon) if self.dim == '2D' \
-                else reconstruct_qlipp_phase3D(stokes[0], recon)
+            phase = reconstruct_phase2D(stokes[0], recon) if self.dim == '2D' \
+                else reconstruct_phase3D(stokes[0], recon)
 
         # reconstruct phase only
         elif self.mode == 'phase':
-            phase = reconstruct_qlipp_phase2D(stokes[0], recon) if self.dim == '2D' \
-                else reconstruct_qlipp_phase3D(stokes[0], recon)
+            phase = reconstruct_phase2D(stokes[0], recon) if self.dim == '2D' \
+                else reconstruct_phase3D(stokes[0], recon)
 
         # reconstruct birefringence only
         elif self.mode == 'birefringence':

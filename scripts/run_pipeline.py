@@ -38,8 +38,10 @@ def main():
             raise ValueError('Specified config path does not exist')
         else:
             config = ConfigReader(Args.config, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name)
+            config.save_yaml()
     else:
         config = ConfigReader(None, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name)
+        config.save_yaml()
 
     manager = PipelineManager(config, Args.overwrite)
     manager.run()

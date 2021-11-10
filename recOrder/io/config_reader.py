@@ -91,9 +91,24 @@ class ConfigReader(object):
         self.preprocessing = Object()
         self.postprocessing = Object()
 
+
+        if data_dir is not None:
+            setattr(self, 'data_dir', data_dir)
+        if save_dir is not None:
+            setattr(self, 'save_dir', save_dir)
+        if method is not None:
+            setattr(self, 'method', method)
+        if mode is not None:
+            setattr(self, 'mode', mode)
+        if name is not None:
+            setattr(self, 'data_save_name', name)
+
         # initialize defaults
         for key, value in DATASET.items():
-            setattr(self, key, value)
+            if hasattr(self, key):
+                continue
+            else:
+                setattr(self, key, value)
 
         for key, value in PREPROCESSING.items():
             if isinstance(value, dict):
@@ -119,7 +134,7 @@ class ConfigReader(object):
 
         # Create yaml dict to save in save_dir
         setattr(self, 'yaml_dict', self._create_yaml_dict())
-        self._save_yaml()
+        # self._save_yaml()
 
     # Override set attribute function to disallow changes after init
     def __setattr__(self, name, value):
@@ -185,7 +200,7 @@ class ConfigReader(object):
                         assert key_child in self.config['postprocessing'][key], \
                             f'User must specify {key_child} to use for {key}'
 
-    def _save_yaml(self):
+    def save_yaml(self):
         if not os.path.exists(self.save_dir):
             os.mkdir(self.save_dir)
         with open(os.path.join(self.save_dir, f'config_{self.data_save_name}.yml'), 'w') as file:
@@ -228,18 +243,6 @@ class ConfigReader(object):
         path = pathlib.PurePath(self.data_dir)
         super().__setattr__('data_save_name', path.name)
 
-    def _parse_cli(self, data_dir, save_dir, method, mode, name):
-        if data_dir:
-            super().__setattr__('data_dir', data_dir)
-        if save_dir:
-            super().__setattr__('save_dir', save_dir)
-        if method:
-            super().__setattr__('method', method)
-        if mode:
-            super().__setattr__('mode', mode)
-        if name:
-            super().__setattr__('data_save_name', name)
-
     def _parse_dataset(self):
         for key, value in self.config['dataset'].items():
             if key in DATASET.keys():
@@ -251,6 +254,10 @@ class ConfigReader(object):
                 elif key == 'data_dir' and self.data_dir:
                     continue
                 elif key == 'save_dir' and self.save_dir:
+                    continue
+                elif key == 'mode' and self.mode:
+                    continue
+                elif key == 'method' and self.method:
                     continue
 
                 # this section appends the rest of the dataset parameters specified
@@ -316,7 +323,6 @@ class ConfigReader(object):
         self.config = yaml.full_load(open(cfg_path))
 
         self._check_assertions(data_dir, save_dir, method, mode, name)
-        self._parse_cli(data_dir, save_dir, method, mode, name)
         self._parse_dataset()
         self._parse_preprocessing()
         self._parse_processing()

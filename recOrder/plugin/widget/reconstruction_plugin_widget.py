@@ -3,6 +3,7 @@ from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QFileDialog
 from recOrder.plugin.widget.thread_worker import ThreadWorker
 from recOrder.plugin.qtdesigner import recOrder_reconstruction
+from recOrder.plugin.widget.loading_widget import Overlay
 from recOrder.io.config_reader import ConfigReader, DATASET, PROCESSING, PREPROCESSING, POSTPROCESSING
 from pathlib import Path
 from napari import Viewer
@@ -20,6 +21,10 @@ class Reconstruction(QWidget):
         self.ui = recOrder_reconstruction.Ui_Form()
         self.ui.setupUi(self)
 
+        self.overlay = Overlay(self)
+        self.overlay.hide()
+
+
         # variables
         self.data_dir = Path.home()
         self.save_dir = Path.home()
@@ -27,8 +32,12 @@ class Reconstruction(QWidget):
         self.calib_path = Path.home()
         self.config_path = Path.home()
         self.save_config_path = Path.home()
+        self.mode = '3D'
 
         self.config_reader = None
+
+        # self.ui.qb_reconstruct.setStyleSheet("QPushButton {background-color: 1px solid rgb(62,161,193)}"
+        #                                      "QPushButton:pressed {background-color: 1px solid rgb(99,179,205)}")
 
         # Setup Connections between elements
         # Recievers
@@ -42,42 +51,62 @@ class Reconstruction(QWidget):
         self.ui.qb_load_config.clicked[bool].connect(self.load_config)
         self.ui.qb_save_config.clicked[bool].connect(self.save_config)
 
+        # Other Buttons
+        self.ui.qb_load_default_config.clicked[bool].connect(self.load_default_config)
+        self.ui.qb_reconstruct.clicked[bool].connect(self.run_reconstruction)
+
+
+        # Line Edit Checks
+        self.ui.le_data_dir.editingFinished.connect(self.enter_data_dir)
+        self.ui.le_save_dir.editingFinished.connect(self.enter_save_dir)
+        self.ui.le_calibration_metadata.editingFinished.connect(self.enter_calib_meta)
+        self.ui.le_background.editingFinished.connect(self.enter_bg_path)
+
+        # Combo Box Checks
+
 
         # File Settings Line Edits
         # self.ui.le_data_dir.editingFinished
 
+    def resizeEvent(self, event):
+        self.overlay.resize(event.size())
+        event.accept()
+
     def _open_file_dialog(self, default_path, type):
 
+        return self._open_dialog("select a directory",
+                                 str(default_path),
+                                 type)
+
+    def _open_dialog(self, title, ref, type):
         options = QFileDialog.Options()
 
         options |= QFileDialog.DontUseNativeDialog
         if type == 'dir':
             path = QFileDialog.getExistingDirectory(None,
-                                                    'Select a directory',
-                                                    default_path,
+                                                    title,
+                                                    ref,
                                                     options=options)
-            return path
-
         elif type == 'file':
             path = QFileDialog.getOpenFileName(None,
-                                               'Select a file',
-                                               default_path,
-                                               options=options)[0]
-            return path
-
-
+                                                title,
+                                                ref,
+                                                options=options)[0]
         elif type == 'save':
             path = QFileDialog.getSaveFileName(None,
                                                'Choose a save name',
-                                               default_path,
-                                               options=options
-                                               )[0]
-
-            return path
-
+                                               ref,
+                                               options=options)[0]
         else:
             raise ValueError('Did not understand file dialogue type')
 
+        return path
+
+    def _check_requirements(self):
+        pass
+
+    def _populate_config_from_app(self):
+        pass
 
     def _populate_from_config(self):
 
@@ -91,7 +120,7 @@ class Reconstruction(QWidget):
         self.ui.le_background.setText(self.config_reader.background)
 
         self.mode = self.config_reader.mode
-        self.ui.cb_mode.setCurrentIndex(0) if self.mode == '3D' else self.cb.setCurrentIndex(1)
+        self.ui.cb_mode.setCurrentIndex(0) if self.mode == '3D' else self.ui.cb_mode.setCurrentIndex(1)
         self.method = self.config_reader.method
         if self.method == 'QLIPP':
             self.ui.cb_method.setCurrentIndex(0)
@@ -114,13 +143,13 @@ class Reconstruction(QWidget):
                     self.ui.chb_preproc_denoise_use.setCheckState(attr)
                 else:
                     le = getattr(self.ui, f'le_preproc_denoise_{key_child}')
-                    le.setText(str(getattr(self.config_reader.preprocessing, f'denoise_{key_child')))
+                    le.setText(str(getattr(self.config_reader.preprocessing, f'denoise_{key_child}')))
 
         # Parse processing automatically
         for key, val in PROCESSING.items():
             if hasattr(self.ui, f'le_{key}'):
                 le = getattr(self.ui, f'le_{key}')
-                le.setText(getattr(self.config_reader, key))
+                le.setText(str(getattr(self.config_reader, key)))
 
             elif hasattr(self.ui, f'cb_{key}'):
                 cb = getattr(self.ui, f'cb_{key}')
@@ -131,8 +160,41 @@ class Reconstruction(QWidget):
                 cb = self.ui.cb_phase_denoiser
                 cfg_attr = getattr(self.config_reader, f'phase_denoiser_{self.mode}')
                 cb.setCurrentIndex(0) if cfg_attr == 'Tikhonov' else cb.setCurrentIndex(1)
-            # elif key == ''
+            #TODO: DENOISER STRENGTH PARSING
+            else:
+                pass
 
+        # Parse Preprocessing automatically
+        for key, val in POSTPROCESSING.items():
+            for key_child, val_child in val.items():
+                if key == 'deconvolution':
+                    if hasattr(self.ui, f'le_postproc_fluor_{key_child}'):
+                        le = getattr(self.ui, f'le_postproc_fluor_{key_child}')
+                        attr = str(getattr(self.config_reader.postprocessing, f'{key}_{key_child}'))
+                        le.setText(attr)
+
+                elif key == 'registration':
+                    if key_child == 'use':
+                        attr = getattr(self.config_reader.postprocessing, 'registration_use')
+                        self.ui.chb_preproc_denoise_use.setCheckState(attr)
+                    else:
+                        le = getattr(self.ui, f'le_postproc_reg_{key_child}')
+                        attr = str(getattr(self.config_reader.postprocessing, f'registration_{key_child}'))
+                        le.setText(attr)
+
+                elif key == 'denoise':
+                    if key_child == 'use':
+                        attr = getattr(self.config_reader.postprocessing, 'denoise_use')
+                        self.ui.chb_preproc_denoise_use.setCheckState(attr)
+                    else:
+                        le = getattr(self.ui, f'le_preproc_denoise_{key_child}')
+                        attr = str(getattr(self.config_reader.postprocessing, f'denoise_{key_child}'))
+                        le.setText(attr)
+
+    @pyqtSlot(bool)
+    def run_reconstruction(self):
+        self.overlay.show()
+        # self._populate_config_from_app()
 
 
     @pyqtSlot(bool)
@@ -151,13 +213,13 @@ class Reconstruction(QWidget):
     def browse_bg_path(self):
         path = self._open_file_dialog(self.bg_path, 'dir')
         self.bg_path = path
-        self.ui.le_bg_path.setText(self.bg_path)
+        self.ui.le_background.setText(self.bg_path)
 
     @pyqtSlot(bool)
     def browse_calib_meta(self):
         path = self._open_file_dialog(self.calib_path, 'dir')
         self.calib_path = path
-        self.ui.le_calib_meta.setText(self.calib_path)
+        self.ui.le_calibration_metadata.setText(self.calib_path)
 
     @pyqtSlot(bool)
     def save_config(self):
@@ -167,7 +229,50 @@ class Reconstruction(QWidget):
     @pyqtSlot(bool)
     def load_config(self):
         path = self._open_file_dialog(self.save_config_path, 'file')
-        self.config_path = path
-        self.config_reader = ConfigReader(self.config_path)
-        self._populate_config()
+        if path == '':
+            pass
+        else:
+            self.config_path = path
+            self.config_reader = ConfigReader(self.config_path)
+            self._populate_from_config()
+
+    @pyqtSlot(bool)
+    def load_default_config(self):
+        self.config_reader = ConfigReader(mode='3D', method='QLIPP')
+        self._populate_from_config()
+
+    @pyqtSlot()
+    def enter_data_dir(self):
+        entry = self.ui.le_data_dir.text()
+        if not os.path.exists(entry):
+            self.ui.le_data_dir.setStyleSheet("border: 1px solid rgb(200,0,0);")
+            self.ui.le_data_dir.setText('Path Does Not Exist')
+        else:
+            self.ui.le_data_dir.setStyleSheet("")
+            self.data_dir = entry
+
+    @pyqtSlot()
+    def enter_save_dir(self):
+        entry = self.ui.le_data_dir.text()
+        self.save_dir = entry
+
+    @pyqtSlot()
+    def enter_calib_meta(self):
+        entry = self.ui.le_calibration_metadata.text()
+        if not os.path.exists(entry):
+            self.ui.le_calibration_metadata.setStyleSheet("border: 1px solid rgb(200,0,0);")
+            self.ui.le_calibration_metadata.setText('Path Does Not Exist')
+        else:
+            self.ui.le_calibration_metadata.setStyleSheet("")
+            self.calib_path = entry
+
+    @pyqtSlot()
+    def enter_bg_path(self):
+        entry = self.ui.le_background.text()
+        if not os.path.exists(entry):
+            self.ui.le_background.setStyleSheet("border: 1px solid rgb(200,0,0);")
+            self.ui.le_background.setText('Path Does Not Exist')
+        else:
+            self.ui.le_background.setStyleSheet("")
+            self.bg_path = entry
 

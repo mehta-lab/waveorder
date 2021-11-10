@@ -65,6 +65,7 @@ if __name__ == '__main__':
             'console_scripts': [
                 'recOrder.reconstruct = recOrder.cli_module:main',
                 'recOrder.convert = scripts.convert_tiff_to_zarr:main'
-            ]
+            ],
+            'napari.plugin': 'recorder = recOrder.plugin.widget.napari_plugin_entry_point'
         }
     )

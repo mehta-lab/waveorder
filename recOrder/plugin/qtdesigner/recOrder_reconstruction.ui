@@ -281,12 +281,12 @@
                    </item>
                    <item>
                     <property name="text">
-                     <string>Global</string>
+                     <string>global</string>
                     </property>
                    </item>
                    <item>
                     <property name="text">
-                     <string>Local Fit</string>
+                     <string>local_fit</string>
                     </property>
                    </item>
                   </widget>
@@ -965,33 +965,6 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="1" column="2">
-                  <widget class="QLabel" name="label_postproc_reg_shift_y">
-                   <property name="text">
-                    <string>Shift Y (px)</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="0">
-                  <widget class="QLabel" name="label_postproc_reg_shift_x">
-                   <property name="text">
-                    <string>Shift X (px)</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="1" column="1">
-                  <widget class="QLineEdit" name="le_postproc_reg_shift_x">
-                   <property name="focusPolicy">
-                    <enum>Qt::StrongFocus</enum>
-                   </property>
-                   <property name="text">
-                    <string/>
-                   </property>
-                   <property name="placeholderText">
-                    <string>+/-  (left/right)</string>
-                   </property>
-                  </widget>
-                 </item>
                  <item row="0" column="0">
                   <widget class="QCheckBox" name="chb_postproc_reg_use">
                    <property name="text">
@@ -999,23 +972,33 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="1" column="3">
-                  <widget class="QLineEdit" name="_postproc_reg_shift_y">
+                 <item row="1" column="1">
+                  <widget class="QLineEdit" name="le_postproc_reg_shift">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
+                   <property name="text">
+                    <string/>
+                   </property>
                    <property name="placeholderText">
-                    <string>+/- (up/down)</string>
+                    <string>(-10, 4), (30, 52) +/-  = left/right, up/down</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="2" column="1" colspan="3">
+                 <item row="2" column="1" colspan="2">
                   <widget class="QLineEdit" name="le_postproc_reg_channel_idx">
                    <property name="focusPolicy">
                     <enum>Qt::StrongFocus</enum>
                    </property>
                    <property name="placeholderText">
                     <string>[2, 3, 4]</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="1" column="0">
+                  <widget class="QLabel" name="label_postproc_reg_shift">
+                   <property name="text">
+                    <string>Shift (px)</string>
                    </property>
                   </widget>
                  </item>
@@ -1028,25 +1011,32 @@
                  <string>Fluorescence Deconvolution</string>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_4">
-                 <item row="1" column="0">
+                 <item row="2" column="0">
                   <widget class="QLabel" name="label_postproc_fluor_channel">
                    <property name="text">
                     <string>Channel Index</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="0" column="0">
+                 <item row="1" column="0">
                   <widget class="QLabel" name="label_postproc_fluor_wavelength">
                    <property name="text">
                     <string>Wavelength(s)</string>
                    </property>
                   </widget>
                  </item>
-                 <item row="1" column="1">
+                 <item row="2" column="1">
                   <widget class="QLineEdit" name="le_postproc_fluor_channels"/>
                  </item>
-                 <item row="0" column="1">
+                 <item row="1" column="1">
                   <widget class="QLineEdit" name="le_postproc_fluor_wavelength_nm"/>
+                 </item>
+                 <item row="0" column="0">
+                  <widget class="QCheckBox" name="chb_postproc_fluor_use">
+                   <property name="text">
+                    <string>Deconvolve?</string>
+                   </property>
+                  </widget>
                  </item>
                 </layout>
                </widget>
