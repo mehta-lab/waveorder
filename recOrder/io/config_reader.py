@@ -320,7 +320,10 @@ class ConfigReader(object):
 
     def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
 
-        self.config = yaml.full_load(open(cfg_path))
+        if isinstance(cfg_path, str):
+            self.config = yaml.full_load(open(cfg_path))
+        if isinstance(cfg_path, dict):
+            self.config = cfg_path
 
         self._check_assertions(data_dir, save_dir, method, mode, name)
         self._parse_dataset()

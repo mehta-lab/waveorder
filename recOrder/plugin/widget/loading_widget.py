@@ -20,17 +20,17 @@ class Overlay(QWidget):
 
         painter.setRenderHint(QPainter.Antialiasing)
         painter.fillRect(event.rect(), QBrush(QColor(40, 45, 60, 197)))
-        text_rect = QRect(self.width()//2, self.height()//2,
-                          self.width()//2, self.height()//3)
-        text_pen = QPen()
-        text_pen.setWidth(self.width())
-        text_pen.setColor(QColor(0, 191, 255))
-        painter.setPen(text_pen)
-
-        text = "Reconstructing..."
-        painter.drawText(self.width()//2,
-                         self.height()//2,
-                         "Reconstructing...")
+        # text_rect = QRect(self.width()//2, self.height()//2,
+        #                   self.width()//2, self.height()//3)
+        # text_pen = QPen()
+        # text_pen.setWidth(100)
+        # text_pen.setColor(QColor(0, 191, 255))
+        # painter.setPen(text_pen)
+        #
+        # text = "Reconstructing..."
+        # painter.drawText(self.width()//2,
+        #                  self.height()//2,
+        #                  "Reconstructing...")
         # painter.drawText(text_rect,
         #                  Qt.AlignVCenter,
         #                  "Reconstructing...")

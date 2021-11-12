@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/Users/cameron.foltz/recOrder/recOrder/plugin/qtdesigner/recOrder_reconstruction.ui'
+# Form implementation generated from reading ui file './recOrder_reconstruction.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.4
 #
@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(580, 1015)
+        Form.resize(580, 803)
         self.gridLayout = QtWidgets.QGridLayout(Form)
         self.gridLayout.setObjectName("gridLayout")
         self.scrollArea_4 = QtWidgets.QScrollArea(Form)
@@ -26,7 +26,7 @@ class Ui_Form(object):
         self.scrollArea_4.setWidgetResizable(True)
         self.scrollArea_4.setObjectName("scrollArea_4")
         self.scrollAreaWidgetContents_4 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 554, 1007))
+        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 554, 1000))
         self.scrollAreaWidgetContents_4.setObjectName("scrollAreaWidgetContents_4")
         self.gridLayout_12 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_4)
         self.gridLayout_12.setObjectName("gridLayout_12")
@@ -136,6 +136,9 @@ class Ui_Form(object):
         self.ReconstructionParams.setObjectName("ReconstructionParams")
         self.gridLayout_14 = QtWidgets.QGridLayout(self.ReconstructionParams)
         self.gridLayout_14.setObjectName("gridLayout_14")
+        self.qb_reconstruct = QtWidgets.QPushButton(self.ReconstructionParams)
+        self.qb_reconstruct.setObjectName("qb_reconstruct")
+        self.gridLayout_14.addWidget(self.qb_reconstruct, 1, 0, 1, 2)
         self.tabWidget_4 = QtWidgets.QTabWidget(self.ReconstructionParams)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
@@ -494,9 +497,9 @@ class Ui_Form(object):
         self.labelpostproc_denoise_channels = QtWidgets.QLabel(self.denoising_2)
         self.labelpostproc_denoise_channels.setObjectName("labelpostproc_denoise_channels")
         self.gridLayout_21.addWidget(self.labelpostproc_denoise_channels, 1, 0, 1, 1)
-        self.cb_postproc_denoise_use = QtWidgets.QCheckBox(self.denoising_2)
-        self.cb_postproc_denoise_use.setObjectName("cb_postproc_denoise_use")
-        self.gridLayout_21.addWidget(self.cb_postproc_denoise_use, 0, 0, 1, 1)
+        self.chb_postproc_denoise_use = QtWidgets.QCheckBox(self.denoising_2)
+        self.chb_postproc_denoise_use.setObjectName("chb_postproc_denoise_use")
+        self.gridLayout_21.addWidget(self.chb_postproc_denoise_use, 0, 0, 1, 1)
         self.le_postproc_denoise_threshold = QtWidgets.QLineEdit(self.denoising_2)
         self.le_postproc_denoise_threshold.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.le_postproc_denoise_threshold.setText("")
@@ -556,9 +559,6 @@ class Ui_Form(object):
         self.gridLayout_22.addWidget(self.fluor, 0, 0, 1, 1)
         self.tabWidget_4.addTab(self.postprocessing, "")
         self.gridLayout_14.addWidget(self.tabWidget_4, 0, 0, 1, 2)
-        self.qb_reconstruct = QtWidgets.QPushButton(self.ReconstructionParams)
-        self.qb_reconstruct.setObjectName("qb_reconstruct")
-        self.gridLayout_14.addWidget(self.qb_reconstruct, 1, 0, 1, 2)
         self.gridLayout_12.addWidget(self.ReconstructionParams, 1, 0, 1, 1)
         self.FileSettings = QtWidgets.QGroupBox(self.scrollAreaWidgetContents_4)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
@@ -698,6 +698,7 @@ class Ui_Form(object):
         self.le_step_size.setText(_translate("Form", "1"))
         self.qb_add_to_config.setText(_translate("Form", "Add to Config"))
         self.ReconstructionParams.setTitle(_translate("Form", "Reconstruction Parameters"))
+        self.qb_reconstruct.setText(_translate("Form", "Reconstruct!"))
         self.cb_background_correction.setItemText(0, _translate("Form", "None"))
         self.cb_background_correction.setItemText(1, _translate("Form", "global"))
         self.cb_background_correction.setItemText(2, _translate("Form", "local_fit"))
@@ -757,7 +758,7 @@ class Ui_Form(object):
         self.label_postproc_denoise_threshold.setText(_translate("Form", "Threshold"))
         self.le_postproc_denoise_channels.setPlaceholderText(_translate("Form", "Phase3D, Retardance, BF"))
         self.labelpostproc_denoise_channels.setText(_translate("Form", "Channels"))
-        self.cb_postproc_denoise_use.setText(_translate("Form", "Denoise?"))
+        self.chb_postproc_denoise_use.setText(_translate("Form", "Denoise?"))
         self.le_postproc_denoise_threshold.setPlaceholderText(_translate("Form", "[0.5, 0.5, 0.5]"))
         self.le_postproc_denoise_level.setPlaceholderText(_translate("Form", "[1, 1, 1]"))
         self.label_postproc_denoise_level.setText(_translate("Form", "Level"))
@@ -772,7 +773,6 @@ class Ui_Form(object):
         self.label_postproc_fluor_wavelength.setText(_translate("Form", "Wavelength(s)"))
         self.chb_postproc_fluor_use.setText(_translate("Form", "Deconvolve?"))
         self.tabWidget_4.setTabText(self.tabWidget_4.indexOf(self.postprocessing), _translate("Form", "Post Processing"))
-        self.qb_reconstruct.setText(_translate("Form", "Reconstruct!"))
         self.FileSettings.setTitle(_translate("Form", "File Settings"))
         self.qb_browse_save_dir.setText(_translate("Form", "Browse"))
         self.label_save_dir.setText(_translate("Form", "Save Directory"))
