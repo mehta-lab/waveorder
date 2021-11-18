@@ -13,8 +13,8 @@ DATASET = {
     'save_dir': None,
     'data_type': 'zarr',
     'data_save_name': None,
-    'positions': ['all'],
-    'timepoints': ['all'],
+    'positions': 'all',
+    'timepoints': 'all',
     'background': None,
     'background_ROI': None,
     'calibration_metadata': None
@@ -86,10 +86,12 @@ class ConfigReader(object):
 
     """
 
-    def __init__(self, cfg_path=None, data_dir=None, save_dir=None, method=None, mode=None, name=None):
+    def __init__(self, cfg_path=None, data_dir=None, save_dir=None, method=None, mode=None, name=None, immutable=True):
 
         self.preprocessing = Object()
         self.postprocessing = Object()
+
+        self.immutable = immutable
 
 
         if data_dir is not None:
@@ -138,7 +140,7 @@ class ConfigReader(object):
 
     # Override set attribute function to disallow changes after init
     def __setattr__(self, name, value):
-        if hasattr(self, name):
+        if hasattr(self, name) and self.immutable:
             raise AttributeError("Attempting to change immutable object")
         else:
             super().__setattr__(name, value)

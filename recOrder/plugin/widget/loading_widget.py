@@ -13,13 +13,14 @@ class Overlay(QWidget):
         palette = QPalette(self.palette())
         palette.setColor(palette.Background, Qt.transparent)
         self.setPalette(palette)
+        self.parent = parent
 
     def paintEvent(self, event):
         painter = QPainter()
         painter.begin(self)
 
         painter.setRenderHint(QPainter.Antialiasing)
-        painter.fillRect(event.rect(), QBrush(QColor(40, 45, 60, 197)))
+        # painter.fillRect(self.parent.ui.qb_reconstruct.rect(), QBrush(QColor(40, 45, 60, 197)))
         # text_rect = QRect(self.width()//2, self.height()//2,
         #                   self.width()//2, self.height()//3)
         # text_pen = QPen()

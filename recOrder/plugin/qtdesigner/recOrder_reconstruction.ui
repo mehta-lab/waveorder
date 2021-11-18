@@ -31,7 +31,7 @@
         <x>0</x>
         <y>0</y>
         <width>554</width>
-        <height>1000</height>
+        <height>1034</height>
        </rect>
       </property>
       <layout class="QGridLayout" name="gridLayout_12">
@@ -533,6 +533,19 @@
                  <string/>
                 </property>
                 <layout class="QGridLayout" name="gridLayout_8">
+                 <item row="3" column="1">
+                  <widget class="QLineEdit" name="le_NA_condenser">
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="placeholderText">
+                    <string>Phase Only</string>
+                   </property>
+                  </widget>
+                 </item>
                  <item row="0" column="0">
                   <widget class="QLabel" name="label_wavelength">
                    <property name="text">
@@ -585,13 +598,6 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="2" column="0">
-                  <widget class="QLabel" name="label_na_obj">
-                   <property name="text">
-                    <string>NA Objective</string>
-                   </property>
-                  </widget>
-                 </item>
                  <item row="2" column="1">
                   <widget class="QLineEdit" name="le_NA_objective">
                    <property name="sizePolicy">
@@ -605,23 +611,10 @@
                    </property>
                   </widget>
                  </item>
-                 <item row="3" column="0">
-                  <widget class="QLabel" name="label_na_cond">
+                 <item row="2" column="0">
+                  <widget class="QLabel" name="label_na_obj">
                    <property name="text">
-                    <string>NA Condenser</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item row="3" column="1">
-                  <widget class="QLineEdit" name="le_NA_condenser">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="placeholderText">
-                    <string>Phase Only</string>
+                    <string>NA Objective</string>
                    </property>
                   </widget>
                  </item>
@@ -629,6 +622,13 @@
                   <widget class="QLabel" name="label_n_media">
                    <property name="text">
                     <string>RI of Objective Media</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="3" column="0">
+                  <widget class="QLabel" name="label_na_cond">
+                   <property name="text">
+                    <string>NA Condenser</string>
                    </property>
                   </widget>
                  </item>
@@ -667,6 +667,20 @@
                      <bold>false</bold>
                     </font>
                    </property>
+                   <property name="placeholderText">
+                    <string>Optional</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="0">
+                  <widget class="QLabel" name="label_pad_z">
+                   <property name="text">
+                    <string>Z-Padding</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item row="6" column="1">
+                  <widget class="QLineEdit" name="le_pad_z">
                    <property name="placeholderText">
                     <string>Optional</string>
                    </property>
@@ -1050,6 +1064,13 @@
               </item>
              </layout>
             </widget>
+           </widget>
+          </item>
+          <item row="2" column="0" colspan="2">
+           <widget class="QPushButton" name="qb_stop">
+            <property name="text">
+             <string>STOP</string>
+            </property>
            </widget>
           </item>
          </layout>

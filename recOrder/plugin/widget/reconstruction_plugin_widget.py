@@ -1,11 +1,11 @@
-from pycromanager import Bridge
-from PyQt5.QtCore import pyqtSlot, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QFileDialog, QLineEdit, QCheckBox
+from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QWidget, QFileDialog
 from PyQt5.QtGui import QColor
-from recOrder.plugin.widget.thread_worker import ThreadWorker
+from recOrder.plugin.reconstruction.reconstruction_workers import reconstruct
+from napari.qt.threading import thread_worker
 from recOrder.plugin.qtdesigner import recOrder_reconstruction
 from recOrder.plugin.widget.loading_widget import Overlay
-from recOrder.io.config_reader import ConfigReader, DATASET, PROCESSING, PREPROCESSING, POSTPROCESSING
+from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, POSTPROCESSING
 from pathlib import Path
 from napari import Viewer
 import os
@@ -23,6 +23,7 @@ class Reconstruction(QWidget):
 
         self.overlay = Overlay(self)
         self.overlay.hide()
+        self.worker = None
 
         #QT Styling
         self.red_text = QColor(200, 0, 0, 255)
@@ -75,7 +76,11 @@ class Reconstruction(QWidget):
         for attr in self.attrs:
             if attr.startswith('le_'):
                 le = getattr(self.ui, attr)
-                le.editingFinished.connect(self.reset_le_style)
+                le.editingFinished.connect(self.reset_style)
+
+    @thread_worker
+    def show_overlay(self):
+        self.overlay.show()
 
     def resizeEvent(self, event):
         self.overlay.resize(event.size())
@@ -139,6 +144,14 @@ class Reconstruction(QWidget):
 
 
     def _check_requirements(self):
+
+        self._set_tab_red('Physical', False)
+        self._set_tab_red('Processing', False)
+        self._set_tab_red('Regularization', False)
+        self._set_tab_red('preprocessing', False)
+        self._set_tab_red('postprocessing', False)
+
+        success = True
         output_channels = self.ui.le_output_channels.text()
         output_channels.replace(' ', '')
         output_channels = output_channels.strip(',')
@@ -149,11 +162,10 @@ class Reconstruction(QWidget):
                           'phase_strength'}
         fluor_decon_required = {'wavelength', 'magnification', 'NA_objective', 'n_objective_media', 'reg'}
 
-        cont = True
         for field in always_required:
             cont = self._check_line_edit(field)
             if not cont:
-                return False
+                success = False
             else:
                 continue
 
@@ -163,8 +175,9 @@ class Reconstruction(QWidget):
                     cont = self._check_line_edit(field)
                     tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
                     if not cont:
-                        self._set_tab_red(tab, True)
-                        return False
+                        if field != 'calibration_metadata':
+                            self._set_tab_red(tab, True)
+                        success = False
                     else:
                         continue
             elif 'Phase2D' in output_channels or 'Phase3D' in output_channels:
@@ -173,20 +186,20 @@ class Reconstruction(QWidget):
                     tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
                     if not cont:
                         self._set_tab_red(tab, True)
-                        return False
+                        success = False
                     else:
                         continue
                 if 'Phase2D' in output_channels:
                     cont = self._check_line_edit('focus_zidx')
                     if not cont:
                         self._set_tab_red('Physical', True)
-                        return False
+                        success = False
 
             else:
                 self._set_tab_red('Processing', True)
                 self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
                 print('User did not specify any QLIPP Specific Channels')
-                return False
+                success = False
 
         elif self.method == 'PhaseFromBF':
             if 'Phase2D' in output_channels or 'Phase3D' in output_channels:
@@ -195,19 +208,19 @@ class Reconstruction(QWidget):
                     tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
                     if not cont:
                         self._set_tab_red(tab, True)
-                        return False
+                        success = False
                     else:
                         continue
                 if 'Phase2D' in output_channels:
                     cont = self._check_line_edit('focus_zidx')
                     if not cont:
                         self._set_tab_red('Physical', True)
-                        return False
+                        success = False
             else:
                 self._set_tab_red('Processing', True)
                 self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
                 print('User did not specify any PhaseFromBF Specific Channels (Phase2D, Phase3D)')
-                return False
+                success = False
 
         elif self.method == 'FluorDeconv':
             for field in fluor_decon_required:
@@ -215,64 +228,102 @@ class Reconstruction(QWidget):
                 tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
                 if not cont:
                     self._set_tab_red(tab, True)
-                    return False
+                    success = False
                 else:
                     continue
 
         else:
             print('Error in parameter checks')
             self.ui.qb_reconstruct.setStyleSheet("border: 1px solid rgb(200,0,0);")
+            success = False
+
+        return success
 
     def _populate_config_from_app(self):
-        cfg_dict = {'dataset': {},
-                     'pre_processing': {},
-                     'processing': {},
-                     'post_processing': {}}
+        self.config_reader = ConfigReader(immutable=False)
 
         # Parse dataset fields manually
-        self.cfg_dict['dataset']['data_dir'] = self.data_dir
-        self.cfg_dict['dataset']['save_dir'] = self.save_dir
-        self.cfg_dict['dataset']['method'] = self.method
-        self.cfg_dict['dataset']['mode'] = self.mode
-        self.cfg_dict['dataset']['data_save_name'] = self.data_save_name
-        self.cfg_dict['dataset']['calibration_metadata'] = self.ui.le_calibration_metadata.text()
-        self.cfg_dict['dataset']['background'] = self.ui.le_calibration_metadata.text()
+        self.config_reader.data_dir = self.data_dir
+        self.config_reader.save_dir = self.save_dir
+        self.config_reader.method = self.method
+        self.config_reader.mode = self.mode
+        self.config_reader.data_save_name = self.ui.le_data_save_name if self.ui.le_data_save_name != '' else None
+        self.config_reader.calibration_metadata = self.ui.le_calibration_metadata.text()
+        self.config_reader.background = self.ui.le_calibration_metadata.text()
 
-        #TODO: Figure out how to parse positions/timepoints
+        # Assumes that positions/timepoints can either be 'all'; '[all]'; 1, 2, 3, N; [start, end]
         positions = self.ui.le_positions.text()
+        positions = positions.replace(' ', '')
+        if positions == 'all' or positions == '[all]':
+            self.config_reader.positions = 'all'
+        elif positions.startswith('[') and positions.endswith(']'):
+            vals = positions[1:-1].split(',')
+            if len(vals) != 2:
+                self._set_tab_red('Processing', True)
+                self.ui.le_positions.setStyleSheet("border: 1px solid rgb(200,0,0);")
+            else:
+                self._set_tab_red('Processing', False)
+                self.ui.le_positions.setStyleSheet("")
+                self.config_reader.positions = [(int(vals[0]), int(vals[1]))]
+        else:
+            vals = positions.split(',')
+            vals = map(lambda x: int(x), vals)
+            self.config_reader.positions = list(vals)
+
         timepoints = self.ui.le_timepoints.text()
+        timepoints = timepoints.replace(' ', '')
+        if timepoints == 'all' or timepoints == '[all]':
+            self.config_reader.timepoints = 'all'
+        elif timepoints.startswith('[') and timepoints.endswith(']'):
+            vals = timepoints[1:-1].split(',')
+            if len(vals) != 2:
+                self._set_tab_red('Processing', True)
+                self.ui.le_timepoints.setStyleSheet("border: 1px solid rgb(200,0,0);")
+            else:
+                self._set_tab_red('Processing', False)
+                self.ui.le_timepoints.setStyleSheet("")
+                self.config_reader.timepoints = [(int(vals[0]), int(vals[1]))]
+        else:
+            vals = timepoints.split(',')
+            vals = map(lambda x: int(x), vals)
+            self.config_reader.timepoints = list(vals)
 
         for key, value in PREPROCESSING.items():
             if isinstance(value, dict):
-                cfg_dict['pre_processing'][key] = {}
                 for key_child, value_child in PREPROCESSING[key].items():
-                    field = getattr(self.ui, f'le_preproc_{key}_{key_child}')
                     if key_child == 'use':
-                        cfg_dict['pre_processing'][key][key_child] = field.checkState()
+                        field = getattr(self.ui, f'chb_preproc_{key}_{key_child}')
+                        val = True if field.checkState() == 2 else False
+                        setattr(self.config_reader.preprocessing, f'{key}_{key_child}', val)
                     else:
-                        cfg_dict['pre_processing'][key][key_child] = field.text()
+                        field = getattr(self.ui, f'le_preproc_{key}_{key_child}')
+                        setattr(self.config_reader.preprocessing, f'{key}_{key_child}', field.text())
             else:
-                cfg_dict['pre_processing'][key] = getattr(self, key)
+                setattr(self.config_reader.preprocessing, key, getattr(self, key))
 
+        #TODO: Figure out how to catch errors in regularizer strength field
         for key, value in PROCESSING.items():
-
             if key == 'background_correction':
                 bg_map = {0: 'None', 1: 'global', 2: 'local_fit'}
-                cfg_dict['processing'][key] = bg_map[self.ui.cb_background_correction.currentIndex()]
+                setattr(self.config_reader, key, bg_map[self.ui.cb_background_correction.currentIndex()])
             elif key == 'output_channels':
                 field_text = self.ui.le_output_channels.text()
                 channels = field_text.replace(' ', '')
                 channels = channels.split(',')
-                cfg_dict['processing'][key] = channels
+                setattr(self.config_reader, key, channels)
             else:
                 attr_name = f'le_{key}'
                 if attr_name in self.attrs:
                     le = getattr(self.ui, attr_name)
-                    cfg_dict['processing'][key] = int(le.text())
-
+                    try:
+                        setattr(self.config_reader, key, float(le.text()))
+                    except ValueError as err:
+                        print(err)
+                        tab = le.parent().parent().objectName()
+                        self._set_tab_red(tab, True)
+                        le.setStyleSheet("border: 1px solid rgb(200,0,0);")
                 else:
                     continue
-
 
         # Parse Postprocessing automatically
         for key, val in POSTPROCESSING.items():
@@ -280,27 +331,30 @@ class Reconstruction(QWidget):
                 if key == 'deconvolution':
                     if key_child == 'use':
                         cb = getattr(self.ui, f'chb_postproc_fluor_{key_child}')
-                        cfg_dict['post_processing']['deconvolution'][key_child] = cb.checkState()
+                        val = True if cb.checkState() == 2 else False
+                        setattr(self.config_reader.postprocessing, f'deconvolution_{key_child}', val)
                     if hasattr(self.ui, f'le_postproc_fluor_{key_child}'):
                         # TODO: Parse wavelengths and channel indices in a smart manor
                         le = getattr(self.ui, f'le_postproc_fluor_{key_child}')
-                        cfg_dict['post_processing'][key][key_child] = le.text()
+                        setattr(self.config_reader.postprocessing, f'deconvolution_{key_child}', le.text())
 
                 elif key == 'registration':
                     if key_child == 'use':
-                        cb = getattr(self.ui, 'chb_postproc_registration_use')
-                        cfg_dict['post_processing']['registration'][key_child] = cb.checkState()
+                        cb = getattr(self.ui, 'chb_postproc_reg_use')
+                        val = True if cb.checkState() == 2 else False
+                        setattr(self.config_reader.postprocessing, f'{key}_{key_child}', val)
                     else:
                         le = getattr(self.ui, f'le_postproc_reg_{key_child}')
-                        cfg_dict['post_processing'][key][key_child] = le.text()
+                        setattr(self.config_reader.postprocessing, f'{key}_{key_child}', le.text())
 
                 elif key == 'denoise':
                     if key_child == 'use':
                         cb = getattr(self.ui, 'chb_postproc_denoise_use')
-                        cfg_dict['post_processing']['denoise'][key_child] = cb.checkState()
+                        val = True if cb.checkState() == 2 else False
+                        setattr(self.config_reader.postprocessing, f'{key}_{key_child}', val)
                     else:
                         le = getattr(self.ui, f'le_postproc_denoise_{key_child}')
-                        cfg_dict['post_processing'][key][key_child] = le.text()
+                        setattr(self.config_reader.postprocessing, f'{key}_{key_child}', le.text())
 
 
     def _populate_from_config(self):
@@ -341,23 +395,32 @@ class Reconstruction(QWidget):
                     le.setText(str(getattr(self.config_reader.preprocessing, f'denoise_{key_child}')))
 
         # Parse processing automatically
+        denoiser = None
         for key, val in PROCESSING.items():
             if hasattr(self.ui, f'le_{key}'):
                 le = getattr(self.ui, f'le_{key}')
-                le.setText(str(getattr(self.config_reader, key)))
+                le.setText(str(getattr(self.config_reader, key)) if not isinstance(getattr(self.config_reader, key), str) else getattr(self.config_reader, key))
 
             elif hasattr(self.ui, f'cb_{key}'):
                 cb = getattr(self.ui, f'cb_{key}')
                 items = [cb.itemText(i) for i in range(cb.count())]
                 cfg_attr = getattr(self.config_reader, key)
                 self.ui.cb_mode.setCurrentIndex(items.index(cfg_attr))
-            elif key == 'phase_denoiser_2D' or key == 'phase_denosier_3D':
+            elif key == 'phase_denoiser_2D' or key == 'phase_denoiser_3D':
                 cb = self.ui.cb_phase_denoiser
                 cfg_attr = getattr(self.config_reader, f'phase_denoiser_{self.mode}')
+                denoiser = cfg_attr
                 cb.setCurrentIndex(0) if cfg_attr == 'Tikhonov' else cb.setCurrentIndex(1)
-            #TODO: DENOISER STRENGTH PARSING
             else:
-                pass
+                if denoiser == 'Tikhonov':
+                    strength = getattr(self.config_reader, f'Tik_reg_ph_{self.mode}')
+                    self.ui.le_phase_strength.setText(str(strength))
+                else:
+                    strength = getattr(self.config_reader, f'TV_reg_ph_{self.mode}')
+                    self.ui.le_phase_strength.setText(str(strength))
+                    self.ui.le_rho.setText(str(getattr(self.config_reader, f'rho_{self.mode}')))
+                    self.ui.le_itr.setText(str(getattr(self.config_reader, f'itr_{self.mode}')))
+
 
         # Parse Postprocessing automatically
         for key, val in POSTPROCESSING.items():
@@ -396,17 +459,21 @@ class Reconstruction(QWidget):
 
     @pyqtSlot(bool)
     def run_reconstruction(self):
-        le = self.ui.le_wavelength
-        # group_box = self.ui.ReconstructionParams.setStyle()
-        print(le.parent().parent().objectName())
-        # self.ui.tabWidget_4.tabBar().
-        tab_bar = self.ui.tabWidget_4.tabBar().setTabTextColor(0, QColor(200, 0, 0, 255))
-        le.setStyleSheet("border: 1px solid rgb(200,0,0);")
-        # tab.setTabTextColor(0, 'red')
-        # tab.setStyleSheet("QTabWidget {border: 1px solid rgb(200,0,0)};")
-        # self.overlay.show()
-        # self._populate_config_from_app()
+        self._check_requirements()
+        self._populate_config_from_app()
 
+        # overlay_worker = self.show_overlay()
+        # overlay_worker.start()
+        # self.ui.qb_stop.clicked.connect(overlay_worker.quit)
+        # self.overlay.show()
+
+        # self.worker = reconstruct(self.config_reader)
+        # self.worker.started.connect(self.overlay.show)
+        # self.worker.finished.connect(self.overlay.hide)
+        # self.worker.finished.connect(self.ui.qb_stop.disconnect)
+        # self.ui.qb_stop.clicked.connect(self.worker.quit)
+
+        # self.worker.start()
 
     @pyqtSlot(bool)
     def browse_data_dir(self):
