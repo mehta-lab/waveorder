@@ -4,29 +4,31 @@ from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, reconstruct_phase2D, reconstruct_phase3D
 from recOrder.acq.acq_functions import generate_acq_settings, acquire_from_settings
 from recOrder.io.utils import load_bg
-import shutil
+from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import logging
 from waveorder.io.writer import WaveorderWriter
 import json
 import numpy as np
 import os
 
+
+class AcquisitionSignals(WorkerBaseSignals):
+    phase_image_emitter = pyqtSignal(object)
+    bire_image_emitter = pyqtSignal(object)
+    phase_reconstructor_emitter = pyqtSignal(object)
+
+
 # TODO: Cache common OTF's on local computers and use those for reconstruction
 # TODO: Fix bug in dimensionality, 2D/3D doesn't make a difference?
-class AcquisitionWorker(QtCore.QObject):
+class AcquisitionWorker(WorkerBase):
     """
     Class to execute a birefringence/phase acquisition.  First step is to snap the images follow by a second
     step of reconstructing those images.
     """
 
-    # Initialize signals to emit to widget handlers
-    phase_image_emitter = pyqtSignal(object)
-    bire_image_emitter = pyqtSignal(object)
-    phase_reconstructor_emitter = pyqtSignal(object)
-    finished = pyqtSignal()
-
     def __init__(self, calib_window, calib, mode):
         super().__init__()
+        self._signals = AcquisitionSignals()
         self.calib_window = calib_window
         self.calib = calib
         self.mode = mode
@@ -37,7 +39,11 @@ class AcquisitionWorker(QtCore.QObject):
         else:
             self.dim = '3D'
 
-    def run(self):
+    def _check_abort(self):
+        if self.abort_request:
+            self.aborted.emit()
+
+    def work(self):
 
         logging.info('Running Acquisition...')
         save_dir = self.calib_window.save_directory if self.calib_window.save_directory else self.calib_window.directory
@@ -45,6 +51,8 @@ class AcquisitionWorker(QtCore.QObject):
         channels = ['State0', 'State1', 'State2', 'State3']
         if self.calib_window.calib_scheme == '5-State':
             channels.append('State4')
+
+        self._check_abort()
 
         # Acquire 2D stack
         if self.dim == '2D':
@@ -54,6 +62,7 @@ class AcquisitionWorker(QtCore.QObject):
                                              channel_group='Channel',
                                              channels=channels,
                                              save_dir = save_dir)
+            self._check_abort()
             stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True) # (1, 4, 1, Y, X) array
 
         # Acquire 3D stack
@@ -67,16 +76,24 @@ class AcquisitionWorker(QtCore.QObject):
                                              zstep = self.calib_window.z_step,
                                              save_dir=save_dir)
 
+            self._check_abort()
+
             stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)  # (1, 4, Z, Y, X) array
 
+            self._check_abort()
+
         # Reconstruct snapped images
+        self._check_abort()
         self.n_slices = stack.shape[2]
         birefringence, phase = self._reconstruct(stack[0])
+        self._check_abort()
 
         # Save images if specified
         if self.calib_window.save_imgs:
             logging.debug('Saving Images')
             self._save_imgs(birefringence, phase)
+
+        self._check_abort()
 
         logging.info('Finished Acquisition')
         logging.debug('Finished Acquisition')
@@ -84,7 +101,7 @@ class AcquisitionWorker(QtCore.QObject):
         # Emit the images and let thread know function is finished
         self.bire_image_emitter.emit(birefringence)
         self.phase_image_emitter.emit(phase)
-        self.finished.emit()
+        # self.finished.emit()
 
     def _reconstruct(self, stack):
         """
@@ -104,12 +121,16 @@ class AcquisitionWorker(QtCore.QObject):
         # get rid of z-dimension if 2D acquisition
         stack = stack[:, 0] if self.n_slices == 1 else stack
 
+        self._check_abort()
+
         # Initialize the heavy reconstuctor
         if self.mode == 'phase' or self.mode == 'all':
 
+            self._check_abort()
             # if no reconstructor has been initialized before
             if not self.calib_window.phase_reconstructor:
                 logging.debug('Computing new reconstructor')
+
                 recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
                                                  self.calib_window.swing, stack.shape[0], False,
                                                  self.calib_window.obj_na, self.calib_window.cond_na,
@@ -120,6 +141,7 @@ class AcquisitionWorker(QtCore.QObject):
 
             # if previous reconstructor exists
             else:
+                self._check_abort()
 
                 # compute new reconstructor
                 if self._reconstructor_changed():
@@ -132,11 +154,13 @@ class AcquisitionWorker(QtCore.QObject):
                                                      self.calib_window.bg_option, mode=self.dim)
                 # use previous reconstructor
                 else:
+
                     logging.debug('Using previous reconstruction settings')
                     recon = self.calib_window.phase_reconstructor
 
         # if phase isn't desired, initialize the lighter birefringence only reconstructor
         else:
+            self._check_abort()
             logging.debug('Creating birefringence only reconstructor')
             recon = initialize_reconstructor((stack.shape[-2], stack.shape[-1]), self.calib_window.wavelength,
                                              self.calib_window.swing, stack.shape[0],
@@ -145,16 +169,22 @@ class AcquisitionWorker(QtCore.QObject):
         # Check to see if background correction is desired and compute BG stokes
         if self.calib_window.bg_option != 'None':
             logging.debug('Loading BG Data')
+            self._check_abort()
             bg_data = self._load_bg(self.calib_window.acq_bg_directory, stack.shape[-2], stack.shape[-1])
+            self._check_abort()
             bg_stokes = recon.Stokes_recon(bg_data)
+            self._check_abort()
             bg_stokes = recon.Stokes_transform(bg_stokes)
+            self._check_abort()
         else:
             logging.debug('No Background Correction method chosen')
             bg_stokes = None
 
         # Begin reconstruction with stokes (needed for birefringence or phase)
         logging.debug('Reconstructing...')
+        self._check_abort()
         stokes = reconstruct_qlipp_stokes(stack, recon, bg_stokes)
+        self._check_abort()
 
         # initialize empty variables to pass along
         birefringence = None
@@ -163,18 +193,23 @@ class AcquisitionWorker(QtCore.QObject):
         # reconstruct both phase and birefringence
         if self.mode == 'all':
             birefringence = reconstruct_qlipp_birefringence(stokes, recon)
+            self._check_abort()
             phase = reconstruct_phase2D(stokes[0], recon) if self.dim == '2D' \
                 else reconstruct_phase3D(stokes[0], recon)
+            self._check_abort()
+
 
         # reconstruct phase only
         elif self.mode == 'phase':
             phase = reconstruct_phase2D(stokes[0], recon) if self.dim == '2D' \
                 else reconstruct_phase3D(stokes[0], recon)
+            self._check_abort()
 
         # reconstruct birefringence only
         elif self.mode == 'birefringence':
             birefringence = reconstruct_qlipp_birefringence(stokes, recon)
             birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
+            self._check_abort()
 
         else:
             raise ValueError('Reconstruction Mode Not Understood')
@@ -308,6 +343,7 @@ class AcquisitionWorker(QtCore.QObject):
                               'n_slices': 'N_defocus',
                               }
 
+        self._check_abort()
         # check if equivalent attributes have diverged
         for key, value in attr_list.items():
             if getattr(self.calib_window, key) != getattr(self.calib_window.phase_reconstructor, value):

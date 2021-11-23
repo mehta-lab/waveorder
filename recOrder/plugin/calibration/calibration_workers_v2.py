@@ -1,6 +1,5 @@
-from PyQt5 import QtCore
-from PyQt5.QtCore import pyqtSignal, QObject
-from napari.qt.threading import thread_worker, WorkerBaseSignals, WorkerBase
+from PyQt5.QtCore import pyqtSignal
+from napari.qt.threading import WorkerBaseSignals, WorkerBase
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
 import os
