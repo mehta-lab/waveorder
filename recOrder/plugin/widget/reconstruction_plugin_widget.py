@@ -1,6 +1,7 @@
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QWidget, QFileDialog
+from PyQt5.QtWidgets import QWidget, QFileDialog, QMainWindow, QPushButton
 from PyQt5.QtGui import QColor
+from napari.utils.key_bindings import bind_key
 from recOrder.plugin.reconstruction.reconstruction_workers import reconstruct
 from napari.qt.threading import thread_worker
 from recOrder.plugin.qtdesigner import recOrder_reconstruction
@@ -24,6 +25,8 @@ class Reconstruction(QWidget):
         self.overlay = Overlay(self)
         self.overlay.hide()
         self.worker = None
+        self.pop_up = PopUpWindow()
+        bind_key(self.viewer.keymap, 's', self.stop_reconstruction)
 
         #QT Styling
         self.red_text = QColor(200, 0, 0, 255)
@@ -60,7 +63,6 @@ class Reconstruction(QWidget):
         self.ui.qb_load_default_config.clicked[bool].connect(self.load_default_config)
         self.ui.qb_reconstruct.clicked[bool].connect(self.run_reconstruction)
 
-
         # Line Edit Checks
         self.ui.le_data_dir.editingFinished.connect(self.enter_data_dir)
         self.ui.le_save_dir.editingFinished.connect(self.enter_save_dir)
@@ -78,9 +80,9 @@ class Reconstruction(QWidget):
                 le = getattr(self.ui, attr)
                 le.editingFinished.connect(self.reset_style)
 
-    @thread_worker
-    def show_overlay(self):
-        self.overlay.show()
+    def stop_reconstruction(self):
+        self.overlay.hide()
+        self.worker.quit()
 
     def resizeEvent(self, event):
         self.overlay.resize(event.size())
@@ -459,13 +461,15 @@ class Reconstruction(QWidget):
 
     @pyqtSlot(bool)
     def run_reconstruction(self):
-        self._check_requirements()
-        self._populate_config_from_app()
+        # self._check_requirements()
+        # self._populate_config_from_app()
 
         # overlay_worker = self.show_overlay()
         # overlay_worker.start()
         # self.ui.qb_stop.clicked.connect(overlay_worker.quit)
-        # self.overlay.show()
+        self.pop_up.stop_button.clicked.connect(self.overlay.hide)
+        self.overlay.show()
+        self.viewer.window.add_dock_widget(self.pop_up)
 
         # self.worker = reconstruct(self.config_reader)
         # self.worker.started.connect(self.overlay.show)
@@ -573,5 +577,15 @@ class Reconstruction(QWidget):
             self.mode = '3D'
         else:
             self.mode = '2D'
+
+
+class PopUpWindow(QMainWindow):
+
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle('PopUpWindow')
+        self.stop_button = QPushButton(text='STOP', parent=self)
+
+
 
 

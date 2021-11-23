@@ -1,6 +1,6 @@
 from qtpy.QtCore import Qt, QRect
 from qtpy.QtGui import QPalette, QPainter, QBrush, QColor, QPen
-from qtpy.QtWidgets import QWidget
+from qtpy.QtWidgets import QWidget, QPushButton
 
 class Overlay(QWidget):
     """
@@ -13,7 +13,7 @@ class Overlay(QWidget):
         palette = QPalette(self.palette())
         palette.setColor(palette.Background, Qt.transparent)
         self.setPalette(palette)
-        self.parent = parent
+
 
     def paintEvent(self, event):
         painter = QPainter()
