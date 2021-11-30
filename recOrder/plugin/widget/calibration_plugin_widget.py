@@ -4,7 +4,6 @@ from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QFileDialog
 from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker
 from recOrder.plugin.acquisition.acquisition_workers import AcquisitionWorker
-from recOrder.plugin.widget.thread_worker import ThreadWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
 from pathlib import Path
 from napari import Viewer
@@ -124,6 +123,7 @@ class Calibration(QWidget):
         self.pad_z = 0
         self.phase_reconstructor = None
         self.acq_bg_directory = None
+        self.auto_shutter = True
 
         # Assessment attributes
         self.calib_assessment_level = None
@@ -138,7 +138,34 @@ class Calibration(QWidget):
         self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
 
         #Init thread worker
-        self.thread_worker = None
+        self.worker = None
+
+    def _enable_buttons(self):
+        self.ui.qbutton_calibrate.setEnabled(True)
+        self.ui.qbutton_capture_bg.setEnabled(True)
+        self.ui.qbutton_calc_extinction.setEnabled(True)
+        self.ui.qbutton_acq_birefringence.setEnabled(True)
+        self.ui.qbutton_acq_phase.setEnabled(True)
+        self.ui.qbutton_acq_birefringence_phase.setEnabled(True)
+
+    def _disable_buttons(self):
+        self.ui.qbutton_calibrate.setEnabled(False)
+        self.ui.qbutton_capture_bg.setEnabled(False)
+        self.ui.qbutton_calc_extinction.setEnabled(False)
+        self.ui.qbutton_acq_birefringence.setEnabled(False)
+        self.ui.qbutton_acq_phase.setEnabled(False)
+        self.ui.qbutton_acq_birefringence_phase.setEnabled(False)
+
+    def _handle_error(self, exc):
+        self.ui.le_calib_assessment.setText(f'Error: {str(exc)}')
+        self.ui.le_calib_assessment.setStyleSheet("border: 1px solid rgb(200,0,0);")
+        self.mmc.clearROI()
+        self.mmc.setAutoShutter(self.auto_shutter)
+        raise exc
+
+    def _handle_acq_error(self, exc):
+
+        raise exc
 
     @pyqtSlot(bool)
     def connect_to_mm(self):
@@ -366,9 +393,9 @@ class Calibration(QWidget):
         if state == 0:
             self.bg_option = 'None'
         elif state == 1:
-            self.bg_option = 'global'
+            self.bg_option = 'Global'
         elif state == 2:
-            self.bg_option = 'local'
+            self.bg_option = 'local_fit'
 
     @pyqtSlot()
     def enter_gpu_id(self):
@@ -425,6 +452,12 @@ class Calibration(QWidget):
         -------
 
         """
+
+        self.ui.le_calib_assessment.setText('')
+        self.ui.le_calib_assessment.setStyleSheet("")
+
+        self.auto_shutter = self.mmc.getAutoShutter()
+
         logging.info('Starting Calibration')
 
         # Initialize displays + parameters for calibration
@@ -440,21 +473,19 @@ class Calibration(QWidget):
             self.calib.snap_manager.setLiveModeOn(False)
 
         # Init Worker and Thread
-        worker = CalibrationWorker(self, self.calib)
-        self.thread_worker = ThreadWorker(self, worker)
-        self.thread_worker.initalize()
+        self.worker = CalibrationWorker(self, self.calib)
 
         # Connect Handlers
-        self.thread_worker.worker.progress_update.connect(self.handle_progress_update)
-        self.thread_worker.worker.extinction_update.connect(self.handle_extinction_update)
-        self.thread_worker.worker.intensity_update.connect(self.handle_plot_update)
-        self.thread_worker.worker.calib_assessment.connect(self.handle_calibration_assessment_update)
-        self.thread_worker.worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
+        self.worker.progress_update.connect(self.handle_progress_update)
+        self.worker.extinction_update.connect(self.handle_extinction_update)
+        self.worker.intensity_update.connect(self.handle_plot_update)
+        self.worker.calib_assessment.connect(self.handle_calibration_assessment_update)
+        self.worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
+        self.worker.started.connect(self._disable_buttons)
+        self.worker.finished.connect(self._enable_buttons)
+        self.worker.errored.connect(self._handle_error)
 
-        self.thread_worker._disable_buttons()
-
-        # Start Calibration
-        self.thread_worker.thread.start()
+        self.worker.start()
 
     @pyqtSlot(bool)
     def capture_bg(self):
@@ -468,18 +499,18 @@ class Calibration(QWidget):
         """
 
         # Init worker and thread
-        worker = BackgroundCaptureWorker(self, self.calib)
-        self.thread_worker = ThreadWorker(self, worker)
-        self.thread_worker.initalize()
+        self.worker = BackgroundCaptureWorker(self, self.calib)
 
         # Connect Handlers
-        self.thread_worker.worker.bg_image_emitter.connect(self.handle_bg_image_update)
-        self.thread_worker.worker.bire_image_emitter.connect(self.handle_bg_bire_image_update)
+        self.worker.bg_image_emitter.connect(self.handle_bg_image_update)
+        self.worker.bire_image_emitter.connect(self.handle_bg_bire_image_update)
 
-        self.thread_worker._disable_buttons()
+        self.worker.started.connect(self._disable_buttons)
+        self.worker.finished.connect(self._enable_buttons)
+        self.worker.errored.connect(self._handle_error)
 
         # Start Capture Background Thread
-        self.thread_worker.thread.start()
+        self.worker.start()
 
     @pyqtSlot(bool)
     def acq_birefringence(self):
@@ -492,17 +523,16 @@ class Calibration(QWidget):
         """
 
         # Init Worker and thread
-        worker = AcquisitionWorker(self, self.calib, 'birefringence')
-        self.thread_worker = ThreadWorker(self, worker)
-        self.thread_worker.initalize()
+        self.worker = AcquisitionWorker(self, self.calib, 'birefringence')
 
         # Connect Handler
-        self.thread_worker.worker.bire_image_emitter.connect(self.handle_bire_image_update)
-
-        self.thread_worker._disable_buttons()
+        self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
+        self.worker.started.connect(self._disable_buttons)
+        self.worker.finished.connect(self._enable_buttons)
+        self.worker.errored.connect(self._handle_acq_error)
 
         # Start Thread
-        self.thread_worker.thread.start()
+        self.worker.start()
 
     @pyqtSlot(bool)
     def acq_phase(self):
@@ -514,18 +544,17 @@ class Calibration(QWidget):
          """
 
         # Init worker and thread
-        worker = AcquisitionWorker(self, self.calib, 'phase')
-        self.thread_worker = ThreadWorker(self, worker)
-        self.thread_worker.initalize()
+        self.worker = AcquisitionWorker(self, self.calib, 'phase')
 
         # Connect Handlers
-        self.thread_worker.worker.phase_image_emitter.connect(self.handle_phase_image_update)
-        self.thread_worker.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
-
-        self.thread_worker._disable_buttons()
+        self.worker.phase_image_emitter.connect(self.handle_phase_image_update)
+        self.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
+        self.worker.started.connect(self._disable_buttons)
+        self.worker.finished.connect(self._enable_buttons)
+        self.worker.errored.connect(self._handle_acq_error)
 
         # Start thread
-        self.thread_worker.thread.start()
+        self.worker.start()
 
     @pyqtSlot(bool)
     def acq_birefringence_phase(self):
@@ -537,19 +566,18 @@ class Calibration(QWidget):
          """
 
         # Init worker
-        worker = AcquisitionWorker(self, self.calib, 'all')
-        self.thread_worker = ThreadWorker(self, worker)
-        self.thread_worker.initalize()
+        self.worker = AcquisitionWorker(self, self.calib, 'all')
 
         # connect handlers
-        self.thread_worker.worker.phase_image_emitter.connect(self.handle_phase_image_update)
-        self.thread_worker.worker.bire_image_emitter.connect(self.handle_bire_image_update)
-        self.thread_worker.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
-
-        self.thread_worker._disable_buttons()
+        self.worker.phase_image_emitter.connect(self.handle_phase_image_update)
+        self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
+        self.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
+        self.worker.started.connect(self._disable_buttons)
+        self.worker.finished.connect(self._enable_buttons)
+        self.worker.errored.connect(self._handle_acq_error)
 
         # Start Thread
-        self.thread_worker.thread.start()
+        self.worker.start()
 
     def _open_file_dialog(self, default_path):
         # TODO: Save the last opened directory to use as default path for next time

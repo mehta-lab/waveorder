@@ -60,7 +60,7 @@ def snap_and_average(snap_manager, display=True):
     """
 
     snap_manager.snap(display)
-    time.sleep(0.1)  # sleep after snap to make sure the image we grab is the correct one
+    time.sleep(0.3)  # sleep after snap to make sure the image we grab is the correct one
 
     return snap_manager.getDisplay().getImagePlus().getStatistics().umean
 
