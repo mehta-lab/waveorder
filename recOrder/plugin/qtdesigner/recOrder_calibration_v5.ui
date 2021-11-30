@@ -120,7 +120,7 @@
             <x>0</x>
             <y>0</y>
             <width>595</width>
-            <height>1041</height>
+            <height>1109</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout">
@@ -512,8 +512,8 @@
              <property name="title">
               <string>Run Calibration</string>
              </property>
-             <layout class="QVBoxLayout" name="verticalLayout_2">
-              <item>
+             <layout class="QGridLayout" name="gridLayout_12">
+              <item row="0" column="0">
                <widget class="QPushButton" name="qbutton_calibrate">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -536,7 +536,7 @@
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="2" column="0">
                <widget class="QPushButton" name="qbutton_calc_extinction">
                 <property name="font">
                  <font>
@@ -550,7 +550,7 @@
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="4" column="0">
                <widget class="QLabel" name="label_progress">
                 <property name="font">
                  <font>
@@ -564,14 +564,21 @@
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="5" column="0">
                <widget class="QProgressBar" name="progress_bar">
                 <property name="value">
                  <number>0</number>
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="3" column="0">
+               <widget class="QPushButton" name="qbutton_stop_calib">
+                <property name="text">
+                 <string>STOP</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
                <widget class="QLabel" name="label_extinction">
                 <property name="font">
                  <font>
@@ -585,7 +592,7 @@
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="7" column="0">
                <widget class="QLineEdit" name="le_extinction">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -598,7 +605,7 @@
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="8" column="0">
                <widget class="QLabel" name="labell_calib_assessment">
                 <property name="font">
                  <font>
@@ -612,10 +619,17 @@
                 </property>
                </widget>
               </item>
-              <item>
+              <item row="9" column="0">
                <widget class="QLineEdit" name="le_calib_assessment">
                 <property name="readOnly">
                  <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QPushButton" name="qbutton_load_calib">
+                <property name="text">
+                 <string>Load Calibration</string>
                 </property>
                </widget>
               </item>
@@ -882,6 +896,13 @@
            <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
             <property name="text">
              <string>Acquire Birefringence + Phase</string>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QPushButton" name="qbutton_stop_acq">
+            <property name="text">
+             <string>STOP</string>
             </property>
            </widget>
           </item>
