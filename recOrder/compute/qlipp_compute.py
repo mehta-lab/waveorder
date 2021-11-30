@@ -5,7 +5,7 @@ import time
 
 def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing=None, calibration_scheme=None,
                              NA_obj=None, NA_illu=None, mag=None, n_slices=None, z_step_um=None,
-                             pad_z=None, pixel_size_um=None, bg_correction='local_fit', n_obj_media=1.0, mode='3D',
+                             pad_z=0, pixel_size_um=None, bg_correction='local_fit', n_obj_media=1.0, mode='3D',
                              use_gpu=False, gpu_id=0):
     """
     Initialize the QLIPP reconstructor for downstream tasks. See tags next to parameters
@@ -120,10 +120,13 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
         raise ValueError(f'Pipeline {pipeline} not understood')
 
     lambda_illu = wavelength_nm / 1000 if wavelength_nm else None
-    n_defocus = n_slices
+    n_defocus = n_slices if n_slices else 0
+    z_step_um = 0 if not z_step_um else z_step_um
     z_defocus = -(np.r_[:n_defocus] - n_defocus // 2) * z_step_um # assumes stack starts from the bottom
-    ps = pixel_size_um / mag
+    ps = pixel_size_um / mag if pixel_size_um else None
     cali = True
+    NA_obj = 0 if not NA_obj else NA_obj
+    NA_illu = 0 if not NA_illu else NA_illu
 
     if calibration_scheme == '4-State':
         inst_mat = np.array([[1, 0, 0, -1],
@@ -203,7 +206,10 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes=None):
     stokes_data = recon.Stokes_transform(stokes_data)
 
     if recon.bg_option == 'None' or bg_stokes is None:
-        return stokes_data
+        if len(stokes_data.shape) == 4:
+            return np.transpose(stokes_data, (0, 2, 3, 1))
+        else:
+            return stokes_data
 
     else:
         if len(np.shape(stokes_data)) == 4:
@@ -233,6 +239,8 @@ def reconstruct_qlipp_birefringence(stokes, recon):
     """
 
     birefringence = recon.Polarization_recon(np.copy(stokes))
+
+    print(stokes.shape, birefringence.shape)
 
     return np.transpose(birefringence, (0, 3, 1, 2)) if len(birefringence.shape) == 4 else birefringence
 
