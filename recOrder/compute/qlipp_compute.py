@@ -240,8 +240,6 @@ def reconstruct_qlipp_birefringence(stokes, recon):
 
     birefringence = recon.Polarization_recon(np.copy(stokes))
 
-    print(stokes.shape, birefringence.shape)
-
     return np.transpose(birefringence, (0, 3, 1, 2)) if len(birefringence.shape) == 4 else birefringence
 
 
@@ -268,6 +266,10 @@ def reconstruct_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
 
     _, phase2D = recon.Phase_recon(np.copy(S0), method=method, reg_p=reg_p, rho=rho, lambda_p=lambda_p, itr=itr, verbose=False)
 
+    # print('compute func')
+    # print(S0)
+    # print('\n')
+    # print(phase2D)
     return phase2D
 
 

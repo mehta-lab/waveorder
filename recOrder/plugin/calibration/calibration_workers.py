@@ -1,11 +1,11 @@
 from PyQt5.QtCore import pyqtSignal
-from napari.qt.threading import WorkerBaseSignals, WorkerBase
+from napari.qt.threading import WorkerBaseSignals, WorkerBase, thread_worker
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
+from recOrder.io.core_functions import define_lc_state, set_lc_state, snap_and_average
 import os
 import numpy as np
 import logging
-
 
 class CalibrationSignals(WorkerBaseSignals):
     progress_update = pyqtSignal(int)
@@ -13,10 +13,13 @@ class CalibrationSignals(WorkerBaseSignals):
     intensity_update = pyqtSignal(object)
     calib_assessment = pyqtSignal(str)
     calib_assessment_msg = pyqtSignal(str)
+    aborted = pyqtSignal()
+
 
 class BackgroundSignals(WorkerBaseSignals):
     bg_image_emitter = pyqtSignal(object)
     bire_image_emitter = pyqtSignal(object)
+    aborted = pyqtSignal()
 
 
 class CalibrationWorker(WorkerBase):
@@ -55,26 +58,32 @@ class CalibrationWorker(WorkerBase):
             # cont = self.calib.display_and_check_ROI(rect)
             self.calib_window.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
             self.calib.ROI = (rect.x, rect.y, rect.width, rect.height)
+
         self._check_abort()
+
         # Calculate Blacklevel
         logging.info('Calculating Blacklevel ...')
         logging.debug('Calculating Blacklevel ...')
         self.calib.calc_blacklevel()
         logging.info(f'Blacklevel: {self.calib.I_Black}\n')
         logging.debug(f'Blacklevel: {self.calib.I_Black}\n')
+
         self._check_abort()
 
         self.progress_update.emit(10)
 
         # Set LC Wavelength:
         self.calib_window.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.calib_window.wavelength)
+
         self._check_abort()
+
         # Optimize States
         self._calibrate_4state() if self.calib_window.calib_scheme == '4-State' else self._calibrate_5state()
 
         # Return ROI to full FOV
         if self.calib_window.use_cropped_roi:
             self.calib_window.mmc.clearROI()
+
         self._check_abort()
 
         # Calculate Extinction
@@ -88,40 +97,45 @@ class CalibrationWorker(WorkerBase):
         # Write Metadata
         self.calib.write_metadata()
         self.progress_update.emit(100)
+
         self._check_abort()
+
         self._assess_calibration()
+
         self._check_abort()
 
         logging.info("\n=======Finished Calibration=======\n")
         logging.info(f"EXTINCTION = {extinction_ratio}")
         logging.debug("\n=======Finished Calibration=======\n")
         logging.debug(f"EXTINCTION = {extinction_ratio}")
-        self._check_abort()
-
-        # Let thread know that it can finish + deconstruct
-        # self.finished.emit()
 
     def _check_abort(self):
         if self.abort_requested:
             self.aborted.emit()
+            raise TimeoutError('Stop Requested')
 
     def _calibrate_4state(self):
 
         self._check_abort()
+
         self.calib.opt_Iext()
+
         self._check_abort()
         self.progress_update.emit(60)
 
         self.calib.opt_I0()
         self.progress_update.emit(65)
+
         self._check_abort()
 
         self.calib.opt_I60(0.05, 0.05)
         self.progress_update.emit(75)
+
         self._check_abort()
 
         self.calib.opt_I120(0.05, 0.05)
         self.progress_update.emit(85)
+
         self._check_abort()
 
 
@@ -129,22 +143,27 @@ class CalibrationWorker(WorkerBase):
 
         self.calib.opt_Iext()
         self.progress_update.emit(50)
+
         self._check_abort()
 
         self.calib.opt_I0()
         self.progress_update.emit(55)
+
         self._check_abort()
 
         self.calib.opt_I45(0.05, 0.05)
         self.progress_update.emit(65)
+
         self._check_abort()
 
         self.calib.opt_I90(0.05, 0.05)
         self.progress_update.emit(75)
+
         self._check_abort()
 
         self.calib.opt_I135(0.05, 0.05)
         self.progress_update.emit(85)
+
         self._check_abort()
 
     def _assess_calibration(self):
@@ -182,6 +201,7 @@ class BackgroundCaptureWorker(WorkerBase):
     def _check_abort(self):
         if self.abort_requested:
             self.aborted.emit()
+            return True
 
     # def work(self):
     #
@@ -213,9 +233,11 @@ class BackgroundCaptureWorker(WorkerBase):
 
         # Reconstruct birefringence from BG images
         stokes = reconstruct_qlipp_stokes(imgs, recon, None)
+
         self._check_abort()
 
         birefringence = reconstruct_qlipp_birefringence(stokes, recon)
+
         self._check_abort()
 
         retardance = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
@@ -223,6 +245,48 @@ class BackgroundCaptureWorker(WorkerBase):
         # Save metadata file and emit imgs
         self.calib.meta_file = os.path.join(bg_path, 'calibration_metadata.txt')
         self.calib.write_metadata()
+
         self._check_abort()
+
         self.bg_image_emitter.emit(imgs)
         self.bire_image_emitter.emit([retardance, birefringence[1]])
+
+@thread_worker
+def load_calibration(calib, meta: dict):
+
+    if meta['Summary']['Acquired Using'] == '4-State':
+        state0 = meta['Summary']['[LCA_Ext, LCB_Ext]']
+        state1 = meta['Summary']['[LCA_0, LCB_0]']
+        state2 = meta['Summary']['[LCA_60, LCB_60]']
+        state3 = meta['Summary']['[LCA_120, LCB_120]']
+
+        define_lc_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
+        define_lc_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
+        define_lc_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
+        define_lc_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
+
+    else:
+        state0 = meta['Summary']['[LCA_Ext, LCB_Ext]']
+        state1 = meta['Summary']['[LCA_0, LCB_0]']
+        state2 = meta['Summary']['[LCA_45, LCB_45]']
+        state3 = meta['Summary']['[LCA_90, LCB_90]']
+        state4 = meta['Summary']['[LCA_135, LCB_135]']
+
+        define_lc_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
+        define_lc_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
+        define_lc_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
+        define_lc_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
+        define_lc_state(calib.mmc, 'State4', state4[0], state4[1], calib.PROPERTIES)
+
+    calib.calc_blacklevel()
+    set_lc_state(calib.mmc, 'State0')
+    calib.I_Ext = snap_and_average(calib.snap_manager)
+    set_lc_state(calib.mmc, 'State1')
+    calib.I_Elliptical = snap_and_average(calib.snap_manager)
+
+    yield str(calib.calculate_extinction(calib.swing, calib.I_Black, calib.I_Ext, calib.I_Elliptical))
+
+    return calib
+
+
+

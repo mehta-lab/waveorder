@@ -2,13 +2,16 @@ from recOrder.calib.Calibration import QLIPP_Calibration
 from pycromanager import Bridge
 from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QFileDialog
-from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker
+from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
 from recOrder.plugin.acquisition.acquisition_workers import AcquisitionWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
+from recOrder.postproc.post_processing import ret_ori_overlay
+from recOrder.io.core_functions import set_lc_state, snap_and_average
 from pathlib import Path
 from napari import Viewer
-from recOrder.io.core_functions import set_lc_state, snap_and_average
+import numpy as np
 import os
+import json
 import logging
 
 #TODO
@@ -38,7 +41,7 @@ class Calibration(QWidget):
         # Connect to Micromanager
         self.ui.qbutton_mm_connect.clicked[bool].connect(self.connect_to_mm)
 
-        # Calibration Parameters
+        # Calibration Tab
         self.ui.qbutton_browse.clicked[bool].connect(self.browse_dir_path)
         self.ui.le_directory.editingFinished.connect(self.enter_dir_path)
         self.ui.le_swing.editingFinished.connect(self.enter_swing)
@@ -46,6 +49,7 @@ class Calibration(QWidget):
         self.ui.cb_calib_scheme.currentIndexChanged[int].connect(self.enter_calib_scheme)
         self.ui.chb_use_roi.stateChanged[int].connect(self.enter_use_cropped_roi)
         self.ui.qbutton_calibrate.clicked[bool].connect(self.run_calibration)
+        self.ui.qbutton_load_calib.clicked[bool].connect(self.load_calibration)
         self.ui.qbutton_calc_extinction.clicked[bool].connect(self.calc_extinction)
 
         # Capture Background
@@ -93,6 +97,7 @@ class Calibration(QWidget):
         #Other Properties:
         self.mm = None
         self.mmc = None
+        self.calib = None
         # self.home_path = str(Path.home())
         self.current_dir_path = str(Path.home())
         self.current_save_path = str(Path.home())
@@ -147,6 +152,7 @@ class Calibration(QWidget):
         self.ui.qbutton_acq_birefringence.setEnabled(True)
         self.ui.qbutton_acq_phase.setEnabled(True)
         self.ui.qbutton_acq_birefringence_phase.setEnabled(True)
+        self.ui.qbutton_load_calib.setEnabled(True)
 
     def _disable_buttons(self):
         self.ui.qbutton_calibrate.setEnabled(False)
@@ -155,17 +161,34 @@ class Calibration(QWidget):
         self.ui.qbutton_acq_birefringence.setEnabled(False)
         self.ui.qbutton_acq_phase.setEnabled(False)
         self.ui.qbutton_acq_birefringence_phase.setEnabled(False)
+        self.ui.qbutton_load_calib.setEnabled(False)
 
     def _handle_error(self, exc):
         self.ui.le_calib_assessment.setText(f'Error: {str(exc)}')
         self.ui.le_calib_assessment.setStyleSheet("border: 1px solid rgb(200,0,0);")
         self.mmc.clearROI()
         self.mmc.setAutoShutter(self.auto_shutter)
+        self.ui.progress_bar.setValue(0)
         raise exc
+
+    def _handle_calib_abort(self):
+        self.mmc.clearROI()
+        self.mmc.setAutoShutter(self.auto_shutter)
+        self.ui.progress_bar.setValue(0)
+
+    def _handle_acq_abort(self):
+        pass
 
     def _handle_acq_error(self, exc):
-
         raise exc
+
+    def _handle_load_finished(self):
+        self.ui.le_calib_assessment.setText('Previous calibration successfully loaded')
+        self.ui.le_calib_assessment.setStyleSheet("border: 1px solid green;")
+        self.ui.progress_bar.setValue(100)
+
+    def _update_calib(self, val):
+        self.calib = val
 
     @pyqtSlot(bool)
     def connect_to_mm(self):
@@ -173,7 +196,6 @@ class Calibration(QWidget):
             bridge = Bridge(convert_camel_case=False)
             self.mmc = bridge.get_core()
             self.mm = bridge.get_studio()
-            self.calib = QLIPP_Calibration(self.mmc, self.mm)
 
             self.mm_status_changed.emit(True)
         except:
@@ -244,10 +266,21 @@ class Calibration(QWidget):
     def handle_bire_image_update(self, value):
         name = 'Birefringence2D' if self.birefringence_dim == '2D' else 'Birefringence3D'
 
+        # overlay = ret_ori_overlay(value[0], value[1], (0, np.percentile(value[0], 99.99)), mode=self.birefringence_dim)
+
         if name in self.viewer.layers:
             self.viewer.layers[name].data = value
         else:
             self.viewer.add_image(value, name=name, colormap='gray')
+
+        if self.birefringence_dim == '2D':
+            overlay_name = name + '_Overlay'
+            overlay = ret_ori_overlay(value[0], value[1], (0, np.percentile(value[0], 99.99)))
+
+            if overlay_name in self.viewer.layers:
+                self.viewer.layers[overlay_name].data = overlay
+            else:
+                self.viewer.add_image(overlay, name=overlay_name, rgb=True)
 
     @pyqtSlot(object)
     def handle_phase_image_update(self, value):
@@ -265,7 +298,7 @@ class Calibration(QWidget):
     @pyqtSlot(bool)
     def browse_dir_path(self):
         # self.ui.le_directory.setFocus()
-        result = self._open_file_dialog(self.current_dir_path)
+        result = self._open_browse_dialog(self.current_dir_path)
         self.directory = result
         self.current_dir_path = result
         self.ui.le_directory.setText(result)
@@ -273,7 +306,7 @@ class Calibration(QWidget):
     @pyqtSlot(bool)
     def browse_save_path(self):
         # self.ui.le_directory.setFocus()
-        result = self._open_file_dialog(self.current_save_path)
+        result = self._open_browse_dialog(self.current_save_path)
         self.save_directory = result
         self.current_save_path = result
         self.ui.le_save_path.setText(result)
@@ -382,7 +415,7 @@ class Calibration(QWidget):
 
     @pyqtSlot(bool)
     def browse_acq_bg_path(self):
-        result = self._open_file_dialog(self.current_bg_path)
+        result = self._open_browse_dialog(self.current_bg_path)
         self.acq_bg_directory = result
         self.current_bg_path = result
         self.ui.le_bg_path.setText(result)
@@ -443,6 +476,40 @@ class Calibration(QWidget):
         self.ui.le_extinction.setText(str(extinction))
 
     @pyqtSlot(bool)
+    def load_calibration(self):
+        result = self._open_browse_dialog(self.current_dir_path, file=True)
+        with open(result, 'r') as file:
+            meta = json.load(file)
+
+        self.wavelength = meta['Summary']['Wavelength (nm)']
+        self.swing = meta['Summary']['Swing (fraction)']
+
+        self.calib = QLIPP_Calibration(self.mmc, self.mm)
+
+        self.calib.swing = self.swing
+        self.ui.le_swing.setText(str(self.swing))
+
+        self.calib.wavelength = self.wavelength
+        self.ui.le_wavelength.setText(str(self.wavelength))
+
+
+        if meta['Summary']['Acquired Using'] == '4-State':
+            self.ui.cb_calib_scheme.setCurrentIndex(0)
+        else:
+            self.ui.cb_calib_scheme.setCurrentIndex(1)
+
+        self.worker = load_calibration(self.calib, meta)
+
+        self.ui.qbutton_stop_calib.clicked.connect(self.worker.quit)
+        self.worker.yielded.connect(self.ui.le_extinction.setText)
+        self.worker.returned.connect(self._update_calib)
+        self.worker.errored.connect(self._handle_error)
+        self.worker.started.connect(self._disable_buttons)
+        self.worker.finished.connect(self._enable_buttons)
+        self.worker.finished.connect(self._handle_load_finished)
+        self.worker.start()
+
+    @pyqtSlot(bool)
     def run_calibration(self):
         """
         Wrapper function to create calibration worker and move that worker to a thread.
@@ -452,6 +519,8 @@ class Calibration(QWidget):
         -------
 
         """
+
+        self.calib = QLIPP_Calibration(self.mmc, self.mm)
 
         self.ui.le_calib_assessment.setText('')
         self.ui.le_calib_assessment.setStyleSheet("")
@@ -484,6 +553,7 @@ class Calibration(QWidget):
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_error)
+        self.ui.qbutton_stop_calib.clicked.connect(self.worker.quit)
 
         self.worker.start()
 
@@ -508,6 +578,8 @@ class Calibration(QWidget):
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_error)
+        self.ui.qbutton_stop_calib.clicked.connect(self.worker.quit)
+        self.worker.aborted.connect(self._handle_calib_abort)
 
         # Start Capture Background Thread
         self.worker.start()
@@ -579,12 +651,17 @@ class Calibration(QWidget):
         # Start Thread
         self.worker.start()
 
-    def _open_file_dialog(self, default_path):
+    def _open_browse_dialog(self, default_path, file=False):
         # TODO: Save the last opened directory to use as default path for next time
-        return self._open_dialog("select a directory",
-                                 default_path)
 
-    def _open_dialog(self, title, ref):
+        if not file:
+            return self._open_dir_dialog("select a directory",
+                                         default_path)
+        else:
+            return self._open_file_dialog('Please select a file',
+                                          default_path)
+
+    def _open_dir_dialog(self, title, ref):
         options = QFileDialog.Options()
 
         options |= QFileDialog.DontUseNativeDialog
@@ -592,6 +669,16 @@ class Calibration(QWidget):
                                                 title,
                                                 ref,
                                                 options=options)
+        return path
+
+    def _open_file_dialog(self, title, ref):
+        options = QFileDialog.Options()
+
+        options |= QFileDialog.DontUseNativeDialog
+        path = QFileDialog.getOpenFileName(None,
+                                           title,
+                                           ref,
+                                           options=options)[0]
         return path
 
 
