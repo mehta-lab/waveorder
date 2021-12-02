@@ -432,7 +432,11 @@ class AcquisitionWorker(WorkerBase):
                 while not closed:
                     closed = disp.isClosed()
                 dp.close()
-                shutil.rmtree(os.path.join(dir_, prefix))
+
+                try:
+                    shutil.rmtree(os.path.join(dir_, prefix))
+                except PermissionError as ex:
+                    dp.close()
                 break
             else:
                 continue

@@ -123,7 +123,7 @@ def acquire_from_settings(mm, settings, grab_images = True):
         # get the most recent acquisition if multiple
         path = os.path.join(settings['root'], settings['prefix'])
         files = glob.glob(path+'*')
-        index = max([int(x.strip(path + '_')) for x in files])
+        index = max([int(x.split(path + '_')[1]) for x in files])
 
         reader = WaveorderReader(path+f'_{index}', 'ometiff', extract_data=True)
 
