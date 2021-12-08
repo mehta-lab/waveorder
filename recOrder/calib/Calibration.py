@@ -709,7 +709,7 @@ class QLIPP_Calibration():
                      'BlackLevel': self.I_Black,
                      'ChNames': ["State0", "State1", "State2", "State3"],
                      '[LCA_Ext, LCB_Ext]': [self.lca_ext, self.lcb_ext],
-                     '[LCA_0, LCB_120]': [self.lca_0, self.lcb_0],
+                     '[LCA_0, LCB_0]': [self.lca_0, self.lcb_0],
                      '[LCA_60, LCB_60]': [self.lca_60, self.lcb_60],
                      '[LCA_120, LCB_120]': [self.lca_120, self.lcb_120],
                      'Swing0': self.swing0,

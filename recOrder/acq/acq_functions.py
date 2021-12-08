@@ -7,7 +7,7 @@ import time
 import glob
 
 def generate_acq_settings(mm, channel_group, channels, zstart=None, zend=None, zstep=None,
-                          save_dir = None, prefix = None, keep_shutter_open = False):
+                          save_dir=None, prefix=None, keep_shutter_open = False):
     """
     This function generates a json file specific to the micromanager SequenceSettings.
     It has default parameters for a multi-channels z-stack acquisition but does not yet
@@ -123,7 +123,7 @@ def acquire_from_settings(mm, settings, grab_images = True):
         # get the most recent acquisition if multiple
         path = os.path.join(settings['root'], settings['prefix'])
         files = glob.glob(path+'*')
-        index = max([int(x.strip(path + '_')) for x in files])
+        index = max([int(x.split(path + '_')[1]) for x in files])
 
         reader = WaveorderReader(path+f'_{index}', 'ometiff', extract_data=True)
 

@@ -1,4 +1,3 @@
-from PyQt5 import QtCore
 from PyQt5.QtCore import pyqtSignal
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, reconstruct_phase2D, reconstruct_phase3D
@@ -10,12 +9,15 @@ from waveorder.io.writer import WaveorderWriter
 import json
 import numpy as np
 import os
+import shutil
+import time
 
 
 class AcquisitionSignals(WorkerBaseSignals):
     phase_image_emitter = pyqtSignal(object)
     bire_image_emitter = pyqtSignal(object)
     phase_reconstructor_emitter = pyqtSignal(object)
+    aborted = pyqtSignal()
 
 
 # TODO: Cache common OTF's on local computers and use those for reconstruction
@@ -32,6 +34,8 @@ class AcquisitionWorker(WorkerBase):
         self.calib = calib
         self.mode = mode
         self.n_slices = None
+        self.prefix = 'recOrderPluginSnap'
+        self.dm = self.calib_window.mm.displays()
 
         if self.mode == 'birefringence' and self.calib_window.birefringence_dim == '2D':
             self.dim = '2D'
@@ -41,6 +45,7 @@ class AcquisitionWorker(WorkerBase):
     def _check_abort(self):
         if self.abort_requested:
             self.aborted.emit()
+            raise TimeoutError('Stop Requested')
 
     def work(self):
 
@@ -60,25 +65,30 @@ class AcquisitionWorker(WorkerBase):
             settings = generate_acq_settings(self.calib_window.mm,
                                              channel_group='Channel',
                                              channels=channels,
-                                             save_dir = save_dir)
+                                             save_dir=save_dir,
+                                             prefix=self.prefix)
             self._check_abort()
             stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True) # (1, 4, 1, Y, X) array
+            time.sleep(1)
+            self._cleanup_acq()
 
         # Acquire 3D stack
         else:
             logging.debug('Acquiring 3D stack')
             settings = generate_acq_settings(self.calib_window.mm,
                                              channel_group='Channel',
-                                             channels = channels,
-                                             zstart = self.calib_window.z_start,
+                                             channels=channels,
+                                             zstart=self.calib_window.z_start,
                                              zend=self.calib_window.z_end,
-                                             zstep = self.calib_window.z_step,
-                                             save_dir=save_dir)
+                                             zstep=self.calib_window.z_step,
+                                             save_dir=save_dir,
+                                             prefix=self.prefix)
 
             self._check_abort()
 
             stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)  # (1, 4, Z, Y, X) array
-
+            time.sleep(1)
+            self._cleanup_acq()
             self._check_abort()
 
         # Reconstruct snapped images
@@ -144,7 +154,7 @@ class AcquisitionWorker(WorkerBase):
                                                  pixel_size_um=self.calib_window.ps,
                                                  bg_correction=self.calib_window.bg_option,
                                                  n_obj_media=self.calib_window.n_media,
-                                                 mode=self.dim,
+                                                 mode=self.calib_window.phase_dim,
                                                  use_gpu=False, gpu_id=0)
 
                 self.phase_reconstructor_emitter.emit(recon)
@@ -152,7 +162,6 @@ class AcquisitionWorker(WorkerBase):
             # if previous reconstructor exists
             else:
                 self._check_abort()
-
                 # compute new reconstructor
                 if self._reconstructor_changed():
                     logging.debug('Reconstruction settings changed, updating reconstructor')
@@ -170,7 +179,7 @@ class AcquisitionWorker(WorkerBase):
                                                      pixel_size_um=self.calib_window.ps,
                                                      bg_correction=self.calib_window.bg_option,
                                                      n_obj_media=self.calib_window.n_media,
-                                                     mode=self.dim,
+                                                     mode=self.calib_window.phase_dim,
                                                      use_gpu=False, gpu_id=0)
                 # use previous reconstructor
                 else:
@@ -187,8 +196,8 @@ class AcquisitionWorker(WorkerBase):
                                              calibration_scheme=self.calib_window.calib_scheme,
                                              wavelength_nm=self.calib_window.wavelength,
                                              swing=self.calib_window.swing,
-                                             bg_correction=self.calib_window.bg_option)
-
+                                             bg_correction=self.calib_window.bg_option,
+                                             n_slices=self.n_slices)
 
         # Check to see if background correction is desired and compute BG stokes
         if self.calib_window.bg_option != 'None':
@@ -216,17 +225,19 @@ class AcquisitionWorker(WorkerBase):
 
         # reconstruct both phase and birefringence
         if self.mode == 'all':
-            birefringence = reconstruct_qlipp_birefringence(stokes, recon)
+            if self.calib_window.birefringence_dim == '2D':
+                birefringence = reconstruct_qlipp_birefringence(stokes[:, :, :, stokes.shape[-1]//2], recon)
+            else:
+                birefringence = reconstruct_qlipp_birefringence(stokes, recon)
             birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
             self._check_abort()
-            phase = reconstruct_phase2D(stokes[0], recon) if self.dim == '2D' \
+            phase = reconstruct_phase2D(stokes[0], recon) if self.calib_window.phase_dim == '2D' \
                 else reconstruct_phase3D(stokes[0], recon)
             self._check_abort()
 
-
         # reconstruct phase only
         elif self.mode == 'phase':
-            phase = reconstruct_phase2D(stokes[0], recon) if self.dim == '2D' \
+            phase = reconstruct_phase2D(stokes[0], recon) if self.calib_window.phase_dim == '2D' \
                 else reconstruct_phase3D(stokes[0], recon)
             self._check_abort()
 
@@ -261,7 +272,7 @@ class AcquisitionWorker(WorkerBase):
         if birefringence is not None:
 
             # initialize
-            chunk_size = (1,1,1,birefringence.shape[-2],birefringence.shape[-1])
+            chunk_size = (1, 1, 1, birefringence.shape[-2],birefringence.shape[-1])
             i = 0
 
             # increment filename one more than last found saved snap
@@ -350,14 +361,10 @@ class AcquisitionWorker(WorkerBase):
 
         changed = None
 
-        #TODO: phase_deconv not attr of reconstructor class, check if the 2D/3D has changes
-
         # Attributes that are directly equivalent to worker attributes
         attr_list = {'phase_dim': 'phase_deconv',
                      'pad_z': 'pad_z',
                      'n_media': 'n_media',
-                     'ps': 'ps',
-                     'swing': 'chi',
                      'bg_option': 'bg_option'
                      }
 
@@ -366,34 +373,88 @@ class AcquisitionWorker(WorkerBase):
                               'cond_na': 'NA_illu',
                               'wavelength': 'lambda_illu',
                               'n_slices': 'N_defocus',
+                              'swing': 'chi',
+                              'ps': 'ps'
                               }
 
         self._check_abort()
         # check if equivalent attributes have diverged
         for key, value in attr_list.items():
+            print(getattr(self.calib_window, key), getattr(self.calib_window.phase_reconstructor, value))
             if getattr(self.calib_window, key) != getattr(self.calib_window.phase_reconstructor, value):
                 changed = True
+                break
             else:
                 changed = False
 
-        # modify attributes to be equivalent and check for divergence
-        for key, value in attr_modified_list.items():
-            if key == 'wavelength':
-                if self.calib_window.wavelength * 1e-3 / self.calib_window.n_media != \
-                        self.calib_window.phase_reconstructor.lambda_illu:
-                    changed = True
-                else:
-                    changed = False
-            elif key == 'n_slices':
-                if getattr(self, key) != getattr(self.calib_window.phase_reconstructor, value):
-                    changed = True
-                else:
-                    changed = False
+        if not changed:
+            # modify attributes to be equivalent and check for divergence
+            for key, value in attr_modified_list.items():
+                if key == 'swing':
+                    if self.calib_window.calib_scheme == '5-State':
+                        if self.calib_window.swing * 2 * np.pi != self.calib_window.phase_reconstructor.chi:
+                            changed = True
+                        else:
+                            changed = False
+                    else:
+                        if self.calib_window.swing != self.calib_window.phase_reconstructor.chi:
+                            changed = True
+                        else:
+                            changed = False
 
-            elif getattr(self.calib_window, key)/self.calib_window.n_media != \
-                    getattr(self.calib_window.phase_reconstructor, value):
-                changed = True
-            else:
-                changed = False
+                elif key == 'wavelength':
+                    if self.calib_window.wavelength * 1e-3 / self.calib_window.n_media != \
+                            self.calib_window.phase_reconstructor.lambda_illu:
+                        changed = True
+                        break
+                    else:
+                        changed = False
+                elif key == 'n_slices':
+                    if getattr(self, key) != getattr(self.calib_window.phase_reconstructor, value):
+                        changed = True
+                        break
+                    else:
+                        changed = False
+
+                elif key == 'ps':
+                    if getattr(self.calib_window, key) / float(self.calib_window.mag) != getattr(self.calib_window.phase_reconstructor, value):
+                        changed = True
+                        break
+                    else:
+                        changed = False
+                else:
+                    if getattr(self.calib_window, key)/self.calib_window.n_media != \
+                            getattr(self.calib_window.phase_reconstructor, value):
+                        changed = True
+                    else:
+                        changed = False
 
         return changed
+
+    def _cleanup_acq(self):
+        disps = self.dm.getAllDataViewers()
+
+        for i in range(disps.size()):
+            disp = disps.get(i)
+
+            if self.prefix in disp.getName():
+                dp = disp.getDataProvider()
+                dir_ = dp.getSummaryMetadata().getDirectory()
+                prefix = dp.getSummaryMetadata().getPrefix()
+                closed = False
+                disp.close()
+                while not closed:
+                    closed = disp.isClosed()
+                dp.close()
+
+                try:
+                    shutil.rmtree(os.path.join(dir_, prefix))
+                except PermissionError as ex:
+                    dp.close()
+                break
+            else:
+                continue
+
+
+
+
