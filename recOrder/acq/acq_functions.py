@@ -7,7 +7,7 @@ import time
 import glob
 
 def generate_acq_settings(mm, channel_group, channels, zstart=None, zend=None, zstep=None,
-                          save_dir = None, prefix = None, keep_shutter_open = False):
+                          save_dir=None, prefix=None, keep_shutter_open = False):
     """
     This function generates a json file specific to the micromanager SequenceSettings.
     It has default parameters for a multi-channels z-stack acquisition but does not yet

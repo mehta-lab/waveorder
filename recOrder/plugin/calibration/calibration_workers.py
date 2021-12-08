@@ -116,6 +116,8 @@ class CalibrationWorker(WorkerBase):
 
     def _calibrate_4state(self):
 
+        self.calib.calib_scheme = '4-State'
+
         self._check_abort()
 
         self.calib.opt_Iext()
@@ -140,6 +142,8 @@ class CalibrationWorker(WorkerBase):
 
 
     def _calibrate_5state(self):
+
+        self.calib.calib_scheme = '5-State'
 
         self.calib.opt_Iext()
         self.progress_update.emit(50)

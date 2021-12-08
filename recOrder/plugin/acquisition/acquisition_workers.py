@@ -199,7 +199,6 @@ class AcquisitionWorker(WorkerBase):
                                              bg_correction=self.calib_window.bg_option,
                                              n_slices=self.n_slices)
 
-
         # Check to see if background correction is desired and compute BG stokes
         if self.calib_window.bg_option != 'None':
             logging.debug('Loading BG Data')
@@ -226,7 +225,10 @@ class AcquisitionWorker(WorkerBase):
 
         # reconstruct both phase and birefringence
         if self.mode == 'all':
-            birefringence = reconstruct_qlipp_birefringence(stokes, recon)
+            if self.calib_window.birefringence_dim == '2D':
+                birefringence = reconstruct_qlipp_birefringence(stokes[:, :, :, stokes.shape[-1]//2], recon)
+            else:
+                birefringence = reconstruct_qlipp_birefringence(stokes, recon)
             birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
             self._check_abort()
             phase = reconstruct_phase2D(stokes[0], recon) if self.calib_window.phase_dim == '2D' \
@@ -270,7 +272,7 @@ class AcquisitionWorker(WorkerBase):
         if birefringence is not None:
 
             # initialize
-            chunk_size = (1,1,1,birefringence.shape[-2],birefringence.shape[-1])
+            chunk_size = (1, 1, 1, birefringence.shape[-2],birefringence.shape[-1])
             i = 0
 
             # increment filename one more than last found saved snap
@@ -363,8 +365,6 @@ class AcquisitionWorker(WorkerBase):
         attr_list = {'phase_dim': 'phase_deconv',
                      'pad_z': 'pad_z',
                      'n_media': 'n_media',
-                     'ps': 'ps',
-                     'swing': 'chi',
                      'bg_option': 'bg_option'
                      }
 
@@ -373,12 +373,14 @@ class AcquisitionWorker(WorkerBase):
                               'cond_na': 'NA_illu',
                               'wavelength': 'lambda_illu',
                               'n_slices': 'N_defocus',
+                              'swing': 'chi',
                               'ps': 'ps'
                               }
 
         self._check_abort()
         # check if equivalent attributes have diverged
         for key, value in attr_list.items():
+            print(getattr(self.calib_window, key), getattr(self.calib_window.phase_reconstructor, value))
             if getattr(self.calib_window, key) != getattr(self.calib_window.phase_reconstructor, value):
                 changed = True
                 break
@@ -388,7 +390,19 @@ class AcquisitionWorker(WorkerBase):
         if not changed:
             # modify attributes to be equivalent and check for divergence
             for key, value in attr_modified_list.items():
-                if key == 'wavelength':
+                if key == 'swing':
+                    if self.calib_window.calib_scheme == '5-State':
+                        if self.calib_window.swing * 2 * np.pi != self.calib_window.phase_reconstructor.chi:
+                            changed = True
+                        else:
+                            changed = False
+                    else:
+                        if self.calib_window.swing != self.calib_window.phase_reconstructor.chi:
+                            changed = True
+                        else:
+                            changed = False
+
+                elif key == 'wavelength':
                     if self.calib_window.wavelength * 1e-3 / self.calib_window.n_media != \
                             self.calib_window.phase_reconstructor.lambda_illu:
                         changed = True
@@ -403,7 +417,7 @@ class AcquisitionWorker(WorkerBase):
                         changed = False
 
                 elif key == 'ps':
-                    if getattr(self, key) / float(self.calib_window.mag) != getattr(self.calib_window.phase_reconstructor, value):
+                    if getattr(self.calib_window, key) / float(self.calib_window.mag) != getattr(self.calib_window.phase_reconstructor, value):
                         changed = True
                         break
                     else:

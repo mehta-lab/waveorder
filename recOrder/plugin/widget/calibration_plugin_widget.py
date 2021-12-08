@@ -264,26 +264,35 @@ class Calibration(QWidget):
 
     @pyqtSlot(object)
     def handle_bire_image_update(self, value):
-        name = 'Birefringence2D' if self.birefringence_dim == '2D' else 'Birefringence3D'
 
-        # overlay = ret_ori_overlay(value[0], value[1], (0, np.percentile(value[0], 99.99)), mode=self.birefringence_dim)
-
-        if name in self.viewer.layers:
-            self.viewer.layers[name].data = value
-        else:
-            self.viewer.add_image(value, name=name, colormap='gray')
+        channel_names = ['Retardance', 'Orientation', 'Brightfield']
 
         if self.birefringence_dim == '2D':
-            overlay_name = name + '_Overlay'
+            channel_names.append('BirefringenceOverlay')
             overlay = ret_ori_overlay(value[0], value[1], (0, np.percentile(value[0], 99.99)))
 
-            if overlay_name in self.viewer.layers:
-                self.viewer.layers[overlay_name].data = overlay
+        for name in channel_names:
+            if name == 'BirefringenceOverlay':
+                if name+self.birefringence_dim in self.viewer.layers:
+                    self.viewer.layers[name].data = overlay
+                else:
+                    self.viewer.add_image(overlay, name=name+self.birefringence_dim, rgb=True)
             else:
-                self.viewer.add_image(overlay, name=overlay_name, rgb=True)
+                if name+self.birefringence_dim in self.viewer.layers:
+                    self.viewer.layers[name].data = value
+                else:
+                    self.viewer.add_image(value, name=name+self.birefringence_dim, colormap='gray')
 
     @pyqtSlot(object)
     def handle_phase_image_update(self, value):
+
+        # if self.phase_dim == '2D':
+        #     name = 'Phase2D'
+        #     # value = np.expand_dims(value, axis=(0, 1))
+        # else:
+        #     name = 'Phase3D'
+        #     # value = np.expand_dims(value, axis=0)
+
         name = 'Phase2D' if self.phase_dim == '2D' else 'Phase3D'
 
         if name in self.viewer.layers:
