@@ -47,6 +47,9 @@ class Calibration(QWidget):
         self.ui.le_swing.editingFinished.connect(self.enter_swing)
         self.ui.le_wavelength.editingFinished.connect(self.enter_wavelength)
         self.ui.cb_calib_scheme.currentIndexChanged[int].connect(self.enter_calib_scheme)
+        self.ui.cb_calib_mode.currentIndexChanged[int].connect(self.enter_calib_mode)
+        self.ui.cb_lca.currentIndexChanged[int].connect(self.enter_dac_lca)
+        self.ui.cb_lcb.currentIndexChanged[int].connect(self.enter_dac_lcb)
         self.ui.chb_use_roi.stateChanged[int].connect(self.enter_use_cropped_roi)
         self.ui.qbutton_calibrate.clicked[bool].connect(self.run_calibration)
         self.ui.qbutton_load_calib.clicked[bool].connect(self.load_calibration)
@@ -106,6 +109,7 @@ class Calibration(QWidget):
         self.swing = 0.1
         self.wavelength = 532
         self.calib_scheme = '4-State'
+        self.calib_mode = 'retardance'
         self.use_cropped_roi = False
         self.bg_folder_name = 'BG'
         self.n_avg = 20
@@ -129,6 +133,8 @@ class Calibration(QWidget):
         self.phase_reconstructor = None
         self.acq_bg_directory = None
         self.auto_shutter = True
+        self.lca_dac = None
+        self.lcb_dac = None
 
         # Assessment attributes
         self.calib_assessment_level = None
@@ -265,23 +271,30 @@ class Calibration(QWidget):
     @pyqtSlot(object)
     def handle_bire_image_update(self, value):
 
-        channel_names = ['Retardance', 'Orientation', 'Brightfield']
+        # channel_names = {'Brightfield': 2,
+        #                  'Orientation': 1,
+        #                  'Retardance': 0,
+        #                  }
+
+        channel_names = {'Orientation': 1,
+                         'Retardance': 0,
+                         }
 
         if self.birefringence_dim == '2D':
-            channel_names.append('BirefringenceOverlay')
+            channel_names['BirefringenceOverlay'] = None
             overlay = ret_ori_overlay(value[0], value[1], (0, np.percentile(value[0], 99.99)))
 
-        for name in channel_names:
-            if name == 'BirefringenceOverlay':
-                if name+self.birefringence_dim in self.viewer.layers:
-                    self.viewer.layers[name].data = overlay
+        for key, chan in channel_names.items():
+            if key == 'BirefringenceOverlay':
+                if key+self.birefringence_dim in self.viewer.layers:
+                    self.viewer.layers[key+self.birefringence_dim].data = overlay
                 else:
-                    self.viewer.add_image(overlay, name=name+self.birefringence_dim, rgb=True)
+                    self.viewer.add_image(overlay, name=key+self.birefringence_dim, rgb=True)
             else:
-                if name+self.birefringence_dim in self.viewer.layers:
-                    self.viewer.layers[name].data = value
+                if key+self.birefringence_dim in self.viewer.layers:
+                    self.viewer.layers[key+self.birefringence_dim].data = value[chan]
                 else:
-                    self.viewer.add_image(value, name=name+self.birefringence_dim, colormap='gray')
+                    self.viewer.add_image(value[chan], name=key+self.birefringence_dim, colormap='gray')
 
     @pyqtSlot(object)
     def handle_phase_image_update(self, value):
@@ -343,6 +356,41 @@ class Calibration(QWidget):
             self.calib_scheme = '4-State'
         else:
             self.calib_scheme = '5-State'
+
+    @pyqtSlot()
+    def enter_calib_mode(self):
+        index = self.ui.cb_calib_mode.currentIndex()
+        if index == 0:
+            self.calib_mode = 'retardance'
+        else:
+            self.calib_mode = 'voltage'
+            self.ui.cb_lca.clear()
+            self.ui.cb_lcb.clear()
+
+            cfg = self.mmc.getConfigData('Channel', 'State0')
+
+            memory = set()
+            for i in range(cfg.size()):
+                prop = cfg.getSetting(i)
+                if 'TS_DAC' in prop.getDeviceLabel():
+                    dac = prop.getDeviceLabel()[-2:]
+                    if dac not in memory:
+                        self.ui.cb_lca.addItem('DAC'+dac)
+                        self.ui.cb_lcb.addItem('DAC'+dac)
+                        memory.add(dac)
+                    else:
+                        continue
+
+
+    @pyqtSlot()
+    def enter_dac_lca(self):
+        dac = self.ui.cb_lca.currentText()
+        self.lca_dac = dac
+
+    @pyqtSlot()
+    def enter_dac_lcb(self):
+        dac = self.ui.cb_lcb.currentText()
+        self.lcb_dac = dac
 
     @pyqtSlot()
     def enter_use_cropped_roi(self):
@@ -529,7 +577,10 @@ class Calibration(QWidget):
 
         """
 
-        self.calib = QLIPP_Calibration(self.mmc, self.mm)
+        self.calib = QLIPP_Calibration(self.mmc, self.mm, mode=self.calib_mode)
+
+        if self.calib_mode == 'voltage':
+            self.calib.set_dacs(self.lca_dac, self.lcb_dac)
 
         self.ui.le_calib_assessment.setText('')
         self.ui.le_calib_assessment.setStyleSheet("")

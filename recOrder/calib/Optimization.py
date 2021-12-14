@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import optimize
-from recOrder.io.core_functions import set_lc, get_lc, snap_and_average
+from recOrder.io.core_functions import snap_and_average
 import logging
 
 class BrentOptimizer:
@@ -12,8 +12,8 @@ class BrentOptimizer:
 
     def _check_bounds(self, lca_bound, lcb_bound):
 
-        current_lca = get_lc(self.calib.mmc, self.calib.PROPERTIES['LCA'])
-        current_lcb = get_lc(self.calib.mmc, self.calib.PROPERTIES['LCB'])
+        current_lca = self.calib.get_lc(self.calib.mmc, self.calib.PROPERTIES['LCA'])
+        current_lcb = self.calib.get_lc(self.calib.mmc, self.calib.PROPERTIES['LCB'])
 
         # check that bounds don't exceed range of LC
         lca_lower_bound = 0.01 if (current_lca - lca_bound) <= 0.01 else current_lca - lca_bound
@@ -34,7 +34,7 @@ class BrentOptimizer:
                                                        full_output=True)
 
         lca = xopt
-        lcb = get_lc(self.calib.mmc, self.calib.PROPERTIES['LCA'])
+        lcb = self.calib.get_lc(self.calib.mmc, self.calib.PROPERTIES['LCA'])
         abs_intensity = fval + reference
         difference = fval / reference * 100
 
@@ -55,7 +55,7 @@ class BrentOptimizer:
                                                        args=cost_function_args,
                                                        full_output=True)
 
-        lca = get_lc(self.calib.mmc, self.calib.PROPERTIES['LCA'])
+        lca = self.calib.get_lc(self.calib.mmc, self.calib.PROPERTIES['LCA'])
         lcb = xopt
         abs_intensity = fval + reference
         difference = fval / reference * 100
@@ -86,14 +86,14 @@ class BrentOptimizer:
                 results_lca = self.opt_lca(self.calib.opt_lc, lca_lower_bound, lca_upper_bound,
                                             reference, (self.calib.PROPERTIES['LCA'], reference))
 
-                set_lc(self.calib.mmc, results_lca[0], self.calib.PROPERTIES['LCA'])
+                self.calib.set_lc(self.calib.mmc, results_lca[0], self.calib.PROPERTIES['LCA'])
 
                 optimal.append(results_lca)
 
                 results_lcb = self.opt_lcb(self.calib.opt_lc, lcb_lower_bound, lcb_upper_bound,
                                             reference, (self.calib.PROPERTIES['LCB'], reference))
 
-                set_lc(self.calib.mmc, results_lca[1], self.calib.PROPERTIES['LCB'])
+                self.calib.set_lc(self.calib.mmc, results_lca[1], self.calib.PROPERTIES['LCB'])
 
                 optimal.append(results_lcb)
 
@@ -164,15 +164,24 @@ class MinScalarOptimizer:
 
     def _check_bounds(self, lca_bound, lcb_bound):
 
-        current_lca = get_lc(self.calib.mmc, self.calib.PROPERTIES['LCA'])
-        current_lcb = get_lc(self.calib.mmc, self.calib.PROPERTIES['LCB'])
+        current_lca = self.calib.get_lc('LCA')
+        current_lcb = self.calib.get_lc('LCB')
 
-        # check that bounds don't exceed range of LC
-        lca_lower_bound = 0.01 if (current_lca - lca_bound) <= 0.01 else current_lca - lca_bound
-        lca_upper_bound = 1.6 if (current_lca + lca_bound) >= 1.6 else current_lca + lca_bound
+        if self.calib.mode == 'voltage':
+            # check that bounds don't exceed range of LC
+            lca_lower_bound = 0.01 if (current_lca - lca_bound) <= 0.01 else current_lca - lca_bound
+            lca_upper_bound = 2.2 if (current_lca + lca_bound) >= 2.2 else current_lca + lca_bound
 
-        lcb_lower_bound = 0.01 if current_lcb - lcb_bound <= 0.01 else current_lcb - lcb_bound
-        lcb_upper_bound = 1.6 if current_lcb + lcb_bound >= 1.6 else current_lcb + lcb_bound
+            lcb_lower_bound = 0.01 if current_lcb - lcb_bound <= 0.01 else current_lcb - lcb_bound
+            lcb_upper_bound = 2.2 if current_lcb + lcb_bound >= 2.2 else current_lcb + lcb_bound
+
+        else:
+            # check that bounds don't exceed range of LC
+            lca_lower_bound = 0.01 if (current_lca - lca_bound) <= 0.01 else current_lca - lca_bound
+            lca_upper_bound = 1.6 if (current_lca + lca_bound) >= 1.6 else current_lca + lca_bound
+
+            lcb_lower_bound = 0.01 if current_lcb - lcb_bound <= 0.01 else current_lcb - lcb_bound
+            lcb_upper_bound = 1.6 if current_lcb + lcb_bound >= 1.6 else current_lcb + lcb_bound
 
         return lca_lower_bound, lca_upper_bound, lcb_lower_bound, lcb_upper_bound
 
@@ -182,7 +191,7 @@ class MinScalarOptimizer:
                                        method='bounded', args=cost_function_args)
 
         lca = res.x
-        lcb = get_lc(self.calib.mmc, self.calib.PROPERTIES['LCB'])
+        lcb = self.calib.get_lc('LCB')
         abs_intensity = res.fun + reference
         difference = res.fun / reference * 100
 
@@ -199,7 +208,7 @@ class MinScalarOptimizer:
         res = optimize.minimize_scalar(cost_function, bounds=(lower_bound, upper_bound),
                                        method='bounded', args=cost_function_args)
 
-        lca = get_lc(self.calib.mmc, self.calib.PROPERTIES['LCA'])
+        lca = self.calib.get_lc('LCA')
         lcb = res.x
         abs_intensity = res.fun + reference
         difference = res.fun / reference * 100
@@ -220,16 +229,16 @@ class MinScalarOptimizer:
             optimal = []
 
             results_lca = self.opt_lca(self.calib.opt_lc, lca_lower_bound, lca_upper_bound,
-                                       reference, (self.calib.PROPERTIES['LCA'], reference))
+                                       reference, ('LCA', reference))
 
-            set_lc(self.calib.mmc, results_lca[0], self.calib.PROPERTIES['LCA'])
+            self.calib.set_lc(results_lca[0], 'LCA')
 
             optimal.append(results_lca)
 
             results_lcb = self.opt_lcb(self.calib.opt_lc, lcb_lower_bound, lcb_upper_bound,
-                                       reference, (self.calib.PROPERTIES['LCB'], reference))
+                                       reference, ('LCB', reference))
 
-            set_lc(self.calib.mmc, results_lcb[1], self.calib.PROPERTIES['LCB'])
+            self.calib.set_lc(results_lcb[1], 'LCB')
 
             optimal.append(results_lcb)
 
@@ -242,16 +251,16 @@ class MinScalarOptimizer:
             lcb_upper_bound = results_lcb[1] + .01
 
             results_lca = self.opt_lca(self.calib.opt_lc, lca_lower_bound, lca_upper_bound,
-                                       reference, (self.calib.PROPERTIES['LCA'], reference))
+                                       reference, ('LCA', reference))
 
-            set_lc(self.calib.mmc, results_lca[0], self.calib.PROPERTIES['LCA'])
+            self.calib.set_lc(results_lca[0], 'LCA')
 
             optimal.append(results_lca)
 
             results_lcb = self.opt_lcb(self.calib.opt_lc, lcb_lower_bound, lcb_upper_bound,
-                                       reference, (self.calib.PROPERTIES['LCB'], reference))
+                                       reference, ('LCB', reference))
 
-            set_lc(self.calib.mmc, results_lcb[1], self.calib.PROPERTIES['LCB'])
+            self.calib.set_lc(results_lcb[1], 'LCB')
 
             optimal.append(results_lcb)
 
@@ -266,14 +275,14 @@ class MinScalarOptimizer:
 
         if state == '45' or state == '135':
             results = self.opt_lcb(self.calib.opt_lc, lcb_lower_bound, lcb_upper_bound,
-                                   reference, (self.calib.PROPERTIES['LCB'], reference))
+                                   reference, ('LCB', reference))
 
             lca = results[0]
             lcb = results[1]
 
         if state == '60':
             results = self.opt_lca(self.calib.opt_lc_cons, lca_lower_bound, lca_upper_bound,
-                                   reference, (reference, '60'))
+                                   reference, ('LCA', reference, '60'))
 
             swing = (self.calib.lca_ext - results[0]) * self.calib.ratio
             lca = results[0]
@@ -281,13 +290,13 @@ class MinScalarOptimizer:
 
         if state == '90':
             results = self.opt_lca(self.calib.opt_lc, lca_lower_bound, lca_upper_bound,
-                                       reference, (self.calib.PROPERTIES['LCA'], reference))
+                                       reference, ('LCA', reference))
             lca = results[0]
             lcb = results[1]
 
         if state == '120':
             results = self.opt_lca(self.calib.opt_lc_cons, lca_lower_bound, lca_upper_bound,
-                                   reference, (reference, '120'))
+                                   reference, ('LCB', reference, '120'))
 
             swing = (self.calib.lca_ext - results[0]) * self.calib.ratio
             lca = results[0]
@@ -330,8 +339,8 @@ def optimize_grid(calib, a_min, a_max, b_min, b_max, step):
     for lca in np.arange(a_min, a_max, step):
         for lcb in np.arange(b_min, b_max, step):
 
-            set_lc(calib.mmc, lca, calib.PROPERTIES['LCA'])
-            set_lc(calib.mmc, lcb, calib.PROPERTIES['LCB'])
+            calib.set_lc(lca, 'LCA')
+            calib.set_lc(lcb, 'LCB')
 
             # current_int = np.mean(snap_image(calib.mmc))
             current_int = snap_and_average(calib.snap_manager)

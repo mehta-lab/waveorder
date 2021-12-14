@@ -3,38 +3,46 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import tifffile as tiff
 import time
-from recOrder.io.core_functions import define_lc_state, snap_image, set_lc, set_lc_state, snap_and_average, \
-    snap_and_get_image
+from recOrder.io.core_functions import define_lc_state, snap_image, set_lc_waves, set_lc_volts, set_lc_state, \
+    snap_and_average, snap_and_get_image, get_lc_waves, get_lc_volts, define_lc_state_volts
 from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer, optimize_grid
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+from scipy.interpolate import interp1d
 import json
 import os
 import logging
 from recOrder.io.utils import MockEmitter
 
-#todo: save metadata without overwriting existing file
-
 #TODO: Docstrings
 class QLIPP_Calibration():
-    # Meadowlark LC Device Adapter Property Names
-    PROPERTIES = {'LCA': 'Retardance LC-A [in waves]',
-                  'LCB': 'Retardance LC-B [in waves]',
-                  'State0': 'Pal. elem. 00; enter 0 to define; 1 to activate',
-                  'State1': 'Pal. elem. 01; enter 0 to define; 1 to activate',
-                  'State2': 'Pal. elem. 02; enter 0 to define; 1 to activate',
-                  'State3': 'Pal. elem. 03; enter 0 to define; 1 to activate',
-                  'State4': 'Pal. elem. 04; enter 0 to define; 1 to activate',
-                  }
 
-    def __init__(self, mmc, mm, optimization='min_scalar', print_details=True):
+
+    def __init__(self, mmc, mm, optimization='min_scalar', mode='retardance', print_details=True):
 
         # Micromanager API
         self.mm = mm
         self.mmc = mmc
         self.snap_manager = mm.getSnapLiveManager()
 
+        # Meadowlark LC Device Adapter Property Names
+        self.PROPERTIES = {'LCA': 'Retardance LC-A [in waves]',
+                          'LCB': 'Retardance LC-B [in waves]',
+                          'State0': 'Pal. elem. 00; enter 0 to define; 1 to activate',
+                          'State1': 'Pal. elem. 01; enter 0 to define; 1 to activate',
+                          'State2': 'Pal. elem. 02; enter 0 to define; 1 to activate',
+                          'State3': 'Pal. elem. 03; enter 0 to define; 1 to activate',
+                          'State4': 'Pal. elem. 04; enter 0 to define; 1 to activate',
+                          'LCA-volt': 'TS_DAC01',
+                          'LCB-volt': 'TS_DAC02'
+                          }
+
         # GUI Emitter
         self.intensity_emitter = MockEmitter()
+
+        #Set Mode
+        self.mode = mode
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        self.curves = CalibrationCurves(os.path.join(dir_path, './Meadowlark_Curves.npy')) if self.mode != 'retardance' else None
 
         # Optimizer
         if optimization == 'min_scalar':
@@ -54,7 +62,6 @@ class QLIPP_Calibration():
         self.print_details = print_details
         self.calib_scheme = '4-State'
 
-
         # LC States
         self.lca_ext = None
         self.lcb_ext = None
@@ -70,6 +77,10 @@ class QLIPP_Calibration():
         self.lcb_120 = None
         self.lca_135 = None
         self.lcb_135 = None
+
+        # Voltage DACS
+        self.lca_dac = None
+        self.lcb_dac = None
 
         # Calibration Outputs
         self.I_Ext = None
@@ -87,35 +98,45 @@ class QLIPP_Calibration():
         self.directory = None
         self.inst_mat = None
 
-    def opt_lc_simul(self, x, reference, normalize=False):
+    def set_dacs(self, lca_dac, lcb_dac):
+        self.PROPERTIES['LCA-volt'] = f'TS_{lca_dac}'
+        self.PROPERTIES['LCB-volt'] = f'TS_{lcb_dac}'
 
-        logging.debug(f'LCA, LCB: {x[0], x[1]}')
-        set_lc(self.mmc, x[0], self.PROPERTIES['LCA'])
-        set_lc(self.mmc, x[1], self.PROPERTIES['LCB'])
+    def set_wavelength(self, wavelength):
+        self.wavelength = wavelength
 
-        mean = snap_and_average(self.snap_manager)
+        if self.mode == 'voltage':
+            self.curves.set_wavelength(wavelength)
 
-        self.inten.append(mean)
+    def set_lc(self, val, device_property):
 
-        if normalize:
-            max_ = 65335
-            min_ = self.I_Black
-
-            val = (np.mean(data) - min_) / (max_ - min_)
-            ref = (reference - min_) / (max_ - min_)
-
-            print(f'F-Value:{val - ref}\n')
-            return val - ref
-
+        if self.mode == 'retardance':
+            set_lc_waves(self.mmc, val, self.PROPERTIES[device_property])
         else:
-            return np.abs(mean - reference)
+            self.curves.get_voltage(val)
+            set_lc_volts(self.mmc, val/4000, self.PROPERTIES[f'{device_property}-volt'])
+
+    def get_lc(self, device_property):
+
+        if self.mode == 'retardance':
+            return get_lc_waves(self.mmc, self.PROPERTIES[device_property])
+        else:
+            volts = get_lc_volts(self.mmc, self.PROPERTIES[f'{device_property}-volt'])
+            return self.curves.get_retardance(volts*4000)
+
+    def define_lc_state(self, state, lca, lcb):
+
+        if self.mode == 'retardance':
+            define_lc_state(self.mmc, state, lca, lcb, self.PROPERTIES)
+        else:
+            define_lc_state_volts(self.mmc, state, lca, lcb, self.lca_dac, self.lcb_dac)
 
     def opt_lc(self, x, device_property, reference, normalize=False):
 
         if isinstance(x, list) or isinstance(x, tuple):
             x = x[0]
 
-        set_lc(self.mmc, x, device_property)
+        self.set_lc(x, device_property)
 
         mean = snap_and_average(self.snap_manager)
 
@@ -137,16 +158,16 @@ class QLIPP_Calibration():
 
             return np.abs(mean - reference)
 
-    def opt_lc_cons(self, x, reference, mode):
+    def opt_lc_cons(self, x, device_property, reference, mode):
 
-        set_lc(self.mmc, x, self.PROPERTIES['LCA'])
+        self.set_lc(x, device_property)
         swing = (self.lca_ext - x) * self.ratio
 
         if mode == '60':
-            set_lc(self.mmc, self.lcb_ext + swing, self.PROPERTIES['LCB'])
+            self.set_lc(self.lcb_ext + swing, 'LCB')
 
         if mode == '120':
-            set_lc(self.mmc, self.lcb_ext - swing, self.PROPERTIES['LCB'])
+            self.set_lc(self.lcb_ext - swing, 'LCB')
 
         mean = snap_and_average(self.snap_manager)
         logging.debug(str(mean))
@@ -181,8 +202,8 @@ class QLIPP_Calibration():
         logging.debug("lcb = " + str(best_lcb))
         logging.debug("intensity = " + str(i_ext_))
 
-        set_lc(self.mmc, best_lca, self.PROPERTIES['LCA'])
-        set_lc(self.mmc, best_lcb, self.PROPERTIES['LCB'])
+        self.set_lc(best_lca, 'LCA')
+        self.set_lc(best_lcb, 'LCB')
 
         logging.debug(f"================================")
         logging.debug(f"Starting fine search")
@@ -195,7 +216,7 @@ class QLIPP_Calibration():
                                                   reference=self.I_Black, thresh=1, n_iter=5)
 
         # Set the Extinction state to values output from optimization
-        define_lc_state(self.mmc, 'State0', lca, lcb, self.PROPERTIES)
+        self.define_lc_state('State0', lca, lcb)
 
         self.lca_ext = lca
         self.lcb_ext = lcb
@@ -224,7 +245,7 @@ class QLIPP_Calibration():
         logging.info('Calibrating State1 (I0)...')
         logging.debug('Calibrating State1 (I0)...')
 
-        define_lc_state(self.mmc, 'State1', self.lca_ext - self.swing, self.lcb_ext, self.PROPERTIES)
+        self.define_lc_state('State1', self.lca_ext - self.swing, self.lcb_ext)
 
         ref = snap_and_average(self.snap_manager)
 
@@ -249,24 +270,22 @@ class QLIPP_Calibration():
         ----------
         lca_bound
         lcb_bound
-
         Returns
         -------
         lca, lcb value at optimized state
         intensity value at optimized state
-
         """
         self.inten = []
         logging.info('Calibrating State2 (I45)...')
         logging.debug('Calibrating State2 (I45)...')
 
-        set_lc(self.mmc, self.lca_ext, self.PROPERTIES['LCA'])
-        set_lc(self.mmc, self.lcb_ext - self.swing, self.PROPERTIES['LCB'])
+        self.set_lc(self.lca_ext, 'LCA')
+        self.set_lc(self.lcb_ext - self.swing, 'LCB')
 
         self.lca_45, self.lcb_45, intensity = self.optimizer.optimize('45', lca_bound, lcb_bound,
                                                                       reference=self.I_Elliptical, n_iter=5, thresh=.01)
 
-        define_lc_state(self.mmc, 'State2', self.lca_45, self.lcb_45, self.PROPERTIES)
+        self.define_lc_state('State2', self.lca_45, self.lcb_45)
 
         self.swing45 = np.sqrt((self.lcb_45 - self.lcb_ext) ** 2 + (self.lca_45 - self.lca_ext) ** 2)
 
@@ -286,12 +305,10 @@ class QLIPP_Calibration():
         ----------
         lca_bound
         lcb_bound
-
         Returns
         -------
         lca, lcb value at optimized state
         intensity value at optimized state
-
         """
         self.inten = []
 
@@ -305,14 +322,14 @@ class QLIPP_Calibration():
         lcb_swing = self.ratio * lca_swing
 
         # Optimization
-        set_lc(self.mmc, self.lca_ext + lca_swing, self.PROPERTIES['LCA'])
-        set_lc(self.mmc, self.lcb_ext + lcb_swing, self.PROPERTIES['LCB'])
+        self.set_lc(self.lca_ext + lca_swing, 'LCA')
+        self.set_lc(self.lcb_ext + lcb_swing, 'LCB')
 
         self.lca_60, self.lcb_60, intensity = self.optimizer.optimize('60', lca_bound, lcb_bound,
                                                                       reference=self.I_Elliptical,
                                                                       n_iter=5, thresh=.01)
 
-        define_lc_state(self.mmc, 'State2', self.lca_60, self.lcb_60, self.PROPERTIES)
+        self.define_lc_state('State2', self.lca_60, self.lcb_60)
 
         self.swing60 = np.sqrt((self.lcb_60 - self.lcb_ext) ** 2 + (self.lca_60 - self.lca_ext) ** 2)
 
@@ -339,26 +356,24 @@ class QLIPP_Calibration():
         ----------
         lca_bound
         lcb_bound
-
         Returns
         -------
         lca, lcb value at optimized state
         intensity value at optimized state
-
         """
         logging.info('Calibrating State3 (I90)...')
         logging.debug('Calibrating State3 (I90)...')
 
         self.inten = []
 
-        set_lc(self.mmc, self.lca_ext + self.swing, self.PROPERTIES['LCA'])
-        set_lc(self.mmc, self.lcb_ext, self.PROPERTIES['LCB'])
+        self.set_lc(self.lca_ext + self.swing, 'LCA')
+        self.set_lc(self.lcb_ext, 'LCB')
 
         self.lca_90, self.lcb_90, intensity = self.optimizer.optimize('90', lca_bound, lcb_bound,
                                                                       reference=self.I_Elliptical,
                                                                       n_iter=5, thresh=.01)
 
-        define_lc_state(self.mmc, 'State3', self.lca_90, self.lcb_90, self.PROPERTIES)
+        self.define_lc_state('State3', self.lca_90, self.lcb_90)
 
         self.swing90 = np.sqrt((self.lcb_90 - self.lcb_ext) ** 2 + (self.lca_90 - self.lca_ext) ** 2)
 
@@ -374,17 +389,14 @@ class QLIPP_Calibration():
     def opt_I120(self, lca_bound, lcb_bound):
         """
         optimized relative to Ielliptical (opt_I0_4State)
-
         Parameters
         ----------
         lca_bound
         lcb_bound
-
         Returns
         -------
         lca, lcb value at optimized state
         intensity value at optimized state
-
         """
         logging.info('Calibrating State3 (I120)...')
         logging.debug('Calibrating State3 (I120)...')
@@ -396,14 +408,14 @@ class QLIPP_Calibration():
         lcb_swing = self.ratio * lca_swing
 
         # Brent Optimization
-        set_lc(self.mmc, self.lca_ext + lca_swing, self.PROPERTIES['LCA'])
-        set_lc(self.mmc, self.lcb_ext - lcb_swing, self.PROPERTIES['LCB'])
+        self.set_lc(self.lca_ext + lca_swing, 'LCA')
+        self.set_lc(self.lcb_ext - lcb_swing, 'LCB')
 
         self.lca_120, self.lcb_120, intensity = self.optimizer.optimize('120', lca_bound, lcb_bound,
                                                                       reference=self.I_Elliptical,
                                                                       n_iter=5, thresh=.01)
 
-        define_lc_state(self.mmc, 'State3', self.lca_120, self.lcb_120, self.PROPERTIES)
+        self.define_lc_state('State3', self.lca_120, self.lcb_120)
 
         self.swing120 = np.sqrt((self.lcb_120 - self.lcb_ext) ** 2 + (self.lca_120 - self.lca_ext) ** 2)
 
@@ -429,24 +441,22 @@ class QLIPP_Calibration():
         ----------
         lca_bound
         lcb_bound
-
         Returns
         -------
         lca, lcb value at optimized state
         intensity value at optimized state
-
         """
         print('Calibrating State4 (I135)...')
         self.inten = []
 
-        set_lc(self.mmc, self.lca_ext, self.PROPERTIES['LCA'])
-        set_lc(self.mmc, self.lcb_ext + self.swing, self.PROPERTIES['LCB'])
+        self.set_lc(self.lca_ext, 'LCA')
+        self.set_lc(self.lcb_ext + self.swing, 'LCB')
 
         self.lca_135, self.lcb_135, intensity = self.optimizer.optimize('135', lca_bound, lcb_bound,
                                                                       reference=self.I_Elliptical,
                                                                       n_iter=5, thresh=.01)
 
-        define_lc_state(self.mmc, 'State4', self.lca_135, self.lcb_135, self.PROPERTIES)
+        self.define_lc_state('State4', self.lca_135, self.lcb_135)
 
         self.swing135 = np.sqrt((self.lcb_135 - self.lcb_ext) ** 2 + (self.lca_135 - self.lca_ext) ** 2)
 
@@ -570,7 +580,8 @@ class QLIPP_Calibration():
         logging.debug(f'Blacklevel: {self.I_Black}\n')
 
         # Set LC Wavelength:
-        self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
+        if self.mode == 'retardance':
+            self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
 
         self.opt_Iext()
         self.opt_I0()
@@ -628,7 +639,8 @@ class QLIPP_Calibration():
         print(f'Blacklevel: {self.I_Black}\n')
 
         # Set LC Wavelength:
-        self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
+        if self.mode == 'retardance':
+            self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
 
         self.opt_Iext()
         self.opt_I0()
@@ -691,12 +703,10 @@ class QLIPP_Calibration():
         """ Function to write a metadata file for calibration.
             This follows the PolAcqu metadata file format and is compatible with
             reconstruct-order
-
         :param: n_states (int)
             Number of states used for calibration
         :param: directory (string)
             Directory to save metadata file.
-
         """
         inst_mat = self.calc_inst_matrix()
         inst_mat = inst_mat.tolist()
@@ -792,12 +802,10 @@ class QLIPP_Calibration():
         and save to specified directory
         This may throw errors depending on the micromanager config file--
         modify 'State_' to match to the corresponding channel preset in config
-
         :param: n_states (int)
             Number of states used for calibration
         :param: directory (string)
             Directory to save images
-
         """
 
         if not os.path.exists(directory):
@@ -837,3 +845,115 @@ class QLIPP_Calibration():
         # self._plot_bg_images(np.asarray(imgs))
 
         return np.asarray(imgs)
+
+
+
+class CalibrationCurves:
+
+    def __init__(self, path, wavelength = None):
+
+        self.raw_curves = np.load(path)
+
+        # 0V to 20V step size 1 mV
+        self.x_range = np.arange(0, 20000, 1)
+
+        # interpolate curves
+        self.spline490 = interp1d(self.raw_curves[0, 0], self.raw_curves[0, 1])
+        self.spline546 = interp1d(self.raw_curves[1, 0], self.raw_curves[1, 1])
+        self.spline630 = interp1d(self.raw_curves[2, 0], self.raw_curves[2, 1])
+
+        self.wavelength = wavelength
+        self.curve = None
+
+    def set_wavelength(self, wavelength):
+        self.wavelength = wavelength
+
+        # Interpolation of curves beyond this range produce strange results.
+        if self.wavelength < 450:
+            self.wavelength = 450
+        if self.wavelength > 720:
+            self.wavelength = 720
+
+        self.create_wavelength_curve()
+
+
+    def create_wavelength_curve(self):
+
+        if self.wavelength < 490:
+            new_a1_y = np.interp(self.x_range, self.x_range, self.spline490(self.x_range))
+            new_a2_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
+
+            wavelength_new = 490 + (490 - self.wavelength)
+            fact1 = np.abs(490 - wavelength_new) / (546 - 490)
+            fact2 = np.abs(546 - wavelength_new) / (546 - 490)
+
+            temp_curve = np.asarray([[i, 2 * new_a1_y[i] - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i])]
+                          for i in range(len(new_a1_y))])
+            self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
+            self.curve = self.spline(self.x_range)
+
+        elif self.wavelength > 630:
+
+            new_a1_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
+            new_a2_y = np.interp(self.x_range, self.x_range, self.spline630(self.x_range))
+
+            wavelength_new = 630 + (630 - self.wavelength)
+            fact1 = np.abs(630 - wavelength_new) / (630 - 546)
+            fact2 = np.abs(546 - wavelength_new) / (630 - 546)
+
+            temp_curve = np.asarray([[i, 2 * new_a1_y[i] - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i])]
+                                     for i in range(len(new_a1_y))])
+            self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
+            self.curve = self.spline(self.x_range)
+
+
+        elif 490 < self.wavelength < 546:
+
+            new_a1_y = np.interp(self.x_range, self.x_range, self.spline490(self.x_range))
+            new_a2_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
+
+            fact1 = np.abs(490 - self.wavelength) / (546 - 490)
+            fact2 = np.abs(546 - self.wavelength) / (546 - 490)
+
+            temp_curve = np.asarray([[i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]] for i in range(len(new_a1_y))])
+            self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
+            self.curve = self.spline(self.x_range)
+
+        elif 546 < self.wavelength < 630:
+
+            new_a1_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
+            new_a2_y = np.interp(self.x_range, self.x_range, self.spline630(self.x_range))
+
+            fact1 = np.abs(546 - self.wavelength) / (630 - 546)
+            fact2 = np.abs(630 - self.wavelength) / (630 - 546)
+
+            temp_curve = np.asarray([[i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]] for i in range(len(new_a1_y))])
+            self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
+            self.curve = self.spline(self.x_range)
+
+        elif self.wavelength == 490:
+            self.curve = self.spline490(self.x_range)
+            self.spline = self.spline490
+
+        elif self.wavelength == 546:
+            self.curve = self.spline546(self.x_range)
+            self.spline = self.spline546
+
+        elif self.wavelength == 630:
+            self.curve = self.spline630(self.x_range)
+            self.spline = self.spline630
+
+        else:
+            raise ValueError(f'Wavelength {self.wavelength} not understood')
+
+    def get_voltage(self, retardance):
+
+        ret_abs = retardance*self.wavelength
+
+        # Since x-step is 1mV starting at 0, returned index = voltage (mV)
+        index = np.abs(self.curve - ret_abs).argmin()
+
+        return index
+
+    def get_retardance(self, volt):
+        return self.spline(volt) / self.wavelength
