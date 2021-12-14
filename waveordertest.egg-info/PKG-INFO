@@ -1,0 +1,27 @@
+Metadata-Version: 2.1
+Name: waveordertest
+Version: 1.0.0b0
+Summary: functions for reconstructing and visualizing phase and birefrigence
+Home-page: https://github.com/mehta-lab/waveorder/
+Author: Li-Hao Yeh
+Author-email: lihao.yeh@czbiohub.org
+License: BSD License (Chan Zuckerberg Biohub Software License)
+Download-URL: https://github.com/mehta-lab/waveorder
+Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: BSD License
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Image Processing
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: Unix
+Classifier: Operating System :: MacOS
+Requires-Python: ==3.7
+Description-Content-Type: text/markdown
+License-File: LICENSE.txt
+
+file: README.md
+
