@@ -17,7 +17,7 @@ def snap_image(mmc):
     """
 
     mmc.snapImage()
-    time.sleep(0.1) # sleep after snap to make sure the image we grab is the correct one
+    time.sleep(0.3) # sleep after snap to make sure the image we grab is the correct one
 
     return mmc.getImage()
 
@@ -35,7 +35,7 @@ def snap_and_get_image(snap_manager):
 
     """
     snap_manager.snap(True)
-    time.sleep(0.1) # sleep after snap to make sure the image we grab is the correct one
+    time.sleep(0.3) # sleep after snap to make sure the image we grab is the correct one
 
     # get pixels + dimensions
     height = snap_manager.getDisplay().getDisplayedImages().get(0).getHeight()
@@ -66,7 +66,7 @@ def snap_and_average(snap_manager, display=True):
 
 # =========== Methods to set/get LC properties ===============
 
-def set_lc(mmc, waves: float, device_property: str):
+def set_lc_waves(mmc, waves: float, device_property: str):
     """
     Puts a retardance value for either LCA or LCB
 
@@ -74,7 +74,7 @@ def set_lc(mmc, waves: float, device_property: str):
     ----------
     mmc:                (object) MM Core object
     waves:              (float) Retardance to set in fraction of wavelength
-    device_property:    (str) 'LCA' or 'LCB'
+    device_property:    (str) 'Retardance LC-A [in waves]' or 'Retardance LC-B [in waves]'
 
     Returns
     -------
@@ -83,11 +83,29 @@ def set_lc(mmc, waves: float, device_property: str):
     if waves > 1.6 or waves < 0.001:
         raise ValueError("waves must be float, greater than 0.001 and less than 1.6")
     mmc.setProperty('MeadowlarkLcOpenSource', device_property, str(waves))
-#     mmc.waitForDevice('MeadowlarkLcOpenSource')
     time.sleep(20/1000)
 
+def set_lc_volts(mmc, volts: float, device_property: str):
+    """
+    Puts a retardance value for either LCA or LCB
 
-def get_lc(mmc, device_property: str) -> float:
+    Parameters
+    ----------
+    mmc:                (object) MM Core object
+    waves:              (float) Voltage to set on triggerscope DAC, 0-5 V
+    device_property:    (str) 'LCA' or 'LCB'
+
+    Returns
+    -------
+
+    """
+    if volts > 5.0 or volts < 0.0:
+        raise ValueError("Voltages must be float, greater than 0 and less than 5")
+
+    mmc.setProperty(device_property, 'Volts', str(volts))
+    time.sleep(0.4) # 10 ms?
+
+def get_lc_waves(mmc, device_property: str) -> float:
     """
     Get LC Retardance Value
 
@@ -103,6 +121,34 @@ def get_lc(mmc, device_property: str) -> float:
     """
     return float(mmc.getProperty('MeadowlarkLcOpenSource', device_property))
 
+def get_lc_volts(mmc, device_property):
+    return float(mmc.getProperty(device_property, 'Volts'))
+
+def define_lc_state_volts(mmc, state, lca, lcb, lca_dac, lcb_dac):
+    """
+    Write specific LC state to the register, corresponds to 'State{i}' in MM config
+
+    Parameters
+    ----------
+    mmc:                (object) MM Core object
+    state:              (string) State upon which LC values will be saved to.  'State{i}'
+    lca:                (float) Retardance of desires LC in fraction of wavelength
+    lcb:                (float) Retardance of desires LC in fraction of wavelength
+    PROPERTIES:         (dict) Properties dictionary which shortcuts MM device property names
+
+    Returns
+    -------
+
+    """
+    set_lc_volts(mmc, lca, lca_dac)
+    set_lc_volts(mmc, lcb, lcb_dac)
+
+    logging.debug("setting LCA = "+str(lca))
+    logging.debug("setting LCB = "+str(lcb))
+
+    mmc.defineConfig('Channel', state, lca_dac, 'Volts', str(lca))
+    mmc.defineConfig('Channel', state, lcb_dac, 'Volts', str(lcb))
+    mmc.waitForConfig('Channel', state)
 
 def define_lc_state(mmc, state, lca, lcb, PROPERTIES: dict):
     """
@@ -120,8 +166,8 @@ def define_lc_state(mmc, state, lca, lcb, PROPERTIES: dict):
     -------
 
     """
-    set_lc(mmc, lca, PROPERTIES['LCA'])
-    set_lc(mmc, lcb, PROPERTIES['LCB'])
+    set_lc_waves(mmc, lca, PROPERTIES['LCA'])
+    set_lc_waves(mmc, lcb, PROPERTIES['LCB'])
 
     logging.debug("setting LCA = "+str(lca))
     logging.debug("setting LCB = "+str(lcb))
