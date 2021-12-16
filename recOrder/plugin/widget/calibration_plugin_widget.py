@@ -14,15 +14,10 @@ import os
 import json
 import logging
 
-#TODO
-# Error Handling on the Calibration Thread
-# Clear buffer before calibration?
-# Check out using the 5state scheme individually
-# Print status of where you are in the acquisition
-
 
 class Calibration(QWidget):
 
+    # Initialize Signals
     mm_status_changed = pyqtSignal(bool)
     intensity_changed = pyqtSignal(float)
     log_changed = pyqtSignal(str)
@@ -36,9 +31,7 @@ class Calibration(QWidget):
         self.ui.setupUi(self)
 
         # Setup Connections between elements
-        # Recievers
-        # =================================
-        # Connect to Micromanager
+        # Connect to MicroManager
         self.ui.qbutton_mm_connect.clicked[bool].connect(self.connect_to_mm)
 
         # Calibration Tab
@@ -60,7 +53,7 @@ class Calibration(QWidget):
         # Advanced
         self.ui.cb_loglevel.currentIndexChanged[int].connect(self.enter_log_level)
 
-        ######### Acquisition Tab #########
+        # Acquisition Tab
         self.ui.qbutton_browse_save_path.clicked[bool].connect(self.browse_save_path)
         self.ui.chb_save_imgs.stateChanged[int].connect(self.enter_save_imgs)
         self.ui.le_save_path.editingFinished.connect(self.enter_save_path)
@@ -90,19 +83,19 @@ class Calibration(QWidget):
         logging.getLogger().addHandler(log_box)
         logging.getLogger().setLevel(logging.INFO)
 
-        # Emitters
-        # =================================#
+        # Signal Emitters
         self.mm_status_changed.connect(self.handle_mm_status_update)
 
-        #Other Properties:
+        # Instantiate Attributes:
         self.mm = None
         self.mmc = None
         self.calib = None
-        # self.home_path = str(Path.home())
         self.current_dir_path = str(Path.home())
         self.current_save_path = str(Path.home())
         self.current_bg_path = str(Path.home())
         self.directory = None
+
+        # Reconstruction / Calibration Parameter Defaults
         self.swing = 0.1
         self.wavelength = 532
         self.calib_scheme = '4-State'
@@ -142,7 +135,7 @@ class Calibration(QWidget):
         # Init Logger
         self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
 
-        #Init thread worker
+        # Init thread worker
         self.worker = None
 
     def _enable_buttons(self):
@@ -243,7 +236,7 @@ class Calibration(QWidget):
 
     @pyqtSlot(object)
     def handle_bg_image_update(self, value):
-        print(self.viewer.layers)
+
         if 'Background Images' in self.viewer.layers:
             self.viewer.layers['Background Images'].data = value
         else:
@@ -252,6 +245,8 @@ class Calibration(QWidget):
     @pyqtSlot(object)
     def handle_bg_bire_image_update(self, value):
 
+        # Separate Background Retardance and Background Orientation
+        # Add new layer if none exists, otherwise update layer data
         if 'Background Retardance' in self.viewer.layers:
             self.viewer.layers['Background Retardance'].data = value[0]
         else:
@@ -267,10 +262,12 @@ class Calibration(QWidget):
 
         channel_names = ['Retardance', 'Orientation', 'Brightfield']
 
+        # Compute Overlay if birefringence acquisition is 2D
         if self.birefringence_dim == '2D':
             channel_names.append('BirefringenceOverlay')
             overlay = ret_ori_overlay(value[0], value[1], (0, np.percentile(value[0], 99.99)))
 
+        # Add new layer if none exists, otherwise update layer data
         for name in channel_names:
             if name == 'BirefringenceOverlay':
                 if name+self.birefringence_dim in self.viewer.layers:
@@ -286,15 +283,9 @@ class Calibration(QWidget):
     @pyqtSlot(object)
     def handle_phase_image_update(self, value):
 
-        # if self.phase_dim == '2D':
-        #     name = 'Phase2D'
-        #     # value = np.expand_dims(value, axis=(0, 1))
-        # else:
-        #     name = 'Phase3D'
-        #     # value = np.expand_dims(value, axis=0)
-
         name = 'Phase2D' if self.phase_dim == '2D' else 'Phase3D'
 
+        # Add new layer if none exists, otherwise update layer data
         if name in self.viewer.layers:
             self.viewer.layers[name].data = value
         else:
@@ -302,11 +293,11 @@ class Calibration(QWidget):
 
     @pyqtSlot(object)
     def handle_reconstructor_update(self, value):
+        # Saves phase reconstructor to be re-used if possible
         self.phase_reconstructor = value
 
     @pyqtSlot(bool)
     def browse_dir_path(self):
-        # self.ui.le_directory.setFocus()
         result = self._open_browse_dialog(self.current_dir_path)
         self.directory = result
         self.current_dir_path = result
@@ -314,7 +305,6 @@ class Calibration(QWidget):
 
     @pyqtSlot(bool)
     def browse_save_path(self):
-        # self.ui.le_directory.setFocus()
         result = self._open_browse_dialog(self.current_save_path)
         self.save_directory = result
         self.current_save_path = result
@@ -477,38 +467,47 @@ class Calibration(QWidget):
 
     @pyqtSlot(bool)
     def calc_extinction(self):
+
+        # Snap images from the extinction state and first elliptical state
         set_lc_state(self.mmc, 'State0')
         extinction = snap_and_average(self.calib.snap_manager)
         set_lc_state(self.mmc, 'State1')
         state1 = snap_and_average(self.calib.snap_manager)
+
+        # Calculate extinction based off captured intensities
         extinction = self.calib.calculate_extinction(self.swing, self.calib.I_Black, extinction, state1)
         self.ui.le_extinction.setText(str(extinction))
 
     @pyqtSlot(bool)
     def load_calibration(self):
+        """
+        Uses previous JSON calibration metadata to load previous calibration
+        """
         result = self._open_browse_dialog(self.current_dir_path, file=True)
         with open(result, 'r') as file:
             meta = json.load(file)
 
+        # Update Properties
         self.wavelength = meta['Summary']['Wavelength (nm)']
         self.swing = meta['Summary']['Swing (fraction)']
 
+        # Initialize calibration class
         self.calib = QLIPP_Calibration(self.mmc, self.mm)
-
         self.calib.swing = self.swing
         self.ui.le_swing.setText(str(self.swing))
-
         self.calib.wavelength = self.wavelength
         self.ui.le_wavelength.setText(str(self.wavelength))
 
-
+        # Update Calibration Scheme Combo Box
         if meta['Summary']['Acquired Using'] == '4-State':
             self.ui.cb_calib_scheme.setCurrentIndex(0)
         else:
             self.ui.cb_calib_scheme.setCurrentIndex(1)
 
+        # Move the load calibration function to a separate thread
         self.worker = load_calibration(self.calib, meta)
 
+        # initialize worker properties
         self.ui.qbutton_stop_calib.clicked.connect(self.worker.quit)
         self.worker.yielded.connect(self.ui.le_extinction.setText)
         self.worker.returned.connect(self._update_calib)
@@ -523,17 +522,16 @@ class Calibration(QWidget):
         """
         Wrapper function to create calibration worker and move that worker to a thread.
         Calibration is then executed by the calibration worker
-
-        Returns
-        -------
-
         """
 
+        # Init calibration class
         self.calib = QLIPP_Calibration(self.mmc, self.mm)
 
+        # Reset Styling
         self.ui.le_calib_assessment.setText('')
         self.ui.le_calib_assessment.setStyleSheet("")
 
+        # Save initial autoshutter state for when we set it back later
         self.auto_shutter = self.mmc.getAutoShutter()
 
         logging.info('Starting Calibration')
@@ -597,7 +595,6 @@ class Calibration(QWidget):
     def acq_birefringence(self):
         """
         Wrapper function to acquire birefringence stack/image and plot in napari
-
         Returns
         -------
 
@@ -618,11 +615,8 @@ class Calibration(QWidget):
     @pyqtSlot(bool)
     def acq_phase(self):
         """
-         Wrapper function to acquire phase stack and plot in napari
-
-         Returns
-         -------
-         """
+        Wrapper function to acquire phase stack and plot in napari
+        """
 
         # Init worker and thread
         self.worker = AcquisitionWorker(self, self.calib, 'phase')
@@ -640,11 +634,8 @@ class Calibration(QWidget):
     @pyqtSlot(bool)
     def acq_birefringence_phase(self):
         """
-         Wrapper function to acquire both birefringence and phase stack and plot in napari
-
-         Returns
-         -------
-         """
+        Wrapper function to acquire both birefringence and phase stack and plot in napari
+        """
 
         # Init worker
         self.worker = AcquisitionWorker(self, self.calib, 'all')
@@ -661,7 +652,6 @@ class Calibration(QWidget):
         self.worker.start()
 
     def _open_browse_dialog(self, default_path, file=False):
-        # TODO: Save the last opened directory to use as default path for next time
 
         if not file:
             return self._open_dir_dialog("select a directory",
@@ -700,7 +690,7 @@ class QtLogger(logging.Handler):
         super().__init__()
         self.widget = widget
 
-    # necessary to be a logging handler
+    # emit function necessary to be considered a logging handler
     def emit(self, record):
         msg = self.format(record)
         self.widget.appendPlainText(msg)

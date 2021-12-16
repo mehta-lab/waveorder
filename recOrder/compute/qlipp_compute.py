@@ -11,62 +11,62 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
     Initialize the QLIPP reconstructor for downstream tasks. See tags next to parameters
     for which parameters are needed for each pipeline
 
-        Parameters
-        ----------
+    Parameters
+    ----------
 
-            pipeline          : string
-                                'birefringence', 'QLIPP', 'PhaseFromBF', 'FluorDecon'
+        pipeline          : string
+                            'birefringence', 'QLIPP', 'PhaseFromBF', 'FluorDecon'
 
-            image_dim         : tuple
-                                (height, width) of images in pixels
+        image_dim         : tuple
+                            (height, width) of images in pixels
 
-            wavelength_nm      : int
-                                wavelength of illumination in nm
+        wavelength_nm      : int
+                            wavelength of illumination in nm
 
-            swing             : float
-                                swing used for calibration in waves
+        swing             : float
+                            swing used for calibration in waves
 
-            calibration_scheme: str
-                                '4-State' or '5-State'
+        calibration_scheme: str
+                            '4-State' or '5-State'
 
-            NA_obj            : float
-                                numerical aperture of the detection objective
+        NA_obj            : float
+                            numerical aperture of the detection objective
 
-            NA_illu           : float
-                                numerical aperture of the illumination condenser
+        NA_illu           : float
+                            numerical aperture of the illumination condenser
 
-            mag               : float
-                                magnification used for imaging (e.g. 20 for 20x)
+        mag               : float
+                            magnification used for imaging (e.g. 20 for 20x)
 
-            n_slices          : int
-                                number of slices in the z-stack
+        n_slices          : int
+                            number of slices in the z-stack
 
-            z_step_um          : float
-                                z step size of the image space
+        z_step_um          : float
+                            z step size of the image space
 
-            pad_z             : float
-                                how many padding slices to add for phase computation
+        pad_z             : float
+                            how many padding slices to add for phase computation
 
-            pixel_size_um     : float
-                                pixel size of the camera in um
+        pixel_size_um     : float
+                            pixel size of the camera in um
 
-            bg_correction      : str
-                                'local' for estimating background with scipy uniform filter
-                                'local_fit' for estimating background with polynomial fit
-                                'None' for no BG correction
-                                'Global' for normal background subtraction with the provided background
+        bg_correction      : str
+                            'local' for estimating background with scipy uniform filter
+                            'local_fit' for estimating background with polynomial fit
+                            'None' for no BG correction
+                            'Global' for normal background subtraction with the provided background
 
-            n_obj_media        : float
-                                refractive index of the objective immersion media
+        n_obj_media        : float
+                            refractive index of the objective immersion media
 
-            mode               : str
-                                '2D' or '3D' (phase, fluorescence reconstruction only)
+        mode               : str
+                            '2D' or '3D' (phase, fluorescence reconstruction only)
 
-            use_gpu           : bool
-                                option to use gpu or not
+        use_gpu           : bool
+                            option to use gpu or not
 
-            gpu_id            : int
-                                number refering to which gpu will be used
+        gpu_id            : int
+                            number refering to which gpu will be used
 
 
         Returns
@@ -119,6 +119,7 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
     else:
         raise ValueError(f'Pipeline {pipeline} not understood')
 
+    # Modify user inputs to fit waveorder input requirements
     lambda_illu = wavelength_nm / 1000 if wavelength_nm else None
     n_defocus = n_slices if n_slices else 0
     z_step_um = 0 if not z_step_um else z_step_um
@@ -191,7 +192,7 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes=None):
         recon               : waveorder.waveorder_microscopy object
                               initialized by initialize_reconstructor
 
-        bg_stokes           : np.ndarray
+        bg_stokes           : np.ndarray (5, Y, X) or (4, Y, X)
                               stokes array representing background data
 
     Returns
@@ -205,12 +206,14 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes=None):
     stokes_data = recon.Stokes_recon(np.copy(data))
     stokes_data = recon.Stokes_transform(stokes_data)
 
+    # Don't do background correction if BG data isn't provided
     if recon.bg_option == 'None' or bg_stokes is None:
         if len(stokes_data.shape) == 4:
             return np.transpose(stokes_data, (0, 2, 3, 1))
         else:
             return stokes_data
 
+    # Compute Stokes with background correction
     else:
         if len(np.shape(stokes_data)) == 4:
             s_image = recon.Polscope_bg_correction(np.transpose(stokes_data, (0, 2, 3, 1)), bg_stokes)
@@ -240,6 +243,7 @@ def reconstruct_qlipp_birefringence(stokes, recon):
 
     birefringence = recon.Polarization_recon(np.copy(stokes))
 
+    # Return the transposed birefringence array with channel first
     return np.transpose(birefringence, (0, 3, 1, 2)) if len(birefringence.shape) == 4 else birefringence
 
 
@@ -266,33 +270,29 @@ def reconstruct_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
 
     _, phase2D = recon.Phase_recon(np.copy(S0), method=method, reg_p=reg_p, rho=rho, lambda_p=lambda_p, itr=itr, verbose=False)
 
-    # print('compute func')
-    # print(S0)
-    # print('\n')
-    # print(phase2D)
     return phase2D
 
 
 def reconstruct_phase3D(S0, recon, method='Tikhonov', reg_re=1e-4,
                         rho=1e-3, lambda_re=1e-4, itr=50):
     """
-        Reconstruct 2D phase from a given S0 or BF stack.
+    Reconstruct 2D phase from a given S0 or BF stack.
 
-        Parameters
-        ----------
-        S0:             (nd-array) BF/S0 stack of dimensions (Y, X, Z)
-        recon:          (waveorder_microscopy Object): initialized reconstructor object
-        method:         (str) Regularization method 'Tikhonov' or 'TV'
-        reg_p:          (float) Tikhonov regularization parameters
-        rho:            (float) TV regularization parameter
-        lambda_p:       (float) TV regularization parameter
-        itr:            (int) TV Regularization number of iterations
+    Parameters
+    ----------
+    S0:             (nd-array) BF/S0 stack of dimensions (Y, X, Z)
+    recon:          (waveorder_microscopy Object): initialized reconstructor object
+    method:         (str) Regularization method 'Tikhonov' or 'TV'
+    reg_p:          (float) Tikhonov regularization parameters
+    rho:            (float) TV regularization parameter
+    lambda_p:       (float) TV regularization parameter
+    itr:            (int) TV Regularization number of iterations
 
-        Returns
-        -------
-        phase3D:        (nd-array) Phase2D image of size (Z, Y, X)
+    Returns
+    -------
+    phase3D:        (nd-array) Phase2D image of size (Z, Y, X)
 
-        """
+    """
 
     phase3D = recon.Phase_recon_3D(np.copy(S0), method=method, reg_re=reg_re, rho=rho, lambda_re=lambda_re,
                                    itr=itr, verbose=False)

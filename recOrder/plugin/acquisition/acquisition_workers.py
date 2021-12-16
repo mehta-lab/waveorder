@@ -14,6 +14,10 @@ import time
 
 
 class AcquisitionSignals(WorkerBaseSignals):
+    """
+    Custom Signals class that includes napari native signals
+    """
+
     phase_image_emitter = pyqtSignal(object)
     bire_image_emitter = pyqtSignal(object)
     phase_reconstructor_emitter = pyqtSignal(object)
@@ -21,7 +25,6 @@ class AcquisitionSignals(WorkerBaseSignals):
 
 
 # TODO: Cache common OTF's on local computers and use those for reconstruction
-# TODO: Fix bug in dimensionality, 2D/3D doesn't make a difference?
 class AcquisitionWorker(WorkerBase):
     """
     Class to execute a birefringence/phase acquisition.  First step is to snap the images follow by a second
@@ -30,13 +33,18 @@ class AcquisitionWorker(WorkerBase):
 
     def __init__(self, calib_window, calib, mode):
         super().__init__(SignalsClass=AcquisitionSignals)
+
+        # Save current state of GUI window
         self.calib_window = calib_window
+
+        # Init properties
         self.calib = calib
         self.mode = mode
         self.n_slices = None
         self.prefix = 'recOrderPluginSnap'
         self.dm = self.calib_window.mm.displays()
 
+        # Determine whether 2D or 3D acquisition is needed
         if self.mode == 'birefringence' and self.calib_window.birefringence_dim == '2D':
             self.dim = '2D'
         else:
@@ -48,10 +56,14 @@ class AcquisitionWorker(WorkerBase):
             raise TimeoutError('Stop Requested')
 
     def work(self):
+        """
+        Function that runs the 2D or 3D acquisition and reconstructs the data
+        """
 
         logging.info('Running Acquisition...')
         save_dir = self.calib_window.save_directory if self.calib_window.save_directory else self.calib_window.directory
 
+        # List the Channels to acquire, if 5-state then append 5th channel
         channels = ['State0', 'State1', 'State2', 'State3']
         if self.calib_window.calib_scheme == '5-State':
             channels.append('State4')
@@ -62,19 +74,29 @@ class AcquisitionWorker(WorkerBase):
         if self.dim == '2D':
             logging.debug('Acquiring 2D stack')
 
+            # Generate MDA Settings
             settings = generate_acq_settings(self.calib_window.mm,
                                              channel_group='Channel',
                                              channels=channels,
                                              save_dir=save_dir,
                                              prefix=self.prefix)
             self._check_abort()
-            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True) # (1, 4, 1, Y, X) array
+
+            # Acquire from MDA settings uses MM MDA GUI
+            # Returns (1, 4/5, 1, Y, X) array
+            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
+
+            # Sleep to make sure resources get unblocked before attempting cleanup
             time.sleep(1)
+
+            # Cleanup acquisition by closing window + deleting temp directory
             self._cleanup_acq()
 
         # Acquire 3D stack
         else:
             logging.debug('Acquiring 3D stack')
+
+            # Generate MDA Settings
             settings = generate_acq_settings(self.calib_window.mm,
                                              channel_group='Channel',
                                              channels=channels,
@@ -86,8 +108,14 @@ class AcquisitionWorker(WorkerBase):
 
             self._check_abort()
 
-            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)  # (1, 4, Z, Y, X) array
+            # Acquire from MDA settings uses MM MDA GUI
+            # Returns (1, 4/5, Z, Y, X) array
+            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
+
+            # Sleep to make sure resources get unblocked before attempting cleanup
             time.sleep(1)
+
+            # Cleanup acquisition by closing window + deleting temp directory
             self._cleanup_acq()
             self._check_abort()
 
@@ -119,7 +147,7 @@ class AcquisitionWorker(WorkerBase):
 
         Parameters
         ----------
-        stack:          (nd-array) Dimensions are either (C, Z Y, X)
+        stack:          (nd-array) Dimensions are (C, Z, Y, X)
 
         Returns
         -------
@@ -135,7 +163,8 @@ class AcquisitionWorker(WorkerBase):
         if self.mode == 'phase' or self.mode == 'all':
 
             self._check_abort()
-            # if no reconstructor has been initialized before
+
+            # if no reconstructor has been initialized before, create new reconstructor
             if not self.calib_window.phase_reconstructor:
                 logging.debug('Computing new reconstructor')
 
@@ -157,14 +186,17 @@ class AcquisitionWorker(WorkerBase):
                                                  mode=self.calib_window.phase_dim,
                                                  use_gpu=False, gpu_id=0)
 
+                # Emit reconstructor to be saved for later reconstructions
                 self.phase_reconstructor_emitter.emit(recon)
 
             # if previous reconstructor exists
             else:
                 self._check_abort()
-                # compute new reconstructor
+
+                # compute new reconstructor if the old reconstructor properties have been modified
                 if self._reconstructor_changed():
                     logging.debug('Reconstruction settings changed, updating reconstructor')
+
                     recon = initialize_reconstructor('QLIPP',
                                                      image_dim=(stack.shape[-2], stack.shape[-1]),
                                                      wavelength_nm=self.calib_window.wavelength,
@@ -181,13 +213,14 @@ class AcquisitionWorker(WorkerBase):
                                                      n_obj_media=self.calib_window.n_media,
                                                      mode=self.calib_window.phase_dim,
                                                      use_gpu=False, gpu_id=0)
+
                 # use previous reconstructor
                 else:
-
                     logging.debug('Using previous reconstruction settings')
                     recon = self.calib_window.phase_reconstructor
 
         # if phase isn't desired, initialize the lighter birefringence only reconstructor
+        # no need to save this reconstructor for later as it is pretty quick to compute
         else:
             self._check_abort()
             logging.debug('Creating birefringence only reconstructor')
@@ -432,11 +465,15 @@ class AcquisitionWorker(WorkerBase):
         return changed
 
     def _cleanup_acq(self):
+
+        # Get display windows
         disps = self.dm.getAllDataViewers()
 
+        # loop through display window and find one with matching prefix
         for i in range(disps.size()):
             disp = disps.get(i)
 
+            # close the datastore and grab the path to where the data is saved
             if self.prefix in disp.getName():
                 dp = disp.getDataProvider()
                 dir_ = dp.getSummaryMetadata().getDirectory()
@@ -447,6 +484,8 @@ class AcquisitionWorker(WorkerBase):
                     closed = disp.isClosed()
                 dp.close()
 
+                # Try to delete the data, sometime it isn't cleaned up quickly enough and will
+                # return an error.  In this case, catch the error and then try to close again (seems to work).
                 try:
                     shutil.rmtree(os.path.join(dir_, prefix))
                 except PermissionError as ex:

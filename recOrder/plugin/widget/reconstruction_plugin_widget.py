@@ -2,8 +2,6 @@ from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QWidget, QFileDialog, QMainWindow, QPushButton
 from PyQt5.QtGui import QColor
 from napari.utils.key_bindings import bind_key
-from recOrder.plugin.reconstruction.reconstruction_workers import reconstruct
-from napari.qt.threading import thread_worker
 from recOrder.plugin.qtdesigner import recOrder_reconstruction
 from recOrder.plugin.widget.loading_widget import Overlay
 from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, POSTPROCESSING

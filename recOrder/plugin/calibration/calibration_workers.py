@@ -7,7 +7,12 @@ import os
 import numpy as np
 import logging
 
+
 class CalibrationSignals(WorkerBaseSignals):
+    """
+    Custom Signals class that includes napari native signals
+    """
+
     progress_update = pyqtSignal(int)
     extinction_update = pyqtSignal(str)
     intensity_update = pyqtSignal(object)
@@ -17,6 +22,10 @@ class CalibrationSignals(WorkerBaseSignals):
 
 
 class BackgroundSignals(WorkerBaseSignals):
+    """
+    Custom Signals class that includes napari native signals
+    """
+
     bg_image_emitter = pyqtSignal(object)
     bire_image_emitter = pyqtSignal(object)
     aborted = pyqtSignal()
@@ -30,20 +39,13 @@ class CalibrationWorker(WorkerBase):
     def __init__(self, calib_window, calib):
         super().__init__(SignalsClass=CalibrationSignals)
 
+        # initialize current state of GUI + Calibration class
         self.calib_window = calib_window
         self.calib = calib
-
-    # def work(self):
-    #
-    #     raise ValueError('Test')
 
     def work(self):
         """
         Runs the full calibration algorithm and emits necessary signals.
-
-        Returns
-        -------
-
         """
 
         self.calib.intensity_emitter = self.intensity_update
@@ -55,7 +57,6 @@ class CalibrationWorker(WorkerBase):
         # Check if change of ROI is needed
         if self.calib_window.use_cropped_roi:
             rect = self.calib.check_and_get_roi()
-            # cont = self.calib.display_and_check_ROI(rect)
             self.calib_window.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
             self.calib.ROI = (rect.x, rect.y, rect.width, rect.height)
 
@@ -69,7 +70,6 @@ class CalibrationWorker(WorkerBase):
         logging.debug(f'Blacklevel: {self.calib.I_Black}\n')
 
         self._check_abort()
-
         self.progress_update.emit(10)
 
         # Set LC Wavelength:
@@ -91,6 +91,7 @@ class CalibrationWorker(WorkerBase):
                                                            self.calib.I_Elliptical)
         self._check_abort()
 
+        # Update main GUI with extinction ratio
         self.calib.extinction_ratio = extinction_ratio
         self.extinction_update.emit(str(extinction_ratio))
 
@@ -100,6 +101,7 @@ class CalibrationWorker(WorkerBase):
 
         self._check_abort()
 
+        # Perform calibration assessment based on retardance values
         self._assess_calibration()
 
         self._check_abort()
@@ -110,68 +112,89 @@ class CalibrationWorker(WorkerBase):
         logging.debug(f"EXTINCTION = {extinction_ratio}")
 
     def _check_abort(self):
+        """
+        Called if the user presses the STOP button.
+        Needed to be checked after every major step to stop the process
+        """
+
         if self.abort_requested:
             self.aborted.emit()
             raise TimeoutError('Stop Requested')
 
     def _calibrate_4state(self):
+        """
+        Run through the 4-state calibration algorithm
+        """
 
         self.calib.calib_scheme = '4-State'
 
         self._check_abort()
 
+        # Optimize Extinction State
         self.calib.opt_Iext()
 
         self._check_abort()
         self.progress_update.emit(60)
 
+        # Optimize first elliptical (reference) state
         self.calib.opt_I0()
         self.progress_update.emit(65)
 
         self._check_abort()
 
+        # Optimize 60 deg state
         self.calib.opt_I60(0.05, 0.05)
         self.progress_update.emit(75)
 
         self._check_abort()
 
+        # Optimize 120 deg state
         self.calib.opt_I120(0.05, 0.05)
         self.progress_update.emit(85)
 
         self._check_abort()
 
-
     def _calibrate_5state(self):
 
         self.calib.calib_scheme = '5-State'
 
+        # Optimize Extinction State
         self.calib.opt_Iext()
         self.progress_update.emit(50)
 
         self._check_abort()
 
+        # Optimize First elliptical state
         self.calib.opt_I0()
         self.progress_update.emit(55)
 
         self._check_abort()
 
+        # Optimize 45 deg state
         self.calib.opt_I45(0.05, 0.05)
         self.progress_update.emit(65)
 
         self._check_abort()
 
+        # Optimize 90 deg state
         self.calib.opt_I90(0.05, 0.05)
         self.progress_update.emit(75)
 
         self._check_abort()
 
+        # Optimize 135 deg state
         self.calib.opt_I135(0.05, 0.05)
         self.progress_update.emit(85)
 
         self._check_abort()
 
     def _assess_calibration(self):
+        """
+        Assesses the quality of calibration based off retardance values.
+        Attempts to determine whether certain optical components are out of place.
+        """
 
+        # Extinction State should be somewhere around LCA = 0.25, LCB = 0.5
         if 0.2 < self.calib.lca_ext < 0.4:
             if 0.4 < self.calib.lcb_ext < 0.75:
                 if self.calib.extinction_ratio >= 100:
@@ -182,11 +205,15 @@ class CalibrationWorker(WorkerBase):
                     self.calib_assessment_msg.emit('Sucessful Calibration, Okay Extinction Ratio')
                 else:
                     self.calib_assessment.emit('bad')
-                    self.calib_assessment_msg.emit('Poor Extinction, try tuning the linear polarizer to be '
-                                                   'perpendicular to the long edge of the LC housing')
+                    self.calib_assessment_msg.emit('Poor Extinction, try tuning the linear polarizer to be \
+                                                   perpendicular to the long edge of the LC housing')
+
+            # LCB Values typically off when linear polarizer is not in correct orientation
             else:
                 self.calib_assessment.emit('bad')
                 self.calib_assessment_msg.emit('Wrong analyzer handedness or linear polarizer 90 degrees off')
+
+        # If LCA is outside of this range, then unclear what has happened
         else:
             self.calib_assessment.emit('bad')
             self.calib_assessment_msg.emit('Calibration Failed, unknown origin of issue')
@@ -206,11 +233,6 @@ class BackgroundCaptureWorker(WorkerBase):
         if self.abort_requested:
             self.aborted.emit()
             return True
-
-    # def work(self):
-    #
-    #     raise ValueError('Test')
-
 
     def work(self):
 
@@ -244,6 +266,7 @@ class BackgroundCaptureWorker(WorkerBase):
 
         self._check_abort()
 
+        # Convert retardance to nm
         retardance = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
 
         # Save metadata file and emit imgs
@@ -252,36 +275,53 @@ class BackgroundCaptureWorker(WorkerBase):
 
         self._check_abort()
 
+        # Emit background images + background birefringence
         self.bg_image_emitter.emit(imgs)
         self.bire_image_emitter.emit([retardance, birefringence[1]])
 
+
 @thread_worker
 def load_calibration(calib, meta: dict):
+    """
+    Sets MM properties based upon calibration metadata file
 
+
+    Parameters
+    ----------
+    calib:          (object) recOrder Calibration Class
+    meta:           (dict) JSON dict read from the calibration metadata file
+
+    Returns
+    -------
+    calib           (object) updated recOrder Calibration Class
+    """
+
+    # State 0 and State 1 are the same for both algorithms
+    state0 = meta['Summary']['[LCA_Ext, LCB_Ext]']
+    state1 = meta['Summary']['[LCA_0, LCB_0]']
+
+    define_lc_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
+    define_lc_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
+
+    # Update algorithm specific states
     if meta['Summary']['Acquired Using'] == '4-State':
-        state0 = meta['Summary']['[LCA_Ext, LCB_Ext]']
-        state1 = meta['Summary']['[LCA_0, LCB_0]']
         state2 = meta['Summary']['[LCA_60, LCB_60]']
         state3 = meta['Summary']['[LCA_120, LCB_120]']
 
-        define_lc_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
-        define_lc_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
         define_lc_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
         define_lc_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
 
+    # 5-State Algorithm
     else:
-        state0 = meta['Summary']['[LCA_Ext, LCB_Ext]']
-        state1 = meta['Summary']['[LCA_0, LCB_0]']
         state2 = meta['Summary']['[LCA_45, LCB_45]']
         state3 = meta['Summary']['[LCA_90, LCB_90]']
         state4 = meta['Summary']['[LCA_135, LCB_135]']
 
-        define_lc_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
-        define_lc_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
         define_lc_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
         define_lc_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
         define_lc_state(calib.mmc, 'State4', state4[0], state4[1], calib.PROPERTIES)
 
+    # Calculate Blacklevel after loading these properties
     calib.calc_blacklevel()
     set_lc_state(calib.mmc, 'State0')
     calib.I_Ext = snap_and_average(calib.snap_manager)
@@ -291,6 +331,3 @@ def load_calibration(calib, meta: dict):
     yield str(calib.calculate_extinction(calib.swing, calib.I_Black, calib.I_Ext, calib.I_Elliptical))
 
     return calib
-
-
-
