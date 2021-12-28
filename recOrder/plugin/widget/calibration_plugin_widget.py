@@ -157,6 +157,7 @@ class Calibration(QWidget):
         self.ui.qbutton_acq_phase.setEnabled(True)
         self.ui.qbutton_acq_birefringence_phase.setEnabled(True)
         self.ui.qbutton_load_calib.setEnabled(True)
+        self.ui.qbutton_listen.setEnabled(True)
 
     def _disable_buttons(self):
         self.ui.qbutton_calibrate.setEnabled(False)
@@ -166,6 +167,7 @@ class Calibration(QWidget):
         self.ui.qbutton_acq_phase.setEnabled(False)
         self.ui.qbutton_acq_birefringence_phase.setEnabled(False)
         self.ui.qbutton_load_calib.setEnabled(False)
+        self.ui.qbutton_listen.setEnabled(False)
 
     def _handle_error(self, exc):
         self.ui.le_calib_assessment.setText(f'Error: {str(exc)}')
@@ -708,12 +710,13 @@ class Calibration(QWidget):
         self.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
-        self.worker.finished.connect(self._reset_listening)
         self.worker.errored.connect(self._handle_acq_error)
+        self.ui.qbutton_stop_acq.clicked.connect(self.worker.quit)
 
         # Start Thread
         self.worker.start()
 
+    @pyqtSlot(bool)
     def listen_and_reconstruct(self):
 
         # Init reconstructor
@@ -730,7 +733,9 @@ class Calibration(QWidget):
         self.worker.dim_emitter.connect(self.update_dims)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
+        self.worker.finished.connect(self._reset_listening)
         self.worker.errored.connect(self._handle_acq_error)
+        self.ui.qbutton_stop_acq.clicked.connect(self.worker.quit)
 
         # Start Thread
         self.worker.start()
