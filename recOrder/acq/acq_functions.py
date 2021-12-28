@@ -118,7 +118,7 @@ def acquire_from_settings(mm, settings, grab_images = True):
 
     time.sleep(3)
 
-    #TODO: speed improvements in reading the data
+    #TODO: speed improvements in reading the data with pycromanager acquisition?
     if grab_images:
         # get the most recent acquisition if multiple
         path = os.path.join(settings['root'], settings['prefix'])

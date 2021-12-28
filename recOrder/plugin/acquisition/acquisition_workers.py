@@ -3,14 +3,18 @@ from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, reconstruct_phase2D, reconstruct_phase3D
 from recOrder.acq.acq_functions import generate_acq_settings, acquire_from_settings
 from recOrder.io.utils import load_bg
+from recOrder.compute import QLIPPBirefringenceCompute
 from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import logging
 from waveorder.io.writer import WaveorderWriter
+import tifffile as tiff
 import json
 import numpy as np
 import os
+import zarr
 import shutil
 import time
+import glob
 
 
 class AcquisitionSignals(WorkerBaseSignals):
@@ -23,6 +27,13 @@ class AcquisitionSignals(WorkerBaseSignals):
     phase_reconstructor_emitter = pyqtSignal(object)
     aborted = pyqtSignal()
 
+class ListeningSignals(WorkerBaseSignals):
+    """
+    Custom Signals class that includes napari native signals
+    """
+
+    store_emitter = pyqtSignal(object)
+    dim_emitter = pyqtSignal(tuple)
 
 # TODO: Cache common OTF's on local computers and use those for reconstruction
 class AcquisitionWorker(WorkerBase):
@@ -413,7 +424,6 @@ class AcquisitionWorker(WorkerBase):
         self._check_abort()
         # check if equivalent attributes have diverged
         for key, value in attr_list.items():
-            print(getattr(self.calib_window, key), getattr(self.calib_window.phase_reconstructor, value))
             if getattr(self.calib_window, key) != getattr(self.calib_window.phase_reconstructor, value):
                 changed = True
                 break
@@ -494,6 +504,230 @@ class AcquisitionWorker(WorkerBase):
             else:
                 continue
 
+
+# TODO: Need to implement multi-threaded reconstruction and set up a data queue or wait to continue until
+# TODO: reconstruction has returned
+class ListeningWorker(WorkerBase):
+    """
+    Class to execute a birefringence/phase acquisition.  First step is to snap the images follow by a second
+    step of reconstructing those images.
+    """
+
+    def __init__(self, calib_window, bg_data):
+        super().__init__(SignalsClass=ListeningSignals)
+        # super().__init__()
+
+        # Save current state of GUI window
+        self.calib_window = calib_window
+
+        # Init properties
+        self.n_slices = None
+        self.n_channels = None
+        self.n_frames = None
+        self.n_pos = None
+        self.shape = None
+        self.dtype = None
+        self.root = None
+        self.prefix = None
+        self.store = None
+        self.save_directory = None
+        self.bg_data = bg_data
+        self.reconstructor = None
+
+    def get_byte_offset(self, offsets, page):
+        """
+        Gets the byte offset from the tiff tag metadata
+
+        Parameters
+        ----------
+        offsets:             (dict) Offset dictionary list
+        page:               (int) Page to look at for the offset
+
+        Returns
+        -------
+        byte offset:        (int) byte offset for the image array
+
+        """
+
+        if page == 0:
+            array_offset = offsets[page] + 210
+        else:
+            array_offset = offsets[page] + 162
+
+        return array_offset
+
+    def listen_for_images(self, array, file, offsets, n_pages, interval, z, c, p, t, dim_order):
+
+        if dim_order == 0:
+            dims = [[t, self.n_frames], [p, self.n_pos], [z, self.n_slices], [c, self.n_channels]]
+            channel_dim = 0
+        elif dim_order == 1:
+            dims = [[t, self.n_frames], [p, self.n_pos], [c, self.n_channels], [z, self.n_slices]]
+            channel_dim = 1
+        elif dim_order == 2:
+            dims = [[p, self.n_pos], [t, self.n_frames], [z, self.n_slices], [c, self.n_channels]]
+            channel_dim = 0
+        else:
+            dims = [[p, self.n_pos], [t, self.n_frames], [c, self.n_channels], [z, self.n_slices]]
+            channel_dim = 1
+
+        idx = 0
+        for dim3 in range(dims[0][0], dims[0][1]):
+            for dim2 in range(dims[1][0], dims[1][1]):
+                for dim1 in range(dims[2][0], dims[2][1]):
+                    for dim0 in range(dims[3][0], dims[3][1]):
+
+                        ## GET OFFSET AND WAIT
+                        if idx > 0:
+                            offset = self.get_byte_offset(offsets, idx)
+                            while offset == 162:
+                                tf = tiff.TiffFile(file)
+                                time.sleep(interval)
+                                offsets = tf.micromanager_metadata['IndexMap']['Offset']
+                                tf.close()
+                                offset = self.get_byte_offset(offsets, idx)
+                        else:
+                            offset = self.get_byte_offset(offsets, idx)
+
+                        if idx < n_pages and idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+                            if channel_dim == 0 and dim0 == self.n_channels - 1:
+                                ## COMPUTE
+                                # print('COMPUTING', idx, dim3, dim2, dim1, dim0)
+                                self.compute_and_save(array, p, t, z)
+                                idx += 1
+                            else:
+                                ## ADD TO ARRAY
+                                # print('array', idx, dim3, dim2, dim1, dim0)
+                                img = np.memmap(file, dtype=self.dtype, mode='r', offset=offset, shape=self.shape)
+                                if dim_order == 0:
+                                    t, p, c, z = dim3, dim2, dim0, dim1
+                                elif dim_order == 1:
+                                    t, p, c, z = dim3, dim2, dim1, dim0
+                                elif dim_order == 2:
+                                    t, p, c, z = dim2, dim3, dim0, dim1
+                                else:
+                                    t, p, c, z = dim2, dim3, dim1, dim0
+
+                                array[c, z] = img
+                                idx += 1
+                        else:
+                            # NEED TO STOP BECAUSE RAN OUT OF PAGES OR REACHED END OF ACQ
+                            return array, idx, dim3, dim2, dim1, dim0
+
+                    if channel_dim == 1 and dim1 == self.n_channels - 1:
+                        # print('COMPUTING', idx, dim3, dim2, dim1, dim0)
+                        self.compute_and_save(array, p, t, dim0)
+                        # idx += 1
+                    else:
+                        continue
+
+    def compute_and_save(self, array, p, t, z):
+
+        # print('computing')
+        if self.n_slices == 1:
+            array = array[:, 0]
+
+        birefringence = self.reconstructor.reconstruct(array[:, 0])
+
+        if self.prefix not in self.calib_window.viewer.layers:
+            self.store = zarr.open(os.path.join(self.root, self.prefix+'.zarr'))
+            self.store.zeros(name='Birefringence',
+                             shape=(self.n_pos,
+                                    self.n_frames,
+                                    2,
+                                    self.n_slices,
+                                    self.shape[0],
+                                    self.shape[1]),
+                             chunks=(1, 1, 1, 1, self.shape[0], self.shape[1]),
+                             overwrite=True)
+
+            if len(birefringence.shape) == 4:
+                self.store['Birefringence'][p, t] = birefringence
+            else:
+                self.store['Birefringence'][p, t, :, z] = birefringence
+
+            self.store_emitter.emit(self.store)
+
+        else:
+            if len(birefringence.shape) == 4:
+                self.store['Birefringence'][p, t] = birefringence
+            else:
+                self.store['Birefringence'][p, t, :, z] = birefringence
+
+        self.dim_emitter.emit((p, t, z))
+
+    def work(self):
+        acq_man = self.calib_window.mm.acquisitions()
+
+        while not acq_man.isAcquisitionRunning():
+            pass
+
+        time.sleep(1)
+
+        # Get all of the dataset dimensions, settings
+        s = acq_man.getAcquisitionSettings()
+        self.root = s.root()
+        self.prefix = s.prefix()
+        self.n_frames, self.interval = (s.numFrames(), s.intervalMs() / 1000) if s.useFrames() else (1, 1)
+        self.n_channels = s.channels().size() if s.useChannels() else 1
+        self.n_slices = s.slices().size() if s.useChannels() else 1
+        self.n_pos = 1 if not s.usePositionList() else \
+            self.calib_window.mm.getPositionListManager().getPositionList().getNumberOfPositions()
+
+        # Get File Path corresponding to current dataset
+        path = os.path.join(self.root, self.prefix)
+        files = glob.glob(path + '*')
+        index = max([int(x.split(path + '_')[1]) for x in files])
+        self.prefix = self.prefix + f'_{index}'
+        full_path = path + f'_{index}'
+
+        #TODO: Potentially remove default depending on windows behavior
+        first_file_path = os.path.join(full_path, self.prefix + '_MMStack_Default.ome.tif')
+
+        file = tiff.TiffFile(first_file_path)
+        file_path = first_file_path
+        self.shape = (file.micromanager_metadata['Summary']['Height'], file.micromanager_metadata['Summary']['Width'])
+        self.dtype = file.pages[0].dtype
+
+        offsets = file.micromanager_metadata['IndexMap']['Offset']
+        n_pages = len(file.micromanager_metadata['IndexMap']['Channel'])
+        file.close()
+
+        # Init Reconstruction Class
+        self.reconstructor = QLIPPBirefringenceCompute(self.shape,
+                                                       self.calib_window.calib_scheme,
+                                                       self.calib_window.wavelength,
+                                                       self.calib_window.swing,
+                                                       self.n_slices,
+                                                       self.calib_window.bg_option,
+                                                       self.bg_data)
+
+        # initialize dimensions / array for the loop
+        idx, z, c, p, t = 0, 0, 0, 0, 0
+        array = np.zeros((self.n_channels, self.n_slices, self.shape[0], self.shape[1]))
+        file_count = 0
+
+        # Run until the function has collected the totality of the data
+        while idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+
+            # this will loop through reading images in a single file as it's being written
+            # when it has successfully loaded all of the images from the file, it'll move on to the next
+            # ASSUMES Z FIRST AQUISITION OR NO Z
+            array, idx, z, c, p, t = self.listen_for_images(array,
+                                                            file_path,
+                                                            offsets,
+                                                            n_pages,
+                                                            self.interval,
+                                                            idx, z, c, p, t)
+
+            if idx != (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+                time.sleep(1)
+                file_count += 1
+                file_path = os.path.join(full_path, self.prefix + f'_MMStack_Default_{file_count}.ome.tif')
+                file = tiff.TiffFile(file_path)
+                offsets = file.micromanager_metadata['IndexMap']['Offset']
+                n_pages = len(file.micromanager_metadata['IndexMap']['Channel'])
+                file.close()
 
 
 

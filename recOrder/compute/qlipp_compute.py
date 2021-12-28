@@ -300,3 +300,34 @@ def reconstruct_phase3D(S0, recon, method='Tikhonov', reg_re=1e-4,
     phase3D = np.transpose(phase3D, (2, 0, 1))
 
     return phase3D
+
+class QLIPPBirefringenceCompute:
+
+    def __init__(self, shape, scheme, wavelength, swing, n_slices, bg_option, bg_data=None):
+
+        self.shape = shape
+        self.scheme = scheme
+        self.wavelength = wavelength
+        self.swing = swing
+        self.n_slices = n_slices
+        self.bg_option = bg_option
+
+        self.reconstructor = initialize_reconstructor(pipeline='birefringence',
+                                                      image_dim=self.shape,
+                                                      calibration_scheme=self.scheme,
+                                                      wavelength_nm=self.wavelength,
+                                                      swing=self.swing,
+                                                      bg_correction=self.bg_option,
+                                                      n_slices=self.n_slices)
+
+        if bg_option != 'None':
+            self.bg_stokes = reconstruct_qlipp_stokes(bg_data, self.reconstructor)
+        else:
+            self.bg_stokes = None
+
+    def reconstruct(self, array):
+        stokes = reconstruct_qlipp_stokes(array, self.reconstructor, self.bg_stokes)
+        birefringence = reconstruct_qlipp_birefringence(stokes, self.reconstructor)
+        birefringence[0] = birefringence[0] / (2 * np.pi) * self.wavelength
+
+        return birefringence[0:2]

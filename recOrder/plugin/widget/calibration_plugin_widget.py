@@ -3,12 +3,14 @@ from pycromanager import Bridge
 from PyQt5.QtCore import pyqtSlot, pyqtSignal
 from PyQt5.QtWidgets import QWidget, QFileDialog
 from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
-from recOrder.plugin.acquisition.acquisition_workers import AcquisitionWorker
+from recOrder.plugin.acquisition.acquisition_workers import AcquisitionWorker, ListeningWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
 from recOrder.postproc.post_processing import ret_ori_overlay
 from recOrder.io.core_functions import set_lc_state, snap_and_average
+from recOrder.io.utils import load_bg
 from pathlib import Path
 from napari import Viewer
+import zarr
 import numpy as np
 import os
 import json
@@ -60,6 +62,7 @@ class Calibration(QWidget):
         self.ui.qbutton_browse_save_path.clicked[bool].connect(self.browse_save_path)
         self.ui.chb_save_imgs.stateChanged[int].connect(self.enter_save_imgs)
         self.ui.le_save_path.editingFinished.connect(self.enter_save_path)
+        self.ui.qbutton_listen.clicked[bool].connect(self.listen_and_reconstruct)
         self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
         self.ui.le_zend.editingFinished.connect(self.enter_zend)
         self.ui.le_zstep.editingFinished.connect(self.enter_zstep)
@@ -71,6 +74,7 @@ class Calibration(QWidget):
         self.ui.le_ps.editingFinished.connect(self.enter_ps)
         self.ui.le_n_media.editingFinished.connect(self.enter_n_media)
         self.ui.le_pad_z.editingFinished.connect(self.enter_pad_z)
+        self.ui.chb_pause_updates.stateChanged[int].connect(self.enter_pause_updates)
         self.ui.cb_birefringence.currentIndexChanged[int].connect(self.enter_birefringence_dim)
         self.ui.cb_phase.currentIndexChanged[int].connect(self.enter_phase_dim)
         self.ui.cb_bg_method.currentIndexChanged[int].connect(self.enter_bg_correction)
@@ -128,6 +132,7 @@ class Calibration(QWidget):
         self.auto_shutter = True
         self.lca_dac = None
         self.lcb_dac = None
+        self.pause_updates = False
 
         # Assessment attributes
         self.calib_assessment_level = None
@@ -512,6 +517,14 @@ class Calibration(QWidget):
     def enter_pad_z(self):
         self.pad_z = int(self.ui.le_pad_z.text())
 
+    @pyqtSlot()
+    def enter_pause_updates(self):
+        state = self.ui.chb_pause_updates.checkState()
+        if state == 2:
+            self.pause_updates = True
+        elif state == 0:
+            self.pause_updates = False
+
     @pyqtSlot(bool)
     def calc_extinction(self):
 
@@ -695,10 +708,55 @@ class Calibration(QWidget):
         self.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
+        self.worker.finished.connect(self._reset_listening)
         self.worker.errored.connect(self._handle_acq_error)
 
         # Start Thread
         self.worker.start()
+
+    def listen_and_reconstruct(self):
+
+        # Init reconstructor
+        if self.bg_option != 'None':
+            bg_data = load_bg(self.current_bg_path, self.worker.height, self.worker.width)
+        else:
+            bg_data = None
+
+        # Init worker
+        self.worker = ListeningWorker(self, bg_data)
+
+        # connect handlers
+        self.worker.store_emitter.connect(self.add_listener_data)
+        self.worker.dim_emitter.connect(self.update_dims)
+        self.worker.started.connect(self._disable_buttons)
+        self.worker.finished.connect(self._enable_buttons)
+        self.worker.errored.connect(self._handle_acq_error)
+
+        # Start Thread
+        self.worker.start()
+
+    @pyqtSlot(object)
+    def add_listener_data(self, store):
+
+        self.viewer.add_image(store['Birefringence'], name=self.worker.prefix)
+        self.viewer.dims.set_axis_label(0, 'P')
+        self.viewer.dims.set_axis_label(1, 'T')
+        self.viewer.dims.set_axis_label(2, 'C')
+        self.viewer.dims.set_axis_label(3, 'Z')
+
+    @pyqtSlot(tuple)
+    def update_dims(self, dims):
+
+        if not self.pause_updates:
+            self.viewer.dims.set_current_step(0, dims[0])
+            self.viewer.dims.set_current_step(1, dims[1])
+            self.viewer.dims.set_current_step(3, dims[2])
+        else:
+            pass
+
+    def _reset_listening(self):
+        self.listening_reconstructor = None
+        self.listening_store = None
 
     def _open_browse_dialog(self, default_path, file=False):
 

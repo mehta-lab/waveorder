@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>635</width>
-    <height>958</height>
+    <width>521</width>
+    <height>806</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -32,7 +32,7 @@
    <enum>Qt::LeftToRight</enum>
   </property>
   <layout class="QGridLayout" name="gridLayout_4">
-   <item row="0" column="0">
+   <item row="0" column="0" alignment="Qt::AlignTop">
     <widget class="QTabWidget" name="tabWidget">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -119,7 +119,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>608</width>
+            <width>541</width>
             <height>1139</height>
            </rect>
           </property>
@@ -169,7 +169,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>568</width>
+                    <width>501</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -218,7 +218,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>568</width>
+                    <width>501</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -849,146 +849,6 @@
        <property name="spacing">
         <number>0</number>
        </property>
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="file_settings">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <italic>true</italic>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="title">
-          <string>File Settings</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-         </property>
-         <property name="checkable">
-          <bool>false</bool>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_7">
-          <property name="horizontalSpacing">
-           <number>-1</number>
-          </property>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="le_save_path"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="chb_save_imgs">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Save Images</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QPushButton" name="qbutton_browse_save_path">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Browse</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_save_path">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Save Path</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="7" column="0" alignment="Qt::AlignTop">
-        <widget class="QGroupBox" name="acquire">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <italic>true</italic>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="title">
-          <string>Acquire</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout">
-          <item>
-           <widget class="QPushButton" name="qbutton_acq_birefringence">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Acquire Birefringence</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="qbutton_acq_phase">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Acquire Phase</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
-            <property name="text">
-             <string>Acquire Birefringence + Phase</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="qbutton_stop_acq">
-            <property name="text">
-             <string>STOP</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
        <item row="2" column="0">
         <widget class="QGroupBox" name="groupBox">
          <property name="sizePolicy">
@@ -1211,6 +1071,13 @@
             </widget>
            </widget>
           </item>
+          <item row="1" column="1">
+           <widget class="QCheckBox" name="chb_pause_updates">
+            <property name="text">
+             <string>Pause Updates</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -1360,6 +1227,153 @@
          </layout>
         </widget>
        </item>
+       <item row="7" column="0" alignment="Qt::AlignTop">
+        <widget class="QGroupBox" name="acquire">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <italic>true</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="title">
+          <string>Acquire</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_13">
+          <item row="0" column="0">
+           <widget class="QPushButton" name="qbutton_listen">
+            <property name="text">
+             <string>Listen For Data</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QPushButton" name="qbutton_acq_phase">
+            <property name="font">
+             <font>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Acquire Phase</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QPushButton" name="qbutton_stop_acq">
+            <property name="text">
+             <string>STOP</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
+            <property name="text">
+             <string>Acquire Birefringence + Phase</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QPushButton" name="qbutton_acq_birefringence">
+            <property name="font">
+             <font>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Acquire Birefringence</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item row="0" column="0">
+        <widget class="QGroupBox" name="file_settings">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <italic>true</italic>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="title">
+          <string>File Settings</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+         </property>
+         <property name="checkable">
+          <bool>false</bool>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_7">
+          <property name="horizontalSpacing">
+           <number>-1</number>
+          </property>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="le_save_path"/>
+          </item>
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="chb_save_imgs">
+            <property name="font">
+             <font>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Save Images</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="2">
+           <widget class="QPushButton" name="qbutton_browse_save_path">
+            <property name="font">
+             <font>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Browse</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="label_save_path">
+            <property name="font">
+             <font>
+              <weight>50</weight>
+              <italic>false</italic>
+              <bold>false</bold>
+             </font>
+            </property>
+            <property name="text">
+             <string>Save Path</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
       </layout>
      </widget>
     </widget>
@@ -1374,6 +1388,62 @@
    <container>1</container>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>le_save_path</tabstop>
+  <tabstop>qbutton_browse_save_path</tabstop>
+  <tabstop>le_zstart</tabstop>
+  <tabstop>le_zend</tabstop>
+  <tabstop>le_zstep</tabstop>
+  <tabstop>cb_birefringence</tabstop>
+  <tabstop>cb_phase</tabstop>
+  <tabstop>le_obj_na</tabstop>
+  <tabstop>le_ps</tabstop>
+  <tabstop>le_cond_na</tabstop>
+  <tabstop>le_n_media</tabstop>
+  <tabstop>le_mag</tabstop>
+  <tabstop>le_pad_z</tabstop>
+  <tabstop>cb_bg_method</tabstop>
+  <tabstop>le_bg_path</tabstop>
+  <tabstop>qbutton_browse_bg_path</tabstop>
+  <tabstop>le_gpu_id</tabstop>
+  <tabstop>chb_use_gpu</tabstop>
+  <tabstop>le_directory</tabstop>
+  <tabstop>le_swing</tabstop>
+  <tabstop>le_wavelength</tabstop>
+  <tabstop>cb_calib_scheme</tabstop>
+  <tabstop>cb_calib_mode</tabstop>
+  <tabstop>cb_lca</tabstop>
+  <tabstop>cb_lcb</tabstop>
+  <tabstop>chb_use_roi</tabstop>
+  <tabstop>qbutton_calibrate</tabstop>
+  <tabstop>qbutton_load_calib</tabstop>
+  <tabstop>qbutton_calc_extinction</tabstop>
+  <tabstop>qbutton_stop_calib</tabstop>
+  <tabstop>qbutton_acq_phase</tabstop>
+  <tabstop>qbutton_acq_birefringence_phase</tabstop>
+  <tabstop>qbutton_stop_acq</tabstop>
+  <tabstop>tabWidget_3</tabstop>
+  <tabstop>qbutton_acq_birefringence</tabstop>
+  <tabstop>qbutton_browse</tabstop>
+  <tabstop>qbutton_capture_bg</tabstop>
+  <tabstop>le_bg_folder</tabstop>
+  <tabstop>scrollArea</tabstop>
+  <tabstop>le_mm_status</tabstop>
+  <tabstop>chb_save_imgs</tabstop>
+  <tabstop>le_calib_assessment</tabstop>
+  <tabstop>le_n_avg</tabstop>
+  <tabstop>le_extinction</tabstop>
+  <tabstop>tabWidget_2</tabstop>
+  <tabstop>acq_settings</tabstop>
+  <tabstop>cb_loglevel</tabstop>
+  <tabstop>te_log</tabstop>
+  <tabstop>scrollArea_2</tabstop>
+  <tabstop>scrollArea_3</tabstop>
+  <tabstop>qbutton_mm_connect</tabstop>
+  <tabstop>qbutton_listen</tabstop>
+  <tabstop>chb_pause_updates</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>
