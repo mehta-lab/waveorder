@@ -10,7 +10,6 @@ from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.utils import load_bg
 from pathlib import Path
 from napari import Viewer
-import zarr
 import numpy as np
 import os
 import json

@@ -571,6 +571,8 @@ class ListeningWorker(WorkerBase):
             dims = [[p, self.n_pos], [t, self.n_frames], [c, self.n_channels], [z, self.n_slices]]
             channel_dim = 1
 
+        print(dims, channel_dim, dim_order)
+
         idx = 0
         for dim3 in range(dims[0][0], dims[0][1]):
             for dim2 in range(dims[1][0], dims[1][1]):
@@ -592,7 +594,7 @@ class ListeningWorker(WorkerBase):
                         if idx < n_pages and idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
                             if channel_dim == 0 and dim0 == self.n_channels - 1:
                                 ## COMPUTE
-                                # print('COMPUTING', idx, dim3, dim2, dim1, dim0)
+                                print('COMPUTING', idx, dim3, dim2, dim1, dim0)
                                 self.compute_and_save(array, p, t, z)
                                 idx += 1
                             else:
@@ -615,7 +617,7 @@ class ListeningWorker(WorkerBase):
                             return array, idx, dim3, dim2, dim1, dim0
 
                     if channel_dim == 1 and dim1 == self.n_channels - 1:
-                        # print('COMPUTING', idx, dim3, dim2, dim1, dim0)
+                        print('COMPUTING', idx, dim3, dim2, dim1, dim0)
                         self.compute_and_save(array, p, t, dim0)
                         # idx += 1
                     else:
@@ -673,6 +675,7 @@ class ListeningWorker(WorkerBase):
         self.n_slices = s.slices().size() if s.useChannels() else 1
         self.n_pos = 1 if not s.usePositionList() else \
             self.calib_window.mm.getPositionListManager().getPositionList().getNumberOfPositions()
+        dim_order = s.acqOrderMode()
 
         # Get File Path corresponding to current dataset
         path = os.path.join(self.root, self.prefix)
@@ -688,7 +691,6 @@ class ListeningWorker(WorkerBase):
         file_path = first_file_path
         self.shape = (file.micromanager_metadata['Summary']['Height'], file.micromanager_metadata['Summary']['Width'])
         self.dtype = file.pages[0].dtype
-
         offsets = file.micromanager_metadata['IndexMap']['Offset']
         n_pages = len(file.micromanager_metadata['IndexMap']['Channel'])
         file.close()
@@ -718,7 +720,7 @@ class ListeningWorker(WorkerBase):
                                                             offsets,
                                                             n_pages,
                                                             self.interval,
-                                                            idx, z, c, p, t)
+                                                            z, c, p, t, dim_order)
 
             if idx != (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
                 time.sleep(1)
