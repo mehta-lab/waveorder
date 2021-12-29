@@ -603,6 +603,8 @@ class waveorder_microscopy:
             self.N_channel = A_matrix.shape[0]
             self.N_Stokes = A_matrix.shape[1]
             self.A_matrix = A_matrix.copy()
+
+        self.A_matrix_inv = np.linalg.pinv(self.A_matrix)
         
 ##############   constructor asisting function group   ##############
 
@@ -988,12 +990,22 @@ class waveorder_microscopy:
         '''
         
         img_shape = I_meas.shape
-        
-        A_pinv = np.linalg.pinv(self.A_matrix)
-        S_image_recon = np.reshape(np.dot(A_pinv, I_meas.reshape((self.N_channel, -1))), (self.N_Stokes,)+img_shape[1:])
+        inst_tensor_recon = True if self.A_matrix.ndim==4 else False
+
+        if inst_tensor_recon:
+            if self.use_gpu:
+                x1 = cp.array(np.transpose(self.A_matrix_inv, (2, 3, 0, 1)))
+                x2 = cp.array(np.transpose(I_meas, (1, 2, 0))[..., np.newaxis])
+                S_image_recon = cp.asnumpy(cp.matmul(x1, x2))
+            else:
+                S_image_recon = np.matmul(np.transpose(self.A_matrix_inv, (2, 3, 0, 1)),
+                                          np.transpose(I_meas, (1, 2, 0))[..., np.newaxis])
+        else:
+            S_image_recon = np.matmul(self.A_matrix_inv,
+                                      np.transpose(I_meas, (1, 2, 0))[..., np.newaxis])
 
             
-        return S_image_recon
+        return np.moveaxis(S_image_recon[...,0],-1,0)
     
     
     def Stokes_transform(self, S_image_recon):
