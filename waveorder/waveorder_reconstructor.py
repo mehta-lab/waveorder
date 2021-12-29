@@ -586,7 +586,7 @@ class waveorder_microscopy:
         ----------
             A_matrix : numpy.ndarray
                        self-provided instrument matrix converting polarization-sensitive intensity images into Stokes parameters 
-                       with shape of (N_channel, N_Stokes)
+                       with shape of (N_channel, N_Stokes) or (size_X, size_Y, N_channel, N_Stokes)
                        If None is provided, the instrument matrix is determined by the QLIPP convention with swing specify by chi
                               
         '''
@@ -600,8 +600,17 @@ class waveorder_microscopy:
                                           [1, -np.sin(self.chi), 0, -np.cos(self.chi)], \
                                           [1, 0, -np.sin(self.chi), -np.cos(self.chi)]])
         else:
-            self.N_channel = A_matrix.shape[0]
-            self.N_Stokes = A_matrix.shape[1]
+
+            A_matrix_shape =  A_matrix.shape
+            if len(A_matrix_shape) != (2, 4):
+                raise ValueError(
+                    'Instrument matrix must have shape (N_channel, N_Stokes) or (size_X, size_Y, N_channel, N_Stokes)')
+            if len(A_matrix_shape) == 4 and A_matrix_shape[:2] != (self.N, self.M):
+                raise ValueError(
+                    'Instrument tensor must have shape (size_X, size_Y, N_channel, N_Stokes)')
+
+            self.N_channel = A_matrix_shape[-2]
+            self.N_Stokes = A_matrix_shape[-1]
             self.A_matrix = A_matrix.copy()
 
         self.A_matrix_inv = np.linalg.pinv(self.A_matrix)
@@ -988,18 +997,11 @@ class waveorder_microscopy:
                        
                               
         '''
-        
-        img_shape = I_meas.shape
-        inst_tensor_recon = True if self.A_matrix.ndim==4 else False
 
-        if inst_tensor_recon:
-            if self.use_gpu:
-                x1 = cp.array(np.transpose(self.A_matrix_inv, (2, 3, 0, 1)))
-                x2 = cp.array(np.transpose(I_meas, (1, 2, 0))[..., np.newaxis])
-                S_image_recon = cp.asnumpy(cp.matmul(x1, x2))
-            else:
-                S_image_recon = np.matmul(np.transpose(self.A_matrix_inv, (2, 3, 0, 1)),
-                                          np.transpose(I_meas, (1, 2, 0))[..., np.newaxis])
+        if self.use_gpu:
+            x1 = cp.array(self.A_matrix_inv)
+            x2 = cp.array(np.transpose(I_meas, (1, 2, 0))[..., np.newaxis])
+            S_image_recon = cp.asnumpy(cp.matmul(x1, x2))
         else:
             S_image_recon = np.matmul(self.A_matrix_inv,
                                       np.transpose(I_meas, (1, 2, 0))[..., np.newaxis])
