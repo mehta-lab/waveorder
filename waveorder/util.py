@@ -318,7 +318,7 @@ def softTreshold(x, threshold, use_gpu=False, gpu_id=0):
     return x_threshold
 
 
-def wavelet_softThreshold(img, wavelet, threshold, level = 1):
+def wavelet_softThreshold(img, wavelet, threshold, level = 1, axes=None):
     
     '''
     
@@ -333,7 +333,10 @@ def wavelet_softThreshold(img, wavelet, threshold, level = 1):
                     type of wavelet to use (pywt.wavelist() to find the whole list)
                     
         threshold : float
-                    threshold value 
+                    threshold value
+
+        axes      : list
+                    axes along which to denoise nD volume
         
     Returns
     -------
@@ -361,7 +364,7 @@ def wavelet_softThreshold(img, wavelet, threshold, level = 1):
 
     img_padded = np.pad(img, padding, 'edge')
 
-    coeffs = pywt.wavedecn(img_padded, wavelet, level=level)
+    coeffs = pywt.wavedecn(img_padded, wavelet, level=level, axes=axes)
     
     for i in range(level+1):
         if i == 0:
@@ -370,7 +373,7 @@ def wavelet_softThreshold(img, wavelet, threshold, level = 1):
             for item in coeffs[i]:
                 coeffs[i][item] = softTreshold(coeffs[i][item], threshold)
 
-    img_thres = pywt.waverecn(coeffs, wavelet)
+    img_thres = pywt.waverecn(coeffs, wavelet, axes=axes)
     
     return img_thres[unpadding]
 
