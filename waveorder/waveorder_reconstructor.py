@@ -988,27 +988,40 @@ class waveorder_microscopy:
         Parameters
         ----------
             I_meas        : numpy.ndarray
-                            polarization-sensitive intensity images with the size of (N_channel, N, M)
+                            polarization-sensitive intensity images with the size of (N_channel, N, M) or
+                            (N_channel, N, M, N_defocus)
                           
         Returns
         -------
             S_image_recon : numpy.ndarray
-                            reconstructed Stokes parameters with the size of (N_Stokes, N, M)
+                            reconstructed Stokes parameters with the size of (N_Stokes, N, M) or
+                            (N_channel, N, M, N_defocus)
                        
                               
         '''
 
+        n_dims = I_meas.ndim
+        if n_dims == 3:
+            img_data = np.moveaxis(I_meas, 0, -1)[..., np.newaxis]
+        elif n_dims == 4:
+            img_data = np.moveaxis(I_meas, 0, -2)
+        else:
+            raise ValueError('Unsupported image data size. Image data must be of size (N_channel, N, M) or '
+                             '(N_channel, N, M, N_defocus)')
+
         if self.use_gpu:
             if self._A_matrix_inv_gpu_array is None:
                 self._A_matrix_inv_gpu_array = cp.array(self.A_matrix_inv)
-            img_gpu_array = cp.array(np.transpose(I_meas, (1, 2, 0))[..., np.newaxis])
+            img_gpu_array = cp.array(img_data)
             S_image_recon = cp.asnumpy(cp.matmul(self._A_matrix_inv_gpu_array, img_gpu_array))
         else:
-            S_image_recon = np.matmul(self.A_matrix_inv,
-                                      np.transpose(I_meas, (1, 2, 0))[..., np.newaxis])
+            S_image_recon = np.matmul(self.A_matrix_inv, img_data)
 
-            
-        return np.moveaxis(S_image_recon[...,0],-1,0)
+        S_image_recon = np.moveaxis(S_image_recon, -2, 0)
+        if n_dims == 3:
+            return S_image_recon[..., 0]
+        else:
+            return S_image_recon
     
     
     def Stokes_transform(self, S_image_recon):
