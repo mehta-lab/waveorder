@@ -124,7 +124,7 @@ def get_lc_waves(mmc, device_property: str) -> float:
 def get_lc_volts(mmc, device_property):
     return float(mmc.getProperty(device_property, 'Volts'))
 
-def define_lc_state_volts(mmc, state, lca, lcb, lca_dac, lcb_dac):
+def define_lc_state_volts(mmc, group, state, lca, lcb, lca_dac, lcb_dac):
     """
     Write specific LC state to the register, corresponds to 'State{i}' in MM config
 
@@ -146,9 +146,9 @@ def define_lc_state_volts(mmc, state, lca, lcb, lca_dac, lcb_dac):
     logging.debug("setting LCA = "+str(lca))
     logging.debug("setting LCB = "+str(lcb))
 
-    mmc.defineConfig('Channel', state, lca_dac, 'Volts', str(lca))
-    mmc.defineConfig('Channel', state, lcb_dac, 'Volts', str(lcb))
-    mmc.waitForConfig('Channel', state)
+    mmc.defineConfig(group, state, lca_dac, 'Volts', str(lca))
+    mmc.defineConfig(group, state, lcb_dac, 'Volts', str(lcb))
+    mmc.waitForConfig(group, state)
 
 def define_lc_state(mmc, state, lca, lcb, PROPERTIES: dict):
     """
@@ -176,7 +176,7 @@ def define_lc_state(mmc, state, lca, lcb, PROPERTIES: dict):
     mmc.waitForDevice('MeadowlarkLcOpenSource')
 
 
-def set_lc_state(mmc, state: str):
+def set_lc_state(mmc, group: str, state: str):
     """
     Change to the specific LC State
 
@@ -187,7 +187,7 @@ def set_lc_state(mmc, state: str):
 
     """
     try:
-        mmc.setConfig('Channel', state)
+        mmc.setConfig(group, state)
     except ValueError:
         print('ERROR: No MicroManager Config Group/Preset named Channel')
     time.sleep(20/1000) # delay for LC settle time

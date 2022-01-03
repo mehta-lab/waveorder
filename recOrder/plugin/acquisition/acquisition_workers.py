@@ -679,7 +679,7 @@ class ListeningWorker(WorkerBase):
 
         # Get File Path corresponding to current dataset
         path = os.path.join(self.root, self.prefix)
-        files = glob.glob(path + '*')
+        files = glob.glob(path + '*.tif')
         index = max([int(x.split(path + '_')[1]) for x in files])
         self.prefix = self.prefix + f'_{index}'
         full_path = path + f'_{index}'
@@ -714,7 +714,6 @@ class ListeningWorker(WorkerBase):
 
             # this will loop through reading images in a single file as it's being written
             # when it has successfully loaded all of the images from the file, it'll move on to the next
-            # ASSUMES Z FIRST AQUISITION OR NO Z
             array, idx, z, c, p, t = self.listen_for_images(array,
                                                             file_path,
                                                             offsets,
@@ -722,6 +721,7 @@ class ListeningWorker(WorkerBase):
                                                             self.interval,
                                                             z, c, p, t, dim_order)
 
+            # If acquisition is not finished, grab the next file and listen for images
             if idx != (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
                 time.sleep(1)
                 file_count += 1

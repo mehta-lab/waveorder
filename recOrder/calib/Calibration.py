@@ -16,7 +16,7 @@ from recOrder.io.utils import MockEmitter
 #TODO: Docstrings
 class QLIPP_Calibration():
 
-    def __init__(self, mmc, mm, optimization='min_scalar', mode='retardance', print_details=True):
+    def __init__(self, mmc, mm, group='Channel', optimization='min_scalar', mode='retardance', print_details=True):
 
         # Micromanager API
         self.mm = mm
@@ -34,6 +34,7 @@ class QLIPP_Calibration():
                           'LCA-volt': 'TS_DAC01',
                           'LCB-volt': 'TS_DAC02'
                           }
+        self.group = group
 
         # GUI Emitter
         self.intensity_emitter = MockEmitter()
@@ -128,7 +129,7 @@ class QLIPP_Calibration():
         if self.mode == 'retardance':
             define_lc_state(self.mmc, state, lca, lcb, self.PROPERTIES)
         else:
-            define_lc_state_volts(self.mmc, state, lca, lcb, self.lca_dac, self.lcb_dac)
+            define_lc_state_volts(self.mmc, self.group, state, lca, lcb, self.lca_dac, self.lcb_dac)
 
     def opt_lc(self, x, device_property, reference, normalize=False):
 
@@ -183,7 +184,7 @@ class QLIPP_Calibration():
         logging.info('Calibrating State0 (Extinction)...')
         logging.debug('Calibrating State0 (Extinction)...')
 
-        set_lc_state(self.mmc, 'State0')
+        set_lc_state(self.mmc, self.group, 'State0')
         time.sleep(2)
 
         # Perform exhaustive search with step 0.1 over range:
@@ -767,7 +768,7 @@ class QLIPP_Calibration():
         return cbar
 
     def _capture_state(self, state, n_avg):
-        set_lc_state(self.mmc, state)
+        set_lc_state(self.mmc, self.group, state)
 
         imgs = []
         for i in range(n_avg):

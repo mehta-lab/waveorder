@@ -48,6 +48,7 @@ class Calibration(QWidget):
         self.ui.qbutton_calibrate.clicked[bool].connect(self.run_calibration)
         self.ui.qbutton_load_calib.clicked[bool].connect(self.load_calibration)
         self.ui.qbutton_calc_extinction.clicked[bool].connect(self.calc_extinction)
+        self.ui.cb_config_group.currentIndexChanged[int].connect(self.enter_config_group)
 
         # Capture Background
         self.ui.le_bg_folder.editingFinished.connect(self.enter_bg_folder_name)
@@ -106,6 +107,7 @@ class Calibration(QWidget):
         self.wavelength = 532
         self.calib_scheme = '4-State'
         self.calib_mode = 'retardance'
+        self.config_group = 'Channel'
         self.use_cropped_roi = False
         self.bg_folder_name = 'BG'
         self.n_avg = 20
@@ -201,6 +203,12 @@ class Calibration(QWidget):
             bridge = Bridge(convert_camel_case=False)
             self.mmc = bridge.get_core()
             self.mm = bridge.get_studio()
+            self.ui.cb_config_group.clear()
+            groups = self.mmc.getAvailableConfigGroups()
+            group_list = []
+            for i in range(groups.size()):
+                group_list.append(groups.get(i))
+            self.ui.cb_config_group.addItems(group_list)
 
             self.mm_status_changed.emit(True)
         except:
@@ -386,6 +394,10 @@ class Calibration(QWidget):
     def enter_dac_lcb(self):
         dac = self.ui.cb_lcb.currentText()
         self.lcb_dac = dac
+
+    @pyqtSlot()
+    def enter_config_group(self):
+        self.config_group = self.ui.cb_config_group.currentText()
 
     @pyqtSlot()
     def enter_use_cropped_roi(self):
