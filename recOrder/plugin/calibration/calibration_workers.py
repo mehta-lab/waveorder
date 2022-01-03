@@ -325,9 +325,9 @@ def load_calibration(calib, meta: dict):
 
     # Calculate Blacklevel after loading these properties
     calib.calc_blacklevel()
-    set_lc_state(calib.mmc, 'State0')
+    set_lc_state(calib.mmc, calib.group, 'State0')
     calib.I_Ext = snap_and_average(calib.snap_manager)
-    set_lc_state(calib.mmc, 'State1')
+    set_lc_state(calib.mmc, calib.group, 'State1')
     calib.I_Elliptical = snap_and_average(calib.snap_manager)
 
     yield str(calib.calculate_extinction(calib.swing, calib.I_Black, calib.I_Ext, calib.I_Elliptical))

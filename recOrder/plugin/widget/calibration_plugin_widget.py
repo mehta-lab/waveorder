@@ -542,9 +542,9 @@ class Calibration(QWidget):
     def calc_extinction(self):
 
         # Snap images from the extinction state and first elliptical state
-        set_lc_state(self.mmc, 'State0')
+        set_lc_state(self.mmc, self.config_group, 'State0')
         extinction = snap_and_average(self.calib.snap_manager)
-        set_lc_state(self.mmc, 'State1')
+        set_lc_state(self.mmc, self.config_group, 'State1')
         state1 = snap_and_average(self.calib.snap_manager)
 
         # Calculate extinction based off captured intensities
@@ -565,7 +565,7 @@ class Calibration(QWidget):
         self.swing = meta['Summary']['Swing (fraction)']
 
         # Initialize calibration class
-        self.calib = QLIPP_Calibration(self.mmc, self.mm)
+        self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group)
         self.calib.swing = self.swing
         self.ui.le_swing.setText(str(self.swing))
         self.calib.wavelength = self.wavelength
@@ -732,7 +732,11 @@ class Calibration(QWidget):
 
         # Init reconstructor
         if self.bg_option != 'None':
-            bg_data = load_bg(self.current_bg_path, self.worker.height, self.worker.width)
+            with open(os.path.join(self.current_bg_path, 'calibration_metadata.txt')) as file:
+                js = json.load(file)
+                roi = js['Summary']['ROI Used (x, y, width, height)']
+                height, width = roi[2], roi[3]
+            bg_data = load_bg(self.current_bg_path, height, width, roi)
         else:
             bg_data = None
 

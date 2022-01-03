@@ -34,6 +34,7 @@ class ListeningSignals(WorkerBaseSignals):
 
     store_emitter = pyqtSignal(object)
     dim_emitter = pyqtSignal(tuple)
+    aborted = pyqtSignal()
 
 # TODO: Cache common OTF's on local computers and use those for reconstruction
 class AcquisitionWorker(WorkerBase):
@@ -505,8 +506,6 @@ class AcquisitionWorker(WorkerBase):
                 continue
 
 
-# TODO: Need to implement multi-threaded reconstruction and set up a data queue or wait to continue until
-# TODO: reconstruction has returned
 class ListeningWorker(WorkerBase):
     """
     Class to execute a birefringence/phase acquisition.  First step is to snap the images follow by a second
@@ -515,7 +514,6 @@ class ListeningWorker(WorkerBase):
 
     def __init__(self, calib_window, bg_data):
         super().__init__(SignalsClass=ListeningSignals)
-        # super().__init__()
 
         # Save current state of GUI window
         self.calib_window = calib_window
@@ -533,6 +531,11 @@ class ListeningWorker(WorkerBase):
         self.save_directory = None
         self.bg_data = bg_data
         self.reconstructor = None
+
+    def _check_abort(self):
+        if self.abort_requested:
+            self.aborted.emit()
+            raise TimeoutError('Stop Requested')
 
     def get_byte_offset(self, offsets, page):
         """
@@ -571,8 +574,6 @@ class ListeningWorker(WorkerBase):
             dims = [[p, self.n_pos], [t, self.n_frames], [c, self.n_channels], [z, self.n_slices]]
             channel_dim = 1
 
-        print(dims, channel_dim, dim_order)
-
         idx = 0
         for dim3 in range(dims[0][0], dims[0][1]):
             for dim2 in range(dims[1][0], dims[1][1]):
@@ -583,6 +584,7 @@ class ListeningWorker(WorkerBase):
                         if idx > 0:
                             offset = self.get_byte_offset(offsets, idx)
                             while offset == 162:
+                                self._check_abort()
                                 tf = tiff.TiffFile(file)
                                 time.sleep(interval)
                                 offsets = tf.micromanager_metadata['IndexMap']['Offset']
@@ -594,12 +596,14 @@ class ListeningWorker(WorkerBase):
                         if idx < n_pages and idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
                             if channel_dim == 0 and dim0 == self.n_channels - 1:
                                 ## COMPUTE
-                                print('COMPUTING', idx, dim3, dim2, dim1, dim0)
-                                self.compute_and_save(array, p, t, z)
+                                # print('COMPUTING', idx, dim3, dim2, dim1, dim0)
+                                self._check_abort()
+                                self.compute_and_save(array[:, z], p, t, z)
                                 idx += 1
                             else:
                                 ## ADD TO ARRAY
                                 # print('array', idx, dim3, dim2, dim1, dim0)
+                                self._check_abort()
                                 img = np.memmap(file, dtype=self.dtype, mode='r', offset=offset, shape=self.shape)
                                 if dim_order == 0:
                                     t, p, c, z = dim3, dim2, dim0, dim1
@@ -617,7 +621,7 @@ class ListeningWorker(WorkerBase):
                             return array, idx, dim3, dim2, dim1, dim0
 
                     if channel_dim == 1 and dim1 == self.n_channels - 1:
-                        print('COMPUTING', idx, dim3, dim2, dim1, dim0)
+                        self._check_abort()
                         self.compute_and_save(array, p, t, dim0)
                         # idx += 1
                     else:
@@ -629,7 +633,7 @@ class ListeningWorker(WorkerBase):
         if self.n_slices == 1:
             array = array[:, 0]
 
-        birefringence = self.reconstructor.reconstruct(array[:, 0])
+        birefringence = self.reconstructor.reconstruct(array)
 
         if self.prefix not in self.calib_window.viewer.layers:
             self.store = zarr.open(os.path.join(self.root, self.prefix+'.zarr'))
@@ -679,13 +683,12 @@ class ListeningWorker(WorkerBase):
 
         # Get File Path corresponding to current dataset
         path = os.path.join(self.root, self.prefix)
-        files = glob.glob(path + '*.tif')
-        index = max([int(x.split(path + '_')[1]) for x in files])
-        self.prefix = self.prefix + f'_{index}'
-        full_path = path + f'_{index}'
+        files = [fn for fn in glob.glob(path + '*') if '.zarr' not in fn]
+        index = max([int(x.strip(path + '_')) for x in files])
 
-        #TODO: Potentially remove default depending on windows behavior
-        first_file_path = os.path.join(full_path, self.prefix + '_MMStack_Default.ome.tif')
+        self.prefix = self.prefix + f'_{index}'
+        full_path = os.path.join(self.root, self.prefix)
+        first_file_path = os.path.join(full_path, self.prefix + '_MMStack.ome.tif')
 
         file = tiff.TiffFile(first_file_path)
         file_path = first_file_path
@@ -694,6 +697,8 @@ class ListeningWorker(WorkerBase):
         offsets = file.micromanager_metadata['IndexMap']['Offset']
         n_pages = len(file.micromanager_metadata['IndexMap']['Channel'])
         file.close()
+
+        self._check_abort()
 
         # Init Reconstruction Class
         self.reconstructor = QLIPPBirefringenceCompute(self.shape,
@@ -704,6 +709,8 @@ class ListeningWorker(WorkerBase):
                                                        self.calib_window.bg_option,
                                                        self.bg_data)
 
+        self._check_abort()
+
         # initialize dimensions / array for the loop
         idx, z, c, p, t = 0, 0, 0, 0, 0
         array = np.zeros((self.n_channels, self.n_slices, self.shape[0], self.shape[1]))
@@ -711,6 +718,8 @@ class ListeningWorker(WorkerBase):
 
         # Run until the function has collected the totality of the data
         while idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+
+            self._check_abort()
 
             # this will loop through reading images in a single file as it's being written
             # when it has successfully loaded all of the images from the file, it'll move on to the next
@@ -721,11 +730,12 @@ class ListeningWorker(WorkerBase):
                                                             self.interval,
                                                             z, c, p, t, dim_order)
 
+
             # If acquisition is not finished, grab the next file and listen for images
             if idx != (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
                 time.sleep(1)
                 file_count += 1
-                file_path = os.path.join(full_path, self.prefix + f'_MMStack_Default_{file_count}.ome.tif')
+                file_path = os.path.join(full_path, self.prefix + f'_MMStack_{file_count}.ome.tif')
                 file = tiff.TiffFile(file_path)
                 offsets = file.micromanager_metadata['IndexMap']['Offset']
                 n_pages = len(file.micromanager_metadata['IndexMap']['Channel'])
