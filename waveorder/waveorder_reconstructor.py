@@ -1001,13 +1001,13 @@ class waveorder_microscopy:
         '''
 
         n_dims = I_meas.ndim
-        if n_dims == 3:
-            img_data = np.moveaxis(I_meas, 0, -1)[..., np.newaxis]
-        elif n_dims == 4:
-            img_data = np.moveaxis(I_meas, 0, -2)
-        else:
+        if n_dims not in (3, 4):
             raise ValueError('Unsupported image data size. Image data must be of size (N_channel, N, M) or '
                              '(N_channel, N, M, N_defocus)')
+
+        if n_dims == 3:
+            I_meas = I_meas[..., np.newaxis]
+        img_data = np.moveaxis(I_meas, 0, -2)
 
         if self.use_gpu:
             if self._A_matrix_inv_gpu_array is None:
