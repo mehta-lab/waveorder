@@ -80,6 +80,9 @@ class AcquisitionWorker(WorkerBase):
         if self.calib_window.calib_scheme == '5-State':
             channels.append('State4')
 
+        if save_dir is None:
+            raise ValueError('save directory is empty, please specify a directory in the plugin')
+
         self._check_abort()
 
         # Acquire 2D stack
@@ -559,30 +562,61 @@ class ListeningWorker(WorkerBase):
 
         return array_offset
 
-    def listen_for_images(self, array, file, offsets, n_pages, interval, z, c, p, t, dim_order):
+    def listen_for_images(self, array, file, offsets, interval, dim3, dim2, dim1, dim0, dim_order):
+        """
 
+        Parameters
+        ----------
+        array:          (nd-array) numpy array of size (C, Z)
+        file:           (string) filepath corresponding to the desired tiff image
+        offsets:        (dict) dictionary of offsets corresponding to byte offsets of pixel data in tiff image
+        interval:       (int) time interval between timepoints in seconds
+        dim3:           (int) outermost dimension to value begin at
+        dim2:           (int) first-inner dimension value to begin at
+        dim1:           (int) second-inner dimension value to begin at
+        dim0:           (int) innermost dimension value to begin at
+        dim_order:      (int) 1, 2, 3, or 4 corresponding to the dimensionality ordering of the acquisition (MM-provided)
+
+        Returns
+        -------
+        array:                      (nd-array) partially filled array of size (C, Z) to continue filling in next iteration
+        index:                      (int) current page number at end of function
+        dim3:                       (int) dimension values corresponding to where the next iteration should begin
+        dim2:                       (int) dimension values corresponding to where the next iteration should begin
+        dim1:                       (int) dimension values corresponding to where the next iteration should begin
+        dim0:                       (int) dimension values corresponding to where the next iteration should begin
+
+        """
+
+        # Order dimensions that we will loop through in order to match the acquisition
         if dim_order == 0:
-            dims = [[t, self.n_frames], [p, self.n_pos], [z, self.n_slices], [c, self.n_channels]]
+            dims = [[dim3, self.n_frames], [dim2, self.n_pos], [dim1, self.n_slices], [dim0, self.n_channels]]
             channel_dim = 0
         elif dim_order == 1:
-            dims = [[t, self.n_frames], [p, self.n_pos], [c, self.n_channels], [z, self.n_slices]]
+            dims = [[dim3, self.n_frames], [dim2, self.n_pos], [dim1, self.n_channels], [dim0, self.n_slices]]
             channel_dim = 1
         elif dim_order == 2:
-            dims = [[p, self.n_pos], [t, self.n_frames], [z, self.n_slices], [c, self.n_channels]]
+            dims = [[dim3, self.n_pos], [dim2, self.n_frames], [dim1, self.n_slices], [dim0, self.n_channels]]
             channel_dim = 0
         else:
-            dims = [[p, self.n_pos], [t, self.n_frames], [c, self.n_channels], [z, self.n_slices]]
+            dims = [[dim3, self.n_pos], [dim2, self.n_frames], [dim1, self.n_channels], [dim0, self.n_slices]]
             channel_dim = 1
 
+        print(dims)
         idx = 0
         for dim3 in range(dims[0][0], dims[0][1]):
             for dim2 in range(dims[1][0], dims[1][1]):
                 for dim1 in range(dims[2][0], dims[2][1]):
                     for dim0 in range(dims[3][0], dims[3][1]):
 
-                        ## GET OFFSET AND WAIT
+                        print('iter', dim3, dim2, dim1, dim0)
+                        # GET OFFSET AND WAIT
                         if idx > 0:
-                            offset = self.get_byte_offset(offsets, idx)
+                            try:
+                                offset = self.get_byte_offset(offsets, idx)
+                            except IndexError:
+                                # NEED TO STOP BECAUSE RAN OUT OF PAGES OR REACHED END OF ACQ
+                                return array, idx, dim3, dim2, dim1, dim0
                             while offset == 162:
                                 self._check_abort()
                                 tf = tiff.TiffFile(file)
@@ -593,43 +627,62 @@ class ListeningWorker(WorkerBase):
                         else:
                             offset = self.get_byte_offset(offsets, idx)
 
-                        if idx < n_pages and idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+                        if idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+
+                            # Assign dimensions based off acquisition order to correctly add image to array
+                            if dim_order == 0:
+                                t, p, c, z = dim3, dim2, dim0, dim1
+                            elif dim_order == 1:
+                                t, p, c, z = dim3, dim2, dim1, dim0
+                            elif dim_order == 2:
+                                t, p, c, z = dim2, dim3, dim0, dim1
+                            else:
+                                t, p, c, z = dim2, dim3, dim1, dim0
+
+                            # If Channel first, compute birefringence here
                             if channel_dim == 0 and dim0 == self.n_channels - 1:
-                                ## COMPUTE
-                                # print('COMPUTING', idx, dim3, dim2, dim1, dim0)
+                                print('computing', dim3, dim2, dim1, dim0)
                                 self._check_abort()
+
+                                # Need to add last channel image before compute
+                                img = np.memmap(file, dtype=self.dtype, mode='r', offset=offset, shape=self.shape)
+                                array[c, z] = img
+
+                                # Compute birefringence
                                 self.compute_and_save(array[:, z], p, t, z)
                                 idx += 1
-                            else:
-                                ## ADD TO ARRAY
-                                # print('array', idx, dim3, dim2, dim1, dim0)
-                                self._check_abort()
-                                img = np.memmap(file, dtype=self.dtype, mode='r', offset=offset, shape=self.shape)
-                                if dim_order == 0:
-                                    t, p, c, z = dim3, dim2, dim0, dim1
-                                elif dim_order == 1:
-                                    t, p, c, z = dim3, dim2, dim1, dim0
-                                elif dim_order == 2:
-                                    t, p, c, z = dim2, dim3, dim0, dim1
-                                else:
-                                    t, p, c, z = dim2, dim3, dim1, dim0
 
+                            # If Z First or channels not finished, add slice to the array
+                            else:
+                                self._check_abort()
+                                print('adding', c, z)
+                                img = np.memmap(file, dtype=self.dtype, mode='r', offset=offset, shape=self.shape)
                                 array[c, z] = img
                                 idx += 1
-                        else:
-                            # NEED TO STOP BECAUSE RAN OUT OF PAGES OR REACHED END OF ACQ
-                            return array, idx, dim3, dim2, dim1, dim0
 
+                    # Reset Range to 0 to account for starting this function in middle of a dimension
+                    if idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+                        dims[2][0] = 0
+                        dims[3][0] = 0
+
+                    # If z-first, compute the birefringence here
                     if channel_dim == 1 and dim1 == self.n_channels - 1:
+                        print('computing', dim3, dim2, dim1, dim0)
                         self._check_abort()
                         self.compute_and_save(array, p, t, dim0)
                         # idx += 1
                     else:
                         continue
 
+                # Reset range to 0 to account for starting this function in the middle of a dimension
+                if idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+                    dims[1][0] = 0
+
+        # Return at the end of the acquisition
+        return array, idx, dim3, dim2, dim1, dim0
+
     def compute_and_save(self, array, p, t, z):
 
-        # print('computing')
         if self.n_slices == 1:
             array = array[:, 0]
 
@@ -695,7 +748,6 @@ class ListeningWorker(WorkerBase):
         self.shape = (file.micromanager_metadata['Summary']['Height'], file.micromanager_metadata['Summary']['Width'])
         self.dtype = file.pages[0].dtype
         offsets = file.micromanager_metadata['IndexMap']['Offset']
-        n_pages = len(file.micromanager_metadata['IndexMap']['Channel'])
         file.close()
 
         self._check_abort()
@@ -712,33 +764,35 @@ class ListeningWorker(WorkerBase):
         self._check_abort()
 
         # initialize dimensions / array for the loop
-        idx, z, c, p, t = 0, 0, 0, 0, 0
+        idx, dim3, dim2, dim1, dim0 = 0, 0, 0, 0, 0
         array = np.zeros((self.n_channels, self.n_slices, self.shape[0], self.shape[1]))
         file_count = 0
+        total_idx = 0
 
         # Run until the function has collected the totality of the data
-        while idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+        while total_idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
 
             self._check_abort()
 
             # this will loop through reading images in a single file as it's being written
             # when it has successfully loaded all of the images from the file, it'll move on to the next
-            array, idx, z, c, p, t = self.listen_for_images(array,
+            array, idx, dim3, dim2, dim1, dim0 = self.listen_for_images(array,
                                                             file_path,
                                                             offsets,
-                                                            n_pages,
                                                             self.interval,
-                                                            z, c, p, t, dim_order)
+                                                            dim3, dim2, dim1, dim0, dim_order)
 
+            total_idx += idx
+            print(self.n_slices, self.n_channels, self.n_frames, self.n_pos)
+            print(total_idx, idx, dim3, dim2, dim1, dim0)
 
             # If acquisition is not finished, grab the next file and listen for images
-            if idx != (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+            if total_idx != self.n_slices * self.n_channels * self.n_frames * self.n_pos:
                 time.sleep(1)
                 file_count += 1
                 file_path = os.path.join(full_path, self.prefix + f'_MMStack_{file_count}.ome.tif')
                 file = tiff.TiffFile(file_path)
                 offsets = file.micromanager_metadata['IndexMap']['Offset']
-                n_pages = len(file.micromanager_metadata['IndexMap']['Channel'])
                 file.close()
 
 
