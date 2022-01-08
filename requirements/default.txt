@@ -9,3 +9,4 @@ pycromanager>=0.6.3
 tqdm>=4.61.1
 opencv-python>=4.5.3.56
 natsort>=7.1.1
+colorspacious>=1.1.2
