@@ -26,6 +26,7 @@ CLASSIFIERS = [
     'Topic :: Scientific/Engineering :: Information Analysis',
     'Topic :: Scientific/Engineering :: Bio-Informatics',
     'Topic :: Utilities',
+    'Framework :: napari',
     'Operating System :: Microsoft :: Windows',
     'Operating System :: POSIX',
     'Operating System :: Unix',
@@ -63,9 +64,10 @@ if __name__ == '__main__':
         include_package_data=True,
         entry_points={
             'console_scripts': [
-                'recOrder.reconstruct = recOrder.cli_module:main',
-                'recOrder.convert = scripts.convert_tiff_to_zarr:main'
+                'recOrder.reconstruct = scripts.run_pipeline:main',
+                'recOrder.convert = scripts.convert_tiff_to_zarr:main',
+                'recOrder = scripts.launch_napari:main'
             ],
-            'napari.plugin': 'recorder = recOrder.plugin.widget.napari_plugin_entry_point'
+            'napari.plugin': 'napari-recorder = recOrder.plugin.widget.napari_plugin_entry_point'
         }
     )

@@ -15,7 +15,7 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
     ----------
 
         pipeline          : string
-                            'birefringence', 'QLIPP', 'PhaseFromBF', 'FluorDecon'
+                            'birefringence', 'QLIPP', 'PhaseFromBF'
 
         image_dim         : tuple
                             (height, width) of images in pixels
@@ -302,6 +302,9 @@ def reconstruct_phase3D(S0, recon, method='Tikhonov', reg_re=1e-4,
     return phase3D
 
 class QLIPPBirefringenceCompute:
+    """
+    Convenience Class for computing QLIPP birefringence only.
+    """
 
     def __init__(self, shape, scheme, wavelength, swing, n_slices, bg_option, bg_data=None):
 
@@ -326,6 +329,19 @@ class QLIPPBirefringenceCompute:
             self.bg_stokes = None
 
     def reconstruct(self, array):
+        """
+        reconstructs raw data into birefringence data
+
+        Parameters
+        ----------
+        array:          (nd-array) of image shape (C, Z, Y, X) or (C, Y, X) with minimum C=4
+
+        Returns
+        -------
+        birefringence:  (nd-array) birefringence array of size (2, Z, Y, X) or (2, Y, X)
+                                    first channel is retardance [nm] second channel is orientation [0, pi]
+
+        """
         stokes = reconstruct_qlipp_stokes(array, self.reconstructor, self.bg_stokes)
         birefringence = reconstruct_qlipp_birefringence(stokes, self.reconstructor)
         birefringence[0] = birefringence[0] / (2 * np.pi) * self.wavelength

@@ -602,14 +602,13 @@ class ListeningWorker(WorkerBase):
             dims = [[dim3, self.n_pos], [dim2, self.n_frames], [dim1, self.n_channels], [dim0, self.n_slices]]
             channel_dim = 1
 
-        print(dims)
+        # Loop through dimensions in the order they are acquired
         idx = 0
         for dim3 in range(dims[0][0], dims[0][1]):
             for dim2 in range(dims[1][0], dims[1][1]):
                 for dim1 in range(dims[2][0], dims[2][1]):
                     for dim0 in range(dims[3][0], dims[3][1]):
 
-                        print('iter', dim3, dim2, dim1, dim0)
                         # GET OFFSET AND WAIT
                         if idx > 0:
                             try:
@@ -641,7 +640,6 @@ class ListeningWorker(WorkerBase):
 
                             # If Channel first, compute birefringence here
                             if channel_dim == 0 and dim0 == self.n_channels - 1:
-                                print('computing', dim3, dim2, dim1, dim0)
                                 self._check_abort()
 
                                 # Need to add last channel image before compute
@@ -655,7 +653,6 @@ class ListeningWorker(WorkerBase):
                             # If Z First or channels not finished, add slice to the array
                             else:
                                 self._check_abort()
-                                print('adding', c, z)
                                 img = np.memmap(file, dtype=self.dtype, mode='r', offset=offset, shape=self.shape)
                                 array[c, z] = img
                                 idx += 1
@@ -667,10 +664,19 @@ class ListeningWorker(WorkerBase):
 
                     # If z-first, compute the birefringence here
                     if channel_dim == 1 and dim1 == self.n_channels - 1:
-                        print('computing', dim3, dim2, dim1, dim0)
+
+                        # Assign dimensions based off acquisition order to correctly add image to array
+                        if dim_order == 0:
+                            t, p, c, z = dim3, dim2, dim0, dim1
+                        elif dim_order == 1:
+                            t, p, c, z = dim3, dim2, dim1, dim0
+                        elif dim_order == 2:
+                            t, p, c, z = dim2, dim3, dim0, dim1
+                        else:
+                            t, p, c, z = dim2, dim3, dim1, dim0
+
                         self._check_abort()
                         self.compute_and_save(array, p, t, dim0)
-                        # idx += 1
                     else:
                         continue
 
@@ -688,6 +694,7 @@ class ListeningWorker(WorkerBase):
 
         birefringence = self.reconstructor.reconstruct(array)
 
+        # If the napari layer doesn't exist yet, create the zarr store to emit to napari
         if self.prefix not in self.calib_window.viewer.layers:
             self.store = zarr.open(os.path.join(self.root, self.prefix+'.zarr'))
             self.store.zeros(name='Birefringence',
@@ -700,6 +707,8 @@ class ListeningWorker(WorkerBase):
                              chunks=(1, 1, 1, 1, self.shape[0], self.shape[1]),
                              overwrite=True)
 
+            # Add data and send out the store.  Once the store has been emitted, we can add data to the store
+            # without needing to emit the store again (thanks to napari's handling of zarr datasets)
             if len(birefringence.shape) == 4:
                 self.store['Birefringence'][p, t] = birefringence
             else:
@@ -713,6 +722,7 @@ class ListeningWorker(WorkerBase):
             else:
                 self.store['Birefringence'][p, t, :, z] = birefringence
 
+        # Emit the current dimensions so that we can update the napari dimension slider
         self.dim_emitter.emit((p, t, z))
 
     def work(self):
@@ -783,8 +793,6 @@ class ListeningWorker(WorkerBase):
                                                             dim3, dim2, dim1, dim0, dim_order)
 
             total_idx += idx
-            print(self.n_slices, self.n_channels, self.n_frames, self.n_pos)
-            print(total_idx, idx, dim3, dim2, dim1, dim0)
 
             # If acquisition is not finished, grab the next file and listen for images
             if total_idx != self.n_slices * self.n_channels * self.n_frames * self.n_pos:
@@ -794,6 +802,3 @@ class ListeningWorker(WorkerBase):
                 file = tiff.TiffFile(file_path)
                 offsets = file.micromanager_metadata['IndexMap']['Offset']
                 file.close()
-
-
-

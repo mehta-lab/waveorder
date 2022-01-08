@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>651</width>
-    <height>805</height>
+    <width>613</width>
+    <height>1031</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -31,8 +31,8 @@
   <property name="layoutDirection">
    <enum>Qt::LeftToRight</enum>
   </property>
-  <layout class="QGridLayout" name="gridLayout_4">
-   <item row="0" column="0" alignment="Qt::AlignTop">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
     <widget class="QTabWidget" name="tabWidget">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -79,7 +79,7 @@
      </property>
      <widget class="QWidget" name="Calibration">
       <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Minimum">
+       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
         <horstretch>0</horstretch>
         <verstretch>0</verstretch>
        </sizepolicy>
@@ -119,9 +119,15 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>611</width>
+            <width>573</width>
             <height>1169</height>
            </rect>
+          </property>
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
           <layout class="QGridLayout" name="gridLayout">
            <property name="leftMargin">
@@ -169,7 +175,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>571</width>
+                    <width>533</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -218,7 +224,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>501</width>
+                    <width>533</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -550,9 +556,9 @@
             <widget class="QGroupBox" name="run_calib">
              <property name="font">
               <font>
-               <weight>50</weight>
-               <italic>false</italic>
-               <bold>false</bold>
+               <weight>75</weight>
+               <italic>true</italic>
+               <bold>true</bold>
               </font>
              </property>
              <property name="title">
@@ -619,6 +625,13 @@
               </item>
               <item row="3" column="0">
                <widget class="QPushButton" name="qbutton_stop_calib">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>STOP</string>
                 </property>
@@ -674,6 +687,13 @@
               </item>
               <item row="1" column="0">
                <widget class="QPushButton" name="qbutton_load_calib">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Load Calibration</string>
                 </property>
@@ -686,9 +706,9 @@
             <widget class="QGroupBox" name="capture_background">
              <property name="font">
               <font>
-               <weight>50</weight>
-               <italic>false</italic>
-               <bold>false</bold>
+               <weight>75</weight>
+               <italic>true</italic>
+               <bold>true</bold>
               </font>
              </property>
              <property name="title">
