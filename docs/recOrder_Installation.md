@@ -42,7 +42,7 @@ Currently, recOrder has not been released via pip, so we will have to clone the 
 
  
 
-recOrder is tested on MicroManager 2.0-gamma (11/13/2020). You can find this version under the MicroManager nightly builds https://micro-manager.org/Micro-Manager_Nightly_Builds . 
+recOrder is tested on MicroManager 2.0-gamma (11/13/2020) and beyond. You can find this version as well as newer versions under the MicroManager nightly builds https://micro-manager.org/Micro-Manager_Nightly_Builds . 
 
  
 
