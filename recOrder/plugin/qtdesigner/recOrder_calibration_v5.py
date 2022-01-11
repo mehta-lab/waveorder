@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'recOrder_calibration_v5.ui'
+# Form implementation generated from reading ui file './recOrder/plugin/qtdesigner/recOrder_calibration_v5.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.4
 #
@@ -15,7 +15,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.NonModal)
-        Form.resize(613, 1031)
+        Form.resize(583, 1012)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -60,7 +60,7 @@ class Ui_Form(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 573, 1169))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 551, 1169))
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -90,7 +90,7 @@ class Ui_Form(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 533, 300))
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 511, 300))
         self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
         self.verticalLayout_6 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_3)
         self.verticalLayout_6.setObjectName("verticalLayout_6")
@@ -117,7 +117,7 @@ class Ui_Form(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 533, 300))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 511, 300))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_2)
         self.verticalLayout_5.setObjectName("verticalLayout_5")
