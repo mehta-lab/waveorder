@@ -42,7 +42,7 @@ Currently, recOrder has not been released via pip, so we will have to clone the 
 
  
 
-recOrder is tested on MicroManager 2.0-gamma (11/13/2020). You can find this version under the MicroManager nightly builds https://micro-manager.org/Micro-Manager_Nightly_Builds . 
+recOrder is tested on MicroManager 2.0-gamma (11/13/2020) and beyond. You can find this version as well as newer versions under the MicroManager nightly builds https://micro-manager.org/Micro-Manager_Nightly_Builds . 
 
  
 
@@ -58,13 +58,13 @@ The recOrder dependencies specify a specific version of *pycromanager* which rel
 
 ![run_port](./images/run_port.png)
 
-2. Create a new channel group called “Channel” and add find the property *MeadowlarkLcOpenSource-String send to -.* Feel free to add any other relevant properties, but this is the bare minimum needed for calibration. Hit “OK” when finished.
+2. Create a new channel group with whatever name you desire and add find the property *MeadowlarkLcOpenSource-String send to -.* Feel free to add any other relevant properties, but this is the bare minimum needed for calibration. Hit “OK” when finished.
 
 ![create_group](./images/create_group.png)
 
 
 
-3. Name each preset “State0”, “State1”, … , “State4” and add the corresponding “state0”, “state1” intothe  “*MeadowlarkLcOpenSource-String send to –“* property.
+3. Name each preset “State0”, “State1”, … , “State4” and add the corresponding “state0”, “state1” into the  “*MeadowlarkLcOpenSource-String send to –“* property.
 
 ![create_preset](./images/create_preset.png)
 

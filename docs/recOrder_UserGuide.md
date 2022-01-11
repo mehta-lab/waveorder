@@ -16,13 +16,12 @@
 
    
 
-   > recOrder-napari
-
-   
-
-3. Navigate to *Plugins > recOrder* 
+   > recOrder
 
 
+
+
+__________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
 
 ### recOrder Calibration
 
@@ -32,11 +31,11 @@ The first step in the QLIPP process is to calibrate the universal polarizer. Thi
 
  
 
-More info on the details of the calibration process can be found in the QLIPP Resources listed on Page1.
+More info on the details of the calibration process and use of the plugin can be found on Zenodo which were taken from a workshop at the Chan-Zuckerberg Biohub in June 2021. https://zenodo.org/record/5135889#.YdyCgH3MJhE
 
  
 
-After pressing “Connect to MM” and choosing a directory, the first step in calibration is to input the illumination wavelength and decide on the swing to use. 
+After pressing “Connect to MM” and choosing a directory (where the calibration metadata / background images will be stored), the first step in calibration is to input the illumination wavelength and decide on the swing to use. 
 
 
 
@@ -48,7 +47,7 @@ After pressing “Connect to MM” and choosing a directory, the first step in c
 
 **Deciding Swing** 
 
-Swing can be thought of as the deviation away from a perfectly circular illumination state. The greater the swing, the more elliptical the state becomes, until finally reaching a linear state at *swing = 0.25*. Picking a swing is dependent on the anisotropy of the sample. Typical swing values rang from *0.1 to 0.03.* Follow the guidelines below for an ideal swing setting.
+Swing can be thought of as the deviation away from a perfectly circular illumination state. The greater the swing, the more elliptical the state becomes, until finally reaching a linear state at *swing = 0.25*. Picking a swing is dependent on the anisotropy of the sample. Typical swing values range from *0.1 to 0.03.* Follow the guidelines below for an ideal swing setting.
 
  
 
@@ -62,21 +61,15 @@ We recommend using a swing of **0.1**  for most tissue samples and **0.05** for 
 
  
 
-
-
 **Illumination Scheme**
 
 The illumination scheme decides which polarization states to calibrate and use. We recommend sticking with the *4-State (Ext, 0, 60, 120)* scheme as it requires one less illumination state than the *5-State* scheme.
 
  
 
-
-
 **Use Cropped ROI**
 
 Calibration should be run on an empty field-of-view or “background” FOV in order to ensure that we are only compensating for the optical effects of the microscope and sample chamber. If you cannot find a fully empty FOV, you can draw a bounding box, or ROI, on the “Live Window” in MicroManager and check the *Use Cropped ROI* box
-
-
 
 
 
@@ -92,9 +85,13 @@ Once the above parameters are set, the user is ready to run the calibration and 
 
 The progress bar will show the progress of calibration, and it should take less than 2 minutes on most systems.
 
- 
+
 
 The plot shows the Intensities over time during the optimization. One way to diagnose if calibration is going smoothly is to look at the shape of this plot. An example of an ideal plot is below:
+
+
+
+![run_calib](./images/ideal_plot.png)
 
  
 
@@ -114,21 +111,35 @@ Once finished, you will get a calibration assessment and an extinction value. Th
 
  
 
-> <u>*Extinction 200+:*</u> Phenomenal. Indicates a very well-aligned and clean light path.
+> <u>*Extinction 200+:*</u> Phenomenal. Indicates a very well-aligned and clean light path and high sensitivity of the system.
 
 
 
+**Load Calibration***
+
+If a user wants to use a previous calibration to acquire new data, then the "Load Calibration" button can be pressed.  It will direct you to select a *calibration_metadata.txt* file and these settings will be automatically updated in MicroManager.  recOrder will also collect a few images to update the extinction ratio to reflect the current conditions.  Once this has finished, a user can now acquire data as they normally would.  
 
 
- **Capturing Background**
 
-The next important step in the calibration process. This will later serve in reconstruction to correct for any local and global background anisotropy. ![cap_bg](./images/cap_bg.png)
+*This is quite useful for micromanager crashes and potential recOrder crashes.  If nothing about the sample / imaging setup has changed, it is safe to use a past calibration.  Otherwise, if a new sample is used or some microscope components are changed, it is recommended to perform a new calibration.
 
-Choose the name of the folder to which to save your background images (will be placed into the save directory chosen at the beginning). Choose the number of images to average, 20 and below is generally good. 
 
- 
+
+**Calculate Extinction**
+
+This is a useful feature to see if the extinction level varies as you move around the sample.  Sometimes there can be local variations present in the sample which can cause slightly different perturbations to the polarization state.  If the extinction level varies dramatically across the sample, it is worthwhile to calibrate and acquire background images as close to the area in which you will be imaging as possible.
+
+
+
+**Capturing Background**
+
+The next important step in the calibration process. This will later serve in reconstruction to correct for any local and global background anisotropy. ![cap_bg](./images/cap_bg.png)Choose the name of the folder to which to save your background images (will be placed into the save directory chosen at the beginning). Choose the number of images to average, 20 and below is generally good.  The background image results will then be displayed in the napari window.  It is normal to see some level of background retardance and orientation bias-- this can be corrected with the background correction step in reconstruction.  Examples of this display are below.
 
 *NOTE: If you wish the capture multiple background sets, please change the folder name in between captures as specifying the same name will overwrite previous data.*
+
+
+
+![run_calib](./images/bg_example.png)
 
  
 
@@ -138,15 +149,15 @@ Choose the name of the folder to which to save your background images (will be p
 
 The advanced tab gives the user a log output which can be useful for debugging purposes. There is a log level “debugging” which serves as a verbose output. Look here for any hints as to what may have gone wrong during calibration or acquisition.![advanced](./images/advanced.png)
 
-
+__________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
 
 ### recOrder Acquisition
 
 
 
-This acquisition module is designed to take single image volumes for both phase and birefringence measurements and allows the user to test the outcome of their calibration with small snapshots or volumes. *It should not be used as the main acquisition method for an experiment, please use the Micromanager MDA Acquisition instead.*
+This acquisition module is designed to take single image volumes for both phase and birefringence measurements and allows the user to test the outcome of their calibration with small snapshots or volumes. *It should not be used as the main acquisition method for an experiment, please use the Micromanager MDA Acquisition instead.* 
 
- 
+
 
 **Save Path**
 
@@ -154,11 +165,9 @@ User specifies the directory in which the images will be saved. Needed if the *S
 
 
 
-
-
 **Acquisition Settings**
 
-*Z Start, Z End, Z Step* specify the relative z-parameters to use for acquiring an image volume. Values are in the default units of the stage, typically in microns. 
+*Z Start, Z End, Z Step* specify the relative z-parameters to use for acquiring an image volume. Values are in the default units of the stage, typically in microns. The center slice will be the current position of the z-stage
 
 ![acquisition](./images/acquisition.png)
 
@@ -184,11 +193,9 @@ User can then choose whether they want to acquire a 2D or 3D Birefringence/Phase
 
 
 
-
-
 **Reconstruction Settings** 
 
-These settings are solely for reconstructing the acquired image / image volume. The *Phase Only* parameters are only needed for reconstructing phase. The user is able to specify the use of a GPU for reconstruction (requires CuPy / CudaToolKit) if present, otherwise leave blank.
+These settings are solely for reconstructing the acquired image / image volume. The *Phase Only* parameters are only needed for reconstructing phase. The user is also able to specify the use of a GPU for reconstruction (requires CuPy / CudaToolKit) if present, otherwise leave blank.
 
 ![reconstruct_acq](./images/reconstruct_acq.png)
 
@@ -204,7 +211,7 @@ Explanation of background correction methods:
 
  
 
-> <u>*Local Fit:*</u> A global background correction is formed and an additional estimation of local background is computed with a polynomial surface fit.
+> <u>*Local Fit**:*</u> A global background correction is formed and an additional estimation of local background is computed with a polynomial surface fit.  This is the preferred background correction method.
 
  
 
@@ -226,8 +233,20 @@ An explanation of phase reconstruction parameters:
 
  
 
-The acquired data will then be displayed in the Napari window. Note that phase reconstruction may take several minutes
+The acquired data will then be displayed in the Napari window. Note that phase reconstruction is rather compute heavy and may take several minutes depending on your system.
 
 
 
-### recOrder Reconstruction
+Examples of Acquiring birefringence data (diatoms) with this snap method are below:
+
+
+
+![reconstruct_acq](./images/acq_diatoms2D.png)
+
+
+
+**Listen For Data**
+
+This feature allows a user to perform real-time reconstructions of data that is being collected by MicroManager.  Once this button is pressed, recOrder will wait for a MicroManager MDA Acquisition to begin (as initiated by the user through the MicroManager GUI) and as the data is collected, it will perform a birefringence reconstruction and display the live results in the napari window.
+
+*NOTE: This is only valid for an acquisition that is NOT MULTIMODAL and saved as IMAGE STACK FILE.  For this function to work properly the only channels being acquired can be the 4 or 5 polarization states depending on which scheme the user is using.  If there is also a fluorescence channel being acquired, the reconstruction will not be computed correctly. Future updates may correct for this inconvencience*. 
