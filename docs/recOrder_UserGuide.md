@@ -121,7 +121,7 @@ If a user wants to use a previous calibration to acquire new data, then the "Loa
 
 
 
-* This is quite useful for micromanager crashes and potential recOrder crashes.  If nothing about the sample / imaging setup has changed, it is safe to use a past calibration.  Otherwise, if a new sample is used or some microscope components are changed, it is recommended to perform a new calibration.
+*This is quite useful for micromanager crashes and potential recOrder crashes.  If nothing about the sample / imaging setup has changed, it is safe to use a past calibration.  Otherwise, if a new sample is used or some microscope components are changed, it is recommended to perform a new calibration.
 
 
 
@@ -240,6 +240,8 @@ The acquired data will then be displayed in the Napari window. Note that phase r
 Examples of Acquiring birefringence data (diatoms) with this snap method are below:
 
 
+
+![reconstruct_acq](./images/acq_diatoms2D.png)
 
 
 
