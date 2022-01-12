@@ -2666,7 +2666,9 @@ class fluorescence_microscopy:
             I_fluor_deconv = np.zeros((self.N_wavelength, 3, N, M, Z))
         else:
             I_fluor_deconv = np.zeros_like(I_fluor_process)
-        print('I_fluor_pad', I_fluor_pad.shape, 'I_fluor_deconv', I_fluor_deconv.shape)
+            
+        if verbose:
+            print('I_fluor_pad', I_fluor_pad.shape, 'I_fluor_deconv', I_fluor_deconv.shape)
         
         for i in range(self.N_wavelength):
         
