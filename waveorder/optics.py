@@ -894,7 +894,7 @@ def scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='po
     
     '''
     
-    compute the adjoint of vectorial SEAGLE forward model
+    compute principal retardance and 3D orientation from scattering potential tensor components
     
     Parameters
     ----------
@@ -950,5 +950,115 @@ def scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='po
         retardance_pr_n = -del_f_sin_square_n * np.sin(theta_n)**2 / (np.sin(theta_n)**4 + reg_ret_pr)
     
         return retardance_pr_n, azimuth_n, theta_n
+    
+    
+    
+
+def phase_inc_correction(f_tensor0, retardance_pr, theta):
+    
+    '''
+    
+    compute the inclination-corrected phase from the principal retardance, inclination, and the 0-th component of the scattering potential tensor
+    
+    Parameters
+    ----------
+        f_tensor0     : numpy.ndarray
+                        0-th component of scattering potential tensor with the size of (N, M) or (N, M, N_defocus) for 3D
+                        
+        retardance_pr : numpy.ndarray
+                        reconstructed principal retardance with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+                        
+        theta         : numpy.ndarray
+                        reconstructed out-of-plane inclination with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+        
+    Returns
+    -------
+        phase         : numpy.ndarray
+                        inclination-corrected phase with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+        
+    '''
+    
+    phase = -f_tensor0 + retardance_pr*np.cos(theta)**2 
+
+    return phase
+
+
+
+def optic_sign_probability(mat_map, mat_map_thres=0.1):
+    
+    '''
+    
+    compute the optic sign probability from the reconstructed material tendancy
+    
+    Parameters
+    ----------
+        mat_map       : numpy.ndarray
+                        reconstructed material tendancy with the size of (2, N, M) for 2D and (2, N, M, N_defocus) for 3D
+                        
+        mat_map_thres : float
+                        the cut-off material tendancy to noisy tendancy estimate (typically 0.05 ~ 0.2)
+        
+    Returns
+    -------
+        p_mat_map     : numpy.ndarray
+                        computed optic sign probability for positive uniaxial material with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+        
+    '''
+    
+    
+    mat_map_norm = mat_map / np.max(np.abs(np.sum(mat_map,axis=0)))
+    p_mat_map = np.maximum(mat_map_norm[0],mat_map_thres)/(np.maximum(mat_map_norm[0],mat_map_thres) + np.maximum(mat_map_norm[1],mat_map_thres))
+
+    return p_mat_map
+
+
+
+def unit_conversion_from_scattering_potential_to_permittivity(SP_array, lambda_0, n_media=1, imaging_mode = '3D'):
+    
+    '''
+    
+    compute the optic sign probability from the reconstructed material tendancy
+    
+    Parameters
+    ----------
+        SP_array    : numpy.ndarray
+                      array in the unit of a scattering potential (z-projected for 2D)
+                      
+        lambda_0    : float
+                      wavelength of the light in the free space
+                      
+        n_media     : float
+                      refractive index of the immersing media
+                        
+        imaging_dim : str
+                      option to convert the scattering potential unit for 2D or 3D imaging 
+                      '2D': convert the unit of a z-projected scattering potential to the unit of phase or absorption (in the unit of nm)
+                      '2D-ret': convert the unit of a z-projected scattering potential to the unit of principal retardance (in the unit of nm)
+                      '3D': convert the unit of a scattering potential to the unit of a permittivity (unitless)
+        
+    Returns
+    -------
+        P_array     : numpy.ndarray
+                      array in the unit of a permittivity (z-projected for 2D)
+        
+    '''
+    
+    k_0 = 2*np.pi/lambda_0
+    
+    if imaging_mode == '2D':
+        P_array = SP_array/2/k_0**2/n_media*1e3
+        
+    elif imaging_mode == '2D-ret':
+        P_array = SP_array/k_0**2/n_media*1e3
+        
+    elif imaging_mode == '3D':
+        P_array = SP_array/k_0**2
+    
+    else:
+        raise ValueError('Unsupported option for imaging dimension. imaging_mode must be 2D-phase, 2D-ret or 3D')
+        
+    return P_array
+    
+
 
 
