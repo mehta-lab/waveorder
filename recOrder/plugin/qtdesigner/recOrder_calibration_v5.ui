@@ -160,8 +160,11 @@
                <bold>false</bold>
               </font>
              </property>
+             <property name="focusPolicy">
+              <enum>Qt::ClickFocus</enum>
+             </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>1</number>
              </property>
              <widget class="QWidget" name="tab_plot">
               <attribute name="title">
@@ -241,6 +244,9 @@
                    </item>
                    <item>
                     <widget class="QComboBox" name="cb_loglevel">
+                     <property name="focusPolicy">
+                      <enum>Qt::ClickFocus</enum>
+                     </property>
                      <property name="currentIndex">
                       <number>0</number>
                      </property>
@@ -315,6 +321,9 @@
                   <bold>false</bold>
                  </font>
                 </property>
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
                 <item>
                  <property name="text">
                   <string>-</string>
@@ -344,6 +353,9 @@
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -497,6 +509,9 @@
                   <bold>false</bold>
                  </font>
                 </property>
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
                 <item>
                  <property name="text">
                   <string>-</string>
@@ -528,7 +543,11 @@
                   <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
+                  <kerning>true</kerning>
                  </font>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -550,7 +569,11 @@
                </widget>
               </item>
               <item row="6" column="2">
-               <widget class="QComboBox" name="cb_config_group"/>
+               <widget class="QComboBox" name="cb_config_group">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>
@@ -969,6 +992,9 @@
                   </item>
                   <item row="0" column="1">
                    <widget class="QComboBox" name="cb_bg_method">
+                    <property name="focusPolicy">
+                     <enum>Qt::ClickFocus</enum>
+                    </property>
                     <item>
                      <property name="text">
                       <string>None</string>
@@ -1251,6 +1277,9 @@
                   <bold>false</bold>
                  </font>
                 </property>
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
                 <item>
                  <property name="text">
                   <string>2D</string>
@@ -1333,6 +1362,9 @@
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -1445,7 +1477,11 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_16">
               <item row="4" column="0">
-               <widget class="QComboBox" name="cb_hue"/>
+               <widget class="QComboBox" name="cb_hue">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
+               </widget>
               </item>
               <item row="2" column="0">
                <widget class="QLabel" name="label_colormap">
@@ -1479,7 +1515,11 @@
                </widget>
               </item>
               <item row="4" column="2">
-               <widget class="QComboBox" name="cb_value"/>
+               <widget class="QComboBox" name="cb_value">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
+               </widget>
               </item>
               <item row="2" column="1" colspan="2">
                <widget class="QComboBox" name="cb_colormap">
@@ -1489,6 +1529,9 @@
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -1510,7 +1553,11 @@
                </widget>
               </item>
               <item row="4" column="1">
-               <widget class="QComboBox" name="cb_saturation"/>
+               <widget class="QComboBox" name="cb_saturation">
+                <property name="focusPolicy">
+                 <enum>Qt::ClickFocus</enum>
+                </property>
+               </widget>
               </item>
               <item row="1" column="0" colspan="3">
                <widget class="QLabel" name="label_orientation_image">

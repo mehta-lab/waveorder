@@ -162,9 +162,7 @@ class Calibration(QWidget):
         self.hsv_pixmap = QPixmap(hsv_legend_path)
         # self.jch_pixmap = self.jch_pixmap.scaled(self.jch_pixmap.height()*0.8, self.jch_pixmap.width(), Qt.KeepAspectRatio)
         self.ui.label_orientation_image.setPixmap(self.jch_pixmap)
-
-
-        # self.ui.DisplayOptions.hide()
+        self.ui.DisplayOptions.hide()
 
 
         # Testing
