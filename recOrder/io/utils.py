@@ -4,6 +4,21 @@ import tifffile as tiff
 import numpy as np
 
 
+def extract_reconstruction_parameters(reconstructor, magnification):
+
+    attr_dict = {'phase_dimension': reconstructor.phase_deconv,
+                 'pad_z': reconstructor.pad_z,
+                 'n_objective_media': reconstructor.n_media,
+                 'bg_correction_option': reconstructor.bg_option,
+                 'objective_NA': reconstructor.NA_obj * reconstructor.n_media,
+                 'condenser_NA': reconstructor.NA_illu * reconstructor.n_media,
+                 'magnification': magnification,
+                 'swing': reconstructor.chi if reconstructor.N_channel == 4 else reconstructor.chi / 2 / np.pi,
+                 'pixel_size': reconstructor.ps * magnification}
+
+    return attr_dict
+
+
 def load_bg(bg_path, height, width, ROI=None):
     """
     Parameters

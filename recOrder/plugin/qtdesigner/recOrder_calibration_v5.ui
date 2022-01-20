@@ -120,7 +120,7 @@
             <x>0</x>
             <y>0</y>
             <width>551</width>
-            <height>1169</height>
+            <height>1185</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -141,6 +141,9 @@
            </property>
            <property name="bottomMargin">
             <number>4</number>
+           </property>
+           <property name="verticalSpacing">
+            <number>20</number>
            </property>
            <item row="6" column="0">
             <widget class="QTabWidget" name="tabWidget_2">
@@ -879,529 +882,658 @@
        <property name="spacing">
         <number>0</number>
        </property>
-       <item row="2" column="0">
-        <widget class="QGroupBox" name="groupBox">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+       <item row="4" column="0">
+        <widget class="QScrollArea" name="scrollArea_4">
+         <property name="widgetResizable">
+          <bool>true</bool>
          </property>
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <italic>true</italic>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="title">
-          <string>Reconstruction Settings</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_9">
-          <item row="0" column="1" alignment="Qt::AlignTop">
-           <widget class="QTabWidget" name="tabWidget_3">
-            <property name="sizePolicy">
-             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-              <horstretch>0</horstretch>
-              <verstretch>0</verstretch>
-             </sizepolicy>
-            </property>
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="currentIndex">
-             <number>0</number>
-            </property>
-            <widget class="QWidget" name="general">
-             <attribute name="title">
-              <string>General</string>
-             </attribute>
-             <layout class="QGridLayout" name="gridLayout_10">
-              <property name="leftMargin">
-               <number>4</number>
-              </property>
-              <property name="topMargin">
-               <number>15</number>
-              </property>
-              <property name="rightMargin">
-               <number>4</number>
-              </property>
-              <property name="bottomMargin">
-               <number>4</number>
-              </property>
-              <item row="0" column="0" alignment="Qt::AlignTop">
-               <widget class="QLabel" name="label_bg_method">
+         <widget class="QWidget" name="scrollAreaWidgetContents_4">
+          <property name="geometry">
+           <rect>
+            <x>0</x>
+            <y>0</y>
+            <width>543</width>
+            <height>955</height>
+           </rect>
+          </property>
+          <layout class="QGridLayout" name="gridLayout_15">
+           <property name="verticalSpacing">
+            <number>20</number>
+           </property>
+           <item row="2" column="0">
+            <widget class="QGroupBox" name="ReconSettings">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <italic>true</italic>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="title">
+              <string>Reconstruction Settings</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_9">
+              <item row="0" column="1" alignment="Qt::AlignTop">
+               <widget class="QTabWidget" name="tabWidget_3">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="currentIndex">
+                 <number>0</number>
+                </property>
+                <widget class="QWidget" name="general">
+                 <attribute name="title">
+                  <string>General</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_10">
+                  <property name="leftMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>15</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>4</number>
+                  </property>
+                  <item row="0" column="0" alignment="Qt::AlignTop">
+                   <widget class="QLabel" name="label_bg_method">
+                    <property name="text">
+                     <string>BG Correction</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1" colspan="2">
+                   <widget class="QLineEdit" name="le_bg_path"/>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QComboBox" name="cb_bg_method">
+                    <item>
+                     <property name="text">
+                      <string>None</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Global</string>
+                     </property>
+                    </item>
+                    <item>
+                     <property name="text">
+                      <string>Local Fit</string>
+                     </property>
+                    </item>
+                   </widget>
+                  </item>
+                  <item row="1" column="3">
+                   <widget class="QPushButton" name="qbutton_browse_bg_path">
+                    <property name="text">
+                     <string>Browse</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="1">
+                   <widget class="QLineEdit" name="le_gpu_id">
+                    <property name="sizePolicy">
+                     <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                      <horstretch>0</horstretch>
+                      <verstretch>0</verstretch>
+                     </sizepolicy>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="0">
+                   <widget class="QLabel" name="label_gpu_id">
+                    <property name="text">
+                     <string>GPU ID</string>
+                    </property>
+                    <property name="alignment">
+                     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="3" column="2">
+                   <widget class="QCheckBox" name="chb_use_gpu">
+                    <property name="text">
+                     <string>Use GPU</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="label_bg_path">
+                    <property name="text">
+                     <string>Background Path</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="phase_only">
+                 <attribute name="title">
+                  <string>Phase Only</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_11">
+                  <property name="leftMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>15</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>4</number>
+                  </property>
+                  <item row="0" column="0">
+                   <widget class="QLabel" name="label_obj_na">
+                    <property name="text">
+                     <string>Objective NA</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="1">
+                   <widget class="QLineEdit" name="le_obj_na"/>
+                  </item>
+                  <item row="0" column="2">
+                   <widget class="QLabel" name="label_ps">
+                    <property name="text">
+                     <string>Camera Pixel Size</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="3">
+                   <widget class="QLineEdit" name="le_ps">
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="0">
+                   <widget class="QLabel" name="label_cond_na">
+                    <property name="text">
+                     <string>Condenser NA</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="1">
+                   <widget class="QLineEdit" name="le_cond_na"/>
+                  </item>
+                  <item row="1" column="2">
+                   <widget class="QLabel" name="label_n_media">
+                    <property name="text">
+                     <string>RI of Obj. Media</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="1" column="3">
+                   <widget class="QLineEdit" name="le_n_media">
+                    <property name="text">
+                     <string>1.003</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="0">
+                   <widget class="QLabel" name="label_mag">
+                    <property name="text">
+                     <string>Magnification</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="1">
+                   <widget class="QLineEdit" name="le_mag"/>
+                  </item>
+                  <item row="2" column="2">
+                   <widget class="QLabel" name="label_pad_z">
+                    <property name="text">
+                     <string>Z Padding</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="2" column="3">
+                   <widget class="QLineEdit" name="le_pad_z">
+                    <property name="text">
+                     <string>0</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QCheckBox" name="chb_pause_updates">
                 <property name="text">
-                 <string>BG Correction</string>
+                 <string>Pause Updates</string>
                 </property>
                </widget>
               </item>
-              <item row="1" column="1" colspan="2">
-               <widget class="QLineEdit" name="le_bg_path"/>
+             </layout>
+            </widget>
+           </item>
+           <item row="3" column="0" alignment="Qt::AlignTop">
+            <widget class="QGroupBox" name="acquire">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <italic>true</italic>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="title">
+              <string>Acquire</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_13">
+              <item row="0" column="0">
+               <widget class="QPushButton" name="qbutton_listen">
+                <property name="text">
+                 <string>Listen For Data</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QPushButton" name="qbutton_acq_phase">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Acquire Phase</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="2">
+               <widget class="QPushButton" name="qbutton_stop_acq">
+                <property name="text">
+                 <string>STOP</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
+                <property name="text">
+                 <string>Acquire Birefringence + Phase</string>
+                </property>
+               </widget>
               </item>
               <item row="0" column="1">
-               <widget class="QComboBox" name="cb_bg_method">
+               <widget class="QPushButton" name="qbutton_acq_birefringence">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Acquire Birefringence</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QGroupBox" name="acq_settings">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <italic>true</italic>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="focusPolicy">
+              <enum>Qt::TabFocus</enum>
+             </property>
+             <property name="title">
+              <string>Acquisition Settings</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_8">
+              <item row="0" column="1">
+               <widget class="QLabel" name="label_zend">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Z End (um)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLineEdit" name="le_zstep"/>
+              </item>
+              <item row="2" column="1">
+               <widget class="QComboBox" name="cb_birefringence">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <item>
                  <property name="text">
-                  <string>None</string>
+                  <string>2D</string>
                  </property>
                 </item>
                 <item>
                  <property name="text">
-                  <string>Global</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Local Fit</string>
+                  <string>3D</string>
                  </property>
                 </item>
                </widget>
               </item>
-              <item row="1" column="3">
-               <widget class="QPushButton" name="qbutton_browse_bg_path">
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_phase">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Phase</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="2">
+               <widget class="QLabel" name="label_zstep">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Z_Step (um)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_zstart">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Z Start (um)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="le_zend"/>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_birefringence">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Birefringence</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLineEdit" name="le_zstart"/>
+              </item>
+              <item row="3" column="1">
+               <widget class="QComboBox" name="cb_phase">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>2D</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>3D</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QGroupBox" name="file_settings">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <italic>true</italic>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="title">
+              <string>File Settings</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             </property>
+             <property name="checkable">
+              <bool>false</bool>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_7">
+              <property name="horizontalSpacing">
+               <number>-1</number>
+              </property>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="le_save_path"/>
+              </item>
+              <item row="2" column="0">
+               <widget class="QCheckBox" name="chb_save_imgs">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Save Images</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
+               <widget class="QPushButton" name="qbutton_browse_save_path">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Browse</string>
                 </property>
                </widget>
               </item>
-              <item row="3" column="1">
-               <widget class="QLineEdit" name="le_gpu_id">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_save_path">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Save Path</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="4" column="0">
+            <widget class="QGroupBox" name="DisplayOptions">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <italic>true</italic>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="title">
+              <string>Display Options</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_16">
+              <item row="4" column="0">
+               <widget class="QComboBox" name="cb_hue"/>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_colormap">
+                <property name="text">
+                 <string>Colormap</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0" colspan="3">
+               <widget class="QLabel" name="label_orientation_legend">
+                <property name="text">
+                 <string>Retardance Orientation Overlay Legend</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
                 </property>
                </widget>
               </item>
               <item row="3" column="0">
-               <widget class="QLabel" name="label_gpu_id">
+               <widget class="QLabel" name="label_hue">
                 <property name="text">
-                 <string>GPU ID</string>
+                 <string>Hue</string>
                 </property>
-                <property name="alignment">
-                 <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QLabel" name="label_saturation">
+                <property name="text">
+                 <string>Saturation</string>
                 </property>
+               </widget>
+              </item>
+              <item row="4" column="2">
+               <widget class="QComboBox" name="cb_value"/>
+              </item>
+              <item row="2" column="1" colspan="2">
+               <widget class="QComboBox" name="cb_colormap">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>JCh (Perceptually Uniform)</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>HSV</string>
+                 </property>
+                </item>
                </widget>
               </item>
               <item row="3" column="2">
-               <widget class="QCheckBox" name="chb_use_gpu">
+               <widget class="QLabel" name="label_value">
                 <property name="text">
-                 <string>Use GPU</string>
+                 <string>Value</string>
                 </property>
                </widget>
               </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_bg_path">
-                <property name="text">
-                 <string>Background Path</string>
-                </property>
-               </widget>
+              <item row="4" column="1">
+               <widget class="QComboBox" name="cb_saturation"/>
               </item>
-             </layout>
-            </widget>
-            <widget class="QWidget" name="phase_only">
-             <attribute name="title">
-              <string>Phase Only</string>
-             </attribute>
-             <layout class="QGridLayout" name="gridLayout_11">
-              <property name="leftMargin">
-               <number>4</number>
-              </property>
-              <property name="topMargin">
-               <number>15</number>
-              </property>
-              <property name="rightMargin">
-               <number>4</number>
-              </property>
-              <property name="bottomMargin">
-               <number>4</number>
-              </property>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_obj_na">
-                <property name="text">
-                 <string>Objective NA</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="le_obj_na"/>
-              </item>
-              <item row="0" column="2">
-               <widget class="QLabel" name="label_ps">
-                <property name="text">
-                 <string>Camera Pixel Size</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="3">
-               <widget class="QLineEdit" name="le_ps">
+              <item row="1" column="0" colspan="3">
+               <widget class="QLabel" name="label_orientation_image">
                 <property name="text">
                  <string/>
                 </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_cond_na">
-                <property name="text">
-                 <string>Condenser NA</string>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
                 </property>
                </widget>
               </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="le_cond_na"/>
-              </item>
-              <item row="1" column="2">
-               <widget class="QLabel" name="label_n_media">
+              <item row="5" column="0" colspan="3">
+               <widget class="QPushButton" name="qbutton_create_overlay">
                 <property name="text">
-                 <string>RI of Obj. Media</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="3">
-               <widget class="QLineEdit" name="le_n_media">
-                <property name="text">
-                 <string>1.003</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_mag">
-                <property name="text">
-                 <string>Magnification</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLineEdit" name="le_mag"/>
-              </item>
-              <item row="2" column="2">
-               <widget class="QLabel" name="label_pad_z">
-                <property name="text">
-                 <string>Z Padding</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="3">
-               <widget class="QLineEdit" name="le_pad_z">
-                <property name="text">
-                 <string>0</string>
+                 <string>Create Overlay</string>
                 </property>
                </widget>
               </item>
              </layout>
             </widget>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QCheckBox" name="chb_pause_updates">
-            <property name="text">
-             <string>Pause Updates</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="1" column="0">
-        <widget class="QGroupBox" name="acq_settings">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <italic>true</italic>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="focusPolicy">
-          <enum>Qt::TabFocus</enum>
-         </property>
-         <property name="title">
-          <string>Acquisition Settings</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_8">
-          <item row="0" column="1">
-           <widget class="QLabel" name="label_zend">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Z End (um)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QLineEdit" name="le_zstep"/>
-          </item>
-          <item row="2" column="1">
-           <widget class="QComboBox" name="cb_birefringence">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <item>
-             <property name="text">
-              <string>2D</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>3D</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-          <item row="3" column="0">
-           <widget class="QLabel" name="label_phase">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Phase</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="2">
-           <widget class="QLabel" name="label_zstep">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Z_Step (um)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="0">
-           <widget class="QLabel" name="label_zstart">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Z Start (um)</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="le_zend"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QLabel" name="label_birefringence">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Birefringence</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLineEdit" name="le_zstart"/>
-          </item>
-          <item row="3" column="1">
-           <widget class="QComboBox" name="cb_phase">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <item>
-             <property name="text">
-              <string>2D</string>
-             </property>
-            </item>
-            <item>
-             <property name="text">
-              <string>3D</string>
-             </property>
-            </item>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="7" column="0" alignment="Qt::AlignTop">
-        <widget class="QGroupBox" name="acquire">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <italic>true</italic>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="title">
-          <string>Acquire</string>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_13">
-          <item row="0" column="0">
-           <widget class="QPushButton" name="qbutton_listen">
-            <property name="text">
-             <string>Listen For Data</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="0">
-           <widget class="QPushButton" name="qbutton_acq_phase">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Acquire Phase</string>
-            </property>
-           </widget>
-          </item>
-          <item row="4" column="0" colspan="2">
-           <widget class="QPushButton" name="qbutton_stop_acq">
-            <property name="text">
-             <string>STOP</string>
-            </property>
-           </widget>
-          </item>
-          <item row="2" column="1">
-           <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
-            <property name="text">
-             <string>Acquire Birefringence + Phase</string>
-            </property>
-           </widget>
-          </item>
-          <item row="0" column="1">
-           <widget class="QPushButton" name="qbutton_acq_birefringence">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Acquire Birefringence</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
-        </widget>
-       </item>
-       <item row="0" column="0">
-        <widget class="QGroupBox" name="file_settings">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="font">
-          <font>
-           <weight>75</weight>
-           <italic>true</italic>
-           <bold>true</bold>
-          </font>
-         </property>
-         <property name="title">
-          <string>File Settings</string>
-         </property>
-         <property name="alignment">
-          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-         </property>
-         <property name="checkable">
-          <bool>false</bool>
-         </property>
-         <layout class="QGridLayout" name="gridLayout_7">
-          <property name="horizontalSpacing">
-           <number>-1</number>
-          </property>
-          <item row="1" column="1">
-           <widget class="QLineEdit" name="le_save_path"/>
-          </item>
-          <item row="2" column="0">
-           <widget class="QCheckBox" name="chb_save_imgs">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Save Images</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="2">
-           <widget class="QPushButton" name="qbutton_browse_save_path">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Browse</string>
-            </property>
-           </widget>
-          </item>
-          <item row="1" column="0">
-           <widget class="QLabel" name="label_save_path">
-            <property name="font">
-             <font>
-              <weight>50</weight>
-              <italic>false</italic>
-              <bold>false</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>Save Path</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
+           </item>
+          </layout>
+         </widget>
         </widget>
        </item>
       </layout>
@@ -1465,7 +1597,6 @@
   <tabstop>le_n_avg</tabstop>
   <tabstop>le_extinction</tabstop>
   <tabstop>tabWidget_2</tabstop>
-  <tabstop>acq_settings</tabstop>
   <tabstop>cb_loglevel</tabstop>
   <tabstop>te_log</tabstop>
   <tabstop>scrollArea_2</tabstop>

@@ -1,7 +1,8 @@
 from recOrder.calib.Calibration import QLIPP_Calibration
 from pycromanager import Bridge
-from PyQt5.QtCore import pyqtSlot, pyqtSignal
-from PyQt5.QtWidgets import QWidget, QFileDialog
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
+from PyQt5.QtWidgets import QWidget, QFileDialog, QGraphicsScene, QGraphicsPixmapItem
+from PyQt5.QtGui import QPixmap, QImage
 from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
 from recOrder.plugin.acquisition.acquisition_workers import AcquisitionWorker, ListeningWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
@@ -9,6 +10,8 @@ from recOrder.postproc.post_processing import ret_ori_overlay
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.utils import load_bg
 from pathlib import Path
+import pyqtgraph as pg
+from imageio import imread
 from napari import Viewer
 import numpy as np
 import os
@@ -83,6 +86,7 @@ class Calibration(QWidget):
         self.ui.qbutton_acq_birefringence.clicked[bool].connect(self.acq_birefringence)
         self.ui.qbutton_acq_phase.clicked[bool].connect(self.acq_phase)
         self.ui.qbutton_acq_birefringence_phase.clicked[bool].connect(self.acq_birefringence_phase)
+        self.ui.cb_colormap.currentIndexChanged[int].connect(self.enter_colormap)
 
         # Logging
         log_box = QtLogger(self.ui.te_log)
@@ -150,7 +154,41 @@ class Calibration(QWidget):
         # Init thread worker
         self.worker = None
 
+        # Display Options
+        recorder_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        jch_legend_path = os.path.join(recorder_dir, 'docs/images/JCh_legend.png')
+        hsv_legend_path = os.path.join(recorder_dir, 'docs/images/HSV_legend.png')
+        self.jch_pixmap = QPixmap(jch_legend_path)
+        self.hsv_pixmap = QPixmap(hsv_legend_path)
+        # self.jch_pixmap = self.jch_pixmap.scaled(self.jch_pixmap.height()*0.8, self.jch_pixmap.width(), Qt.KeepAspectRatio)
+        self.ui.label_orientation_image.setPixmap(self.jch_pixmap)
+
+
+        # self.ui.DisplayOptions.hide()
+
+
+        # Testing
+        # data = imread(img_path)
+        # print(data.shape)
+        # image = QImage(data, data.shape[0], data.shape[1], data.shape[1]*3, QImage.Format_RGB888)
+
+        # self.scene = QGraphicsScene(self)
+
+        # self.scene.addPixmap(pixmap_rescale)
+        # self.ui.graphicsView.setScene(self.scene)
+
+
+        # item = QGraphicsPixmapItem(pixmap)
+
+        # self.glayout = pg.GraphicsLayout()
+        # self.viewbox = self.glayout.addViewBox()
+        # self.ui.graphicsView.setCentralItem(self.glayout)
+        # self.viewbox.addItem(pg.ImageItem(data))
+        # self.viewbox.autoRange()
+
+
     def _enable_buttons(self):
+
         self.ui.qbutton_calibrate.setEnabled(True)
         self.ui.qbutton_capture_bg.setEnabled(True)
         self.ui.qbutton_calc_extinction.setEnabled(True)
@@ -159,6 +197,7 @@ class Calibration(QWidget):
         self.ui.qbutton_acq_birefringence_phase.setEnabled(True)
         self.ui.qbutton_load_calib.setEnabled(True)
         self.ui.qbutton_listen.setEnabled(True)
+        self.ui.qbutton_create_overlay.setEnabled(True)
 
     def _disable_buttons(self):
         self.ui.qbutton_calibrate.setEnabled(False)
@@ -169,6 +208,7 @@ class Calibration(QWidget):
         self.ui.qbutton_acq_birefringence_phase.setEnabled(False)
         self.ui.qbutton_load_calib.setEnabled(False)
         self.ui.qbutton_listen.setEnabled(False)
+        self.ui.qbutton_create_overlay.setEnabled(False)
 
     def _handle_error(self, exc):
         self.ui.le_calib_assessment.setText(f'Error: {str(exc)}')
@@ -196,6 +236,9 @@ class Calibration(QWidget):
 
     def _update_calib(self, val):
         self.calib = val
+
+    def _set_colormap(self, val):
+        pass
 
     @pyqtSlot(bool)
     def connect_to_mm(self):
@@ -304,7 +347,18 @@ class Calibration(QWidget):
                 if key+self.birefringence_dim in self.viewer.layers:
                     self.viewer.layers[key+self.birefringence_dim].data = value[chan]
                 else:
-                    self.viewer.add_image(value[chan], name=key+self.birefringence_dim, colormap='gray')
+                    cmap = 'gray' if key != 'Orientation' else 'hsv'
+                    self.viewer.add_image(value[chan], name=key+self.birefringence_dim, colormap=cmap)
+
+        if self.ui.DisplayOptions.isHidden():
+            self.ui.DisplayOptions.show()
+
+        if 'Orientation' not in [self.ui.cb_hue.itemText(i) for i in range(self.ui.cb_hue.count())]:
+            self.ui.cb_hue.addItem('Orientation')
+        if 'Retardance' not in [self.ui.cb_saturation.itemText(i) for i in range(self.ui.cb_saturation.count())]:
+            self.ui.cb_saturation.addItem('Retardance')
+        if 'Retardance' not in [self.ui.cb_value.itemText(i) for i in range(self.ui.cb_value.count())]:
+            self.ui.cb_saturation.addItem('Retardance')
 
     @pyqtSlot(object)
     def handle_phase_image_update(self, value):
@@ -316,6 +370,11 @@ class Calibration(QWidget):
             self.viewer.layers[name].data = value
         else:
             self.viewer.add_image(value, name=name, colormap='gray')
+
+        if 'Phase' not in [self.ui.cb_saturation.itemText(i) for i in range(self.ui.cb_saturation.count())]:
+            self.ui.cb_saturation.addItem('Retardance')
+        if 'Phase' not in [self.ui.cb_value.itemText(i) for i in range(self.ui.cb_value.count())]:
+            self.ui.cb_saturation.addItem('Retardance')
 
     @pyqtSlot(object)
     def handle_reconstructor_update(self, value):
@@ -537,6 +596,14 @@ class Calibration(QWidget):
             self.pause_updates = True
         elif state == 0:
             self.pause_updates = False
+
+    @pyqtSlot()
+    def enter_colormap(self):
+        state = self.ui.cb_colormap.currentIndex()
+        if state == 0:
+            self.ui.label_orientation_image.setPixmap(self.jch_pixmap)
+        else:
+            self.ui.label_orientation_image.setPixmap(self.hsv_pixmap)
 
     @pyqtSlot(bool)
     def calc_extinction(self):

@@ -2,7 +2,7 @@ from PyQt5.QtCore import pyqtSignal
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, reconstruct_phase2D, reconstruct_phase3D
 from recOrder.acq.acq_functions import generate_acq_settings, acquire_from_settings
-from recOrder.io.utils import load_bg
+from recOrder.io.utils import load_bg, extract_reconstruction_parameters
 from recOrder.compute import QLIPPBirefringenceCompute
 from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import logging
@@ -137,13 +137,13 @@ class AcquisitionWorker(WorkerBase):
         # Reconstruct snapped images
         self._check_abort()
         self.n_slices = stack.shape[2]
-        birefringence, phase = self._reconstruct(stack[0])
+        birefringence, phase, meta = self._reconstruct(stack[0])
         self._check_abort()
 
         # Save images if specified
         if self.calib_window.save_imgs:
             logging.debug('Saving Images')
-            self._save_imgs(birefringence, phase)
+            self._save_imgs(birefringence, phase, meta)
 
         self._check_abort()
 
@@ -298,10 +298,11 @@ class AcquisitionWorker(WorkerBase):
         else:
             raise ValueError('Reconstruction Mode Not Understood')
 
+        meta = extract_reconstruction_parameters(recon, self.calib_window.mag)
         # return both variables, could contain images or could be null
-        return birefringence, phase
+        return birefringence, phase, meta
 
-    def _save_imgs(self, birefringence, phase):
+    def _save_imgs(self, birefringence, phase, meta=None):
         """
         function to save images.  Seperates out both birefringence and phase into separate zarr stores.
         Makes sure file names do not overlap, i.e. nothing is overwritten.
@@ -329,6 +330,10 @@ class AcquisitionWorker(WorkerBase):
 
             # create zarr root and position group
             writer.create_zarr_root(f'Birefringence_Snap_{i}.zarr')
+            current_meta = writer.store.attrs.asdict()
+            current_meta['recOrder'] = meta
+            writer.store.attrs.put(current_meta)
+
             # Check if 2D
             if len(birefringence.shape) == 3:
                 writer.init_array(0, (1, 4, 1, birefringence.shape[-2], birefringence.shape[-1]),
@@ -356,6 +361,9 @@ class AcquisitionWorker(WorkerBase):
 
             # create zarr root and position group
             writer.create_zarr_root(f'Phase_Snap_{i}.zarr')
+            current_meta = writer.store.attrs.asdict()
+            current_meta['recOrder'] = meta
+            writer.store.attrs.put(current_meta)
 
             # Check if 2D
             if len(phase.shape) == 2:
@@ -542,7 +550,10 @@ class ListeningWorker(WorkerBase):
 
     def get_byte_offset(self, offsets, page):
         """
-        Gets the byte offset from the tiff tag metadata
+        Gets the byte offset from the tiff tag metadata.
+
+        210 accounts for header data + page header data.
+        162 accounts page header data
 
         Parameters
         ----------
@@ -616,6 +627,9 @@ class ListeningWorker(WorkerBase):
                             except IndexError:
                                 # NEED TO STOP BECAUSE RAN OUT OF PAGES OR REACHED END OF ACQ
                                 return array, idx, dim3, dim2, dim1, dim0
+
+                            # Checks if the offset in metadata is 0, but technically self.get_byte_offset() adds
+                            # 162 to every offset to account for tiff file header bytes
                             while offset == 162:
                                 self._check_abort()
                                 tf = tiff.TiffFile(file)
@@ -638,24 +652,20 @@ class ListeningWorker(WorkerBase):
                             else:
                                 t, p, c, z = dim2, dim3, dim1, dim0
 
+                            self._check_abort()
+
+                            # Add Image to array
+                            img = np.memmap(file, dtype=self.dtype, mode='r', offset=offset, shape=self.shape)
+                            array[c, z] = img
+
                             # If Channel first, compute birefringence here
                             if channel_dim == 0 and dim0 == self.n_channels - 1:
                                 self._check_abort()
 
-                                # Need to add last channel image before compute
-                                img = np.memmap(file, dtype=self.dtype, mode='r', offset=offset, shape=self.shape)
-                                array[c, z] = img
-
                                 # Compute birefringence
                                 self.compute_and_save(array[:, z], p, t, z)
-                                idx += 1
 
-                            # If Z First or channels not finished, add slice to the array
-                            else:
-                                self._check_abort()
-                                img = np.memmap(file, dtype=self.dtype, mode='r', offset=offset, shape=self.shape)
-                                array[c, z] = img
-                                idx += 1
+                            idx += 1
 
                     # Reset Range to 0 to account for starting this function in middle of a dimension
                     if idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
