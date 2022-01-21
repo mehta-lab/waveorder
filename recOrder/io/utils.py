@@ -4,7 +4,8 @@ import tifffile as tiff
 import numpy as np
 
 
-def extract_reconstruction_parameters(reconstructor, magnification):
+def extract_reconstruction_parameters(reconstructor, magnification=None):
+
 
     attr_dict = {'phase_dimension': reconstructor.phase_deconv,
                  'pad_z': reconstructor.pad_z,
@@ -14,7 +15,7 @@ def extract_reconstruction_parameters(reconstructor, magnification):
                  'condenser_NA': reconstructor.NA_illu * reconstructor.n_media,
                  'magnification': magnification,
                  'swing': reconstructor.chi if reconstructor.N_channel == 4 else reconstructor.chi / 2 / np.pi,
-                 'pixel_size': reconstructor.ps * magnification}
+                 'pixel_size': reconstructor.ps * magnification if magnification else None}
 
     return attr_dict
 

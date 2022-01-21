@@ -1,8 +1,8 @@
 from recOrder.calib.Calibration import QLIPP_Calibration
 from pycromanager import Bridge
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
-from PyQt5.QtWidgets import QWidget, QFileDialog, QGraphicsScene, QGraphicsPixmapItem
-from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtCore import pyqtSlot, pyqtSignal
+from PyQt5.QtWidgets import QWidget, QFileDialog
+from PyQt5.QtGui import QPixmap
 from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
 from recOrder.plugin.acquisition.acquisition_workers import AcquisitionWorker, ListeningWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
@@ -10,8 +10,6 @@ from recOrder.postproc.post_processing import ret_ori_overlay
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.utils import load_bg
 from pathlib import Path
-import pyqtgraph as pg
-from imageio import imread
 from napari import Viewer
 import numpy as np
 import os
@@ -87,6 +85,8 @@ class Calibration(QWidget):
         self.ui.qbutton_acq_phase.clicked[bool].connect(self.acq_phase)
         self.ui.qbutton_acq_birefringence_phase.clicked[bool].connect(self.acq_birefringence_phase)
         self.ui.cb_colormap.currentIndexChanged[int].connect(self.enter_colormap)
+        self.ui.chb_display_volume.stateChanged[int].connect(self.enter_use_full_volume)
+        self.ui.le_overlay_slice.editingFinished.connect(self.enter_display_slice)
 
         # Logging
         log_box = QtLogger(self.ui.te_log)
@@ -138,6 +138,9 @@ class Calibration(QWidget):
         self.lca_dac = None
         self.lcb_dac = None
         self.pause_updates = False
+        self.colormap = 'JCh'
+        self.use_full_volume = False
+        self.display_slice = None
 
         # Assessment attributes
         self.calib_assessment_level = None
@@ -333,7 +336,10 @@ class Calibration(QWidget):
         # Compute Overlay if birefringence acquisition is 2D
         if self.birefringence_dim == '2D':
             channel_names['BirefringenceOverlay'] = None
-            overlay = ret_ori_overlay(value[0], value[1], (0, np.percentile(value[0], 99.99)))
+            overlay = ret_ori_overlay(retardance=value[0],
+                                      orientation=value[1],
+                                      scale=(0, np.percentile(value[0], 99.99)),
+                                      cmap=self.colormap)
 
         for key, chan in channel_names.items():
             if key == 'BirefringenceOverlay':
@@ -356,7 +362,7 @@ class Calibration(QWidget):
         if 'Retardance' not in [self.ui.cb_saturation.itemText(i) for i in range(self.ui.cb_saturation.count())]:
             self.ui.cb_saturation.addItem('Retardance')
         if 'Retardance' not in [self.ui.cb_value.itemText(i) for i in range(self.ui.cb_value.count())]:
-            self.ui.cb_saturation.addItem('Retardance')
+            self.ui.cb_value.addItem('Retardance')
 
     @pyqtSlot(object)
     def handle_phase_image_update(self, value):
@@ -372,7 +378,7 @@ class Calibration(QWidget):
         if 'Phase' not in [self.ui.cb_saturation.itemText(i) for i in range(self.ui.cb_saturation.count())]:
             self.ui.cb_saturation.addItem('Retardance')
         if 'Phase' not in [self.ui.cb_value.itemText(i) for i in range(self.ui.cb_value.count())]:
-            self.ui.cb_saturation.addItem('Retardance')
+            self.ui.cb_value.addItem('Retardance')
 
     @pyqtSlot(object)
     def handle_reconstructor_update(self, value):
@@ -597,11 +603,44 @@ class Calibration(QWidget):
 
     @pyqtSlot()
     def enter_colormap(self):
+        prev_cmap = self.colormap
         state = self.ui.cb_colormap.currentIndex()
         if state == 0:
             self.ui.label_orientation_image.setPixmap(self.jch_pixmap)
+            self.colormap = 'JCh'
         else:
             self.ui.label_orientation_image.setPixmap(self.hsv_pixmap)
+            self.colormap = 'HSV'
+
+        # Update the birefringence overlay to new colormap if the colormap has changed
+        if prev_cmap != self.colormap:
+            #TODO: Handle case where there are multiple snaps
+            if 'BirefringenceOverlay2D' in self.viewer.layers:
+                if 'Retardance2D' in self.viewer.layers and 'Orientation2D' in self.viewer.layers:
+
+                    overlay = ret_ori_overlay(retardance=self.viewer.layers['Retardance2D'].data,
+                                              orientation=self.viewer.layers['Orientation2D'].data,
+                                              scale=(0, np.percentile(self.viewer.layers['Retardance2D'].data, 99.99)),
+                                              cmap=self.colormap)
+
+                    self.viewer.layers['BirefringenceOverlay2D'].data = overlay
+
+    @pyqtSlot(int)
+    def enter_use_full_volume(self):
+        state = self.ui.chb_display_volume.checkState()
+
+        if state == 2:
+            self.ui.le_overlay_slice.clear()
+            self.ui.le_overlay_slice.setEnabled(False)
+            self.use_full_volume = False
+        else:
+            self.ui.le_overlay_slice.setEnabled(True)
+            self.use_full_volume = True
+
+    @pyqtSlot()
+    def enter_display_slice(self):
+        slice = int(self.ui.le_overlay_slice.text())
+        self.display_slice = slice
 
     @pyqtSlot(bool)
     def calc_extinction(self):
@@ -819,6 +858,17 @@ class Calibration(QWidget):
 
         # Start Thread
         self.worker.start()
+
+    @pyqtSlot(bool)
+    def create_overlay(self):
+
+        if self.display_slice is None and not self.use_full_volume:
+            raise ValueError('Please specify a slice to display or choose to use the entire volume')
+        else:
+            if self.ui.cb_hue.count() == 0 or self.ui.cb_saturation.count() != 2 or self.ui.cb_value != 2:
+                raise ValueError('Cannot create overlay until Orientation, Retardance, and Phase are available')
+            else:
+                pass
 
     @pyqtSlot(object)
     def add_listener_data(self, store):

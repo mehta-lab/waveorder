@@ -298,6 +298,7 @@ class AcquisitionWorker(WorkerBase):
         else:
             raise ValueError('Reconstruction Mode Not Understood')
 
+        # mag = self.calib_window.mag if self.calib_window.mag is not None else 1
         meta = extract_reconstruction_parameters(recon, self.calib_window.mag)
         # return both variables, could contain images or could be null
         return birefringence, phase, meta
