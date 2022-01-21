@@ -109,7 +109,7 @@ def ret_ori_overlay(retardance, orientation, scale, mode='2D', cmap='JCh'):
 
             overlay_final[i] = JCh_rgb
         elif cmap == 'HSV':
-            I_hsv = np.transpose(np.stack([ori_, np.ones_like(ori_),
+            I_hsv = np.transpose(np.stack([ori_binned, np.ones_like(ori_binned),
                                            np.minimum(1, ret_ / np.max(ret_))]), (1, 2, 0))
             overlay_final[i] = hsv_to_rgb(I_hsv)
 
