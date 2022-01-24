@@ -1,6 +1,6 @@
 from recOrder.calib.Calibration import QLIPP_Calibration
 from pycromanager import Bridge
-from PyQt5.QtCore import pyqtSlot, pyqtSignal
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, QEvent
 from PyQt5.QtWidgets import QWidget, QFileDialog
 from PyQt5.QtGui import QPixmap
 from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
@@ -182,6 +182,12 @@ class Calibration(QWidget):
         self.ui.label_lcb.hide()
         self.ui.cb_lca.hide()
         self.ui.cb_lcb.hide()
+
+        # disable wheel events for combo boxes
+        for attr_name in dir(self):
+            if 'cb_' in attr_name:
+                attr = getattr(self, attr_name)
+                attr.wheelEvent = lambda event: None
 
     def _enable_buttons(self):
 
