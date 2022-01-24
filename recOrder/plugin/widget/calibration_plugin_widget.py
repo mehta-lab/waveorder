@@ -224,8 +224,8 @@ class Calibration(QWidget):
         raise exc
 
     def _handle_load_finished(self):
-        self.ui.le_calib_assessment.setText('Previous calibration successfully loaded')
-        self.ui.le_calib_assessment.setStyleSheet("border: 1px solid green;")
+        self.ui.tb_calib_assessment.setText('Previous calibration successfully loaded')
+        self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid green;")
         self.ui.progress_bar.setValue(100)
 
     def _update_calib(self, val):
@@ -277,14 +277,14 @@ class Calibration(QWidget):
 
     @pyqtSlot(str)
     def handle_calibration_assessment_msg_update(self, value):
-        self.ui.le_calib_assessment.setText(value)
+        self.ui.tb_calib_assessment.setText(value)
 
         if self.calib_assessment_level == 'good':
-            self.ui.le_calib_assessment.setStyleSheet("border: 1px solid green;")
+            self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid green;")
         elif self.calib_assessment_level == 'okay':
-            self.ui.le_calib_assessment.setStyleSheet("border: 1px solid rgb(252,190,3);")
+            self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid rgb(252,190,3);")
         elif self.calib_assessment_level == 'bad':
-            self.ui.le_calib_assessment.setStyleSheet("border: 1px solid rgb(200,0,0);")
+            self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid rgb(200,0,0);")
         else:
             pass
 

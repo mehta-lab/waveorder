@@ -217,8 +217,7 @@ class CalibrationWorker(WorkerBase):
                     self.calib_assessment_msg.emit('Sucessful Calibration, Okay Extinction Ratio')
                 else:
                     self.calib_assessment.emit('bad')
-                    self.calib_assessment_msg.emit('Poor Extinction, try tuning the linear polarizer to be',
-                                                   ' perpendicular to the long edge of the LC housing')
+                    self.calib_assessment_msg.emit('Poor Extinction, try tuning the linear polarizer to be perpendicular to the long edge of the LC housing')
 
             # LCB Values typically off when linear polarizer is not in correct orientation
             else:
