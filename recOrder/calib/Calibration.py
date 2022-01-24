@@ -491,7 +491,7 @@ class QLIPP_Calibration():
         if not auto_shutter:
             self.mmc.setShutterOpen(shutter)
 
-        self.I_Black = np.round(blacklevel, 2)
+        self.I_Black = blacklevel
 
         return blacklevel
 
@@ -674,8 +674,8 @@ class QLIPP_Calibration():
             raise ValueError('Please define the calibration scheme')
 
     def calculate_extinction(self, swing, black_level, intensity_extinction, intensity_elliptical):
-        return (1 / np.sin(np.pi * swing) ** 2) * \
-               (intensity_elliptical - black_level) / (intensity_extinction - black_level)
+        return np.round((1 / np.sin(np.pi * swing) ** 2) * \
+               (intensity_elliptical - black_level) / (intensity_extinction - black_level), 2)
 
     def calc_inst_matrix(self):
 
@@ -708,7 +708,7 @@ class QLIPP_Calibration():
 
         if self.calib_scheme == '4-State':
             data = {'Summary':
-                    {'Timestamp': datetime.now(),
+                    {'Timestamp': str(datetime.now()),
                      'Acquired Using': '4-State',
                      'Swing (fraction)': self.swing,
                      'Wavelength (nm)': self.wavelength,
@@ -729,7 +729,7 @@ class QLIPP_Calibration():
 
         elif self.calib_scheme == '5-State':
             data = {'Summary':
-                    {'Timestamp': datetime.now(),
+                    {'Timestamp': str(datetime.now()),
                      'Acquired Using': '5-State',
                      'Swing (fraction)': self.swing,
                      'Wavelength (nm)': self.wavelength,
