@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>583</width>
-    <height>1012</height>
+    <width>592</width>
+    <height>1035</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -119,8 +119,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>551</width>
-            <height>1185</height>
+            <width>552</width>
+            <height>1203</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -164,7 +164,7 @@
               <enum>Qt::ClickFocus</enum>
              </property>
              <property name="currentIndex">
-              <number>1</number>
+              <number>0</number>
              </property>
              <widget class="QWidget" name="tab_plot">
               <attribute name="title">
@@ -181,7 +181,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>511</width>
+                    <width>512</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -230,7 +230,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>511</width>
+                    <width>512</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -293,6 +293,23 @@
                    </item>
                   </layout>
                  </widget>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab_notes">
+              <attribute name="title">
+               <string>Notes</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout">
+               <item>
+                <widget class="QTextEdit" name="te_notes_field"/>
+               </item>
+               <item>
+                <widget class="QPushButton" name="qbutton_push_note">
+                 <property name="text">
+                  <string>Push Note to Last Calibration File</string>
+                 </property>
                 </widget>
                </item>
               </layout>
@@ -520,7 +537,7 @@
                </widget>
               </item>
               <item row="4" column="4">
-               <widget class="QLabel" name="lcabel_lcb">
+               <widget class="QLabel" name="label_lcb">
                 <property name="text">
                  <string>LC-B</string>
                 </property>
@@ -591,7 +608,55 @@
               <string>Run Calibration</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_12">
-              <item row="0" column="0">
+              <item row="8" column="0">
+               <widget class="QLabel" name="labell_calib_assessment">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Calibration Assessment</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_progress">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Progress</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_extinction">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Extinction</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0" colspan="2">
                <widget class="QPushButton" name="qbutton_calibrate">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
@@ -614,7 +679,14 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="0">
+              <item row="5" column="0" colspan="2">
+               <widget class="QProgressBar" name="progress_bar">
+                <property name="value">
+                 <number>0</number>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0" colspan="2">
                <widget class="QPushButton" name="qbutton_calc_extinction">
                 <property name="font">
                  <font>
@@ -628,28 +700,25 @@
                 </property>
                </widget>
               </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_progress">
+              <item row="6" column="1">
+               <widget class="QLineEdit" name="le_extinction">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
                 <property name="font">
                  <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
+                  <pointsize>20</pointsize>
                  </font>
                 </property>
-                <property name="text">
-                 <string>Progress</string>
+                <property name="readOnly">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
-              <item row="5" column="0">
-               <widget class="QProgressBar" name="progress_bar">
-                <property name="value">
-                 <number>0</number>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
+              <item row="3" column="0" colspan="2">
                <widget class="QPushButton" name="qbutton_stop_calib">
                 <property name="font">
                  <font>
@@ -663,55 +732,7 @@
                 </property>
                </widget>
               </item>
-              <item row="6" column="0">
-               <widget class="QLabel" name="label_extinction">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Extinction</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="0">
-               <widget class="QLineEdit" name="le_extinction">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="8" column="0">
-               <widget class="QLabel" name="labell_calib_assessment">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Calibration Assessment</string>
-                </property>
-               </widget>
-              </item>
-              <item row="9" column="0">
-               <widget class="QLineEdit" name="le_calib_assessment">
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="0">
+              <item row="1" column="0" colspan="2">
                <widget class="QPushButton" name="qbutton_load_calib">
                 <property name="font">
                  <font>
@@ -724,6 +745,9 @@
                  <string>Load Calibration</string>
                 </property>
                </widget>
+              </item>
+              <item row="8" column="1">
+               <widget class="QTextBrowser" name="tb_calib_assessment"/>
               </item>
              </layout>
             </widget>
@@ -793,7 +817,7 @@
                  </font>
                 </property>
                 <property name="text">
-                 <string>20</string>
+                 <string>5</string>
                 </property>
                </widget>
               </item>
@@ -915,8 +939,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>543</width>
-            <height>955</height>
+            <width>552</width>
+            <height>978</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_15">
@@ -1667,9 +1691,7 @@
   <tabstop>scrollArea</tabstop>
   <tabstop>le_mm_status</tabstop>
   <tabstop>chb_save_imgs</tabstop>
-  <tabstop>le_calib_assessment</tabstop>
   <tabstop>le_n_avg</tabstop>
-  <tabstop>le_extinction</tabstop>
   <tabstop>tabWidget_2</tabstop>
   <tabstop>cb_loglevel</tabstop>
   <tabstop>te_log</tabstop>

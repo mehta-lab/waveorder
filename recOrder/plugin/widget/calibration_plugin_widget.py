@@ -114,7 +114,7 @@ class Calibration(QWidget):
         self.config_group = 'Channel'
         self.use_cropped_roi = False
         self.bg_folder_name = 'BG'
-        self.n_avg = 20
+        self.n_avg = 5
         self.intensity_monitor = []
         self.save_imgs = False
         self.save_directory = None
@@ -163,30 +163,23 @@ class Calibration(QWidget):
         hsv_legend_path = os.path.join(recorder_dir, 'docs/images/HSV_legend.png')
         self.jch_pixmap = QPixmap(jch_legend_path)
         self.hsv_pixmap = QPixmap(hsv_legend_path)
-        # self.jch_pixmap = self.jch_pixmap.scaled(self.jch_pixmap.height()*0.8, self.jch_pixmap.width(), Qt.KeepAspectRatio)
         self.ui.label_orientation_image.setPixmap(self.jch_pixmap)
+
+        # Hide initial UI elements for later implementation or for later pop-up purposes
         self.ui.DisplayOptions.hide()
-
-
-        # Testing
-        # data = imread(img_path)
-        # print(data.shape)
-        # image = QImage(data, data.shape[0], data.shape[1], data.shape[1]*3, QImage.Format_RGB888)
-
-        # self.scene = QGraphicsScene(self)
-
-        # self.scene.addPixmap(pixmap_rescale)
-        # self.ui.graphicsView.setScene(self.scene)
-
-
-        # item = QGraphicsPixmapItem(pixmap)
-
-        # self.glayout = pg.GraphicsLayout()
-        # self.viewbox = self.glayout.addViewBox()
-        # self.ui.graphicsView.setCentralItem(self.glayout)
-        # self.viewbox.addItem(pg.ImageItem(data))
-        # self.viewbox.autoRange()
-
+        self.ui.label_hue.hide()
+        self.ui.label_saturation.hide()
+        self.ui.label_value.hide()
+        self.ui.qbutton_create_overlay.hide()
+        self.ui.cb_value.hide()
+        self.ui.cb_hue.hide()
+        self.ui.cb_saturation.hide()
+        self.ui.le_overlay_slice.hide()
+        self.ui.chb_display_volume.hide()
+        self.ui.label_lca.hide()
+        self.ui.label_lcb.hide()
+        self.ui.cb_lca.hide()
+        self.ui.cb_lcb.hide()
 
     def _enable_buttons(self):
 
@@ -237,9 +230,6 @@ class Calibration(QWidget):
 
     def _update_calib(self, val):
         self.calib = val
-
-    def _set_colormap(self, val):
-        pass
 
     @pyqtSlot(bool)
     def connect_to_mm(self):
@@ -428,10 +418,18 @@ class Calibration(QWidget):
         index = self.ui.cb_calib_mode.currentIndex()
         if index == 0:
             self.calib_mode = 'retardance'
+            self.ui.label_lca.hide()
+            self.ui.label_lcb.hide()
+            self.ui.cb_lca.hide()
+            self.ui.cb_lcb.hide()
         else:
             self.calib_mode = 'voltage'
             self.ui.cb_lca.clear()
             self.ui.cb_lcb.clear()
+            self.ui.cb_lca.show()
+            self.ui.cb_lcb.show()
+            self.ui.label_lca.show()
+            self.ui.label_lcb.show()
 
             cfg = self.mmc.getConfigData('Channel', 'State0')
 
@@ -446,7 +444,6 @@ class Calibration(QWidget):
                         memory.add(dac)
                     else:
                         continue
-
 
     @pyqtSlot()
     def enter_dac_lca(self):

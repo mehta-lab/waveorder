@@ -5,6 +5,7 @@ from recOrder.compute.qlipp_compute import initialize_reconstructor, \
 from recOrder.io.core_functions import define_lc_state, set_lc_state, snap_and_average
 import os
 import numpy as np
+import glob
 import logging
 
 
@@ -98,6 +99,15 @@ class CalibrationWorker(WorkerBase):
         self.extinction_update.emit(str(extinction_ratio))
 
         # Write Metadata
+        self.calib.meta_file = os.path.join(self.calib_window.directory, 'calibration_metadata.txt')
+        idx = 1
+        while os.path.exists(self.calib.meta_file):
+            if self.calib.meta_file == os.path.join(self.calib_window.directory, 'calibration_metadata.txt'):
+                self.calib.meta_file = os.path.join(self.calib_window.directory, 'calibration_metadata_1.txt')
+            else:
+                idx += 1
+                self.calib.meta_file = os.path.join(self.calib_window.directory, f'calibration_metadata_{idx}.txt')
+
         self.calib.write_metadata()
         self.progress_update.emit(100)
 
@@ -242,6 +252,12 @@ class BackgroundCaptureWorker(WorkerBase):
         bg_path = os.path.join(self.calib_window.directory, self.calib_window.ui.le_bg_folder.text())
         if not os.path.exists(bg_path):
             os.mkdir(bg_path)
+        else:
+            for state_file in glob.glob(os.path.join(bg_path, 'State*')):
+                os.remove(state_file)
+
+            if os.path.exists(os.path.join(bg_path, 'calibration_metadata.txt')):
+                os.remove(os.path.join(bg_path, 'calibration_metadata.txt'))
 
         self._check_abort()
 

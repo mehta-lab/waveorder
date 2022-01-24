@@ -12,6 +12,7 @@ import json
 import os
 import logging
 from recOrder.io.utils import MockEmitter
+from datetime import datetime
 
 #TODO: Docstrings
 class QLIPP_Calibration():
@@ -490,7 +491,8 @@ class QLIPP_Calibration():
         if not auto_shutter:
             self.mmc.setShutterOpen(shutter)
 
-        self.I_Black = blacklevel
+        self.I_Black = np.round(blacklevel, 2)
+
         return blacklevel
 
     def get_full_roi(self):
@@ -593,7 +595,7 @@ class QLIPP_Calibration():
         self.extinction_ratio = self.calculate_extinction()
 
         # Write Metadata
-        self.write_metadata(5)
+        self.write_metadata()
 
         # Return ROI to full FOV
         if use_full_FOV is False:
@@ -651,7 +653,7 @@ class QLIPP_Calibration():
         self.extinction_ratio = self.calculate_extinction()
 
         # Write Metadata
-        self.write_metadata(4)
+        self.write_metadata()
 
         # Return ROI to full FOV
         if use_full_FOV is False:
@@ -699,21 +701,15 @@ class QLIPP_Calibration():
 
             return inst_mat
 
-    def write_metadata(self):
-        """ Function to write a metadata file for calibration.
-            This follows the PolAcqu metadata file format and is compatible with
-            reconstruct-order
-        :param: n_states (int)
-            Number of states used for calibration
-        :param: directory (string)
-            Directory to save metadata file.
-        """
+    def write_metadata(self, notes=None):
+
         inst_mat = self.calc_inst_matrix()
         inst_mat = inst_mat.tolist()
 
         if self.calib_scheme == '4-State':
             data = {'Summary':
-                    {'Acquired Using': '4-State',
+                    {'Timestamp': datetime.now(),
+                     'Acquired Using': '4-State',
                      'Swing (fraction)': self.swing,
                      'Wavelength (nm)': self.wavelength,
                      'BlackLevel': self.I_Black,
@@ -727,12 +723,14 @@ class QLIPP_Calibration():
                      'Swing120': self.swing120,
                      'Extinction Ratio': self.extinction_ratio,
                      'ROI Used (x, y, width, height)': self.ROI,
-                     'Instrument_Matrix': inst_mat}
+                     'Instrument_Matrix': inst_mat},
+                    'Notes': notes
                     }
 
         elif self.calib_scheme == '5-State':
             data = {'Summary':
-                    {'Acquired Using': '5-State',
+                    {'Timestamp': datetime.now(),
+                     'Acquired Using': '5-State',
                      'Swing (fraction)': self.swing,
                      'Wavelength (nm)': self.wavelength,
                      'BlackLevel': self.I_Black,
@@ -748,7 +746,8 @@ class QLIPP_Calibration():
                      'Swing135': self.swing135,
                      'Extinction Ratio': self.extinction_ratio,
                      'ROI Used (x, y, width, height)': self.ROI,
-                     'Instrument_Matrix': inst_mat}
+                     'Instrument_Matrix': inst_mat},
+                    'Notes': notes
                     }
 
         if not self.meta_file.endswith('.txt'):
@@ -845,7 +844,6 @@ class QLIPP_Calibration():
         # self._plot_bg_images(np.asarray(imgs))
 
         return np.asarray(imgs)
-
 
 
 class CalibrationCurves:
