@@ -666,9 +666,14 @@ class Calibration(QWidget):
             with open(self.last_calib_meta_file, 'r') as file:
                 current_json = json.load(file)
 
-            current_json['Notes'] = note
+            old_note = current_json['Notes']
+            if old_note is None:
+                current_json['Notes'] = note
+            else:
+                current_json['Notes'] = old_note + ',' + note
+
             with open(self.last_calib_meta_file, 'w') as file:
-                json.dump(current_json, file)
+                json.dump(current_json, file, indent=1)
 
     @pyqtSlot(bool)
     def calc_extinction(self):
