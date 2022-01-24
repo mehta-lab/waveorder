@@ -112,6 +112,7 @@ class Calibration(QWidget):
         self.calib_scheme = '4-State'
         self.calib_mode = 'retardance'
         self.config_group = 'Channel'
+        self.last_calib_meta_file = None
         self.use_cropped_roi = False
         self.bg_folder_name = 'BG'
         self.n_avg = 5
@@ -207,13 +208,17 @@ class Calibration(QWidget):
     def _handle_error(self, exc):
         self.ui.tb_calib_assessment.setText(f'Error: {str(exc)}')
         self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid rgb(200,0,0);")
-        self.mmc.clearROI()
+
+        if self.use_cropped_roi:
+            self.mmc.clearROI()
+
         self.mmc.setAutoShutter(self.auto_shutter)
         self.ui.progress_bar.setValue(0)
         raise exc
 
     def _handle_calib_abort(self):
-        self.mmc.clearROI()
+        if self.use_cropped_roi:
+            self.mmc.clearROI()
         self.mmc.setAutoShutter(self.auto_shutter)
         self.ui.progress_bar.setValue(0)
 
@@ -374,6 +379,10 @@ class Calibration(QWidget):
     def handle_reconstructor_update(self, value):
         # Saves phase reconstructor to be re-used if possible
         self.phase_reconstructor = value
+
+    @pyqtSlot(str)
+    def handle_calib_file_update(self, value):
+        self.last_calib_meta_file = value
 
     @pyqtSlot(bool)
     def browse_dir_path(self):
@@ -678,6 +687,8 @@ class Calibration(QWidget):
         else:
             self.ui.cb_calib_scheme.setCurrentIndex(1)
 
+        self.last_calib_meta_file = result
+
         # Move the load calibration function to a separate thread
         self.worker = load_calibration(self.calib, meta)
 
@@ -733,6 +744,7 @@ class Calibration(QWidget):
         self.worker.intensity_update.connect(self.handle_plot_update)
         self.worker.calib_assessment.connect(self.handle_calibration_assessment_update)
         self.worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
+        self.worker.calib_file_emit.connect(self.handle_calib_file_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_error)

@@ -19,6 +19,7 @@ class CalibrationSignals(WorkerBaseSignals):
     intensity_update = pyqtSignal(object)
     calib_assessment = pyqtSignal(str)
     calib_assessment_msg = pyqtSignal(str)
+    calib_file_emit = pyqtSignal(str)
     aborted = pyqtSignal()
 
 
@@ -108,7 +109,9 @@ class CalibrationWorker(WorkerBase):
                 idx += 1
                 self.calib.meta_file = os.path.join(self.calib_window.directory, f'calibration_metadata_{idx}.txt')
 
-        self.calib.write_metadata()
+
+        self.calib.write_metadata(notes=self.calib_window.ui.te_notes_field.getText())
+        self.calib_file_emit.emit(self.calib.meta_file)
         self.progress_update.emit(100)
 
         self._check_abort()
