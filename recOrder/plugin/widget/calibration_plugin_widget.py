@@ -281,6 +281,9 @@ class Calibration(QWidget):
     def handle_plot_update(self, value):
         self.intensity_monitor.append(value)
         self.ui.plot_widget.plot(self.intensity_monitor)
+
+        state = self.plot_item.getViewBox().getState()
+        print(state)
         self.ui.plot_widget.getPlotItem().autoRange()
 
     @pyqtSlot(str)
