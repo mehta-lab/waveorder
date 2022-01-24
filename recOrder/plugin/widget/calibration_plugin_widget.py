@@ -186,7 +186,7 @@ class Calibration(QWidget):
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
             if 'cb_' in attr_name:
-                attr = getattr(self, attr_name)
+                attr = getattr(self.ui, attr_name)
                 attr.wheelEvent = lambda event: None
 
     def _enable_buttons(self):
