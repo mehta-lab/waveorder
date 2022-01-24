@@ -245,7 +245,7 @@
                    <item>
                     <widget class="QComboBox" name="cb_loglevel">
                      <property name="focusPolicy">
-                      <enum>Qt::ClickFocus</enum>
+                      <enum>Qt::StrongFocus</enum>
                      </property>
                      <property name="currentIndex">
                       <number>0</number>
@@ -339,7 +339,7 @@
                  </font>
                 </property>
                 <property name="focusPolicy">
-                 <enum>Qt::ClickFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -372,7 +372,7 @@
                  </font>
                 </property>
                 <property name="focusPolicy">
-                 <enum>Qt::ClickFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -527,7 +527,7 @@
                  </font>
                 </property>
                 <property name="focusPolicy">
-                 <enum>Qt::ClickFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -564,7 +564,7 @@
                  </font>
                 </property>
                 <property name="focusPolicy">
-                 <enum>Qt::ClickFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -588,7 +588,7 @@
               <item row="6" column="2">
                <widget class="QComboBox" name="cb_config_group">
                 <property name="focusPolicy">
-                 <enum>Qt::ClickFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                </widget>
               </item>
@@ -1017,7 +1017,7 @@
                   <item row="0" column="1">
                    <widget class="QComboBox" name="cb_bg_method">
                     <property name="focusPolicy">
-                     <enum>Qt::ClickFocus</enum>
+                     <enum>Qt::StrongFocus</enum>
                     </property>
                     <item>
                      <property name="text">
@@ -1302,7 +1302,7 @@
                  </font>
                 </property>
                 <property name="focusPolicy">
-                 <enum>Qt::ClickFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -1388,7 +1388,7 @@
                  </font>
                 </property>
                 <property name="focusPolicy">
-                 <enum>Qt::ClickFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -1503,7 +1503,7 @@
               <item row="4" column="0">
                <widget class="QComboBox" name="cb_hue">
                 <property name="focusPolicy">
-                 <enum>Qt::ClickFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                </widget>
               </item>
@@ -1541,7 +1541,7 @@
               <item row="4" column="2">
                <widget class="QComboBox" name="cb_value">
                 <property name="focusPolicy">
-                 <enum>Qt::ClickFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                </widget>
               </item>
@@ -1555,7 +1555,7 @@
                  </font>
                 </property>
                 <property name="focusPolicy">
-                 <enum>Qt::ClickFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                 <item>
                  <property name="text">
@@ -1579,7 +1579,7 @@
               <item row="4" column="1">
                <widget class="QComboBox" name="cb_saturation">
                 <property name="focusPolicy">
-                 <enum>Qt::ClickFocus</enum>
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                </widget>
               </item>
