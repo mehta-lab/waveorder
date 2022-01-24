@@ -5,7 +5,7 @@ import tifffile as tiff
 import time
 from recOrder.io.core_functions import define_lc_state, snap_image, set_lc_waves, set_lc_volts, set_lc_state, \
     snap_and_average, snap_and_get_image, get_lc_waves, get_lc_volts, define_lc_state_volts
-from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer, optimize_grid
+from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from scipy.interpolate import interp1d
 import json
@@ -179,6 +179,64 @@ class QLIPP_Calibration():
 
         return np.abs(mean - reference)
 
+    def opt_lc_grid(self, a_min, a_max, b_min, b_max, step):
+        """
+        Exhaustive Search method
+
+        Finds the minimum intensity value for a given
+        grid of LCA,LCB values
+
+        :param a_min: float
+            Minimum value of LCA
+        :param a_max: float
+            Maximum value of LCA
+        :param b_min: float
+            Minimum value of LCB
+        :param b_max: float
+            Maximum value of LCB
+        :param step: float
+            step size of the grid between max/min values
+
+
+        :return best_lca: float
+            LCA value corresponding to lowest mean Intensity
+        :return best_lcb: float
+            LCB value corresponding to lowest mean Intensity
+        :return min_int: float
+            Lowest value of mean Intensity
+        """
+
+        min_int = 65536
+        better_lca = -1
+        better_lcb = -1
+
+        # coarse search
+        for lca in np.arange(a_min, a_max, step):
+            for lcb in np.arange(b_min, b_max, step):
+
+                self.set_lc(lca, 'LCA')
+                self.set_lc(lcb, 'LCB')
+
+                # current_int = np.mean(snap_image(calib.mmc))
+                current_int = snap_and_average(self.snap_manager)
+                self.intensity_emitter.emit(current_int)
+
+                if current_int < min_int:
+                    better_lca = lca
+                    better_lcb = lcb
+                    min_int = current_int
+                    logging.debug("update (%f, %f, %f)" % (min_int, better_lca, better_lcb))
+
+        logging.debug("coarse search done")
+        logging.debug("better lca = " + str(better_lca))
+        logging.debug("better lcb = " + str(better_lcb))
+        logging.debug("better int = " + str(min_int))
+
+        best_lca = better_lca
+        best_lcb = better_lcb
+
+        return best_lca, best_lcb, min_int
+
     # ========== Optimization wrappers =============
     # ==============================================
     def opt_Iext(self):
@@ -196,7 +254,7 @@ class QLIPP_Calibration():
         logging.debug(f"Starting first grid search, step = {step}")
         logging.debug(f"================================")
 
-        best_lca, best_lcb, i_ext_ = optimize_grid(self, 0.01, 0.5, 0.25, 0.75, step)
+        best_lca, best_lcb, i_ext_ = self.opt_lc_grid(0.01, 0.5, 0.25, 0.75, step)
 
         logging.debug("grid search done")
         logging.debug("lca = " + str(best_lca))
