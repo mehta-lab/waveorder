@@ -110,7 +110,7 @@ class CalibrationWorker(WorkerBase):
                 self.calib.meta_file = os.path.join(self.calib_window.directory, f'calibration_metadata_{idx}.txt')
 
 
-        self.calib.write_metadata(notes=self.calib_window.ui.te_notes_field.getText())
+        self.calib.write_metadata(notes=self.calib_window.ui.le_notes_field.text())
         self.calib_file_emit.emit(self.calib.meta_file)
         self.progress_update.emit(100)
 

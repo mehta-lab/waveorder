@@ -651,15 +651,18 @@ class Calibration(QWidget):
 
     @pyqtSlot(bool)
     def push_note(self):
-        note = self.ui.te_notes_field.copy()
-        print(type(note), note)
 
-        with open(self.last_calib_meta_file, 'r') as file:
-            current_json = json.load(file)
+        if not self.last_calib_meta_file:
+            raise ValueError('No calibration has been performed yet so there is no previous metadata file')
+        else:
+            note = self.ui.le_notes_field.text()
 
-        current_json['Notes'] = note
-        with open(self.last_calib_meta_file, 'w') as file:
-            json.dump(current_json, file)
+            with open(self.last_calib_meta_file, 'r') as file:
+                current_json = json.load(file)
+
+            current_json['Notes'] = note
+            with open(self.last_calib_meta_file, 'w') as file:
+                json.dump(current_json, file)
 
     @pyqtSlot(bool)
     def calc_extinction(self):

@@ -145,7 +145,7 @@
            <property name="verticalSpacing">
             <number>20</number>
            </property>
-           <item row="6" column="0">
+           <item row="6" column="0" alignment="Qt::AlignTop">
             <widget class="QTabWidget" name="tabWidget_2">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
@@ -301,14 +301,21 @@
               <attribute name="title">
                <string>Notes</string>
               </attribute>
-              <layout class="QVBoxLayout" name="verticalLayout">
-               <item>
-                <widget class="QTextEdit" name="te_notes_field"/>
+              <layout class="QFormLayout" name="formLayout">
+               <item row="1" column="0" colspan="2">
+                <widget class="QLineEdit" name="le_notes_field"/>
                </item>
-               <item>
+               <item row="2" column="0" colspan="2">
                 <widget class="QPushButton" name="qbutton_push_note">
                  <property name="text">
-                  <string>Push Note to Last Calibration File</string>
+                  <string>Push note to last metadata file</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_note">
+                 <property name="text">
+                  <string>Note</string>
                  </property>
                 </widget>
                </item>
