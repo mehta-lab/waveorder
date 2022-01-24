@@ -58,6 +58,7 @@ class Calibration(QWidget):
 
         # Advanced
         self.ui.cb_loglevel.currentIndexChanged[int].connect(self.enter_log_level)
+        self.ui.qbutton_push_note.clicked[bool].connect(self.push_note)
 
         # Acquisition Tab
         self.ui.qbutton_browse_save_path.clicked[bool].connect(self.browse_save_path)
@@ -647,6 +648,18 @@ class Calibration(QWidget):
     def enter_display_slice(self):
         slice = int(self.ui.le_overlay_slice.text())
         self.display_slice = slice
+
+    @pyqtSlot(bool)
+    def push_note(self):
+        note = self.ui.te_notes_field.copy()
+        print(type(note), note)
+
+        with open(self.last_calib_meta_file, 'r') as file:
+            current_json = json.load(file)
+
+        current_json['Notes'] = note
+        with open(self.last_calib_meta_file, 'w') as file:
+            json.dump(current_json, file)
 
     @pyqtSlot(bool)
     def calc_extinction(self):
