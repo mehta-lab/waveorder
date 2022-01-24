@@ -482,6 +482,7 @@ class QLIPP_Calibration():
         avgs = []
         for i in range(n_avg):
             mean = snap_and_average(self.snap_manager)
+            self.intensity_emitter.emit(mean)
             avgs.append(mean)
 
         blacklevel = np.mean(avgs)
