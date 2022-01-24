@@ -205,8 +205,8 @@ class Calibration(QWidget):
         self.ui.qbutton_create_overlay.setEnabled(False)
 
     def _handle_error(self, exc):
-        self.ui.le_calib_assessment.setText(f'Error: {str(exc)}')
-        self.ui.le_calib_assessment.setStyleSheet("border: 1px solid rgb(200,0,0);")
+        self.ui.tb_calib_assessment.setText(f'Error: {str(exc)}')
+        self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid rgb(200,0,0);")
         self.mmc.clearROI()
         self.mmc.setAutoShutter(self.auto_shutter)
         self.ui.progress_bar.setValue(0)
@@ -704,8 +704,8 @@ class Calibration(QWidget):
             self.calib.set_dacs(self.lca_dac, self.lcb_dac)
 
         # Reset Styling
-        self.ui.le_calib_assessment.setText('')
-        self.ui.le_calib_assessment.setStyleSheet("")
+        self.ui.tb_calib_assessment.setText('')
+        self.ui.tb_calib_assessment.setStyleSheet("")
 
         # Save initial autoshutter state for when we set it back later
         self.auto_shutter = self.mmc.getAutoShutter()
