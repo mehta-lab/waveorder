@@ -152,6 +152,7 @@ class Calibration(QWidget):
         self.plot_item.enableAutoRange()
         self.plot_item.setLabel('left', 'Intensity')
         self.ui.plot_widget.setBackground((32, 34, 40))
+        self.plot_sequence = 'Coarse'
 
         # Init Logger
         self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
@@ -281,12 +282,16 @@ class Calibration(QWidget):
     def handle_plot_update(self, value):
         self.intensity_monitor.append(value)
         self.ui.plot_widget.plot(self.intensity_monitor)
+
         #
         # state = self.plot_item.getViewBox().getState()
         # view_range = state['viewRange']
         #
         # print(state)
 
+        # if self.plot_sequence = 'Coarse':
+        #     self.plot_item.autoRange()
+        # else:
         self.plot_item.autoRange()
 
     @pyqtSlot(str)

@@ -20,6 +20,7 @@ class CalibrationSignals(WorkerBaseSignals):
     calib_assessment = pyqtSignal(str)
     calib_assessment_msg = pyqtSignal(str)
     calib_file_emit = pyqtSignal(str)
+    plot_sequence_emit = pyqtSignal(str)
     aborted = pyqtSignal()
 
 
@@ -50,6 +51,7 @@ class CalibrationWorker(WorkerBase):
         Runs the full calibration algorithm and emits necessary signals.
         """
 
+        self.plot_sequence_emit.emit('Coarse')
         self.calib.intensity_emitter = self.intensity_update
         self.calib.get_full_roi()
         self.progress_update.emit(1)
