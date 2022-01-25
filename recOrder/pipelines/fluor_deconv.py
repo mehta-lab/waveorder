@@ -130,11 +130,9 @@ class FluorescenceDeconvolution(PipelineInterface):
         deconvolved3D = None
         deconvolved2D = None
 
-        bg_levels = calculate_background(data[:, self.data.slices // 2])
-
         #todo: move transposing to compute function
         if self.mode == '3D':
-
+            bg_levels = calculate_background(data[:, self.data.slices // 2])
             deconvolved3D = deconvolve_fluorescence_3D(data,
                                                        self.reconstructor,
                                                        bg_level=bg_levels,
@@ -150,6 +148,8 @@ class FluorescenceDeconvolution(PipelineInterface):
                 raise ValueError('deconvolution returned incorrect dimensions')
 
         elif self.mode == '2D':
+            bg_levels = calculate_background(data)
+
             deconvolved2D = deconvolve_fluorescence_2D(data,
                                                        self.reconstructor,
                                                        bg_level=bg_levels,
@@ -233,7 +233,7 @@ class FluorescenceDeconvolution(PipelineInterface):
 
         Returns
         -------
-        collected_data:     (nd-array) collected raw data of dimensions (C, Z, Y, X)
+        collected_data:     (nd-array) collected raw data of dimensions (C, Z, Y, X) or (C, Y, X)
         """
 
         collected_data = []

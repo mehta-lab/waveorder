@@ -115,11 +115,12 @@ def test_2D_reconstruction(setup_test_data_zarr, setup_data_save_folder):
     manager.run()
 
     pos, t, z = 1, 0, 40
-    data = manager.data.get_array(pos)
-    bg_level = calculate_background(data[t, 0, z])
+    data = manager.data.get_array(pos)[t, 0, z]
+    data = np.expand_dims(data, axis=0)
+    bg_level = calculate_background(data)
     recon = manager.pipeline.reconstructor
 
-    fluor2D = deconvolve_fluorescence_2D(data[t, 0, z], recon, bg_level, reg=[config.reg])
+    fluor2D = deconvolve_fluorescence_2D(data, recon, bg_level, reg=[config.reg])
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'), 'r')
     array = store['Row_0']['Col_1']['Pos_001']['array']
 

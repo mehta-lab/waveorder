@@ -86,7 +86,7 @@ def calculate_background(data):
         fluors = 1
         data = data[np.newaxis, :, :]
     else:
-        raise ValueError('invalid input data dimensions.  Data must be (N_fluor, Z, Y, X) or (Z, Y, X)')
+        raise ValueError('invalid input data dimensions.  Data must be (N_fluor, Y, X) or (Y, X)')
 
     background_vals = []
     for i in range(fluors):
