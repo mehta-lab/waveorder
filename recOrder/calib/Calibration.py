@@ -786,7 +786,8 @@ class QLIPP_Calibration():
                      'Swing120': self.swing120,
                      'ROI Used (x, y, width, height)': self.ROI,
                      'Instrument_Matrix': inst_mat},
-                    'Notes': notes
+                    'Notes': notes,
+                    'Microscope Parameters': None
                     }
 
         elif self.calib_scheme == '5-State':
@@ -809,7 +810,8 @@ class QLIPP_Calibration():
                      'Swing135': self.swing135,
                      'ROI Used (x, y, width, height)': self.ROI,
                      'Instrument_Matrix': inst_mat},
-                    'Notes': notes
+                    'Notes': notes,
+                    'Microscope Parameters': None
                     }
 
         if not self.meta_file.endswith('.txt'):

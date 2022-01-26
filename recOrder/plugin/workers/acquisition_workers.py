@@ -25,6 +25,7 @@ class AcquisitionSignals(WorkerBaseSignals):
     phase_image_emitter = pyqtSignal(object)
     bire_image_emitter = pyqtSignal(object)
     phase_reconstructor_emitter = pyqtSignal(object)
+    meta_emitter = pyqtSignal(dict)
     aborted = pyqtSignal()
 
 class ListeningSignals(WorkerBaseSignals):
@@ -101,12 +102,6 @@ class AcquisitionWorker(WorkerBase):
             # Returns (1, 4/5, 1, Y, X) array
             stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
 
-            # Sleep to make sure resources get unblocked before attempting cleanup
-            time.sleep(1)
-
-            # Cleanup acquisition by closing window + deleting temp directory
-            self._cleanup_acq()
-
         # Acquire 3D stack
         else:
             logging.debug('Acquiring 3D stack')
@@ -126,12 +121,6 @@ class AcquisitionWorker(WorkerBase):
             # Acquire from MDA settings uses MM MDA GUI
             # Returns (1, 4/5, Z, Y, X) array
             stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
-
-            # Sleep to make sure resources get unblocked before attempting cleanup
-            time.sleep(1)
-
-            # Cleanup acquisition by closing window + deleting temp directory
-            self._cleanup_acq()
             self._check_abort()
 
         # Reconstruct snapped images
@@ -140,10 +129,9 @@ class AcquisitionWorker(WorkerBase):
         birefringence, phase, meta = self._reconstruct(stack[0])
         self._check_abort()
 
-        # Save images if specified
-        if self.calib_window.save_imgs:
-            logging.debug('Saving Images')
-            self._save_imgs(birefringence, phase, meta)
+        # Save images
+        logging.debug('Saving Images')
+        self._save_imgs(birefringence, phase, meta)
 
         self._check_abort()
 
@@ -153,6 +141,10 @@ class AcquisitionWorker(WorkerBase):
         # Emit the images and let thread know function is finished
         self.bire_image_emitter.emit(birefringence)
         self.phase_image_emitter.emit(phase)
+        self.meta_emitter.emit(meta)
+
+        # Cleanup acquisition by closing window + deleting temp directory
+        self._cleanup_acq()
 
     def _reconstruct(self, stack):
         """
@@ -317,7 +309,8 @@ class AcquisitionWorker(WorkerBase):
         -------
 
         """
-        writer = WaveorderWriter(self.calib_window.save_directory)
+        dir_ = self.calib_window.save_directory if self.calib_window.save_directory else self.calib_window.directory
+        writer = WaveorderWriter(dir_)
 
         if birefringence is not None:
 
@@ -326,11 +319,14 @@ class AcquisitionWorker(WorkerBase):
             i = 0
 
             # increment filename one more than last found saved snap
-            while os.path.exists(os.path.join(self.calib_window.save_directory, f'Birefringence_Snap_{i}.zarr')):
+            prefix = self.calib_window.save_name
+            name = f'Birefringence_Snap_{i}.zarr' if not prefix else f'{prefix}_Birefringence_Snap_{i}.zarr'
+            while os.path.exists(os.path.join(dir_, name)):
                 i += 1
+                name = f'Birefringence_Snap_{i}.zarr' if not prefix else f'{prefix}_Birefringence_Snap_{i}.zarr'
 
             # create zarr root and position group
-            writer.create_zarr_root(f'Birefringence_Snap_{i}.zarr')
+            writer.create_zarr_root(name)
             current_meta = writer.store.attrs.asdict()
             current_meta['recOrder'] = meta
             writer.store.attrs.put(current_meta)
@@ -357,11 +353,15 @@ class AcquisitionWorker(WorkerBase):
 
             # increment filename one more than last found saved snap
             i = 0
-            while os.path.exists(os.path.join(self.calib_window.save_directory, f'Phase_Snap_{i}.zarr')):
+            prefix = self.calib_window.save_name
+            name = f'Phase_Snap_{i}.zarr' if not prefix else f'{prefix}_Phase_Snap_{i}.zarr'
+            while os.path.exists(os.path.join(dir_, name)):
                 i += 1
+                name = f'Phase_Snap_{i}.zarr' if not prefix else f'{prefix}_Phasee_Snap_{i}.zarr'
+
 
             # create zarr root and position group
-            writer.create_zarr_root(f'Phase_Snap_{i}.zarr')
+            writer.create_zarr_root(name)
             current_meta = writer.store.attrs.asdict()
             current_meta['recOrder'] = meta
             writer.store.attrs.put(current_meta)
@@ -396,7 +396,7 @@ class AcquisitionWorker(WorkerBase):
 
         #TODO: Change to just accept ROI
         try:
-            meta_path = open(os.path.join(path,'calibration_metadata.txt'))
+            meta_path = open(os.path.join(path, 'calibration_metadata.txt'))
             roi = json.load(meta_path)['Summary']['ROI Used (x, y, width, height)']
             meta_path.close()
         except:

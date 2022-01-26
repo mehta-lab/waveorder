@@ -3,6 +3,7 @@ from napari.qt.threading import WorkerBaseSignals, WorkerBase, thread_worker
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
 from recOrder.io.core_functions import define_lc_state, set_lc_state, snap_and_average
+from recOrder.io.utils import MockEmitter
 import os
 import numpy as np
 import glob
@@ -345,6 +346,7 @@ def load_calibration(calib, meta: dict):
         define_lc_state(calib.mmc, 'State4', state4[0], state4[1], calib.PROPERTIES)
 
     # Calculate Blacklevel after loading these properties
+    calib.intensity_emitter = MockEmitter()
     calib.calc_blacklevel()
     set_lc_state(calib.mmc, calib.group, 'State0')
     calib.I_Ext = snap_and_average(calib.snap_manager)

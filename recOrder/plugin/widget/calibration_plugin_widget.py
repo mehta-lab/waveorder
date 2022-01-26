@@ -3,9 +3,9 @@ from pycromanager import Bridge
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy
 from PyQt5.QtGui import QPixmap
-from superqt import QLabeledRangeSlider, QRangeSlider
-from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
-from recOrder.plugin.acquisition.acquisition_workers import AcquisitionWorker, ListeningWorker
+from superqt import QRangeSlider
+from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
+from recOrder.plugin.workers.acquisition_workers import AcquisitionWorker, ListeningWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
 from recOrder.postproc.post_processing import ret_ori_overlay
 from recOrder.io.core_functions import set_lc_state, snap_and_average
@@ -65,8 +65,8 @@ class Calibration(QWidget):
         # Acquisition Tab
         self.ui.qbutton_gui_mode.clicked[bool].connect(self.change_gui_mode)
         self.ui.qbutton_browse_save_dir.clicked[bool].connect(self.browse_save_path)
-        # self.ui.chb_save_imgs.stateChanged[int].connect(self.enter_save_imgs)
         self.ui.le_save_dir.editingFinished.connect(self.enter_save_path)
+        self.ui.le_data_save_name.editingFinished.connect(self.enter_save_name)
         self.ui.qbutton_listen.clicked[bool].connect(self.listen_and_reconstruct)
         self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
         self.ui.le_zend.editingFinished.connect(self.enter_zend)
@@ -128,8 +128,8 @@ class Calibration(QWidget):
         self.bg_folder_name = 'BG'
         self.n_avg = 5
         self.intensity_monitor = []
-        self.save_imgs = False
         self.save_directory = None
+        self.save_name = None
         self.bg_option = 'None'
         self.birefringence_dim = '2D'
         self.phase_dim = '2D'
@@ -394,21 +394,17 @@ class Calibration(QWidget):
             for i in range(groups.size()):
                 group_list.append(groups.get(i))
             self.ui.cb_config_group.addItems(group_list)
-
             self.mm_status_changed.emit(True)
         except:
             self.mm_status_changed.emit(False)
 
     @pyqtSlot(bool)
     def handle_mm_status_update(self, value):
+        print(value)
         if value:
             self.ui.le_mm_status.setText('Sucess!')
             self.ui.le_mm_status.setStyleSheet("background-color: green;")
-            self.gui_mode = 'online'
-            self._hide_acquisition_ui(False)
-            self._hide_offline_ui(True)
-            self.ui.qbutton_gui_mode.setText('Switch to Offline')
-            self.ui.le_gui_mode.setText('Online')
+
         else:
             self.ui.le_mm_status.setText('Failed.')
             self.ui.le_mm_status.setStyleSheet("background-color: rgb(200,0,0);")
@@ -435,9 +431,9 @@ class Calibration(QWidget):
         if self.plot_sequence[0] == 'Coarse':
             self.plot_item.autoRange()
         else:
-            self.plot_item.setRange(xRange=(self.plot_sequence[0], len(self.intensity_monitor)),
-                                    yRange=(0, np.max(self.intensity_monitor[self.plot_sequence[0]:])))
-            # self.plot_item.autoRange()
+            self.plot_item.setRange(xRange=(self.plot_sequence[1], len(self.intensity_monitor)),
+                                    yRange=(0, np.max(self.intensity_monitor[self.plot_sequence[1]:])),
+                                    padding=0.1)
 
     @pyqtSlot(str)
     def handle_calibration_assessment_update(self, value):
@@ -510,13 +506,6 @@ class Calibration(QWidget):
         # if self.ui.DisplayOptions.isHidden():
         #     self.ui.DisplayOptions.show()
 
-        if 'Orientation' not in [self.ui.cb_hue.itemText(i) for i in range(self.ui.cb_hue.count())]:
-            self.ui.cb_hue.addItem('Orientation')
-        if 'Retardance' not in [self.ui.cb_saturation.itemText(i) for i in range(self.ui.cb_saturation.count())]:
-            self.ui.cb_saturation.addItem('Retardance')
-        if 'Retardance' not in [self.ui.cb_value.itemText(i) for i in range(self.ui.cb_value.count())]:
-            self.ui.cb_value.addItem('Retardance')
-
     @pyqtSlot(object)
     def handle_phase_image_update(self, value):
 
@@ -537,6 +526,16 @@ class Calibration(QWidget):
     def handle_reconstructor_update(self, value):
         # Saves phase reconstructor to be re-used if possible
         self.phase_reconstructor = value
+
+    @pyqtSlot(dict)
+    def handle_meta_update(self, value):
+        with open(self.last_calib_meta_file, 'r') as file:
+            current_json = json.load(file)
+
+        current_json['Microscope Parameters'] = value
+
+        with open(self.last_calib_meta_file, 'w') as file:
+            json.dump(current_json, file, indent=1)
 
     @pyqtSlot(str)
     def handle_calib_file_update(self, value):
@@ -569,7 +568,7 @@ class Calibration(QWidget):
         result = self._open_browse_dialog(self.current_save_path)
         self.save_directory = result
         self.current_save_path = result
-        self.ui.le_save_path.setText(result)
+        self.ui.le_save_dir.setText(result)
 
     @pyqtSlot()
     def enter_dir_path(self):
@@ -666,21 +665,18 @@ class Calibration(QWidget):
             logging.getLogger().setLevel(logging.DEBUG)
 
     @pyqtSlot()
-    def enter_save_imgs(self):
-        state = self.ui.chb_save_imgs.checkState()
-        if state == 2:
-            self.save_imgs = True
-        elif state == 0:
-            self.save_imgs = False
-
-    @pyqtSlot()
     def enter_save_path(self):
-        path = self.ui.le_save_path.text()
+        path = self.ui.le_save_dir.text()
         if os.path.exists(path):
             self.save_directory = path
             self.current_save_path = path
         else:
-            self.ui.le_save_path.setText('Path Does Not Exist')
+            self.ui.le_save_dir.setText('Path Does Not Exist')
+
+    @pyqtSlot()
+    def enter_save_name(self):
+        name = self.ui.le_data_save_name.text()
+        self.save_name = name
 
     @pyqtSlot()
     def enter_zstart(self):
@@ -842,10 +838,10 @@ class Calibration(QWidget):
                 current_json = json.load(file)
 
             old_note = current_json['Notes']
-            if old_note is None:
+            if old_note is None or old_note == '':
                 current_json['Notes'] = note
             else:
-                current_json['Notes'] = old_note + ',' + note
+                current_json['Notes'] = old_note + ', ' + note
 
             with open(self.last_calib_meta_file, 'w') as file:
                 json.dump(current_json, file, indent=1)
@@ -996,6 +992,7 @@ class Calibration(QWidget):
 
         # Connect Handler
         self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
+        self.worker.meta_emitter.connect(self.handle_meta_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_acq_error)
@@ -1015,6 +1012,7 @@ class Calibration(QWidget):
         # Connect Handlers
         self.worker.phase_image_emitter.connect(self.handle_phase_image_update)
         self.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
+        self.worker.meta_emitter.connect(self.handle_meta_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_acq_error)
@@ -1035,6 +1033,7 @@ class Calibration(QWidget):
         self.worker.phase_image_emitter.connect(self.handle_phase_image_update)
         self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
         self.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
+        self.worker.meta_emitter.connect(self.handle_meta_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_acq_error)

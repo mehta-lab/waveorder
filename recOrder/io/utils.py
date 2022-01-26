@@ -78,5 +78,5 @@ def create_grid_from_coordinates(xy_coords, rows, columns):
 
 
 class MockEmitter:
-    def emit(self):
+    def emit(self, value):
         pass

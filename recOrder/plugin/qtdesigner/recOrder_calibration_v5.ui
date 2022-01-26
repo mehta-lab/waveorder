@@ -120,7 +120,7 @@
             <x>0</x>
             <y>0</y>
             <width>578</width>
-            <height>1329</height>
+            <height>1326</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -726,7 +726,7 @@
                 </property>
                 <property name="font">
                  <font>
-                  <pointsize>20</pointsize>
+                  <pointsize>17</pointsize>
                  </font>
                 </property>
                 <property name="readOnly">
@@ -968,7 +968,7 @@
             <x>0</x>
             <y>0</y>
             <width>578</width>
-            <height>969</height>
+            <height>961</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -2385,8 +2385,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>546</width>
-            <height>931</height>
+            <width>562</width>
+            <height>939</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
