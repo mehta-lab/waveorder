@@ -190,6 +190,10 @@ class Calibration(QWidget):
         # Set initial UI Properties
         self.ui.le_gui_mode.setStyleSheet("border: 1px solid rgb(200,0,0); color: rgb(200,0,0);")
         self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
+        self.ui.le_mm_status.setText('Not Connected')
+        self.ui.le_mm_status.setStyleSheet("border: 1px solid yellow;")
+        # self.setStyleSheet("QGroupBox::title {padding-top: -10}")
+        self.setStyleSheet("QGroupBox {margin-top: 20;}")
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
@@ -250,10 +254,12 @@ class Calibration(QWidget):
             self.ui.tabWidget.setStyleSheet("QTabBar::tab::disabled {width: 0; height: 0; margin: 0; padding: 0; border: none;} ")
         else:
             self.ui.tabWidget.setStyleSheet("")
-            self.mm_status_changed.emit(False)
+            self.ui.le_mm_status.setText('Not Connected')
+            self.ui.le_mm_status.setStyleSheet("border: 1px solid yellow;")
             self.mmc = None
             self.mm = None
             self.ui.cb_config_group.clear()
+            self.ui.tabWidget.setCurrentIndex(0)
 
     def _hide_offline_ui(self, val: bool):
 

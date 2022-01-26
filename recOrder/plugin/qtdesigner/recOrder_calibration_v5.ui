@@ -32,7 +32,7 @@
    <enum>Qt::LeftToRight</enum>
   </property>
   <layout class="QGridLayout" name="gridLayout_7">
-   <item row="0" column="0">
+   <item row="1" column="0">
     <widget class="QTabWidget" name="tabWidget">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -111,6 +111,11 @@
        </property>
        <item row="0" column="0">
         <widget class="QScrollArea" name="scrollArea">
+         <property name="font">
+          <font>
+           <italic>false</italic>
+          </font>
+         </property>
          <property name="widgetResizable">
           <bool>true</bool>
          </property>
@@ -120,7 +125,7 @@
             <x>0</x>
             <y>0</y>
             <width>578</width>
-            <height>1326</height>
+            <height>1309</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -173,6 +178,11 @@
               <layout class="QVBoxLayout" name="verticalLayout_4">
                <item>
                 <widget class="QScrollArea" name="scrollArea_3">
+                 <property name="font">
+                  <font>
+                   <italic>false</italic>
+                  </font>
+                 </property>
                  <property name="widgetResizable">
                   <bool>true</bool>
                  </property>
@@ -188,6 +198,11 @@
                   <layout class="QVBoxLayout" name="verticalLayout_6">
                    <item>
                     <widget class="QLabel" name="label_inten_plot">
+                     <property name="font">
+                      <font>
+                       <italic>false</italic>
+                      </font>
+                     </property>
                      <property name="text">
                       <string>Intensity Plot</string>
                      </property>
@@ -200,6 +215,11 @@
                        <width>0</width>
                        <height>250</height>
                       </size>
+                     </property>
+                     <property name="font">
+                      <font>
+                       <italic>false</italic>
+                      </font>
                      </property>
                     </widget>
                    </item>
@@ -328,7 +348,7 @@
              <property name="font">
               <font>
                <weight>75</weight>
-               <italic>true</italic>
+               <italic>false</italic>
                <bold>true</bold>
               </font>
              </property>
@@ -522,6 +542,13 @@
               </item>
               <item row="4" column="3">
                <widget class="QLabel" name="label_lca">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>LC-A</string>
                 </property>
@@ -551,6 +578,13 @@
               </item>
               <item row="4" column="4">
                <widget class="QLabel" name="label_lcb">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>LC-B</string>
                 </property>
@@ -561,6 +595,13 @@
               </item>
               <item row="5" column="0">
                <widget class="QLabel" name="label_calib_mode">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Calibration Mode</string>
                 </property>
@@ -593,6 +634,13 @@
               </item>
               <item row="6" column="0">
                <widget class="QLabel" name="label_cfg_group">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Config Group</string>
                 </property>
@@ -600,6 +648,11 @@
               </item>
               <item row="6" column="2">
                <widget class="QComboBox" name="cb_config_group">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                 </font>
+                </property>
                 <property name="focusPolicy">
                  <enum>Qt::StrongFocus</enum>
                 </property>
@@ -613,7 +666,7 @@
              <property name="font">
               <font>
                <weight>75</weight>
-               <italic>true</italic>
+               <italic>false</italic>
                <bold>true</bold>
               </font>
              </property>
@@ -697,6 +750,11 @@
               </item>
               <item row="5" column="0" colspan="2">
                <widget class="QProgressBar" name="progress_bar">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                 </font>
+                </property>
                 <property name="value">
                  <number>0</number>
                 </property>
@@ -727,6 +785,7 @@
                 <property name="font">
                  <font>
                   <pointsize>17</pointsize>
+                  <italic>false</italic>
                  </font>
                 </property>
                 <property name="readOnly">
@@ -763,7 +822,13 @@
                </widget>
               </item>
               <item row="8" column="1">
-               <widget class="QTextBrowser" name="tb_calib_assessment"/>
+               <widget class="QTextBrowser" name="tb_calib_assessment">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                 </font>
+                </property>
+               </widget>
               </item>
              </layout>
             </widget>
@@ -773,7 +838,7 @@
              <property name="font">
               <font>
                <weight>75</weight>
-               <italic>true</italic>
+               <italic>false</italic>
                <bold>true</bold>
               </font>
              </property>
@@ -862,12 +927,12 @@
              <property name="font">
               <font>
                <weight>75</weight>
-               <italic>true</italic>
+               <italic>false</italic>
                <bold>true</bold>
               </font>
              </property>
              <property name="title">
-              <string>Connect to Micromanager</string>
+              <string/>
              </property>
              <layout class="QGridLayout" name="gridLayout_14">
               <property name="verticalSpacing">
@@ -968,7 +1033,7 @@
             <x>0</x>
             <y>0</y>
             <width>578</width>
-            <height>961</height>
+            <height>884</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -992,7 +1057,7 @@
              <property name="font">
               <font>
                <weight>75</weight>
-               <italic>true</italic>
+               <italic>false</italic>
                <bold>true</bold>
               </font>
              </property>
@@ -1005,6 +1070,12 @@
               </property>
               <item row="0" column="0">
                <widget class="QPushButton" name="qbutton_listen">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Listen For Data</string>
                 </property>
@@ -1026,6 +1097,12 @@
               </item>
               <item row="4" column="0" colspan="2">
                <widget class="QPushButton" name="qbutton_stop_acq">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>STOP</string>
                 </property>
@@ -1033,6 +1110,12 @@
               </item>
               <item row="2" column="1">
                <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Acquire Birefringence + Phase</string>
                 </property>
@@ -1055,85 +1138,6 @@
              </layout>
             </widget>
            </item>
-           <item row="0" column="0" colspan="2" alignment="Qt::AlignTop">
-            <widget class="QGroupBox" name="recon_status">
-             <property name="font">
-              <font>
-               <weight>75</weight>
-               <italic>true</italic>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="title">
-              <string>Status</string>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_22">
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_gui_mode">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Preferred">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Current Reconstruction Mode</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="le_gui_mode">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Offline</string>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="2">
-               <widget class="QPushButton" name="qbutton_gui_mode">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Switch to Online</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
            <item row="6" column="0" colspan="2" alignment="Qt::AlignTop">
             <widget class="QGroupBox" name="ReconSettings">
              <property name="sizePolicy">
@@ -1145,7 +1149,7 @@
              <property name="font">
               <font>
                <weight>75</weight>
-               <italic>true</italic>
+               <italic>false</italic>
                <bold>true</bold>
               </font>
              </property>
@@ -1201,6 +1205,9 @@
                    <widget class="QGroupBox" name="groupBox">
                     <property name="title">
                      <string/>
+                    </property>
+                    <property name="flat">
+                     <bool>true</bool>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_20">
                      <item row="0" column="0">
@@ -2207,7 +2214,7 @@
              <property name="font">
               <font>
                <weight>75</weight>
-               <italic>true</italic>
+               <italic>false</italic>
                <bold>true</bold>
               </font>
              </property>
@@ -2216,6 +2223,9 @@
              </property>
              <property name="title">
               <string>Acquisition Settings</string>
+             </property>
+             <property name="flat">
+              <bool>false</bool>
              </property>
              <layout class="QGridLayout" name="gridLayout_8">
               <property name="verticalSpacing">
@@ -2350,6 +2360,12 @@
               </item>
               <item row="4" column="0">
                <widget class="QCheckBox" name="chb_pause_updates">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Pause Updates</string>
                 </property>
@@ -2386,7 +2402,7 @@
             <x>0</x>
             <y>0</y>
             <width>562</width>
-            <height>939</height>
+            <height>863</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
@@ -2621,6 +2637,85 @@
        </item>
       </layout>
      </widget>
+    </widget>
+   </item>
+   <item row="0" column="0" alignment="Qt::AlignTop">
+    <widget class="QGroupBox" name="recon_status">
+     <property name="font">
+      <font>
+       <weight>75</weight>
+       <italic>false</italic>
+       <bold>true</bold>
+      </font>
+     </property>
+     <property name="title">
+      <string>recOrder Status</string>
+     </property>
+     <layout class="QGridLayout" name="gridLayout_22">
+      <item row="0" column="0">
+       <widget class="QLabel" name="label_gui_mode">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <weight>50</weight>
+          <italic>false</italic>
+          <bold>false</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Mode</string>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="le_gui_mode">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <weight>50</weight>
+          <italic>false</italic>
+          <bold>false</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Offline</string>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="2">
+       <widget class="QPushButton" name="qbutton_gui_mode">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <weight>50</weight>
+          <italic>false</italic>
+          <bold>false</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Switch to Online</string>
+        </property>
+       </widget>
+      </item>
+     </layout>
     </widget>
    </item>
   </layout>
