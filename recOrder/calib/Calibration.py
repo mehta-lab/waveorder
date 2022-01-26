@@ -39,6 +39,7 @@ class QLIPP_Calibration():
 
         # GUI Emitter
         self.intensity_emitter = MockEmitter()
+        self.plot_sequence_emitter = MockEmitter()
 
         #Set Mode
         self.mode = mode
@@ -240,6 +241,7 @@ class QLIPP_Calibration():
     # ========== Optimization wrappers =============
     # ==============================================
     def opt_Iext(self):
+        self.plot_sequence_emitter.emit('Coarse')
         logging.info('Calibrating State0 (Extinction)...')
         logging.debug('Calibrating State0 (Extinction)...')
 
@@ -271,6 +273,7 @@ class QLIPP_Calibration():
         # Perform brent optimization around results of 2nd grid search
         # threshold not very necessary here as intensity value will
         # vary between exposure/lamp intensities
+        self.plot_sequence_emitter.emit('Fine')
         lca, lcb, I_ext = self.optimizer.optimize(state='ext', lca_bound=0.1, lcb_bound=0.1,
                                                   reference=self.I_Black, thresh=1, n_iter=5)
 

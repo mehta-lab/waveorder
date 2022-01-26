@@ -1,8 +1,9 @@
 from recOrder.calib.Calibration import QLIPP_Calibration
 from pycromanager import Bridge
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, QEvent
-from PyQt5.QtWidgets import QWidget, QFileDialog
+from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
+from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy
 from PyQt5.QtGui import QPixmap
+from superqt import QLabeledRangeSlider, QRangeSlider
 from recOrder.plugin.calibration.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
 from recOrder.plugin.acquisition.acquisition_workers import AcquisitionWorker, ListeningWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
@@ -31,6 +32,7 @@ class Calibration(QWidget):
         # Setup GUI Elements
         self.ui = recOrder_calibration_v5.Ui_Form()
         self.ui.setupUi(self)
+        self._promote_slider()
 
         # Setup Connections between elements
         # Connect to MicroManager
@@ -61,9 +63,10 @@ class Calibration(QWidget):
         self.ui.qbutton_push_note.clicked[bool].connect(self.push_note)
 
         # Acquisition Tab
-        self.ui.qbutton_browse_save_path.clicked[bool].connect(self.browse_save_path)
-        self.ui.chb_save_imgs.stateChanged[int].connect(self.enter_save_imgs)
-        self.ui.le_save_path.editingFinished.connect(self.enter_save_path)
+        self.ui.qbutton_gui_mode.clicked[bool].connect(self.change_gui_mode)
+        self.ui.qbutton_browse_save_dir.clicked[bool].connect(self.browse_save_path)
+        # self.ui.chb_save_imgs.stateChanged[int].connect(self.enter_save_imgs)
+        self.ui.le_save_dir.editingFinished.connect(self.enter_save_path)
         self.ui.qbutton_listen.clicked[bool].connect(self.listen_and_reconstruct)
         self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
         self.ui.le_zend.editingFinished.connect(self.enter_zend)
@@ -88,6 +91,8 @@ class Calibration(QWidget):
         self.ui.cb_colormap.currentIndexChanged[int].connect(self.enter_colormap)
         self.ui.chb_display_volume.stateChanged[int].connect(self.enter_use_full_volume)
         self.ui.le_overlay_slice.editingFinished.connect(self.enter_display_slice)
+        self.ui.slider_value.sliderMoved[tuple].connect(self.handle_val_slider_move)
+        self.ui.slider_saturation.sliderMoved[tuple].connect(self.handle_sat_slider_move)
 
         # Logging
         log_box = QtLogger(self.ui.te_log)
@@ -99,6 +104,7 @@ class Calibration(QWidget):
         self.mm_status_changed.connect(self.handle_mm_status_update)
 
         # Instantiate Attributes:
+        self.gui_mode = 'offline'
         self.mm = None
         self.mmc = None
         self.calib = None
@@ -169,26 +175,134 @@ class Calibration(QWidget):
         self.ui.label_orientation_image.setPixmap(self.jch_pixmap)
 
         # Hide initial UI elements for later implementation or for later pop-up purposes
-        self.ui.DisplayOptions.hide()
-        self.ui.label_hue.hide()
-        self.ui.label_saturation.hide()
-        self.ui.label_value.hide()
-        self.ui.qbutton_create_overlay.hide()
-        self.ui.cb_value.hide()
-        self.ui.cb_hue.hide()
-        self.ui.cb_saturation.hide()
-        self.ui.le_overlay_slice.hide()
-        self.ui.chb_display_volume.hide()
+        # self.ui.DisplayOptions.hide()
+        # self.ui.label_hue.hide()
+        # self.ui.label_saturation.hide()
+        # self.ui.label_value.hide()
+        # self.ui.qbutton_create_overlay.hide()
+        # self.ui.cb_value.hide()
+        # self.ui.cb_hue.hide()
+        # self.ui.cb_saturation.hide()
+        # self.ui.le_overlay_slice.hide()
+        # self.ui.chb_display_volume.hide()
+        # self.ui.label_range.hide()
+        # self.ui.slider_saturation.hide()
+        # self.ui.slider_value.hide()
         self.ui.label_lca.hide()
         self.ui.label_lcb.hide()
         self.ui.cb_lca.hide()
         self.ui.cb_lcb.hide()
+        self._hide_acquisition_ui(True)
+        self.ui.label_bg_path.setHidden(True)
+        self.ui.le_bg_path.setHidden(True)
+        self.ui.qbutton_browse_bg_path.setHidden(True)
+        self.ui.le_rho.setHidden(True)
+        self.ui.le_itr.setHidden(True)
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
             if 'cb_' in attr_name:
                 attr = getattr(self.ui, attr_name)
                 attr.wheelEvent = lambda event: None
+
+    def _promote_slider(self):
+
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+
+        # Get Information from regular sliders
+        value_slider_idx = self.ui.gridLayout_17.indexOf(self.ui.slider_value)
+        value_slider_position = self.ui.gridLayout_17.getItemPosition(value_slider_idx)
+        value_slider_parent = self.ui.slider_value.parent().objectName()
+        saturation_slider_idx = self.ui.gridLayout_17.indexOf(self.ui.slider_saturation)
+        saturation_slider_position = self.ui.gridLayout_17.getItemPosition(saturation_slider_idx)
+        saturation_slider_parent = self.ui.slider_saturation.parent().objectName()
+
+        # Remove regular sliders from the UI
+        self.ui.gridLayout_17.removeWidget(self.ui.slider_value)
+        self.ui.gridLayout_17.removeWidget(self.ui.slider_saturation)
+
+        # Add back the sliders as range sliders with the same properties
+        self.ui.slider_saturation = QRangeSlider(getattr(self.ui, saturation_slider_parent))
+        sizePolicy.setHeightForWidth(self.ui.slider_saturation.sizePolicy().hasHeightForWidth())
+        self.ui.slider_saturation.setSizePolicy(sizePolicy)
+        self.ui.slider_saturation.setOrientation(Qt.Horizontal)
+        self.ui.slider_saturation.setObjectName("slider_saturation")
+        self.ui.gridLayout_17.addWidget(self.ui.slider_saturation,
+                                        saturation_slider_position[0],
+                                        saturation_slider_position[1],
+                                        saturation_slider_position[2],
+                                        saturation_slider_position[3])
+        self.ui.slider_saturation.setRange(0, 100)
+
+
+        self.ui.slider_value = QRangeSlider(getattr(self.ui, value_slider_parent))
+        sizePolicy.setHeightForWidth(self.ui.slider_value.sizePolicy().hasHeightForWidth())
+        self.ui.slider_value.setSizePolicy(sizePolicy)
+        self.ui.slider_value.setOrientation(Qt.Horizontal)
+        self.ui.slider_value.setObjectName("slider_value")
+        self.ui.gridLayout_17.addWidget(self.ui.slider_value,
+                                        value_slider_position[0],
+                                        value_slider_position[1],
+                                        value_slider_position[2],
+                                        value_slider_position[3])
+        self.ui.slider_value.setRange(0, 100)
+
+    def _hide_acquisition_ui(self, val: bool):
+        self.ui.acq_settings.setHidden(val)
+        self.ui.acquire.setHidden(val)
+
+        # Calibration Tab
+        self.ui.tabWidget.setTabEnabled(0, not val)
+        if val:
+            self.ui.tabWidget.setStyleSheet("QTabBar::tab::disabled {width: 0; height: 0; margin: 0; padding: 0; border: none;} ")
+        else:
+            self.ui.tabWidget.setStyleSheet("")
+            self.mm_status_changed.emit(False)
+            self.mmc = None
+            self.mm = None
+            self.ui.cb_config_group.clear()
+
+    def _hide_offline_ui(self, val: bool):
+
+        # General Settings
+        self.ui.le_data_dir.setHidden(val)
+        self.ui.label_data_dir.setHidden(val)
+        self.ui.qbutton_browse_data_dir.setHidden(val)
+        self.ui.le_calibration_metadata.setHidden(val)
+        self.ui.label_calib_meta.setHidden(val)
+        self.ui.qbutton_browse_calib_meta.setHidden(val)
+        self.ui.qbutton_load_config.setHidden(val)
+        self.ui.qbutton_save_config.setHidden(val)
+        self.ui.qbutton_load_default_config.setHidden(val)
+
+        # Processing Settings
+        self.ui.tabWidget_3.setTabEnabled(1, not val)
+        if val:
+            self.ui.tabWidget_3.setStyleSheet("QTabBar::tab::disabled {width: 0; height: 0; margin: 0; padding: 0; border: none;} ")
+        else:
+            self.ui.tabWidget_3.setStyleSheet("")
+
+        # Physical Parameters
+        self.ui.le_recon_wavelength.setHidden(val)
+        self.ui.label_recon_wavelength.setHidden(val)
+
+        # Regularization
+        self.ui.fluorescence.setHidden(val)
+
+        # Pre/Post Processing
+        self.ui.tabWidget_3.setTabEnabled(4, not val)
+        if val:
+            self.ui.tabWidget_3.setStyleSheet("QTabBar::tab::disabled {width: 0; height: 0; margin: 0; padding: 0; border: none;} ")
+        else:
+            self.ui.tabWidget_3.setStyleSheet("")
+
+        self.ui.tabWidget_3.setTabEnabled(5, not val)
+        if val:
+            self.ui.tabWidget_3.setStyleSheet("QTabBar::tab::disabled {width: 0; height: 0; margin: 0; padding: 0; border: none;} ")
+        else:
+            self.ui.tabWidget_3.setStyleSheet("")
 
     def _enable_buttons(self):
 
@@ -245,6 +359,21 @@ class Calibration(QWidget):
         self.calib = val
 
     @pyqtSlot(bool)
+    def change_gui_mode(self):
+        if self.gui_mode == 'offline':
+            self.ui.qbutton_gui_mode.setText('Switch to Offline')
+            self.ui.le_gui_mode.setText('Online')
+            self._hide_offline_ui(True)
+            self._hide_acquisition_ui(False)
+            self.gui_mode = 'online'
+        else:
+            self.ui.qbutton_gui_mode.setText('Switch to Online')
+            self.ui.le_gui_mode.setText('Online')
+            self._hide_offline_ui(False)
+            self._hide_acquisition_ui(True)
+            self.gui_mode = 'offline'
+
+    @pyqtSlot(bool)
     def connect_to_mm(self):
         try:
             bridge = Bridge(convert_camel_case=False)
@@ -266,6 +395,11 @@ class Calibration(QWidget):
         if value:
             self.ui.le_mm_status.setText('Sucess!')
             self.ui.le_mm_status.setStyleSheet("background-color: green;")
+            self.gui_mode = 'online'
+            self._hide_acquisition_ui(False)
+            self._hide_offline_ui(True)
+            self.ui.qbutton_gui_mode.setText('Switch to Offline')
+            self.ui.le_gui_mode.setText('Online')
         else:
             self.ui.le_mm_status.setText('Failed.')
             self.ui.le_mm_status.setStyleSheet("background-color: rgb(200,0,0);")
@@ -289,10 +423,12 @@ class Calibration(QWidget):
         #
         # print(state)
 
-        # if self.plot_sequence = 'Coarse':
-        #     self.plot_item.autoRange()
-        # else:
-        self.plot_item.autoRange()
+        if self.plot_sequence[0] == 'Coarse':
+            self.plot_item.autoRange()
+        else:
+            self.plot_item.setRange(xRange=(self.plot_sequence[0], len(self.intensity_monitor)),
+                                    yRange=(0, np.max(self.intensity_monitor[self.plot_sequence[0]:])))
+            # self.plot_item.autoRange()
 
     @pyqtSlot(str)
     def handle_calibration_assessment_update(self, value):
@@ -401,6 +537,21 @@ class Calibration(QWidget):
     @pyqtSlot(str)
     def handle_calib_file_update(self, value):
         self.last_calib_meta_file = value
+
+    @pyqtSlot(str)
+    def handle_plot_sequence_update(self, value):
+        current_idx = len(self.intensity_monitor)
+        self.plot_sequence = (value, current_idx)
+
+    @pyqtSlot(tuple)
+    def handle_sat_slider_move(self, value):
+        self.ui.label_sat_min.setText(str(value[0]))
+        self.ui.label_sat_max.setText(str(value[1]))
+
+    @pyqtSlot(tuple)
+    def handle_val_slider_move(self, value):
+        self.ui.label_val_min.setText(str(value[0]))
+        self.ui.label_val_max.setText(str(value[1]))
 
     @pyqtSlot(bool)
     def browse_dir_path(self):
@@ -575,10 +726,19 @@ class Calibration(QWidget):
     def enter_bg_correction(self):
         state = self.ui.cb_bg_method.currentIndex()
         if state == 0:
+            self.ui.label_bg_path.setHidden(True)
+            self.ui.le_bg_path.setHidden(True)
+            self.ui.qbutton_browse_bg_path.setHidden(True)
             self.bg_option = 'None'
         elif state == 1:
+            self.ui.label_bg_path.setHidden(False)
+            self.ui.le_bg_path.setHidden(False)
+            self.ui.qbutton_browse_bg_path.setHidden(False)
             self.bg_option = 'Global'
         elif state == 2:
+            self.ui.label_bg_path.setHidden(False)
+            self.ui.le_bg_path.setHidden(False)
+            self.ui.qbutton_browse_bg_path.setHidden(False)
             self.bg_option = 'local_fit'
 
     @pyqtSlot()
@@ -783,6 +943,7 @@ class Calibration(QWidget):
         self.worker.calib_assessment.connect(self.handle_calibration_assessment_update)
         self.worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
         self.worker.calib_file_emit.connect(self.handle_calib_file_update)
+        self.worker.plot_sequence_emit.connect(self.handle_plot_sequence_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_error)

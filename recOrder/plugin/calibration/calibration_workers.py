@@ -53,6 +53,7 @@ class CalibrationWorker(WorkerBase):
 
         self.plot_sequence_emit.emit('Coarse')
         self.calib.intensity_emitter = self.intensity_update
+        self.calib.plot_sequence_emitter = self.plot_sequence_emit
         self.calib.get_full_roi()
         self.progress_update.emit(1)
         self.progress_update.emit(1)
