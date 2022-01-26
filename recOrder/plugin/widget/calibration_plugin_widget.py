@@ -94,6 +94,10 @@ class Calibration(QWidget):
         self.ui.slider_value.sliderMoved[tuple].connect(self.handle_val_slider_move)
         self.ui.slider_saturation.sliderMoved[tuple].connect(self.handle_sat_slider_move)
 
+        # Display Tab
+        self.viewer.layers.events.inserted.connect(self._add_layer_to_display_boxes)
+        self.viewer.layers.events.removed.connect(self._remove_layer_from_display_boxes)
+
         # Logging
         log_box = QtLogger(self.ui.te_log)
         log_box.setFormatter(logging.Formatter('%(levelname)s - %(message)s'))
@@ -160,9 +164,6 @@ class Calibration(QWidget):
         self.ui.plot_widget.setBackground((32, 34, 40))
         self.plot_sequence = 'Coarse'
 
-        # Init Logger
-        self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
-
         # Init thread worker
         self.worker = None
 
@@ -175,19 +176,6 @@ class Calibration(QWidget):
         self.ui.label_orientation_image.setPixmap(self.jch_pixmap)
 
         # Hide initial UI elements for later implementation or for later pop-up purposes
-        # self.ui.DisplayOptions.hide()
-        # self.ui.label_hue.hide()
-        # self.ui.label_saturation.hide()
-        # self.ui.label_value.hide()
-        # self.ui.qbutton_create_overlay.hide()
-        # self.ui.cb_value.hide()
-        # self.ui.cb_hue.hide()
-        # self.ui.cb_saturation.hide()
-        # self.ui.le_overlay_slice.hide()
-        # self.ui.chb_display_volume.hide()
-        # self.ui.label_range.hide()
-        # self.ui.slider_saturation.hide()
-        # self.ui.slider_value.hide()
         self.ui.label_lca.hide()
         self.ui.label_lcb.hide()
         self.ui.cb_lca.hide()
@@ -198,6 +186,10 @@ class Calibration(QWidget):
         self.ui.qbutton_browse_bg_path.setHidden(True)
         self.ui.le_rho.setHidden(True)
         self.ui.le_itr.setHidden(True)
+
+        # Set initial UI Properties
+        self.ui.le_gui_mode.setStyleSheet("border: 1px solid rgb(200,0,0); color: rgb(200,0,0);")
+        self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
@@ -235,7 +227,6 @@ class Calibration(QWidget):
                                         saturation_slider_position[2],
                                         saturation_slider_position[3])
         self.ui.slider_saturation.setRange(0, 100)
-
 
         self.ui.slider_value = QRangeSlider(getattr(self.ui, value_slider_parent))
         sizePolicy.setHeightForWidth(self.ui.slider_value.sizePolicy().hasHeightForWidth())
@@ -344,9 +335,6 @@ class Calibration(QWidget):
         self.mmc.setAutoShutter(self.auto_shutter)
         self.ui.progress_bar.setValue(0)
 
-    def _handle_acq_abort(self):
-        pass
-
     def _handle_acq_error(self, exc):
         raise exc
 
@@ -358,17 +346,38 @@ class Calibration(QWidget):
     def _update_calib(self, val):
         self.calib = val
 
+    def _add_layer_to_display_boxes(self, val):
+        for layer in self.viewer.layers:
+            if layer.name not in [self.ui.cb_hue.itemText(i) for i in range(self.ui.cb_hue.count())]:
+                self.ui.cb_hue.addItem(layer.name)
+            if layer.name not in [self.ui.cb_saturation.itemText(i) for i in range(self.ui.cb_saturation.count())]:
+                self.ui.cb_saturation.addItem(layer.name)
+            if layer.name not in [self.ui.cb_value.itemText(i) for i in range(self.ui.cb_value.count())]:
+                self.ui.cb_value.addItem(layer.name)
+
+    def _remove_layer_from_display_boxes(self, val):
+
+        for i in range(self.ui.cb_hue.count()):
+            if val.value.name in self.ui.cb_hue.itemText(i):
+                self.ui.cb_hue.removeItem(i)
+            if val.value.name in self.ui.cb_saturation.itemText(i):
+                self.ui.cb_saturation.removeItem(i)
+            if val.value.name in self.ui.cb_value.itemText(i):
+                self.ui.cb_value.removeItem(i)
+
     @pyqtSlot(bool)
     def change_gui_mode(self):
         if self.gui_mode == 'offline':
             self.ui.qbutton_gui_mode.setText('Switch to Offline')
             self.ui.le_gui_mode.setText('Online')
+            self.ui.le_gui_mode.setStyleSheet("border: 1px solid green; color: green;")
             self._hide_offline_ui(True)
             self._hide_acquisition_ui(False)
             self.gui_mode = 'online'
         else:
             self.ui.qbutton_gui_mode.setText('Switch to Online')
-            self.ui.le_gui_mode.setText('Online')
+            self.ui.le_gui_mode.setText('Offline')
+            self.ui.le_gui_mode.setStyleSheet("border: 1px solid rgb(200,0,0); color: rgb(200,0,0);")
             self._hide_offline_ui(False)
             self._hide_acquisition_ui(True)
             self.gui_mode = 'offline'
@@ -473,11 +482,6 @@ class Calibration(QWidget):
     @pyqtSlot(object)
     def handle_bire_image_update(self, value):
 
-        # channel_names = {'Brightfield': 2,
-        #                  'Orientation': 1,
-        #                  'Retardance': 0,
-        #                  }
-
         channel_names = {'Orientation': 1,
                          'Retardance': 0,
                          }
@@ -503,8 +507,8 @@ class Calibration(QWidget):
                     cmap = 'gray' if key != 'Orientation' else 'hsv'
                     self.viewer.add_image(value[chan], name=key+self.birefringence_dim, colormap=cmap)
 
-        if self.ui.DisplayOptions.isHidden():
-            self.ui.DisplayOptions.show()
+        # if self.ui.DisplayOptions.isHidden():
+        #     self.ui.DisplayOptions.show()
 
         if 'Orientation' not in [self.ui.cb_hue.itemText(i) for i in range(self.ui.cb_hue.count())]:
             self.ui.cb_hue.addItem('Orientation')
