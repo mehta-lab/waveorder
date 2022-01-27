@@ -1091,7 +1091,7 @@
                  </font>
                 </property>
                 <property name="currentIndex">
-                 <number>2</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="General">
                  <attribute name="title">
@@ -2463,7 +2463,7 @@
              <property name="font">
               <font>
                <weight>75</weight>
-               <italic>true</italic>
+               <italic>false</italic>
                <bold>true</bold>
               </font>
              </property>
@@ -2493,6 +2493,12 @@
               </item>
               <item row="15" column="0" colspan="4">
                <widget class="QPushButton" name="qbutton_create_overlay">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Create Overlay</string>
                 </property>
@@ -2520,6 +2526,12 @@
               </item>
               <item row="9" column="2" colspan="2">
                <widget class="QSlider" name="slider_saturation">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -2551,6 +2563,12 @@
               </item>
               <item row="11" column="1">
                <widget class="QComboBox" name="cb_value">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="focusPolicy">
                  <enum>Qt::StrongFocus</enum>
                 </property>
@@ -2558,6 +2576,12 @@
               </item>
               <item row="7" column="1">
                <widget class="QComboBox" name="cb_hue">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="focusPolicy">
                  <enum>Qt::StrongFocus</enum>
                 </property>
@@ -2565,6 +2589,12 @@
               </item>
               <item row="11" column="0">
                <widget class="QLabel" name="label_value">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Value</string>
                 </property>
@@ -2572,6 +2602,12 @@
               </item>
               <item row="9" column="1">
                <widget class="QComboBox" name="cb_saturation">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="focusPolicy">
                  <enum>Qt::StrongFocus</enum>
                 </property>
@@ -2579,6 +2615,12 @@
               </item>
               <item row="14" column="1">
                <widget class="QCheckBox" name="chb_display_volume">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Use Full Volume</string>
                 </property>
@@ -2592,6 +2634,12 @@
                   <verstretch>0</verstretch>
                  </sizepolicy>
                 </property>
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -2599,6 +2647,12 @@
               </item>
               <item row="6" column="0" colspan="4">
                <widget class="Line" name="line">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="lineWidth">
                  <number>3</number>
                 </property>
@@ -2609,6 +2663,12 @@
               </item>
               <item row="3" column="0">
                <widget class="QLabel" name="label_colormap">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>BirefringenceOverlay Colormap</string>
                 </property>
@@ -2616,6 +2676,12 @@
               </item>
               <item row="7" column="0">
                <widget class="QLabel" name="label_hue">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Hue</string>
                 </property>
@@ -2623,6 +2689,12 @@
               </item>
               <item row="9" column="0">
                <widget class="QLabel" name="label_saturation">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>Saturation</string>
                 </property>

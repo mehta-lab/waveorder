@@ -4,6 +4,7 @@ from waveorder.io.writer import WaveorderWriter
 import time
 import os
 import shutil
+from recOrder.io.utils import MockEmitter
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
 from recOrder.postproc.post_processing import *
@@ -15,7 +16,7 @@ class PipelineManager:
     This will pull the necessary pipeline based off the config default.
     """
 
-    def __init__(self, config: ConfigReader, overwrite: bool = False):
+    def __init__(self, config: ConfigReader, overwrite: bool = False, emitter=MockEmitter()):
 
         start = time.time()
         print('Reading Data...')
@@ -52,10 +53,10 @@ class PipelineManager:
 
         # Pipeline Initiation
         if self.config.method == 'QLIPP':
-            self.pipeline = QLIPP(self.config, self.data, self.writer, self.config.mode, self.num_t)
+            self.pipeline = QLIPP(self.config, self.data, self.writer, self.config.mode, self.num_t, emitter=emitter)
 
         elif self.config.method == 'PhaseFromBF':
-            self.pipeline = PhaseFromBF(self.config, self.data, self.writer, self.num_t)
+            self.pipeline = PhaseFromBF(self.config, self.data, self.writer, self.num_t, emitter=emitter)
 
         elif self.config.method == 'UPTI':
             raise NotImplementedError
@@ -246,7 +247,7 @@ class PipelineManager:
             for time_point in t_indices:
                 self.pt_set.add((pos, time_point))
 
-    def _try_init_array(self, pt):
+    def try_init_array(self, pt):
         try:
 
             # If not doing the full position, we still want semantic information on which positions
@@ -275,7 +276,7 @@ class PipelineManager:
         for pt in sorted(self.pt_set):
             start_time = time.time()
 
-            self._try_init_array(pt)
+            self.try_init_array(pt)
 
             pt_data = self.data.get_zarr(pt[0])[pt[1]] # (C, Z, Y, X) virtual
 

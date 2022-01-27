@@ -115,6 +115,7 @@ class MainWidget(QWidget):
         self.ui.cb_method.currentIndexChanged[int].connect(self.enter_method)
         self.ui.cb_mode.currentIndexChanged[int].connect(self.enter_mode)
         self.ui.le_calibration_metadata.editingFinished.connect(self.enter_calib_meta)
+        self.ui.qbutton_reconstruct.clicked[bool].connect(self.reconstruct)
 
         # Logging
         log_box = QtLogger(self.ui.te_log)
@@ -226,6 +227,7 @@ class MainWidget(QWidget):
         self.ui.le_val_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.red_text = QColor(200, 0, 0, 255)
         self.original_tab_text = self.ui.tabWidget_3.tabBar().tabTextColor(0)
+        self.ui.tabWidget.parent().setObjectName('recOrder')
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
@@ -825,12 +827,6 @@ class MainWidget(QWidget):
     def handle_plot_update(self, value):
         self.intensity_monitor.append(value)
         self.ui.plot_widget.plot(self.intensity_monitor)
-
-        #
-        # state = self.plot_item.getViewBox().getState()
-        # view_range = state['viewRange']
-        #
-        # print(state)
 
         if self.plot_sequence[0] == 'Coarse':
             self.plot_item.autoRange()
@@ -1559,6 +1555,17 @@ class MainWidget(QWidget):
 
         # Start Thread
         self.worker.start()
+
+    @pyqtSlot(bool)
+    def reconstruct(self):
+
+        # connect handlers
+        self.worker.dimension_emitter.connect(self.add_reconstructed_data)
+        self.worker.store_emitter.connect(self.add_reconstruction_store)
+        self.worker.started.connect(self._disable_buttons)
+        self.worker.finished.connect(self._enable_buttons)
+        self.worker.errored.connect(self._handle_reconstruct_error)
+        self.ui.qbutton_stop_acq.clicked.connect(self.worker.quit)
 
     @pyqtSlot(bool)
     def save_config(self):

@@ -1,18 +1,22 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
+from recOrder.io.utils import MockEmitter
 from recOrder.compute.qlipp_compute import reconstruct_phase2D, reconstruct_phase3D, initialize_reconstructor
 import numpy as np
 from recOrder.pipelines.pipeline_interface import PipelineInterface
 
 class PhaseFromBF(PipelineInterface):
 
-    def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderWriter, num_t: int):
+    def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderWriter, num_t: int, emitter=MockEmitter()):
 
         # Dataset Parameters
         self.config = config
         self.data = data
         self.writer = writer
+
+        # Emitter
+        self.dimension_emitter = emitter
 
         # Dimension Parameters
         self.t = num_t
@@ -177,3 +181,5 @@ class PhaseFromBF(PipelineInterface):
                 else:
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
+
+            self.dimension_emitter.emit((p, t, chan, z))

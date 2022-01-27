@@ -1,7 +1,7 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
-from recOrder.io.utils import load_bg
+from recOrder.io.utils import load_bg, MockEmitter
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, \
     reconstruct_phase2D, reconstruct_phase3D, initialize_reconstructor
 import json
@@ -15,7 +15,7 @@ class QLIPP(PipelineInterface):
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
     """
 
-    def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderWriter, mode: str, num_t: int):
+    def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderWriter, mode: str, num_t: int, emitter=MockEmitter()):
         """
         Parameters
         ----------
@@ -31,6 +31,9 @@ class QLIPP(PipelineInterface):
         self.data = data
         self.writer = writer
         self.mode = mode
+
+        # Emitter
+        self.dimension_emitter = emitter
 
         # Dimension Parameters
         self.t = num_t
@@ -251,6 +254,8 @@ class QLIPP(PipelineInterface):
                 else:
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
+
+            self.dimension_emitter.emit((p, t, chan, z))
 
     def parse_channel_idx(self, channel_list):
         """
