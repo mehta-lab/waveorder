@@ -1594,6 +1594,8 @@ class MainWidget(QWidget):
         # self.ui.slider_value.setRange(min_, max_)
         self.ui.slider_saturation.setSingleStep((max_ - min_)/250)
         self.ui.slider_saturation.setValue((min_, max_))
+        self.ui.le_sat_max.setText(np.round(max_, 3))
+        self.ui.le_sat_min.setText(np.round(min_, 3))
 
     @pyqtSlot(int)
     def update_value_scale(self):
@@ -1606,6 +1608,8 @@ class MainWidget(QWidget):
         # self.ui.slider_value.setRange(min_, max_)
         self.ui.slider_value.setSingleStep((max_ - min_)/250)
         self.ui.slider_value.setValue((min_, max_))
+        self.ui.le_val_max.setText(np.round(max_, 3))
+        self.ui.le_val_min.setText(np.round(min_, 3))
 
     @pyqtSlot(bool)
     def create_overlay(self):
