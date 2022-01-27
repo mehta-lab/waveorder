@@ -7,7 +7,7 @@ from superqt import QRangeSlider
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
 from recOrder.plugin.workers.acquisition_workers import AcquisitionWorker, ListeningWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
-from recOrder.postproc.post_processing import ret_ori_overlay
+from recOrder.postproc.post_processing import ret_ori_overlay, generic_hsv_overlay
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.utils import load_bg
 from pathlib import Path, PurePath
@@ -100,6 +100,9 @@ class MainWidget(QWidget):
         # Display Tab
         self.viewer.layers.events.inserted.connect(self._add_layer_to_display_boxes)
         self.viewer.layers.events.removed.connect(self._remove_layer_from_display_boxes)
+        self.ui.qbutton_create_overlay.clicked[bool].connect(self.create_overlay)
+        self.ui.cb_saturation.currentIndexChanged[int].connect(self.update_sat_scale)
+        self.ui.cb_value.currentIndexChanged[int].connect(self.update_value_scale)
 
         # Reconstruction
         self.ui.qbutton_browse_data_dir.clicked[bool].connect(self.browse_data_dir)
@@ -417,6 +420,7 @@ class MainWidget(QWidget):
             le.setStyleSheet("border: 1px solid rgb(200,0,0);")
             return False
         else:
+            le.setStyleSheet("")
             return True
 
     def _check_requirements_for_acq(self, mode):
@@ -1433,6 +1437,8 @@ class MainWidget(QWidget):
 
         """
 
+        self._check_requirements_for_acq('birefringence')
+
         # Init Worker and thread
         self.worker = AcquisitionWorker(self, self.calib, 'birefringence')
 
@@ -1451,6 +1457,8 @@ class MainWidget(QWidget):
         """
         Wrapper function to acquire phase stack and plot in napari
         """
+
+        self._check_requirements_for_acq('phase')
 
         # Init worker and thread
         self.worker = AcquisitionWorker(self, self.calib, 'phase')
@@ -1471,6 +1479,8 @@ class MainWidget(QWidget):
         """
         Wrapper function to acquire both birefringence and phase stack and plot in napari
         """
+
+        self._check_requirements_for_acq('phase')
 
         # Init worker
         self.worker = AcquisitionWorker(self, self.calib, 'all')
@@ -1539,16 +1549,49 @@ class MainWidget(QWidget):
         self.config_reader = ConfigReader(mode='3D', method='QLIPP')
         self._populate_from_config()
 
+    @pyqtSlot(int)
+    def update_sat_scale(self):
+        idx = self.ui.cb_saturation.currentIndex()
+        layer = self.ui.cb_saturation.itemText(idx)
+        data = self.viewer.layers[layer].data
+        self.ui.slider_saturation.setRange(np.min(data), np.max(data))
+
+    @pyqtSlot(int)
+    def update_value_scale(self):
+        idx = self.ui.cb_value.currentIndex()
+        layer = self.ui.cb_value.itemText(idx)
+        data = self.viewer.layers[layer].data
+        self.ui.slider_value.setRange(np.min(data), np.max(data))
+
     @pyqtSlot(bool)
     def create_overlay(self):
 
-        if self.display_slice is None and not self.use_full_volume:
-            raise ValueError('Please specify a slice to display or choose to use the entire volume')
-        else:
-            if self.ui.cb_hue.count() == 0 or self.ui.cb_saturation.count() != 2 or self.ui.cb_value != 2:
-                raise ValueError('Cannot create overlay until Orientation, Retardance, and Phase are available')
+        if self.ui.cb_hue.count() == 0 or self.ui.cb_saturation.count() == 0 or self.ui.cb_value == 0:
+            raise ValueError('Cannot create overlay until all 3 combo boxes are populated')
+
+        H = self.viewer.layers[self.ui.cb_hue.itemText(self.ui.cb_hue.currentIndex())].data
+        S = self.viewer.layers[self.ui.cb_saturation.itemText(self.ui.cb_saturation.currentIndex())].data
+        V = self.viewer.layers[self.ui.cb_value.itemText(self.ui.cb_value.currentIndex())].data
+
+        if H.ndim > 2 or S.ndim > 2 or V.ndim > 2:
+            if self.display_slice is None and not self.use_full_volume:
+                raise ValueError('Please specify a slice to display or choose to use the entire volume')
+            if not self.use_volume and self.display_slice:
+                mode='2D'
             else:
-                pass
+                mode='3D'
+
+        H_scale = (np.min(H), np.max(H))
+        S_scale = self.ui.slider_saturation.value()
+        V_scale = self.ui.slider_value.value()
+
+        hsv_image = generic_hsv_overlay(H, S, V, H_scale, S_scale, V_scale, mode=mode)
+
+        idx = 0
+        while f'Overlay_{idx}' in self.viewer.layers:
+            idx += 1
+
+        self.viewer.add_image(hsv_image, rgb=True)
 
     @pyqtSlot(object)
     def add_listener_data(self, store):

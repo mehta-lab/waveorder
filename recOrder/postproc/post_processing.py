@@ -5,50 +5,29 @@ from colorspacious import cspace_convert
 from matplotlib.colors import hsv_to_rgb
 
 
-def generic_overlay(chan1, chan2, chan3, mode='2D', cmap='JCh'):
-    levels = 8
-    ret_scale = (0, 10)
-    noise_level = 1
+def generic_hsv_overlay(H, S, V, H_scale=None, S_scale=None, V_scale=None, mode='2D'):
 
-    if chan1.shape != chan2.shape or chan1.shape != chan3.shape or chan2.shape != chan3.shape:
+    if H.shape != S.shape or H.shape != S.shape or S.shape != V.shape:
         raise ValueError(
-            f'Channel shapes do not match: {chan1.shape} vs. {chan2.shape} vs. {chan3.shape}')
+            f'Channel shapes do not match: {H.shape} vs. {S.shape} vs. {V.shape}')
 
     if mode == '3D':
-        overlay_final = np.zeros((chan1.shape[0], chan1.shape[1], chan1.shape[2], 3))
-        slices = chan1.shape[0]
+        overlay_final = np.zeros((H.shape[0], H.shape[1], H.shape[2], 3))
+        slices = H.shape[0]
     else:
-        overlay_final = np.zeros((1, chan1.shape[-2], chan1.shape[-1], 3))
-        chan1 = np.expand_dims(chan1, axis=0)
-        chan2 = np.expand_dims(chan2, axis=0)
-        chan3 = np.expand_dims(chan3, axis=0)
+        overlay_final = np.zeros((1, H.shape[-2], H.shape[-1], 3))
+        H = np.expand_dims(H, axis=0)
+        S = np.expand_dims(S, axis=0)
+        V = np.expand_dims(V, axis=0)
         slices = 1
 
     for i in range(slices):
-        ret_ = np.interp(retardance[i], ret_scale, scale)
-        ori_binned = np.round(orientation[i] / 180 * levels + 0.5) / levels - 1 / levels
-        ori_ = np.interp(ori_binned, (0, 1), (0, 360))
+        H_ = np.interp(H[i], H_scale, (0, 255))
+        S_ = np.interp(S[i], S_scale, (0, 255))
+        V_ = np.interp(V[i], V_scale, (0, 255))
 
-        if cmap == 'JCh':
-            J = ret_
-            C = np.ones_like(J) * 60
-            C[retardance[i] < noise_level] = 0
-            h = ori_
-
-            JCh = np.stack((J, C, h), axis=-1)
-            JCh_rgb = cspace_convert(JCh, "JCh", "sRGB1")
-
-            JCh_rgb[JCh_rgb < 0] = 0
-            JCh_rgb[JCh_rgb > 1] = 1
-
-            overlay_final[i] = JCh_rgb
-        elif cmap == 'HSV':
-            I_hsv = np.transpose(np.stack([ori_, np.ones_like(ori_),
-                                           np.minimum(1, ret_ / np.max(ret_))]), (1, 2, 0))
-            overlay_final[i] = hsv_to_rgb(I_hsv)
-
-        else:
-            raise ValueError(f'Colormap {cmap} not understood')
+        hsv = np.stack([H_, S_, V_])
+        overlay_final[i] = hsv_to_rgb(hsv)
 
     return overlay_final[0] if mode == '2D' else overlay_final
 
