@@ -763,7 +763,7 @@ class QLIPP_Calibration():
 
             return inst_mat
 
-    def write_metadata(self, notes=None):
+    def write_metadata(self, notes=None, microscope_params=None):
 
         inst_mat = self.calc_inst_matrix()
         inst_mat = inst_mat.tolist()
@@ -787,7 +787,7 @@ class QLIPP_Calibration():
                      'ROI Used (x, y, width, height)': self.ROI,
                      'Instrument_Matrix': inst_mat},
                     'Notes': notes,
-                    'Microscope Parameters': None
+                    'Microscope Parameters': microscope_params
                     }
 
         elif self.calib_scheme == '5-State':
@@ -811,7 +811,7 @@ class QLIPP_Calibration():
                      'ROI Used (x, y, width, height)': self.ROI,
                      'Instrument_Matrix': inst_mat},
                     'Notes': notes,
-                    'Microscope Parameters': None
+                    'Microscope Parameters': microscope_params
                     }
 
         if not self.meta_file.endswith('.txt'):

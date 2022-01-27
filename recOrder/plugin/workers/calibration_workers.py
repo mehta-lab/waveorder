@@ -8,6 +8,7 @@ import os
 import numpy as np
 import glob
 import logging
+import json
 
 
 class CalibrationSignals(WorkerBaseSignals):
@@ -259,6 +260,13 @@ class BackgroundCaptureWorker(WorkerBase):
         if not os.path.exists(bg_path):
             os.mkdir(bg_path)
         else:
+
+            # increment background paths
+            idx = 1
+            while os.path.exists(bg_path+f'_{idx}'):
+                idx += 1
+
+            bg_path = bg_path+f'_{idx}'
             for state_file in glob.glob(os.path.join(bg_path, 'State*')):
                 os.remove(state_file)
 
@@ -295,7 +303,37 @@ class BackgroundCaptureWorker(WorkerBase):
 
         # Save metadata file and emit imgs
         self.calib.meta_file = os.path.join(bg_path, 'calibration_metadata.txt')
-        self.calib.write_metadata()
+
+        microscope_params = {
+             'phase_dimension': None,
+             'pad_z': float(self.calib_window.ui.le_pad_z.text()) if self.calib_window.ui.le_pad_z.text() != '' else None,
+             'n_objective_media': float(self.calib_window.ui.le_n_media.text()) if self.calib_window.ui.le_n_media.text() != '' else None,
+             'bg_correction_option': self.calib_window.bg_option,
+             'objective_NA': float(self.calib_window.ui.le_obj_na.text()) if self.calib_window.ui.le_obj_na.text() != '' else None,
+             'condenser_NA': float(self.calib_window.ui.le_cond_na.text()) if self.calib_window.ui.le_cond_na.text() != '' else None,
+             'magnification': float(self.calib_window.ui.le_mag.text()) if self.calib_window.ui.le_mag.text() != '' else None,
+             'swing': self.calib_window.swing,
+             'pixel_size': float(self.calib_window.ui.le_ps.text()) if self.calib_window.ui.le_ps.text() != '' else None
+        }
+
+        self.calib.write_metadata(notes=self.calib_window.ui.le_notes_field.text(), microscope_params=microscope_params)
+
+        # Update last calibration file
+        note = self.calib_window.ui.le_notes_field.text()
+
+        with open(self.calib_window.last_calib_meta_file, 'r') as file:
+            current_json = json.load(file)
+
+        old_note = current_json['Notes']
+        if old_note is None or old_note == '' or old_note == note:
+            current_json['Notes'] = note
+        else:
+            current_json['Notes'] = old_note + ', ' + note
+
+        current_json['Microscope Parameters'] = microscope_params
+
+        with open(self.calib_window.last_calib_meta_file, 'w') as file:
+            json.dump(current_json, file, indent=1)
 
         self._check_abort()
 

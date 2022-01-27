@@ -1597,7 +1597,7 @@
                 </widget>
                 <widget class="QWidget" name="Physical">
                  <attribute name="title">
-                  <string>Physical Parameters</string>
+                  <string>Microscope Parameters</string>
                  </attribute>
                  <layout class="QGridLayout" name="gridLayout_11">
                   <property name="leftMargin">

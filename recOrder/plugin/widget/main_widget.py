@@ -818,7 +818,6 @@ class MainWidget(QWidget):
 
     @pyqtSlot(bool)
     def handle_mm_status_update(self, value):
-        print(value)
         if value:
             self.ui.le_mm_status.setText('Sucess!')
             self.ui.le_mm_status.setStyleSheet("background-color: green;")
@@ -1330,7 +1329,7 @@ class MainWidget(QWidget):
                 current_json = json.load(file)
 
             old_note = current_json['Notes']
-            if old_note is None or old_note == '':
+            if old_note is None or old_note == '' or old_note == note:
                 current_json['Notes'] = note
             else:
                 current_json['Notes'] = old_note + ', ' + note
@@ -1379,12 +1378,25 @@ class MainWidget(QWidget):
 
         self.last_calib_meta_file = result
 
+        params = meta['Microscope Parameters']
+        if params is not None:
+            self.ui.le_pad_z.setText(str(params['pad_z']) if params['pad_z'] is not None else '')
+            self.ui.le_n_media.setText(str(params['n_objective_media']) if params['n_objective_media'] is not None else '')
+            self.ui.le_obj_na.setText(str(params['objective_NA']) if params['objective_NA'] is not None else '')
+            self.ui.le_cond_na.setText(str(params['condenser_NA']) if params['condenser_NA'] is not None else '')
+            self.ui.le_mag.setText(str(params['magnification']) if params['magnification'] is not None else '')
+            self.ui.le_ps.setText(str(params['pixel_size']) if params['pixel_size'] is not None else '')
+
         # Move the load calibration function to a separate thread
         self.worker = load_calibration(self.calib, meta)
+
+        def update_extinction(extinction):
+            self.calib.extinction_ratio = float(extinction)
 
         # initialize worker properties
         self.ui.qbutton_stop_calib.clicked.connect(self.worker.quit)
         self.worker.yielded.connect(self.ui.le_extinction.setText)
+        self.worker.yielded.connect(update_extinction)
         self.worker.returned.connect(self._update_calib)
         self.worker.errored.connect(self._handle_error)
         self.worker.started.connect(self._disable_buttons)
@@ -1613,8 +1625,8 @@ class MainWidget(QWidget):
         # self.ui.slider_value.setRange(min_, max_)
         self.ui.slider_saturation.setSingleStep((max_ - min_)/250)
         self.ui.slider_saturation.setValue((min_, max_))
-        self.ui.le_sat_max.setText(np.round(max_, 3))
-        self.ui.le_sat_min.setText(np.round(min_, 3))
+        self.ui.le_sat_max.setText(str(np.round(max_, 3)))
+        self.ui.le_sat_min.setText(str(np.round(min_, 3)))
 
     @pyqtSlot(int)
     def update_value_scale(self):
@@ -1627,8 +1639,8 @@ class MainWidget(QWidget):
         # self.ui.slider_value.setRange(min_, max_)
         self.ui.slider_value.setSingleStep((max_ - min_)/250)
         self.ui.slider_value.setValue((min_, max_))
-        self.ui.le_val_max.setText(np.round(max_, 3))
-        self.ui.le_val_min.setText(np.round(min_, 3))
+        self.ui.le_val_max.setText(str(np.round(max_, 3)))
+        self.ui.le_val_min.setText(str(np.round(min_, 3)))
 
     @pyqtSlot(bool)
     def create_overlay(self):
@@ -1640,7 +1652,6 @@ class MainWidget(QWidget):
         S = self.viewer.layers[self.ui.cb_saturation.itemText(self.ui.cb_saturation.currentIndex())].data
         V = self.viewer.layers[self.ui.cb_value.itemText(self.ui.cb_value.currentIndex())].data
 
-        print(H.shape, S.shape, V.shape)
 
         #TODO: this is a temp fix which handles on data with n-dimensions of 4, 3, or 2 which automatically
         # chooses the first timepoint

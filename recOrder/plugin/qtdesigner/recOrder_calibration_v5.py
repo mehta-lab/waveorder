@@ -1717,7 +1717,7 @@ class Ui_Form(object):
         self.label_mag.setText(_translate("Form", "Magnification"))
         self.label_pad_z.setText(_translate("Form", "Z Padding"))
         self.le_pad_z.setText(_translate("Form", "0"))
-        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.Physical), _translate("Form", "Physical Parameters"))
+        self.tabWidget_3.setTabText(self.tabWidget_3.indexOf(self.Physical), _translate("Form", "Microscope Parameters"))
         self.phase.setTitle(_translate("Form", "Phase"))
         self.label_phase_regularizer.setText(_translate("Form", "Regularizer"))
         self.le_phase_strength.setText(_translate("Form", ".0001"))
