@@ -3,7 +3,7 @@ from pycromanager import Bridge
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy
 from PyQt5.QtGui import QPixmap, QColor
-from superqt import QRangeSlider, QDoubleRangeSlider
+from superqt import QDoubleRangeSlider
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
 from recOrder.plugin.workers.acquisition_workers import AcquisitionWorker, ListeningWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
@@ -16,8 +16,6 @@ import numpy as np
 import os
 import json
 import logging
-from napari.utils.key_bindings import bind_key
-from recOrder.plugin.widget.loading_widget import Overlay
 from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, POSTPROCESSING
 
 
@@ -218,8 +216,8 @@ class MainWidget(QWidget):
         self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
         self.ui.le_mm_status.setText('Not Connected')
         self.ui.le_mm_status.setStyleSheet("border: 1px solid yellow;")
-        # self.setStyleSheet("QGroupBox::title {padding-top: -10}")
         self.setStyleSheet("QGroupBox {margin-top: 20;}")
+        self.setStyleSheet("QTabWidget::tab-bar {alignment: center;}")
         self.red_text = QColor(200, 0, 0, 255)
         self.original_tab_text = self.ui.tabWidget_3.tabBar().tabTextColor(0)
         self.ui.le_sat_min.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
