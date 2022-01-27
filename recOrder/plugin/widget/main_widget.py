@@ -218,12 +218,12 @@ class MainWidget(QWidget):
         self.ui.le_mm_status.setStyleSheet("border: 1px solid yellow;")
         self.setStyleSheet("QGroupBox {margin-top: 20;}")
         self.setStyleSheet("QTabWidget::tab-bar {alignment: center;}")
-        self.red_text = QColor(200, 0, 0, 255)
-        self.original_tab_text = self.ui.tabWidget_3.tabBar().tabTextColor(0)
         self.ui.le_sat_min.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.ui.le_sat_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.ui.le_val_min.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.ui.le_val_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
+        self.red_text = QColor(200, 0, 0, 255)
+        self.original_tab_text = self.ui.tabWidget_3.tabBar().tabTextColor(0)
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):

@@ -2539,12 +2539,12 @@
                 </property>
                 <item>
                  <property name="text">
-                  <string>JCh (Perceptually Uniform)</string>
+                  <string>HSV</string>
                  </property>
                 </item>
                 <item>
                  <property name="text">
-                  <string>HSV</string>
+                  <string>JCh (Perceptually Uniform)</string>
                  </property>
                 </item>
                </widget>
