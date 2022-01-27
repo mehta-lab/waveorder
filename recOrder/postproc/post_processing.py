@@ -22,11 +22,11 @@ def generic_hsv_overlay(H, S, V, H_scale=None, S_scale=None, V_scale=None, mode=
         slices = 1
 
     for i in range(slices):
-        H_ = np.interp(H[i], H_scale, (0, 255))
-        S_ = np.interp(S[i], S_scale, (0, 255))
-        V_ = np.interp(V[i], V_scale, (0, 255))
+        H_ = np.interp(H[i], H_scale, (0, 1))
+        S_ = np.interp(S[i], S_scale, (0, 1))
+        V_ = np.interp(V[i], V_scale, (0, 1))
 
-        hsv = np.stack([H_, S_, V_])
+        hsv = np.transpose(np.stack([H_, S_, V_]), (1, 2, 0))
         overlay_final[i] = hsv_to_rgb(hsv)
 
     return overlay_final[0] if mode == '2D' else overlay_final

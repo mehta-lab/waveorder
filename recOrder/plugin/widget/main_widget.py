@@ -3,7 +3,7 @@ from pycromanager import Bridge
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy
 from PyQt5.QtGui import QPixmap, QColor
-from superqt import QRangeSlider
+from superqt import QRangeSlider, QDoubleRangeSlider
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
 from recOrder.plugin.workers.acquisition_workers import AcquisitionWorker, ListeningWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
@@ -103,6 +103,10 @@ class MainWidget(QWidget):
         self.ui.qbutton_create_overlay.clicked[bool].connect(self.create_overlay)
         self.ui.cb_saturation.currentIndexChanged[int].connect(self.update_sat_scale)
         self.ui.cb_value.currentIndexChanged[int].connect(self.update_value_scale)
+        self.ui.le_sat_max.editingFinished.connect(self.enter_sat_max)
+        self.ui.le_sat_min.editingFinished.connect(self.enter_sat_min)
+        self.ui.le_val_max.editingFinished.connect(self.enter_val_max)
+        self.ui.le_val_min.editingFinished.connect(self.enter_val_min)
 
         # Reconstruction
         self.ui.qbutton_browse_data_dir.clicked[bool].connect(self.browse_data_dir)
@@ -174,7 +178,7 @@ class MainWidget(QWidget):
         self.save_config_path = str(Path.home())
         self.colormap = 'JCh'
         self.use_full_volume = False
-        self.display_slice = None
+        self.display_slice = 0
 
         # Assessment attributes
         self.calib_assessment_level = None
@@ -218,6 +222,10 @@ class MainWidget(QWidget):
         self.setStyleSheet("QGroupBox {margin-top: 20;}")
         self.red_text = QColor(200, 0, 0, 255)
         self.original_tab_text = self.ui.tabWidget_3.tabBar().tabTextColor(0)
+        self.ui.le_sat_min.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
+        self.ui.le_sat_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
+        self.ui.le_val_min.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
+        self.ui.le_val_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
@@ -244,7 +252,7 @@ class MainWidget(QWidget):
         self.ui.gridLayout_17.removeWidget(self.ui.slider_saturation)
 
         # Add back the sliders as range sliders with the same properties
-        self.ui.slider_saturation = QRangeSlider(getattr(self.ui, saturation_slider_parent))
+        self.ui.slider_saturation = QDoubleRangeSlider(getattr(self.ui, saturation_slider_parent))
         sizePolicy.setHeightForWidth(self.ui.slider_saturation.sizePolicy().hasHeightForWidth())
         self.ui.slider_saturation.setSizePolicy(sizePolicy)
         self.ui.slider_saturation.setOrientation(Qt.Horizontal)
@@ -256,7 +264,7 @@ class MainWidget(QWidget):
                                         saturation_slider_position[3])
         self.ui.slider_saturation.setRange(0, 100)
 
-        self.ui.slider_value = QRangeSlider(getattr(self.ui, value_slider_parent))
+        self.ui.slider_value = QDoubleRangeSlider(getattr(self.ui, value_slider_parent))
         sizePolicy.setHeightForWidth(self.ui.slider_value.sizePolicy().hasHeightForWidth())
         self.ui.slider_value.setSizePolicy(sizePolicy)
         self.ui.slider_value.setOrientation(Qt.Horizontal)
@@ -380,6 +388,8 @@ class MainWidget(QWidget):
 
     def _add_layer_to_display_boxes(self, val):
         for layer in self.viewer.layers:
+            if 'Overlay' in layer.name:
+                continue
             if layer.name not in [self.ui.cb_hue.itemText(i) for i in range(self.ui.cb_hue.count())]:
                 self.ui.cb_hue.addItem(layer.name)
             if layer.name not in [self.ui.cb_saturation.itemText(i) for i in range(self.ui.cb_saturation.count())]:
@@ -429,7 +439,7 @@ class MainWidget(QWidget):
         self._set_tab_red('Processing', False)
         self._set_tab_red('Regularization', False)
 
-        phase_required = {'wavelength', 'magnification', 'cond_na', 'obj_na', 'n_media',
+        phase_required = {'wavelength', 'mag', 'cond_na', 'obj_na', 'n_media',
                           'phase_strength'}
 
         if mode == 'birefringence' or mode == 'phase':
@@ -465,8 +475,8 @@ class MainWidget(QWidget):
         output_channels = output_channels.strip(',')
 
         always_required = {'data_dir', 'save_dir', 'positions', 'timepoints', 'output_channels'}
-        birefringence_required = {'calibration_metadata', 'wavelength'}
-        phase_required = {'recon_wavelength', 'magnification', 'NA_objective', 'NA_condenser', 'n_objective_media',
+        birefringence_required = {'calibration_metadata', 'recon_wavelength'}
+        phase_required = {'recon_wavelength', 'mag', 'NA_objective', 'NA_condenser', 'n_objective_media',
                           'phase_strength'}
         fluor_decon_required = {'wavelength', 'magnification', 'NA_objective', 'n_objective_media', 'reg'}
 
@@ -942,13 +952,13 @@ class MainWidget(QWidget):
 
     @pyqtSlot(tuple)
     def handle_sat_slider_move(self, value):
-        self.ui.label_sat_min.setText(str(value[0]))
-        self.ui.label_sat_max.setText(str(value[1]))
+        self.ui.le_sat_min.setText(str(np.round(value[0], 3)))
+        self.ui.le_sat_max.setText(str(np.round(value[1], 3)))
 
     @pyqtSlot(tuple)
     def handle_val_slider_move(self, value):
-        self.ui.label_val_min.setText(str(value[0]))
-        self.ui.label_val_max.setText(str(value[1]))
+        self.ui.le_val_min.setText(str(np.round(value[0], 3)))
+        self.ui.le_val_max.setText(str(np.round(value[1], 3)))
 
     @pyqtSlot(bool)
     def browse_dir_path(self):
@@ -1276,6 +1286,30 @@ class MainWidget(QWidget):
         slice = int(self.ui.le_overlay_slice.text())
         self.display_slice = slice
 
+    @pyqtSlot()
+    def enter_sat_min(self):
+        val = float(self.ui.le_sat_min.text())
+        slider_val = self.ui.slider_saturation.value()
+        self.ui.slider_saturation.setValue((val, slider_val[1]))
+
+    @pyqtSlot()
+    def enter_sat_max(self):
+        val = float(self.ui.le_sat_max.text())
+        slider_val = self.ui.slider_saturation.value()
+        self.ui.slider_saturation.setValue((slider_val[0], val))
+
+    @pyqtSlot()
+    def enter_val_min(self):
+        val = float(self.ui.le_val_min.text())
+        slider_val = self.ui.slider_value.value()
+        self.ui.slider_value.setValue((val, slider_val[1]))
+
+    @pyqtSlot()
+    def enter_val_max(self):
+        val = float(self.ui.le_val_max.text())
+        slider_val = self.ui.slider_value.value()
+        self.ui.slider_value.setValue((slider_val[0], val))
+
     @pyqtSlot(bool)
     def push_note(self):
 
@@ -1554,14 +1588,24 @@ class MainWidget(QWidget):
         idx = self.ui.cb_saturation.currentIndex()
         layer = self.ui.cb_saturation.itemText(idx)
         data = self.viewer.layers[layer].data
-        self.ui.slider_saturation.setRange(np.min(data), np.max(data))
+        min_, max_ = np.min(data), np.max(data)
+        self.ui.slider_saturation.setMinimum(min_)
+        self.ui.slider_saturation.setMaximum(max_)
+        # self.ui.slider_value.setRange(min_, max_)
+        self.ui.slider_saturation.setSingleStep((max_ - min_)/250)
+        self.ui.slider_saturation.setValue((min_, max_))
 
     @pyqtSlot(int)
     def update_value_scale(self):
         idx = self.ui.cb_value.currentIndex()
         layer = self.ui.cb_value.itemText(idx)
         data = self.viewer.layers[layer].data
-        self.ui.slider_value.setRange(np.min(data), np.max(data))
+        min_, max_ = np.min(data), np.max(data)
+        self.ui.slider_value.setMinimum(min_)
+        self.ui.slider_value.setMaximum(max_)
+        # self.ui.slider_value.setRange(min_, max_)
+        self.ui.slider_value.setSingleStep((max_ - min_)/250)
+        self.ui.slider_value.setValue((min_, max_))
 
     @pyqtSlot(bool)
     def create_overlay(self):
@@ -1573,25 +1617,43 @@ class MainWidget(QWidget):
         S = self.viewer.layers[self.ui.cb_saturation.itemText(self.ui.cb_saturation.currentIndex())].data
         V = self.viewer.layers[self.ui.cb_value.itemText(self.ui.cb_value.currentIndex())].data
 
-        if H.ndim > 2 or S.ndim > 2 or V.ndim > 2:
-            if self.display_slice is None and not self.use_full_volume:
-                raise ValueError('Please specify a slice to display or choose to use the entire volume')
-            if not self.use_volume and self.display_slice:
-                mode='2D'
-            else:
-                mode='3D'
+        print(H.shape, S.shape, V.shape)
 
-        H_scale = (np.min(H), np.max(H))
+        #TODO: this is a temp fix which handles on data with n-dimensions of 4, 3, or 2 which automatically
+        # chooses the first timepoint
+        if H.ndim > 2 or S.ndim > 2 or V.ndim > 2:
+            if H.ndim == 4:
+                # assumes this is a (T, Z, Y, X) array read from napari-ome-zarr
+                H = H[0, self.display_slice] if not self.use_full_volume else H[0]
+            if S.ndim == 4:
+                S = S[0, self.display_slice] if not self.use_full_volume else S[0]
+            if V.ndim == 4:
+                V = V[0, self.display_slice] if not self.use_full_volume else V[0]
+
+            if H.ndim == 3:
+                # assumes this is a (Z, Y, X) array collected from acquisition module
+                H = H[self.display_slice] if not self.use_full_volume else H
+
+            if S.ndim == 3:
+                S = S[self.display_slice] if not self.use_full_volume else S
+
+            if S.ndim == 3:
+                S = S[self.display_slice] if not self.use_full_volume else S
+
+        mode = '2D' if not self.use_full_volume else '3D'
+
+        H_name = self.ui.cb_hue.itemText(self.ui.cb_hue.currentIndex())
+        H_scale = (np.min(H), np.max(H)) if 'Orientation' not in H_name else (0, np.pi)
         S_scale = self.ui.slider_saturation.value()
         V_scale = self.ui.slider_value.value()
 
         hsv_image = generic_hsv_overlay(H, S, V, H_scale, S_scale, V_scale, mode=mode)
 
         idx = 0
-        while f'Overlay_{idx}' in self.viewer.layers:
+        while f'HSV_Overlay_{idx}' in self.viewer.layers:
             idx += 1
 
-        self.viewer.add_image(hsv_image, rgb=True)
+        self.viewer.add_image(hsv_image, name=f'HSV_Overlay_{idx}', rgb=True)
 
     @pyqtSlot(object)
     def add_listener_data(self, store):

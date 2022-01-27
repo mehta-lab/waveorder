@@ -1091,7 +1091,7 @@
                  </font>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>2</number>
                 </property>
                 <widget class="QWidget" name="General">
                  <attribute name="title">
@@ -2471,39 +2471,55 @@
               <string>Display Options</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_17">
-              <item row="8" column="2">
-               <widget class="QLabel" name="label_sat_min">
+              <item row="8" column="3">
+               <widget class="QLineEdit" name="le_sat_max">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
-                 <string>20</string>
+                 <string>80</string>
+                </property>
+                <property name="frame">
+                 <bool>false</bool>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
                 </property>
                </widget>
               </item>
-              <item row="7" column="0">
-               <widget class="QLabel" name="label_hue">
+              <item row="15" column="0" colspan="4">
+               <widget class="QPushButton" name="qbutton_create_overlay">
                 <property name="text">
-                 <string>Hue</string>
+                 <string>Create Overlay</string>
                 </property>
                </widget>
               </item>
-              <item row="9" column="0">
-               <widget class="QLabel" name="label_saturation">
-                <property name="text">
-                 <string>Saturation</string>
+              <item row="14" column="0">
+               <widget class="QLineEdit" name="le_overlay_slice">
+                <property name="sizePolicy">
+                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                  <horstretch>0</horstretch>
+                  <verstretch>0</verstretch>
+                 </sizepolicy>
+                </property>
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="placeholderText">
+                 <string>Slice</string>
                 </property>
                </widget>
               </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_colormap">
-                <property name="text">
-                 <string>BirefringenceOverlay Colormap</string>
-                </property>
-               </widget>
-              </item>
-              <item row="6" column="0" colspan="4">
-               <widget class="Line" name="line">
-                <property name="lineWidth">
-                 <number>3</number>
-                </property>
+              <item row="9" column="2" colspan="2">
+               <widget class="QSlider" name="slider_saturation">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
@@ -2533,40 +2549,31 @@
                 </item>
                </widget>
               </item>
-              <item row="9" column="1">
-               <widget class="QComboBox" name="cb_saturation">
+              <item row="11" column="1">
+               <widget class="QComboBox" name="cb_value">
                 <property name="focusPolicy">
                  <enum>Qt::StrongFocus</enum>
                 </property>
                </widget>
               </item>
-              <item row="14" column="0">
-               <widget class="QLineEdit" name="le_overlay_slice">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="placeholderText">
-                 <string>Slice</string>
+              <item row="7" column="1">
+               <widget class="QComboBox" name="cb_hue">
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                </widget>
               </item>
-              <item row="8" column="3">
-               <widget class="QLabel" name="label_sat_max">
+              <item row="11" column="0">
+               <widget class="QLabel" name="label_value">
                 <property name="text">
-                 <string>80</string>
+                 <string>Value</string>
                 </property>
-                <property name="alignment">
-                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+               </widget>
+              </item>
+              <item row="9" column="1">
+               <widget class="QComboBox" name="cb_saturation">
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
                 </property>
                </widget>
               </item>
@@ -2590,55 +2597,91 @@
                 </property>
                </widget>
               </item>
-              <item row="11" column="1">
-               <widget class="QComboBox" name="cb_value">
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
+              <item row="6" column="0" colspan="4">
+               <widget class="Line" name="line">
+                <property name="lineWidth">
+                 <number>3</number>
                 </property>
-               </widget>
-              </item>
-              <item row="9" column="2" colspan="2">
-               <widget class="QSlider" name="slider_saturation">
                 <property name="orientation">
                  <enum>Qt::Horizontal</enum>
                 </property>
                </widget>
               </item>
-              <item row="11" column="0">
-               <widget class="QLabel" name="label_value">
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_colormap">
                 <property name="text">
-                 <string>Value</string>
+                 <string>BirefringenceOverlay Colormap</string>
                 </property>
                </widget>
               </item>
-              <item row="7" column="1">
-               <widget class="QComboBox" name="cb_hue">
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
+              <item row="7" column="0">
+               <widget class="QLabel" name="label_hue">
+                <property name="text">
+                 <string>Hue</string>
+                </property>
+               </widget>
+              </item>
+              <item row="9" column="0">
+               <widget class="QLabel" name="label_saturation">
+                <property name="text">
+                 <string>Saturation</string>
+                </property>
+               </widget>
+              </item>
+              <item row="8" column="2">
+               <widget class="QLineEdit" name="le_sat_min">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="inputMask">
+                 <string/>
+                </property>
+                <property name="text">
+                 <string>20</string>
+                </property>
+                <property name="frame">
+                 <bool>false</bool>
                 </property>
                </widget>
               </item>
               <item row="10" column="2">
-               <widget class="QLabel" name="label_val_min">
+               <widget class="QLineEdit" name="le_val_min">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>20</string>
+                </property>
+                <property name="frame">
+                 <bool>false</bool>
                 </property>
                </widget>
               </item>
               <item row="10" column="3">
-               <widget class="QLabel" name="label_val_max">
+               <widget class="QLineEdit" name="le_val_max">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
                  <string>80</string>
                 </property>
+                <property name="frame">
+                 <bool>false</bool>
+                </property>
                 <property name="alignment">
                  <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-                </property>
-               </widget>
-              </item>
-              <item row="15" column="0" colspan="4">
-               <widget class="QPushButton" name="qbutton_create_overlay">
-                <property name="text">
-                 <string>Create Overlay</string>
                 </property>
                </widget>
               </item>
