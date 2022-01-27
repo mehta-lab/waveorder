@@ -202,12 +202,16 @@ class ConfigReader(object):
                         assert key_child in self.config['postprocessing'][key], \
                             f'User must specify {key_child} to use for {key}'
 
-    def save_yaml(self):
-        if not os.path.exists(self.save_dir):
-            os.mkdir(self.save_dir)
-        with open(os.path.join(self.save_dir, f'config_{self.data_save_name}.yml'), 'w') as file:
+    def save_yaml(self, dir_=None, name=None):
+        dir_ = self.save_dir if dir_ is None else dir_
+        name = f'config_{self.data_save_name}.yml' if name is None else name
+        print(dir_, name)
+        if not name.endswith('.yml'):
+            name += '.yml'
+        if not os.path.exists(dir_):
+            os.mkdir(dir_)
+        with open(os.path.join(dir_, name), 'w') as file:
             yaml.dump(self.yaml_dict, file)
-
         file.close()
 
     def _create_yaml_dict(self):

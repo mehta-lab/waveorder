@@ -1,10 +1,10 @@
 import napari
-from recOrder.plugin.widget.calibration_plugin_widget import Calibration
+from recOrder.plugin.widget.main_widget import MainWidget
 
 
 def main():
     viewer = napari.Viewer()
-    viewer.window.add_dock_widget(Calibration(viewer))
+    viewer.window.add_dock_widget(MainWidget(viewer))
     napari.run()
 
 
