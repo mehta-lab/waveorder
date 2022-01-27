@@ -216,7 +216,9 @@ class MainWidget(QWidget):
         self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
         self.ui.le_mm_status.setText('Not Connected')
         self.ui.le_mm_status.setStyleSheet("border: 1px solid yellow;")
-        self.setStyleSheet("QGroupBox {margin-top: 20;}")
+        box_style = "QGroupBox {margin-top: 20;} QGroupBox::title {"
+        box_style += "subcontrol-origin: margin; subcontrol-position: top center; padding: -14px 0px 0px 3px;}"
+        self.setStyleSheet(box_style)
         self.setStyleSheet("QTabWidget::tab-bar {alignment: center;}")
         self.ui.le_sat_min.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.ui.le_sat_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
