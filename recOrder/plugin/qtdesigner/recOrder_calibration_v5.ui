@@ -125,7 +125,7 @@
             <x>0</x>
             <y>0</y>
             <width>578</width>
-            <height>1306</height>
+            <height>1345</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -150,199 +150,6 @@
            <property name="verticalSpacing">
             <number>20</number>
            </property>
-           <item row="6" column="0" alignment="Qt::AlignTop">
-            <widget class="QTabWidget" name="tabWidget_2">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="font">
-              <font>
-               <weight>50</weight>
-               <italic>false</italic>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="focusPolicy">
-              <enum>Qt::ClickFocus</enum>
-             </property>
-             <property name="currentIndex">
-              <number>0</number>
-             </property>
-             <widget class="QWidget" name="tab_plot">
-              <attribute name="title">
-               <string>Plot</string>
-              </attribute>
-              <layout class="QVBoxLayout" name="verticalLayout_4">
-               <item>
-                <widget class="QScrollArea" name="scrollArea_3">
-                 <property name="font">
-                  <font>
-                   <italic>false</italic>
-                  </font>
-                 </property>
-                 <property name="widgetResizable">
-                  <bool>true</bool>
-                 </property>
-                 <widget class="QWidget" name="scrollAreaWidgetContents_3">
-                  <property name="geometry">
-                   <rect>
-                    <x>0</x>
-                    <y>0</y>
-                    <width>538</width>
-                    <height>300</height>
-                   </rect>
-                  </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_6">
-                   <item>
-                    <widget class="QLabel" name="label_inten_plot">
-                     <property name="font">
-                      <font>
-                       <italic>false</italic>
-                      </font>
-                     </property>
-                     <property name="text">
-                      <string>Intensity Plot</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="PlotWidget" name="plot_widget" native="true">
-                     <property name="minimumSize">
-                      <size>
-                       <width>0</width>
-                       <height>250</height>
-                      </size>
-                     </property>
-                     <property name="font">
-                      <font>
-                       <italic>false</italic>
-                      </font>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </widget>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="tab_advanced">
-              <attribute name="title">
-               <string>Advanced</string>
-              </attribute>
-              <layout class="QVBoxLayout" name="verticalLayout_3">
-               <item>
-                <widget class="QScrollArea" name="scrollArea_2">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="widgetResizable">
-                  <bool>true</bool>
-                 </property>
-                 <widget class="QWidget" name="scrollAreaWidgetContents_2">
-                  <property name="geometry">
-                   <rect>
-                    <x>0</x>
-                    <y>0</y>
-                    <width>538</width>
-                    <height>300</height>
-                   </rect>
-                  </property>
-                  <layout class="QVBoxLayout" name="verticalLayout_5">
-                   <item>
-                    <widget class="QLabel" name="label_loglevel">
-                     <property name="text">
-                      <string>Log Level</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QComboBox" name="cb_loglevel">
-                     <property name="focusPolicy">
-                      <enum>Qt::StrongFocus</enum>
-                     </property>
-                     <property name="currentIndex">
-                      <number>0</number>
-                     </property>
-                     <property name="maxVisibleItems">
-                      <number>2</number>
-                     </property>
-                     <item>
-                      <property name="text">
-                       <string>Basic</string>
-                      </property>
-                     </item>
-                     <item>
-                      <property name="text">
-                       <string>Debug</string>
-                      </property>
-                     </item>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QLabel" name="label_log">
-                     <property name="text">
-                      <string>Log</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QPlainTextEdit" name="te_log">
-                     <property name="minimumSize">
-                      <size>
-                       <width>0</width>
-                       <height>150</height>
-                      </size>
-                     </property>
-                     <property name="lineWidth">
-                      <number>1</number>
-                     </property>
-                     <property name="readOnly">
-                      <bool>true</bool>
-                     </property>
-                     <property name="backgroundVisible">
-                      <bool>true</bool>
-                     </property>
-                    </widget>
-                   </item>
-                  </layout>
-                 </widget>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-             <widget class="QWidget" name="tab_notes">
-              <attribute name="title">
-               <string>Notes</string>
-              </attribute>
-              <layout class="QFormLayout" name="formLayout">
-               <item row="1" column="0" colspan="2">
-                <widget class="QLineEdit" name="le_notes_field"/>
-               </item>
-               <item row="2" column="0" colspan="2">
-                <widget class="QPushButton" name="qbutton_push_note">
-                 <property name="text">
-                  <string>Push note to last metadata file</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="0">
-                <widget class="QLabel" name="label_note">
-                 <property name="text">
-                  <string>Note</string>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </widget>
-            </widget>
-           </item>
            <item row="3" column="0">
             <widget class="QGroupBox" name="calib_params">
              <property name="font">
@@ -352,10 +159,22 @@
                <bold>true</bold>
               </font>
              </property>
+             <property name="contextMenuPolicy">
+              <enum>Qt::DefaultContextMenu</enum>
+             </property>
              <property name="title">
               <string>Calibration Parameters</string>
              </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             </property>
+             <property name="checkable">
+              <bool>false</bool>
+             </property>
              <layout class="QGridLayout" name="gridLayout_2">
+              <property name="topMargin">
+               <number>25</number>
+              </property>
               <property name="verticalSpacing">
                <number>20</number>
               </property>
@@ -663,6 +482,56 @@
              </layout>
             </widget>
            </item>
+           <item row="0" column="0" rowspan="3">
+            <widget class="QGroupBox" name="connect_to_micromanager">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <italic>false</italic>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="title">
+              <string/>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_14">
+              <property name="topMargin">
+               <number>12</number>
+              </property>
+              <property name="verticalSpacing">
+               <number>20</number>
+              </property>
+              <item row="0" column="1">
+               <widget class="QLineEdit" name="le_mm_status">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QPushButton" name="qbutton_mm_connect">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Connect to MM</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
            <item row="4" column="0">
             <widget class="QGroupBox" name="run_calib">
              <property name="font">
@@ -676,6 +545,9 @@
               <string>Run Calibration</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_12">
+              <property name="topMargin">
+               <number>25</number>
+              </property>
               <property name="verticalSpacing">
                <number>20</number>
               </property>
@@ -837,6 +709,199 @@
              </layout>
             </widget>
            </item>
+           <item row="6" column="0" alignment="Qt::AlignTop">
+            <widget class="QTabWidget" name="tabWidget_2">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <weight>50</weight>
+               <italic>false</italic>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="focusPolicy">
+              <enum>Qt::ClickFocus</enum>
+             </property>
+             <property name="currentIndex">
+              <number>0</number>
+             </property>
+             <widget class="QWidget" name="tab_plot">
+              <attribute name="title">
+               <string>Plot</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_4">
+               <item>
+                <widget class="QScrollArea" name="scrollArea_3">
+                 <property name="font">
+                  <font>
+                   <italic>false</italic>
+                  </font>
+                 </property>
+                 <property name="widgetResizable">
+                  <bool>true</bool>
+                 </property>
+                 <widget class="QWidget" name="scrollAreaWidgetContents_3">
+                  <property name="geometry">
+                   <rect>
+                    <x>0</x>
+                    <y>0</y>
+                    <width>538</width>
+                    <height>300</height>
+                   </rect>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_6">
+                   <item>
+                    <widget class="QLabel" name="label_inten_plot">
+                     <property name="font">
+                      <font>
+                       <italic>false</italic>
+                      </font>
+                     </property>
+                     <property name="text">
+                      <string>Intensity Plot</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="PlotWidget" name="plot_widget" native="true">
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>250</height>
+                      </size>
+                     </property>
+                     <property name="font">
+                      <font>
+                       <italic>false</italic>
+                      </font>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab_advanced">
+              <attribute name="title">
+               <string>Advanced</string>
+              </attribute>
+              <layout class="QVBoxLayout" name="verticalLayout_3">
+               <item>
+                <widget class="QScrollArea" name="scrollArea_2">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="widgetResizable">
+                  <bool>true</bool>
+                 </property>
+                 <widget class="QWidget" name="scrollAreaWidgetContents_2">
+                  <property name="geometry">
+                   <rect>
+                    <x>0</x>
+                    <y>0</y>
+                    <width>538</width>
+                    <height>300</height>
+                   </rect>
+                  </property>
+                  <layout class="QVBoxLayout" name="verticalLayout_5">
+                   <item>
+                    <widget class="QLabel" name="label_loglevel">
+                     <property name="text">
+                      <string>Log Level</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QComboBox" name="cb_loglevel">
+                     <property name="focusPolicy">
+                      <enum>Qt::StrongFocus</enum>
+                     </property>
+                     <property name="currentIndex">
+                      <number>0</number>
+                     </property>
+                     <property name="maxVisibleItems">
+                      <number>2</number>
+                     </property>
+                     <item>
+                      <property name="text">
+                       <string>Basic</string>
+                      </property>
+                     </item>
+                     <item>
+                      <property name="text">
+                       <string>Debug</string>
+                      </property>
+                     </item>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QLabel" name="label_log">
+                     <property name="text">
+                      <string>Log</string>
+                     </property>
+                    </widget>
+                   </item>
+                   <item>
+                    <widget class="QPlainTextEdit" name="te_log">
+                     <property name="minimumSize">
+                      <size>
+                       <width>0</width>
+                       <height>150</height>
+                      </size>
+                     </property>
+                     <property name="lineWidth">
+                      <number>1</number>
+                     </property>
+                     <property name="readOnly">
+                      <bool>true</bool>
+                     </property>
+                     <property name="backgroundVisible">
+                      <bool>true</bool>
+                     </property>
+                    </widget>
+                   </item>
+                  </layout>
+                 </widget>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+             <widget class="QWidget" name="tab_notes">
+              <attribute name="title">
+               <string>Notes</string>
+              </attribute>
+              <layout class="QFormLayout" name="formLayout">
+               <item row="1" column="0" colspan="2">
+                <widget class="QLineEdit" name="le_notes_field"/>
+               </item>
+               <item row="2" column="0" colspan="2">
+                <widget class="QPushButton" name="qbutton_push_note">
+                 <property name="text">
+                  <string>Push note to last metadata file</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="0">
+                <widget class="QLabel" name="label_note">
+                 <property name="text">
+                  <string>Note</string>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </widget>
+            </widget>
+           </item>
            <item row="5" column="0">
             <widget class="QGroupBox" name="capture_background">
              <property name="font">
@@ -850,6 +915,9 @@
               <string>Capture Background</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_3">
+              <property name="topMargin">
+               <number>25</number>
+              </property>
               <property name="verticalSpacing">
                <number>20</number>
               </property>
@@ -926,53 +994,6 @@
              </layout>
             </widget>
            </item>
-           <item row="0" column="0" rowspan="3">
-            <widget class="QGroupBox" name="connect_to_micromanager">
-             <property name="font">
-              <font>
-               <weight>75</weight>
-               <italic>false</italic>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="title">
-              <string/>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_14">
-              <property name="verticalSpacing">
-               <number>20</number>
-              </property>
-              <item row="0" column="1">
-               <widget class="QLineEdit" name="le_mm_status">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QPushButton" name="qbutton_mm_connect">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Connect to MM</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
           </layout>
          </widget>
         </widget>
@@ -1037,7 +1058,7 @@
             <x>0</x>
             <y>0</y>
             <width>578</width>
-            <height>923</height>
+            <height>962</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -1072,6 +1093,9 @@
               <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
              </property>
              <layout class="QGridLayout" name="gridLayout_9">
+              <property name="topMargin">
+               <number>25</number>
+              </property>
               <property name="verticalSpacing">
                <number>25</number>
               </property>
@@ -1795,6 +1819,9 @@
                      <string>Phase</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_23">
+                     <property name="topMargin">
+                      <number>25</number>
+                     </property>
                      <item row="0" column="0">
                       <widget class="QLabel" name="label_phase_regularizer">
                        <property name="text">
@@ -1867,6 +1894,9 @@
                      <string>Fluorescence</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_24">
+                     <property name="topMargin">
+                      <number>25</number>
+                     </property>
                      <item row="0" column="0">
                       <widget class="QLabel" name="label_fluor_strength">
                        <property name="text">
@@ -1908,6 +1938,9 @@
                      <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_25">
+                     <property name="topMargin">
+                      <number>25</number>
+                     </property>
                      <item row="3" column="0">
                       <widget class="QLabel" name="label_preproc_denoise_level">
                        <property name="text">
@@ -1994,6 +2027,9 @@
                      <string>Registration</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_28">
+                     <property name="topMargin">
+                      <number>25</number>
+                     </property>
                      <item row="2" column="0">
                       <widget class="QLabel" name="label_postproc_reg_channel_idx">
                        <property name="text">
@@ -2047,6 +2083,9 @@
                      <string>Fluorescence Deconvolution</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_29">
+                     <property name="topMargin">
+                      <number>25</number>
+                     </property>
                      <item row="2" column="0">
                       <widget class="QLabel" name="label_postproc_fluor_channel">
                        <property name="text">
@@ -2086,6 +2125,9 @@
                      <string>Denoising</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_27">
+                     <property name="topMargin">
+                      <number>25</number>
+                     </property>
                      <item row="1" column="0">
                       <widget class="QLabel" name="labelpostproc_denoise_channels">
                        <property name="text">
@@ -2182,6 +2224,9 @@
               <bool>false</bool>
              </property>
              <layout class="QGridLayout" name="gridLayout_8">
+              <property name="topMargin">
+               <number>25</number>
+              </property>
               <property name="verticalSpacing">
                <number>20</number>
               </property>
@@ -2347,6 +2392,9 @@
               <string>Acquire</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_13">
+              <property name="topMargin">
+               <number>25</number>
+              </property>
               <property name="verticalSpacing">
                <number>20</number>
               </property>
@@ -2448,7 +2496,7 @@
             <x>0</x>
             <y>0</y>
             <width>562</width>
-            <height>886</height>
+            <height>873</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
@@ -2471,6 +2519,9 @@
               <string>Display Options</string>
              </property>
              <layout class="QGridLayout" name="gridLayout_17">
+              <property name="topMargin">
+               <number>25</number>
+              </property>
               <item row="8" column="3">
                <widget class="QLineEdit" name="le_sat_max">
                 <property name="font">
@@ -2813,6 +2864,9 @@
       <string>recOrder Status</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_22">
+      <property name="topMargin">
+       <number>25</number>
+      </property>
       <item row="0" column="0">
        <widget class="QLabel" name="label_gui_mode">
         <property name="sizePolicy">

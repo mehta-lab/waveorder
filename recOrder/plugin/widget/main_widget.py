@@ -1,7 +1,7 @@
 from recOrder.calib.Calibration import QLIPP_Calibration
 from pycromanager import Bridge
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
-from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy, QGroupBox
 from PyQt5.QtGui import QPixmap, QColor
 from superqt import QDoubleRangeSlider
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
@@ -217,23 +217,35 @@ class MainWidget(QWidget):
         self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
         self.ui.le_mm_status.setText('Not Connected')
         self.ui.le_mm_status.setStyleSheet("border: 1px solid yellow;")
-        box_style = "QGroupBox {margin-top: 20;} QGroupBox::title {"
-        box_style += "subcontrol-origin: margin; subcontrol-position: top center; padding: -14px 0px 0px 3px;}"
-        self.setStyleSheet(box_style)
-        self.setStyleSheet("QTabWidget::tab-bar {alignment: center;}")
         self.ui.le_sat_min.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.ui.le_sat_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.ui.le_val_min.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.ui.le_val_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
+        self.setStyleSheet("QTabWidget::tab-bar {alignment: center;}")
         self.red_text = QColor(200, 0, 0, 255)
         self.original_tab_text = self.ui.tabWidget_3.tabBar().tabTextColor(0)
         self.ui.tabWidget.parent().setObjectName('recOrder')
+
+        # group_boxes = ['recon_status', 'calib_params', 'run_calib', 'capture_background', 'acq_settings',
+        #                'acquire', 'ReconSettings', 'phase', 'fluorescence', 'denoising', 'denoising_2', 'fluor',
+        #                'registration', 'DisplayOptions']
+
+        # for groupbox in group_boxes:
+        #     box = getattr(self.ui, groupbox)
+        #     # box.setStyleSheet("margin-top: -10ex;")
+        #     box.setStyleSheet("QGroupBox::title {"
+        #                       "subcontrol-origin: margin;"
+        #                       "subcontrol-position: top left;")
+                              # "min-height: 10ex;"
+                              # "top: -1.5ex; }")
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
             if 'cb_' in attr_name:
                 attr = getattr(self.ui, attr_name)
                 attr.wheelEvent = lambda event: None
+
+        self.showMaximized()
 
     def _promote_slider(self):
 
