@@ -176,7 +176,7 @@ class MainWidget(QWidget):
         self.data_dir = str(Path.home())
         self.config_path = str(Path.home())
         self.save_config_path = str(Path.home())
-        self.colormap = 'JCh'
+        self.colormap = 'HSV'
         self.use_full_volume = False
         self.display_slice = 0
 
@@ -199,7 +199,7 @@ class MainWidget(QWidget):
         hsv_legend_path = os.path.join(recorder_dir, 'docs/images/HSV_legend.png')
         self.jch_pixmap = QPixmap(jch_legend_path)
         self.hsv_pixmap = QPixmap(hsv_legend_path)
-        self.ui.label_orientation_image.setPixmap(self.jch_pixmap)
+        self.ui.label_orientation_image.setPixmap(self.hsv_pixmap)
 
         # Hide initial UI elements for later implementation or for later pop-up purposes
         self.ui.label_lca.hide()
