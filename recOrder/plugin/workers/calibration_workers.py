@@ -214,28 +214,20 @@ class CalibrationWorker(WorkerBase):
         Attempts to determine whether certain optical components are out of place.
         """
 
-        # Extinction State should be somewhere around LCA = 0.25, LCB = 0.5
-        if 0.2 < self.calib.lca_ext < 0.4:
-            if 0.4 < self.calib.lcb_ext < 0.75:
-                if self.calib.extinction_ratio >= 100:
-                    self.calib_assessment.emit('good')
-                    self.calib_assessment_msg.emit('Sucessful Calibration')
-                elif 80 <= self.calib.extinction_ratio < 100:
-                    self.calib_assessment.emit('okay')
-                    self.calib_assessment_msg.emit('Sucessful Calibration, Okay Extinction Ratio')
-                else:
-                    self.calib_assessment.emit('bad')
-                    self.calib_assessment_msg.emit('Poor Extinction, try tuning the linear polarizer to be perpendicular to the long edge of the LC housing')
-
-            # LCB Values typically off when linear polarizer is not in correct orientation
-            else:
-                self.calib_assessment.emit('bad')
-                self.calib_assessment_msg.emit('Wrong analyzer handedness or linear polarizer 90 degrees off')
-
-        # If LCA is outside of this range, then unclear what has happened
+        if self.calib.extinction_ratio >= 100:
+            self.calib_assessment.emit('good')
+            self.calib_assessment_msg.emit('Sucessful Calibration')
+        elif 80 <= self.calib.extinction_ratio < 100:
+            self.calib_assessment.emit('okay')
+            self.calib_assessment_msg.emit('Sucessful Calibration, Okay Extinction Ratio')
         else:
             self.calib_assessment.emit('bad')
-            self.calib_assessment_msg.emit('Calibration Failed, unknown origin of issue')
+            message = ("Possibilities are: a) polarizer and LC are not oriented properly, "
+                       "b) circular analyzer has wrong handedness, "
+                       "c) the condenser is not setup for Kohler illumination, "
+                       "d) a component, such as autofocus dichroic, distorts the polarization state")
+
+            self.calib_assessment_msg.emit('Poor Extinction. '+message)
 
 
 class BackgroundCaptureWorker(WorkerBase):
