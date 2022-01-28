@@ -222,10 +222,10 @@ class CalibrationWorker(WorkerBase):
             self.calib_assessment_msg.emit('Sucessful Calibration, Okay Extinction Ratio')
         else:
             self.calib_assessment.emit('bad')
-            message = ("Possibilities are: a) polarizer and LC are not oriented properly, "
+            message = ("Possibilities are: a) linear polarizer and LC are not oriented properly, "
                        "b) circular analyzer has wrong handedness, "
                        "c) the condenser is not setup for Kohler illumination, "
-                       "d) a component, such as autofocus dichroic, distorts the polarization state")
+                       "d) a component, such as autofocus dichroic or sample chamber, distorts the polarization state")
 
             self.calib_assessment_msg.emit('Poor Extinction. '+message)
 
