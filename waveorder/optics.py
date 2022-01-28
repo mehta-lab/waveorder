@@ -150,6 +150,71 @@ def gen_Pupil(fxx, fyy, NA, lambda_in):
     
     return Pupil
 
+def gen_sector_Pupil(fxx, fyy, NA, lambda_in, sector_angle, rotation_angle):
+    
+    '''
+    
+    compute sector pupil functions given spatial frequency, NA, wavelength, sector angle, and the rotational angles.
+    
+    Parameters
+    ----------
+        fxx            : numpy.ndarray
+                         x component of 2D spatial frequency array with the size of (Ny, Nx)
+                    
+        fyy            : numpy.ndarray
+                         y component of 2D spatial frequency array with the size of (Ny, Nx)
+                    
+        NA             : float
+                         numerical aperture of the pupil function (normalized by the refractive index of the immersion media)
+                    
+        lambda_in      : float
+                         wavelength of the light (inside the immersion media)
+        
+        sector_angle   : float
+                         the angle of a sector pupil function (0~180 degrees)
+        
+        rotation_angle : float, int, or list of ints or floats
+                         the rotational angles of a set of rotated sector pupil functions
+        
+        
+    Returns
+    ------- 
+        Pupil_sector   : list of numpy.ndarray
+                         a set of rotated sector pupil functions with the specified parameters with the size of (Ny, Nx)
+    
+    '''
+    
+    N, M = fxx.shape
+    
+    Pupil = np.zeros((N,M))
+    fr = (fxx**2 + fyy**2)**(1/2)
+    Pupil[ fr < NA/lambda_in] = 1
+    Pupil_sector = []
+    
+    if sector_angle > 180 or sector_angle < 0:
+        raise ValueError('sector_angle should be between 0 to 180 degree')
+        
+    if isinstance(rotation_angle,int) or isinstance(rotation_angle,float):
+        rotation_angle = [rotation_angle]
+    elif isinstance(rotation_angle,list):
+        if (not isinstance(rotation_angle[0], int)) and (not isinstance(rotation_angle[0],float)):
+            raise ValueError('Elements in rotation_angle need to be either int or float')
+    else:
+        raise ValueError('rotation_angle needs to be int, float, or a list of int and float')
+    
+    for i in range(len(rotation_angle)):
+        deg = rotation_angle[i]
+        temp = np.zeros_like(Pupil)
+        temp2 = np.zeros_like(Pupil)
+        temp[fyy * np.cos(np.deg2rad(deg)) - fxx*np.sin(np.deg2rad(deg)) > 1e-10] = 1
+        temp2[fyy * np.cos(np.deg2rad(deg-(180-sector_angle))) - fxx*np.sin(np.deg2rad(deg-(180-sector_angle))) > 1e-10] = 1
+
+        Pupil_sector.append(temp*temp2*Pupil)
+
+    
+    
+    return Pupil_sector
+
 def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA = 0.1):
     
     '''
