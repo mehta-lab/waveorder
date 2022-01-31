@@ -68,11 +68,9 @@ class PipelineManager:
         elif self.config.method == 'FluorDeconv':
             self.pipeline = FluorescenceDeconvolution(self.config, self.data, self.writer, self.config.mode, self.num_t)
 
-        elif self.config.method == 'UPTI':
-            raise NotImplementedError
-
-        elif self.config.method == 'IPS':
-            raise NotImplementedError
+        else:
+            raise NotImplementedError(f'Method {self.config.method} is not currently implemented '
+                                      'please specify one of the following: QLIPP, PhaseFromBF, or FluorDeconv')
 
         # instantiate fluor deconvolution reconstructor if deconvolution is specified in post-processing
         if self.config.postprocessing.deconvolution_use:
