@@ -192,13 +192,16 @@ class MainWidget(QWidget):
         # Init thread worker
         self.worker = None
 
-        # Display Options
+        # Display Images
         recorder_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         jch_legend_path = os.path.join(recorder_dir, 'docs/images/JCh_legend.png')
         hsv_legend_path = os.path.join(recorder_dir, 'docs/images/HSV_legend.png')
         self.jch_pixmap = QPixmap(jch_legend_path)
         self.hsv_pixmap = QPixmap(hsv_legend_path)
         self.ui.label_orientation_image.setPixmap(self.hsv_pixmap)
+        logo_path = os.path.join(recorder_dir, 'docs/images/recOrder_plugin_logo.png')
+        logo_pixmap = QPixmap(logo_path)
+        self.ui.label_logo.setPixmap(logo_pixmap)
 
         # Hide initial UI elements for later implementation or for later pop-up purposes
         self.ui.label_lca.hide()

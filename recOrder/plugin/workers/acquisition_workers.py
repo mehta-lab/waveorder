@@ -4,6 +4,7 @@ from recOrder.compute.qlipp_compute import initialize_reconstructor, \
 from recOrder.acq.acq_functions import generate_acq_settings, acquire_from_settings
 from recOrder.io.utils import load_bg, extract_reconstruction_parameters
 from recOrder.compute import QLIPPBirefringenceCompute
+from recOrder.io.zarr_converter import ZarrConverter
 from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import logging
 from waveorder.io.writer import WaveorderWriter
@@ -357,7 +358,7 @@ class AcquisitionWorker(WorkerBase):
             name = f'Phase_Snap_{i}.zarr' if not prefix else f'{prefix}_Phase_Snap_{i}.zarr'
             while os.path.exists(os.path.join(dir_, name)):
                 i += 1
-                name = f'Phase_Snap_{i}.zarr' if not prefix else f'{prefix}_Phasee_Snap_{i}.zarr'
+                name = f'Phase_Snap_{i}.zarr' if not prefix else f'{prefix}_Phase_Snap_{i}.zarr'
 
 
             # create zarr root and position group
@@ -507,9 +508,19 @@ class AcquisitionWorker(WorkerBase):
                     closed = disp.isClosed()
                 dp.close()
 
+
                 # Try to delete the data, sometime it isn't cleaned up quickly enough and will
                 # return an error.  In this case, catch the error and then try to close again (seems to work).
                 try:
+                    save_prefix = self.calib_window.save_name if self.calib_window.save_name else None
+                    name = f'RawData_Snap_{i}.zarr' if not save_prefix else f'{save_prefix}_RawData_Snap_{i}.zarr'
+                    while os.path.exists(os.path.join(dir_, name)):
+                        i += 1
+                        name = f'RawData_Snap_{i}.zarr' if not save_prefix else f'{save_prefix}_RawData_Snap_{i}.zarr'
+
+                    out_path = os.path.join(dir_, name)
+                    converter = ZarrConverter(os.path.join(dir_, prefix), out_path, 'ometiff', False, False)
+                    converter.run_conversion()
                     shutil.rmtree(os.path.join(dir_, prefix))
                 except PermissionError as ex:
                     dp.close()
