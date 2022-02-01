@@ -258,7 +258,7 @@ def reconstruct_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
 
     """
 
-    _, phase2D = recon.Phase_recon(np.copy(S0), method=method, reg_p=reg_p, rho=rho, lambda_p=lambda_p, itr=itr, verbose=False)
+    _, phase2D = recon.Phase_recon(np.copy(S0).astype('float'), method=method, reg_p=reg_p, rho=rho, lambda_p=lambda_p, itr=itr, verbose=False)
 
     return phase2D
 
@@ -284,7 +284,7 @@ def reconstruct_phase3D(S0, recon, method='Tikhonov', reg_re=1e-4,
 
         """
 
-    phase3D = recon.Phase_recon_3D(np.copy(S0), method=method, reg_re=reg_re, rho=rho, lambda_re=lambda_re,
+    phase3D = recon.Phase_recon_3D(np.copy(S0).astype('float'), method=method, reg_re=reg_re, rho=rho, lambda_re=lambda_re,
                                    itr=itr, verbose=False)
 
     phase3D = np.transpose(phase3D, (-1, -3, -2))
