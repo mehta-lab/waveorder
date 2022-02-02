@@ -25,7 +25,7 @@ def test_pipeline_manager_initiate(setup_BF_test_data_zarr, setup_data_save_fold
     assert(manager.pipeline is not None)
     assert(isinstance(manager.pipeline, PhaseFromBF))
 
-def test_qlipp_pipeline_initiate(setup_BF_test_data_zarr, setup_data_save_folder):
+def test_bf_pipeline_initiate(setup_BF_test_data_zarr, setup_data_save_folder):
     folder, data = setup_BF_test_data_zarr
     save_folder = setup_data_save_folder
 
@@ -84,7 +84,7 @@ def test_3D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     data = manager.data.get_array(pos)
     recon = manager.pipeline.reconstructor
 
-    phase3D = reconstruct_phase3D(np.transpose(data[t, 0], (1, 2, 0)), recon, method=config.phase_denoiser_3D,
+    phase3D = reconstruct_phase3D(np.transpose(data[t, 0], (-2, -1, -3)), recon, method=config.phase_denoiser_3D,
                                   reg_re=config.Tik_reg_ph_3D, rho=config.rho_3D, lambda_re=config.TV_reg_ph_3D,
                                   itr=config.itr_3D)
 
@@ -95,7 +95,7 @@ def test_3D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     assert(array.shape == (1, len(config.output_channels), 81, 231, 498))
 
     # Check Phase
-    assert (np.sum(np.abs(phase3D[z] - array[0, 0, z]) ** 2) / np.sum(np.abs(phase3D[z])**2) < 0.1)
+    assert(np.sum(np.abs(phase3D[z] - array[0, 0, z]) ** 2) / np.sum(np.abs(phase3D[z])**2) < 0.1)
 
 def test_2D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     folder, data = setup_BF_test_data_zarr
@@ -112,7 +112,7 @@ def test_2D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     data = manager.data.get_array(pos)
     recon = manager.pipeline.reconstructor
 
-    phase2D = reconstruct_phase2D(np.transpose(data[t, 0], (1, 2, 0)), recon, method=config.phase_denoiser_2D,
+    phase2D = reconstruct_phase2D(np.transpose(data[t, 0], (-2, -1, -3)), recon, method=config.phase_denoiser_2D,
                                   reg_p=config.Tik_reg_ph_2D, rho=config.rho_2D, lambda_p=config.TV_reg_ph_2D,
                                   itr=config.itr_2D)
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'), 'r')

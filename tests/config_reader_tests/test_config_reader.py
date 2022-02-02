@@ -14,7 +14,8 @@ def test_config_reader(setup_test_data_zarr):
     avoid = ['data_dir', 'save_dir', 'data_save_name', 'positions', 'timepoints',
              'background_ROI', 'qlipp_birefringence_only', 'phase_denoiser_2D',
              'Tik_reg_abs_2D', 'Tik_reg_ph_2D', 'rho_2D', 'itr_2D', 'TV_reg_abs_2D',
-             'TV_reg_ph_2D', 'brightfield_channel_idx']
+             'TV_reg_ph_2D', 'brightfield_channel_index', 'fluorescence_channel_indices',
+             'reg']
 
     for key, value in DATASET.items():
         if key not in avoid:

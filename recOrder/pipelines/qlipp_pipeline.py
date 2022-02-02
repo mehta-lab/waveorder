@@ -6,7 +6,7 @@ from recOrder.compute.qlipp_compute import reconstruct_qlipp_birefringence, reco
     reconstruct_phase2D, reconstruct_phase3D, initialize_reconstructor
 import json
 import numpy as np
-from recOrder.pipelines.pipeline_interface import PipelineInterface
+from recOrder.pipelines.base import PipelineInterface
 
 
 class QLIPP(PipelineInterface):
@@ -113,7 +113,7 @@ class QLIPP(PipelineInterface):
 
         Returns
         -------
-        stokes:         (nd-array) stokes volume of dimensions (Z, 5, Y, X)
+        stokes:         (nd-array) stokes volume of dimensions (C, Z, Y, X) w/ C=5
                                     where C is the stokes channels (S0..S3 + DOP)
 
         """
@@ -141,7 +141,7 @@ class QLIPP(PipelineInterface):
 
         return stokes
 
-    def reconstruct_phase_volume(self, stokes):
+    def deconvolve_volume(self, stokes):
         """
         This method reconstructs a phase volume or 2D phase image given stokes stack
 
@@ -197,7 +197,7 @@ class QLIPP(PipelineInterface):
                                 self.reconstructor)
 
     # todo: think about better way to write fluor/registered data?
-    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
+    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, modified_fluor):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
         If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
@@ -212,7 +212,7 @@ class QLIPP(PipelineInterface):
         birefringence:      (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
         phase2D:            (nd-array) None or nd-array w/ dimensions (Y, X)
         phase3D:            (nd-array) None or nd-array w/ dimensions (Z, Y, X)
-        registered_stacks:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
+        modified_fluor:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
 
         Returns
         -------
@@ -222,7 +222,7 @@ class QLIPP(PipelineInterface):
 
         z = 0 if self.mode == '2D' else None
         slice_ = self.focus_slice if self.mode == '2D' else slice(None)
-        stokes = np.transpose(stokes, (3, 0, 1, 2)) if len(stokes.shape) == 4 else stokes
+        stokes = np.transpose(stokes, (-1, -4, -3, -2)) if len(stokes.shape) == 4 else stokes
         fluor_idx = 0
 
         for chan in range(len(self.output_channels)):
@@ -248,8 +248,8 @@ class QLIPP(PipelineInterface):
 
             # Assume any other output channel in config is fluorescence
             else:
-                if self.config.postprocessing.registration_use:
-                    self.writer.write(registered_stacks[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
+                if self.config.postprocessing.registration_use or self.config.postprocessing.deconvolution_use:
+                    self.writer.write(modified_fluor[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
                 else:
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
