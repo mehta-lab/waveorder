@@ -19,7 +19,7 @@ class PhaseFromBF(PipelineInterface):
         self.output_channels = self.config.output_channels
         self._check_output_channels(self.output_channels)
         self.mode = '2D' if 'Phase2D' in self.output_channels else '3D'
-        self.bf_chan_idx = self.config.brightfield_channel_idx
+        self.bf_chan_idx = self.config.brightfield_channel_index
         self.fluor_idxs = []
 
         # Assume any other channel in the data is fluorescence
