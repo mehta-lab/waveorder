@@ -207,7 +207,7 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes=None):
 
     else:
         if len(np.shape(stokes_data)) == 4:
-            s_image = recon.Polscope_bg_correction(np.transpose(stokes_data, (0, 2, 3, 1)), bg_stokes)
+            s_image = recon.Polscope_bg_correction(np.transpose(stokes_data, (-4, -2, -1, -3)), bg_stokes)
         else:
             s_image = recon.Polscope_bg_correction(stokes_data, bg_stokes)
 
@@ -234,7 +234,7 @@ def reconstruct_qlipp_birefringence(stokes, recon):
 
     birefringence = recon.Polarization_recon(np.copy(stokes))
 
-    return np.transpose(birefringence, (0, 3, 1, 2)) if len(birefringence.shape) == 4 else birefringence
+    return np.transpose(birefringence, (-4, -1, -3, -2)) if len(birefringence.shape) == 4 else birefringence
 
 
 def reconstruct_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
@@ -258,7 +258,7 @@ def reconstruct_phase2D(S0, recon, method='Tikhonov', reg_p=1e-4, rho=1,
 
     """
 
-    _, phase2D = recon.Phase_recon(np.copy(S0), method=method, reg_p=reg_p, rho=rho, lambda_p=lambda_p, itr=itr, verbose=False)
+    _, phase2D = recon.Phase_recon(np.copy(S0).astype('float'), method=method, reg_p=reg_p, rho=rho, lambda_p=lambda_p, itr=itr, verbose=False)
 
     return phase2D
 
@@ -284,9 +284,9 @@ def reconstruct_phase3D(S0, recon, method='Tikhonov', reg_re=1e-4,
 
         """
 
-    phase3D = recon.Phase_recon_3D(np.copy(S0), method=method, reg_re=reg_re, rho=rho, lambda_re=lambda_re,
+    phase3D = recon.Phase_recon_3D(np.copy(S0).astype('float'), method=method, reg_re=reg_re, rho=rho, lambda_re=lambda_re,
                                    itr=itr, verbose=False)
 
-    phase3D = np.transpose(phase3D, (2, 0, 1))
+    phase3D = np.transpose(phase3D, (-1, -3, -2))
 
     return phase3D

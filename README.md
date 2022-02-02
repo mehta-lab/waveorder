@@ -71,6 +71,14 @@ Install the git version control system git : [link](https://git-scm.com/book/en/
 
 ## Usage and example
 
+recOrder currently has two different command-line usage modes: `recOrder.reconstruct` and `recOrder.convert` 
+
+Please type `recOrder` in order to print the usage instructions
+
+
+
+### recOrder.reconstruct
+
 In the following, we demonstrate how to run `recOrder` for reconstruction. <br>
 
 1) In the terminal, switch to the environment with waveorder installed 
@@ -80,7 +88,7 @@ In the following, we demonstrate how to run `recOrder` for reconstruction. <br>
 
 2) Navigate to the repository folder:
 >  ```buildoutcfg
->  cd recOrder/example
+>  cd recOrder/examples/example_configs
 >  ```
 
 3) Open `config_example.yml` and modify the parameters to match your dataset:
@@ -90,7 +98,52 @@ In the following, we demonstrate how to run `recOrder` for reconstruction. <br>
 >  recOrder.reconstruct --config <path/to/config>
 >  ```
 
+5. certain command-line arguments can override parameters specified in the config.  See the list below and the following example:
+
+   ```
+   --method (str) method of reconstruction: QLIPP,IPS,UPTI')
+   --mode (str) mode of reconstruction: 2D, 3D')
+   --data_dir (str) path to raw data folder')
+   --save_dir (str) path to folder where reconstructed data will be saved')
+   --name (str) name under which to save the reconstructed data')
+   --config (str) path to configuration file (see /examples/example_configs')
+   --overwrite (bool) True/False whether or not to overwrite data that exists under save_dir/name')
+   ```
+
+>  ```buildoutcfg
+>  recOrder.reconstruct --config /path/to/config.yml --method QLIPP --data_dir /path/to/data_folder --save_dir /path/to/folder/to/save/data --name Test_Data --overwrite True
+>  ```
+
+
+
+### recOrder.convert
+
+In the following, we demonstrate how to run `recOrder.convert` to convert micromanager .tif files to ome-zarr data format. <br>
+
+1) Run the converter
+
+>  ```buildoutcfg
+>  recOrder.convert --input /path/to/folder/with/micromanager/tifs --output /path/to/desired/output/<name>.zarr  --data_type ometiff
+>  ```
+
+2. you can also specify a handful of other arguments to format your data more specifically:
+
+```
+--input (str) path to folder containing micromanager tif files')
+--ouput (str) full path to save the ome-zarr data, i.e. /path/to/Data.zarr')
+--data_type (str) micromananger data-type: ometiff, singlepagetiff')
+--replace_pos_names (bool) [default=False] whether to replace zarr position names with ones listed in micro-manager metadata')
+--format_hcs (bool) [default=False] if tiled micromanager dataset, format in ome-zarr HCS format')
+```
+
+>  ```buildoutcfg
+>  recOrder.convert --input /path/to/folder/with/micromanager/tifs --output /path/to/desired/output/<name>.zarr  --data_type ometiff --replace_pos_names True --format_hcs True
+>  ```
+
+## 
+
 ## License
+
 Chan Zuckerberg Biohub Software License
 
 This software license is the 2-clause BSD license plus clause a third clause

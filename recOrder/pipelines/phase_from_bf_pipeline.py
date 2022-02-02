@@ -3,7 +3,7 @@ from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
 from recOrder.compute.qlipp_compute import reconstruct_phase2D, reconstruct_phase3D, initialize_reconstructor
 import numpy as np
-from recOrder.pipelines.pipeline_interface import PipelineInterface
+from recOrder.pipelines.base import PipelineInterface
 
 class PhaseFromBF(PipelineInterface):
 
@@ -19,7 +19,7 @@ class PhaseFromBF(PipelineInterface):
         self.output_channels = self.config.output_channels
         self._check_output_channels(self.output_channels)
         self.mode = '2D' if 'Phase2D' in self.output_channels else '3D'
-        self.bf_chan_idx = self.config.brightfield_channel_idx
+        self.bf_chan_idx = self.config.brightfield_channel_index
         self.fluor_idxs = []
 
         # Assume any other channel in the data is fluorescence
@@ -94,7 +94,7 @@ class PhaseFromBF(PipelineInterface):
         data:           (nd-array) brightfield data of dimensions (Y, X, Z)
 
         """
-        return np.transpose(data[self.bf_chan_idx], (1, 2, 0))
+        return np.transpose(data[self.bf_chan_idx], (-2, -1, -3))
 
     def reconstruct_birefringence_volume(self, data):
         """
@@ -105,7 +105,7 @@ class PhaseFromBF(PipelineInterface):
 
         return data
 
-    def reconstruct_phase_volume(self, bf_data):
+    def deconvolve_volume(self, bf_data):
         """
         This method reconstructs a phase volume or 2D phase image given stokes stack
 
@@ -137,7 +137,7 @@ class PhaseFromBF(PipelineInterface):
 
         return phase2D, phase3D
 
-    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, registered_stacks):
+    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, modified_fluor):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
         If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
@@ -152,7 +152,7 @@ class PhaseFromBF(PipelineInterface):
         birefringence:      (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
         phase2D:            (nd-array) None or nd-array w/ dimensions (Y, X)
         phase3D:            (nd-array) None or nd-array w/ dimensions (Z, Y, X)
-        registered_stacks:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
+        modified_fluor:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
 
         Returns
         -------
@@ -171,8 +171,8 @@ class PhaseFromBF(PipelineInterface):
 
             # Assume any other output channel in config is fluorescence
             else:
-                if self.config.postprocessing.registration_use:
-                    self.writer.write(registered_stacks[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
+                if self.config.postprocessing.registration_use or self.config.postprocessing.deconvolution_use:
+                    self.writer.write(modified_fluor[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
                 else:
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)

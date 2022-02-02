@@ -8,10 +8,10 @@ from recOrder.pipelines.pipeline_manager import PipelineManager
                                                       QLIPP,IPS,UPTI')
 @click.option('--mode', required=False, type=str, help='mode of reconstruction: \
                                                       2D,3D,Stokes')
-@click.option('--data_dir', required=False, type=str, help='path to the data')
-@click.option('--save_dir', required=False, type=str, help='path to the save directory')
+@click.option('--data_dir', required=False, type=click.Path(exists=True), help='path to the data')
+@click.option('--save_dir', required=False, type=click.Path(), help='path to the save directory')
 @click.option('--name', required=False, type=str, help='name to use for saving the data')
-@click.option('--config', required=False, type=str, help='path to config yml file')
+@click.option('--config', required=False, type=click.Path(exists=True), help='path to config yml file')
 @click.option('--overwrite', required=False, type=bool,
               help='whether or not to overwrite any previous data under this name')
 def parse_args(method, mode, data_dir, save_dir, name, config, overwrite=False):

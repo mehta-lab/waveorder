@@ -6,7 +6,7 @@ dataset:
   # Mode for reconstruction, '2D' or '3D'
 
   data_dir: '/path/to/raw/data'
-  # (str) path to the raw data directory (folder which holds .tif files)
+  # (str) path to the raw data directory (folder which holds .tif files) or the root .zarr file
 
   save_dir: '/path/to/save/directory'
   # (str) path to the directory in which the data will be saved
@@ -142,8 +142,23 @@ post_processing:
     channels: ['Phase3D'] # Choose which channels to denoise.
     threshold: [0.1] # Must match length of channels
     level: [1] # must match length of channels
+
+  deconvolution:
+    use: False # set to true if you want to deconvolve raw fluorescence channels
+    channels: [1, 2] # MUST BE IN NUMERICAL ORDER
+                      # specify the index of fluorescent channels you wish to deconvolve in numerical order
+    wavelength_nm: [488, 562] # specify the wavelengths of the fluorescence channel emissions (in same order as channels)
+    regularization: [1e-4, 1e-4] # regularization parameters to use for each channel
+    pixel_size_um: 6.5 # specify pixel size of the camera in um
+    NA_obj: 0.4 # specify the numerical aperture of the objective
+    magnification: 20 # effective magnification
+    n_objective_media: 1.0 # specify the refractive index of objective immersion media (1.0 for air)
+    pad_z: 0 # specify padding to eliminate potential boundary artifacts
+    use_gpu: False
+    gpu_id: 0
+
   registration:
     use: False # set to true if you want to register a channel before writing
-    channel_idx: [3] # Index of desired channel to register.  Index corresponds to its position in raw data
-                     # if multiple channels, must match order of the fluorescence channels in output_channels
+    channel_idx: [3] # MUST BE IN NUMERICAL ORDER
+                     # specify the index of fluorescent channels you wish to deconvolve in numerical order
     shift: [[0, 50, -50]] # up and to the right [0, +y, -x].  Must match length of channels

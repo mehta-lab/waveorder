@@ -1,0 +1,86 @@
+dataset:
+  method: 'FluorDeconv'
+  # Reconstruction Method 'QLIPP' only implemented for now.
+
+  mode: '3D'
+  # Mode for reconstruction, '2D' or '3D'
+
+  data_type: 'zarr'
+  # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
+
+  positions: 'all'
+  # (str or list) Positions within the dataset that are to be analyzed.
+  ##   'all'
+  ##   !!python/tuple [0, N] for pos 0 through N
+  ##   [0, 1, 5] for pos 0, 1, and 5
+  ##   [!!python/tuple [0, 15], [19, 25]] for pos 0 through 15, 19, and 25
+
+  timepoints: 'all'
+  # (str or list) timepoints within the dataset that are to be analyzed.
+  ##   'all'
+  ##   !!python/tuple [0, N] for pos 0 through N
+  ##   [0, 1, 5] for pos 0, 1, and 5
+  ##   [!!python/tuple [0, 15], [19, 25]] for timepoints 0 through 15, 19, and 25
+
+pre_processing:
+  denoise:
+    use: False
+    channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
+    threshold: [0.1, 0.1, 0.1, 0.1] # Must match length of channels
+    level: [1, 1, 1, 1] # must match length of channels
+
+processing:
+  output_channels: ['GFP_deconvolved_registered', 'DAPI_deconvolved_registered', 'CY5']
+
+  # (list) names of the output channels.  Order matches postprocessing registration.  Length must match
+  # unique deconvolutions + unique registrations
+
+  fluorescence_channel_indices: [0, 1]
+  # (list) channel index of the fluorophore to deconvolve
+
+  use_gpu: False
+  # (bool) Option to use GPU processing if True (require cupy to be installed)
+
+  gpu_id: 0
+  # (int) ID of GPU to be used
+
+  ########################################
+  #    PHASE RECONSTRUCTION PARAMETERS   #
+  ########################################
+
+  wavelength: [532, 488]
+  # (int or list) wavelength of the fluorescence emission in nm
+
+  pixel_size: 6.5
+  # (float) Camera pixel size in the unit of um
+
+  magnification: 63
+  # (float) Magnification of the objective
+
+  NA_objective: 1.2
+  # (float) Numerical aperture of the objective
+
+  n_objective_media: 1.51
+  # (float) Refractive index of the objective immersion oil
+
+  pad_z: 0
+  # (int) Number of z slices padded above and below the dataset for 3D phase reconstruction to avoid boundary artifacts
+
+  reg: 1.0e-4
+    # (float) regularization parameter
+
+  #### 2D Tikhonov parameter ####
+
+post_processing:
+  denoise:
+    use: False # set to true if you want to denoise the data before writing
+    channels: ['Retardance', 'Phase3D'] # Choose which channels to denoise.
+    threshold: [0.1, 0.1] # Must match length of channels
+    level: [1, 1] # must match length of channels
+  registration:
+    use: True # set to true if you want to register a channel before writing
+    channel_idx: [0, 1, 2] # Index of desired raw data channel to register.  Index corresponds to its position in raw data
+                         # if multiple channels, must match order of the fluorescence channels in output_channels
+                     # If matches fluorescence_channel_indices then that channel will be deconvolved then registered
+
+    shift: [[0, -100, -100], [0, -100, -100], [0, -100, -100]] # up and to the right [0, +y, -x].  Must match length of channel_idx
