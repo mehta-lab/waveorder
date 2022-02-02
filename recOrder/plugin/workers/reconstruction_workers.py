@@ -2,6 +2,7 @@ from PyQt5.QtCore import pyqtSignal
 from recOrder.pipelines.pipeline_manager import PipelineManager
 from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import time
+import os
 
 class ReconstructionSignals(WorkerBaseSignals):
     """
@@ -9,7 +10,7 @@ class ReconstructionSignals(WorkerBaseSignals):
     """
 
     dimension_emitter = pyqtSignal(tuple)
-    store_emitter = pyqtSignal(object)
+    store_emitter = pyqtSignal(str)
     aborted = pyqtSignal()
 
 
@@ -19,8 +20,8 @@ class ReconstructionWorker(WorkerBase):
         super().__init__(SignalsClass=ReconstructionSignals)
 
         self.calib_window = calib_window
-        self.manager = PipelineManager(config, emitter=self.dimension_emitter)
-        self.store_emitter.emit(self.manager.writer.store)
+        self.config = config
+        self.manager = None
 
     def _check_abort(self):
         if self.abort_requested:
@@ -28,6 +29,13 @@ class ReconstructionWorker(WorkerBase):
             raise TimeoutError('Stop Requested')
 
     def work(self):
+
+        self.manager = PipelineManager(self.config, emitter=self.dimension_emitter)
+
+        store_path = os.path.join(self.manager.config.save_dir, self.manager.config.data_save_name)
+        store_path = store_path + '.zarr' if not store_path.endswith('.zarr') else store_path
+        self.store_emitter.emit(store_path)
+
         print(f'Beginning Reconstruction...')
 
         for pt in sorted(self.manager.pt_set):

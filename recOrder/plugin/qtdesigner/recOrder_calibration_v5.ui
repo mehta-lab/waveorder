@@ -1420,6 +1420,9 @@
                          <verstretch>0</verstretch>
                         </sizepolicy>
                        </property>
+                       <property name="text">
+                        <string>0</string>
+                       </property>
                        <property name="placeholderText">
                         <string>Optional</string>
                        </property>
@@ -2578,7 +2581,7 @@
             <x>0</x>
             <y>0</y>
             <width>562</width>
-            <height>873</height>
+            <height>787</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">

@@ -1,15 +1,17 @@
 from recOrder.calib.Calibration import QLIPP_Calibration
 from pycromanager import Bridge
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
-from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy, QGroupBox
+from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy
 from PyQt5.QtGui import QPixmap, QColor
 from superqt import QDoubleRangeSlider
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
 from recOrder.plugin.workers.acquisition_workers import AcquisitionWorker, ListeningWorker
+from recOrder.plugin.workers.reconstruction_workers import ReconstructionWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
 from recOrder.postproc.post_processing import ret_ori_overlay, generic_hsv_overlay
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.utils import load_bg
+from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
 import numpy as np
@@ -582,15 +584,15 @@ class MainWidget(QWidget):
         self.config_reader.save_dir = self.save_directory
         self.config_reader.method = self.method
         self.config_reader.mode = self.mode
-        self.config_reader.data_save_name = self.ui.le_data_save_name if self.ui.le_data_save_name != '' else None
+        self.config_reader.data_save_name = self.ui.le_data_save_name.text() if self.ui.le_data_save_name.text() != '' else None
         self.config_reader.calibration_metadata = self.ui.le_calibration_metadata.text()
         self.config_reader.background = self.ui.le_calibration_metadata.text()
 
         # Assumes that positions/timepoints can either be 'all'; '[all]'; 1, 2, 3, N; [start, end]
         positions = self.ui.le_positions.text()
         positions = positions.replace(' ', '')
-        if positions == 'all' or positions == '[all]':
-            self.config_reader.positions = 'all'
+        if positions == 'all' or positions == "['all']" or positions == '[all]':
+            self.config_reader.positions = ['all']
         elif positions.startswith('[') and positions.endswith(']'):
             vals = positions[1:-1].split(',')
             if len(vals) != 2:
@@ -607,8 +609,8 @@ class MainWidget(QWidget):
 
         timepoints = self.ui.le_timepoints.text()
         timepoints = timepoints.replace(' ', '')
-        if timepoints == 'all' or timepoints == '[all]':
-            self.config_reader.timepoints = 'all'
+        if timepoints == 'all' or timepoints == "['all']" or timepoints == '[all]':
+            self.config_reader.timepoints = ['all']
         elif timepoints.startswith('[') and timepoints.endswith(']'):
             vals = timepoints[1:-1].split(',')
             if len(vals) != 2:
@@ -636,6 +638,7 @@ class MainWidget(QWidget):
             else:
                 setattr(self.config_reader.preprocessing, key, getattr(self, key))
 
+        attrs = dir(self.ui)
         # TODO: Figure out how to catch errors in regularizer strength field
         for key, value in PROCESSING.items():
             if key == 'background_correction':
@@ -645,10 +648,11 @@ class MainWidget(QWidget):
                 field_text = self.ui.le_output_channels.text()
                 channels = field_text.replace(' ', '')
                 channels = channels.split(',')
+                print(channels)
                 setattr(self.config_reader, key, channels)
             else:
                 attr_name = f'le_{key}'
-                if attr_name in self.attrs:
+                if attr_name in attrs:
                     le = getattr(self.ui, attr_name)
                     try:
                         setattr(self.config_reader, key, float(le.text()))
@@ -694,6 +698,7 @@ class MainWidget(QWidget):
     def _populate_from_config(self):
         # Parse dataset fields manually
         self.data_dir = self.config_reader.data_dir
+
         self.ui.le_data_dir.setText(self.config_reader.data_dir)
         self.save_directory = self.config_reader.save_dir
         self.ui.le_save_dir.setText(self.config_reader.save_dir)
@@ -970,6 +975,28 @@ class MainWidget(QWidget):
         self.ui.le_val_min.setText(str(np.round(value[0], 3)))
         self.ui.le_val_max.setText(str(np.round(value[1], 3)))
 
+    @pyqtSlot(str)
+    def handle_reconstruction_store_update(self, value):
+        layer_name = self.worker.manager.config.data_save_name
+        self.reconstruction_data = WaveorderReader(value, 'zarr')
+
+        for i in range(self.reconstruction_data.get_num_positions()):
+            self.viewer.add_image(self.reconstruction_data.get_zarr(i), name=layer_name + f'_Pos_{i:03d}')
+
+        # self.viewer.dims.set_axis_label(0, 'P')
+        self.viewer.dims.set_axis_label(0, 'T')
+        self.viewer.dims.set_axis_label(1, 'C')
+        self.viewer.dims.set_axis_label(2, 'Z')
+
+    @pyqtSlot(tuple)
+    def handle_reconstruction_dim_update(self, value):
+        p, t, c, z = value
+
+        if not self.pause_updates:
+            self.viewer.dims.set_current_step(0, t)
+            self.viewer.dims.set_current_step(1, c)
+            self.viewer.dims.set_current_step(2, z)
+
     @pyqtSlot(bool)
     def browse_dir_path(self):
         result = self._open_file_dialog(self.current_dir_path, 'dir')
@@ -994,7 +1021,7 @@ class MainWidget(QWidget):
 
     @pyqtSlot(bool)
     def browse_calib_meta(self):
-        path = self._open_file_dialog(self.calib_path, 'dir')
+        path = self._open_file_dialog(self.calib_path, 'file')
         self.calib_path = path
         self.ui.le_calibration_metadata.setText(self.calib_path)
 
@@ -1586,13 +1613,19 @@ class MainWidget(QWidget):
     @pyqtSlot(bool)
     def reconstruct(self):
 
+        self._populate_config_from_app()
+        self.config_reader.data_type = 'ometiff'
+        self.worker = ReconstructionWorker(self, self.config_reader)
+
         # connect handlers
-        self.worker.dimension_emitter.connect(self.add_reconstructed_data)
-        self.worker.store_emitter.connect(self.add_reconstruction_store)
+        self.worker.dimension_emitter.connect(self.handle_reconstruction_dim_update)
+        self.worker.store_emitter.connect(self.handle_reconstruction_store_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
-        self.worker.errored.connect(self._handle_reconstruct_error)
+        self.worker.errored.connect(self._handle_acq_error)
         self.ui.qbutton_stop_acq.clicked.connect(self.worker.quit)
+
+        self.worker.start()
 
     @pyqtSlot(bool)
     def save_config(self):
@@ -1600,6 +1633,7 @@ class MainWidget(QWidget):
         self.save_config_path = path
         name = PurePath(self.save_config_path).name
         dir_ = self.save_config_path.strip(name)
+        self._populate_config_from_app()
         self.config_reader.save_yaml(dir_=dir_, name=name)
 
     @pyqtSlot(bool)

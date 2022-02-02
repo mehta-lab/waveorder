@@ -35,7 +35,7 @@ PROCESSING = {
     'background_correction': 'None',
     'use_gpu': False,
     'gpu_id': 0,
-    'wavelength':None,
+    'wavelength': None,
     'pixel_size': None,
     'magnification': None,
     'NA_objective': None,
@@ -203,9 +203,10 @@ class ConfigReader(object):
                             f'User must specify {key_child} to use for {key}'
 
     def save_yaml(self, dir_=None, name=None):
+        self.yaml_dict = self._create_yaml_dict()
+
         dir_ = self.save_dir if dir_ is None else dir_
         name = f'config_{self.data_save_name}.yml' if name is None else name
-        print(dir_, name)
         if not name.endswith('.yml'):
             name += '.yml'
         if not os.path.exists(dir_):
