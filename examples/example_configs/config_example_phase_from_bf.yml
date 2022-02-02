@@ -6,7 +6,7 @@ dataset:
   # Mode for reconstruction, '2D' or '3D'
 
   data_dir: '/path/to/raw/data'
-  # (str) path to the raw data directory (folder which holds .tif files)
+  # (str) path to the raw data directory (folder which holds .tif files) or the root .zarr file
 
   save_dir: '/path/to/save/directory'
   # (str) path to the directory in which the data will be saved

@@ -41,7 +41,7 @@ PROCESSING = {
     'NA_objective': None,
     'NA_condenser': None,
     'n_objective_media': 1.003,
-    'brightfield_channel_idx': 0,
+    'brightfield_channel_index': 0,
     'fluorescence_channel_indices': None,
     'z_step': None,
     'focus_zidx': None,
@@ -180,6 +180,14 @@ class ConfigReader(object):
                 if 'Phase3D' in self.config['processing'][key] and 'Phase2D' in self.config['processing'][key]:
                     raise KeyError(f'Both Phase3D and Phase2D cannot be specified in {key}.  Please compute separately')
 
+                if 'Phase3D' in self.config['processing'][key] and self.config['dataset']['mode'] == '2D':
+                    raise KeyError(f'Specified mode is 2D and Phase3D was specified for reconstruction. '
+                                   'Only 2D reconstructions can be performed in 2D mode')
+
+                if 'Phase2D' in self.config['processing'][key] and self.config['dataset']['mode'] == '3D':
+                    raise KeyError(f'Specified mode is 3D and Phase2D was specified for reconstruction. '
+                                   'Only 3D reconstructions can be performed in 3D mode')
+
             elif key == 'background_correction' and self.config['dataset']['method'] == 'QLIPP':
                 if self.config['processing'][key] == 'None' or self.config['processing'][key] == 'local_filter':
                     pass
@@ -296,15 +304,17 @@ class ConfigReader(object):
                 warnings.warn(f'yaml DATASET config field {key} is not recognized')
 
     def _parse_preprocessing(self):
-        for key, value in self.config['pre_processing'].items():
-            if key in PREPROCESSING.keys():
-                for key_child, value_child in self.config['pre_processing'][key].items():
-                    if key_child in PREPROCESSING[key].keys():
-                        setattr(self.preprocessing, f'{key}_{key_child}', value_child)
-                    else:
-                        warnings.warn(f'yaml PREPROCESSING config field {key}, {key_child} is not recognized')
-            else:
-                warnings.warn(f'yaml PREPROCESSING config field {key} is not recognized')
+
+        if 'pre_processing' in self.config:
+            for key, value in self.config['pre_processing'].items():
+                if key in PREPROCESSING.keys():
+                    for key_child, value_child in self.config['pre_processing'][key].items():
+                        if key_child in PREPROCESSING[key].keys():
+                            setattr(self.preprocessing, f'{key}_{key_child}', value_child)
+                        else:
+                            warnings.warn(f'yaml PREPROCESSING config field {key}, {key_child} is not recognized')
+                else:
+                    warnings.warn(f'yaml PREPROCESSING config field {key} is not recognized')
 
     def _parse_processing(self):
         for key, value in self.config['processing'].items():
@@ -317,15 +327,17 @@ class ConfigReader(object):
             super().__setattr__('qlipp_birefringence_only', True)
 
     def _parse_postprocessing(self):
-        for key, value in self.config['post_processing'].items():
-            if key in POSTPROCESSING.keys():
-                for key_child, value_child in self.config['post_processing'][key].items():
-                    if key_child in POSTPROCESSING[key].keys():
-                        setattr(self.postprocessing, f'{key}_{key_child}', value_child)
-                    else:
-                        warnings.warn(f'yaml POSTPROCESSING config field {key}, {key_child} is not recognized')
-            else:
-                warnings.warn(f'yaml POSTPROCESSING config field {key} is not recognized')
+
+        if 'post_processing' in self.config:
+            for key, value in self.config['post_processing'].items():
+                if key in POSTPROCESSING.keys():
+                    for key_child, value_child in self.config['post_processing'][key].items():
+                        if key_child in POSTPROCESSING[key].keys():
+                            setattr(self.postprocessing, f'{key}_{key_child}', value_child)
+                        else:
+                            warnings.warn(f'yaml POSTPROCESSING config field {key}, {key_child} is not recognized')
+                else:
+                    warnings.warn(f'yaml POSTPROCESSING config field {key} is not recognized')
 
     def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
 

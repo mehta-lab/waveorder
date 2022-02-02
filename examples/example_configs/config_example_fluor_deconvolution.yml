@@ -6,7 +6,7 @@ dataset:
   # Mode for reconstruction, '2D' or '3D'
 
   data_dir: '/path/to/raw/data'
-  # (str) path to the raw data directory (folder which holds .tif files)
+  # (str) path to the raw data directory (folder which holds .tif files) or the root .zarr file
 
   save_dir: '/path/to/save/directory'
   # (str) path to the directory in which the data will be saved
@@ -56,12 +56,9 @@ processing:
   gpu_id: 0
   # (int) ID of GPU to be used
 
-  ########################################
-  #    PHASE RECONSTRUCTION PARAMETERS   #
-  ########################################
-
-  wavelength: 532
-  # (int or list) wavelength of the fluorescence emission in nm
+  ################################################
+  #    DECONVOLTUION RECONSTRUCTION PARAMETERS   #
+  ################################################
 
   pixel_size: 6.5
   # (float) Camera pixel size in the unit of um
@@ -75,25 +72,8 @@ processing:
   n_objective_media: 1.0
   # (float) Refractive index of the objective immersion oil
 
-
   pad_z: 0
   # (int) Number of z slices padded above and below the dataset for 3D phase reconstruction to avoid boundary artifacts
 
   reg: 1.0e-4
     # (float) regularization parameter
-
-  #### 2D Tikhonov parameter ####
-
-post_processing:
-  denoise:
-    use: False # set to true if you want to denoise the data before writing
-    channels: ['Retardance', 'Phase3D'] # Choose which channels to denoise.
-    threshold: [0.1, 0.1] # Must match length of channels
-    level: [1, 1] # must match length of channels
-  registration:
-    use: False # set to true if you want to register a channel before writing
-    channel_idx: [3] # Index of desired raw data channel to register.  Index corresponds to its position in raw data
-                         # if multiple channels, must match order of the fluorescence channels in output_channels
-                     # If matches fluorescence_channel_indices then that channel will be deconvolved then registered
-
-    shift: [[0, 50, -50]] # up and to the right [0, +y, -x].  Must match length of channel_idx

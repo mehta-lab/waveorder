@@ -103,8 +103,8 @@ def deconvolve_fluorescence_2D(data, reconstructor: fluorescence_microscopy, bg_
     ----------
     data:               (nd-array) 2D data of size (N_fluor, Y, X) or (Y, X)
     reconstructor:      (waveorder.fluorescence_microscopy) Initialized reconstructor object
-    bg_level:           (list or int) list/int of background levels of size [N_Fluor] or 1
-    reg:                (list or int) list/int of regularization parameters of size [N_Fluor] or 1
+    bg_level:           (list) list of background levels of size [N_Fluor] or 1
+    reg:                (list) list of regularization parameters of size [N_Fluor] or 1
 
     Returns
     -------
@@ -128,8 +128,8 @@ def deconvolve_fluorescence_3D(data, reconstructor: fluorescence_microscopy, bg_
     ----------
     data:               (nd-array) 2D data of size (N_fluor, Z, Y, X) or (Z, Y, X)
     reconstructor:      (waveorder.fluorescence_microscopy) Initialized reconstructor object
-    bg_level:           (list or int) list/int of background levels of size [N_Fluor] or 1
-    reg:                (list or int) list/int of regularization parameters of size [N_Fluor] or 1
+    bg_level:           (list) list of background levels of size [N_Fluor] or 1
+    reg:                (list) list of regularization parameters of size [N_Fluor] or 1
 
     Returns
     -------
