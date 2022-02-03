@@ -988,27 +988,42 @@ class waveorder_microscopy:
         Parameters
         ----------
             I_meas        : numpy.ndarray
-                            polarization-sensitive intensity images with the size of (N_channel, N, M) or
-                            (N_channel, N, M, N_defocus)
+                            polarization-sensitive intensity images with the size of (N_channel, ..., N, M) or
+                            (N_channel, ..., N, M, N_defocus)
                           
         Returns
         -------
             S_image_recon : numpy.ndarray
-                            reconstructed Stokes parameters with the size of (N_Stokes, N, M) or
-                            (N_channel, N, M, N_defocus)
+                            reconstructed Stokes parameters with the size of (N_Stokes, ..., N, M), or
+                            (N_Stokes, ..., N, M, N_defocus)
                        
                               
         '''
 
-        n_dims = I_meas.ndim
-        if n_dims not in (3, 4):
-            raise ValueError('Unsupported image data size. Image data must be of size (N_channel, N, M) or '
-                             '(N_channel, N, M, N_defocus)')
 
-        if n_dims == 3:
+        data_dims = I_meas.shape
+        if data_dims[0] != self.N_channel:
+            raise ValueError(f'Unsupported image data size. Provide image data is of size: {data_dims}. '
+                             f'Image data must be of size (N_channel, ..., N, M) or (N_channel, ..., N, M, N_defocus)')
+        if not (data_dims[-2:] != (self.N, self.M) or data_dims[-3:] != (self.N, self.M, self.N_defocus)):
+            raise ValueError(f'Unsupported image data size. Provide image data is of size: {data_dims}. '
+                             f'Image data must be of size (N_channel, ..., N, M) or (N_channel, ..., N, M, N_defocus)')
+
+        # append dummy z dimension (N_defocus=1) if input data is 2D
+        single_plane = False
+        if data_dims[-2:] == (self.N, self.M):
+            single_plane = True
             I_meas = I_meas[..., np.newaxis]
-        img_data = np.moveaxis(I_meas, 0, -2)
 
+        # reshape image data into (N, M, N_channel, ...)
+        img_data = np.moveaxis(I_meas, (-3, -2), (0, 1))
+        data_dims2 = img_data.shape
+        img_data = np.reshape(img_data, (self.N, self.M, self.N_channel, -1))
+
+        # compute Stokes parameters
+        # A_matrix_inv is shape (N_Stokes, N_channel) or (N, M, N_Stokes, N_channel)
+        # img_data is shape (N, M, N_channel, ...)
+        # S_image_recon is shape (N, M, N_stokes, ...)
         if self.use_gpu:
             if self._A_matrix_inv_gpu_array is None:
                 self._A_matrix_inv_gpu_array = cp.array(self.A_matrix_inv)
@@ -1017,8 +1032,12 @@ class waveorder_microscopy:
         else:
             S_image_recon = np.matmul(self.A_matrix_inv, img_data)
 
-        S_image_recon = np.moveaxis(S_image_recon, -2, 0)
-        if n_dims == 3:
+        # reshape Stokes parameters into (N_Stokes, ..., N, M, N_defocus)
+        S_image_recon = np.reshape(S_image_recon, (self.N, self.M, self.N_Stokes)+data_dims2[3:])
+        S_image_recon = np.moveaxis(S_image_recon, (0, 1), (-3, -2))
+
+        # if input data was 2D, remove dummy z dimension
+        if single_plane:
             return S_image_recon[..., 0]
         else:
             return S_image_recon
