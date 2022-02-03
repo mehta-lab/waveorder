@@ -1501,7 +1501,14 @@
                   <property name="verticalSpacing">
                    <number>20</number>
                   </property>
-                  <item row="0" column="0">
+                  <item row="1" column="0" colspan="2">
+                   <widget class="QLabel" name="spacer">
+                    <property name="text">
+                     <string/>
+                    </property>
+                   </widget>
+                  </item>
+                  <item row="0" column="0" colspan="2">
                    <widget class="QGroupBox" name="groupBox_2">
                     <property name="title">
                      <string/>
@@ -1510,6 +1517,13 @@
                      <property name="verticalSpacing">
                       <number>20</number>
                      </property>
+                     <item row="1" column="0">
+                      <widget class="QLabel" name="label_mode">
+                       <property name="text">
+                        <string>Mode</string>
+                       </property>
+                      </widget>
+                     </item>
                      <item row="0" column="0">
                       <widget class="QLabel" name="label_pipeline">
                        <property name="text">
@@ -1536,10 +1550,17 @@
                        </item>
                       </widget>
                      </item>
-                     <item row="1" column="0">
-                      <widget class="QLabel" name="label_mode">
+                     <item row="2" column="0">
+                      <widget class="QLabel" name="label_positions">
                        <property name="text">
-                        <string>Mode</string>
+                        <string>Positions</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QLabel" name="label_timepoints">
+                       <property name="text">
+                        <string>Timepoints</string>
                        </property>
                       </widget>
                      </item>
@@ -1557,54 +1578,6 @@
                        </item>
                       </widget>
                      </item>
-                     <item row="2" column="0">
-                      <widget class="QLabel" name="label_positions">
-                       <property name="text">
-                        <string>Positions</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="2" column="1">
-                      <widget class="QLineEdit" name="le_positions">
-                       <property name="font">
-                        <font>
-                         <weight>50</weight>
-                         <italic>false</italic>
-                         <bold>false</bold>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string/>
-                       </property>
-                       <property name="placeholderText">
-                        <string>all or 1, 2, or [0, 10]</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="3" column="0">
-                      <widget class="QLabel" name="label_timepoints">
-                       <property name="text">
-                        <string>Timepoints</string>
-                       </property>
-                      </widget>
-                     </item>
-                     <item row="3" column="1">
-                      <widget class="QLineEdit" name="le_timepoints">
-                       <property name="font">
-                        <font>
-                         <weight>50</weight>
-                         <italic>false</italic>
-                         <bold>false</bold>
-                        </font>
-                       </property>
-                       <property name="text">
-                        <string/>
-                       </property>
-                       <property name="placeholderText">
-                        <string>all or 1, 2, or [0, 10]</string>
-                       </property>
-                      </widget>
-                     </item>
                      <item row="4" column="0">
                       <widget class="QLabel" name="label_output_channels">
                        <property name="sizePolicy">
@@ -1618,7 +1591,7 @@
                        </property>
                       </widget>
                      </item>
-                     <item row="4" column="1">
+                     <item row="4" column="1" colspan="2">
                       <widget class="QLineEdit" name="le_output_channels">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
@@ -1647,7 +1620,7 @@
                        </property>
                       </widget>
                      </item>
-                     <item row="5" column="1">
+                     <item row="5" column="1" colspan="2">
                       <widget class="QLabel" name="label_chan_desc">
                        <property name="sizePolicy">
                         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -1668,14 +1641,21 @@
                        </property>
                       </widget>
                      </item>
+                     <item row="2" column="1">
+                      <widget class="QLineEdit" name="le_positions">
+                       <property name="placeholderText">
+                        <string>all or 1, 2, or [0, 10]</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="1">
+                      <widget class="QLineEdit" name="le_timepoints">
+                       <property name="placeholderText">
+                        <string>all or 1, 2, or [0, 10]</string>
+                       </property>
+                      </widget>
+                     </item>
                     </layout>
-                   </widget>
-                  </item>
-                  <item row="1" column="0" colspan="2">
-                   <widget class="QLabel" name="spacer">
-                    <property name="text">
-                     <string/>
-                    </property>
                    </widget>
                   </item>
                  </layout>
@@ -1790,7 +1770,7 @@
                         </sizepolicy>
                        </property>
                        <property name="text">
-                        <string>Camera Pixel Size</string>
+                        <string>Camera Pixel Size (um)</string>
                        </property>
                       </widget>
                      </item>

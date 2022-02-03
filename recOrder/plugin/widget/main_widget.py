@@ -1,9 +1,9 @@
 from recOrder.calib.Calibration import QLIPP_Calibration
 from pycromanager import Bridge
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
-from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy, QSlider
 from PyQt5.QtGui import QPixmap, QColor
-from superqt import QDoubleRangeSlider
+from superqt import QDoubleRangeSlider, QRangeSlider
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
 from recOrder.plugin.workers.acquisition_workers import AcquisitionWorker, ListeningWorker
 from recOrder.plugin.workers.reconstruction_workers import ReconstructionWorker
@@ -20,6 +20,10 @@ import json
 import logging
 from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, POSTPROCESSING
 
+#TODO:
+# Parse the Microscope Parameters correctly
+# Make the checks robust to every pipeline
+
 
 class MainWidget(QWidget):
 
@@ -35,7 +39,7 @@ class MainWidget(QWidget):
         # Setup GUI Elements
         self.ui = recOrder_calibration_v5.Ui_Form()
         self.ui.setupUi(self)
-        self._promote_slider()
+        self._promote_slider_init()
 
         # Setup Connections between elements
         # Connect to MicroManager
@@ -252,7 +256,63 @@ class MainWidget(QWidget):
 
         self.showMaximized()
 
-    def _promote_slider(self):
+    def _demote_slider_offline(self, ui_slider, range_):
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+
+        # Get Information from regular sliders
+        slider_idx = self.ui.gridLayout_26.indexOf(ui_slider)
+        slider_position = self.ui.gridLayout_26.getItemPosition(slider_idx)
+        slider_parent = ui_slider.parent().objectName()
+        slider_name = ui_slider.objectName()
+
+        # Remove regular sliders from the UI
+        self.ui.gridLayout_26.removeWidget(ui_slider)
+
+        # Add back the sliders as range sliders with the same properties
+        ui_slider = QSlider(getattr(self.ui, slider_parent))
+        sizePolicy.setHeightForWidth(ui_slider.sizePolicy().hasHeightForWidth())
+        ui_slider.setSizePolicy(sizePolicy)
+        ui_slider.setOrientation(Qt.Horizontal)
+        ui_slider.setObjectName(slider_name)
+        self.ui.gridLayout_26.addWidget(ui_slider,
+                                        slider_position[0],
+                                        slider_position[1],
+                                        slider_position[2],
+                                        slider_position[3])
+        ui_slider.setRange(range_[0], range_[1])
+
+    def _promote_slider_offline(self, ui_slider, range_):
+
+        sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+
+        # Get Information from regular sliders
+        slider_idx = self.ui.gridLayout_26.indexOf(ui_slider)
+        slider_position = self.ui.gridLayout_26.getItemPosition(slider_idx)
+        slider_parent = ui_slider.parent().objectName()
+        slider_name = ui_slider.objectName()
+        print(slider_parent)
+
+        # Remove regular sliders from the UI
+        self.ui.gridLayout_26.removeWidget(ui_slider)
+
+        # Add back the sliders as range sliders with the same properties
+        ui_slider = QRangeSlider(getattr(self.ui, slider_parent))
+        sizePolicy.setHeightForWidth(ui_slider.sizePolicy().hasHeightForWidth())
+        ui_slider.setSizePolicy(sizePolicy)
+        ui_slider.setOrientation(Qt.Horizontal)
+        ui_slider.setObjectName(slider_name)
+        self.ui.gridLayout_26.addWidget(ui_slider,
+                                        slider_position[0],
+                                        slider_position[1],
+                                        slider_position[2],
+                                        slider_position[3])
+        ui_slider.setRange(range_[0], range_[1])
+
+    def _promote_slider_init(self):
 
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -490,8 +550,9 @@ class MainWidget(QWidget):
 
         success = True
         output_channels = self.ui.le_output_channels.text()
-        output_channels.replace(' ', '')
-        output_channels = output_channels.strip(',')
+        print(output_channels.split(','))
+        # output_channels.replace(' ', '')
+        # output_channels = output_channels.strip(',')
 
         always_required = {'data_dir', 'save_dir', 'positions', 'timepoints', 'output_channels'}
         birefringence_required = {'calibration_metadata', 'recon_wavelength'}
@@ -646,8 +707,8 @@ class MainWidget(QWidget):
                 setattr(self.config_reader, key, bg_map[self.ui.cb_bg_method.currentIndex()])
             elif key == 'output_channels':
                 field_text = self.ui.le_output_channels.text()
-                channels = field_text.replace(' ', '')
-                channels = channels.split(',')
+                channels = field_text.split(',')
+                channels = [i.replace(' ', '') for i in channels]
                 print(channels)
                 setattr(self.config_reader, key, channels)
             else:
@@ -735,17 +796,33 @@ class MainWidget(QWidget):
         # Parse processing automatically
         denoiser = None
         for key, val in PROCESSING.items():
-            if hasattr(self.ui, f'le_{key}'):
+            if key == 'output_channels':
+                channels = self.config_reader.output_channels
+                text = ''
+                for idx, chan in enumerate(channels):
+                    text += f'{chan}, ' if idx != len(channels)-1 else f'{chan}'
+
+                self.ui.le_output_channels.setText(text)
+
+            elif key == 'use_gpu':
+                state = getattr(self.config_reader, key)
+                self.ui.chb_use_gpu.setChecked(state)
+
+            elif key == 'gpu_id':
+                val = str(int(getattr(self.config_reader, key)))
+                self.ui.le_gpu_id.setText(val)
+
+            elif hasattr(self.ui, f'le_{key}'):
                 le = getattr(self.ui, f'le_{key}')
                 le.setText(str(getattr(self.config_reader, key)) if not isinstance(getattr(self.config_reader, key),
                                                                                    str) else getattr(self.config_reader,
                                                                                                      key))
-
             elif hasattr(self.ui, f'cb_{key}'):
                 cb = getattr(self.ui, f'cb_{key}')
                 items = [cb.itemText(i) for i in range(cb.count())]
                 cfg_attr = getattr(self.config_reader, key)
                 self.ui.cb_mode.setCurrentIndex(items.index(cfg_attr))
+
             elif key == 'phase_denoiser_2D' or key == 'phase_denoiser_3D':
                 cb = self.ui.cb_phase_denoiser
                 cfg_attr = getattr(self.config_reader, f'phase_denoiser_{self.mode}')
@@ -834,9 +911,10 @@ class MainWidget(QWidget):
             self.ui.le_mm_status.setText('Failed.')
             self.ui.le_mm_status.setStyleSheet("background-color: rgb(200,0,0);")
 
-    @pyqtSlot(int)
+    @pyqtSlot(tuple)
     def handle_progress_update(self, value):
-        self.ui.progress_bar.setValue(value)
+        self.ui.progress_bar.setValue(value[0])
+        self.ui.label_progress.setText('Progress: ' + value[1])
 
     @pyqtSlot(str)
     def handle_extinction_update(self, value):
@@ -1019,6 +1097,22 @@ class MainWidget(QWidget):
         self.data_dir = path
         self.ui.le_data_dir.setText(self.data_dir)
 
+        # reader = WaveorderReader(self.data_dir)
+        # if reader.get_num_positions() > 1:
+        #     self.ui.slider_positions.setDisabled(False)
+        #     self._promote_slider_offline(self.ui.slider_positions, range_=(0, reader.get_num_positions()))
+        # else:
+        #     self.ui.slider_positions.setRange(0, 0)
+        #     self.ui.slider_positions.setDisabled(True)
+        #
+        # if reader.frames > 1:
+        #     self.ui.slider_timepoints.setDisabled(False)
+        #     self._promote_slider_offline(self.ui.slider_timepoints, range_=(0, reader.frames))
+        # else:
+        #     self.ui.slider_timepoints.setRange(0, 0)
+        #     self.ui.slider_timepoints.setDisabled(True)
+
+
     @pyqtSlot(bool)
     def browse_calib_meta(self):
         path = self._open_file_dialog(self.calib_path, 'file')
@@ -1096,6 +1190,26 @@ class MainWidget(QWidget):
     @pyqtSlot()
     def enter_config_group(self):
         self.config_group = self.ui.cb_config_group.currentText()
+        config = self.mmc.getAvailableConfigs(self.config_group)
+
+        channels = []
+        for i in range(config.size()):
+            channels.append(config.get(i))
+
+        states = ['State0', 'State1', 'State2', 'State3', 'State4']
+        missing = []
+        for state in states:
+            if state not in channels:
+                missing.append(state)
+
+        if len(missing) != 0:
+            msg = f'The chosen config group ({self.config_group}) is missing states: {missing}. '\
+                   'Please refer to the recOrder wiki on how to set up the config properly.'
+
+            self.ui.cb_config_group.setStyleSheet("border: 1px solid rgb(200,0,0);")
+            raise KeyError(msg)
+        else:
+            self.ui.cb_config_group.setStyleSheet("")
 
     @pyqtSlot()
     def enter_use_cropped_roi(self):
@@ -1246,12 +1360,42 @@ class MainWidget(QWidget):
     def enter_method(self):
         idx = self.ui.cb_method.currentIndex()
 
+
         if idx == 0:
             self.method = 'QLIPP'
+            self.ui.le_cond_na.show()
+            self.ui.label_cond_na.show()
+            self.ui.cb_bg_method.show()
+            self.ui.le_bg_path.hide() if self.bg_option == 'None' else self.ui.le_bg_path.show()
+            self.ui.qbutton_browse_bg_path.hide() if self.bg_option == 'None' else self.ui.qbutton_browse_bg_path.show()
+            self.ui.label_bg_path.hide() if self.bg_option == 'None' else self.ui.label_bg_path.show()
+            self.ui.label_bg_method.hide() if self.bg_option == 'None' else self.ui.label_bg_method.show()
+            self.ui.phase.show()
+            self.ui.fluor.show()
+
         elif idx == 1:
             self.method = 'PhaseFromBF'
+            self.ui.le_cond_na.show()
+            self.ui.label_cond_na.show()
+            self.ui.cb_bg_method.show()
+            self.ui.le_bg_path.hide() if self.bg_option == 'None' else self.ui.le_bg_path.show()
+            self.ui.qbutton_browse_bg_path.hide() if self.bg_option == 'None' else self.ui.qbutton_browse_bg_path.show()
+            self.ui.label_bg_path.hide() if self.bg_option == 'None' else self.ui.label_bg_path.show()
+            self.ui.label_bg_method.hide() if self.bg_option == 'None' else self.ui.label_bg_method.show()
+            self.ui.phase.show()
+            self.ui.fluor.show()
+
         else:
             self.method = 'FluorDeconv'
+            self.ui.le_cond_na.hide()
+            self.ui.label_cond_na.hide()
+            self.ui.cb_bg_method.hide()
+            self.ui.label_bg_path.hide()
+            self.ui.label_bg_method.hide()
+            self.ui.le_bg_path.hide()
+            self.ui.qbutton_browse_bg_path.hide()
+            self.ui.phase.hide()
+            self.ui.fluor.hide()
 
     @pyqtSlot(int)
     def enter_mode(self):
@@ -1272,6 +1416,25 @@ class MainWidget(QWidget):
             self.ui.le_data_dir.setStyleSheet("")
             self.data_dir = entry
 
+        # reader = WaveorderReader(self.data_dir)
+        # if reader.get_num_positions() > 1:
+        #     self.ui.slider_positions.setDisabled(False)
+        #     self.ui.chb_positions.setDisabled(False)
+        #     self._promote_slider_offline(self.ui.slider_positions, range_=(0, reader.get_num_positions()))
+        # else:
+        #     self.ui.slider_positions.setRange(0, 0)
+        #     self.ui.slider_positions.setDisabled(True)
+        #     self.ui.chb_positions.setDisabled(True)
+        #
+        # if reader.frames > 1:
+        #     self.ui.slider_timepoints.setDisabled(False)
+        #     self.ui.chb_timepoints.setDisabled(False)
+        #     self._promote_slider_offline(self.ui.slider_timepoints, range_=(0, reader.frames))
+        # else:
+        #     self.ui.slider_timepoints.setRange(0, 0)
+        #     self.ui.slider_timepoints.setDisabled(True)
+        #     self.ui.chb_timepoints.setDisabled(True)
+
     @pyqtSlot()
     def enter_calib_meta(self):
         entry = self.ui.le_calibration_metadata.text()
@@ -1281,6 +1444,28 @@ class MainWidget(QWidget):
         else:
             self.ui.le_calibration_metadata.setStyleSheet("")
             self.calib_path = entry
+
+    @pyqtSlot()
+    def enter_single_position(self):
+
+        state = self.ui.chb_positions.checkState()
+        current_slider_range = (self.ui.slider_positions.minimum(), self.ui.slider_positions.maximum())
+
+        if state == 2:
+            self._demote_slider_offline(self.ui.slider_positions, range_=current_slider_range)
+        else:
+            self._promote_slider_offline(self.ui.slider_positions, range_=current_slider_range)
+
+    @pyqtSlot()
+    def enter_single_timepoint(self):
+
+        state = self.ui.chb_timepoints.checkState()
+        current_slider_range = (self.ui.slider_timepoints.minimum(), self.ui.slider_timepoints.maximum())
+
+        if state == 2:
+            self._demote_slider_offline(self.ui.slider_timepoints, range_=current_slider_range)
+        else:
+            self._promote_slider_offline(self.ui.slider_timepoints, range_=current_slider_range)
 
     @pyqtSlot()
     def enter_colormap(self):

@@ -16,7 +16,7 @@ class CalibrationSignals(WorkerBaseSignals):
     Custom Signals class that includes napari native signals
     """
 
-    progress_update = pyqtSignal(int)
+    progress_update = pyqtSignal(tuple)
     extinction_update = pyqtSignal(str)
     intensity_update = pyqtSignal(object)
     calib_assessment = pyqtSignal(str)
@@ -57,8 +57,7 @@ class CalibrationWorker(WorkerBase):
         self.calib.intensity_emitter = self.intensity_update
         self.calib.plot_sequence_emitter = self.plot_sequence_emit
         self.calib.get_full_roi()
-        self.progress_update.emit(1)
-        self.progress_update.emit(1)
+        self.progress_update.emit((1, 'Calculating Blacklevel...'))
         self._check_abort()
 
         # Check if change of ROI is needed
@@ -77,7 +76,7 @@ class CalibrationWorker(WorkerBase):
         logging.debug(f'Blacklevel: {self.calib.I_Black}\n')
 
         self._check_abort()
-        self.progress_update.emit(10)
+        self.progress_update.emit((10, 'Calibrating Extinction State...'))
 
         # Set LC Wavelength:
         self.calib.set_wavelength(int(self.calib_window.wavelength))
@@ -117,7 +116,7 @@ class CalibrationWorker(WorkerBase):
 
         self.calib.write_metadata(notes=self.calib_window.ui.le_notes_field.text())
         self.calib_file_emit.emit(self.calib.meta_file)
-        self.progress_update.emit(100)
+        self.progress_update.emit((100, 'Finished'))
 
         self._check_abort()
 
@@ -154,23 +153,23 @@ class CalibrationWorker(WorkerBase):
         self.calib.opt_Iext()
 
         self._check_abort()
-        self.progress_update.emit(60)
+        self.progress_update.emit((60, 'Calibrating State 1...'))
 
         # Optimize first elliptical (reference) state
         self.calib.opt_I0()
-        self.progress_update.emit(65)
+        self.progress_update.emit((65, 'Calibrating State 2...'))
 
         self._check_abort()
 
         # Optimize 60 deg state
         self.calib.opt_I60(0.05, 0.05)
-        self.progress_update.emit(75)
+        self.progress_update.emit((75, 'Calibrating State 3...'))
 
         self._check_abort()
 
         # Optimize 120 deg state
         self.calib.opt_I120(0.05, 0.05)
-        self.progress_update.emit(85)
+        self.progress_update.emit((85, 'Writing Metadata...'))
 
         self._check_abort()
 
@@ -180,31 +179,31 @@ class CalibrationWorker(WorkerBase):
 
         # Optimize Extinction State
         self.calib.opt_Iext()
-        self.progress_update.emit(50)
+        self.progress_update.emit((50, 'Calibrating State 1...'))
 
         self._check_abort()
 
         # Optimize First elliptical state
         self.calib.opt_I0()
-        self.progress_update.emit(55)
+        self.progress_update.emit((55, 'Calibrating State 2...'))
 
         self._check_abort()
 
         # Optimize 45 deg state
         self.calib.opt_I45(0.05, 0.05)
-        self.progress_update.emit(65)
+        self.progress_update.emit((65, 'Calibrating State 3...'))
 
         self._check_abort()
 
         # Optimize 90 deg state
         self.calib.opt_I90(0.05, 0.05)
-        self.progress_update.emit(75)
+        self.progress_update.emit((75, 'Calibrating State 4...'))
 
         self._check_abort()
 
         # Optimize 135 deg state
         self.calib.opt_I135(0.05, 0.05)
-        self.progress_update.emit(85)
+        self.progress_update.emit((85, 'Writing Metadata...'))
 
         self._check_abort()
 
