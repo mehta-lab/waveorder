@@ -318,7 +318,7 @@ def softTreshold(x, threshold, use_gpu=False, gpu_id=0):
     return x_threshold
 
 
-def wavelet_softThreshold(img, wavelet, threshold, level=None, axes=None):
+def wavelet_softThreshold(img, wavelet, threshold, level = 1, axes=None):
     
     '''
     
