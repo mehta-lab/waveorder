@@ -5,7 +5,6 @@ import itertools
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 
 
-
 def Jones_sample(Ein, t, sa):
     
     '''
@@ -970,7 +969,7 @@ def scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='po
                         'positive' for assumption of positively uniaxial material
                         'negative' for assumption of negatively uniaxial material
                         
-        reg_ret_pr    : numpy.ndarray
+        reg_ret_pr    : float
                         regularization parameters for principal retardance estimation
         
     Returns
