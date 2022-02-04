@@ -364,7 +364,6 @@ def wavelet_softThreshold(img, wavelet, threshold, level=None, axes=None):
 
     img_padded = np.pad(img, padding, 'edge')
 
-    level = pywt.dwtn_max_level(img_padded.shape, wavelet, axes=axes)
     coeffs = pywt.wavedecn(img_padded, wavelet, level=level, axes=axes)
     
     for i in range(level+1):
