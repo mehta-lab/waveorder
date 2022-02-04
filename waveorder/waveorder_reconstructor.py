@@ -2705,3 +2705,41 @@ class fluorescence_microscopy:
             
 
         return np.squeeze(I_fluor_deconv)
+
+
+    def Fluor_anisotropy_recon(self, S1_stack, S2_stack):
+
+        """
+
+        Reconstruct fluorescence anisotropy and ensemble fluorophore orientation from normalized S1 and S2 Stokes
+        parameters
+
+        Parameters
+        ----------
+        S1_stack        : numpy.ndarray
+                          Normalized S1 images
+        S2_stack        : numpy.ndarray
+                          Normalized S2 images
+
+        Returns
+        -------
+            anisotropy  : numpy.ndarray
+                          Fluorescence anisotropy
+
+            orientation : numpy.ndarray
+                          Ensemble fluorophore orientation, in the range [0, pi] radians
+
+        """
+
+        if self.use_gpu:
+            S1_stack = cp.array(S1_stack)
+            S2_stack = cp.array(S2_stack)
+
+            anisotropy = cp.asnumpy(0.5 * cp.sqrt(S1_stack ** 2 + S2_stack ** 2))
+            orientation = cp.asnumpy((0.5 * cp.arctan2(S2_stack, S1_stack)) % np.pi)
+
+        else:
+            anisotropy = 0.5 * np.sqrt(S1_stack**2 + S2_stack**2)
+            orientation = (0.5 * np.arctan2(S2_stack, S1_stack)) % np.pi
+
+        return anisotropy, orientation
