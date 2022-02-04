@@ -6,7 +6,7 @@ import time
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from scipy.ndimage import uniform_filter
 from collections import namedtuple
-
+from .optics import scattering_potential_tensor_to_3D_orientation_PN
 
 import re
 numbers = re.compile(r'(\d+)')
@@ -2021,3 +2021,61 @@ def image_stitching(coord_list, overlap, file_loading_func, gen_ref_map=True, re
         return img_normalized, ref_stitch
     else:
         return img_normalized
+    
+    
+def orientation_3D_continuity_map(azimuth, theta, psz_ps_ratio=None, avg_px_size=10, reg_ret_pr=1e-1):
+    
+    '''
+    
+    calculate the 3D orientation continuity map that is used to suppress noisy retardance measurements
+    
+    Parameters
+    ----------
+        azimuth           : numpy.ndarray
+                            reconstructed in-plane orientation with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+                            
+        theta             : numpy.ndarray
+                            reconstructed out-of-plane inclination with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+        
+        psz_ps_ratio      : float
+                            the ratio of the sampling size in z and in xy
+                    
+        avg_px_size       : int
+                            size of the smoothing uniform filter to enforce spatial continuity 
+                            (larger --> smoother feature, lower --> sharper feature)
+        
+        reg_ret_pr        : float
+                            regularization parameters for principal retardance estimation
+        
+        
+    Returns
+    -------
+        retardance_pr_avg : numpy.ndarray
+                            the computed orientation continuity map with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+                  
+    '''
+    
+    img_size = azimuth.shape
+    img_dim  = azimuth.ndim
+    
+    f_tensor_unit_ret = np.zeros((7,)+img_size)
+    f_tensor_unit_ret[2] = -np.ones(img_size)*(np.sin(theta)**2)*np.cos(2*azimuth)
+    f_tensor_unit_ret[3] = -np.ones(img_size)*(np.sin(theta)**2)*np.sin(2*azimuth)
+    f_tensor_unit_ret[4] = -np.ones(img_size)*(np.sin(2*theta))*np.cos(azimuth)
+    f_tensor_unit_ret[5] = -np.ones(img_size)*(np.sin(2*theta))*np.sin(azimuth)
+    
+    
+    f_tensor_blur = np.zeros_like(f_tensor_unit_ret)
+    for i in range(4):
+        if img_dim==3 and psz_ps_ratio is not None:
+            f_tensor_blur[2+i] = uniform_filter(f_tensor_unit_ret[2+i], (avg_px_size,avg_px_size,int(np.round(avg_px_size/psz_ps_ratio))))
+        elif img_dim==2:
+            f_tensor_blur[2+i] = uniform_filter(f_tensor_unit_ret[2+i], (avg_px_size,avg_px_size))
+        else:
+            raise ValueError('azimuth and theta are either 2D or 3D, psz_ps_ratio should not be None for 3D images')
+    
+    retardance_pr_avg,_,_ = scattering_potential_tensor_to_3D_orientation_PN(f_tensor_blur, material_type='positive', reg_ret_pr = reg_ret_pr)
+    retardance_pr_avg /= np.max(retardance_pr_avg)
+    
+    
+    return retardance_pr_avg
