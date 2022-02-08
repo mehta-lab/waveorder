@@ -6,7 +6,7 @@ from waveorder.io.reader import WaveorderReader
 import time
 import glob
 
-def generate_acq_settings(mm, channel_group, channels, zstart=None, zend=None, zstep=None,
+def generate_acq_settings(mm, channel_group, channels=None, zstart=None, zend=None, zstep=None,
                           save_dir=None, prefix=None, keep_shutter_open = False):
     """
     This function generates a json file specific to the micromanager SequenceSettings.
@@ -53,18 +53,20 @@ def generate_acq_settings(mm, channel_group, channels, zstart=None, zend=None, z
                     'doZStack': do_z,
                     'color': {'value': -16747854, 'falpha': 0.0},
                     'skipFactorFrame': 0,
-                    'useChannel': True}
+                    'useChannel': True if channels else False}
 
-    # Append all the QLIPP channels with their current exposure settings
-    channel_list = []
-    for chan in channels:
-        #todo: think about how to deal with missing exposure
-        exposure = app.getChannelExposureTime(channel_group, chan, 10) # sets exposure to 10 if not found
-        channel = channel_dict.copy()
-        channel['config'] = chan
-        channel['exposure'] = exposure
+    channel_list = None
+    if channels:
+        # Append all the QLIPP channels with their current exposure settings
+        channel_list = []
+        for chan in channels:
+            #todo: think about how to deal with missing exposure
+            exposure = app.getChannelExposureTime(channel_group, chan, 10) # sets exposure to 10 if not found
+            channel = channel_dict.copy()
+            channel['config'] = chan
+            channel['exposure'] = exposure
 
-        channel_list.append(channel)
+            channel_list.append(channel)
 
     # set other parameters
     original_json['numFrames'] = 1
@@ -85,7 +87,7 @@ def generate_acq_settings(mm, channel_group, channels, zstart=None, zend=None, z
     original_json['shouldDisplayImages'] = True
     original_json['useSlices'] = do_z
     original_json['useFrames'] = False
-    original_json['useChannels'] = True
+    original_json['useChannels'] = True if channels else False
     original_json['slices'] = list(np.arange(float(zstart), float(zend+zstep), float(zstep))) if zstart else []
     original_json['sliceZStepUm'] = zstep
     original_json['sliceZBottomUm'] = zstart

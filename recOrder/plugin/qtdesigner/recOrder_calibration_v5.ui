@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>618</width>
-    <height>978</height>
+    <width>630</width>
+    <height>1035</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -206,7 +206,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>578</width>
+            <width>590</width>
             <height>1345</height>
            </rect>
           </property>
@@ -832,7 +832,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>538</width>
+                    <width>550</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -891,7 +891,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>538</width>
+                    <width>550</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -1139,8 +1139,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>578</width>
-            <height>962</height>
+            <width>590</width>
+            <height>1042</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -1153,7 +1153,7 @@
            <property name="verticalSpacing">
             <number>20</number>
            </property>
-           <item row="6" column="0" colspan="2" alignment="Qt::AlignTop">
+           <item row="7" column="0" colspan="2" alignment="Qt::AlignTop">
             <widget class="QGroupBox" name="ReconSettings">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -1181,7 +1181,7 @@
               <property name="verticalSpacing">
                <number>25</number>
               </property>
-              <item row="2" column="1" colspan="3">
+              <item row="2" column="1" colspan="3" alignment="Qt::AlignTop">
                <widget class="QTabWidget" name="tabWidget_3">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -1962,6 +1962,20 @@
                      <property name="topMargin">
                       <number>25</number>
                      </property>
+                     <item row="2" column="0">
+                      <widget class="QLabel" name="label_fluor_bg">
+                       <property name="text">
+                        <string>Background Level</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="0" column="1">
+                      <widget class="QLineEdit" name="le_fluor_strength">
+                       <property name="text">
+                        <string>.0001</string>
+                       </property>
+                      </widget>
+                     </item>
                      <item row="0" column="0">
                       <widget class="QLabel" name="label_fluor_strength">
                        <property name="text">
@@ -1969,8 +1983,19 @@
                        </property>
                       </widget>
                      </item>
-                     <item row="0" column="1">
-                      <widget class="QLineEdit" name="le_reg"/>
+                     <item row="2" column="1">
+                      <widget class="QLineEdit" name="le_fluor_bg">
+                       <property name="text">
+                        <string>0</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="1" column="0" colspan="2">
+                      <widget class="QCheckBox" name="chb_autocalc_bg">
+                       <property name="text">
+                        <string>Auto-calculate background</string>
+                       </property>
+                      </widget>
                      </item>
                     </layout>
                    </widget>
@@ -2295,8 +2320,8 @@
               <property name="verticalSpacing">
                <number>20</number>
               </property>
-              <item row="0" column="1">
-               <widget class="QLabel" name="label_zend">
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_zstart">
                 <property name="font">
                  <font>
                   <weight>50</weight>
@@ -2305,12 +2330,9 @@
                  </font>
                 </property>
                 <property name="text">
-                 <string>Z End (um)</string>
+                 <string>Z Start (um)</string>
                 </property>
                </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QLineEdit" name="le_zstep"/>
               </item>
               <item row="2" column="1">
                <widget class="QComboBox" name="cb_birefringence">
@@ -2336,20 +2358,6 @@
                 </item>
                </widget>
               </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_phase">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Phase</string>
-                </property>
-               </widget>
-              </item>
               <item row="0" column="2">
                <widget class="QLabel" name="label_zstep">
                 <property name="font">
@@ -2364,8 +2372,8 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_zstart">
+              <item row="0" column="1">
+               <widget class="QLabel" name="label_zend">
                 <property name="font">
                  <font>
                   <weight>50</weight>
@@ -2374,12 +2382,12 @@
                  </font>
                 </property>
                 <property name="text">
-                 <string>Z Start (um)</string>
+                 <string>Z End (um)</string>
                 </property>
                </widget>
               </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="le_zend"/>
+              <item row="1" column="2">
+               <widget class="QLineEdit" name="le_zstep"/>
               </item>
               <item row="2" column="0">
                <widget class="QLabel" name="label_birefringence">
@@ -2397,6 +2405,36 @@
               </item>
               <item row="1" column="0">
                <widget class="QLineEdit" name="le_zstart"/>
+              </item>
+              <item row="5" column="0">
+               <widget class="QCheckBox" name="chb_pause_updates">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Pause Updates</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_phase">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Phase</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="1">
+               <widget class="QLineEdit" name="le_zend"/>
               </item>
               <item row="3" column="1">
                <widget class="QComboBox" name="cb_phase">
@@ -2423,22 +2461,36 @@
                </widget>
               </item>
               <item row="4" column="0">
-               <widget class="QCheckBox" name="chb_pause_updates">
+               <widget class="QLabel" name="label_fluor">
+                <property name="text">
+                 <string>Fluorescence</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="1">
+               <widget class="QComboBox" name="cb_fluor_dim">
                 <property name="font">
                  <font>
                   <weight>50</weight>
                   <bold>false</bold>
                  </font>
                 </property>
-                <property name="text">
-                 <string>Pause Updates</string>
-                </property>
+                <item>
+                 <property name="text">
+                  <string>2D</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>3D</string>
+                 </property>
+                </item>
                </widget>
               </item>
              </layout>
             </widget>
            </item>
-           <item row="5" column="0" colspan="2">
+           <item row="6" column="0" colspan="2">
             <widget class="QGroupBox" name="acquire">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -2463,19 +2515,6 @@
               <property name="verticalSpacing">
                <number>20</number>
               </property>
-              <item row="0" column="0">
-               <widget class="QPushButton" name="qbutton_listen">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Listen For Data</string>
-                </property>
-               </widget>
-              </item>
               <item row="2" column="0">
                <widget class="QPushButton" name="qbutton_acq_phase">
                 <property name="font">
@@ -2530,6 +2569,26 @@
                 </property>
                </widget>
               </item>
+              <item row="3" column="0" colspan="2">
+               <widget class="QPushButton" name="qbutton_listen">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Listen For Data</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QPushButton" name="qbutton_acq_fluor">
+                <property name="text">
+                 <string>Acquire Deconvolved Fluor</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>
@@ -2560,8 +2619,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>562</width>
-            <height>787</height>
+            <width>574</width>
+            <height>844</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
@@ -2972,7 +3031,6 @@
   <tabstop>scrollArea_2</tabstop>
   <tabstop>scrollArea_3</tabstop>
   <tabstop>qbutton_mm_connect</tabstop>
-  <tabstop>qbutton_listen</tabstop>
  </tabstops>
  <resources/>
  <connections/>

@@ -2,20 +2,33 @@ import glob
 import os
 import tifffile as tiff
 import numpy as np
+from waveorder.waveorder_reconstructor import fluorescence_microscopy, waveorder_microscopy
 
 
 def extract_reconstruction_parameters(reconstructor, magnification=None):
 
 
-    attr_dict = {'phase_dimension': reconstructor.phase_deconv,
-                 'pad_z': reconstructor.pad_z,
-                 'n_objective_media': reconstructor.n_media,
-                 'bg_correction_option': reconstructor.bg_option,
-                 'objective_NA': reconstructor.NA_obj * reconstructor.n_media,
-                 'condenser_NA': reconstructor.NA_illu * reconstructor.n_media,
-                 'magnification': magnification,
-                 'swing': reconstructor.chi if reconstructor.N_channel == 4 else reconstructor.chi / 2 / np.pi,
-                 'pixel_size': reconstructor.ps * magnification if magnification else None}
+    if isinstance(reconstructor, waveorder_microscopy):
+        attr_dict = {'phase_dimension': reconstructor.phase_deconv,
+                     'pad_z': reconstructor.pad_z,
+                     'n_objective_media': reconstructor.n_media,
+                     'bg_correction_option': reconstructor.bg_option,
+                     'objective_NA': reconstructor.NA_obj * reconstructor.n_media,
+                     'condenser_NA': reconstructor.NA_illu * reconstructor.n_media,
+                     'magnification': magnification,
+                     'swing': reconstructor.chi if reconstructor.N_channel == 4 else reconstructor.chi / 2 / np.pi,
+                     'pixel_size': reconstructor.ps * magnification if magnification else None}
+
+    elif isinstance(reconstructor, fluorescence_microscopy):
+        attr_dict = {'fluor_wavelength': list(reconstructor.lambda_emiss * reconstructor.n_media),
+                     'pad_z': reconstructor.pad_z,
+                     'n_objective_media': reconstructor.n_media,
+                     'objective_NA': reconstructor.NA_obj * reconstructor.n_media,
+                     'magnification': magnification,
+                     'pixel_size': reconstructor.ps * magnification if magnification else None}
+
+    else:
+        attr_dict = dict()
 
     return attr_dict
 

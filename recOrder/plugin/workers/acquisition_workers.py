@@ -4,6 +4,8 @@ from recOrder.compute.qlipp_compute import initialize_reconstructor, \
 from recOrder.acq.acq_functions import generate_acq_settings, acquire_from_settings
 from recOrder.io.utils import load_bg, extract_reconstruction_parameters
 from recOrder.compute import QLIPPBirefringenceCompute
+from recOrder.compute.fluorescence_compute import initialize_fluorescence_reconstructor, deconvolve_fluorescence_3D, \
+    deconvolve_fluorescence_2D, calculate_background
 from recOrder.io.zarr_converter import ZarrConverter
 from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import logging
@@ -18,7 +20,7 @@ import time
 import glob
 
 
-class AcquisitionSignals(WorkerBaseSignals):
+class PolarizationAcquisitionSignals(WorkerBaseSignals):
     """
     Custom Signals class that includes napari native signals
     """
@@ -26,6 +28,16 @@ class AcquisitionSignals(WorkerBaseSignals):
     phase_image_emitter = pyqtSignal(object)
     bire_image_emitter = pyqtSignal(object)
     phase_reconstructor_emitter = pyqtSignal(object)
+    meta_emitter = pyqtSignal(dict)
+    aborted = pyqtSignal()
+
+class FluorescenceAcquisitionSignals(WorkerBaseSignals):
+    """
+    Custom Signals class that includes napari native signals
+    """
+
+    fluor_image_emitter = pyqtSignal(object)
+    fluor_reconstructor_emitter = pyqtSignal(object)
     meta_emitter = pyqtSignal(dict)
     aborted = pyqtSignal()
 
@@ -38,15 +50,352 @@ class ListeningSignals(WorkerBaseSignals):
     dim_emitter = pyqtSignal(tuple)
     aborted = pyqtSignal()
 
+class FluorescenceAcquisitionWorker(WorkerBase):
+    """
+    Class to execute a fluorescence deconvolution acquisition.  First step is to snap the images follow by a second
+    step of reconstructing those images.
+    """
+
+    def __init__(self, calib_window):
+        super().__init__(SignalsClass=FluorescenceAcquisitionSignals)
+
+        # Save current state of GUI window
+        self.calib_window = calib_window
+
+        # Init Properties
+        self.prefix = 'recOrderPluginSnap'
+        self.dm = self.calib_window.mm.displays()
+        self.dim = '2D' if self.calib_window.ui.cb_fluor_dim.currentIndex() == 0 else '3D'
+
+        self.img_dim = None
+
+    def _check_abort(self):
+        if self.abort_requested:
+            self.aborted.emit()
+            raise TimeoutError('Stop Requested')
+
+    def work(self):
+        """
+        Function that runs the 2D or 3D acquisition and reconstructs the data
+        """
+
+        logging.info('Running Acquisition...')
+        save_dir = self.calib_window.save_directory if self.calib_window.save_directory else self.calib_window.directory
+
+        if save_dir is None:
+            raise ValueError('save directory is empty, please specify a directory in the plugin')
+
+        self._check_abort()
+
+        # Acquire 2D stack
+        if self.dim == '2D':
+            logging.debug('Acquiring 2D stack')
+
+            # Generate MDA Settings
+            settings = generate_acq_settings(self.calib_window.mm,
+                                             channel_group=None,
+                                             channels=None,
+                                             save_dir=save_dir,
+                                             prefix=self.prefix)
+            self._check_abort()
+
+            # Acquire from MDA settings uses MM MDA GUI
+            # Returns (1, 4/5, 1, Y, X) array
+            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
+
+        # Acquire 3D stack
+        else:
+            logging.debug('Acquiring 3D stack')
+
+            # Generate MDA Settings
+            settings = generate_acq_settings(self.calib_window.mm,
+                                             channel_group=None,
+                                             channels=None,
+                                             zstart=self.calib_window.z_start,
+                                             zend=self.calib_window.z_end,
+                                             zstep=self.calib_window.z_step,
+                                             save_dir=save_dir,
+                                             prefix=self.prefix)
+
+            self._check_abort()
+
+            # Acquire from MDA settings uses MM MDA GUI
+            # Returns (1, 4/5, Z, Y, X) array
+            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
+            self._check_abort()
+
+        # Reconstruct snapped images
+        self._check_abort()
+        self.n_slices = stack.shape[2]
+        fluor, meta = self._reconstruct(stack[0])
+        self._check_abort()
+
+        # Save images
+        logging.debug('Saving Images')
+        self._save_imgs(fluor, meta)
+
+        self._check_abort()
+
+        logging.info('Finished Acquisition')
+        logging.debug('Finished Acquisition')
+
+        # Emit the images and let thread know function is finished
+        self.fluor_image_emitter.emit(fluor)
+        self.meta_emitter.emit(meta)
+
+        # Cleanup acquisition by closing window + deleting temp directory
+        self._cleanup_acq()
+
+    def _reconstruct(self, stack):
+        """
+        Method to reconstruct, given a 2D or 3D stack.  First need to initialize the reconstructor given
+        what type of acquisition it is (birefringence only skips a lot of heavy compute needed for phase).
+        This function also checks to see if the reconstructor needs to be updated from previous acquisitions
+
+        Parameters
+        ----------
+        stack:          (nd-array) Dimensions are (C, Z, Y, X)
+
+        Returns
+        -------
+
+        """
+
+        # get rid of z-dimension if 2D acquisition
+        stack = stack[:, 0] if self.n_slices == 1 else stack
+        self.img_dim = (stack.shape[-2], stack.shape[-1], stack.shape[-3]) if self.n_slices != 1 else (stack.shape[-2], stack.shape[-1], 1)
+
+        self._check_abort()
+
+        # Initialize the reconstuctor
+
+        # if no reconstructor has been initialized before, create new reconstructor
+        if not self.calib_window.fluor_reconstructor:
+            logging.debug('Computing new reconstructor')
+
+            recon = initialize_fluorescence_reconstructor(img_dim=self.img_dim,
+                                                          wavelength_nm=int(
+                                                              self.calib_window.ui.le_recon_wavelength.text()),
+                                                          pixel_size_um=self.calib_window.ps,
+                                                          z_step_um=self.calib_window.z_step,
+                                                          NA_obj=self.calib_window.obj_na,
+                                                          magnification=self.calib_window.mag,
+                                                          mode=self.dim,
+                                                          n_obj_media=self.calib_window.n_media,
+                                                          pad_z=self.calib_window.pad_z,
+                                                          use_gpu=self.calib_window.use_gpu,
+                                                          gpu_id=self.calib_window.gpu_id)
+
+            # Emit reconstructor to be saved for later reconstructions
+            self.fluor_reconstructor_emitter.emit(recon)
+
+        # if previous reconstructor exists
+        else:
+            self._check_abort()
+
+            # compute new reconstructor if the old reconstructor properties have been modified
+            if self._reconstructor_changed():
+                logging.debug('Reconstruction settings changed, updating reconstructor')
+
+                recon = initialize_fluorescence_reconstructor(img_dim=self.img_dim,
+                                                              wavelength_nm=int(
+                                                                  self.calib_window.ui.le_recon_wavelength.text()),
+                                                              pixel_size_um=self.calib_window.ps,
+                                                              z_step_um=self.calib_window.z_step,
+                                                              NA_obj=self.calib_window.obj_na,
+                                                              magnification=self.calib_window.mag,
+                                                              mode=self.dim,
+                                                              n_obj_media=self.calib_window.n_media,
+                                                              pad_z=self.calib_window.pad_z,
+                                                              use_gpu=self.calib_window.use_gpu,
+                                                              gpu_id=self.calib_window.gpu_id)
+
+                # Emit reconstructor to be saved for later reconstructions
+                self.fluor_reconstructor_emitter.emit(recon)
+
+            # use previous reconstructor
+            else:
+                logging.debug('Using previous reconstruction settings')
+                recon = self.calib_window.fluor_reconstructor
+
+        # Get BG information
+        if self.calib_window.ui.chb_autocalc_bg.checkState() == 2:
+            bg_level = calculate_background(stack)
+
+        else:
+            try:
+                bg_level = [int(self.calib_window.ui.le_fluor_bg.text())]
+            except ValueError:
+                bg_level = [0]
+
+        # Perform deconvolution
+        if self.dim == '2D':
+
+            fluor_deconvolved = deconvolve_fluorescence_2D(data=stack,
+                                                           reconstructor=recon,
+                                                           bg_level=bg_level,
+                                                           reg=[float(self.calib_window.ui.le_fluor_strength.text())])
+        else:
+
+            fluor_deconvolved = deconvolve_fluorescence_3D(data=stack,
+                                                           reconstructor=recon,
+                                                           bg_level=bg_level,
+                                                           reg=[float(self.calib_window.ui.le_fluor_strength.text())])
+
+            fluor_deconvolved = np.transpose(fluor_deconvolved, (2, 0, 1))
+
+        meta = extract_reconstruction_parameters(recon, magnification=self.calib_window.mag)
+
+        # return both variables, could contain images or could be null
+        return fluor_deconvolved, meta
+
+    def _save_imgs(self, fluor, meta=None):
+        """
+        function to save images.
+
+        Parameters
+        ----------
+        fluor:      (nd-array or None) deconvolved fluorescence image or stack
+
+        Returns
+        -------
+
+        """
+        dir_ = self.calib_window.save_directory if self.calib_window.save_directory else self.calib_window.directory
+        writer = WaveorderWriter(dir_)
+
+        # initialize
+        chunk_size = (1, 1, 1, fluor.shape[-2], fluor.shape[-1])
+
+        # increment filename one more than last found saved snap
+        i = 0
+        prefix = self.calib_window.save_name
+        name = f'Fluorescence_Snap_{i}.zarr' if not prefix else f'{prefix}_Fluorescence_Snap_{i}.zarr'
+        while os.path.exists(os.path.join(dir_, name)):
+            i += 1
+            name = f'Fluorescence_Snap_{i}.zarr' if not prefix else f'{prefix}_Fluorescence_Snap_{i}.zarr'
+
+
+        # create zarr root and position group
+        writer.create_zarr_root(name)
+        current_meta = writer.store.attrs.asdict()
+        current_meta['recOrder'] = meta
+        writer.store.attrs.put(current_meta)
+
+        # Check if 2D
+        if len(fluor.shape) == 2:
+            writer.init_array(0, (1, 1, 1, fluor.shape[-2], fluor.shape[-1]), chunk_size, ['FluorDeconvolved2D'])
+            z = 0
+
+        # Check if 3D
+        else:
+            writer.init_array(0, (1, 1, fluor.shape[-3], fluor.shape[-2], fluor.shape[-1]), chunk_size,
+                              ['FluorDeconvolved3D'])
+
+            z = [0, fluor.shape[-3]]
+
+
+        # Write data to disk
+        writer.write(fluor, p=0, t=0, c=0, z=z)
+
+    def _reconstructor_changed(self):
+        """
+        Function to check if the reconstructor has changed from the previous one in memory.
+        Serves to check if the worker attributes and reconstructor attributes have diverged.
+
+        Returns
+        -------
+
+        """
+
+        recon = self.calib_window.fluor_reconstructor
+
+        if (recon.N, recon.M, recon.N_defocus) != self.img_dim:
+            changed = True
+
+        elif recon.n_media != self.calib_window.n_media:
+            changed = True
+
+        elif recon.NA_obj * recon.n_media != self.calib_window.obj_na:
+            changed = True
+
+        elif recon.lambda_emiss * recon.n_media != int(self.calib_window.ui.le_recon_wavelength.text()) / 1000:
+            changed = True
+
+        elif recon.ps * self.calib_window.mag != self.calib_window.ps:
+            changed = True
+
+        elif recon.psz != self.calib_window.z_step:
+            changed = True
+
+        elif recon.pad_z != self.calib_window.pad_z:
+            changed = True
+
+        elif recon.use_gpu != self.calib_window.use_gpu:
+            changed = True
+
+        elif recon.gpu_id != self.calib_window.gpu_id:
+            changed = True
+
+        # #TODO: Add in when instrument_tensor branch of waveorder is merged
+        # elif recon.mode != self.dim+'-WF':
+        #     changed = True
+
+        else:
+            changed = False
+
+        return changed
+
+    def _cleanup_acq(self):
+
+        # Get display windows
+        disps = self.dm.getAllDataViewers()
+
+        # loop through display window and find one with matching prefix
+        for i in range(disps.size()):
+            disp = disps.get(i)
+
+            # close the datastore and grab the path to where the data is saved
+            if self.prefix in disp.getName():
+                dp = disp.getDataProvider()
+                dir_ = dp.getSummaryMetadata().getDirectory()
+                prefix = dp.getSummaryMetadata().getPrefix()
+                closed = False
+                disp.close()
+                while not closed:
+                    closed = disp.isClosed()
+                dp.close()
+
+
+                # Try to delete the data, sometime it isn't cleaned up quickly enough and will
+                # return an error.  In this case, catch the error and then try to close again (seems to work).
+                try:
+                    save_prefix = self.calib_window.save_name if self.calib_window.save_name else None
+                    name = f'RawFluorData_Snap_{i}.zarr' if not save_prefix else f'{save_prefix}_RawFluorData_Snap_{i}.zarr'
+                    while os.path.exists(os.path.join(dir_, name)):
+                        i += 1
+                        name = f'RawFluorData_Snap_{i}.zarr' if not save_prefix else f'{save_prefix}_RawFluorData_Snap_{i}.zarr'
+
+                    out_path = os.path.join(dir_, name)
+                    converter = ZarrConverter(os.path.join(dir_, prefix), out_path, 'ometiff', False, False)
+                    converter.run_conversion()
+                    shutil.rmtree(os.path.join(dir_, prefix))
+                except PermissionError as ex:
+                    dp.close()
+                break
+            else:
+                continue
+
+
 # TODO: Cache common OTF's on local computers and use those for reconstruction
-class AcquisitionWorker(WorkerBase):
+class PolarizationAcquisitionWorker(WorkerBase):
     """
     Class to execute a birefringence/phase acquisition.  First step is to snap the images follow by a second
     step of reconstructing those images.
     """
 
     def __init__(self, calib_window, calib, mode):
-        super().__init__(SignalsClass=AcquisitionSignals)
+        super().__init__(SignalsClass=PolarizationAcquisitionSignals)
 
         # Save current state of GUI window
         self.calib_window = calib_window
@@ -57,6 +406,7 @@ class AcquisitionWorker(WorkerBase):
         self.n_slices = None
         self.prefix = 'recOrderPluginSnap'
         self.dm = self.calib_window.mm.displays()
+        self.channel_group = self.calib_window.config_group
 
         # Determine whether 2D or 3D acquisition is needed
         if self.mode == 'birefringence' and self.calib_window.birefringence_dim == '2D':
@@ -93,7 +443,7 @@ class AcquisitionWorker(WorkerBase):
 
             # Generate MDA Settings
             settings = generate_acq_settings(self.calib_window.mm,
-                                             channel_group='Channel',
+                                             channel_group=self.channel_group,
                                              channels=channels,
                                              save_dir=save_dir,
                                              prefix=self.prefix)
@@ -109,7 +459,7 @@ class AcquisitionWorker(WorkerBase):
 
             # Generate MDA Settings
             settings = generate_acq_settings(self.calib_window.mm,
-                                             channel_group='Channel',
+                                             channel_group=self.channel_group,
                                              channels=channels,
                                              zstart=self.calib_window.z_start,
                                              zend=self.calib_window.z_end,
@@ -192,7 +542,8 @@ class AcquisitionWorker(WorkerBase):
                                                  bg_correction=self.calib_window.bg_option,
                                                  n_obj_media=self.calib_window.n_media,
                                                  mode=self.calib_window.phase_dim,
-                                                 use_gpu=False, gpu_id=0)
+                                                 use_gpu=self.calib_window.use_gpu,
+                                                 gpu_id=self.calib_window.gpu_id)
 
                 # Emit reconstructor to be saved for later reconstructions
                 self.phase_reconstructor_emitter.emit(recon)
@@ -220,7 +571,10 @@ class AcquisitionWorker(WorkerBase):
                                                      bg_correction=self.calib_window.bg_option,
                                                      n_obj_media=self.calib_window.n_media,
                                                      mode=self.calib_window.phase_dim,
-                                                     use_gpu=False, gpu_id=0)
+                                                     use_gpu=self.calib_window.use_gpu,
+                                                     gpu_id=self.calib_window.gpu_id)
+
+                    self.phase_reconstructor_emitter.emit(recon)
 
                 # use previous reconstructor
                 else:
@@ -423,7 +777,9 @@ class AcquisitionWorker(WorkerBase):
         attr_list = {'phase_dim': 'phase_deconv',
                      'pad_z': 'pad_z',
                      'n_media': 'n_media',
-                     'bg_option': 'bg_option'
+                     'bg_option': 'bg_option',
+                     'use_gpu': 'use_gpu',
+                     'gpu_idx': 'gpu_id'
                      }
 
         # attributes that are modified upon passing them to reconstructor
@@ -513,10 +869,10 @@ class AcquisitionWorker(WorkerBase):
                 # return an error.  In this case, catch the error and then try to close again (seems to work).
                 try:
                     save_prefix = self.calib_window.save_name if self.calib_window.save_name else None
-                    name = f'RawData_Snap_{i}.zarr' if not save_prefix else f'{save_prefix}_RawData_Snap_{i}.zarr'
+                    name = f'RawPolData_Snap_{i}.zarr' if not save_prefix else f'{save_prefix}_RawPolData_Snap_{i}.zarr'
                     while os.path.exists(os.path.join(dir_, name)):
                         i += 1
-                        name = f'RawData_Snap_{i}.zarr' if not save_prefix else f'{save_prefix}_RawData_Snap_{i}.zarr'
+                        name = f'RawPolData_Snap_{i}.zarr' if not save_prefix else f'{save_prefix}_RawPolData_Snap_{i}.zarr'
 
                     out_path = os.path.join(dir_, name)
                     converter = ZarrConverter(os.path.join(dir_, prefix), out_path, 'ometiff', False, False)

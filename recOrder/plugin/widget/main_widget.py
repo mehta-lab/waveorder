@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy, QSlider
 from PyQt5.QtGui import QPixmap, QColor
 from superqt import QDoubleRangeSlider, QRangeSlider
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
-from recOrder.plugin.workers.acquisition_workers import AcquisitionWorker, ListeningWorker
+from recOrder.plugin.workers.acquisition_workers import PolarizationAcquisitionWorker, ListeningWorker, FluorescenceAcquisitionWorker
 from recOrder.plugin.workers.reconstruction_workers import ReconstructionWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
 from recOrder.postproc.post_processing import ret_ori_overlay, generic_hsv_overlay
@@ -95,6 +95,7 @@ class MainWidget(QWidget):
         self.ui.qbutton_acq_birefringence.clicked[bool].connect(self.acq_birefringence)
         self.ui.qbutton_acq_phase.clicked[bool].connect(self.acq_phase)
         self.ui.qbutton_acq_birefringence_phase.clicked[bool].connect(self.acq_birefringence_phase)
+        self.ui.qbutton_acq_fluor.clicked[bool].connect(self.acquire_fluor_deconvolved)
         self.ui.cb_colormap.currentIndexChanged[int].connect(self.enter_colormap)
         self.ui.chb_display_volume.stateChanged[int].connect(self.enter_use_full_volume)
         self.ui.le_overlay_slice.editingFinished.connect(self.enter_display_slice)
@@ -122,6 +123,7 @@ class MainWidget(QWidget):
         self.ui.cb_mode.currentIndexChanged[int].connect(self.enter_mode)
         self.ui.le_calibration_metadata.editingFinished.connect(self.enter_calib_meta)
         self.ui.qbutton_reconstruct.clicked[bool].connect(self.reconstruct)
+        self.ui.cb_phase_denoiser.currentIndexChanged[int].connect(self.enter_phase_denoiser)
 
         # Logging
         log_box = QtLogger(self.ui.te_log)
@@ -170,6 +172,7 @@ class MainWidget(QWidget):
         self.n_media = 1.003
         self.pad_z = 0
         self.phase_reconstructor = None
+        self.fluor_reconstructor = None
         self.acq_bg_directory = None
         self.auto_shutter = True
         self.lca_dac = None
@@ -219,7 +222,9 @@ class MainWidget(QWidget):
         self.ui.le_bg_path.setHidden(True)
         self.ui.qbutton_browse_bg_path.setHidden(True)
         self.ui.le_rho.setHidden(True)
+        self.ui.label_phase_rho.setHidden(True)
         self.ui.le_itr.setHidden(True)
+        self.ui.label_itr.setHidden(True)
 
         # Set initial UI Properties
         self.ui.le_gui_mode.setStyleSheet("border: 1px solid rgb(200,0,0); color: rgb(200,0,0);")
@@ -394,13 +399,6 @@ class MainWidget(QWidget):
         else:
             self.ui.tabWidget_3.setStyleSheet("")
 
-        # Physical Parameters
-        self.ui.le_recon_wavelength.setHidden(val)
-        self.ui.label_recon_wavelength.setHidden(val)
-
-        # Regularization
-        self.ui.fluorescence.setHidden(val)
-
         # Pre/Post Processing
         self.ui.tabWidget_3.setTabEnabled(4, not val)
         if val:
@@ -422,9 +420,13 @@ class MainWidget(QWidget):
         self.ui.qbutton_acq_birefringence.setEnabled(True)
         self.ui.qbutton_acq_phase.setEnabled(True)
         self.ui.qbutton_acq_birefringence_phase.setEnabled(True)
+        self.ui.qbutton_acq_fluor.setEnabled(True)
         self.ui.qbutton_load_calib.setEnabled(True)
         self.ui.qbutton_listen.setEnabled(True)
         self.ui.qbutton_create_overlay.setEnabled(True)
+        self.ui.qbutton_reconstruct.setEnabled(True)
+        self.ui.qbutton_load_config.setEnabled(True)
+        self.ui.qbutton_load_default_config.setEnabled(True)
 
     def _disable_buttons(self):
         self.ui.qbutton_calibrate.setEnabled(False)
@@ -433,9 +435,13 @@ class MainWidget(QWidget):
         self.ui.qbutton_acq_birefringence.setEnabled(False)
         self.ui.qbutton_acq_phase.setEnabled(False)
         self.ui.qbutton_acq_birefringence_phase.setEnabled(False)
+        self.ui.qbutton_acq_fluor.setEnabled(False)
         self.ui.qbutton_load_calib.setEnabled(False)
         self.ui.qbutton_listen.setEnabled(False)
         self.ui.qbutton_create_overlay.setEnabled(False)
+        self.ui.qbutton_reconstruct.setEnabled(False)
+        self.ui.qbutton_load_config.setEnabled(False)
+        self.ui.qbutton_load_default_config.setEnabled(False)
 
     def _handle_error(self, exc):
         self.ui.tb_calib_assessment.setText(f'Error: {str(exc)}')
@@ -648,6 +654,7 @@ class MainWidget(QWidget):
         self.config_reader.data_save_name = self.ui.le_data_save_name.text() if self.ui.le_data_save_name.text() != '' else None
         self.config_reader.calibration_metadata = self.ui.le_calibration_metadata.text()
         self.config_reader.background = self.ui.le_calibration_metadata.text()
+        self.config_reader.background_correction = self.bg_option
 
         # Assumes that positions/timepoints can either be 'all'; '[all]'; 1, 2, 3, N; [start, end]
         positions = self.ui.le_positions.text()
@@ -700,30 +707,45 @@ class MainWidget(QWidget):
                 setattr(self.config_reader.preprocessing, key, getattr(self, key))
 
         attrs = dir(self.ui)
+        skip = ['wavelength', 'pixel_size', 'magnification', 'NA_objective', 'NA_condenser', 'n_objective_media']
         # TODO: Figure out how to catch errors in regularizer strength field
         for key, value in PROCESSING.items():
-            if key == 'background_correction':
-                bg_map = {0: 'None', 1: 'global', 2: 'local_fit'}
-                setattr(self.config_reader, key, bg_map[self.ui.cb_bg_method.currentIndex()])
-            elif key == 'output_channels':
-                field_text = self.ui.le_output_channels.text()
-                channels = field_text.split(',')
-                channels = [i.replace(' ', '') for i in channels]
-                print(channels)
-                setattr(self.config_reader, key, channels)
-            else:
-                attr_name = f'le_{key}'
-                if attr_name in attrs:
-                    le = getattr(self.ui, attr_name)
-                    try:
-                        setattr(self.config_reader, key, float(le.text()))
-                    except ValueError as err:
-                        print(err)
-                        tab = le.parent().parent().objectName()
-                        self._set_tab_red(tab, True)
-                        le.setStyleSheet("border: 1px solid rgb(200,0,0);")
+            if key not in skip:
+                if key == 'background_correction':
+                    bg_map = {0: 'None', 1: 'global', 2: 'local_fit'}
+                    setattr(self.config_reader, key, bg_map[self.ui.cb_bg_method.currentIndex()])
+
+                elif key == 'output_channels':
+                    field_text = self.ui.le_output_channels.text()
+                    channels = field_text.split(',')
+                    channels = [i.replace(' ', '') for i in channels]
+                    print(channels)
+                    setattr(self.config_reader, key, channels)
+
+                elif key == 'pad_z':
+                    val = self.ui.le_pad_z.text()
+                    setattr(self.config_reader, key, int(val))
                 else:
-                    continue
+                    attr_name = f'le_{key}'
+                    if attr_name in attrs:
+                        le = getattr(self.ui, attr_name)
+                        try:
+                            setattr(self.config_reader, key, float(le.text()))
+                        except ValueError as err:
+                            print(err)
+                            tab = le.parent().parent().objectName()
+                            self._set_tab_red(tab, True)
+                            le.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                    else:
+                        continue
+
+        # Parse name mismatch fields
+        setattr(self.config_reader, 'wavelength', int(self.ui.le_recon_wavelength.text()))
+        setattr(self.config_reader, 'NA_objective', float(self.ui.le_obj_na.text()))
+        setattr(self.config_reader, 'NA_condenser', float(self.ui.le_cond_na.text()))
+        setattr(self.config_reader, 'pixel_size', float(self.ui.le_ps.text()))
+        setattr(self.config_reader, 'n_objective_media', float(self.ui.le_n_media.text()))
+        setattr(self.config_reader, 'magnification', float(self.ui.le_mag.text()))
 
         # Parse Postprocessing automatically
         for key, val in POSTPROCESSING.items():
@@ -780,6 +802,17 @@ class MainWidget(QWidget):
             print(f'Did not understand method from config: {self.method}')
             self.ui.cb_method.setStyleSheet("border: 1px solid rgb(200,0,0);")
 
+        self.bg_option = self.config_reader.background_correction
+        if self.bg_option == 'None':
+            self.ui.cb_bg_method.setCurrentIndex(0)
+        elif self.bg_option == 'Global':
+            self.ui.cb_bg_method.setCurrentIndex(1)
+        elif self.bg_option == 'local_fit':
+            self.ui.cb_bg_method.setCurrentIndex(2)
+        else:
+            print(f'Did not understand method from config: {self.method}')
+            self.ui.cb_method.setStyleSheet("border: 1px solid rgb(200,0,0);")
+
         self.ui.le_positions.setText(str(self.config_reader.positions))
         self.ui.le_timepoints.setText(str(self.config_reader.timepoints))
 
@@ -792,6 +825,14 @@ class MainWidget(QWidget):
                 else:
                     le = getattr(self.ui, f'le_preproc_denoise_{key_child}')
                     le.setText(str(getattr(self.config_reader.preprocessing, f'denoise_{key_child}')))
+
+        # Parse Processing name mismatch fields
+        self.ui.le_recon_wavelength.setText(str(int(self.config_reader.wavelength)))
+        self.ui.le_obj_na.setText(str(self.config_reader.NA_objective))
+        self.ui.le_cond_na.setText(str(self.config_reader.NA_condenser))
+        self.ui.le_ps.setText(str(self.config_reader.pixel_size))
+        self.ui.le_n_media.setText(str(self.config_reader.n_objective_media))
+        self.ui.le_mag.setText(str(self.config_reader.magnification))
 
         # Parse processing automatically
         denoiser = None
@@ -811,6 +852,10 @@ class MainWidget(QWidget):
             elif key == 'gpu_id':
                 val = str(int(getattr(self.config_reader, key)))
                 self.ui.le_gpu_id.setText(val)
+
+            elif key == 'pad_z':
+                val = str(int(getattr(self.config_reader, key)))
+                self.ui.le_pad_z.setText(val)
 
             elif hasattr(self.ui, f'le_{key}'):
                 le = getattr(self.ui, f'le_{key}')
@@ -1020,16 +1065,37 @@ class MainWidget(QWidget):
             self.ui.cb_value.addItem('Retardance')
 
     @pyqtSlot(object)
-    def handle_reconstructor_update(self, value):
+    def handle_fluor_image_update(self, value):
+
+        mode = '2D' if self.ui.cb_fluor_dim.currentIndex() == 0 else '3D'
+        name = f'FluorDeconvolved{mode}'
+
+        # Add new layer if none exists, otherwise update layer data
+        if name in self.viewer.layers:
+            self.viewer.layers[name].data = value
+        else:
+            self.viewer.add_image(value, name=name, colormap='gray')
+
+    @pyqtSlot(object)
+    def handle_qlipp_reconstructor_update(self, value):
         # Saves phase reconstructor to be re-used if possible
         self.phase_reconstructor = value
 
+    @pyqtSlot(object)
+    def handle_fluor_reconstructor_update(self, value):
+        # Saves phase reconstructor to be re-used if possible
+        self.fluor_reconstructor = value
+
     @pyqtSlot(dict)
-    def handle_meta_update(self, value):
+    def handle_meta_update(self, meta):
         with open(self.last_calib_meta_file, 'r') as file:
             current_json = json.load(file)
 
-        current_json['Microscope Parameters'] = value
+        for key, value in current_json['Microscope Parameters'].items():
+            if key in meta:
+                current_json['Microscope Parameters'][key] = meta[key]
+            else:
+                current_json['Microscope Parameters'][key] = None
 
         with open(self.last_calib_meta_file, 'w') as file:
             json.dump(current_json, file, indent=1)
@@ -1276,6 +1342,21 @@ class MainWidget(QWidget):
             self.phase_dim = '2D'
         elif state == 1:
             self.phase_dim = '3D'
+
+    @pyqtSlot()
+    def enter_phase_denoiser(self):
+        state = self.ui.cb_phase_denoiser.currentIndex()
+        if state == 0:
+            self.ui.label_itr.setHidden(True)
+            self.ui.label_phase_rho.setHidden(True)
+            self.ui.le_rho.setHidden(True)
+            self.ui.le_itr.setHidden(True)
+
+        elif state == 1:
+            self.ui.label_itr.setHidden(False)
+            self.ui.label_phase_rho.setHidden(False)
+            self.ui.le_rho.setHidden(False)
+            self.ui.le_itr.setHidden(False)
 
     @pyqtSlot()
     def enter_acq_bg_path(self):
@@ -1709,7 +1790,7 @@ class MainWidget(QWidget):
         self._check_requirements_for_acq('birefringence')
 
         # Init Worker and thread
-        self.worker = AcquisitionWorker(self, self.calib, 'birefringence')
+        self.worker = PolarizationAcquisitionWorker(self, self.calib, 'birefringence')
 
         # Connect Handler
         self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
@@ -1730,11 +1811,11 @@ class MainWidget(QWidget):
         self._check_requirements_for_acq('phase')
 
         # Init worker and thread
-        self.worker = AcquisitionWorker(self, self.calib, 'phase')
+        self.worker = PolarizationAcquisitionWorker(self, self.calib, 'phase')
 
         # Connect Handlers
         self.worker.phase_image_emitter.connect(self.handle_phase_image_update)
-        self.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
+        self.worker.phase_reconstructor_emitter.connect(self.handle_qlipp_reconstructor_update)
         self.worker.meta_emitter.connect(self.handle_meta_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
@@ -1752,12 +1833,12 @@ class MainWidget(QWidget):
         self._check_requirements_for_acq('phase')
 
         # Init worker
-        self.worker = AcquisitionWorker(self, self.calib, 'all')
+        self.worker = PolarizationAcquisitionWorker(self, self.calib, 'all')
 
         # connect handlers
         self.worker.phase_image_emitter.connect(self.handle_phase_image_update)
         self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
-        self.worker.phase_reconstructor_emitter.connect(self.handle_reconstructor_update)
+        self.worker.phase_reconstructor_emitter.connect(self.handle_qlipp_reconstructor_update)
         self.worker.meta_emitter.connect(self.handle_meta_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
@@ -1766,6 +1847,24 @@ class MainWidget(QWidget):
 
         # Start Thread
         self.worker.start()
+
+    @pyqtSlot(bool)
+    def acquire_fluor_deconvolved(self):
+        # Init worker
+        self.worker = FluorescenceAcquisitionWorker(self)
+
+        # connect handlers
+        self.worker.fluor_image_emitter.connect(self.handle_fluor_image_update)
+        self.worker.meta_emitter.connect(self.handle_meta_update)
+        self.worker.fluor_reconstructor_emitter.connect(self.handle_fluor_reconstructor_update)
+        self.worker.started.connect(self._disable_buttons)
+        self.worker.finished.connect(self._enable_buttons)
+        self.worker.errored.connect(self._handle_acq_error)
+        self.ui.qbutton_stop_acq.clicked.connect(self.worker.quit)
+
+        # Start Thread
+        self.worker.start()
+
 
     @pyqtSlot(bool)
     def listen_and_reconstruct(self):
