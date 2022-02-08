@@ -2491,6 +2491,7 @@ class fluorescence_microscopy:
         self.pad_z = pad_z
         self.NA_obj = NA_obj / n_media
         self.N_wavelength = len(lambda_emiss)
+        self.deconv_mode = deconv_mode
 
         # setup microscocpe variables
         self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
