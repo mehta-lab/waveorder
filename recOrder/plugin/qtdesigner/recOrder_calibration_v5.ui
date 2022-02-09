@@ -9,7 +9,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>630</width>
+    <width>618</width>
     <height>1035</height>
    </rect>
   </property>
@@ -206,7 +206,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>590</width>
+            <width>578</width>
             <height>1345</height>
            </rect>
           </property>
@@ -832,7 +832,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>550</width>
+                    <width>538</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -891,7 +891,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>550</width>
+                    <width>538</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -1139,7 +1139,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>590</width>
+            <width>578</width>
             <height>1047</height>
            </rect>
           </property>
@@ -1930,6 +1930,9 @@
                      </item>
                      <item row="3" column="1">
                       <widget class="QLineEdit" name="le_itr">
+                       <property name="text">
+                        <string>50</string>
+                       </property>
                        <property name="placeholderText">
                         <string>TV Only</string>
                        </property>
@@ -1958,6 +1961,9 @@
                      </item>
                      <item row="2" column="1">
                       <widget class="QLineEdit" name="le_rho">
+                       <property name="text">
+                        <string>0.001</string>
+                       </property>
                        <property name="placeholderText">
                         <string>TV Only</string>
                        </property>
@@ -2619,7 +2625,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>574</width>
+            <width>562</width>
             <height>844</height>
            </rect>
           </property>

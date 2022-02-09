@@ -10,6 +10,7 @@ def extract_reconstruction_parameters(reconstructor, magnification=None):
 
     if isinstance(reconstructor, waveorder_microscopy):
         attr_dict = {'phase_dimension': reconstructor.phase_deconv,
+                     'wavelength (nm)': np.round(reconstructor.lambda_illu * 1000 * reconstructor.n_media,1),
                      'pad_z': reconstructor.pad_z,
                      'n_objective_media': reconstructor.n_media,
                      'bg_correction_option': reconstructor.bg_option,
@@ -20,7 +21,7 @@ def extract_reconstruction_parameters(reconstructor, magnification=None):
                      'pixel_size': reconstructor.ps * magnification if magnification else None}
 
     elif isinstance(reconstructor, fluorescence_microscopy):
-        attr_dict = {'fluor_wavelength': list(reconstructor.lambda_emiss * reconstructor.n_media),
+        attr_dict = {'fluor_wavelength (nm)': list(reconstructor.lambda_emiss * reconstructor.n_media * 1000),
                      'pad_z': reconstructor.pad_z,
                      'n_objective_media': reconstructor.n_media,
                      'objective_NA': reconstructor.NA_obj * reconstructor.n_media,

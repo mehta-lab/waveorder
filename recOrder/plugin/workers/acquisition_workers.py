@@ -246,6 +246,9 @@ class FluorescenceAcquisitionWorker(WorkerBase):
 
         meta = extract_reconstruction_parameters(recon, magnification=self.calib_window.mag)
 
+        meta['regularization_strength'] = float(self.calib_window.ui.le_fluor_strength.text())
+        meta['bg_level'] = bg_level
+
         # return both variables, could contain images or could be null
         return fluor_deconvolved, meta
 
@@ -278,9 +281,6 @@ class FluorescenceAcquisitionWorker(WorkerBase):
 
         # create zarr root and position group
         writer.create_zarr_root(name)
-        current_meta = writer.store.attrs.asdict()
-        current_meta['recOrder'] = meta
-        writer.store.attrs.put(current_meta)
 
         # Check if 2D
         if len(fluor.shape) == 2:
@@ -297,6 +297,10 @@ class FluorescenceAcquisitionWorker(WorkerBase):
 
         # Write data to disk
         writer.write(fluor, p=0, t=0, c=0, z=z)
+
+        current_meta = writer.store.attrs.asdict()
+        current_meta['recOrder'] = meta
+        writer.store.attrs.put(current_meta)
 
     def _reconstructor_changed(self):
         """
@@ -618,6 +622,9 @@ class PolarizationAcquisitionWorker(WorkerBase):
         birefringence = None
         phase = None
 
+        regularizer = 'Tikhonov' if self.calib_window.ui.cb_phase_denoiser.currentIndex() == 0 else 'TV'
+        reg = float(self.calib_window.ui.le_phase_strength.text())
+
         # reconstruct both phase and birefringence
         if self.mode == 'all':
             if self.calib_window.birefringence_dim == '2D':
@@ -626,14 +633,40 @@ class PolarizationAcquisitionWorker(WorkerBase):
                 birefringence = reconstruct_qlipp_birefringence(stokes, recon)
             birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
             self._check_abort()
-            phase = reconstruct_phase2D(stokes[0], recon) if self.calib_window.phase_dim == '2D' \
-                else reconstruct_phase3D(stokes[0], recon)
+
+            if self.calib_window.phase_dim == '2D':
+                phase = reconstruct_phase2D(stokes[0],
+                                            recon,
+                                            method=regularizer,
+                                            reg_p=reg,
+                                            itr=int(self.calib_window.ui.le_itr.text()),
+                                            rho=float(self.calib_window.ui.le_rho.text()))
+            else:
+                phase = reconstruct_phase3D(stokes[0],
+                                            recon,
+                                            method=regularizer,
+                                            reg_re=reg,
+                                            itr=int(self.calib_window.ui.le_itr.text()),
+                                            rho=float(self.calib_window.ui.le_rho.text()))
+
             self._check_abort()
 
         # reconstruct phase only
         elif self.mode == 'phase':
-            phase = reconstruct_phase2D(stokes[0], recon) if self.calib_window.phase_dim == '2D' \
-                else reconstruct_phase3D(stokes[0], recon)
+            if self.calib_window.phase_dim == '2D':
+                phase = reconstruct_phase2D(stokes[0],
+                                            recon,
+                                            method=regularizer,
+                                            reg_p=reg,
+                                            itr=int(self.calib_window.ui.le_itr.text()),
+                                            rho=float(self.calib_window.ui.le_rho.text()))
+            else:
+                phase = reconstruct_phase3D(stokes[0],
+                                            recon,
+                                            method=regularizer,
+                                            reg_re=reg,
+                                            itr=int(self.calib_window.ui.le_itr.text()),
+                                            rho=float(self.calib_window.ui.le_rho.text()))
             self._check_abort()
 
         # reconstruct birefringence only
@@ -645,8 +678,13 @@ class PolarizationAcquisitionWorker(WorkerBase):
         else:
             raise ValueError('Reconstruction Mode Not Understood')
 
-        # mag = self.calib_window.mag if self.calib_window.mag is not None else 1
         meta = extract_reconstruction_parameters(recon, self.calib_window.mag)
+        meta['regularization_method'] = regularizer
+        meta['regularization_strength'] = reg
+        if regularizer == 'TV':
+            meta['rho'] = float(self.calib_window.ui.le_rho.text())
+            meta['itr'] = int(self.calib_window.ui.le_itr.text())
+
         # return both variables, could contain images or could be null
         return birefringence, phase, meta
 
@@ -682,9 +720,6 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
             # create zarr root and position group
             writer.create_zarr_root(name)
-            current_meta = writer.store.attrs.asdict()
-            current_meta['recOrder'] = meta
-            writer.store.attrs.put(current_meta)
 
             # Check if 2D
             if len(birefringence.shape) == 3:
@@ -700,6 +735,10 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
             # Write the data to disk
             writer.write(birefringence, p=0, t=0, c=[0, 4], z=z)
+
+            current_meta = writer.store.attrs.asdict()
+            current_meta['recOrder'] = meta
+            writer.store.attrs.put(current_meta)
 
         if phase is not None:
 
@@ -717,9 +756,6 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
             # create zarr root and position group
             writer.create_zarr_root(name)
-            current_meta = writer.store.attrs.asdict()
-            current_meta['recOrder'] = meta
-            writer.store.attrs.put(current_meta)
 
             # Check if 2D
             if len(phase.shape) == 2:
@@ -733,6 +769,10 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
             # Write data to disk
             writer.write(phase, p=0, t=0, c=0, z=z)
+
+            current_meta = writer.store.attrs.asdict()
+            current_meta['recOrder'] = meta
+            writer.store.attrs.put(current_meta)
 
     def _load_bg(self, path, height, width):
         """
