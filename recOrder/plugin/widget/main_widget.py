@@ -1886,6 +1886,9 @@ class MainWidget(QWidget):
 
     @pyqtSlot(bool)
     def acquire_fluor_deconvolved(self):
+
+        self._check_requirements_for_acq('fluor')
+
         # Init worker
         self.worker = FluorescenceAcquisitionWorker(self)
 
