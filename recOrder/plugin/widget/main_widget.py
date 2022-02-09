@@ -187,6 +187,9 @@ class MainWidget(QWidget):
         self.colormap = 'HSV'
         self.use_full_volume = False
         self.display_slice = 0
+        self.last_p = 0
+        self.reconstruction_data_path = None
+        self.reconstruction_data = None
 
         # Assessment attributes
         self.calib_assessment_level = None
@@ -653,7 +656,7 @@ class MainWidget(QWidget):
         self.config_reader.mode = self.mode
         self.config_reader.data_save_name = self.ui.le_data_save_name.text() if self.ui.le_data_save_name.text() != '' else None
         self.config_reader.calibration_metadata = self.ui.le_calibration_metadata.text()
-        self.config_reader.background = self.ui.le_calibration_metadata.text()
+        self.config_reader.background = self.ui.le_bg_path.text()
         self.config_reader.background_correction = self.bg_option
 
         # Assumes that positions/timepoints can either be 'all'; '[all]'; 1, 2, 3, N; [start, end]
@@ -1121,25 +1124,33 @@ class MainWidget(QWidget):
 
     @pyqtSlot(str)
     def handle_reconstruction_store_update(self, value):
-        layer_name = self.worker.manager.config.data_save_name
-        self.reconstruction_data = WaveorderReader(value, 'zarr')
 
-        for i in range(self.reconstruction_data.get_num_positions()):
-            self.viewer.add_image(self.reconstruction_data.get_zarr(i), name=layer_name + f'_Pos_{i:03d}')
-
-        # self.viewer.dims.set_axis_label(0, 'P')
-        self.viewer.dims.set_axis_label(0, 'T')
-        self.viewer.dims.set_axis_label(1, 'C')
-        self.viewer.dims.set_axis_label(2, 'Z')
+        self.reconstruction_data_path = value
 
     @pyqtSlot(tuple)
     def handle_reconstruction_dim_update(self, value):
-        p, t, c, z = value
+        p, t, c = value
+        layer_name = self.worker.manager.config.data_save_name
+
+        if p == 0 and t == 0 and c == 0:
+            self.reconstruction_data = WaveorderReader(self.reconstruction_data_path, 'zarr')
+            self.viewer.add_image(self.reconstruction_data.get_zarr(p), name=layer_name + f'_Pos_{p:03d}')
+
+            # self.viewer.dims.set_axis_label(0, 'P')
+            self.viewer.dims.set_axis_label(0, 'T')
+            self.viewer.dims.set_axis_label(1, 'C')
+            self.viewer.dims.set_axis_label(2, 'Z')
+
+        name = layer_name + f'_Pos_{p:03d}'
+        if name not in self.viewer.layers:
+            self.reconstruction_data = WaveorderReader(self.reconstruction_data_path, 'zarr')
+            self.viewer.add_image(self.reconstruction_data.get_zarr(p), name=name)
 
         if not self.pause_updates:
             self.viewer.dims.set_current_step(0, t)
             self.viewer.dims.set_current_step(1, c)
-            self.viewer.dims.set_current_step(2, z)
+
+        self.last_p = p
 
     @pyqtSlot(bool)
     def browse_dir_path(self):

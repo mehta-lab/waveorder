@@ -2,11 +2,12 @@ from recOrder.pipelines.base import PipelineInterface
 from recOrder.compute.fluorescence_compute import initialize_fluorescence_reconstructor, \
     deconvolve_fluorescence_2D, deconvolve_fluorescence_3D, calculate_background
 import numpy as np
+from recOrder.io.utils import MockEmitter
 
 
 class FluorescenceDeconvolution(PipelineInterface):
 
-    def __init__(self, config, data, writer, mode, num_t):
+    def __init__(self, config, data, writer, mode, num_t, emitter=MockEmitter()):
 
         """
         Parameters
@@ -29,6 +30,7 @@ class FluorescenceDeconvolution(PipelineInterface):
         self.t = num_t
         self.output_channels = self.config.output_channels
         self._check_output_channels(self.output_channels)
+        self.dimension_emitter = emitter
 
         # check to make sure parameters match data and each other
         self._check_parameters()
@@ -195,6 +197,8 @@ class FluorescenceDeconvolution(PipelineInterface):
                 elif self.mode == '3D':
                     self.writer.write(deconvolve3D[chan], p=p, t=t, c=chan, z=z)
 
+                self.dimension_emitter.emit((p, t, chan))
+
         elif len(modified_fluor) > len(self.output_channels):
             raise IndexError('Registered stacks exceeds length of output channels')
 
@@ -222,6 +226,8 @@ class FluorescenceDeconvolution(PipelineInterface):
                         self.writer.write(deconvolve2D[chan], p=p, t=t, c=chan, z=z)
                     else:
                         raise ValueError('reconstruct mode during write not understood.')
+
+                self.dimension_emitter.emit((p, t, chan))
 
     def reconstruct_stokes_volume(self, data):
         """

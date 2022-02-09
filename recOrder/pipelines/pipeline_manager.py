@@ -7,7 +7,7 @@ import shutil
 from recOrder.io.utils import MockEmitter
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
-from recOrder.pipelines.fluor_deconv import FluorescenceDeconvolution
+from recOrder.pipelines.fluor_deconv_pipeline import FluorescenceDeconvolution
 from recOrder.compute.fluorescence_compute import initialize_fluorescence_reconstructor, \
     deconvolve_fluorescence_3D, calculate_background
 from recOrder.postproc.post_processing import *
@@ -67,7 +67,8 @@ class PipelineManager:
             self.pipeline = PhaseFromBF(self.config, self.data, self.writer, self.num_t, emitter=emitter)
 
         elif self.config.method == 'FluorDeconv':
-            self.pipeline = FluorescenceDeconvolution(self.config, self.data, self.writer, self.config.mode, self.num_t)
+            self.pipeline = FluorescenceDeconvolution(self.config, self.data, self.writer, self.config.mode, self.num_t,
+                                                      emitter=emitter)
 
         else:
             raise NotImplementedError(f'Method {self.config.method} is not currently implemented '

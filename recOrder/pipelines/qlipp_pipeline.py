@@ -89,10 +89,13 @@ class QLIPP(PipelineInterface):
                                                       gpu_id=self.config.gpu_id)
 
         # Compute BG stokes if necessary
-        if self.config.background_correction != None:
+        if self.config.background_correction != 'None':
             bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
             self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
             self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
+
+        else:
+            self.bg_stokes = None
 
     def _check_output_channels(self, output_channels):
         self.no_birefringence = True
@@ -255,7 +258,7 @@ class QLIPP(PipelineInterface):
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
 
-            self.dimension_emitter.emit((p, t, chan, z))
+            self.dimension_emitter.emit((p, t, chan))
 
     def parse_channel_idx(self, channel_list):
         """

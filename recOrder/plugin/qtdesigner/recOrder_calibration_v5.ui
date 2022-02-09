@@ -1140,7 +1140,7 @@
             <x>0</x>
             <y>0</y>
             <width>590</width>
-            <height>1042</height>
+            <height>1047</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -1181,7 +1181,20 @@
               <property name="verticalSpacing">
                <number>25</number>
               </property>
-              <item row="2" column="1" colspan="3" alignment="Qt::AlignTop">
+              <item row="0" column="0">
+               <widget class="QCheckBox" name="chb_pause_updates">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Pause Updates</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0" colspan="4">
                <widget class="QTabWidget" name="tabWidget_3">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -2406,19 +2419,6 @@
               <item row="1" column="0">
                <widget class="QLineEdit" name="le_zstart"/>
               </item>
-              <item row="5" column="0">
-               <widget class="QCheckBox" name="chb_pause_updates">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Pause Updates</string>
-                </property>
-               </widget>
-              </item>
               <item row="3" column="0">
                <widget class="QLabel" name="label_phase">
                 <property name="font">
@@ -2460,13 +2460,6 @@
                 </item>
                </widget>
               </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_fluor">
-                <property name="text">
-                 <string>Fluorescence</string>
-                </property>
-               </widget>
-              </item>
               <item row="4" column="1">
                <widget class="QComboBox" name="cb_fluor_dim">
                 <property name="font">
@@ -2485,6 +2478,13 @@
                   <string>3D</string>
                  </property>
                 </item>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_fluor">
+                <property name="text">
+                 <string>Fluorescence</string>
+                </property>
                </widget>
               </item>
              </layout>

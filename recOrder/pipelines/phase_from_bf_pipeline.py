@@ -182,4 +182,4 @@ class PhaseFromBF(PipelineInterface):
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
 
-            self.dimension_emitter.emit((p, t, chan, z))
+            self.dimension_emitter.emit((p, t, chan))
