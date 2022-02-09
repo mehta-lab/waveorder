@@ -528,7 +528,9 @@ class MainWidget(QWidget):
         self._set_tab_red('Regularization', False)
 
         phase_required = {'wavelength', 'mag', 'cond_na', 'obj_na', 'n_media',
-                          'phase_strength'}
+                          'phase_strength', 'ps', 'zstep'}
+
+        fluor_required = {'recon_wavelength', 'mag', 'obj_na', 'n_media', 'fluor_strength', 'ps'}
 
         if mode == 'birefringence' or mode == 'phase':
             success = self._check_line_edit('save_dir')
@@ -549,6 +551,21 @@ class MainWidget(QWidget):
                 else:
                     continue
 
+        if mode == 'fluor':
+            for field in fluor_required:
+                cont = self._check_line_edit(field)
+                tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
+                if not cont:
+                    self._set_tab_red(tab, True)
+                else:
+                    continue
+            if self.ui.chb_autocalc_bg.checkState() != 2:
+                cont = self._check_line_edit('fluor_bg')
+                tab = getattr(self.ui, f'le_fluor_bg').parent().parent().objectName()
+                if not cont:
+                    self._set_tab_red(tab, True)
+
+
     def _check_requirements_for_reconstruction(self):
         self._set_tab_red('General', False)
         self._set_tab_red('Physical', False)
@@ -557,17 +574,16 @@ class MainWidget(QWidget):
         self._set_tab_red('preprocessing', False)
         self._set_tab_red('postprocessing', False)
 
+        self.ui.qbutton_reconstruct.setStyleSheet("")
+
         success = True
         output_channels = self.ui.le_output_channels.text()
-        print(output_channels.split(','))
-        # output_channels.replace(' ', '')
-        # output_channels = output_channels.strip(',')
 
         always_required = {'data_dir', 'save_dir', 'positions', 'timepoints', 'output_channels'}
         birefringence_required = {'calibration_metadata', 'recon_wavelength'}
-        phase_required = {'recon_wavelength', 'mag', 'NA_objective', 'NA_condenser', 'n_objective_media',
-                          'phase_strength'}
-        fluor_decon_required = {'wavelength', 'magnification', 'NA_objective', 'n_objective_media', 'reg'}
+        phase_required = {'recon_wavelength', 'mag', 'obj_na', 'cond_na', 'n_media',
+                          'phase_strength', 'ps'}
+        fluor_decon_required = {'recon_wavelength', 'mag', 'obj_na', 'n_media', 'fluor_strength', 'ps'}
 
         for field in always_required:
             cont = self._check_line_edit(field)
@@ -586,7 +602,9 @@ class MainWidget(QWidget):
                             self._set_tab_red(tab, True)
                         success = False
                     else:
+                        self._set_tab_red(tab, False)
                         continue
+
             elif 'Phase2D' in output_channels or 'Phase3D' in output_channels:
                 for field in phase_required:
                     cont = self._check_line_edit(field)
@@ -595,12 +613,15 @@ class MainWidget(QWidget):
                         self._set_tab_red(tab, True)
                         success = False
                     else:
+                        self._set_tab_red(tab, False)
                         continue
                 if 'Phase2D' in output_channels:
                     cont = self._check_line_edit('focus_zidx')
                     if not cont:
                         self._set_tab_red('Physical', True)
                         success = False
+                    else:
+                        self._set_tab_red('Physical', False)
 
             else:
                 self._set_tab_red('Processing', True)
@@ -617,12 +638,15 @@ class MainWidget(QWidget):
                         self._set_tab_red(tab, True)
                         success = False
                     else:
+                        self._set_tab_red(tab, False)
                         continue
                 if 'Phase2D' in output_channels:
                     cont = self._check_line_edit('focus_zidx')
                     if not cont:
                         self._set_tab_red('Physical', True)
                         success = False
+                    else:
+                        self._set_tab_red('Physical', False)
             else:
                 self._set_tab_red('Processing', True)
                 self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
@@ -637,6 +661,7 @@ class MainWidget(QWidget):
                     self._set_tab_red(tab, True)
                     success = False
                 else:
+                    self._set_tab_red(tab, False)
                     continue
 
         else:
