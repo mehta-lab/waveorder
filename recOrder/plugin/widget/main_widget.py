@@ -818,11 +818,11 @@ class MainWidget(QWidget):
         setattr(self.config_reader, 'n_objective_media', float(self.ui.le_n_media.text()))
         setattr(self.config_reader, 'magnification', float(self.ui.le_mag.text()))
 
-        if self.ui.cb_method.getCurrentIndex() == 2:
+        if self.method == 'FluorDeconv':
             setattr(self.config_reader, 'fluorescence_channel_indices',
                       int(self.ui.le_fluor_chan.text()))
 
-        if self.ui.cb_method.getCurrentIndex() == 1:
+        if self.method == 'PhaseFromBF':
             setattr(self.config_reader, 'brightfield_channel_index',
                       int(self.ui.le_fluor_chan.text()))
 
