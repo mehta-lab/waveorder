@@ -527,19 +527,30 @@ class MainWidget(QWidget):
         self._set_tab_red('Processing', False)
         self._set_tab_red('Regularization', False)
 
+        raise_error = False
+
         phase_required = {'wavelength', 'mag', 'cond_na', 'obj_na', 'n_media',
                           'phase_strength', 'ps', 'zstep'}
 
         fluor_required = {'recon_wavelength', 'mag', 'obj_na', 'n_media', 'fluor_strength', 'ps'}
 
-        if mode == 'birefringence' or mode == 'phase':
+        for field in phase_required:
+            le = getattr(self.ui, f'le_{field}')
+            le.setStyleSheet("")
+        for field in fluor_required:
+            le = getattr(self.ui, f'le_{field}')
+            le.setStyleSheet("")
+
+        if mode == 'birefringence' or mode == 'phase' or mode == 'fluor':
             success = self._check_line_edit('save_dir')
             if not success:
+                raise_error = True
                 self._set_tab_red('General', True)
 
             if self.bg_option == 'local_fit' or self.bg_option == 'Global':
                 success = self._check_line_edit('bg_path')
                 if not success:
+                    raise_error = True
                     self._set_tab_red('General', True)
 
         if mode == 'phase':
@@ -547,7 +558,9 @@ class MainWidget(QWidget):
                 cont = self._check_line_edit(field)
                 tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
                 if not cont:
-                    self._set_tab_red(tab, True)
+                    raise_error = True
+                    if field != 'zstep':
+                        self._set_tab_red(tab, True)
                 else:
                     continue
 
@@ -556,6 +569,7 @@ class MainWidget(QWidget):
                 cont = self._check_line_edit(field)
                 tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
                 if not cont:
+                    raise_error = True
                     self._set_tab_red(tab, True)
                 else:
                     continue
@@ -563,8 +577,11 @@ class MainWidget(QWidget):
                 cont = self._check_line_edit('fluor_bg')
                 tab = getattr(self.ui, f'le_fluor_bg').parent().parent().objectName()
                 if not cont:
+                    raise_error = True
                     self._set_tab_red(tab, True)
 
+        if raise_error:
+            raise ValueError('Please enter in all of the parameters necessary for the acquisition')
 
     def _check_requirements_for_reconstruction(self):
         self._set_tab_red('General', False)
@@ -586,9 +603,23 @@ class MainWidget(QWidget):
         fluor_decon_required = {'recon_wavelength', 'mag', 'obj_na', 'n_media', 'fluor_strength', 'ps'}
 
         for field in always_required:
+            le = getattr(self.ui, f'le_{field}')
+            le.setStyleSheet("")
+        for field in phase_required:
+            le = getattr(self.ui, f'le_{field}')
+            le.setStyleSheet("")
+        for field in fluor_decon_required:
+            le = getattr(self.ui, f'le_{field}')
+            le.setStyleSheet("")
+
+        for field in always_required:
             cont = self._check_line_edit(field)
             if not cont:
                 success = False
+                if field == 'data_dir' or field == 'save_dir':
+                    self._set_tab_red('General', True)
+                if field == 'positions' or field == 'timepoints' or field == 'output_channels':
+                    self._set_tab_red('Processing', True)
             else:
                 continue
 
@@ -630,6 +661,12 @@ class MainWidget(QWidget):
                 success = False
 
         elif self.method == 'PhaseFromBF':
+            cont = self._check_line_edit('fluor_chan')
+            tab = getattr(self.ui, f'le_fluor_chan').parent().parent().objectName()
+            if not cont:
+                self._set_tab_red(tab, True)
+                success = False
+
             if 'Phase2D' in output_channels or 'Phase3D' in output_channels:
                 for field in phase_required:
                     cont = self._check_line_edit(field)
@@ -654,6 +691,12 @@ class MainWidget(QWidget):
                 success = False
 
         elif self.method == 'FluorDeconv':
+            cont = self._check_line_edit('fluor_chan')
+            tab = getattr(self.ui, f'le_fluor_chan').parent().parent().objectName()
+            if not cont:
+                self._set_tab_red(tab, True)
+                success = False
+
             for field in fluor_decon_required:
                 cont = self._check_line_edit(field)
                 tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
@@ -774,6 +817,14 @@ class MainWidget(QWidget):
         setattr(self.config_reader, 'pixel_size', float(self.ui.le_ps.text()))
         setattr(self.config_reader, 'n_objective_media', float(self.ui.le_n_media.text()))
         setattr(self.config_reader, 'magnification', float(self.ui.le_mag.text()))
+
+        if self.ui.cb_method.getCurrentIndex() == 2:
+            setattr(self.config_reader, 'fluorescence_channel_indices',
+                      int(self.ui.le_fluor_chan.text()))
+
+        if self.ui.cb_method.getCurrentIndex() == 1:
+            setattr(self.config_reader, 'brightfield_channel_index',
+                      int(self.ui.le_fluor_chan.text()))
 
         # Parse Postprocessing automatically
         for key, val in POSTPROCESSING.items():
@@ -1501,6 +1552,8 @@ class MainWidget(QWidget):
             self.ui.label_bg_method.hide() if self.bg_option == 'None' else self.ui.label_bg_method.show()
             self.ui.phase.show()
             self.ui.fluor.show()
+            self.ui.label_fluor_chan.setText('Brightfield Channel Index')
+            self.ui.le_fluor_chan.setPlaceholderText('')
 
         else:
             self.method = 'FluorDeconv'
@@ -1513,6 +1566,8 @@ class MainWidget(QWidget):
             self.ui.qbutton_browse_bg_path.hide()
             self.ui.phase.hide()
             self.ui.fluor.hide()
+            self.ui.label_fluor_chan.setText('Fluor Channel Index')
+            self.ui.le_fluor_chan.setPlaceholderText('list: 0, 1, 2 or single value: 0')
 
     @pyqtSlot(int)
     def enter_mode(self):
@@ -1936,8 +1991,12 @@ class MainWidget(QWidget):
     @pyqtSlot(bool)
     def reconstruct(self):
 
+        success = self._check_requirements_for_reconstruction()
+        if not success:
+            raise ValueError('Please make sure all necessary parameters are set before reconstruction')
+
         self._populate_config_from_app()
-        self.config_reader.data_type = 'ometiff'
+        self.config_reader.data_type = 'ometiff' #TODO: Get rid of this for new waveorder
         self.worker = ReconstructionWorker(self, self.config_reader)
 
         # connect handlers

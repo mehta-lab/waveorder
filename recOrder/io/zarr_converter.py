@@ -85,28 +85,6 @@ class ZarrConverter:
         self.writer = WaveorderWriter(self.save_directory, hcs=self.format_hcs, hcs_meta=self.hcs_meta, verbose=False)
         self.writer.create_zarr_root(self.save_name)
 
-    # def _gather_index_maps(self):
-    #     """
-    #     Will return a dictionary of {coord: (filepath, page)} of length(N_Images) to later query
-    #     Returns
-    #     -------
-    #     """
-    #     if self.data_type == 'ometiff':
-    #         for file in self.files:
-    #             tf = tiff.TiffFile(file)
-    #             meta = tf.micromanager_metadata['IndexMap']
-    #
-    #             for page in range(len(meta['Channel'])):
-    #                 coord = [0, 0, 0, 0]
-    #                 coord[self.p_dim] = meta['Position'][page]
-    #                 coord[self.t_dim] = meta['Frame'][page]
-    #                 coord[self.c_dim] = meta['Channel'][page]
-    #                 coord[self.z_dim] = meta['Slice'][page]
-    #
-    #                 self.coord_map[tuple(coord)] = (file, page)
-    #     else:
-    #         pass
-
     def _gen_coordset(self):
         """
         generates a coordinate set in the dimensional order to which the data was acquired.
