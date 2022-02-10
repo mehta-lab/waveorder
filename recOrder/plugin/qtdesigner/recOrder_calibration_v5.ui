@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>618</width>
-    <height>977</height>
+    <width>630</width>
+    <height>1035</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -173,7 +173,7 @@
        </size>
       </property>
       <attribute name="title">
-       <string>Calibration</string>
+       <string>LC Calibration</string>
       </attribute>
       <layout class="QGridLayout" name="gridLayout_5">
        <property name="sizeConstraint">
@@ -206,7 +206,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>578</width>
+            <width>590</width>
             <height>1345</height>
            </rect>
           </property>
@@ -832,7 +832,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>538</width>
+                    <width>550</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -1139,7 +1139,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>578</width>
+            <width>590</width>
             <height>1047</height>
            </rect>
           </property>
@@ -2653,8 +2653,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>562</width>
-            <height>786</height>
+            <width>574</width>
+            <height>844</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
