@@ -646,13 +646,13 @@ class MainWidget(QWidget):
                     else:
                         self._set_tab_red(tab, False)
                         continue
-                if 'Phase2D' in output_channels:
-                    cont = self._check_line_edit('focus_zidx')
-                    if not cont:
-                        self._set_tab_red('Physical', True)
-                        success = False
-                    else:
-                        self._set_tab_red('Physical', False)
+                # if 'Phase2D' in output_channels:
+                #     cont = self._check_line_edit('focus_zidx')
+                #     if not cont:
+                #         self._set_tab_red('Physical', True)
+                #         success = False
+                #     else:
+                #         self._set_tab_red('Physical', False)
 
             else:
                 self._set_tab_red('Processing', True)
@@ -677,13 +677,13 @@ class MainWidget(QWidget):
                     else:
                         self._set_tab_red(tab, False)
                         continue
-                if 'Phase2D' in output_channels:
-                    cont = self._check_line_edit('focus_zidx')
-                    if not cont:
-                        self._set_tab_red('Physical', True)
-                        success = False
-                    else:
-                        self._set_tab_red('Physical', False)
+                # if 'Phase2D' in output_channels:
+                #     cont = self._check_line_edit('focus_zidx')
+                #     if not cont:
+                #         self._set_tab_red('Physical', True)
+                #         success = False
+                #     else:
+                #         self._set_tab_red('Physical', False)
             else:
                 self._set_tab_red('Processing', True)
                 self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
@@ -718,8 +718,10 @@ class MainWidget(QWidget):
         self.config_reader = ConfigReader(immutable=False)
 
         # Parse dataset fields manually
-        self.config_reader.data_dir = self.data_dir
-        self.config_reader.save_dir = self.save_directory
+        self.config_reader.data_dir = self.ui.le_data_dir.text()
+        self.data_dir = self.ui.le_data_dir.text()
+        self.config_reader.save_dir = self.ui.le_save_dir.text()
+        self.save_directory = self.ui.le_save_dir.text()
         self.config_reader.method = self.method
         self.config_reader.mode = self.mode
         self.config_reader.data_save_name = self.ui.le_data_save_name.text() if self.ui.le_data_save_name.text() != '' else None
@@ -790,7 +792,6 @@ class MainWidget(QWidget):
                     field_text = self.ui.le_output_channels.text()
                     channels = field_text.split(',')
                     channels = [i.replace(' ', '') for i in channels]
-                    print(channels)
                     setattr(self.config_reader, key, channels)
 
                 elif key == 'pad_z':
@@ -819,8 +820,10 @@ class MainWidget(QWidget):
         setattr(self.config_reader, 'magnification', float(self.ui.le_mag.text()))
 
         if self.method == 'FluorDeconv':
-            setattr(self.config_reader, 'fluorescence_channel_indices',
-                      int(self.ui.le_fluor_chan.text()))
+            fluor_chan = self.ui.le_fluor_chan.text()
+            channels = fluor_chan.split(',')
+            channels = [int(i.replace(' ', '')) for i in channels]
+            setattr(self.config_reader, 'fluorescence_channel_indices', channels)
 
         if self.method == 'PhaseFromBF':
             setattr(self.config_reader, 'brightfield_channel_index',
