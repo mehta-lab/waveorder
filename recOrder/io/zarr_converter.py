@@ -79,7 +79,6 @@ class ZarrConverter:
         self.metadata = dict()
         self.metadata['recOrder_Converter_Version'] = self.version
         self.metadata['Summary'] = self.summary_metadata
-        self.metadata['ImagePlaneMetadata'] = dict()
 
         # initialize metadata if HCS desired, init writer
         self.hcs_meta = self._generate_hcs_metadata() if self.format_hcs else None
@@ -418,13 +417,7 @@ class ZarrConverter:
                 plane_meta = self._generate_plane_metadata(tf, page)
                 meta[f'{coord_reorder}'] = plane_meta
 
-                # only write the plane metadata for the first time-point to avoid huge i/o overhead
-                # rest will be placed in json file with the zarr store
-                if coord[self.t_dim] == 0:
-                    self.metadata['ImagePlaneMetadata'][f'{coord_reorder}'] = plane_meta
-                    json.dump(meta, self.meta_file, indent=1)
-                else:
-                    json.dump(meta, self.meta_file, indent=1)
+                json.dump(meta, self.meta_file, indent=1)
             # get the memory mapped image
             img_raw = self.get_image_array(coord[self.p_dim], coord[self.t_dim], coord[self.c_dim], coord[self.z_dim])
 
