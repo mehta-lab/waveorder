@@ -1543,6 +1543,8 @@ class MainWidget(QWidget):
             self.ui.label_bg_method.hide() if self.bg_option == 'None' else self.ui.label_bg_method.show()
             self.ui.phase.show()
             self.ui.fluor.show()
+            self.ui.label_chan_desc.setText('Retardance, Orientation, BF, Phase3D, Phase2D, Fluor1, '
+                                            'Fluor2 (ex. DAPI, GFP), S0, S1, S2, S3')
 
         elif idx == 1:
             self.method = 'PhaseFromBF'
@@ -1556,7 +1558,8 @@ class MainWidget(QWidget):
             self.ui.phase.show()
             self.ui.fluor.show()
             self.ui.label_fluor_chan.setText('Brightfield Channel Index')
-            self.ui.le_fluor_chan.setPlaceholderText('')
+            self.ui.le_fluor_chan.setPlaceholderText('int')
+            self.ui.label_chan_desc.setText('Phase3D, Phase2D, Fluor1, Fluor2 (ex. DAPI, GFP)')
 
         else:
             self.method = 'FluorDeconv'
@@ -1570,7 +1573,8 @@ class MainWidget(QWidget):
             self.ui.phase.hide()
             self.ui.fluor.hide()
             self.ui.label_fluor_chan.setText('Fluor Channel Index')
-            self.ui.le_fluor_chan.setPlaceholderText('list: 0, 1, 2 or single value: 0')
+            self.ui.le_fluor_chan.setPlaceholderText('list of integers or int')
+            self.ui.label_chan_desc.setText('Fluor1, Fluor2 (ex. DAPI, GFP)')
 
     @pyqtSlot(int)
     def enter_mode(self):
