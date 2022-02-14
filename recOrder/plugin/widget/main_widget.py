@@ -5,7 +5,8 @@ from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy, QSlider
 from PyQt5.QtGui import QPixmap, QColor
 from superqt import QDoubleRangeSlider, QRangeSlider
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
-from recOrder.plugin.workers.acquisition_workers import PolarizationAcquisitionWorker, ListeningWorker, FluorescenceAcquisitionWorker
+from recOrder.plugin.workers.acquisition_workers import PolarizationAcquisitionWorker, ListeningWorker, \
+    FluorescenceAcquisitionWorker, BFAcquisitionWorker
 from recOrder.plugin.workers.reconstruction_workers import ReconstructionWorker
 from recOrder.plugin.qtdesigner import recOrder_calibration_v5
 from recOrder.postproc.post_processing import ret_ori_overlay, generic_hsv_overlay
@@ -228,6 +229,8 @@ class MainWidget(QWidget):
         self.ui.label_phase_rho.setHidden(True)
         self.ui.le_itr.setHidden(True)
         self.ui.label_itr.setHidden(True)
+        self.ui.le_fluor_chan.setHidden(True)
+        self.ui.label_fluor_chan.setHidden(True)
 
         # Set initial UI Properties
         self.ui.le_gui_mode.setStyleSheet("border: 1px solid rgb(200,0,0); color: rgb(200,0,0);")
@@ -554,6 +557,13 @@ class MainWidget(QWidget):
                     self._set_tab_red('General', True)
 
         if mode == 'phase':
+            if self.ui.chb_phase_from_bf.isChecked():
+                cont = self._check_line_edit('recon_wavelength')
+                tab = getattr(self.ui, f'le_recon_wavelength').parent().parent().objectName()
+                if not cont:
+                    raise_error = True
+                    self._set_tab_red(tab, True)
+
             for field in phase_required:
                 cont = self._check_line_edit(field)
                 tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
@@ -623,37 +633,47 @@ class MainWidget(QWidget):
             else:
                 continue
 
+        possible_channels = ['Retardance', 'Orientation', 'BF', 'S0', 'S1', 'S2', 'S3', 'Phase2D', 'Phase3D']
+        bire_channels = ['Retardance', 'Orientation', 'BF', 'S0', 'S1', 'S2', 'S3']
+        qlipp_channel_present = False
+        bire_channel_present = False
         if self.method == 'QLIPP':
-            if 'Retardance' in output_channels or 'Orientation' in output_channels or 'BF' in output_channels:
-                for field in birefringence_required:
-                    cont = self._check_line_edit(field)
-                    tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
-                    if not cont:
-                        if field != 'calibration_metadata':
+            for channel in output_channels:
+                if channel in possible_channels:
+                    qlipp_channel_present = True
+                if channel in bire_channels:
+                    bire_channel_present = True
+
+            if qlipp_channel_present:
+                if bire_channel_present:
+                    for field in birefringence_required:
+                        cont = self._check_line_edit(field)
+                        tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
+                        if not cont:
+                            if field != 'calibration_metadata':
+                                self._set_tab_red(tab, True)
+                            success = False
+                        else:
+                            self._set_tab_red(tab, False)
+                            continue
+
+                if 'Phase2D' in output_channels or 'Phase3D' in output_channels:
+                    for field in phase_required:
+                        cont = self._check_line_edit(field)
+                        tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
+                        if not cont:
                             self._set_tab_red(tab, True)
-                        success = False
-                    else:
-                        self._set_tab_red(tab, False)
-                        continue
-
-            elif 'Phase2D' in output_channels or 'Phase3D' in output_channels:
-                for field in phase_required:
-                    cont = self._check_line_edit(field)
-                    tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
-                    if not cont:
-                        self._set_tab_red(tab, True)
-                        success = False
-                    else:
-                        self._set_tab_red(tab, False)
-                        continue
-                # if 'Phase2D' in output_channels:
-                #     cont = self._check_line_edit('focus_zidx')
-                #     if not cont:
-                #         self._set_tab_red('Physical', True)
-                #         success = False
-                #     else:
-                #         self._set_tab_red('Physical', False)
-
+                            success = False
+                        else:
+                            self._set_tab_red(tab, False)
+                            continue
+                    # if 'Phase2D' in output_channels:
+                    #     cont = self._check_line_edit('focus_zidx')
+                    #     if not cont:
+                    #         self._set_tab_red('Physical', True)
+                    #         success = False
+                    #     else:
+                    #         self._set_tab_red('Physical', False)
             else:
                 self._set_tab_red('Processing', True)
                 self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
@@ -1025,6 +1045,15 @@ class MainWidget(QWidget):
                 group_list.append(groups.get(i))
             self.ui.cb_config_group.addItems(group_list)
             self.mm_status_changed.emit(True)
+
+            avoid = ['State0', 'State1', 'State2', 'State3', 'State4']
+            for group in group_list:
+                config = self.mmc.getAvailableConfigs(group)
+                for i in range(config.size()):
+                    chan = config.get(i)
+                    if chan not in avoid:
+                        self.ui.cb_acq_channel.addItem(chan)
+
         except:
             self.mm_status_changed.emit(False)
 
@@ -1531,7 +1560,6 @@ class MainWidget(QWidget):
     def enter_method(self):
         idx = self.ui.cb_method.currentIndex()
 
-
         if idx == 0:
             self.method = 'QLIPP'
             self.ui.le_cond_na.show()
@@ -1543,6 +1571,8 @@ class MainWidget(QWidget):
             self.ui.label_bg_method.hide() if self.bg_option == 'None' else self.ui.label_bg_method.show()
             self.ui.phase.show()
             self.ui.fluor.show()
+            self.ui.label_fluor_chan.hide()
+            self.ui.le_fluor_chan.hide()
             self.ui.label_chan_desc.setText('Retardance, Orientation, BF, Phase3D, Phase2D, Fluor1, '
                                             'Fluor2 (ex. DAPI, GFP), S0, S1, S2, S3')
 
@@ -1557,6 +1587,8 @@ class MainWidget(QWidget):
             self.ui.label_bg_method.hide() if self.bg_option == 'None' else self.ui.label_bg_method.show()
             self.ui.phase.show()
             self.ui.fluor.show()
+            self.ui.label_fluor_chan.show()
+            self.ui.le_fluor_chan.show()
             self.ui.label_fluor_chan.setText('Brightfield Channel Index')
             self.ui.le_fluor_chan.setPlaceholderText('int')
             self.ui.label_chan_desc.setText('Phase3D, Phase2D, Fluor1, Fluor2 (ex. DAPI, GFP)')
@@ -1572,6 +1604,8 @@ class MainWidget(QWidget):
             self.ui.qbutton_browse_bg_path.hide()
             self.ui.phase.hide()
             self.ui.fluor.hide()
+            self.ui.label_fluor_chan.show()
+            self.ui.le_fluor_chan.show()
             self.ui.label_fluor_chan.setText('Fluor Channel Index')
             self.ui.le_fluor_chan.setPlaceholderText('list of integers or int')
             self.ui.label_chan_desc.setText('Fluor1, Fluor2 (ex. DAPI, GFP)')
@@ -1909,7 +1943,10 @@ class MainWidget(QWidget):
         self._check_requirements_for_acq('phase')
 
         # Init worker and thread
-        self.worker = PolarizationAcquisitionWorker(self, self.calib, 'phase')
+        if self.ui.chb_phase_from_bf.isChecked():
+            self.worker = BFAcquisitionWorker(self)
+        else:
+            self.worker = PolarizationAcquisitionWorker(self, self.calib, 'phase')
 
         # Connect Handlers
         self.worker.phase_image_emitter.connect(self.handle_phase_image_update)
@@ -1931,12 +1968,13 @@ class MainWidget(QWidget):
         self._check_requirements_for_acq('phase')
 
         # Init worker
+        # Init worker and thread
         self.worker = PolarizationAcquisitionWorker(self, self.calib, 'all')
 
         # connect handlers
         self.worker.phase_image_emitter.connect(self.handle_phase_image_update)
-        self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
         self.worker.phase_reconstructor_emitter.connect(self.handle_qlipp_reconstructor_update)
+        self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
         self.worker.meta_emitter.connect(self.handle_meta_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)

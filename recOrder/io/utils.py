@@ -8,6 +8,10 @@ from waveorder.waveorder_reconstructor import fluorescence_microscopy, waveorder
 def extract_reconstruction_parameters(reconstructor, magnification=None):
 
 
+    ps = reconstructor.ps
+    if ps:
+        ps = ps * magnification if magnification else ps
+
     if isinstance(reconstructor, waveorder_microscopy):
         attr_dict = {'phase_dimension': reconstructor.phase_deconv,
                      'wavelength (nm)': np.round(reconstructor.lambda_illu * 1000 * reconstructor.n_media,1),
@@ -18,7 +22,7 @@ def extract_reconstruction_parameters(reconstructor, magnification=None):
                      'condenser_NA': reconstructor.NA_illu * reconstructor.n_media,
                      'magnification': magnification,
                      'swing': reconstructor.chi if reconstructor.N_channel == 4 else reconstructor.chi / 2 / np.pi,
-                     'pixel_size': reconstructor.ps * magnification if magnification else None}
+                     'pixel_size': ps}
 
     elif isinstance(reconstructor, fluorescence_microscopy):
         attr_dict = {'fluor_wavelength (nm)': list(reconstructor.lambda_emiss * reconstructor.n_media * 1000),
@@ -26,7 +30,7 @@ def extract_reconstruction_parameters(reconstructor, magnification=None):
                      'n_objective_media': reconstructor.n_media,
                      'objective_NA': reconstructor.NA_obj * reconstructor.n_media,
                      'magnification': magnification,
-                     'pixel_size': reconstructor.ps * magnification if magnification else None}
+                     'pixel_size': ps}
 
     else:
         attr_dict = dict()

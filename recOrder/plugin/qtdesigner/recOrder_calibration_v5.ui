@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>630</width>
-    <height>1035</height>
+    <height>978</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -145,7 +145,7 @@
       <enum>QTabWidget::North</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <property name="elideMode">
       <enum>Qt::ElideMiddle</enum>
@@ -891,7 +891,7 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>538</width>
+                    <width>550</width>
                     <height>300</height>
                    </rect>
                   </property>
@@ -1140,7 +1140,7 @@
             <x>0</x>
             <y>0</y>
             <width>590</width>
-            <height>1047</height>
+            <height>1087</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -2353,35 +2353,37 @@
               <property name="verticalSpacing">
                <number>20</number>
               </property>
-              <item row="3" column="2">
-               <widget class="QCheckBox" name="chb_phase_from_bf">
+              <item row="5" column="0">
+               <widget class="QLabel" name="label_fluor">
                 <property name="text">
-                 <string>Phase From BF</string>
+                 <string>Fluorescence</string>
                 </property>
                </widget>
               </item>
-              <item row="4" column="2">
-               <widget class="QComboBox" name="cb_fluor_channel">
-                <property name="currentText">
-                 <string/>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_zstart">
+              <item row="5" column="1">
+               <widget class="QComboBox" name="cb_fluor_dim">
                 <property name="font">
                  <font>
                   <weight>50</weight>
-                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
-                <property name="text">
-                 <string>Z Start (um)</string>
-                </property>
+                <item>
+                 <property name="text">
+                  <string>2D</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>3D</string>
+                 </property>
+                </item>
                </widget>
               </item>
               <item row="2" column="1">
+               <widget class="QLineEdit" name="le_zend"/>
+              </item>
+              <item row="3" column="1">
                <widget class="QComboBox" name="cb_birefringence">
                 <property name="font">
                  <font>
@@ -2405,7 +2407,28 @@
                 </item>
                </widget>
               </item>
-              <item row="0" column="2">
+              <item row="4" column="2">
+               <widget class="QCheckBox" name="chb_phase_from_bf">
+                <property name="text">
+                 <string>Phase From BF</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="0">
+               <widget class="QLabel" name="label_zstart">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Z Start (um)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="1" column="2">
                <widget class="QLabel" name="label_zstep">
                 <property name="font">
                  <font>
@@ -2419,7 +2442,7 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="1">
+              <item row="1" column="1">
                <widget class="QLabel" name="label_zend">
                 <property name="font">
                  <font>
@@ -2433,10 +2456,10 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="2">
+              <item row="2" column="2">
                <widget class="QLineEdit" name="le_zstep"/>
               </item>
-              <item row="2" column="0">
+              <item row="3" column="0">
                <widget class="QLabel" name="label_birefringence">
                 <property name="font">
                  <font>
@@ -2450,10 +2473,10 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="0">
+              <item row="2" column="0">
                <widget class="QLineEdit" name="le_zstart"/>
               </item>
-              <item row="3" column="0">
+              <item row="4" column="0">
                <widget class="QLabel" name="label_phase">
                 <property name="font">
                  <font>
@@ -2467,10 +2490,7 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="1">
-               <widget class="QLineEdit" name="le_zend"/>
-              </item>
-              <item row="3" column="1">
+              <item row="4" column="1">
                <widget class="QComboBox" name="cb_phase">
                 <property name="font">
                  <font>
@@ -2494,30 +2514,17 @@
                 </item>
                </widget>
               </item>
-              <item row="4" column="1">
-               <widget class="QComboBox" name="cb_fluor_dim">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <bold>false</bold>
-                 </font>
+              <item row="6" column="0">
+               <widget class="QLabel" name="labe_acq_channel">
+                <property name="text">
+                 <string>Acq Channel (BF/Fluor Only)</string>
                 </property>
-                <item>
-                 <property name="text">
-                  <string>2D</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>3D</string>
-                 </property>
-                </item>
                </widget>
               </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_fluor">
-                <property name="text">
-                 <string>Fluorescence</string>
+              <item row="6" column="1">
+               <widget class="QComboBox" name="cb_acq_channel">
+                <property name="currentText">
+                 <string/>
                 </property>
                </widget>
               </item>
@@ -2654,7 +2661,7 @@
             <x>0</x>
             <y>0</y>
             <width>574</width>
-            <height>844</height>
+            <height>787</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">

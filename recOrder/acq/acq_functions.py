@@ -57,7 +57,7 @@ def generate_acq_settings(mm, channel_group, channels=None, zstart=None, zend=No
 
     channel_list = None
     if channels:
-        # Append all the QLIPP channels with their current exposure settings
+        # Append all the channels with their current exposure settings
         channel_list = []
         for chan in channels:
             #todo: think about how to deal with missing exposure
