@@ -589,6 +589,7 @@ class waveorder_microscopy:
                        self-provided instrument matrix converting polarization-sensitive intensity images into Stokes parameters 
                        with shape of (N_channel, N_Stokes) or (size_X, size_Y, N_channel, N_Stokes)
                        If None is provided, the instrument matrix is determined by the QLIPP convention with swing specify by chi
+                       
                               
         '''
         
