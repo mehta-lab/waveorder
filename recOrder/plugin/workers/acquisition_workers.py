@@ -266,6 +266,7 @@ class BFAcquisitionWorker(WorkerBase):
 
         self._check_abort()
 
+        # Update metadata in zarr attributes with reconstruction parameters
         meta = extract_reconstruction_parameters(recon, magnification=self.calib_window.mag)
         meta['regularization_method'] = regularizer
         meta['regularization_strength'] = reg
@@ -648,8 +649,9 @@ class FluorescenceAcquisitionWorker(WorkerBase):
 
             fluor_deconvolved = np.transpose(fluor_deconvolved, (2, 0, 1))
 
-        meta = extract_reconstruction_parameters(recon, magnification=self.calib_window.mag)
 
+        # Update metadata in zarr attributes with reconstruction parameters
+        meta = extract_reconstruction_parameters(recon, magnification=self.calib_window.mag)
         meta['regularization_strength'] = float(self.calib_window.ui.le_fluor_strength.text())
         meta['bg_level'] = bg_level
 

@@ -6,6 +6,24 @@ from matplotlib.colors import hsv_to_rgb
 
 
 def generic_hsv_overlay(H, S, V, H_scale=None, S_scale=None, V_scale=None, mode='2D'):
+    """
+    Generates a generic HSV overlay in either 2D or 3D
+
+    Parameters
+    ----------
+    H:          (nd-array) data to use in the Hue channel
+    S:          (nd-array) data to use in the Saturation channel
+    V:          (nd-array) data to use in the Value channel
+    H_scale:    (tuple) values at which to clip the hue data for display
+    S_scale:    (tuple) values at which to clip the saturation data for display
+    V_scale:    (tuple) values at which to clip the value data for display
+    mode:       (str) '3D' or '2D'
+
+    Returns
+    -------
+    overlay:    (nd-array) RGB overlay array of shape (Z, Y, X, 3) or (Y, X, 3)
+
+    """
 
     if H.shape != S.shape or H.shape != S.shape or S.shape != V.shape:
         raise ValueError(
@@ -98,6 +116,19 @@ def ret_ori_overlay(retardance, orientation, scale, mode='2D', cmap='JCh'):
     return overlay_final[0] if mode == '2D' else overlay_final
 
 def post_proc_denoise(data_volume, params):
+    """
+    performs denoising on a data value with given parameters
+
+    Parameters
+    ----------
+    data_volume:        (nd-array) data volume of (Z, Y, X) or (1, Y, X) to be denoised
+    params:             (tuple) list of tuples corresponding to the level and threshold of the wavelet denoising
+
+    Returns
+    -------
+    data_volume_denosied: (nd-array) denosied data volume of size (Z, Y, X) or (Y, X).
+
+    """
 
     data_volume_denoised = np.copy(data_volume)
 
@@ -110,7 +141,7 @@ def post_proc_denoise(data_volume, params):
     return data_volume_denoised
 
 
-def translate_3D(image_stack, shift, binning=1, size_z_param=0, size_z_um=0):
+def translate_3D(image_stack, shift):
     """
     Parameters
     ----------
@@ -130,16 +161,7 @@ def translate_3D(image_stack, shift, binning=1, size_z_param=0, size_z_um=0):
 
     matrix = [[1, 0, shift[1]], [0, 1, shift[2]]]
     for img in image_stack:
-        #         if size_z_um == 0:  # 2D translation
-        #             pass
-        # #             shift[0] = 0
-        #         else:
-        #             # 3D translation. Scale z-shift according to the z-step size.
-        #             shift[0] = shift[0] * size_z_param / size_z_um
-        #         if not binning == 1:
-        #             shift[1] = shift[1] / binning
-        #             shift[2] = shift[2] / binning
-
         image = affine_transform(img, matrix, order=1)
         registered_images.append(image)
+
     return np.asarray(registered_images)

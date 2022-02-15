@@ -6,7 +6,20 @@ from waveorder.waveorder_reconstructor import fluorescence_microscopy, waveorder
 
 
 def extract_reconstruction_parameters(reconstructor, magnification=None):
+    """
+    Function that extracts the reconstruction parameters from a waveorder reconstructor.  Works
+    for both fluorescence_microscopy class and waveorder_microscopy class.
 
+    Parameters
+    ----------
+    reconstructor:      (waveorder reconstructor object) initalized reconstructor
+    magnification:      (float or None) magnification of the microscope setup (value not saved in reconstructor)
+
+    Returns
+    -------
+    attr_dict           (dict) dictionary of reconstruction parameters in their native units
+
+    """
 
     ps = reconstructor.ps
     if ps:
@@ -69,6 +82,20 @@ def load_bg(bg_path, height, width, ROI=None):
 
 
 def create_grid_from_coordinates(xy_coords, rows, columns):
+    """
+    Function to create a grid from XY-position coordinates.  Useful for generating HCS Zarr metadata.
+
+    Parameters
+    ----------
+    xy_coords:          (list) XY Stage position list in the order in which it was acquired: (X, Y) tuple.
+    rows:               (int) number of rows in the grid-like acquisition
+    columns:            (int) number of columns in the grid-like acquisition
+
+    Returns
+    -------
+    pos_index_grid      (array) A grid-like array mimicking the shape of the acquisition where the value in the array
+                                corresponds to the position index at that location.
+    """
 
     coords = dict()
     coords_list = []

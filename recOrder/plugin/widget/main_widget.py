@@ -21,14 +21,15 @@ import json
 import logging
 from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, POSTPROCESSING
 
-#TODO:
-# Parse the Microscope Parameters correctly
-# Make the checks robust to every pipeline
-
 
 class MainWidget(QWidget):
+    """
+    This is the main recOrder widget that houses all of the GUI components of recOrder.
+    The GUI is designed in QT Designer in /recOrder/plugin/widget/qt_designer and converted to a python file
+    with the pyuic5 command.
+    """
 
-    # Initialize Signals
+    # Initialize Custom Signals
     mm_status_changed = pyqtSignal(bool)
     intensity_changed = pyqtSignal(float)
     log_changed = pyqtSignal(str)
@@ -205,7 +206,7 @@ class MainWidget(QWidget):
         # Init thread worker
         self.worker = None
 
-        # Display Images
+        # Display/Initialiaze GUI Images (plotting legends, recOrder logo)
         recorder_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         jch_legend_path = os.path.join(recorder_dir, 'docs/images/JCh_legend.png')
         hsv_legend_path = os.path.join(recorder_dir, 'docs/images/HSV_legend.png')
@@ -244,20 +245,7 @@ class MainWidget(QWidget):
         self.setStyleSheet("QTabWidget::tab-bar {alignment: center;}")
         self.red_text = QColor(200, 0, 0, 255)
         self.original_tab_text = self.ui.tabWidget_3.tabBar().tabTextColor(0)
-        self.ui.tabWidget.parent().setObjectName('recOrder')
-
-        # group_boxes = ['recon_status', 'calib_params', 'run_calib', 'capture_background', 'acq_settings',
-        #                'acquire', 'ReconSettings', 'phase', 'fluorescence', 'denoising', 'denoising_2', 'fluor',
-        #                'registration', 'DisplayOptions']
-
-        # for groupbox in group_boxes:
-        #     box = getattr(self.ui, groupbox)
-        #     # box.setStyleSheet("margin-top: -10ex;")
-        #     box.setStyleSheet("QGroupBox::title {"
-        #                       "subcontrol-origin: margin;"
-        #                       "subcontrol-position: top left;")
-                              # "min-height: 10ex;"
-                              # "top: -1.5ex; }")
+        self.ui.tabWidget.parent().setObjectName('recOrder') # make sure the top says recOrder and not 'Form'
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
@@ -265,14 +253,27 @@ class MainWidget(QWidget):
                 attr = getattr(self.ui, attr_name)
                 attr.wheelEvent = lambda event: None
 
+        # Display GUI using maximum resolution
         self.showMaximized()
 
     def _demote_slider_offline(self, ui_slider, range_):
+        """
+        This function converts a promoted superqt.QRangeSlider to a QSlider element
+
+        Parameters
+        ----------
+        ui_slider       (superqt.QRangeSlider) QSlider UI element to demote
+        range_          (tuple) initial range to set for the slider
+
+        Returns
+        -------
+
+        """
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
 
-        # Get Information from regular sliders
+        # Get positioning information from regular sliders
         slider_idx = self.ui.gridLayout_26.indexOf(ui_slider)
         slider_position = self.ui.gridLayout_26.getItemPosition(slider_idx)
         slider_parent = ui_slider.parent().objectName()
@@ -295,6 +296,18 @@ class MainWidget(QWidget):
         ui_slider.setRange(range_[0], range_[1])
 
     def _promote_slider_offline(self, ui_slider, range_):
+        """
+        This function converts a a QSlider element to a promoted superqt.QRangeSlider
+
+        Parameters
+        ----------
+        ui_slider       (QT.Slider) QSlider UI element to demote
+        range_          (tuple) initial range to set for the slider
+
+        Returns
+        -------
+
+        """
 
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -324,6 +337,13 @@ class MainWidget(QWidget):
         ui_slider.setRange(range_[0], range_[1])
 
     def _promote_slider_init(self):
+
+        """
+        Used to promote the Display Tab sliders from QSlider to QDoubeRangeSlider with superqt
+        Returns
+        -------
+
+        """
 
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
@@ -367,6 +387,17 @@ class MainWidget(QWidget):
         self.ui.slider_value.setRange(0, 100)
 
     def _hide_acquisition_ui(self, val: bool):
+        """
+        hides or shows the acquisition (online) UI elements.  Used when switching between online/offline mode
+
+        Parameters
+        ----------
+        val:        (bool) True/False whether to hide (True) or show (False)
+
+        Returns
+        -------
+
+        """
         self.ui.acq_settings.setHidden(val)
         self.ui.acquire.setHidden(val)
 
@@ -384,6 +415,17 @@ class MainWidget(QWidget):
             self.ui.tabWidget.setCurrentIndex(0)
 
     def _hide_offline_ui(self, val: bool):
+        """
+        hides or shows the offline UI elements.  Used when switching between online/offline mode
+
+        Parameters
+        ----------
+        val:        (bool) True/False whether to hide (True) or show (False)
+
+        Returns
+        -------
+
+        """
 
         # General Settings
         self.ui.le_data_dir.setHidden(val)
@@ -419,6 +461,13 @@ class MainWidget(QWidget):
             self.ui.tabWidget_3.setStyleSheet("")
 
     def _enable_buttons(self):
+        """
+        enables the buttons that were disabled during acquisition, calibration, or reconstruction
+
+        Returns
+        -------
+
+        """
 
         self.ui.qbutton_calibrate.setEnabled(True)
         self.ui.qbutton_capture_bg.setEnabled(True)
@@ -435,6 +484,15 @@ class MainWidget(QWidget):
         self.ui.qbutton_load_default_config.setEnabled(True)
 
     def _disable_buttons(self):
+        """
+        disables the buttons during acquisition, calibration, or reconstruction.  This prevents the user from
+        trying to do multiple actions at once (i.e. trying to use the acquisition features while calibration is running)
+
+        Returns
+        -------
+
+        """
+
         self.ui.qbutton_calibrate.setEnabled(False)
         self.ui.qbutton_capture_bg.setEnabled(False)
         self.ui.qbutton_calc_extinction.setEnabled(False)
@@ -450,14 +508,31 @@ class MainWidget(QWidget):
         self.ui.qbutton_load_default_config.setEnabled(False)
 
     def _handle_error(self, exc):
+        """
+        Handles errors from calibration and restores micromanager to its state prior to the start of calibration
+        Parameters
+        ----------
+        exc:        (Error) Propogated error message to display
+
+        Returns
+        -------
+
+        """
+
         self.ui.tb_calib_assessment.setText(f'Error: {str(exc)}')
         self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid rgb(200,0,0);")
 
+        # Reset ROI if it was cropped down during reconstruction
         if self.use_cropped_roi:
             self.mmc.clearROI()
 
+        # Reset the autoshutter setting if errored during blacklevel calculation
         self.mmc.setAutoShutter(self.auto_shutter)
+
+        # Reset the progress bar to 0
         self.ui.progress_bar.setValue(0)
+
+        # Raise the error
         raise exc
 
     def _handle_calib_abort(self):
@@ -470,6 +545,13 @@ class MainWidget(QWidget):
         raise exc
 
     def _handle_load_finished(self):
+        """
+        Updates the calibration assessment when the user loads a previous calibration metadata file.
+
+        Returns
+        -------
+
+        """
         self.ui.tb_calib_assessment.setText('Previous calibration successfully loaded')
         self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid green;")
         self.ui.progress_bar.setValue(100)
@@ -478,6 +560,20 @@ class MainWidget(QWidget):
         self.calib = val
 
     def _add_layer_to_display_boxes(self, val):
+        """
+        When a new napari layer is added to recOrder, update the Display Tab combo boxes with these layers.
+        This will allow the user to then choose which layers it wants to use for the overlay.  Will skip over
+        any layers that are already an 'Overlay'.  This function is connected to a napari.Layer signal
+
+        Parameters
+        ----------
+        val:            (napari.Layer) layer that was added [not used]
+
+        Returns
+        -------
+
+        """
+
         for layer in self.viewer.layers:
             if 'Overlay' in layer.name:
                 continue
@@ -489,6 +585,17 @@ class MainWidget(QWidget):
                 self.ui.cb_value.addItem(layer.name)
 
     def _remove_layer_from_display_boxes(self, val):
+        """
+        When a napari layer is removed from napari, remove the corresponding layer from Display Tab combo boxes.
+
+        Parameters
+        ----------
+        val:            (napari.Layer) layer that was removed by the user
+
+        Returns
+        -------
+
+        """
 
         for i in range(self.ui.cb_hue.count()):
             if val.value.name in self.ui.cb_hue.itemText(i):
@@ -499,6 +606,20 @@ class MainWidget(QWidget):
                 self.ui.cb_value.removeItem(i)
 
     def _set_tab_red(self, name, state):
+        """
+        Convenience function to set a GUI tab red when there is a parameter missing for acquisiton or reconstruction
+
+        Parameters
+        ----------
+        name:           (str) Name of the tab
+        state:          (bool) True/False whether to set red (True) or not red (False)
+
+        Returns
+        -------
+
+        """
+
+        # this map corresponds to the tab index in the TabWidget GUI element
         name_map = {'General': 0,
                     'Processing': 1,
                     'Physical': 2,
@@ -514,6 +635,18 @@ class MainWidget(QWidget):
             self.ui.tabWidget_3.tabBar().setTabTextColor(index, self.original_tab_text)
 
     def _check_line_edit(self, name):
+        """
+        Convencience function used in checking whether a line edit is present or missing.  Will place a red border
+        around the line edit if it is empty, otherwise it will remove the red border.
+
+        Parameters
+        ----------
+        name:           (str) name of the LineEdit element as specified in QT Designer file.
+
+        Returns
+        -------
+
+        """
         le = getattr(self.ui, f'le_{name}')
         text = le.text()
 
@@ -525,18 +658,36 @@ class MainWidget(QWidget):
             return True
 
     def _check_requirements_for_acq(self, mode):
+        """
+        This function will loop through the parameters from a specific acquisition and make sure the user has
+        specified the necessary parameters.  If it finds an empty or missing parameters, it will set missing fields red
+        and stop the acquisition process.
+
+        Parameters
+        ----------
+        mode:           (str) 'birefringence', 'phase', or 'fluor' which denotes the type of acquisition
+
+        Returns
+        -------
+
+        """
+
+        # Initialize all tabs in their default style (not red)
         self._set_tab_red('General', False)
         self._set_tab_red('Physical', False)
         self._set_tab_red('Processing', False)
         self._set_tab_red('Regularization', False)
 
+        # initialize the variable to keep track of the success of the requirement check
         raise_error = False
 
+        # define the fields required for the specific acquisition modes.  Matches LineEdit object names
         phase_required = {'wavelength', 'mag', 'cond_na', 'obj_na', 'n_media',
                           'phase_strength', 'ps', 'zstep'}
 
         fluor_required = {'recon_wavelength', 'mag', 'obj_na', 'n_media', 'fluor_strength', 'ps'}
 
+        # Initalize all fields in their default style (not red).
         for field in phase_required:
             le = getattr(self.ui, f'le_{field}')
             le.setStyleSheet("")
@@ -544,6 +695,7 @@ class MainWidget(QWidget):
             le = getattr(self.ui, f'le_{field}')
             le.setStyleSheet("")
 
+        # Check generally required fields
         if mode == 'birefringence' or mode == 'phase' or mode == 'fluor':
             success = self._check_line_edit('save_dir')
             if not success:
@@ -556,7 +708,10 @@ class MainWidget(QWidget):
                     raise_error = True
                     self._set_tab_red('General', True)
 
+        # Check phase specific fields
         if mode == 'phase':
+
+            # add in extra requirement is user is acquiring PhaseFromBF
             if self.ui.chb_phase_from_bf.isChecked():
                 cont = self._check_line_edit('recon_wavelength')
                 tab = getattr(self.ui, f'le_recon_wavelength').parent().parent().objectName()
@@ -574,6 +729,7 @@ class MainWidget(QWidget):
                 else:
                     continue
 
+        # Check fluorescence deconvolution specific parameters
         if mode == 'fluor':
             for field in fluor_required:
                 cont = self._check_line_edit(field)
@@ -590,28 +746,44 @@ class MainWidget(QWidget):
                     raise_error = True
                     self._set_tab_red(tab, True)
 
+        # Alert the user to check and enter in the missing parameters
         if raise_error:
             raise ValueError('Please enter in all of the parameters necessary for the acquisition')
 
     def _check_requirements_for_reconstruction(self):
+        """
+        This function will loop through the parameters for offline reconstruction and make sure the user has
+        specified the necessary parameters.  If it finds an empty or missing parameters, it will set missing fields red
+        and stop the reconstruction process.
+
+        Returns
+        -------
+
+        """
+
+        # Initalize all tab elements and reconstruct button to default state (not red)
         self._set_tab_red('General', False)
         self._set_tab_red('Physical', False)
         self._set_tab_red('Processing', False)
         self._set_tab_red('Regularization', False)
         self._set_tab_red('preprocessing', False)
         self._set_tab_red('postprocessing', False)
-
         self.ui.qbutton_reconstruct.setStyleSheet("")
 
+        # initalize the success variable of the requirement check
         success = True
+
+        # gather the specified output channels (will determine which requirements are necessary to look at)
         output_channels = self.ui.le_output_channels.text()
 
+        # intialize the reconstruction specific required fields
         always_required = {'data_dir', 'save_dir', 'positions', 'timepoints', 'output_channels'}
         birefringence_required = {'calibration_metadata', 'recon_wavelength'}
         phase_required = {'recon_wavelength', 'mag', 'obj_na', 'cond_na', 'n_media',
                           'phase_strength', 'ps'}
         fluor_decon_required = {'recon_wavelength', 'mag', 'obj_na', 'n_media', 'fluor_strength', 'ps'}
 
+        # intialize all UI elements in the default state
         for field in always_required:
             le = getattr(self.ui, f'le_{field}')
             le.setStyleSheet("")
@@ -735,6 +907,16 @@ class MainWidget(QWidget):
         return success
 
     def _populate_config_from_app(self):
+        """
+        This function will create a ConfigReader instance with the information from the UI elements.  This function
+        is called prior to reconstruction or when the user uses the "Save Config" to file functionality.
+
+        Returns
+        -------
+
+        """
+
+        # ConfigReader is usually immutable but we need it to not be in this case to update its properties
         self.config_reader = ConfigReader(immutable=False)
 
         # Parse dataset fields manually
@@ -881,6 +1063,14 @@ class MainWidget(QWidget):
                         setattr(self.config_reader.postprocessing, f'{key}_{key_child}', le.text())
 
     def _populate_from_config(self):
+        """
+        This function will take a previously defined config file and populate all of the UI elements.  Used in the
+        Load Config workflow.
+
+        Returns
+        -------
+
+        """
         # Parse dataset fields manually
         self.data_dir = self.config_reader.data_dir
 
@@ -1017,6 +1207,13 @@ class MainWidget(QWidget):
 
     @pyqtSlot(bool)
     def change_gui_mode(self):
+        """
+        Switches between offline/online mode and updates the corresponding GUI elements
+
+        Returns
+        -------
+
+        """
         if self.gui_mode == 'offline':
             self.ui.qbutton_gui_mode.setText('Switch to Offline')
             self.ui.le_gui_mode.setText('Online')
@@ -1034,6 +1231,15 @@ class MainWidget(QWidget):
 
     @pyqtSlot(bool)
     def connect_to_mm(self):
+        """
+        Function to establish the python/java bridge to MicroManager.  Micromanager must be open with a config loaded
+        in order for the connection to be successful.  On connection, it will populate all of the available config
+        groups.  Config group choice is used to establish which config group the Polarization states live in.
+
+        Returns
+        -------
+
+        """
         try:
             bridge = Bridge(convert_camel_case=False)
             self.mmc = bridge.get_core()
@@ -1078,6 +1284,20 @@ class MainWidget(QWidget):
 
     @pyqtSlot(object)
     def handle_plot_update(self, value):
+        """
+        handles the plotting of the intensity values during calibration.  Calibration class will emit a signal
+        depending on which stage of the calibration process it is in and then we limit the scaling / range of the plot
+        accordingly.  After the coarse search of extinction is done, the plot will shift the viewing range to only be
+        that of the convex optimization.  Full plot will still exist if the user uses their mouse to zoom out.
+
+        Parameters
+        ----------
+        value:          (float) new intensity value from calibration
+
+        Returns
+        -------
+
+        """
         self.intensity_monitor.append(value)
         self.ui.plot_widget.plot(self.intensity_monitor)
 
@@ -1156,9 +1376,6 @@ class MainWidget(QWidget):
                     cmap = 'gray' if key != 'Orientation' else 'hsv'
                     self.viewer.add_image(value[chan], name=key+self.birefringence_dim, colormap=cmap)
 
-        # if self.ui.DisplayOptions.isHidden():
-        #     self.ui.DisplayOptions.show()
-
     @pyqtSlot(object)
     def handle_phase_image_update(self, value):
 
@@ -1194,7 +1411,7 @@ class MainWidget(QWidget):
 
     @pyqtSlot(object)
     def handle_fluor_reconstructor_update(self, value):
-        # Saves phase reconstructor to be re-used if possible
+        # Saves fluorescence deconvolution reconstructor to be re-used if possible
         self.fluor_reconstructor = value
 
     @pyqtSlot(dict)
@@ -1232,7 +1449,6 @@ class MainWidget(QWidget):
 
     @pyqtSlot(str)
     def handle_reconstruction_store_update(self, value):
-
         self.reconstruction_data_path = value
 
     @pyqtSlot(tuple)
@@ -1244,16 +1460,18 @@ class MainWidget(QWidget):
             self.reconstruction_data = WaveorderReader(self.reconstruction_data_path, 'zarr')
             self.viewer.add_image(self.reconstruction_data.get_zarr(p), name=layer_name + f'_Pos_{p:03d}')
 
-            # self.viewer.dims.set_axis_label(0, 'P')
             self.viewer.dims.set_axis_label(0, 'T')
             self.viewer.dims.set_axis_label(1, 'C')
             self.viewer.dims.set_axis_label(2, 'Z')
 
+
+        # Add each new position as a new layer in napari
         name = layer_name + f'_Pos_{p:03d}'
         if name not in self.viewer.layers:
             self.reconstruction_data = WaveorderReader(self.reconstruction_data_path, 'zarr')
             self.viewer.add_image(self.reconstruction_data.get_zarr(p), name=name)
 
+        # update the napari dimension slider position if the user hasn't specified to pause updates
         if not self.pause_updates:
             self.viewer.dims.set_current_step(0, t)
             self.viewer.dims.set_current_step(1, c)
@@ -1281,22 +1499,6 @@ class MainWidget(QWidget):
         path = self._open_file_dialog(self.data_dir, 'dir')
         self.data_dir = path
         self.ui.le_data_dir.setText(self.data_dir)
-
-        # reader = WaveorderReader(self.data_dir)
-        # if reader.get_num_positions() > 1:
-        #     self.ui.slider_positions.setDisabled(False)
-        #     self._promote_slider_offline(self.ui.slider_positions, range_=(0, reader.get_num_positions()))
-        # else:
-        #     self.ui.slider_positions.setRange(0, 0)
-        #     self.ui.slider_positions.setDisabled(True)
-        #
-        # if reader.frames > 1:
-        #     self.ui.slider_timepoints.setDisabled(False)
-        #     self._promote_slider_offline(self.ui.slider_timepoints, range_=(0, reader.frames))
-        # else:
-        #     self.ui.slider_timepoints.setRange(0, 0)
-        #     self.ui.slider_timepoints.setDisabled(True)
-
 
     @pyqtSlot(bool)
     def browse_calib_meta(self):
@@ -1350,6 +1552,8 @@ class MainWidget(QWidget):
 
             cfg = self.mmc.getConfigData('Channel', 'State0')
 
+            # Update the DAC combo boxes with available DAC's from the config.  Necessary for the user
+            # to specify which DAC output corresponds to which LC for voltage-space calibration
             memory = set()
             for i in range(cfg.size()):
                 prop = cfg.getSetting(i)
@@ -1374,6 +1578,17 @@ class MainWidget(QWidget):
 
     @pyqtSlot()
     def enter_config_group(self):
+        """
+        callback for changing the config group combo box.  User needs to specify a config group that has the
+        hardcoded states 'State0', 'State1', ... , 'State4'.  Calibration will not work unless a proper config
+        group is specific
+
+        Returns
+        -------
+
+        """
+
+        # Gather config groups and their children
         self.config_group = self.ui.cb_config_group.currentText()
         config = self.mmc.getAvailableConfigs(self.config_group)
 
@@ -1381,12 +1596,14 @@ class MainWidget(QWidget):
         for i in range(config.size()):
             channels.append(config.get(i))
 
+        # Check to see if any states are missing
         states = ['State0', 'State1', 'State2', 'State3', 'State4']
         missing = []
         for state in states:
             if state not in channels:
                 missing.append(state)
 
+        # if states are missing, set the combo box red and alert the user
         if len(missing) != 0:
             msg = f'The chosen config group ({self.config_group}) is missing states: {missing}. '\
                    'Please refer to the recOrder wiki on how to set up the config properly.'
@@ -1550,6 +1767,13 @@ class MainWidget(QWidget):
 
     @pyqtSlot()
     def enter_pause_updates(self):
+        """
+        pauses the updating of the dimension slider for offline reconstruction or live listening mode.
+
+        Returns
+        -------
+
+        """
         state = self.ui.chb_pause_updates.checkState()
         if state == 2:
             self.pause_updates = True
@@ -1558,6 +1782,14 @@ class MainWidget(QWidget):
 
     @pyqtSlot(int)
     def enter_method(self):
+        """
+        Handles the updating of UI elements depending on the method of offline reconstruction.
+
+        Returns
+        -------
+
+        """
+
         idx = self.ui.cb_method.currentIndex()
 
         if idx == 0:
@@ -1629,25 +1861,6 @@ class MainWidget(QWidget):
             self.ui.le_data_dir.setStyleSheet("")
             self.data_dir = entry
 
-        # reader = WaveorderReader(self.data_dir)
-        # if reader.get_num_positions() > 1:
-        #     self.ui.slider_positions.setDisabled(False)
-        #     self.ui.chb_positions.setDisabled(False)
-        #     self._promote_slider_offline(self.ui.slider_positions, range_=(0, reader.get_num_positions()))
-        # else:
-        #     self.ui.slider_positions.setRange(0, 0)
-        #     self.ui.slider_positions.setDisabled(True)
-        #     self.ui.chb_positions.setDisabled(True)
-        #
-        # if reader.frames > 1:
-        #     self.ui.slider_timepoints.setDisabled(False)
-        #     self.ui.chb_timepoints.setDisabled(False)
-        #     self._promote_slider_offline(self.ui.slider_timepoints, range_=(0, reader.frames))
-        # else:
-        #     self.ui.slider_timepoints.setRange(0, 0)
-        #     self.ui.slider_timepoints.setDisabled(True)
-        #     self.ui.chb_timepoints.setDisabled(True)
-
     @pyqtSlot()
     def enter_calib_meta(self):
         entry = self.ui.le_calibration_metadata.text()
@@ -1659,29 +1872,16 @@ class MainWidget(QWidget):
             self.calib_path = entry
 
     @pyqtSlot()
-    def enter_single_position(self):
-
-        state = self.ui.chb_positions.checkState()
-        current_slider_range = (self.ui.slider_positions.minimum(), self.ui.slider_positions.maximum())
-
-        if state == 2:
-            self._demote_slider_offline(self.ui.slider_positions, range_=current_slider_range)
-        else:
-            self._promote_slider_offline(self.ui.slider_positions, range_=current_slider_range)
-
-    @pyqtSlot()
-    def enter_single_timepoint(self):
-
-        state = self.ui.chb_timepoints.checkState()
-        current_slider_range = (self.ui.slider_timepoints.minimum(), self.ui.slider_timepoints.maximum())
-
-        if state == 2:
-            self._demote_slider_offline(self.ui.slider_timepoints, range_=current_slider_range)
-        else:
-            self._promote_slider_offline(self.ui.slider_timepoints, range_=current_slider_range)
-
-    @pyqtSlot()
     def enter_colormap(self):
+        """
+        Handles the update of the display colormap.  Will display different png image legend
+        depending on the colormap choice.
+
+        Returns
+        -------
+
+        """
+
         prev_cmap = self.colormap
         state = self.ui.cb_colormap.currentIndex()
         if state == 0:
@@ -1747,26 +1947,47 @@ class MainWidget(QWidget):
 
     @pyqtSlot(bool)
     def push_note(self):
+        """
+        Pushes a note to the last calibration metadata file.
 
+        Returns
+        -------
+
+        """
+
+        # make sure the user has performed a calibration in this session (or loaded a previous one)
         if not self.last_calib_meta_file:
             raise ValueError('No calibration has been performed yet so there is no previous metadata file')
         else:
             note = self.ui.le_notes_field.text()
 
+            # Open the existing calibration metadata file and append the notes
             with open(self.last_calib_meta_file, 'r') as file:
                 current_json = json.load(file)
 
+            # Append note to the end of the old note (so we don't overwrite previous notes) or write a new
+            # note in the blank notes field
             old_note = current_json['Notes']
             if old_note is None or old_note == '' or old_note == note:
                 current_json['Notes'] = note
             else:
                 current_json['Notes'] = old_note + ', ' + note
 
+            # dump the contents into the metadata file
             with open(self.last_calib_meta_file, 'w') as file:
                 json.dump(current_json, file, indent=1)
 
     @pyqtSlot(bool)
     def calc_extinction(self):
+        """
+        Calculates the extinction when the user uses the Load Calibration functionality.  This if performed
+        because the calibration file could be loaded in a different FOV which may require recalibration
+        depending on the extinction quality.
+
+        Returns
+        -------
+
+        """
 
         # Snap images from the extinction state and first elliptical state
         set_lc_state(self.mmc, self.config_group, 'State0')
@@ -1783,6 +2004,7 @@ class MainWidget(QWidget):
         """
         Uses previous JSON calibration metadata to load previous calibration
         """
+
         result = self._open_file_dialog(self.current_dir_path, 'file')
         with open(result, 'r') as file:
             meta = json.load(file)
@@ -1806,6 +2028,7 @@ class MainWidget(QWidget):
 
         self.last_calib_meta_file = result
 
+        # Update the Microscope Parameters with those from the previous calibration (if they're present)
         params = meta['Microscope Parameters']
         if params is not None:
             self.ui.le_pad_z.setText(str(params['pad_z']) if params['pad_z'] is not None else '')
@@ -1821,7 +2044,7 @@ class MainWidget(QWidget):
         def update_extinction(extinction):
             self.calib.extinction_ratio = float(extinction)
 
-        # initialize worker properties
+        # initialize worker properties for multi-threading
         self.ui.qbutton_stop_calib.clicked.connect(self.worker.quit)
         self.worker.yielded.connect(self.ui.le_extinction.setText)
         self.worker.yielded.connect(update_extinction)
@@ -1924,7 +2147,7 @@ class MainWidget(QWidget):
         # Init Worker and thread
         self.worker = PolarizationAcquisitionWorker(self, self.calib, 'birefringence')
 
-        # Connect Handler
+        # Connect Handlers
         self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
         self.worker.meta_emitter.connect(self.handle_meta_update)
         self.worker.started.connect(self._disable_buttons)
@@ -1986,6 +2209,9 @@ class MainWidget(QWidget):
 
     @pyqtSlot(bool)
     def acquire_fluor_deconvolved(self):
+        """
+        Wrapper function to acquire a fluorescence stack, deconvolve, and plot in napari
+        """
 
         self._check_requirements_for_acq('fluor')
 
@@ -2004,9 +2230,16 @@ class MainWidget(QWidget):
         # Start Thread
         self.worker.start()
 
-
     @pyqtSlot(bool)
     def listen_and_reconstruct(self):
+        """
+        Wrapper function for on the fly data listening and reconstructing.  Only works if the user is acquiring
+        polarization only data (cannot have any extra channels in the acquisition)
+
+        Returns
+        -------
+
+        """
 
         # Init reconstructor
         if self.bg_option != 'None':
@@ -2035,6 +2268,9 @@ class MainWidget(QWidget):
 
     @pyqtSlot(bool)
     def reconstruct(self):
+        """
+        Wrapper function for offline reconstruction.
+        """
 
         success = self._check_requirements_for_reconstruction()
         if not success:
@@ -2065,6 +2301,13 @@ class MainWidget(QWidget):
 
     @pyqtSlot(bool)
     def load_config(self):
+        """
+        Populates the GUI elements with values from a pre-defined config file.
+
+        Returns
+        -------
+
+        """
         path = self._open_file_dialog(self.save_config_path, 'file')
         if path == '':
             pass
@@ -2086,7 +2329,6 @@ class MainWidget(QWidget):
         min_, max_ = np.min(data), np.max(data)
         self.ui.slider_saturation.setMinimum(min_)
         self.ui.slider_saturation.setMaximum(max_)
-        # self.ui.slider_value.setRange(min_, max_)
         self.ui.slider_saturation.setSingleStep((max_ - min_)/250)
         self.ui.slider_saturation.setValue((min_, max_))
         self.ui.le_sat_max.setText(str(np.round(max_, 3)))
@@ -2100,7 +2342,6 @@ class MainWidget(QWidget):
         min_, max_ = np.min(data), np.max(data)
         self.ui.slider_value.setMinimum(min_)
         self.ui.slider_value.setMaximum(max_)
-        # self.ui.slider_value.setRange(min_, max_)
         self.ui.slider_value.setSingleStep((max_ - min_)/250)
         self.ui.slider_value.setValue((min_, max_))
         self.ui.le_val_max.setText(str(np.round(max_, 3)))
@@ -2108,10 +2349,19 @@ class MainWidget(QWidget):
 
     @pyqtSlot(bool)
     def create_overlay(self):
+        """
+        Creates HSV or JCh overlay with the specified channels from the combo boxes.  Will compute and then
+        display the overlay in napari.
+
+        Returns
+        -------
+
+        """
 
         if self.ui.cb_hue.count() == 0 or self.ui.cb_saturation.count() == 0 or self.ui.cb_value == 0:
             raise ValueError('Cannot create overlay until all 3 combo boxes are populated')
 
+        # Gather channel data
         H = self.viewer.layers[self.ui.cb_hue.itemText(self.ui.cb_hue.currentIndex())].data
         S = self.viewer.layers[self.ui.cb_saturation.itemText(self.ui.cb_saturation.currentIndex())].data
         V = self.viewer.layers[self.ui.cb_value.itemText(self.ui.cb_value.currentIndex())].data
@@ -2147,10 +2397,12 @@ class MainWidget(QWidget):
 
         hsv_image = generic_hsv_overlay(H, S, V, H_scale, S_scale, V_scale, mode=mode)
 
+        # Create overlay layer name
         idx = 0
         while f'HSV_Overlay_{idx}' in self.viewer.layers:
             idx += 1
 
+        # add overlay image to napari
         self.viewer.add_image(hsv_image, name=f'HSV_Overlay_{idx}', rgb=True)
 
     @pyqtSlot(object)
@@ -2176,35 +2428,6 @@ class MainWidget(QWidget):
         self.listening_reconstructor = None
         self.listening_store = None
 
-    # def _open_browse_dialog(self, default_path, file=False):
-    #
-    #     if not file:
-    #         return self._open_dir_dialog("select a directory",
-    #                                      default_path)
-    #     else:
-    #         return self._open_file_dialog('Please select a file',
-    #                                       default_path)
-    #
-    # def _open_dir_dialog(self, title, ref):
-    #     options = QFileDialog.Options()
-    #
-    #     options |= QFileDialog.DontUseNativeDialog
-    #     path = QFileDialog.getExistingDirectory(None,
-    #                                             title,
-    #                                             ref,
-    #                                             options=options)
-    #     return path
-    #
-    # def _open_file_dialog(self, title, ref):
-    #     options = QFileDialog.Options()
-    #
-    #     options |= QFileDialog.DontUseNativeDialog
-    #     path = QFileDialog.getOpenFileName(None,
-    #                                        title,
-    #                                        ref,
-    #                                        options=options)[0]
-    #     return path
-
     def _open_file_dialog(self, default_path, type):
 
         return self._open_dialog("select a directory",
@@ -2212,6 +2435,20 @@ class MainWidget(QWidget):
                                  type)
 
     def _open_dialog(self, title, ref, type):
+        """
+        opens pop-up dialogue for the user to choose a specific file or directory.
+
+        Parameters
+        ----------
+        title:          (str) message to display at the top of the pop up
+        ref:            (str) reference path to start the search at
+        type:           (str) type of file the user is choosing (dir, file, or save)
+
+        Returns
+        -------
+
+        """
+
         options = QFileDialog.Options()
 
         options |= QFileDialog.DontUseNativeDialog

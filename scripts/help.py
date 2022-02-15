@@ -25,7 +25,7 @@ def print_help_statements():
 
     click.echo(click.style('  Instructions', italic=True, fg='magenta'))
     click.echo('    --input (str) path to folder containing micromanager tif files')
-    click.echo('    --ouput (str) full path to save the ome-zarr data, i.e. /path/to/Data.zarr')
+    click.echo('    --output (str) full path to save the ome-zarr data, i.e. /path/to/Data.zarr')
     click.echo('    --data_type (str) micromananger data-type: ometiff, singlepagetiff')
     click.echo('    --replace_pos_names (bool) True/False whether to replace zarr position names with ones listed in micro-manager metadata')
     click.echo('    --format_hcs (bool) if tiled micromanager dataset, format in ome-zarr HCS format')

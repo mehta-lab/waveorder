@@ -1,6 +1,6 @@
 dataset:
   method: 'QLIPP'
-  # Reconstruction Method 'QLIPP' only implemented for now.
+  # Reconstruction Method 'QLIPP', 'PhaseFromBF', or 'FluorDeconv' only implemented for now.
 
   mode: '2D'
   # Mode for reconstruction, '2D' or '3D'
@@ -11,6 +11,7 @@ dataset:
   save_dir: '/path/to/save/directory'
   # (str) path to the directory in which the data will be saved
 
+  #TODO: Remove this when waveOrder is merged
   data_type: 'ometiff'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
 
