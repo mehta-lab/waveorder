@@ -266,6 +266,7 @@ class waveorder_microscopy:
         
         self.use_gpu = use_gpu
         self.gpu_id = gpu_id
+        self._A_matrix_inv_gpu_array = None
         
         if self.use_gpu:
             globals()['cp'] = __import__("cupy")
@@ -586,8 +587,9 @@ class waveorder_microscopy:
         ----------
             A_matrix : numpy.ndarray
                        self-provided instrument matrix converting polarization-sensitive intensity images into Stokes parameters 
-                       with shape of (N_channel, N_Stokes)
+                       with shape of (N_channel, N_Stokes) or (size_X, size_Y, N_channel, N_Stokes)
                        If None is provided, the instrument matrix is determined by the QLIPP convention with swing specify by chi
+                       
                               
         '''
         
@@ -600,9 +602,19 @@ class waveorder_microscopy:
                                           [1, -np.sin(self.chi), 0, -np.cos(self.chi)], \
                                           [1, 0, -np.sin(self.chi), -np.cos(self.chi)]])
         else:
-            self.N_channel = A_matrix.shape[0]
-            self.N_Stokes = A_matrix.shape[1]
+            A_matrix_shape =  A_matrix.shape
+            if len(A_matrix_shape) not in (2, 4):
+                raise ValueError(
+                    'Instrument matrix must have shape (N_channel, N_Stokes) or (N, M, N_channel, N_Stokes)')
+            if len(A_matrix_shape) == 4 and A_matrix_shape[:2] != (self.N, self.M):
+                raise ValueError(
+                    'Instrument tensor must have shape (N, M, N_channel, N_Stokes)')
+
+            self.N_channel = A_matrix_shape[-2]
+            self.N_Stokes = A_matrix_shape[-1]
             self.A_matrix = A_matrix.copy()
+
+        self.A_matrix_inv = np.linalg.pinv(self.A_matrix)
         
 ##############   constructor asisting function group   ##############
 
@@ -977,23 +989,59 @@ class waveorder_microscopy:
         Parameters
         ----------
             I_meas        : numpy.ndarray
-                            polarization-sensitive intensity images with the size of (N_channel, ...)
+                            polarization-sensitive intensity images with the size of (N_channel, ..., N, M) or
+                            (N_channel, ..., N, M, N_defocus)
                           
         Returns
         -------
             S_image_recon : numpy.ndarray
-                            reconstructed Stokes parameters with the size of (N_Stokes, ...)
+                            reconstructed Stokes parameters with the size of (N_Stokes, ..., N, M), or
+                            (N_Stokes, ..., N, M, N_defocus)
                        
                               
         '''
-        
-        img_shape = I_meas.shape
-        
-        A_pinv = np.linalg.pinv(self.A_matrix)
-        S_image_recon = np.reshape(np.dot(A_pinv, I_meas.reshape((self.N_channel, -1))), (self.N_Stokes,)+img_shape[1:])
 
-            
-        return S_image_recon
+
+        data_dims = I_meas.shape
+        if data_dims[0] != self.N_channel:
+            raise ValueError(f'Unsupported image data size. Provide image data is of size: {data_dims}. '
+                             f'Image data must be of size (N_channel, ..., N, M) or (N_channel, ..., N, M, N_defocus)')
+        if not (data_dims[-2:] != (self.N, self.M) or data_dims[-3:] != (self.N, self.M, self.N_defocus)):
+            raise ValueError(f'Unsupported image data size. Provide image data is of size: {data_dims}. '
+                             f'Image data must be of size (N_channel, ..., N, M) or (N_channel, ..., N, M, N_defocus)')
+
+        # append dummy z dimension (N_defocus=1) if input data is 2D
+        single_plane = False
+        if data_dims[-2:] == (self.N, self.M):
+            single_plane = True
+            I_meas = I_meas[..., np.newaxis]
+
+        # reshape image data into (N, M, N_channel, ...)
+        img_data = np.moveaxis(I_meas, (-3, -2), (0, 1))
+        data_dims2 = img_data.shape
+        img_data = np.reshape(img_data, (self.N, self.M, self.N_channel, -1))
+
+        # compute Stokes parameters
+        # A_matrix_inv is shape (N_Stokes, N_channel) or (N, M, N_Stokes, N_channel)
+        # img_data is shape (N, M, N_channel, ...)
+        # S_image_recon is shape (N, M, N_stokes, ...)
+        if self.use_gpu:
+            if self._A_matrix_inv_gpu_array is None:
+                self._A_matrix_inv_gpu_array = cp.array(self.A_matrix_inv)
+            img_gpu_array = cp.array(img_data)
+            S_image_recon = cp.asnumpy(cp.matmul(self._A_matrix_inv_gpu_array, img_gpu_array))
+        else:
+            S_image_recon = np.matmul(self.A_matrix_inv, img_data)
+
+        # reshape Stokes parameters into (N_Stokes, ..., N, M, N_defocus)
+        S_image_recon = np.reshape(S_image_recon, (self.N, self.M, self.N_Stokes)+data_dims2[3:])
+        S_image_recon = np.moveaxis(S_image_recon, (0, 1), (-3, -2))
+
+        # if input data was 2D, remove dummy z dimension
+        if single_plane:
+            return S_image_recon[..., 0]
+        else:
+            return S_image_recon
     
     
     def Stokes_transform(self, S_image_recon):
@@ -2463,6 +2511,7 @@ class fluorescence_microscopy:
         self.pad_z = pad_z
         self.NA_obj = NA_obj / n_media
         self.N_wavelength = len(lambda_emiss)
+        self.deconv_mode = deconv_mode
 
         # setup microscocpe variables
         self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
@@ -2638,7 +2687,9 @@ class fluorescence_microscopy:
             I_fluor_deconv = np.zeros((self.N_wavelength, 3, N, M, Z))
         else:
             I_fluor_deconv = np.zeros_like(I_fluor_process)
-        print('I_fluor_pad', I_fluor_pad.shape, 'I_fluor_deconv', I_fluor_deconv.shape)
+            
+        if verbose:
+            print('I_fluor_pad', I_fluor_pad.shape, 'I_fluor_deconv', I_fluor_deconv.shape)
         
         for i in range(self.N_wavelength):
         
@@ -2656,3 +2707,41 @@ class fluorescence_microscopy:
             
 
         return np.squeeze(I_fluor_deconv)
+
+
+    def Fluor_anisotropy_recon(self, S1_stack, S2_stack):
+
+        """
+
+        Reconstruct fluorescence anisotropy and ensemble fluorophore orientation from normalized S1 and S2 Stokes
+        parameters
+
+        Parameters
+        ----------
+        S1_stack        : numpy.ndarray
+                          Normalized S1 images
+        S2_stack        : numpy.ndarray
+                          Normalized S2 images
+
+        Returns
+        -------
+            anisotropy  : numpy.ndarray
+                          Fluorescence anisotropy
+
+            orientation : numpy.ndarray
+                          Ensemble fluorophore orientation, in the range [0, pi] radians
+
+        """
+
+        if self.use_gpu:
+            S1_stack = cp.array(S1_stack)
+            S2_stack = cp.array(S2_stack)
+
+            anisotropy = cp.asnumpy(0.5 * cp.sqrt(S1_stack ** 2 + S2_stack ** 2))
+            orientation = cp.asnumpy((0.5 * cp.arctan2(S2_stack, S1_stack)) % np.pi)
+
+        else:
+            anisotropy = 0.5 * np.sqrt(S1_stack**2 + S2_stack**2)
+            orientation = (0.5 * np.arctan2(S2_stack, S1_stack)) % np.pi
+
+        return anisotropy, orientation

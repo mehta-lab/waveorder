@@ -6,7 +6,7 @@ import time
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from scipy.ndimage import uniform_filter
 from collections import namedtuple
-
+from .optics import scattering_potential_tensor_to_3D_orientation_PN
 
 import re
 numbers = re.compile(r'(\d+)')
@@ -318,7 +318,7 @@ def softTreshold(x, threshold, use_gpu=False, gpu_id=0):
     return x_threshold
 
 
-def wavelet_softThreshold(img, wavelet, threshold, level = 1):
+def wavelet_softThreshold(img, wavelet, threshold, level = 1, axes=None):
     
     '''
     
@@ -333,7 +333,10 @@ def wavelet_softThreshold(img, wavelet, threshold, level = 1):
                     type of wavelet to use (pywt.wavelist() to find the whole list)
                     
         threshold : float
-                    threshold value 
+                    threshold value
+
+        axes      : list
+                    axes along which to denoise nD volume
         
     Returns
     -------
@@ -361,7 +364,7 @@ def wavelet_softThreshold(img, wavelet, threshold, level = 1):
 
     img_padded = np.pad(img, padding, 'edge')
 
-    coeffs = pywt.wavedecn(img_padded, wavelet, level=level)
+    coeffs = pywt.wavedecn(img_padded, wavelet, level=level, axes=axes)
     
     for i in range(level+1):
         if i == 0:
@@ -370,7 +373,7 @@ def wavelet_softThreshold(img, wavelet, threshold, level = 1):
             for item in coeffs[i]:
                 coeffs[i][item] = softTreshold(coeffs[i][item], threshold)
 
-    img_thres = pywt.waverecn(coeffs, wavelet)
+    img_thres = pywt.waverecn(coeffs, wavelet, axes=axes)
     
     return img_thres[unpadding]
 
@@ -1581,3 +1584,501 @@ def cylindrical_shell_local_orientation(VOI, ps, psz, scale, beta=0.5, c_para=0.
     print('Finish local orientation extraction, elapsed time:' + str(time.time()-t0))
     
     return azimuth, theta, V_func, kernel
+
+
+
+def integer_factoring(integer):
+    
+    '''
+    
+    find all the factors of an integer
+    
+    Parameters
+    ----------
+        integer : int
+                  integer to be factored
+    Returns
+    -------
+        factors : list
+                  list containing all the factors of the input integer
+
+    '''
+    
+    if not isinstance(integer,int):
+        raise ValueError('integer should be an int')
+    
+    factors=[]
+    
+    for half_factor in range(1, int(np.sqrt(integer)) + 1):
+        if integer % half_factor ==0:
+            factors.append(half_factor)
+            if integer // half_factor != half_factor:
+                factors.append(integer // half_factor)
+    
+    factors.sort()
+    return factors
+
+
+def generate_FOV_splitting_parameters(img_size, overlapping_range, max_image_size):
+    
+    '''
+    
+    calculate the overlap and pixels of increment for sub-FOV processing
+    
+    Parameters
+    ----------
+        img_size          : tuple or list
+                            the original size of the image in the format of (Ny, Nx)
+                            
+        overlapping_range : tuple or list
+                            the targeted range for the number of overlapping pixels in the format of (overlap_min, overlap_max)
+        
+        max_image_size    : tuple or list
+                            the maximal accepted size of the sub-FOV in the format of (Ny, Nx)
+        
+        
+    Returns
+    -------
+        overlap           : int
+                            the number of overlapping pixels
+                  
+        N_space           : int
+                            the number of y-increment pixels
+        
+        M_space           : int
+                            the number of x-increment pixels
+
+    '''
+        
+    overlap = 0
+    N_space = 0
+    M_space = 0
+    
+    for i in range(overlapping_range[0], overlapping_range[1]):
+        pre_N_space = np.max([x for x in integer_factoring(img_size[0]-i) if x <= max_image_size[0]-i])
+        pre_M_space = np.max([x for x in integer_factoring(img_size[1]-i) if x <= max_image_size[1]-i])
+        
+        if pre_N_space > N_space and pre_M_space > M_space and (pre_N_space+i)%2 ==0 and  (pre_M_space+i)%2 ==0:
+            overlap = i
+            N_space = pre_N_space
+            M_space = pre_M_space
+
+    print('Optimal number of overlapping is %d pixels'%(overlap))
+    print('The corresponding maximal N_space is %d pixels'%(N_space))
+    print('The corresponding maximal M_space is %d pixels'%(M_space))
+    
+    return overlap, N_space, M_space
+
+
+
+def generate_sub_FOV_coordinates(img_size, img_space, overlap):
+    
+    '''
+    
+    calculate the starting pixel indices of each sub-FOV
+    
+    Parameters
+    ----------
+        img_size  : tuple or list
+                    the original size of the image in the format of (Ny, Nx)
+                            
+        img_space : tuple or list
+                    the number of x- and y-increment pixels in the format of (Ny, Nx)
+        
+        overlap   : tuple or list
+                    the number of overlapping pixels in y and x directions in the format of (Ny, Nx)
+        
+        
+    Returns
+    -------
+        ns        : int
+                    the starting pixel indices in y direction
+                  
+        ms        : int
+                    the starting pixel indices in x direction
+
+    '''
+    
+    N_full, M_full = img_size
+    N_space, M_space = img_space
+    
+    
+    Ns = N_space + overlap[0]
+    Ms = M_space + overlap[1]
+
+
+    num_N = np.floor(N_full/N_space)
+    num_M = np.floor(M_full/M_space)
+
+    end_N = (num_N-1)*N_space + Ns
+    end_M = (num_M-1)*M_space + Ms
+
+    if end_N <= N_full:
+        ns = np.r_[0:num_N]*N_space
+    else:
+        ns = np.r_[0:(num_N-1)]*N_space
+        num_N -= 1
+        end_N = (num_N-1)*N_space + Ns
+
+
+    if end_M <= M_full:
+        ms = np.r_[0:num_M]*M_space
+    else:
+        ms = np.r_[0:(num_M-1)]*M_space
+        num_M -= 1
+        end_M = (num_M-1)*M_space + Ms
+
+    print('Last pixel in (y,x) dimension processed is (%d, %d)'%(end_N, end_M))
+
+    ms, ns = np.meshgrid(ms, ns)
+    ms = ms.flatten()
+    ns = ns.flatten()
+
+    return ns, ms
+
+
+
+def image_stitching(coord_list, overlap, file_loading_func, gen_ref_map=True, ref_stitch=None):
+    
+    '''
+    
+    stitch images (with size (Ny, Nx, ...)) with alpha blending algorithm given the image coordinate, overlap, and file_loading_functions
+    
+    Parameters
+    ----------
+        coord_list        : tuple
+                            a tuple containing two np.arrays for the y- and x-coordinate of the sub-FOVs
+                            e.g. (y_idx_list, x_idx_list)
+                            y_idx_list = [0, 0, 1, 1]
+                            x_idx_list = [0, 1, 0, 1]
+                                         |
+                                [0, 0]   |   [0, 1]
+                                         |
+                            --------------------------  for a FOV like this, the list suggest an order of [0,0] -> [0, 1] -> [1,0] -> [1, 1]
+                                         |
+                                [1, 0]   |   [1, 1]
+                                         |
+                            
+        
+        overlap           : tuple or list
+                            the number of overlapping pixels in y and x directions in the format of (Ny, Nx)
+                    
+        file_loading_func : func
+                            a function handle that receives one integer parameter (p) to load the p-th array in the disk with the shape of (Ny_sub, Nx_sub, ...)
+        
+        gen_ref_map       : bool
+                            an option to generate a normalization map for the stitching algorithm
+        
+        ref_stitch        : numpy.ndarray
+                            a precomputed normalization map with the shape of (Ny, Nx)
+        
+        
+    Returns
+    -------
+        img_normalized    : numpy.ndarray
+                            the stitched array with the shape of (Ny, Nx, ...)
+                  
+        ref_stitch        : int
+                            the computed normalization map with the shape of (Ny, Nx)
+
+    '''
+
+
+    row_list = coord_list[0]
+    column_list = coord_list[1]
+
+    overlap_y = overlap[0]
+    overlap_x = overlap[1]
+
+    num_row = int(np.max(np.array(row_list))+1)
+    num_column = int(np.max(np.array(column_list))+1)
+    
+    
+    t0 = time.time()
+    for i in range(num_row*num_column):
+
+        row_idx = int(row_list[i])
+        column_idx = int(column_list[i])
+
+        img_i = file_loading_func(i)
+        
+        if i == 0:
+            
+            Ns, Ms = img_i.shape[:2]
+            N_full = (num_row-1)*(Ns-overlap_y)+Ns
+            M_full = (num_column-1)*(Ms-overlap_x)+Ms
+            if img_i.ndim == 2:
+                img_stitch = np.zeros((N_full, M_full))
+            else:
+                img_stitch = np.zeros((N_full, M_full)+img_i.shape[2:])
+                
+            if gen_ref_map:
+                ref_stitch = np.zeros((N_full, M_full))
+            else:
+                if ref_stitch is None:
+                    raise ValueError('Make gen_ref_map True if ref_stitch is None')
+        
+
+        if gen_ref_map:
+            ref_i = np.ones(img_i.shape[:2])
+        
+
+        # center 
+        if np.sum(row_idx == np.r_[1:num_row-1])*np.sum(column_idx == np.r_[1:num_column-1]) == 1:
+            for p in range(overlap_y):
+                img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
+                img_i[p,:] = img_i[p,:]*p/overlap_y
+                if gen_ref_map:
+                    ref_i[-1-p,:] = ref_i[-1-p,:]*p/overlap_y
+                    ref_i[p,:] = ref_i[p,:]*p/overlap_y
+
+
+            for p in range(overlap_x):
+                img_i[:,p] = img_i[:,p]*p/overlap_x
+                img_i[:,-1-p] = img_i[:,-1-p]*p/overlap_x
+                if gen_ref_map:
+                    ref_i[:,p] = ref_i[:,p]*p/overlap_x
+                    ref_i[:,-1-p] = ref_i[:,-1-p]*p/overlap_x
+
+
+        # top
+        if np.sum(row_idx == 0)*np.sum(column_idx == np.r_[1:num_column-1]) == 1:
+
+            for p in range(overlap_y):
+                img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
+    #             img_i[p,:] = img_i[p,:]*p/overlap_y
+                if gen_ref_map:
+                    ref_i[-1-p,:] = ref_i[-1-p,:]*p/overlap_y
+        #             ref_i[p,:] = ref_i[p,:]*p/overlap_y
+
+
+            for p in range(overlap_x):
+                img_i[:,p] = img_i[:,p]*p/overlap_x
+                img_i[:,-1-p] = img_i[:,-1-p]*p/overlap_x
+                if gen_ref_map:
+                    ref_i[:,p] = ref_i[:,p]*p/overlap_x
+                    ref_i[:,-1-p] = ref_i[:,-1-p]*p/overlap_x
+
+
+        # bottom 
+        if np.sum(row_idx == num_row-1)*np.sum(column_idx == np.r_[1:num_column-1]) == 1:
+
+            for p in range(overlap_y):
+    #             img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
+                img_i[p,:] = img_i[p,:]*p/overlap_y
+                if gen_ref_map:
+        #             ref_i[-1-p,:] = ref_i[-1-p,:]*p/overlap_y
+                    ref_i[p,:] = ref_i[p,:]*p/overlap_y
+
+
+            for p in range(overlap_x):
+                img_i[:,p] = img_i[:,p]*p/overlap_x
+                img_i[:,-1-p] = img_i[:,-1-p]*p/overlap_x
+                if gen_ref_map:
+                    ref_i[:,p] = ref_i[:,p]*p/overlap_x
+                    ref_i[:,-1-p] = ref_i[:,-1-p]*p/overlap_x
+
+
+        # left 
+        if np.sum(row_idx == np.r_[1:num_row-1])*np.sum(column_idx == 0) == 1:
+
+            for p in range(overlap_y):
+                img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
+                img_i[p,:] = img_i[p,:]*p/overlap_y
+                if gen_ref_map:
+                    ref_i[-1-p,:] = ref_i[-1-p,:]*p/overlap_y
+                    ref_i[p,:] = ref_i[p,:]*p/overlap_y
+
+
+            for p in range(overlap_x):
+    #             img_i[:,p] = img_i[:,p]*p/overlap_x
+                img_i[:,-1-p] = img_i[:,-1-p]*p/overlap_x
+                if gen_ref_map:
+        #             ref_i[:,p] = ref_i[:,p]*p/overlap_x
+                    ref_i[:,-1-p] = ref_i[:,-1-p]*p/overlap_x
+
+
+        # right 
+        if np.sum(row_idx == np.r_[1:num_row-1])*np.sum(column_idx == num_column-1) == 1:
+
+            for p in range(overlap_y):
+                img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
+                img_i[p,:] = img_i[p,:]*p/overlap_y
+                if gen_ref_map:
+                    ref_i[-1-p,:] = ref_i[-1-p,:]*p/overlap_y
+                    ref_i[p,:] = ref_i[p,:]*p/overlap_y
+
+
+            for p in range(overlap_x):
+                img_i[:,p] = img_i[:,p]*p/overlap_x
+    #             img_i[:,-1-p] = img_i[:,-1-p]*p/overlap_x
+                if gen_ref_map:
+                    ref_i[:,p] = ref_i[:,p]*p/overlap_x
+        #             ref_i[:,-1-p] = ref_i[:,-1-p]*p/overlap_x
+
+
+        # top left
+        if np.sum(row_idx == 0)*np.sum(column_idx == 0) == 1:
+
+            for p in range(overlap_y):
+                img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
+    #             img_i[p,:] = img_i[p,:]*p/overlap_y
+                if gen_ref_map:
+                    ref_i[-1-p,:] = ref_i[-1-p,:]*p/overlap_y
+        #             ref_i[p,:] = ref_i[p,:]*p/overlap_y
+
+
+            for p in range(overlap_x):
+    #             img_i[:,p] = img_i[:,p]*p/overlap_x
+                img_i[:,-1-p] = img_i[:,-1-p]*p/overlap_x
+                if gen_ref_map:
+        #             ref_i[:,p] = ref_i[:,p]*p/overlap_x
+                    ref_i[:,-1-p] = ref_i[:,-1-p]*p/overlap_x
+
+
+        # top right
+        if np.sum(row_idx == 0)*np.sum(column_idx == num_column-1) == 1:
+
+            for p in range(overlap_y):
+                img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
+    #             img_i[p,:] = img_i[p,:]*p/overlap_y
+                if gen_ref_map:
+                    ref_i[-1-p,:] = ref_i[-1-p,:]*p/overlap_y
+        #             ref_i[p,:] = ref_i[p,:]*p/overlap_y
+
+
+            for p in range(overlap_x):
+                img_i[:,p] = img_i[:,p]*p/overlap_x
+    #             img_i[:,-1-p] = img_i[:,-1-p]*p/overlap_x
+                if gen_ref_map:
+                    ref_i[:,p] = ref_i[:,p]*p/overlap_x
+        #             ref_i[:,-1-p] = ref_i[:,-1-p]*p/overlap_x
+
+
+        # bottom left
+        if np.sum(row_idx == num_row-1)*np.sum(column_idx ==0) == 1:
+
+            for p in range(overlap_y):
+    #             img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
+                img_i[p,:] = img_i[p,:]*p/overlap_y
+                if gen_ref_map:
+        #             ref_i[-1-p,:] = ref_i[-1-p,:]*p/overlap_y
+                    ref_i[p,:] = ref_i[p,:]*p/overlap_y
+
+
+            for p in range(overlap_x):
+    #             img_i[:,p] = img_i[:,p]*p/overlap_x
+                img_i[:,-1-p] = img_i[:,-1-p]*p/overlap_x
+                if gen_ref_map:
+        #             ref_i[:,p] = ref_i[:,p]*p/overlap_x
+                    ref_i[:,-1-p] = ref_i[:,-1-p]*p/overlap_x
+
+
+        # bottom right
+        if np.sum(row_idx == num_row-1)*np.sum(column_idx == num_column-1) == 1:
+
+            for p in range(overlap_y):
+    #             img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
+                img_i[p,:] = img_i[p,:]*p/overlap_y
+                if gen_ref_map:
+        #             ref_i[-1-p,:] = ref_i[-1-p,:]*p/overlap_y
+                    ref_i[p,:] = ref_i[p,:]*p/overlap_y
+
+
+            for p in range(overlap_x):
+                img_i[:,p] = img_i[:,p]*p/overlap_x
+    #             img_i[:,-1-p] = img_i[:,-1-p]*p/overlap_x
+                if gen_ref_map:
+                    ref_i[:,p] = ref_i[:,p]*p/overlap_x
+        #             ref_i[:,-1-p] = ref_i[:,-1-p]*p/overlap_x
+                
+        pad_tuple_ref = ((row_idx*(Ns-overlap_y),(num_row-1-row_idx)*(Ns-overlap_y)), \
+                                 (column_idx*(Ms-overlap_x),(num_column-1-column_idx)*(Ms-overlap_x)))
+        pad_tuple = pad_tuple_ref
+        
+        if img_stitch.ndim > ref_stitch.ndim:
+            for extend_idx in range(img_stitch.ndim-ref_stitch.ndim):
+                pad_tuple += ((0,0),)
+        
+        img_temp = np.pad(img_i,pad_tuple, mode='constant')
+        img_stitch += img_temp
+
+        
+        if gen_ref_map:
+            ref_temp = np.pad(ref_i,pad_tuple_ref, mode='constant')
+            ref_stitch += ref_temp
+        
+
+        if np.mod(i+1,1) ==0:
+            print('Processed positions (%d / %d), elapsed time: %.2f'%(i+1, num_row*num_column, time.time()-t0))
+
+    
+    ref_stitch_extend = ref_stitch.copy()
+    if img_stitch.ndim > ref_stitch.ndim:
+        for extend_idx in range(img_stitch.ndim-ref_stitch.ndim):
+            ref_stitch_extend=ref_stitch_extend[...,np.newaxis]
+
+    img_normalized = img_stitch*ref_stitch_extend/(ref_stitch_extend + 1e-6)
+    
+    if gen_ref_map:
+        return img_normalized, ref_stitch
+    else:
+        return img_normalized
+    
+    
+def orientation_3D_continuity_map(azimuth, theta, psz_ps_ratio=None, avg_px_size=10, reg_ret_pr=1e-1):
+    
+    '''
+    
+    calculate the 3D orientation continuity map that is used to suppress noisy retardance measurements
+    
+    Parameters
+    ----------
+        azimuth           : numpy.ndarray
+                            reconstructed in-plane orientation with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+                            
+        theta             : numpy.ndarray
+                            reconstructed out-of-plane inclination with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+        
+        psz_ps_ratio      : float
+                            the ratio of the sampling size in z and in xy
+                    
+        avg_px_size       : int
+                            size of the smoothing uniform filter to enforce spatial continuity 
+                            (larger --> smoother feature, lower --> sharper feature)
+        
+        reg_ret_pr        : float
+                            regularization parameters for principal retardance estimation
+        
+        
+    Returns
+    -------
+        retardance_pr_avg : numpy.ndarray
+                            the computed orientation continuity map with the size of (N, M) for 2D and (N, M, N_defocus) for 3D
+                  
+    '''
+    
+    img_size = azimuth.shape
+    img_dim  = azimuth.ndim
+    
+    f_tensor_unit_ret = np.zeros((7,)+img_size)
+    f_tensor_unit_ret[2] = -np.ones(img_size)*(np.sin(theta)**2)*np.cos(2*azimuth)
+    f_tensor_unit_ret[3] = -np.ones(img_size)*(np.sin(theta)**2)*np.sin(2*azimuth)
+    f_tensor_unit_ret[4] = -np.ones(img_size)*(np.sin(2*theta))*np.cos(azimuth)
+    f_tensor_unit_ret[5] = -np.ones(img_size)*(np.sin(2*theta))*np.sin(azimuth)
+    
+    
+    f_tensor_blur = np.zeros_like(f_tensor_unit_ret)
+    for i in range(4):
+        if img_dim==3 and psz_ps_ratio is not None:
+            f_tensor_blur[2+i] = uniform_filter(f_tensor_unit_ret[2+i], (avg_px_size,avg_px_size,int(np.round(avg_px_size/psz_ps_ratio))))
+        elif img_dim==2:
+            f_tensor_blur[2+i] = uniform_filter(f_tensor_unit_ret[2+i], (avg_px_size,avg_px_size))
+        else:
+            raise ValueError('azimuth and theta are either 2D or 3D, psz_ps_ratio should not be None for 3D images')
+    
+    retardance_pr_avg,_,_ = scattering_potential_tensor_to_3D_orientation_PN(f_tensor_blur, material_type='positive', reg_ret_pr = reg_ret_pr)
+    retardance_pr_avg /= np.max(retardance_pr_avg)
+    
+    
+    return retardance_pr_avg
