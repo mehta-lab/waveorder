@@ -83,10 +83,10 @@ def setup_test_data_zarr():
         print("\nsetting up temp folder")
 
     # shared gdrive
-    # 'https://drive.google.com/file/d/1TXZoe0nPeI1Wk3oxtIOIgQh6PQrtvI3P/view?usp=sharing'
+    # https://drive.google.com/file/d/1pwEuTS7AChg_zsE3bXGZsy6LmMwl_ctf/view?usp=sharing
 
     # DO NOT ADJUST THIS VALUE
-    recOrder_pytest = '1TXZoe0nPeI1Wk3oxtIOIgQh6PQrtvI3P'
+    recOrder_pytest = '1pwEuTS7AChg_zsE3bXGZsy6LmMwl_ctf'
 
     # download files to temp folder
     output = temp_pipeline + "/2021_06_11_recOrder_pytest_20x_04NA_zarr.zip"
@@ -96,8 +96,10 @@ def setup_test_data_zarr():
                                         showsize=True,
                                         overwrite=True)
 
+    # shutil.unpack_archive(output, temp_pipeline)
+
     src = os.path.join(temp_pipeline, '2021_06_11_recOrder_pytest_20x_04NA_zarr')
-    data = os.path.join(src, '2T_3P_81Z_231Y_498X_Kazansky.zarr')
+    data = os.path.join(src, '2T_3P_3Z_128Y_128X_Kazansky.zarr')
 
     yield temp_pipeline, data
 

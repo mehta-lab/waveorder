@@ -37,11 +37,14 @@ def main():
         if not os.path.exists(Args.config):
             raise ValueError('Specified config path does not exist')
         else:
-            config = ConfigReader(Args.config, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name)
+            config = ConfigReader(Args.config, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name,
+                                  immutable=False)
             config.save_yaml()
+            config.immutable = True
     else:
-        config = ConfigReader(None, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name)
+        config = ConfigReader(None, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name, immutable=False)
         config.save_yaml()
+        config.immutable = True
 
     manager = PipelineManager(config, Args.overwrite)
     manager.run()
