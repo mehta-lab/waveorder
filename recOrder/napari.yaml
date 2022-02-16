@@ -1,0 +1,10 @@
+name: recOrder
+schema_version: 0.1.0
+contributions:
+  commands:
+  - id: recOrder.MainWidget
+    title: Create Main Widget
+    python_name: recOrder.plugin.widget.napari_plugin_entry_point:MainWidget
+  widgets:
+  - command: recOrder.MainWidget
+    display_name: Main Menu
