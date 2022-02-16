@@ -40,7 +40,6 @@ def main():
             config = ConfigReader(Args.config, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name,
                                   immutable=False)
             config.save_yaml()
-            config.immutable = True
     else:
         config = ConfigReader(None, Args.data_dir, Args.save_dir, Args.method, Args.mode, Args.name, immutable=False)
         config.save_yaml()
