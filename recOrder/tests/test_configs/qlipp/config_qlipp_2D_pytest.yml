@@ -79,7 +79,7 @@ processing:
   n_objective_media: 1.0
   # (float) Refractive index of the objective immersion oil
 
-  focus_zidx: 40
+  focus_zidx: 1
   # (int) Index of the focused z slice of the dataset for 2D phase reconstruction
 
   pad_z: 0

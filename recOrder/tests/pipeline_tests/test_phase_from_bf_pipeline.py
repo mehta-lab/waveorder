@@ -3,8 +3,7 @@ from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_manager import PipelineManager
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
 from waveorder.io.writer import WaveorderWriter
-from recOrder.compute.qlipp_compute import reconstruct_qlipp_stokes, reconstruct_qlipp_birefringence, \
-    reconstruct_phase3D, reconstruct_phase2D
+from recOrder.compute.qlipp_compute import reconstruct_phase3D, reconstruct_phase2D
 from os.path import dirname, abspath
 import numpy as np
 import os
@@ -67,7 +66,7 @@ def test_pipeline_manager_run(setup_BF_test_data_zarr, setup_data_save_folder):
     assert (store['Row_0']['Col_0']['Pos_000'])
     assert (store['Row_0']['Col_1']['Pos_001'])
     assert (store['Row_0']['Col_2']['Pos_002'])
-    assert (array.shape == (2, 1, 81, manager.data.height, manager.data.width))
+    assert (array.shape == (2, 1, 3, manager.data.height, manager.data.width))
 
 def test_3D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     folder, data = setup_BF_test_data_zarr
@@ -80,7 +79,7 @@ def test_3D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     assert(manager.pipeline.mode == '3D')
     manager.run()
 
-    pos, t, z = 1, 0, 40
+    pos, t, z = 1, 0, 1
     data = manager.data.get_array(pos)
     recon = manager.pipeline.reconstructor
 
@@ -92,7 +91,7 @@ def test_3D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     array = store['Row_0']['Col_1']['Pos_001']['array']
 
     # Check Shape
-    assert(array.shape == (1, len(config.output_channels), 81, 231, 498))
+    assert(array.shape == (1, len(config.output_channels), 2, 128, 128))
 
     # Check Phase
     assert(np.sum(np.abs(phase3D[z] - array[0, 0, z]) ** 2) / np.sum(np.abs(phase3D[z])**2) < 0.1)
@@ -119,7 +118,7 @@ def test_2D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
     array = store['Row_0']['Col_1']['Pos_001']['array']
 
     # Check Shapes
-    assert(array.shape == (1, len(config.output_channels), 1, 231, 498))
+    assert(array.shape == (1, len(config.output_channels), 1, 128, 128))
 
     # Check Phase
     assert (np.sum(np.abs(phase2D - array[0, 0, 0]) ** 2) / np.sum(np.abs(phase2D)**2) < 0.1)

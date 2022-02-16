@@ -38,7 +38,7 @@ processing:
   fluorescence_channel_indices: [0]
   # (list) channel index of the fluorophore to deconvolve
 
-  focus_zidx: [40]
+  focus_zidx: [1]
 
   use_gpu: False
   # (bool) Option to use GPU processing if True (require cupy to be installed)

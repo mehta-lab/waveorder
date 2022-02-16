@@ -2,9 +2,7 @@ import yaml
 import pathlib
 import os
 import warnings
-import re
 
-#TODO: Make CLI override config reader
 
 DATASET = {
     'method': None,
@@ -227,7 +225,9 @@ class ConfigReader(object):
                             f'User must specify {key_child} to use for {key}'
 
     def save_yaml(self, dir_=None, name=None):
+        self.immutable = False
         self.yaml_dict = self._create_yaml_dict()
+        self.immutable = True
 
         dir_ = self.save_dir if dir_ is None else dir_
         name = f'config_{self.data_save_name}.yml' if name is None else name
