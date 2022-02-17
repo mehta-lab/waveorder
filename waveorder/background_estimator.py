@@ -96,7 +96,7 @@ class BackgroundEstimator2D:
         x_mesh, y_mesh = np.meshgrid(np.linspace(0, im_shape[1] - 1, im_shape[1]),
                                      np.linspace(0, im_shape[0] - 1, im_shape[0]))
         # Reconstruct the surface from the coefficients
-        poly_surface = np.zeros(im_shape, np.float)
+        poly_surface = np.zeros(im_shape, np.float64)
         order_pairs = list(itertools.product(orders, orders))
         # sum of orders of x,y <= order of the polynomial
         variable_iterator = itertools.filterfalse(lambda x: sum(x) > order, order_pairs)
