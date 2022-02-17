@@ -1041,6 +1041,12 @@ class MainWidget(QWidget):
                     val = self.ui.le_gpu_id.text()
                     setattr(self.config_reader, key, int(val))
 
+                elif key == 'use_gpu':
+                    if self.ui.chb_use_gpu.isChecked():
+                        setattr(self.config_reader, key, True)
+                    else:
+                        setattr(self.config_reader, key, False)
+
                 else:
                     attr_name = f'le_{key}'
                     if attr_name in attrs:
@@ -1137,8 +1143,8 @@ class MainWidget(QWidget):
             setattr(self.config_reader, 'brightfield_channel_index',
                       int(self.ui.le_fluor_chan.text()))
 
-            focus_zidx = int(self.ui.le_focus_zidx.text())
-            setattr(self.config_reader, 'focus_zidx', focus_zidx if focus_zidx != '' else None)
+            focus_zidx = self.ui.le_focus_zidx.text()
+            setattr(self.config_reader, 'focus_zidx', int(focus_zidx) if focus_zidx != '' else None)
 
         else:
             setattr(self.config_reader, 'wavelength', int(self.ui.le_recon_wavelength.text()))
@@ -2456,7 +2462,6 @@ class MainWidget(QWidget):
             raise ValueError('Please make sure all necessary parameters are set before reconstruction')
 
         self._populate_config_from_app()
-        self.config_reader.data_type = 'ometiff' #TODO: Get rid of this for new waveorder
         self.worker = ReconstructionWorker(self, self.config_reader)
 
         # connect handlers
