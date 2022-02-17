@@ -70,23 +70,36 @@ class QLIPP(PipelineInterface):
         self.chunk_size = (1, 1, 1, self.data_shape[-2], self.data_shape[-1])
 
         # Initialize Reconstructor
-        self.reconstructor = initialize_reconstructor(pipeline='QLIPP',
-                                                      image_dim=(self.img_dim[0], self.img_dim[1]),
-                                                      wavelength_nm=self.config.wavelength,
-                                                      swing=self.calib_meta['Summary']['Swing (fraction)'],
-                                                      calibration_scheme=self.calib_scheme,
-                                                      NA_obj=self.config.NA_objective,
-                                                      NA_illu=self.config.NA_condenser,
-                                                      n_obj_media=self.config.n_objective_media,
-                                                      mag=self.config.magnification,
-                                                      n_slices=self.data.slices,
-                                                      z_step_um=self.data.z_step_size,
-                                                      pad_z=self.config.pad_z,
-                                                      pixel_size_um=self.config.pixel_size,
-                                                      bg_correction=self.config.background_correction,
-                                                      mode=self.mode,
-                                                      use_gpu=self.config.use_gpu,
-                                                      gpu_id=self.config.gpu_id)
+        if self.no_phase:
+            self.reconstructor = initialize_reconstructor(pipeline='birefringence',
+                                                          image_dim=(self.img_dim[0], self.img_dim[1]),
+                                                          wavelength_nm=self.config.wavelength,
+                                                          swing=self.calib_meta['Summary']['Swing (fraction)'],
+                                                          calibration_scheme=self.calib_scheme,
+                                                          pad_z=self.config.pad_z,
+                                                          bg_correction=self.config.background_correction,
+                                                          mode=self.mode,
+                                                          use_gpu=self.config.use_gpu,
+                                                          gpu_id=self.config.gpu_id)
+
+        else:
+            self.reconstructor = initialize_reconstructor(pipeline='QLIPP',
+                                                          image_dim=(self.img_dim[0], self.img_dim[1]),
+                                                          wavelength_nm=self.config.wavelength,
+                                                          swing=self.calib_meta['Summary']['Swing (fraction)'],
+                                                          calibration_scheme=self.calib_scheme,
+                                                          NA_obj=self.config.NA_objective,
+                                                          NA_illu=self.config.NA_condenser,
+                                                          n_obj_media=self.config.n_objective_media,
+                                                          mag=self.config.magnification,
+                                                          n_slices=self.data.slices,
+                                                          z_step_um=self.data.z_step_size,
+                                                          pad_z=self.config.pad_z,
+                                                          pixel_size_um=self.config.pixel_size,
+                                                          bg_correction=self.config.background_correction,
+                                                          mode=self.mode,
+                                                          use_gpu=self.config.use_gpu,
+                                                          gpu_id=self.config.gpu_id)
 
         # Compute BG stokes if necessary
         if self.config.background_correction != 'None':
@@ -99,11 +112,15 @@ class QLIPP(PipelineInterface):
 
     def _check_output_channels(self, output_channels):
         self.no_birefringence = True
+        self.no_phase = True
         for channel in output_channels:
             if 'Retardance' in channel or 'Orientation' in channel or 'Brightfield' in channel:
                 self.no_birefringence = False
+            if 'Phase3D' in channel or 'Phase2D' in channel:
+                self.no_phase = False
             else:
                 continue
+
 
     def reconstruct_stokes_volume(self, data):
         """

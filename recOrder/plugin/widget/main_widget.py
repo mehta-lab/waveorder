@@ -12,6 +12,7 @@ from recOrder.plugin.qtdesigner import recOrder_calibration_v5
 from recOrder.postproc.post_processing import ret_ori_overlay, generic_hsv_overlay
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.utils import load_bg
+from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, POSTPROCESSING
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
@@ -19,7 +20,7 @@ import numpy as np
 import os
 import json
 import logging
-from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, POSTPROCESSING
+import pathlib
 
 
 class MainWidget(QWidget):
@@ -232,6 +233,8 @@ class MainWidget(QWidget):
         self.ui.label_itr.setHidden(True)
         self.ui.le_fluor_chan.setHidden(True)
         self.ui.label_fluor_chan.setHidden(True)
+        self.ui.label_focus_zidx.setHidden(True)
+        self.ui.le_focus_zidx.setHidden(True)
 
         # Set initial UI Properties
         self.ui.le_gui_mode.setStyleSheet("border: 1px solid rgb(200,0,0); color: rgb(200,0,0);")
@@ -318,7 +321,6 @@ class MainWidget(QWidget):
         slider_position = self.ui.gridLayout_26.getItemPosition(slider_idx)
         slider_parent = ui_slider.parent().objectName()
         slider_name = ui_slider.objectName()
-        print(slider_parent)
 
         # Remove regular sliders from the UI
         self.ui.gridLayout_26.removeWidget(ui_slider)
@@ -775,6 +777,8 @@ class MainWidget(QWidget):
 
         # gather the specified output channels (will determine which requirements are necessary to look at)
         output_channels = self.ui.le_output_channels.text()
+        output_channels = output_channels.split(',')
+        output_channels = [chan.replace(' ', '') for chan in output_channels]
 
         # intialize the reconstruction specific required fields
         always_required = {'data_dir', 'save_dir', 'positions', 'timepoints', 'output_channels'}
@@ -926,7 +930,8 @@ class MainWidget(QWidget):
         self.save_directory = self.ui.le_save_dir.text()
         self.config_reader.method = self.method
         self.config_reader.mode = self.mode
-        self.config_reader.data_save_name = self.ui.le_data_save_name.text() if self.ui.le_data_save_name.text() != '' else None
+        self.config_reader.data_save_name = self.ui.le_data_save_name.text() if self.ui.le_data_save_name.text() != '' \
+                                            else pathlib.PurePath(self.data_dir).name
         self.config_reader.calibration_metadata = self.ui.le_calibration_metadata.text()
         self.config_reader.background = self.ui.le_bg_path.text()
         self.config_reader.background_correction = self.bg_option
@@ -1003,6 +1008,11 @@ class MainWidget(QWidget):
                 elif key == 'pad_z':
                     val = self.ui.le_pad_z.text()
                     setattr(self.config_reader, key, int(val))
+
+                elif key == 'gpu_id':
+                    val = self.ui.le_gpu_id.text()
+                    setattr(self.config_reader, key, int(val))
+
                 else:
                     attr_name = f'le_{key}'
                     if attr_name in attrs:
@@ -1019,11 +1029,16 @@ class MainWidget(QWidget):
 
         # Parse name mismatch fields
         setattr(self.config_reader, 'wavelength', int(self.ui.le_recon_wavelength.text()))
-        setattr(self.config_reader, 'NA_objective', float(self.ui.le_obj_na.text()))
-        setattr(self.config_reader, 'NA_condenser', float(self.ui.le_cond_na.text()))
-        setattr(self.config_reader, 'pixel_size', float(self.ui.le_ps.text()))
-        setattr(self.config_reader, 'n_objective_media', float(self.ui.le_n_media.text()))
-        setattr(self.config_reader, 'magnification', float(self.ui.le_mag.text()))
+        setattr(self.config_reader, 'NA_objective', float(self.ui.le_obj_na.text()) if self.ui.le_obj_na.text() != ''
+                else None)
+        setattr(self.config_reader, 'NA_condenser', float(self.ui.le_cond_na.text()) if self.ui.le_cond_na.text() != ''
+                else None)
+        setattr(self.config_reader, 'pixel_size', float(self.ui.le_ps.text()) if self.ui.le_ps.text() != ''
+                else None)
+        setattr(self.config_reader, 'n_objective_media', float(self.ui.le_n_media.text())
+                if self.ui.le_n_media.text() != '' else None)
+        setattr(self.config_reader, 'magnification', float(self.ui.le_mag.text()) if self.ui.le_mag.text() != ''
+                else None)
 
         focus_zidx = int(self.ui.le_focus_zidx.text())
         setattr(self.config_reader, 'focus_zidx', focus_zidx if focus_zidx != '' else None)
