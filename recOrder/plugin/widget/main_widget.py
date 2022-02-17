@@ -1000,21 +1000,36 @@ class MainWidget(QWidget):
                     setattr(self.config_reader, key, bg_map[self.ui.cb_bg_method.currentIndex()])
 
                 elif key == 'output_channels':
+
+                    # Reset style sheets
+                    self.ui.le_output_channels.setStyleSheet("")
+                    self.ui.cb_mode.setStyleSheet("")
+                    self._set_tab_red('Processing', False)
+
+                    # Make a list of the channels from the line edit string
                     field_text = self.ui.le_output_channels.text()
                     channels = field_text.split(',')
                     channels = [i.replace(' ', '') for i in channels]
                     setattr(self.config_reader, key, channels)
 
                     if 'Phase3D' in channels and 'Phase2D' in channels:
+                        self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                        self._set_tab_red('Processing', True)
                         raise KeyError(
                             f'Both Phase3D and Phase2D cannot be specified in output_channels.  Please compute '
                             f'separately')
 
                     if 'Phase3D' in channels and self.mode == '2D':
+                        self._set_tab_red('Processing', True)
+                        self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                        self.ui.cb_mode.setStyleSheet("border: 1px solid rgb(200,0,0);")
                         raise KeyError(f'Specified mode is 2D and Phase3D was specified for reconstruction. '
                                        'Only 2D reconstructions can be performed in 2D mode')
 
                     if 'Phase2D' in channels and self.mode == '3D':
+                        self._set_tab_red('Processing', True)
+                        self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                        self.ui.cb_mode.setStyleSheet("border: 1px solid rgb(200,0,0);")
                         raise KeyError(f'Specified mode is 3D and Phase2D was specified for reconstruction. '
                                        'Only 3D reconstructions can be performed in 3D mode')
 
@@ -1040,8 +1055,95 @@ class MainWidget(QWidget):
                     else:
                         continue
 
+        if self.method == 'FluorDeconv':
+
+            wavelengths = self.ui.le_recon_wavelength.text()
+            wavelengths = wavelengths.split(',')
+            wavelengths = [int(i.replace(' ', '')) for i in wavelengths]
+            setattr(self.config_reader, 'wavelength', wavelengths)
+
+            fluor_chan = self.ui.le_fluor_chan.text()
+            channels = fluor_chan.split(',')
+            channels = [int(i.replace(' ', '')) for i in channels]
+            setattr(self.config_reader, 'fluorescence_channel_indices', channels)
+
+            val = self.ui.le_fluor_strength.text()
+            regs = val.split(',')
+            regs = [float(i.replace(' ', '')) for i in regs]
+
+            if len(regs) == 1:
+                setattr(self.config_reader, 'reg', regs[0])
+            else:
+                if len(regs) != len(wavelengths):
+                    self._set_tab_red('Regularization', True)
+                    self.ui.le_recon_wavelength.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                    self.ui.le_fluor_strength.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                    raise ValueError('Length of regularization values must match wavelengths')
+                else:
+                    self._set_tab_red('Regularization', False)
+                    self.ui.le_recon_wavelength.setStyleSheet("")
+                    self.ui.le_fluor_strength.setStyleSheet("")
+                    setattr(self.config_reader, 'reg', regs)
+
+            if self.ui.chb_autocalc_bg.isChecked():
+                setattr(self.config_reader, 'fluorescence_background', None)
+            else:
+                val = self.ui.le_fluor_bg.text()
+                bg = val.split(',')
+                bg = [float(i.replace(' ', '')) for i in bg]
+
+                if len(bg) != len(channels):
+                    self._set_tab_red('Regularization', True)
+                    self.ui.le_recon_wavelength.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                    self.ui.le_fluor_bg.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                    raise ValueError('Length of background values must match wavelengths')
+                else:
+                    self._set_tab_red('Regularization', False)
+                    self.ui.le_recon_wavelength.setStyleSheet("")
+                    self.ui.le_fluor_bg.setStyleSheet("")
+                    setattr(self.config_reader, 'fluorescence_background', bg)
+
+            if len(wavelengths) != len(channels):
+                self._set_tab_red('Processing', True)
+                self.ui.le_recon_wavelength.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                self.ui.le_fluor_chan.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                raise ValueError('Wavelengths and output channels must be the same length')
+            elif len(wavelengths) != len(self.config_reader.output_channels):
+                self.ui.le_recon_wavelength.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
+
+            else:
+                self._set_tab_red('Processing', False)
+                self.ui.le_fluor_chan.setStyleSheet("")
+                self.ui.le_recon_wavelength.setStyleSheet("")
+                self.ui.le_output_channels.setStyleSheet("")
+
+            if self.mode == '2D':
+                focus_zidx = self.ui.le_focus_zidx.text()
+                indices = focus_zidx.split(',')
+                indices = [int(i.replace(' ', '')) for i in indices]
+                setattr(self.config_reader, 'focus_zidx', indices)
+
+                if len(indices) != len(channels):
+                    self._set_tab_red('Processing', True)
+                    self.ui.le_focus_zidx.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                    raise ValueError('Wavelengths, Focused z-indices, and channels must be the same length')
+                else:
+                    self._set_tab_red('Processing', False)
+                    self.ui.le_focus_zidx.setStyleSheet("")
+
+        elif self.method == 'PhaseFromBF':
+            setattr(self.config_reader, 'wavelength', int(self.ui.le_recon_wavelength.text()))
+            setattr(self.config_reader, 'brightfield_channel_index',
+                      int(self.ui.le_fluor_chan.text()))
+
+            focus_zidx = int(self.ui.le_focus_zidx.text())
+            setattr(self.config_reader, 'focus_zidx', focus_zidx if focus_zidx != '' else None)
+
+        else:
+            setattr(self.config_reader, 'wavelength', int(self.ui.le_recon_wavelength.text()))
+
         # Parse name mismatch fields
-        setattr(self.config_reader, 'wavelength', int(self.ui.le_recon_wavelength.text()))
         setattr(self.config_reader, 'NA_objective', float(self.ui.le_obj_na.text()) if self.ui.le_obj_na.text() != ''
                 else None)
         setattr(self.config_reader, 'NA_condenser', float(self.ui.le_cond_na.text()) if self.ui.le_cond_na.text() != ''
@@ -1053,18 +1155,7 @@ class MainWidget(QWidget):
         setattr(self.config_reader, 'magnification', float(self.ui.le_mag.text()) if self.ui.le_mag.text() != ''
                 else None)
 
-        focus_zidx = int(self.ui.le_focus_zidx.text())
-        setattr(self.config_reader, 'focus_zidx', focus_zidx if focus_zidx != '' else None)
-
-        if self.method == 'FluorDeconv':
-            fluor_chan = self.ui.le_fluor_chan.text()
-            channels = fluor_chan.split(',')
-            channels = [int(i.replace(' ', '')) for i in channels]
-            setattr(self.config_reader, 'fluorescence_channel_indices', channels)
-
-        if self.method == 'PhaseFromBF':
-            setattr(self.config_reader, 'brightfield_channel_index',
-                      int(self.ui.le_fluor_chan.text()))
+        #TODO: Figure out how to parse pre/post processing parameters
 
         # Parse Postprocessing automatically
         for key, val in POSTPROCESSING.items():
@@ -1096,7 +1187,6 @@ class MainWidget(QWidget):
                     else:
                         le = getattr(self.ui, f'le_postproc_denoise_{key_child}')
                         setattr(self.config_reader.postprocessing, f'{key}_{key_child}', le.text())
-
 
     def _populate_from_config(self):
         """
@@ -1170,7 +1260,15 @@ class MainWidget(QWidget):
                     le.setText(str(getattr(self.config_reader.preprocessing, f'denoise_{key_child}')))
 
         # Parse Processing name mismatch fields
-        self.ui.le_recon_wavelength.setText(str(int(self.config_reader.wavelength)))
+        wavelengths = self.config_reader.wavelength
+        if not isinstance(wavelengths, list):
+            self.ui.le_recon_wavelength.setText(str(int(self.config_reader.wavelength)))
+        else:
+            text = ''
+            for idx, chan in enumerate(wavelengths):
+                text += f'{chan}, ' if idx != len(wavelengths) - 1 else f'{chan}'
+            self.ui.le_recon_wavelength.setText(text)
+
         self.ui.le_obj_na.setText(str(self.config_reader.NA_objective))
         self.ui.le_cond_na.setText(str(self.config_reader.NA_condenser))
         self.ui.le_ps.setText(str(self.config_reader.pixel_size))
@@ -1181,7 +1279,12 @@ class MainWidget(QWidget):
         if self.method == 'PhaseFromBF':
             self.ui.le_fluor_chan.setText(str(self.config_reader.brightfield_channel_index))
         if self.method == 'FluorDeconv':
-            self.ui.le_fluor_chan.setText(str(self.config_reader.fluorescence_channel_indices))
+            channels = self.config_reader.fluorescence_channel_indices
+            text = ''
+            for idx, chan in enumerate(channels):
+                text += f'{chan}, ' if idx != len(channels) - 1 else f'{chan}'
+
+            self.ui.le_fluor_chan.setText(text)
 
         # Parse processing automatically
         denoiser = None
@@ -1193,6 +1296,17 @@ class MainWidget(QWidget):
                     text += f'{chan}, ' if idx != len(channels)-1 else f'{chan}'
 
                 self.ui.le_output_channels.setText(text)
+
+            elif key == 'focus_zidx':
+                indices = self.config_reader.focus_zidx
+                if isinstance(indices, int):
+                    self.ui.le_focus_zidx.setText(str(indices))
+                elif isinstance(indices, list):
+                    text = ''
+                    for idx, val in enumerate(indices):
+                        text += f'{val}, ' if idx != len(indices) - 1 else f'{val}'
+
+                    self.ui.le_focus_zidx.setText(text)
 
             elif key == 'use_gpu':
                 state = getattr(self.config_reader, key)

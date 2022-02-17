@@ -104,6 +104,14 @@ class FluorescenceDeconvolution(PipelineInterface):
             else:
                 self.reg = self.config.reg
 
+        if isinstance(self.config.fluorescence_background, int) or isinstance(self.config.reg, float):
+            self.background = [self.config.fluorescence_background]*len(self.fluor_idxs)
+        else:
+            if len(self.config.fluorescence_background) != len(self.fluor_idxs):
+                raise ValueError('Config Error: background values must be a list the same length as fluor_channels')
+            else:
+                self.background = self.config.fluorescence_background
+
         if isinstance(self.config.wavelength, int) or isinstance(self.config.wavelength, float):
             if len(self.fluor_idxs) != 1:
                 raise ValueError('Config Error: Wavelengths must be a list if processing more than 1 fluor_channel')
@@ -134,7 +142,10 @@ class FluorescenceDeconvolution(PipelineInterface):
 
         #todo: move transposing to compute function
         if self.mode == '3D':
-            bg_levels = calculate_background(data[:, self.data.slices // 2])
+            if not self.config.fluorescence_background:
+                bg_levels = calculate_background(data[:, self.data.slices // 2])
+            else:
+                bg_levels = self.config.fluorescence_background
             deconvolved3D = deconvolve_fluorescence_3D(data,
                                                        self.reconstructor,
                                                        bg_level=bg_levels,
@@ -150,7 +161,10 @@ class FluorescenceDeconvolution(PipelineInterface):
                 raise ValueError('deconvolution returned incorrect dimensions')
 
         elif self.mode == '2D':
-            bg_levels = calculate_background(data)
+            if not self.config.fluorescence_background:
+                bg_levels = calculate_background(data)
+            else:
+                bg_levels = self.config.fluorescence_background
 
             deconvolved2D = deconvolve_fluorescence_2D(data,
                                                        self.reconstructor,

@@ -41,11 +41,14 @@ processing:
   # (list) names of the output channels.  Order matches postprocessing registration.  Length must match
   # unique deconvolutions + unique registrations
 
-  fluorescence_channel_indices: [0, 1, 2]
+  fluorescence_channel_indices: [0, 1]
   # (list) channel index of the fluorophore to deconvolve
 
-  focus_zidx: [20, 20, 20] # 2D ONLY
+  focus_zidx: [20, 20] # 2D ONLY
   # (list) of focus-slices of the stack.  ONLY NEEDED FOR 2D
+
+  fluorescence_background: [0, 100]
+  # (list) or delete this field to auto-calculate the background based on uni-modal thresholding
 
   use_gpu: False
   # (bool) Option to use GPU processing if True (require cupy to be installed)

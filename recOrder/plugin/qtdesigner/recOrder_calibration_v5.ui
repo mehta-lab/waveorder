@@ -145,7 +145,7 @@
       <enum>QTabWidget::North</enum>
      </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>1</number>
      </property>
      <property name="elideMode">
       <enum>Qt::ElideMiddle</enum>
@@ -891,8 +891,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>112</width>
-                    <height>252</height>
+                    <width>550</width>
+                    <height>300</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -1140,7 +1140,7 @@
             <x>0</x>
             <y>0</y>
             <width>590</width>
-            <height>1177</height>
+            <height>1208</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -2097,7 +2097,7 @@
                         <enum>Qt::StrongFocus</enum>
                        </property>
                        <property name="placeholderText">
-                        <string>Phase3D, Retardance, BF</string>
+                        <string>S0, S1, S2</string>
                        </property>
                       </widget>
                      </item>
@@ -2206,6 +2206,16 @@
                        </property>
                       </widget>
                      </item>
+                     <item row="0" column="0">
+                      <widget class="QCheckBox" name="chb_postproc_fluor_use">
+                       <property name="text">
+                        <string>Deconvolve?</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="2" column="1">
+                      <widget class="QLineEdit" name="le_postproc_fluor_channels"/>
+                     </item>
                      <item row="1" column="0">
                       <widget class="QLabel" name="label_postproc_fluor_wavelength">
                        <property name="text">
@@ -2213,16 +2223,20 @@
                        </property>
                       </widget>
                      </item>
-                     <item row="2" column="1">
-                      <widget class="QLineEdit" name="le_postproc_fluor_channels"/>
-                     </item>
                      <item row="1" column="1">
                       <widget class="QLineEdit" name="le_postproc_fluor_wavelength_nm"/>
                      </item>
-                     <item row="0" column="0">
-                      <widget class="QCheckBox" name="chb_postproc_fluor_use">
+                     <item row="3" column="1">
+                      <widget class="QLineEdit" name="le_postproc_fluor_bg">
+                       <property name="placeholderText">
+                        <string>Leave blank for auto-calculation of background</string>
+                       </property>
+                      </widget>
+                     </item>
+                     <item row="3" column="0">
+                      <widget class="QLabel" name="label_postproc_fluor_bg">
                        <property name="text">
-                        <string>Deconvolve?</string>
+                        <string>Background Value(s)</string>
                        </property>
                       </widget>
                      </item>
