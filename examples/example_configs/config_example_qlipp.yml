@@ -11,24 +11,20 @@ dataset:
   save_dir: '/path/to/save/directory'
   # (str) path to the directory in which the data will be saved
 
-  #TODO: Remove this when waveOrder is merged
-  data_type: 'ometiff'
-  # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
-
   data_save_name: 'Test_Data'
   # (str) Name of the zarr dataset that will be written.
 
   positions: [1]
   # (str or list) Positions within the dataset that are to be analyzed.
   ##   'all'
-  ##   !!python/tuple [0, N] for pos 0 through N
+  ##   [!!python/tuple [0, N]] for pos 0 through N
   ##   [0, 1, 5] for pos 0, 1, and 5
   ##   [!!python/tuple [0, 15], [19, 25]] for pos 0 through 15, 19, and 25
 
   timepoints: [0]
   # (str or list) timepoints within the dataset that are to be analyzed.
   ##   'all'
-  ##   !!python/tuple [0, N] for pos 0 through N
+  ##   [!!python/tuple [0, N]] for timepoint 0 through N
   ##   [0, 1, 5] for pos 0, 1, and 5
   ##   [!!python/tuple [0, 15], [19, 25]] for timepoints 0 through 15, 19, and 25
 

@@ -19,7 +19,7 @@ class ZarrConverter:
     for tiled acquisitions)
     """
 
-    def __init__(self, input, output, data_type, replace_position_names=False, format_hcs=False):
+    def __init__(self, input, output, data_type=None, replace_position_names=False, format_hcs=False):
 
         # Add Initial Checks
         if len(glob.glob(os.path.join(input, '*.tif'))) == 0:
@@ -39,7 +39,7 @@ class ZarrConverter:
         self.meta_file = None
 
         print('Initializing Data...')
-        self.reader = WaveorderReader(self.data_directory, self.data_type, extract_data=False)
+        self.reader = WaveorderReader(self.data_directory, data_type, extract_data=False)
         print('Finished initializing data')
 
         self.summary_metadata = self.reader.mm_meta['Summary'] if self.reader.mm_meta else None

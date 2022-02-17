@@ -14,7 +14,7 @@ import logging
 from recOrder.io.utils import MockEmitter
 from datetime import datetime
 
-#TODO: Docstrings
+
 class QLIPP_Calibration():
 
     def __init__(self, mmc, mm, group='Channel', optimization='min_scalar', mode='retardance', print_details=True):

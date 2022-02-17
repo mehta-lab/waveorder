@@ -826,7 +826,7 @@ class MainWidget(QWidget):
                                 self._set_tab_red(tab, True)
                             success = False
                         else:
-                            self._set_tab_red(tab, False)
+                            # self._set_tab_red(tab, False)
                             continue
 
                 if 'Phase2D' in output_channels or 'Phase3D' in output_channels:
@@ -839,13 +839,11 @@ class MainWidget(QWidget):
                         else:
                             self._set_tab_red(tab, False)
                             continue
-                    # if 'Phase2D' in output_channels:
-                    #     cont = self._check_line_edit('focus_zidx')
-                    #     if not cont:
-                    #         self._set_tab_red('Physical', True)
-                    #         success = False
-                    #     else:
-                    #         self._set_tab_red('Physical', False)
+                    if 'Phase2D' in output_channels:
+                        cont = self._check_line_edit('focus_zidx')
+                        if not cont:
+                            self._set_tab_red('Processing', True)
+                            success = False
             else:
                 self._set_tab_red('Processing', True)
                 self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
@@ -867,15 +865,12 @@ class MainWidget(QWidget):
                         self._set_tab_red(tab, True)
                         success = False
                     else:
-                        self._set_tab_red(tab, False)
                         continue
-                # if 'Phase2D' in output_channels:
-                #     cont = self._check_line_edit('focus_zidx')
-                #     if not cont:
-                #         self._set_tab_red('Physical', True)
-                #         success = False
-                #     else:
-                #         self._set_tab_red('Physical', False)
+                if 'Phase2D' in output_channels:
+                    cont = self._check_line_edit('focus_zidx')
+                    if not cont:
+                        self._set_tab_red('Processing', True)
+                        success = False
             else:
                 self._set_tab_red('Processing', True)
                 self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
@@ -896,8 +891,13 @@ class MainWidget(QWidget):
                     self._set_tab_red(tab, True)
                     success = False
                 else:
-                    self._set_tab_red(tab, False)
                     continue
+
+            if self.mode == '2D':
+                cont = self._check_line_edit('focus_zidx')
+                if not cont:
+                    self._set_tab_red('Processing', True)
+                    success = False
 
         else:
             print('Error in parameter checks')
@@ -945,6 +945,8 @@ class MainWidget(QWidget):
                 self._set_tab_red('Processing', False)
                 self.ui.le_positions.setStyleSheet("")
                 self.config_reader.positions = [(int(vals[0]), int(vals[1]))]
+        elif positions.startswith('(') and positions.endswith(')'):
+            self.config_reader.positions = positions
         else:
             vals = positions.split(',')
             vals = map(lambda x: int(x), vals)
@@ -963,6 +965,8 @@ class MainWidget(QWidget):
                 self._set_tab_red('Processing', False)
                 self.ui.le_timepoints.setStyleSheet("")
                 self.config_reader.timepoints = [(int(vals[0]), int(vals[1]))]
+        elif timepoints.startswith('(') and timepoints.endswith(')'):
+            self.config_reader.timepoints = timepoints
         else:
             vals = timepoints.split(',')
             vals = map(lambda x: int(x), vals)
@@ -1020,6 +1024,9 @@ class MainWidget(QWidget):
         setattr(self.config_reader, 'pixel_size', float(self.ui.le_ps.text()))
         setattr(self.config_reader, 'n_objective_media', float(self.ui.le_n_media.text()))
         setattr(self.config_reader, 'magnification', float(self.ui.le_mag.text()))
+
+        focus_zidx = int(self.ui.le_focus_zidx.text())
+        setattr(self.config_reader, 'focus_zidx', focus_zidx if focus_zidx != '' else None)
 
         if self.method == 'FluorDeconv':
             fluor_chan = self.ui.le_fluor_chan.text()
@@ -1105,8 +1112,23 @@ class MainWidget(QWidget):
             print(f'Did not understand method from config: {self.method}')
             self.ui.cb_method.setStyleSheet("border: 1px solid rgb(200,0,0);")
 
-        self.ui.le_positions.setText(str(self.config_reader.positions))
-        self.ui.le_timepoints.setText(str(self.config_reader.timepoints))
+        if isinstance(self.config_reader.positions, list):
+            positions = self.config_reader.positions
+            text = ''
+            for idx, pos in enumerate(positions):
+                text += f'{pos}, ' if idx != len(positions) - 1 else f'{pos}'
+                self.ui.le_positions.setText(text)
+        else:
+            self.ui.le_positions.setText(str(self.config_reader.positions))
+
+        if isinstance(self.config_reader.timepoints, list):
+            timepoints = self.config_reader.timepoints
+            text = ''
+            for idx, time in enumerate(timepoints):
+                text += f'{time}, ' if idx != len(timepoints) - 1 else f'{time}'
+                self.ui.le_timepoints.setText(text)
+        else:
+            self.ui.le_timepoints.setText(str(self.config_reader.timepoints))
 
         # Parse Preprocessing automatically
         for key, val in PREPROCESSING.items():
@@ -1125,6 +1147,12 @@ class MainWidget(QWidget):
         self.ui.le_ps.setText(str(self.config_reader.pixel_size))
         self.ui.le_n_media.setText(str(self.config_reader.n_objective_media))
         self.ui.le_mag.setText(str(self.config_reader.magnification))
+
+        # Parse for FluorDeconv and PhaseFromBF
+        if self.method == 'PhaseFromBF':
+            self.ui.le_fluor_chan.setText(str(self.config_reader.brightfield_channel_index))
+        if self.method == 'FluorDeconv':
+            self.ui.le_fluor_chan.setText(str(self.config_reader.fluorescence_channel_indices))
 
         # Parse processing automatically
         denoiser = None
@@ -1148,6 +1176,10 @@ class MainWidget(QWidget):
             elif key == 'pad_z':
                 val = str(int(getattr(self.config_reader, key)))
                 self.ui.le_pad_z.setText(val)
+
+            elif key == 'focus_zidx':
+                val = str(int(getattr(self.config_reader, key)))
+                self.ui.le_focus_zidx.setText(val)
 
             elif hasattr(self.ui, f'le_{key}'):
                 le = getattr(self.ui, f'le_{key}')
@@ -1848,8 +1880,12 @@ class MainWidget(QWidget):
 
         if idx == 0:
             self.mode = '3D'
+            self.ui.label_focus_zidx.hide()
+            self.ui.le_focus_zidx.hide()
         else:
             self.mode = '2D'
+            self.ui.label_focus_zidx.show()
+            self.ui.le_focus_zidx.show()
 
     @pyqtSlot()
     def enter_data_dir(self):
@@ -2297,6 +2333,14 @@ class MainWidget(QWidget):
         name = PurePath(self.save_config_path).name
         dir_ = self.save_config_path.strip(name)
         self._populate_config_from_app()
+
+        if isinstance(self.config_reader.positions, tuple):
+            pos = self.config_reader.positions
+            self.config_reader.positions = f'!!python/tuple [{pos[0]},{pos[1]}]'
+        if isinstance(self.config_reader.timepoints, tuple):
+            t = self.config_reader.timepoints
+            self.config_reader.timepoints = f'!!python/tuple [{t[0]},{t[1]}]'
+
         self.config_reader.save_yaml(dir_=dir_, name=name)
 
     @pyqtSlot(bool)

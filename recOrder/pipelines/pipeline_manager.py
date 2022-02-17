@@ -25,7 +25,7 @@ class PipelineManager:
 
         start = time.time()
         print('Reading Data...')
-        data = WaveorderReader(config.data_dir, config.data_type, extract_data=True)
+        data = WaveorderReader(config.data_dir, extract_data=True)
         end = time.time()
         print(f'Finished Reading Data ({(end - start) / 60 :0.1f} min)')
 

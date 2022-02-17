@@ -740,9 +740,8 @@ class FluorescenceAcquisitionWorker(WorkerBase):
         elif recon.gpu_id != self.calib_window.gpu_id:
             changed = True
 
-        # #TODO: Add in when instrument_tensor branch of waveorder is merged
-        # elif recon.mode != self.dim+'-WF':
-        #     changed = True
+        elif recon.mode != self.dim+'-WF':
+            changed = True
 
         else:
             changed = False
