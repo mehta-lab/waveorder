@@ -951,7 +951,7 @@ class MainWidget(QWidget):
                 self.ui.le_positions.setStyleSheet("")
                 self.config_reader.positions = [(int(vals[0]), int(vals[1]))]
         elif positions.startswith('(') and positions.endswith(')'):
-            self.config_reader.positions = positions
+            self.config_reader.positions = eval(positions)
         else:
             vals = positions.split(',')
             vals = map(lambda x: int(x), vals)
@@ -971,7 +971,7 @@ class MainWidget(QWidget):
                 self.ui.le_timepoints.setStyleSheet("")
                 self.config_reader.timepoints = [(int(vals[0]), int(vals[1]))]
         elif timepoints.startswith('(') and timepoints.endswith(')'):
-            self.config_reader.timepoints = timepoints
+            self.config_reader.timepoints = eval(timepoints)
         else:
             vals = timepoints.split(',')
             vals = map(lambda x: int(x), vals)
