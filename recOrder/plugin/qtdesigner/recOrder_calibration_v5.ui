@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>630</width>
-    <height>978</height>
+    <height>1005</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -891,8 +891,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>550</width>
-                    <height>300</height>
+                    <width>112</width>
+                    <height>252</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -1140,7 +1140,7 @@
             <x>0</x>
             <y>0</y>
             <width>590</width>
-            <height>1087</height>
+            <height>1177</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -1153,7 +1153,7 @@
            <property name="verticalSpacing">
             <number>20</number>
            </property>
-           <item row="7" column="0" colspan="2" alignment="Qt::AlignTop">
+           <item row="4" column="0" rowspan="2" colspan="2">
             <widget class="QGroupBox" name="ReconSettings">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -1181,19 +1181,6 @@
               <property name="verticalSpacing">
                <number>25</number>
               </property>
-              <item row="0" column="0">
-               <widget class="QCheckBox" name="chb_pause_updates">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Pause Updates</string>
-                </property>
-               </widget>
-              </item>
               <item row="2" column="0" colspan="4">
                <widget class="QTabWidget" name="tabWidget_3">
                 <property name="sizePolicy">
@@ -1488,20 +1475,6 @@
                       </widget>
                      </item>
                     </layout>
-                   </widget>
-                  </item>
-                  <item row="1" column="0">
-                   <widget class="QPushButton" name="qbutton_reconstruct">
-                    <property name="text">
-                     <string>Reconstruct</string>
-                    </property>
-                   </widget>
-                  </item>
-                  <item row="2" column="0">
-                   <widget class="QPushButton" name="qbutton_stop_reconstruct">
-                    <property name="text">
-                     <string>STOP</string>
-                    </property>
                    </widget>
                   </item>
                  </layout>
@@ -2336,10 +2309,139 @@
                 </widget>
                </widget>
               </item>
+              <item row="0" column="0">
+               <widget class="QCheckBox" name="chb_pause_updates">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Pause Updates</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="4">
+               <widget class="QPushButton" name="qbutton_reconstruct">
+                <property name="text">
+                 <string>Reconstruct</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="0" colspan="4">
+               <widget class="QPushButton" name="qbutton_stop_reconstruct">
+                <property name="text">
+                 <string>STOP</string>
+                </property>
+               </widget>
+              </item>
              </layout>
             </widget>
            </item>
-           <item row="4" column="0" colspan="2">
+           <item row="0" column="0" colspan="2">
+            <widget class="QGroupBox" name="acquire">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <italic>false</italic>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="title">
+              <string>Acquire</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_13">
+              <property name="topMargin">
+               <number>25</number>
+              </property>
+              <property name="verticalSpacing">
+               <number>20</number>
+              </property>
+              <item row="2" column="0">
+               <widget class="QPushButton" name="qbutton_acq_phase">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Acquire Phase</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0" colspan="2">
+               <widget class="QPushButton" name="qbutton_stop_acq">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>STOP</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Acquire Birefringence + Phase</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QPushButton" name="qbutton_acq_birefringence">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Acquire Birefringence</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0" colspan="2">
+               <widget class="QPushButton" name="qbutton_listen">
+                <property name="font">
+                 <font>
+                  <weight>50</weight>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Listen For Data</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QPushButton" name="qbutton_acq_fluor">
+                <property name="text">
+                 <string>Acquire Deconvolved Fluor</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="1" column="0">
             <widget class="QGroupBox" name="acq_settings">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -2548,108 +2650,6 @@
              </layout>
             </widget>
            </item>
-           <item row="6" column="0" colspan="2">
-            <widget class="QGroupBox" name="acquire">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="font">
-              <font>
-               <weight>75</weight>
-               <italic>false</italic>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="title">
-              <string>Acquire</string>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_13">
-              <property name="topMargin">
-               <number>25</number>
-              </property>
-              <property name="verticalSpacing">
-               <number>20</number>
-              </property>
-              <item row="2" column="0">
-               <widget class="QPushButton" name="qbutton_acq_phase">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Acquire Phase</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0" colspan="2">
-               <widget class="QPushButton" name="qbutton_stop_acq">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>STOP</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Acquire Birefringence + Phase</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="1">
-               <widget class="QPushButton" name="qbutton_acq_birefringence">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Acquire Birefringence</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0" colspan="2">
-               <widget class="QPushButton" name="qbutton_listen">
-                <property name="font">
-                 <font>
-                  <weight>50</weight>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Listen For Data</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="0">
-               <widget class="QPushButton" name="qbutton_acq_fluor">
-                <property name="text">
-                 <string>Acquire Deconvolved Fluor</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
           </layout>
          </widget>
         </widget>
@@ -2678,7 +2678,7 @@
             <x>0</x>
             <y>0</y>
             <width>574</width>
-            <height>787</height>
+            <height>814</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
@@ -3055,11 +3055,6 @@
  </customwidgets>
  <tabstops>
   <tabstop>tabWidget</tabstop>
-  <tabstop>le_zstart</tabstop>
-  <tabstop>le_zend</tabstop>
-  <tabstop>le_zstep</tabstop>
-  <tabstop>cb_birefringence</tabstop>
-  <tabstop>cb_phase</tabstop>
   <tabstop>le_directory</tabstop>
   <tabstop>le_swing</tabstop>
   <tabstop>le_wavelength</tabstop>
@@ -3072,11 +3067,7 @@
   <tabstop>qbutton_load_calib</tabstop>
   <tabstop>qbutton_calc_extinction</tabstop>
   <tabstop>qbutton_stop_calib</tabstop>
-  <tabstop>qbutton_acq_phase</tabstop>
-  <tabstop>qbutton_acq_birefringence_phase</tabstop>
-  <tabstop>qbutton_stop_acq</tabstop>
   <tabstop>tabWidget_3</tabstop>
-  <tabstop>qbutton_acq_birefringence</tabstop>
   <tabstop>qbutton_browse</tabstop>
   <tabstop>qbutton_capture_bg</tabstop>
   <tabstop>le_bg_folder</tabstop>

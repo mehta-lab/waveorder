@@ -1005,6 +1005,19 @@ class MainWidget(QWidget):
                     channels = [i.replace(' ', '') for i in channels]
                     setattr(self.config_reader, key, channels)
 
+                    if 'Phase3D' in channels and 'Phase2D' in channels:
+                        raise KeyError(
+                            f'Both Phase3D and Phase2D cannot be specified in output_channels.  Please compute '
+                            f'separately')
+
+                    if 'Phase3D' in channels and self.mode == '2D':
+                        raise KeyError(f'Specified mode is 2D and Phase3D was specified for reconstruction. '
+                                       'Only 2D reconstructions can be performed in 2D mode')
+
+                    if 'Phase2D' in channels and self.mode == '3D':
+                        raise KeyError(f'Specified mode is 3D and Phase2D was specified for reconstruction. '
+                                       'Only 3D reconstructions can be performed in 3D mode')
+
                 elif key == 'pad_z':
                     val = self.ui.le_pad_z.text()
                     setattr(self.config_reader, key, int(val))
@@ -1083,6 +1096,7 @@ class MainWidget(QWidget):
                     else:
                         le = getattr(self.ui, f'le_postproc_denoise_{key_child}')
                         setattr(self.config_reader.postprocessing, f'{key}_{key_child}', le.text())
+
 
     def _populate_from_config(self):
         """
