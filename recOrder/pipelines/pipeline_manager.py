@@ -239,7 +239,6 @@ class PipelineManager:
         p_indices = set()
         t_indices = set()
 
-        print(self.config.positions, type(self.config.positions))
         # run through the different possible config specifications (ranges, single entries, 'all', etc.)
         cnt = 0
         for p_entry in self.config.positions:
