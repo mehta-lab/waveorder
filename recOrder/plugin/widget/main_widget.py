@@ -936,7 +936,7 @@ class MainWidget(QWidget):
         self.config_reader.background = self.ui.le_bg_path.text()
         self.config_reader.background_correction = self.bg_option
 
-        # Assumes that positions/timepoints can either be 'all'; '[all]'; 1, 2, 3, N; [start, end]
+        # Assumes that positions/timepoints can either be 'all'; '[all]'; 1, 2, 3, N; (start, end)
         positions = self.ui.le_positions.text()
         positions = positions.replace(' ', '')
         if positions == 'all' or positions == "['all']" or positions == '[all]':

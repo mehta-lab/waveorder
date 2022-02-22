@@ -1135,7 +1135,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
                 z = [0, birefringence.shape[-3]]
 
             # Write the data to disk
-            writer.write(birefringence, p=0, t=0, c=[0, 4], z=z)
+            writer.write(birefringence, p=0, t=0, c=slice(0, 4), z=z)
 
             current_meta = writer.store.attrs.asdict()
             current_meta['recOrder'] = meta
