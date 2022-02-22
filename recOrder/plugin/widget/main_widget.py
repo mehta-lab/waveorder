@@ -1061,6 +1061,24 @@ class MainWidget(QWidget):
                     else:
                         continue
 
+        # Manually enter in phase regularization
+        if self.mode == '3D':
+            if self.ui.cb_phase_denoiser.currentIndex() == 0:
+                setattr(self.config_reader, 'Tik_reg_ph_3D', float(self.ui.le_phase_strength.text()))
+            else:
+                setattr(self.config_reader, 'TV_reg_ph_3D', float(self.ui.le_phase_strength.text()))
+                setattr(self.config_reader, 'rho_3D', float(self.ui.le_rho.text()))
+                setattr(self.config_reader, 'itr_3D', int(self.ui.le_itr.text()))
+
+        else:
+            if self.ui.cb_phase_denoiser.currentIndex() == 0:
+                setattr(self.config_reader, 'Tik_reg_ph_2D', float(self.ui.le_phase_strength.text()))
+            else:
+                setattr(self.config_reader, 'TV_reg_ph_2D', float(self.ui.le_phase_strength.text()))
+                setattr(self.config_reader, 'rho_2D', float(self.ui.le_rho.text()))
+                setattr(self.config_reader, 'itr_2D', int(self.ui.le_itr.text()))
+
+
         if self.method == 'FluorDeconv':
 
             wavelengths = self.ui.le_recon_wavelength.text()
