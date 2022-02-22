@@ -219,7 +219,7 @@ class ZarrConverter:
 
         """
 
-        zarr_array = self.writer.sub_writer.current_pos_group['array']
+        zarr_array = self.writer.sub_writer.current_pos_group['arr_0']
         zarr_img = zarr_array[coord[self.dim_order.index('time')],
                               coord[self.dim_order.index('channel')],
                               coord[self.dim_order.index('z')]]
