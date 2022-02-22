@@ -1,5 +1,5 @@
 from recOrder.io.config_reader import ConfigReader
-from waveorder.io.reader import WaveorderReader
+from waveorder.io.reader import WaveorderReader, ZarrReader
 from waveorder.io.writer import WaveorderWriter
 import time
 import os
@@ -31,7 +31,7 @@ class PipelineManager:
 
         self.config = config
         self.data = data
-        self.use_hcs = True if self.config.data_type == 'zarr' else False
+        self.use_hcs = True if isinstance(self.data.reader, ZarrReader) else False
 
         self._gen_coord_set()
 
