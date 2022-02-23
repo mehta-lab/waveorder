@@ -843,7 +843,7 @@ class MainWidget(QWidget):
                         else:
                             self._set_tab_red(tab, False)
                             continue
-                    if 'Phase2D' in output_channels:
+                    if 'Phase2D' in output_channels and self.mode == '2D':
                         cont = self._check_line_edit('focus_zidx')
                         if not cont:
                             self._set_tab_red('Processing', True)
@@ -870,7 +870,7 @@ class MainWidget(QWidget):
                         success = False
                     else:
                         continue
-                if 'Phase2D' in output_channels:
+                if 'Phase2D' in output_channels and self.mode == '2D':
                     cont = self._check_line_edit('focus_zidx')
                     if not cont:
                         self._set_tab_red('Processing', True)
@@ -1046,6 +1046,13 @@ class MainWidget(QWidget):
                         setattr(self.config_reader, key, True)
                     else:
                         setattr(self.config_reader, key, False)
+
+                elif key == 'focus_zidx':
+                    val = self.ui.le_focus_zidx.text()
+                    if val == '':
+                        setattr(self.config_reader, key, None)
+                    else:
+                        setattr(self.config_reader, key, int(val))
 
                 else:
                     attr_name = f'le_{key}'
