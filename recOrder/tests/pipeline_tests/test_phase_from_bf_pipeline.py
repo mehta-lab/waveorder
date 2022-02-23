@@ -60,7 +60,7 @@ def test_pipeline_manager_run(setup_BF_test_data_zarr, setup_data_save_folder):
     manager.run()
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'))
-    array = store['Row_0']['Col_0']['Pos_000']['array']
+    array = store['Row_0']['Col_0']['Pos_000']['arr_0']
 
     assert (store.attrs.asdict()['Config'] == config.yaml_dict)
     assert (store['Row_0']['Col_0']['Pos_000'])
@@ -88,7 +88,7 @@ def test_3D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
                                   itr=config.itr_3D)
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'), 'r')
-    array = store['Row_0']['Col_1']['Pos_001']['array']
+    array = store['Row_0']['Col_1']['Pos_001']['arr_0']
 
     # Check Shape
     assert(array.shape == (1, len(config.output_channels), 2, 128, 128))
@@ -115,7 +115,7 @@ def test_2D_reconstruction(setup_BF_test_data_zarr, setup_data_save_folder):
                                   reg_p=config.Tik_reg_ph_2D, rho=config.rho_2D, lambda_p=config.TV_reg_ph_2D,
                                   itr=config.itr_2D)
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'), 'r')
-    array = store['Row_0']['Col_1']['Pos_001']['array']
+    array = store['Row_0']['Col_1']['Pos_001']['arr_0']
 
     # Check Shapes
     assert(array.shape == (1, len(config.output_channels), 1, 128, 128))

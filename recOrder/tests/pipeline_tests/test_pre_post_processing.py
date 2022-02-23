@@ -31,7 +31,7 @@ def test_pre_processing(setup_test_data, setup_data_save_folder):
     stokes_denoise = preproc_denoise(stokes, params)
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'), 'r')
-    array = store['Row_0']['Col_0']['Pos_001']['array']
+    array = store['Row_0']['Col_0']['Pos_001']['arr_0']
 
     # Check Stokes
     assert (np.sum(np.abs(stokes_denoise[0, :, :, z] - array[0, 0, z]) ** 2) / np.sum(
@@ -66,7 +66,7 @@ def test_post_processing(setup_test_data, setup_data_save_folder):
     ret_denoise = ret_denoise / (2*np.pi)*config.wavelength
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'), 'r')
-    array = store['Row_0']['Col_0']['Pos_001']['array']
+    array = store['Row_0']['Col_0']['Pos_001']['arr_0']
 
     data_decon = np.asarray([data[t, 1], data[t, 2]])
     bg_level = calculate_background(data_decon[:, z])

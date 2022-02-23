@@ -64,7 +64,7 @@ def test_pipeline_manager_run(setup_test_data_zarr, setup_data_save_folder):
     manager.run()
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_3Z_128Y_128X_Kazansky.zarr'))
-    array = store['Row_0']['Col_0']['Pos_000']['array']
+    array = store['Row_0']['Col_0']['Pos_000']['arr_0']
 
     assert (store.attrs.asdict()['Config'] == config.yaml_dict)
     assert (store['Row_0']['Col_0']['Pos_000'])
@@ -93,7 +93,7 @@ def test_3D_reconstruction(setup_test_data_zarr, setup_data_save_folder):
     fluor3D = np.transpose(fluor3D, (-1, -3, -2))
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_3Z_128Y_128X_Kazansky.zarr'), 'r')
-    array = store['Row_0']['Col_1']['Pos_001']['array']
+    array = store['Row_0']['Col_1']['Pos_001']['arr_0']
 
     # Check Shape
     assert(array.shape == (1, len(config.output_channels), 3, 128, 128))
@@ -122,7 +122,7 @@ def test_2D_reconstruction(setup_test_data_zarr, setup_data_save_folder):
 
     fluor2D = deconvolve_fluorescence_2D(data, recon, bg_level, reg=[config.reg])
     store = zarr.open(os.path.join(save_folder, '2T_3P_3Z_128Y_128X_Kazansky.zarr'), 'r')
-    array = store['Row_0']['Col_1']['Pos_001']['array']
+    array = store['Row_0']['Col_1']['Pos_001']['arr_0']
 
     # Check Shapes
     assert(array.shape == (1, len(config.output_channels), 1, 128, 128))
@@ -153,7 +153,7 @@ def test_deconvolution_and_registration(setup_test_data_zarr, setup_data_save_fo
     fluor3D = np.transpose(fluor3D, (-4, -1, -3, -2))
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_3Z_128Y_128X_Kazansky.zarr'), 'r')
-    array = store['Row_0']['Col_1']['Pos_001']['array']
+    array = store['Row_0']['Col_1']['Pos_001']['arr_0']
 
     # Check Registration - Chan0
     assert(np.sum(np.abs(array[0, 0, z, 100:, 100:] - fluor3D[0, z, 0:-100, 0:-100])**2)

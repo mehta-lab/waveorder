@@ -318,7 +318,7 @@ class ZarrConverter:
     def init_zarr_structure(self):
         """
         Initiates the zarr store.  Will create a zarr store with user-specified name or original name of data
-        if not provided.  Store will contain a group called 'array' with contains an array of original
+        if not provided.  Store will contain a group called 'arr_0' with contains an array of original
         data dtype of dimensions (T, C, Z, Y, X).  Appends OME-zarr metadata with clims,chan_names
 
         Current compressor is Blosc zstd w/ bitshuffle (~1.5x compression, faster compared to best 1.6x compressor)
