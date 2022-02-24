@@ -73,6 +73,7 @@ POSTPROCESSING = {
         'channels': None,
         'wavelength_nm': None,
         'regularization': None,
+        'background': None,
         'pixel_size_um': None,
         'NA_obj': None,
         'magnification': None,
@@ -82,7 +83,7 @@ POSTPROCESSING = {
         'gpu_id': 0
     },
 
-    'registration':{
+    'registration': {
         'use': False,
         'channel_idx': None,
         'shift': None
