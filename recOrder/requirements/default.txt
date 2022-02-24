@@ -1,0 +1,16 @@
+numpy>=1.17.4
+scipy>=1.3.0
+matplotlib>=3.4.3
+zarr>=2.6.1
+click>=8.0.1
+pyyaml>=5.4.1
+PyWavelets>=1.1.1
+waveorder>=1.0.0b0
+pycromanager>=0.6.3
+tqdm>=4.61.1
+opencv-python>=4.5.3.56
+natsort>=7.1.1
+colorspacious>=1.1.2
+pyqtgraph>=0.12.3
+superqt>=0.2.4
+napari-ome-zarr>=0.3.2
