@@ -10,13 +10,13 @@ import os
 import zarr
 
 def test_pre_processing(setup_test_data, setup_data_save_folder):
-    folder, data = setup_test_data
+    folder, ometiff_data, zarr_data, bf_data = setup_test_data
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))),
                                   'test_configs/config_preprocessing_pytest.yml')
 
-    config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
+    config = ConfigReader(path_to_config, data_dir=ometiff_data, save_dir=save_folder)
 
     manager = PipelineManager(config)
 
@@ -34,22 +34,23 @@ def test_pre_processing(setup_test_data, setup_data_save_folder):
     array = store['Row_0']['Col_0']['Pos_001']['arr_0']
 
     # Check Stokes
-    assert (np.sum(np.abs(stokes_denoise[0, :, :, z] - array[0, 0, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[0, :, :, z])) ** 2 < 0.1)
-    assert (np.sum(np.abs(stokes_denoise[1, :, :, z] - array[0, 1, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[1, :, :, z])) ** 2 < 0.1)
-    assert (np.sum(np.abs(stokes_denoise[2, :, :, z] - array[0, 2, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[2, :, :, z])) ** 2 < 0.1)
-    assert (np.sum(np.abs(stokes_denoise[3, :, :, z] - array[0, 3, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[3, :, :, z])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes_denoise[0, z, :, :] - array[0, 0, z]) ** 2) / np.sum(
+        np.abs(stokes_denoise[0, z, :, :])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes_denoise[1, z, :, :] - array[0, 1, z]) ** 2) / np.sum(
+        np.abs(stokes_denoise[1, z, :, :])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes_denoise[2, z, :, :] - array[0, 2, z]) ** 2) / np.sum(
+        np.abs(stokes_denoise[2, z, :, :])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes_denoise[3, z, :, :] - array[0, 3, z]) ** 2) / np.sum(
+        np.abs(stokes_denoise[3, z, :, :])) ** 2 < 0.1)
 
 
 def test_post_processing(setup_test_data, setup_data_save_folder):
-    folder, data = setup_test_data
+
+    folder, ometiff_data, zarr_data, bf_data = setup_test_data
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_postprocessing_pytest.yml')
-    config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
+    config = ConfigReader(path_to_config, data_dir=ometiff_data, save_dir=save_folder)
 
     manager = PipelineManager(config)
     manager.run()
@@ -71,7 +72,6 @@ def test_post_processing(setup_test_data, setup_data_save_folder):
     data_decon = np.asarray([data[t, 1], data[t, 2]])
     bg_level = calculate_background(data_decon[:, z])
     fluor3D = deconvolve_fluorescence_3D(data_decon, manager.deconv_reconstructor, bg_level, reg=[1e-4, 1e-4])
-    fluor3D = np.transpose(fluor3D, (-4, -1, -3, -2))
 
     # Check Birefringence
     assert(np.sum(np.abs(ret_denoise[z] - array[0, 0, z]) ** 2) / np.sum(np.abs(ret_denoise[z])) < 0.1)

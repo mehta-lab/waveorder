@@ -12,11 +12,11 @@ import zarr
 
 def test_pipeline_manager_initiate(setup_test_data, setup_data_save_folder):
 
-    folder, data = setup_test_data
+    folder, ometiff_data, zarr_data, bf_data = setup_test_data
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_full_pytest_tiff.yml')
-    config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
+    config = ConfigReader(path_to_config, data_dir=ometiff_data, save_dir=save_folder)
 
     manager = PipelineManager(config)
     assert(manager.config is not None)
@@ -36,11 +36,12 @@ def test_pipeline_manager_initiate(setup_test_data, setup_data_save_folder):
     assert(isinstance(manager.pipeline, QLIPP))
 
 def test_qlipp_pipeline_initiate(setup_test_data, setup_data_save_folder):
-    folder, data = setup_test_data
+
+    folder, ometiff_data, zarr_data, bf_data = setup_test_data
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_full_pytest_tiff.yml')
-    config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
+    config = ConfigReader(path_to_config, data_dir=ometiff_data, save_dir=save_folder)
 
     manager = PipelineManager(config)
 
@@ -71,11 +72,11 @@ def test_qlipp_pipeline_initiate(setup_test_data, setup_data_save_folder):
 
 def test_pipeline_manager_run(setup_test_data, setup_data_save_folder):
 
-    folder, data = setup_test_data
+    folder, ometiff_data, zarr_data, bf_data = setup_test_data
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_full_pytest_tiff.yml')
-    config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
+    config = ConfigReader(path_to_config, data_dir=ometiff_data, save_dir=save_folder)
 
     manager = PipelineManager(config)
     manager.run()
@@ -90,11 +91,12 @@ def test_pipeline_manager_run(setup_test_data, setup_data_save_folder):
     assert(array.shape == (2, 4, 81, manager.data.height, manager.data.width))
 
 def test_3D_reconstruction(setup_test_data, setup_data_save_folder):
-    folder, data = setup_test_data
+
+    folder, ometiff_data, zarr_data, bf_data = setup_test_data
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_full_recon_pytest_tiff.yml')
-    config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
+    config = ConfigReader(path_to_config, data_dir=ometiff_data, save_dir=save_folder)
 
     manager = PipelineManager(config)
     assert(manager.pipeline.mode == '3D')
@@ -115,10 +117,10 @@ def test_3D_reconstruction(setup_test_data, setup_data_save_folder):
     assert(array.shape == (1, len(config.output_channels), 81, 231, 498))
 
     # Check Stokes
-    assert(np.sum(np.abs(stokes[0, :, :, z] - array[0, 4, z]) ** 2) / np.sum(np.abs(stokes[0, :, :, z])**2) < 0.1)
-    assert(np.sum(np.abs(stokes[1, :, :, z] - array[0, 5, z]) ** 2) / np.sum(np.abs(stokes[1, :, :, z])**2) < 0.1)
-    assert(np.sum(np.abs(stokes[2, :, :, z] - array[0, 6, z]) ** 2) / np.sum(np.abs(stokes[2, :, :, z])**2) < 0.1)
-    assert(np.sum(np.abs(stokes[3, :, :, z] - array[0, 7, z]) ** 2) / np.sum(np.abs(stokes[3, :, :, z])**2) < 0.1)
+    assert(np.sum(np.abs(stokes[0, z, :, :] - array[0, 4, z]) ** 2) / np.sum(np.abs(stokes[0, z, :, :])**2) < 0.1)
+    assert(np.sum(np.abs(stokes[1, z, :, :] - array[0, 5, z]) ** 2) / np.sum(np.abs(stokes[1, z, :, :])**2) < 0.1)
+    assert(np.sum(np.abs(stokes[2, z, :, :] - array[0, 6, z]) ** 2) / np.sum(np.abs(stokes[2, z, :, :])**2) < 0.1)
+    assert(np.sum(np.abs(stokes[3, z, :, :] - array[0, 7, z]) ** 2) / np.sum(np.abs(stokes[3, z, :, :])**2) < 0.1)
 
     # Check Birefringence
     assert(np.sum(np.abs((birefringence[0, z]/(2 * np.pi)*config.wavelength) - array[0, 0, z]) ** 2)
@@ -131,11 +133,12 @@ def test_3D_reconstruction(setup_test_data, setup_data_save_folder):
 
 
 def test_2D_reconstruction(setup_test_data, setup_data_save_folder):
-    folder, data = setup_test_data
+
+    folder, ometiff_data, zarr_data, bf_data = setup_test_data
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_2D_pytest_tiff.yml')
-    config = ConfigReader(path_to_config, data_dir=data, save_dir=save_folder)
+    config = ConfigReader(path_to_config, data_dir=ometiff_data, save_dir=save_folder)
 
     manager = PipelineManager(config)
     assert(manager.pipeline.mode == '2D')
@@ -146,7 +149,7 @@ def test_2D_reconstruction(setup_test_data, setup_data_save_folder):
     recon = manager.pipeline.reconstructor
 
     stokes = reconstruct_qlipp_stokes(data[t], recon, manager.pipeline.bg_stokes)
-    birefringence = reconstruct_qlipp_birefringence(stokes[:, :, :, z], recon)
+    birefringence = reconstruct_qlipp_birefringence(stokes[:, z, :, :], recon)
     phase2D = reconstruct_phase2D(stokes[0], recon, method=config.phase_denoiser_2D, reg_p=config.Tik_reg_ph_2D,
                                   rho=config.rho_2D, lambda_p=config.TV_reg_ph_2D, itr=config.itr_2D)
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'), 'r')
@@ -156,10 +159,10 @@ def test_2D_reconstruction(setup_test_data, setup_data_save_folder):
     assert(array.shape == (1, len(config.output_channels), 1, 231, 498))
 
     # Check Stokes
-    assert(np.sum(np.abs(stokes[0, :, :, z] - array[0, 4, 0]) ** 2) / np.sum(np.abs(stokes[0, :, :, z]))**2 < 0.1)
-    assert(np.sum(np.abs(stokes[1, :, :, z] - array[0, 5, 0]) ** 2) / np.sum(np.abs(stokes[1, :, :, z]))**2 < 0.1)
-    assert(np.sum(np.abs(stokes[2, :, :, z] - array[0, 6, 0]) ** 2) / np.sum(np.abs(stokes[2, :, :, z]))**2 < 0.1)
-    assert(np.sum(np.abs(stokes[3, :, :, z] - array[0, 7, 0]) ** 2) / np.sum(np.abs(stokes[3, :, :, z]))**2 < 0.1)
+    assert(np.sum(np.abs(stokes[0, z, :, :] - array[0, 4, 0]) ** 2) / np.sum(np.abs(stokes[0, z, :, :]))**2 < 0.1)
+    assert(np.sum(np.abs(stokes[1, z, :, :] - array[0, 5, 0]) ** 2) / np.sum(np.abs(stokes[1, z, :, :]))**2 < 0.1)
+    assert(np.sum(np.abs(stokes[2, z, :, :] - array[0, 6, 0]) ** 2) / np.sum(np.abs(stokes[2, z, :, :]))**2 < 0.1)
+    assert(np.sum(np.abs(stokes[3, z, :, :] - array[0, 7, 0]) ** 2) / np.sum(np.abs(stokes[3, z, :, :]))**2 < 0.1)
 
     # Check Birefringence
 

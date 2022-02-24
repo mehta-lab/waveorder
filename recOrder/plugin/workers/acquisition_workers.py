@@ -249,7 +249,7 @@ class BFAcquisitionWorker(WorkerBase):
         # Perform deconvolution
         if self.dim == '2D':
 
-            phase = reconstruct_phase2D(np.transpose(stack[0], (1, 2, 0)),
+            phase = reconstruct_phase2D(stack[0],
                                         recon,
                                         method=regularizer,
                                         reg_p=reg,
@@ -257,7 +257,7 @@ class BFAcquisitionWorker(WorkerBase):
                                         rho=float(self.calib_window.ui.le_rho.text()))
         else:
 
-            phase = reconstruct_phase3D(np.transpose(stack[0], (1, 2, 0)),
+            phase = reconstruct_phase3D(stack[0],
                                         recon,
                                         method=regularizer,
                                         reg_re=reg,
@@ -647,7 +647,6 @@ class FluorescenceAcquisitionWorker(WorkerBase):
                                                            bg_level=bg_level,
                                                            reg=[float(self.calib_window.ui.le_fluor_strength.text())])
 
-            fluor_deconvolved = np.transpose(fluor_deconvolved, (2, 0, 1))
 
 
         # Update metadata in zarr attributes with reconstruction parameters

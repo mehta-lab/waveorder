@@ -1,7 +1,7 @@
 dataset:
-  background: ./pytest_temp/pipeline_test/2021_06_11_recOrder_pytest_20x_04NA/BG
+  background: ./pytest_temp/rawdata/2021_06_11_recOrder_pytest_20x_04NA/BG
   background_ROI: null
-  calibration_metadata: ./pytest_temp/pipeline_test/2021_06_11_recOrder_pytest_20x_04NA/calib_metadata.txt
+  calibration_metadata: ./pytest_temp/rawdata/2021_06_11_recOrder_pytest_20x_04NA/calib_metadata.txt
   data_dir: ./
   data_save_name: ''
   data_type: ometiff

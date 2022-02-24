@@ -115,8 +115,8 @@ class QLIPP_Calibration():
         if self.mode == 'retardance':
             set_lc_waves(self.mmc, val, self.PROPERTIES[device_property])
         else:
-            self.curves.get_voltage(val)
-            set_lc_volts(self.mmc, val/4000, self.PROPERTIES[f'{device_property}-volt'])
+            volt = self.curves.get_voltage(val)
+            set_lc_volts(self.mmc, volt/4000, self.PROPERTIES[f'{device_property}-volt'])
 
     def get_lc(self, device_property):
 
@@ -937,7 +937,6 @@ class CalibrationCurves:
             self.wavelength = 720
 
         self.create_wavelength_curve()
-
 
     def create_wavelength_curve(self):
 

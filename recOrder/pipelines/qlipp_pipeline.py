@@ -213,7 +213,7 @@ class QLIPP(PipelineInterface):
             return None
         else:
             return reconstruct_qlipp_birefringence(
-                                stokes[:, :, :, slice(None) if self.slices != 1 else self.focus_slice],
+                                stokes[:, slice(None) if self.slices != 1 else self.focus_slice, :, :],
                                 self.reconstructor)
 
     # todo: think about better way to write fluor/registered data?
@@ -242,7 +242,7 @@ class QLIPP(PipelineInterface):
 
         z = 0 if self.mode == '2D' else None
         slice_ = self.focus_slice if self.mode == '2D' else slice(None)
-        stokes = np.transpose(stokes, (-1, -4, -3, -2)) if len(stokes.shape) == 4 else stokes
+        # stokes = np.transpose(stokes, (-1, -4, -3, -2)) if len(stokes.shape) == 4 else stokes
         fluor_idx = 0
 
         for chan in range(len(self.output_channels)):
@@ -258,13 +258,13 @@ class QLIPP(PipelineInterface):
             elif 'Phase2D' in self.output_channels[chan]:
                 self.writer.write(phase2D, p=p, t=t, c=chan, z=z)
             elif 'S0' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 0, :, :], p=p, t=t, c=chan, z=z)
+                self.writer.write(stokes[0, slice_, :, :], p=p, t=t, c=chan, z=z)
             elif 'S1' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 1, :, :], p=p, t=t, c=chan, z=z)
+                self.writer.write(stokes[1, slice_, :, :], p=p, t=t, c=chan, z=z)
             elif 'S2' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 2, :, :], p=p, t=t, c=chan, z=z)
+                self.writer.write(stokes[2, slice_, :, :], p=p, t=t, c=chan, z=z)
             elif 'S3' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 3, :, :], p=p, t=t, c=chan, z=z)
+                self.writer.write(stokes[3, slice_, :, :], p=p, t=t, c=chan, z=z)
 
             # Assume any other output channel in config is fluorescence
             else:

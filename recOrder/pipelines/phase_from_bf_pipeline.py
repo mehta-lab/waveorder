@@ -98,7 +98,8 @@ class PhaseFromBF(PipelineInterface):
         data:           (nd-array) brightfield data of dimensions (Y, X, Z)
 
         """
-        return np.transpose(data[self.bf_chan_idx], (-2, -1, -3))
+        # return np.transpose(data[self.bf_chan_idx], (-2, -1, -3))
+        return data[self.bf_chan_idx]
 
     def reconstruct_birefringence_volume(self, data):
         """

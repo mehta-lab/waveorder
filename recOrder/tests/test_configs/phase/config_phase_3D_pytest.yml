@@ -69,7 +69,7 @@ processing:
   z_step: 0.25
   # (int) Step size of the z-dimension in um
 
-  focus_zidx: 1
+  focus_zidx: 40
   # (int) Index of the focused z slice of the dataset for 2D phase reconstruction
 
   pad_z: 0

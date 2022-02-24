@@ -151,15 +151,6 @@ class FluorescenceDeconvolution(PipelineInterface):
                                                        bg_level=bg_levels,
                                                        reg=self.reg)
 
-            if deconvolved3D.ndim == 4:
-                deconvolved3D = np.transpose(deconvolved3D, (-4, -1, -3, -2))
-
-            elif deconvolved3D.ndim == 3:
-                deconvolved3D = np.transpose(deconvolved3D, (-1, -3, -2))
-
-            else:
-                raise ValueError('deconvolution returned incorrect dimensions')
-
         elif self.mode == '2D':
             if not self.config.fluorescence_background:
                 bg_levels = calculate_background(data)

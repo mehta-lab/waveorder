@@ -242,7 +242,13 @@ def reconstruct_qlipp_birefringence(stokes, recon):
                               volume of shape (C, Z, Y, X) or (C, Y, X) containing reconstructed birefringence data.
     """
 
-    stokes = np.transpose(stokes, (0, 2, 3, 1))
+    if stokes.ndim == 4:
+        stokes = np.transpose(stokes, (0, 2, 3, 1))
+    elif stokes.ndim == 3:
+        pass
+    else:
+        raise ValueError(f'Incompatible stokes dimension: {stokes.shape}')
+
     birefringence = recon.Polarization_recon(np.copy(stokes))
 
     # Return the transposed birefringence array with channel first

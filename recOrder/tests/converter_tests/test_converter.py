@@ -10,19 +10,19 @@ from recOrder.io.zarr_converter import ZarrConverter
 
 def test_converter_initialize(setup_data_save_folder, setup_test_data):
 
-    folder, data = setup_test_data
+    folder, ometiff_data, zarr_data, bf_data = setup_test_data
     save_folder = setup_data_save_folder
 
-    input = data
+    input = ometiff_data
     output = os.path.join(save_folder,'2T_3P_81Z_231Y_498X_Kazansky.zarr')
 
     if os.path.exists(output):
         shutil.rmtree(output)
 
     converter = ZarrConverter(input, output, 'ometiff')
-    tf = tiff.TiffFile(os.path.join(data, '2T_3P_81Z_231Y_498X_Kazansky_2_MMStack.ome.tif'))
+    tf = tiff.TiffFile(os.path.join(ometiff_data, '2T_3P_81Z_231Y_498X_Kazansky_2_MMStack.ome.tif'))
 
-    assert(converter.files == glob.glob(os.path.join(data, '*.ome.tif')))
+    assert(converter.files == glob.glob(os.path.join(ometiff_data, '*.ome.tif')))
     assert(converter.dtype == 'uint16')
     assert(isinstance(converter.reader, WaveorderReader))
     assert(isinstance(converter.writer, WaveorderWriter))
@@ -47,17 +47,18 @@ def test_converter_initialize(setup_data_save_folder, setup_test_data):
     assert(converter.z == 81)
 
 def test_converter_run(setup_data_save_folder, setup_test_data):
-    folder, data = setup_test_data
+
+    folder, ometiff_data, zarr_data, bf_data = setup_test_data
     save_folder = setup_data_save_folder
 
-    input = data
+    input = ometiff_data
     output = os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr')
 
     if os.path.exists(output):
         shutil.rmtree(output)
 
     converter = ZarrConverter(input, output, 'ometiff')
-    tf = tiff.TiffFile(os.path.join(data, '2T_3P_81Z_231Y_498X_Kazansky_2_MMStack.ome.tif'))
+    tf = tiff.TiffFile(os.path.join(ometiff_data, '2T_3P_81Z_231Y_498X_Kazansky_2_MMStack.ome.tif'))
 
     converter.run_conversion()
 
@@ -79,7 +80,7 @@ def test_converter_run(setup_data_save_folder, setup_test_data):
         for p in range(3):
             for c in range(4):
                 for z in range(81):
-                    image = zs['Row_0'][f'Col_{p}'][f'Pos_00{p}']['array'][t, c, z]
+                    image = zs['Row_0'][f'Col_{p}'][f'Pos_00{p}']['arr_0'][t, c, z]
                     tiff_image = tf.pages.get(cnt).asarray()
                     assert(np.array_equal(image, tiff_image))
                     cnt += 1

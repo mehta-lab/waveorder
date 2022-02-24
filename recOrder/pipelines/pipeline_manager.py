@@ -432,12 +432,12 @@ class PipelineManager:
                                                              deconvolution_params['reg'])
 
             # transpose arrays
-            if deconvolved_volumes.ndim == 4:
-                deconvolved_volumes = np.transpose(deconvolved_volumes, (-4, -1, -3, -2))
-            elif deconvolved_volumes.ndim == 3:
-                deconvolved_volumes = np.transpose(deconvolved_volumes, (-1, -3, -2))
-            else:
-                raise ValueError('deconvolution returned incorrect shape')
+            # if deconvolved_volumes.ndim == 4:
+            #     deconvolved_volumes = np.transpose(deconvolved_volumes, (-4, -1, -3, -2))
+            # elif deconvolved_volumes.ndim == 3:
+            #     deconvolved_volumes = np.transpose(deconvolved_volumes, (-1, -3, -2))
+            # else:
+            #     raise ValueError('deconvolution returned incorrect shape')
 
             # overwrite raw data with deconvolved data in case it needs to also be registered in the next section
             for idx, channel_idx in enumerate(deconvolution_params['channels']):

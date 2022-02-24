@@ -3,13 +3,13 @@ import os
 from os.path import dirname, abspath
 import yaml
 
-def test_config_reader(setup_test_data_zarr):
+def test_config_reader(setup_test_data):
 
-    folder, data = setup_test_data_zarr
+    folder, ometiff_data, zarr_data, bf_data = setup_test_data
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_full_pytest.yml')
 
     raw = yaml.full_load(open(path_to_config))
-    config = ConfigReader(path_to_config, data_dir=data, save_dir=folder)
+    config = ConfigReader(path_to_config, data_dir=zarr_data, save_dir=folder)
 
     avoid = ['data_dir', 'save_dir', 'data_save_name', 'positions', 'timepoints',
              'background_ROI', 'qlipp_birefringence_only', 'phase_denoiser_2D',
@@ -22,7 +22,7 @@ def test_config_reader(setup_test_data_zarr):
             assert(raw['dataset'][key] == getattr(config, key))
 
     assert(folder == config.save_dir)
-    assert(data == config.data_dir)
+    assert(zarr_data == config.data_dir)
     assert([raw['dataset']['positions']] == config.positions)
     assert([raw['dataset']['timepoints']] == config.timepoints)
     assert(config.background_ROI == None)
