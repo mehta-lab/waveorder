@@ -203,6 +203,7 @@ class PipelineManager:
             deconvolution_params['channels'] = self.config.postprocessing.deconvolution_channels
             deconvolution_params['wavelengths'] = self.config.postprocessing.deconvolution_wavelength_nm
             deconvolution_params['reg'] = [float(i) for i in self.config.postprocessing.deconvolution_regularization]
+            deconvolution_params['background'] = [float(i) for i in self.config.postprocessing.deconvolution_background]
             deconvolution_params['pixel_size_um'] = self.config.postprocessing.deconvolution_pixel_size_um
             deconvolution_params['NA_obj'] = self.config.postprocessing.deconvolution_NA_obj
             deconvolution_params['magnification'] = self.config.postprocessing.deconvolution_magnification
@@ -425,19 +426,15 @@ class PipelineManager:
             process_data = np.asarray(process_data)
 
             # deconvolve
-            bg_level = calculate_background(process_data[:, self.data.slices // 2])
+            if deconvolution_params['background'] is None:
+                bg_level = calculate_background(process_data[:, self.data.slices // 2])
+            else:
+                bg_level = deconvolution_params['background']
+
             deconvolved_volumes = deconvolve_fluorescence_3D(process_data,
                                                              self.deconv_reconstructor,
                                                              bg_level,
                                                              deconvolution_params['reg'])
-
-            # transpose arrays
-            # if deconvolved_volumes.ndim == 4:
-            #     deconvolved_volumes = np.transpose(deconvolved_volumes, (-4, -1, -3, -2))
-            # elif deconvolved_volumes.ndim == 3:
-            #     deconvolved_volumes = np.transpose(deconvolved_volumes, (-1, -3, -2))
-            # else:
-            #     raise ValueError('deconvolution returned incorrect shape')
 
             # overwrite raw data with deconvolved data in case it needs to also be registered in the next section
             for idx, channel_idx in enumerate(deconvolution_params['channels']):
