@@ -1191,93 +1191,93 @@ class MainWidget(QWidget):
 
         #TODO: Figure out how to parse pre/post processing parameters
 
-        # Parse Postprocessing automatically
-        for key, val in POSTPROCESSING.items():
-            for key_child, val_child in val.items():
-                if key == 'deconvolution':
-                    if key_child == 'use':
-                        cb = getattr(self.ui, f'chb_postproc_fluor_{key_child}')
-                        val = True if cb.checkState() == 2 else False
-                        setattr(self.config_reader.postprocessing, f'deconvolution_{key_child}', val)
-                    elif key_child == 'reg':
-                        regs = self.ui.le_fluor_strength.text()
-                        regs = regs.replace('[', '')
-                        reg_vals = regs.split(',')
-                        reg_vals = [float(i.replace(' ', '')) for i in reg_vals]
-                        setattr(self.config_reader.postprocessing, 'deconvolution_reg', reg_vals)
-                    elif key_child == 'wavelength_nm':
-                        lambdas = self.ui.le_postproc_fluor_wavelength_nm.text()
-                        lambdas = lambdas.replace('[', '')
-                        vals = lambdas.split(',')
-                        vals = [int(i.replace(' ', '')) for i in vals]
-                        setattr(self.config_reader.postprocessing, 'deconvolution_wavelength_nm', vals)
-                    elif key_child == 'background':
-                        text = self.ui.le_postproc_fluor_bg.text()
-                        text = text.replace('[', '')
-                        vals = text.split(',')
-                        vals = [float(i.replace(' ', '')) for i in vals]
-                        setattr(self.config_reader.postprocessing, 'deconvolution_background', vals)
-                    elif key_child == 'channels':
-                        text = self.ui.le_postproc_fluor_channels.text()
-                        text = text.replace('[', '')
-                        vals = text.split(',')
-                        vals = [int(i.replace(' ', '')) for i in vals]
-                        setattr(self.config_reader.postprocessing, 'deconvolution_channels', vals)
-                    elif key_child == 'pixel_size_um':
-                        text = self.ui.le_postproc_fluor_bg.text()
-                        text = text.replace('[', '')
-                        vals = text.split(',')
-                        vals = [int(i.replace(' ', '')) for i in vals]
-                        setattr(self.config_reader.postprocessing, 'deconvolution_background', vals)
-                    elif key_child == 'use_gpu':
-                        if self.ui.chb_use_gpu.isChecked():
-                            setattr(self.config_reader.postprocessing, 'deconvolution_use_gpu', True)
-                        else:
-                            setattr(self.config_reader.postprocessing, 'deconvolution_use_gpu', False)
-                    elif key_child == 'pixel_size_um':
-                        setattr(self.config_reader.postprocessing, 'deconvolution_pixel_size_um',
-                                float(self.ui.le_ps.text()))
-                    elif key_child == 'NA_obj':
-                        setattr(self.config_reader.postprocessing, 'deconvolution_NA_obj',
-                                float(self.ui.le_obj_na.text()))
-                    elif key_child == 'n_objective_media':
-                        setattr(self.config_reader.postprocessing, 'deconvolution_n_objective_media',
-                                float(self.ui.le_n_media.text()))
-                    elif key_child == 'gpu_id':
-                        setattr(self.config_reader.postprocessing, 'deconvolution_gpu_id',
-                                int(self.ui.le_gpu_id.text()))
-                    else:
-                        pass
-
-                elif key == 'registration':
-                    if key_child == 'use':
-                        cb = getattr(self.ui, 'chb_postproc_reg_use')
-                        val = cb.isChecked()
-                        setattr(self.config_reader.postprocessing, f'{key}_{key_child}', val)
-                    elif key_child == 'channel_idx':
-                        le = getattr(self.ui, f'le_postproc_reg_{key_child}')
-                        text = le.text()
-                        text = text.replace('[', '')
-                        vals = text.split(',')
-                        vals = [int(i.replace(' ', '')) for i in vals]
-                        setattr(self.config_reader.postprocessing, f'{key}_{key_child}', vals)
-                    elif key_child == 'shift':
-                        le = getattr(self.ui, f'le_postproc_reg_{key_child}')
-                        text = le.text()
-                        text = text.replace('[', '')
-                        vals = eval(text)
-                        vals = [i for i in vals]
-                        setattr(self.config_reader.postprocessing, f'{key}_{key_child}', vals)
-
-                #TODO: Parse correctly from line edit
-                elif key == 'denoise':
-                    if key_child == 'use':
-                        cb = getattr(self.ui, 'chb_postproc_denoise_use')
-                        val = True if cb.checkState() == 2 else False
-                        setattr(self.config_reader.postprocessing, f'{key}_{key_child}', val)
-                    else:
-                        le = getattr(self.ui, f'le_postproc_denoise_{key_child}')
-                        setattr(self.config_reader.postprocessing, f'{key}_{key_child}', le.text())
+        # # Parse Postprocessing automatically
+        # for key, val in POSTPROCESSING.items():
+        #     for key_child, val_child in val.items():
+        #         if key == 'deconvolution':
+        #             if key_child == 'use':
+        #                 cb = getattr(self.ui, f'chb_postproc_fluor_{key_child}')
+        #                 val = True if cb.checkState() == 2 else False
+        #                 setattr(self.config_reader.postprocessing, f'deconvolution_{key_child}', val)
+        #             elif key_child == 'reg':
+        #                 regs = self.ui.le_fluor_strength.text()
+        #                 regs = regs.replace('[', '')
+        #                 reg_vals = regs.split(',')
+        #                 reg_vals = [float(i.replace(' ', '')) for i in reg_vals]
+        #                 setattr(self.config_reader.postprocessing, 'deconvolution_reg', reg_vals)
+        #             elif key_child == 'wavelength_nm':
+        #                 lambdas = self.ui.le_postproc_fluor_wavelength_nm.text()
+        #                 lambdas = lambdas.replace('[', '')
+        #                 vals = lambdas.split(',')
+        #                 vals = [int(i.replace(' ', '')) for i in vals]
+        #                 setattr(self.config_reader.postprocessing, 'deconvolution_wavelength_nm', vals)
+        #             elif key_child == 'background':
+        #                 text = self.ui.le_postproc_fluor_bg.text()
+        #                 text = text.replace('[', '')
+        #                 vals = text.split(',')
+        #                 vals = [float(i.replace(' ', '')) for i in vals]
+        #                 setattr(self.config_reader.postprocessing, 'deconvolution_background', vals)
+        #             elif key_child == 'channels':
+        #                 text = self.ui.le_postproc_fluor_channels.text()
+        #                 text = text.replace('[', '')
+        #                 vals = text.split(',')
+        #                 vals = [int(i.replace(' ', '')) for i in vals]
+        #                 setattr(self.config_reader.postprocessing, 'deconvolution_channels', vals)
+        #             elif key_child == 'pixel_size_um':
+        #                 text = self.ui.le_postproc_fluor_bg.text()
+        #                 text = text.replace('[', '')
+        #                 vals = text.split(',')
+        #                 vals = [int(i.replace(' ', '')) for i in vals]
+        #                 setattr(self.config_reader.postprocessing, 'deconvolution_background', vals)
+        #             elif key_child == 'use_gpu':
+        #                 if self.ui.chb_use_gpu.isChecked():
+        #                     setattr(self.config_reader.postprocessing, 'deconvolution_use_gpu', True)
+        #                 else:
+        #                     setattr(self.config_reader.postprocessing, 'deconvolution_use_gpu', False)
+        #             elif key_child == 'pixel_size_um':
+        #                 setattr(self.config_reader.postprocessing, 'deconvolution_pixel_size_um',
+        #                         float(self.ui.le_ps.text()))
+        #             elif key_child == 'NA_obj':
+        #                 setattr(self.config_reader.postprocessing, 'deconvolution_NA_obj',
+        #                         float(self.ui.le_obj_na.text()))
+        #             elif key_child == 'n_objective_media':
+        #                 setattr(self.config_reader.postprocessing, 'deconvolution_n_objective_media',
+        #                         float(self.ui.le_n_media.text()))
+        #             elif key_child == 'gpu_id':
+        #                 setattr(self.config_reader.postprocessing, 'deconvolution_gpu_id',
+        #                         int(self.ui.le_gpu_id.text()))
+        #             else:
+        #                 pass
+        #
+        #         elif key == 'registration':
+        #             if key_child == 'use':
+        #                 cb = getattr(self.ui, 'chb_postproc_reg_use')
+        #                 val = cb.isChecked()
+        #                 setattr(self.config_reader.postprocessing, f'{key}_{key_child}', val)
+        #             elif key_child == 'channel_idx':
+        #                 le = getattr(self.ui, f'le_postproc_reg_{key_child}')
+        #                 text = le.text()
+        #                 text = text.replace('[', '')
+        #                 vals = text.split(',')
+        #                 vals = [int(i.replace(' ', '')) for i in vals]
+        #                 setattr(self.config_reader.postprocessing, f'{key}_{key_child}', vals)
+        #             elif key_child == 'shift':
+        #                 le = getattr(self.ui, f'le_postproc_reg_{key_child}')
+        #                 text = le.text()
+        #                 text = text.replace('[', '')
+        #                 vals = eval(text)
+        #                 vals = [i for i in vals]
+        #                 setattr(self.config_reader.postprocessing, f'{key}_{key_child}', vals)
+        #
+        #         #TODO: Parse correctly from line edit
+        #         elif key == 'denoise':
+        #             if key_child == 'use':
+        #                 cb = getattr(self.ui, 'chb_postproc_denoise_use')
+        #                 val = True if cb.checkState() == 2 else False
+        #                 setattr(self.config_reader.postprocessing, f'{key}_{key_child}', val)
+        #             else:
+        #                 le = getattr(self.ui, f'le_postproc_denoise_{key_child}')
+        #                 setattr(self.config_reader.postprocessing, f'{key}_{key_child}', le.text())
 
     def _populate_from_config(self):
         """
