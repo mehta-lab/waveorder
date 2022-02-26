@@ -1,4 +1,4 @@
-name: recOrder-napari
+name: recOrder
 schema_version: 0.1.0
 contributions:
   commands:
