@@ -1,12 +1,13 @@
 from recOrder.io.config_reader import ConfigReader
-from waveorder.io.reader import WaveorderReader
+from waveorder.io.reader import WaveorderReader, ZarrReader
 from waveorder.io.writer import WaveorderWriter
 import time
 import os
 import shutil
+from recOrder.io.utils import MockEmitter
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
-from recOrder.pipelines.fluor_deconv import FluorescenceDeconvolution
+from recOrder.pipelines.fluor_deconv_pipeline import FluorescenceDeconvolution
 from recOrder.compute.fluorescence_compute import initialize_fluorescence_reconstructor, \
     deconvolve_fluorescence_3D, calculate_background
 from recOrder.postproc.post_processing import *
@@ -20,17 +21,17 @@ class PipelineManager:
 
     """
 
-    def __init__(self, config: ConfigReader, overwrite: bool = False):
+    def __init__(self, config: ConfigReader, overwrite: bool = False, emitter=MockEmitter()):
 
         start = time.time()
         print('Reading Data...')
-        data = WaveorderReader(config.data_dir, config.data_type, extract_data=True)
+        data = WaveorderReader(config.data_dir, extract_data=True)
         end = time.time()
         print(f'Finished Reading Data ({(end - start) / 60 :0.1f} min)')
 
         self.config = config
         self.data = data
-        self.use_hcs = True if self.config.data_type == 'zarr' else False
+        self.use_hcs = True if isinstance(self.data.reader, ZarrReader) else False
 
         self._gen_coord_set()
 
@@ -60,13 +61,14 @@ class PipelineManager:
 
         # Pipeline Initiation
         if self.config.method == 'QLIPP':
-            self.pipeline = QLIPP(self.config, self.data, self.writer, self.config.mode, self.num_t)
+            self.pipeline = QLIPP(self.config, self.data, self.writer, self.config.mode, self.num_t, emitter=emitter)
 
         elif self.config.method == 'PhaseFromBF':
-            self.pipeline = PhaseFromBF(self.config, self.data, self.writer, self.num_t)
+            self.pipeline = PhaseFromBF(self.config, self.data, self.writer, self.num_t, emitter=emitter)
 
         elif self.config.method == 'FluorDeconv':
-            self.pipeline = FluorescenceDeconvolution(self.config, self.data, self.writer, self.config.mode, self.num_t)
+            self.pipeline = FluorescenceDeconvolution(self.config, self.data, self.writer, self.config.mode, self.num_t,
+                                                      emitter=emitter)
 
         else:
             raise NotImplementedError(f'Method {self.config.method} is not currently implemented '
@@ -201,6 +203,7 @@ class PipelineManager:
             deconvolution_params['channels'] = self.config.postprocessing.deconvolution_channels
             deconvolution_params['wavelengths'] = self.config.postprocessing.deconvolution_wavelength_nm
             deconvolution_params['reg'] = [float(i) for i in self.config.postprocessing.deconvolution_regularization]
+            deconvolution_params['background'] = [float(i) for i in self.config.postprocessing.deconvolution_background]
             deconvolution_params['pixel_size_um'] = self.config.postprocessing.deconvolution_pixel_size_um
             deconvolution_params['NA_obj'] = self.config.postprocessing.deconvolution_NA_obj
             deconvolution_params['magnification'] = self.config.postprocessing.deconvolution_magnification
@@ -289,7 +292,7 @@ class PipelineManager:
             for time_point in t_indices:
                 self.pt_set.add((pos, time_point))
 
-    def _try_init_array(self, pt):
+    def try_init_array(self, pt):
         try:
 
             # If not doing the full position, we still want semantic information on which positions
@@ -318,7 +321,7 @@ class PipelineManager:
         for pt in sorted(self.pt_set):
             start_time = time.time()
 
-            self._try_init_array(pt)
+            self.try_init_array(pt)
 
             pt_data = self.data.get_zarr(pt[0])[pt[1]] # (C, Z, Y, X) virtual
 
@@ -423,19 +426,15 @@ class PipelineManager:
             process_data = np.asarray(process_data)
 
             # deconvolve
-            bg_level = calculate_background(process_data[:, self.data.slices // 2])
+            if deconvolution_params['background'] is None:
+                bg_level = calculate_background(process_data[:, self.data.slices // 2])
+            else:
+                bg_level = deconvolution_params['background']
+
             deconvolved_volumes = deconvolve_fluorescence_3D(process_data,
                                                              self.deconv_reconstructor,
                                                              bg_level,
                                                              deconvolution_params['reg'])
-
-            # transpose arrays
-            if deconvolved_volumes.ndim == 4:
-                deconvolved_volumes = np.transpose(deconvolved_volumes, (-4, -1, -3, -2))
-            elif deconvolved_volumes.ndim == 3:
-                deconvolved_volumes = np.transpose(deconvolved_volumes, (-1, -3, -2))
-            else:
-                raise ValueError('deconvolution returned incorrect shape')
 
             # overwrite raw data with deconvolved data in case it needs to also be registered in the next section
             for idx, channel_idx in enumerate(deconvolution_params['channels']):

@@ -133,7 +133,7 @@ def deconvolve_fluorescence_3D(data, reconstructor: fluorescence_microscopy, bg_
 
     Returns
     -------
-    deconvolved_data:   (nd-array) of size (N_fluor, Y, X, Z) or (Y, X, Z)
+    deconvolved_data:   (nd-array) of size (N_fluor, Z, Y, X) or (Z, Y, X)
     """
 
     if data.ndim == 4:
@@ -144,5 +144,12 @@ def deconvolve_fluorescence_3D(data, reconstructor: fluorescence_microscopy, bg_
         raise ValueError('invalid input data dimensions.  Data must be (N_fluor, Z, Y, X) or (Z, Y, X)')
 
     deconvolved_data = reconstructor.deconvolve_fluor_3D(data_process, bg_level, reg)
+
+    if deconvolved_data.ndim == 4:
+        deconvolved_data = np.transpose(deconvolved_data, (0, 3, 1, 2))
+    elif deconvolved_data.ndim == 3:
+        deconvolved_data = np.transpose(deconvolved_data, (2, 0, 1))
+    else:
+        raise ValueError(f'Unexpected output dimensions: {deconvolved_data.shape}')
 
     return deconvolved_data

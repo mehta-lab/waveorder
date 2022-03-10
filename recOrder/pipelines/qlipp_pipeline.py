@@ -1,7 +1,7 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
-from recOrder.io.utils import load_bg
+from recOrder.io.utils import load_bg, MockEmitter
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, \
     reconstruct_phase2D, reconstruct_phase3D, initialize_reconstructor
 import json
@@ -15,7 +15,7 @@ class QLIPP(PipelineInterface):
     This class contains methods to reconstruct an entire dataset alongside pre/post-processing
     """
 
-    def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderWriter, mode: str, num_t: int):
+    def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderWriter, mode: str, num_t: int, emitter=MockEmitter()):
         """
         Parameters
         ----------
@@ -31,6 +31,9 @@ class QLIPP(PipelineInterface):
         self.data = data
         self.writer = writer
         self.mode = mode
+
+        # Emitter
+        self.dimension_emitter = emitter
 
         # Dimension Parameters
         self.t = num_t
@@ -67,37 +70,57 @@ class QLIPP(PipelineInterface):
         self.chunk_size = (1, 1, 1, self.data_shape[-2], self.data_shape[-1])
 
         # Initialize Reconstructor
-        self.reconstructor = initialize_reconstructor(pipeline='QLIPP',
-                                                      image_dim=(self.img_dim[0], self.img_dim[1]),
-                                                      wavelength_nm=self.config.wavelength,
-                                                      swing=self.calib_meta['Summary']['Swing (fraction)'],
-                                                      calibration_scheme=self.calib_scheme,
-                                                      NA_obj=self.config.NA_objective,
-                                                      NA_illu=self.config.NA_condenser,
-                                                      n_obj_media=self.config.n_objective_media,
-                                                      mag=self.config.magnification,
-                                                      n_slices=self.data.slices,
-                                                      z_step_um=self.data.z_step_size,
-                                                      pad_z=self.config.pad_z,
-                                                      pixel_size_um=self.config.pixel_size,
-                                                      bg_correction=self.config.background_correction,
-                                                      mode=self.mode,
-                                                      use_gpu=self.config.use_gpu,
-                                                      gpu_id=self.config.gpu_id)
+        if self.no_phase:
+            self.reconstructor = initialize_reconstructor(pipeline='birefringence',
+                                                          image_dim=(self.img_dim[0], self.img_dim[1]),
+                                                          wavelength_nm=self.config.wavelength,
+                                                          swing=self.calib_meta['Summary']['Swing (fraction)'],
+                                                          calibration_scheme=self.calib_scheme,
+                                                          pad_z=self.config.pad_z,
+                                                          bg_correction=self.config.background_correction,
+                                                          mode=self.mode,
+                                                          use_gpu=self.config.use_gpu,
+                                                          gpu_id=self.config.gpu_id)
+
+        else:
+            self.reconstructor = initialize_reconstructor(pipeline='QLIPP',
+                                                          image_dim=(self.img_dim[0], self.img_dim[1]),
+                                                          wavelength_nm=self.config.wavelength,
+                                                          swing=self.calib_meta['Summary']['Swing (fraction)'],
+                                                          calibration_scheme=self.calib_scheme,
+                                                          NA_obj=self.config.NA_objective,
+                                                          NA_illu=self.config.NA_condenser,
+                                                          n_obj_media=self.config.n_objective_media,
+                                                          mag=self.config.magnification,
+                                                          n_slices=self.data.slices,
+                                                          z_step_um=self.data.z_step_size,
+                                                          pad_z=self.config.pad_z,
+                                                          pixel_size_um=self.config.pixel_size,
+                                                          bg_correction=self.config.background_correction,
+                                                          mode=self.mode,
+                                                          use_gpu=self.config.use_gpu,
+                                                          gpu_id=self.config.gpu_id)
 
         # Compute BG stokes if necessary
-        if self.config.background_correction != None:
+        if self.config.background_correction != 'None':
             bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
             self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
             self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
 
+        else:
+            self.bg_stokes = None
+
     def _check_output_channels(self, output_channels):
         self.no_birefringence = True
+        self.no_phase = True
         for channel in output_channels:
             if 'Retardance' in channel or 'Orientation' in channel or 'Brightfield' in channel:
                 self.no_birefringence = False
+            if 'Phase3D' in channel or 'Phase2D' in channel:
+                self.no_phase = False
             else:
                 continue
+
 
     def reconstruct_stokes_volume(self, data):
         """
@@ -190,7 +213,7 @@ class QLIPP(PipelineInterface):
             return None
         else:
             return reconstruct_qlipp_birefringence(
-                                stokes[:, :, :, slice(None) if self.slices != 1 else self.focus_slice],
+                                stokes[:, slice(None) if self.slices != 1 else self.focus_slice, :, :],
                                 self.reconstructor)
 
     # todo: think about better way to write fluor/registered data?
@@ -219,7 +242,7 @@ class QLIPP(PipelineInterface):
 
         z = 0 if self.mode == '2D' else None
         slice_ = self.focus_slice if self.mode == '2D' else slice(None)
-        stokes = np.transpose(stokes, (-1, -4, -3, -2)) if len(stokes.shape) == 4 else stokes
+        # stokes = np.transpose(stokes, (-1, -4, -3, -2)) if len(stokes.shape) == 4 else stokes
         fluor_idx = 0
 
         for chan in range(len(self.output_channels)):
@@ -235,13 +258,13 @@ class QLIPP(PipelineInterface):
             elif 'Phase2D' in self.output_channels[chan]:
                 self.writer.write(phase2D, p=p, t=t, c=chan, z=z)
             elif 'S0' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 0, :, :], p=p, t=t, c=chan, z=z)
+                self.writer.write(stokes[0, slice_, :, :], p=p, t=t, c=chan, z=z)
             elif 'S1' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 1, :, :], p=p, t=t, c=chan, z=z)
+                self.writer.write(stokes[1, slice_, :, :], p=p, t=t, c=chan, z=z)
             elif 'S2' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 2, :, :], p=p, t=t, c=chan, z=z)
+                self.writer.write(stokes[2, slice_, :, :], p=p, t=t, c=chan, z=z)
             elif 'S3' in self.output_channels[chan]:
-                self.writer.write(stokes[slice_, 3, :, :], p=p, t=t, c=chan, z=z)
+                self.writer.write(stokes[3, slice_, :, :], p=p, t=t, c=chan, z=z)
 
             # Assume any other output channel in config is fluorescence
             else:
@@ -251,6 +274,8 @@ class QLIPP(PipelineInterface):
                 else:
                     self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
                     fluor_idx += 1
+
+            self.dimension_emitter.emit((p, t, chan))
 
     def parse_channel_idx(self, channel_list):
         """

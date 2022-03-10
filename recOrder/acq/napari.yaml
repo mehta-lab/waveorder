@@ -1,0 +1,7 @@
+name: recOrder
+display_name: recOrder
+
+contributions:
+  widgets:
+    - command: recOrder.plugin.widget.napari_plugin_entry_point
+      display_name: recOrder

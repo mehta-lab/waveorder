@@ -1,0 +1,125 @@
+dataset:
+  method: 'QLIPP'
+
+  mode: '3D'
+
+  data_type: 'zarr'
+  # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
+
+  positions: [1]
+  # (str or list) Positions within the dataset that are to be analyzed.
+  ##   'all'
+  ##   !!python/tuple [0, N] for pos 0 through N
+  ## [0, 1, 5] for pos 0, 1, and 5
+
+  timepoints: [0]
+  # (str or list) timepoints within the dataset that are to be analyzed.
+  ##   'all'
+  ##   !!python/tuple [0, N] for pos 0 through N
+  ## [0, 1, 5] for pos 0, 1, and 5
+
+  background: './pytest_temp/rawdata/recOrder/2021_06_11_recOrder_pytest_20x_04NA_zarr/BG'
+
+  #(str or list) Background folder(s) within the experiment folder
+  ##   a list, e.g. ['/path/to/bg_1', '/path/to/bg_2'], of one background dataset per sample
+
+  calibration_metadata: './pytest_temp/rawdata/recOrder/2021_06_11_recOrder_pytest_20x_04NA_zarr/calib_metadata.txt'
+
+pre_processing:
+  denoise:
+    use: False
+    channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
+    threshold: [0.1, 0.1, 0.1, 0.1]
+    level: [1, 1, 1, 1]
+
+
+processing:
+  output_channels: ['Retardance', 'Orientation', 'Brightfield', 'Phase3D', 'S0', 'S1', 'S2', 'S3']
+
+  # (list) Any combination of the following values.
+  #    'Retardance', 'Orientation','Brightfield', 'Phase3D'
+  #     order of the channels specifies the order in which they will be written
+
+  #    can also specify custom names of fluorescence channels 'GFP' or 'DAPI' or 'Nuclei'.
+  #    The order in which fluor channels are listed corresponds to their order in
+  #    the acquisition.  Specified name stored in the metadata.
+
+  background_correction: 'local_fit'
+  # (str) Background correction method, one of the following
+  ##   'None': no background correction will be performed
+  ##   'local': for estimating background with scipy uniform filter
+  ##   'local_fit': for estimating background with polynomial fit
+  ##   'global': for normal background subtraction with the provided background
+
+  use_gpu: False
+  # (bool) Option to use GPU processing if True (require cupy to be installed)
+
+  gpu_id: 0
+  # (int) ID of GPU to be used
+
+  ########################################
+  #    PHASE RECONSTRUCTION PARAMETERS   #
+  ########################################
+
+  wavelength: 532
+  # (int) wavelength of the illumination in nm
+
+  pixel_size: 6.5
+  # (float) Camera pixel size in the unit of um
+
+  magnification: 20
+  # (float) Magnification of the objective
+
+  NA_objective: 0.55
+  # (float) Numerical aperture of the objective
+
+  NA_condenser: 0.4
+  # (float) Numerical aperture of the condenser
+
+  n_objective_media: 1.0
+  # (float) Refractive index of the objective immersion oil
+
+  focus_zidx: 40
+  # (int) Index of the focused z slice of the dataset for 2D phase reconstruction
+
+  pad_z: 0
+  # (int) Number of z slices padded above and below the dataset for 3D phase reconstruction to avoid boundary artifacts
+
+  ## Denoiser parameters ##
+
+  phase_denoiser_3D: 'Tikhonov'
+  # (str) Options of denoiser for 3D phase reconstruction
+  ##   'Tikhonov' or 'TV' (total variation)
+
+  #### 3D Tikhonov parameters ####
+  # if noise is higher raise an order of magnitude to see if the recon is better
+
+  Tik_reg_ph_3D: 1.0e-4
+  # (float) Tikhonov regularization parameter for 3D phase
+  ##   1.0e-3 to 1.0e-4 should work generally when noise is low
+
+  #### 3D TV parameters ####
+  # For more noisy data, raise TV_reg to enforce stronger denoising effect
+
+  rho_3D: 1.0e-3
+  # (float) rho parameters in the 2D ADMM formulation
+  ##   1.0e-3 is generally good, no need to tune
+
+  itr_3D: 50
+  # (int) Number of iterations for 3D TV denoiser
+  ##   50 is generally good, no need to tune
+
+  TV_reg_ph_3D: 5.0e-5
+  # (float) TV regularization parameter for 3D phase
+  ##   5.0e-5 is generally good
+
+post_processing:
+  denoise:
+    use: False
+    channels: ['Retardance', 'Phase3D'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
+    threshold: [0.1, 0.1]
+    level: [1, 1]
+  registration:
+    use: False
+    channel_idx: [3] # if multiple channels, must match order of the fluorescence channels
+    shift: [[0, 50, 50]] # up and to the right [0, +y, -x]

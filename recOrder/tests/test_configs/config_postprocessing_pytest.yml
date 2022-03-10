@@ -1,0 +1,94 @@
+dataset:
+  method: 'QLIPP'
+
+  mode: '3D'
+
+  data_type: 'ometiff'
+  # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
+
+  positions: [1]
+  # (str or list) Positions within the dataset that are to be analyzed.
+  ##   'all'
+  ##   !!python/tuple [0, N] for pos 0 through N
+  ## [0, 1, 5] for pos 0, 1, and 5
+
+  timepoints: [0]
+  # (str or list) timepoints within the dataset that are to be analyzed.
+  ##   'all'
+  ##   !!python/tuple [0, N] for pos 0 through N
+  ## [0, 1, 5] for pos 0, 1, and 5
+
+  background: './pytest_temp/rawdata/recOrder/2021_06_11_recOrder_pytest_20x_04NA/BG'
+
+  #(str or list) Background folder(s) within the experiment folder
+  ##   a list, e.g. ['/path/to/bg_1', '/path/to/bg_2'], of one background dataset per sample
+
+  calibration_metadata: './pytest_temp/rawdata/recOrder/2021_06_11_recOrder_pytest_20x_04NA/calib_metadata.txt'
+
+pre_processing:
+  denoise:
+    use: False
+    channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
+    threshold: [0.5, 0.5, 0.5, 0.5]
+    level: [1, 1, 1, 1]
+
+
+processing:
+  output_channels: ['Retardance', 'DAPI_deconv_reg', 'GFP_deconv']
+
+  # (list) Any combination of the following values.
+  #    'Retardance', 'Orientation','Brightfield', 'Phase3D'
+  #     order of the channels specifies the order in which they will be written
+
+  #    can also specify custom names of fluorescence channels 'GFP' or 'DAPI' or 'Nuclei'.
+  #    The order in which fluor channels are listed corresponds to their order in
+  #    the acquisition.  Specified name stored in the metadata.
+
+  background_correction: 'local_fit'
+  # (str) Background correction method, one of the following
+  ##   'None': no background correction will be performed
+  ##   'local': for estimating background with scipy uniform filter
+  ##   'local_fit': for estimating background with polynomial fit
+  ##   'global': for normal background subtraction with the provided background
+  wavelength: 532
+  # (int) wavelength of the illumination in nm
+
+  pixel_size: 6.5
+  # (float) Camera pixel size in the unit of um
+
+  magnification: 63
+  # (float) Magnification of the objective
+
+  NA_objective: 1.2
+  # (float) Numerical aperture of the objective
+
+  NA_condenser: 0.4
+  # (float) Numerical aperture of the condenser
+
+  n_objective_media: 1.33
+  # (float) Refractive index of the objective immersion oil
+post_processing:
+  denoise:
+    use: True
+    channels: ['Retardance'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
+    threshold: [0.1]
+    level: [1]
+
+  deconvolution:
+    use: True # set to true if you want to deconvolve raw fluorescence channels
+    channels: [1, 2] # MUST BE IN NUMERICAL ORDER
+                      # specify the index of fluorescent channels you wish to deconvolve in numerical order
+    wavelength_nm: [488, 562] # specify the wavelengths of the fluorescence channel emissions (in same order as channels)
+    regularization: [1e-4, 1e-4] # regularization parameters to use for each channel
+    pixel_size_um: 6.5 # specify pixel size of the camera in um
+    NA_obj: 0.4 # specify the numerical aperture of the objective
+    magnification: 63 # effective magnificaiton
+    n_objective_media: 1.0 # specify the refractive index of objective immersion media (1.0 for air)
+    pad_z: 0 # specify padding to eliminate potential boundary artifacts
+    use_gpu: False
+    gpu_id: 0
+
+  registration:
+    use: True
+    channel_idx: [1] # if multiple channels, must match order of the fluorescence channels in output_channels
+    shift: [[0, -100, -100]] # up and to the right [0, +y, -x]

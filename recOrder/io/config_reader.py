@@ -2,9 +2,7 @@ import yaml
 import pathlib
 import os
 import warnings
-import re
 
-#TODO: Make CLI override config reader
 
 DATASET = {
     'method': None,
@@ -13,8 +11,8 @@ DATASET = {
     'save_dir': None,
     'data_type': 'zarr',
     'data_save_name': None,
-    'positions': ['all'],
-    'timepoints': ['all'],
+    'positions': 'all',
+    'timepoints': 'all',
     'background': None,
     'background_ROI': None,
     'calibration_metadata': None
@@ -43,6 +41,7 @@ PROCESSING = {
     'n_objective_media': 1.003,
     'brightfield_channel_index': 0,
     'fluorescence_channel_indices': None,
+    'fluorescence_background': None,
     'z_step': None,
     'focus_zidx': None,
     'reg': 1e-4,
@@ -74,6 +73,7 @@ POSTPROCESSING = {
         'channels': None,
         'wavelength_nm': None,
         'regularization': None,
+        'background': None,
         'pixel_size_um': None,
         'NA_obj': None,
         'magnification': None,
@@ -83,7 +83,7 @@ POSTPROCESSING = {
         'gpu_id': 0
     },
 
-    'registration':{
+    'registration': {
         'use': False,
         'channel_idx': None,
         'shift': None
@@ -102,14 +102,31 @@ class ConfigReader(object):
 
     """
 
-    def __init__(self, cfg_path=None, data_dir=None, save_dir=None, method=None, mode=None, name=None):
+    def __init__(self, cfg_path=None, data_dir=None, save_dir=None, method=None, mode=None, name=None, immutable=True):
 
         self.preprocessing = Object()
         self.postprocessing = Object()
 
+        self.immutable = immutable
+
+
+        if data_dir is not None:
+            setattr(self, 'data_dir', data_dir)
+        if save_dir is not None:
+            setattr(self, 'save_dir', save_dir)
+        if method is not None:
+            setattr(self, 'method', method)
+        if mode is not None:
+            setattr(self, 'mode', mode)
+        if name is not None:
+            setattr(self, 'data_save_name', name)
+
         # initialize defaults
         for key, value in DATASET.items():
-            setattr(self, key, value)
+            if hasattr(self, key):
+                continue
+            else:
+                setattr(self, key, value)
 
         for key, value in PREPROCESSING.items():
             if isinstance(value, dict):
@@ -135,11 +152,11 @@ class ConfigReader(object):
 
         # Create yaml dict to save in save_dir
         setattr(self, 'yaml_dict', self._create_yaml_dict())
-        self._save_yaml()
+        # self._save_yaml()
 
     # Override set attribute function to disallow changes after init
     def __setattr__(self, name, value):
-        if hasattr(self, name):
+        if hasattr(self, name) and self.immutable:
             raise AttributeError("Attempting to change immutable object")
         else:
             super().__setattr__(name, value)
@@ -209,12 +226,19 @@ class ConfigReader(object):
                         assert key_child in self.config['postprocessing'][key], \
                             f'User must specify {key_child} to use for {key}'
 
-    def _save_yaml(self):
-        if not os.path.exists(self.save_dir):
-            os.mkdir(self.save_dir)
-        with open(os.path.join(self.save_dir, f'config_{self.data_save_name}.yml'), 'w') as file:
-            yaml.dump(self.yaml_dict, file)
+    def save_yaml(self, dir_=None, name=None):
+        self.immutable = False
+        self.yaml_dict = self._create_yaml_dict()
+        self.immutable = True
 
+        dir_ = self.save_dir if dir_ is None else dir_
+        name = f'config_{self.data_save_name}.yml' if name is None else name
+        if not name.endswith('.yml'):
+            name += '.yml'
+        if not os.path.exists(dir_):
+            os.mkdir(dir_)
+        with open(os.path.join(dir_, name), 'w') as file:
+            yaml.dump(self.yaml_dict, file)
         file.close()
 
     def _create_yaml_dict(self):
@@ -252,18 +276,6 @@ class ConfigReader(object):
         path = pathlib.PurePath(self.data_dir)
         super().__setattr__('data_save_name', path.name)
 
-    def _parse_cli(self, data_dir, save_dir, method, mode, name):
-        if data_dir:
-            super().__setattr__('data_dir', data_dir)
-        if save_dir:
-            super().__setattr__('save_dir', save_dir)
-        if method:
-            super().__setattr__('method', method)
-        if mode:
-            super().__setattr__('mode', mode)
-        if name:
-            super().__setattr__('data_save_name', name)
-
     def _parse_dataset(self):
         for key, value in self.config['dataset'].items():
             if key in DATASET.keys():
@@ -275,6 +287,10 @@ class ConfigReader(object):
                 elif key == 'data_dir' and self.data_dir:
                     continue
                 elif key == 'save_dir' and self.save_dir:
+                    continue
+                elif key == 'mode' and self.mode:
+                    continue
+                elif key == 'method' and self.method:
                     continue
 
                 # this section appends the rest of the dataset parameters specified
@@ -341,10 +357,12 @@ class ConfigReader(object):
 
     def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
 
-        self.config = yaml.full_load(open(cfg_path))
+        if isinstance(cfg_path, str):
+            self.config = yaml.full_load(open(cfg_path))
+        if isinstance(cfg_path, dict):
+            self.config = cfg_path
 
         self._check_assertions(data_dir, save_dir, method, mode, name)
-        self._parse_cli(data_dir, save_dir, method, mode, name)
         self._parse_dataset()
         self._parse_preprocessing()
         self._parse_processing()
