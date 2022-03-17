@@ -2608,6 +2608,8 @@ class fluorescence_microscopy:
         elif I_fluor.ndim == 3:
             I_fluor_process = I_fluor.copy()
             
+        I_fluor_process = I_fluor_process.astype('float')
+            
         I_fluor_deconv = np.zeros_like(I_fluor_process)
         
         for i in range(self.N_wavelength):
@@ -2681,6 +2683,8 @@ class fluorescence_microscopy:
                 
         else:
             I_fluor_pad = I_fluor_process
+        
+        I_fluor_process = I_fluor_process.astype('float')
         
         if autotune:
             N, M, Z = I_fluor_process.shape[1:]
