@@ -7,25 +7,22 @@ assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**Summary and expected behavior**
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Open '....'
-3. Run this command  '....'
-4. See error
+**Code for reproduction (script, command line interface)**
+```
+# paste your code here
+
+```
+
+**Screenshots or steps for reproduction (UI)**
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+**Environment:**
 
-**Environment (please complete the following information):**
- - OS: [e.g. iOS]
- - conda environment: [relevant details]
-
-**Additional context**
-Add any other context about the problem here.
+Operating system:
+Python version:
+Python environment (command line, IDE, Jupyter notebook, etc):
+MicroManager/pycromanager version:
