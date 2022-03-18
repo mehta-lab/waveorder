@@ -9,13 +9,13 @@ assignees: ''
 
 **Summary and expected behavior**
 
-**Code for reproduction (script, command line interface)**
+**Code for reproduction (using python script or command line interface)**
 ```
 # paste your code here
 
 ```
 
-**Screenshots or steps for reproduction (UI)**
+**Screenshots or steps for reproduction (using napari GUI)**
 
 **Expected behavior**
 A clear and concise description of what you expected to happen.
