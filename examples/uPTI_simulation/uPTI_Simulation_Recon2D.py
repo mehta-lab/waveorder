@@ -166,7 +166,6 @@ orientation_3D_image_RGB = wo.orientation_3D_to_rgb(orientation_3D_image, interp
 
 plt.figure(figsize=(5,5))
 plt.imshow(orientation_3D_image_RGB, origin='lower')
-plt.show()
 plt.figure(figsize=(3,3))
 wo.orientation_3D_colorwheel(wheelsize=256, circ_size=50, interp_belt=20/180*np.pi, sat_factor=1)
 plt.show()
@@ -187,7 +186,6 @@ in_plane_orientation = hsv_to_rgb(I_hsv.copy())
 
 plt.figure(figsize=(5,5))
 plt.imshow(in_plane_orientation, origin='lower')
-plt.show()
 plt.figure(figsize=(3,3))
 wo.orientation_2D_colorwheel()
 plt.show()
@@ -224,7 +222,6 @@ ret_mask[ret_mask<0.5]=0
 
 plt.figure(figsize=(10,10))
 plt.imshow(ret_mask, cmap='gray', origin='lower')
-plt.show()
 wo.orientation_3D_hist(azimuth[0].flatten(), \
                        theta[0].flatten(), \
                        ret_mask.flatten(),\

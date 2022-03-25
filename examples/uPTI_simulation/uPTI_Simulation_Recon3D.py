@@ -228,10 +228,8 @@ orientation_3D_image_RGB = wo.orientation_3D_to_rgb(orientation_3D_image, interp
 
 plt.figure(figsize=(10,10))
 plt.imshow(orientation_3D_image_RGB[z_layer], origin='lower')
-plt.show()
 plt.figure(figsize=(10,10))
 plt.imshow(orientation_3D_image_RGB[:,y_layer], origin='lower',aspect=psz/ps)
-plt.show()
 # plot the top view of 3D orientation colorsphere
 plt.figure(figsize=(3,3))
 wo.orientation_3D_colorwheel(wheelsize=128, circ_size=50, interp_belt=20/180*np.pi, sat_factor=1, discretize=True)
@@ -250,10 +248,8 @@ in_plane_orientation = hsv_to_rgb(I_hsv.copy())
 
 plt.figure(figsize=(10,10))
 plt.imshow(in_plane_orientation[z_layer], origin='lower')
-plt.show()
 plt.figure(figsize=(10,10))
 plt.imshow(in_plane_orientation[:,y_layer], origin='lower',aspect=psz/ps)
-plt.show()
 plt.figure(figsize=(3,3))
 wo.orientation_2D_colorwheel()
 plt.show()
@@ -270,7 +266,6 @@ out_of_plane_tilt = hsv_to_rgb(I_hsv.copy())
 
 plt.figure(figsize=(10,10))
 plt.imshow(out_of_plane_tilt[z_layer], origin='lower')
-plt.show()
 plt.figure(figsize=(10,10))
 plt.imshow(out_of_plane_tilt[:,y_layer], origin='lower',aspect=psz/ps)
 plt.show()
@@ -343,8 +338,6 @@ ret_mask[ret_mask<0.00125]=0
 
 plt.figure(figsize=(10,10))
 plt.imshow(ret_mask[:,:,z_layer], cmap='gray', origin='lower')
-plt.show()
-
 wo.orientation_3D_hist(azimuth[0].flatten(), \
                        theta[0].flatten(), \
                        ret_mask.flatten(),\

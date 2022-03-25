@@ -121,10 +121,7 @@ biref_map = ne_map_copy -  no_map_copy
 ### Visualize sample properties
 
 #### XY sections
-
 wo.plot_multicolumn([target[:,:,z_layer], azimuth[:,:,z_layer]%(2*np.pi), inclination[:,:,z_layer]], origin='lower', size=5, num_col=3, titles=[f'target, z={z_layer}', 'azimuth', 'inclination'], set_title = True)
-plt.show()
-
 #### XZ sections
 wo.plot_multicolumn([np.transpose(target[y_layer,:,:]), np.transpose(azimuth[y_layer,:,:])%(2*np.pi), np.transpose(inclination[y_layer,:,:])], origin='lower', size=5, num_col=3, titles=['retardance', 'azimuth', 'inclination'], set_title = True)
 plt.show()
@@ -136,12 +133,8 @@ orientation_3D_image_RGB = wo.orientation_3D_to_rgb(orientation_3D_image, interp
 
 plt.figure(figsize=(10,10))
 plt.imshow(orientation_3D_image_RGB[z_layer], origin='lower')
-plt.show()
-
 plt.figure(figsize=(10,10))
 plt.imshow(orientation_3D_image_RGB[:,y_layer], origin='lower')
-plt.show()
-
 plt.figure(figsize=(3,3))
 wo.orientation_3D_colorwheel(wheelsize=128, circ_size=50, interp_belt=20/180*np.pi, sat_factor=1,  discretize=True)
 plt.show()
@@ -250,13 +243,9 @@ for i in range(len(Source)):
 #### Circularly polarized illumination patterns
 
 wo.plot_multicolumn(fftshift(Source_cont,axes=(1,2)), origin='lower', num_col=5, size=5)
-plt.show()
-
 # discretized illumination patterns used in simulation (faster forward model)
 wo.plot_multicolumn(fftshift(Source,axes=(1,2)), origin='lower', num_col=5, size=5)
-plt.show()
 print(Source_PolState)
-
 plt.figure(figsize=(10,10))
 plt.imshow(fftshift(np.sum(Source,axis=0)), origin='lower')
 plt.show()

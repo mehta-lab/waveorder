@@ -32,10 +32,10 @@ cali          = False                # correction for S1/S2 Polscope reconstruct
 bg_option     = 'global'         # background correction method for Polscope recon (does not affect phase)
 pad_z         = 5                # padding along z to avoid periodic artifacts in reconstructions
 
-data_path        = '/gpfs/CompMicro/rawdata/falcon/LiHao/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/smooth_muscle_2/data/'             # path to data
-calibration_path = '/gpfs/CompMicro/projects/waveorderData/data_processing/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/smooth_muscle_2/'                             # path to calibration data
-bg_path          = '/gpfs/CompMicro/rawdata/falcon/LiHao/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/smooth_muscle_1/bg/'               # path to background images
-output_path   = '/gpfs/CompMicro/projects/waveorderData/data_processing/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/smooth_muscle_2/Full_FOV_process_test_new_pipeline_script'      # output image path
+data_path        = '/gpfs/CompMicro/rawdata/falcon/LiHao/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/cardiac_muscle_1/data/'             # path to data
+calibration_path = '/gpfs/CompMicro/projects/waveorderData/data_processing/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/cardiac_muscle_1/'                             # path to calibration data
+bg_path          = '/gpfs/CompMicro/rawdata/falcon/LiHao/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/cardiac_muscle_1/bg/'               # path to background images
+output_path   = '/gpfs/CompMicro/projects/waveorderData/data_processing/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/cardiac_muscle_1/Full_FOV_process_test_new_pipeline_script'      # output image path
 use_gpu       = True
 gpu_id        = 0
 
@@ -43,17 +43,12 @@ reg_inc       = np.array([2, 2, 20, 20, 80, 80, 80])*1  # regularization for 3D 
 reg_ret_pr    = 1e-2                                    # principle retardance regularization
 
 
-
-
 filedir = data_path + '*img*.tif'
 filedir_bg = bg_path + 'img*.tif'
 files = sorted(glob.glob(filedir), key=wo.numericalSort)
 files_bg = sorted(glob.glob(filedir_bg), key=wo.numericalSort)
 
-
-# ### Calibration
 # Load calibration
-
 f = open(calibration_path+'cali_images.pckl', 'rb')
 I_cali_mean = pickle.load(f)
 f.close()
@@ -66,8 +61,6 @@ M_full = 1224
 overlapping_range = [62,100]
 max_image_size = [400,400]
 N_edge, N_space, M_space = wo.generate_FOV_splitting_parameters((N_full, M_full), overlapping_range, max_image_size)
-
-
 # Create sub-FOV list
 Ns = N_space + N_edge
 Ms = M_space + N_edge
@@ -76,7 +69,6 @@ os.system('mkdir '+output_path)
 
 
 # ### Initialize the processing (Source, OTF, ...)
-
 xx, yy, fxx, fyy = wo.gen_coordinate((Ns, Ms), ps)
 rotation_angle=[180-22.5, 225-22.5, 270-22.5, 315-22.5, 0-22.5, 45-22.5, 90-22.5, 135-22.5]
 sector_angle = 45
@@ -84,14 +76,14 @@ Source_BF = wo.gen_Pupil(fxx, fyy, NA_obj/n_media/2, lambda_illu/n_media)
 Source = wo.gen_sector_Pupil(fxx, fyy, NA_obj/n_media, lambda_illu/n_media, sector_angle, rotation_angle)
 Source.append(Source_BF)
 Source = np.array(Source)
-
 Source_PolState = np.zeros((len(Source),2), complex)
+
 for i in range(len(Source)):
     Source_PolState[i,0] = E_in[0]
     Source_PolState[i,1] = E_in[1]
-
+    
+    
 # Reconstruct parameters
-
 setup = wo.waveorder_microscopy((Ns,Ms), lambda_illu, ps, NA_obj, NA_illu, z_defocus,
                                 n_media=n_media, cali=cali, bg_option=bg_option,
                                 A_matrix = A_matrix,
@@ -99,8 +91,6 @@ setup = wo.waveorder_microscopy((Ns,Ms), lambda_illu, ps, NA_obj, NA_illu, z_def
                                 illu_mode='Arbitrary', Source = Source,
                                 Source_PolState=Source_PolState,
                                 use_gpu=use_gpu, gpu_id=gpu_id)
-
-
 
 # ### Data loading
 # Loading full FOV data
@@ -118,7 +108,6 @@ for i in range(N_pattern+1):
 
 I_meas_minus_leak = np.maximum(0,I_meas_full[:,:9]-(I_meas_full[:,-1])[:,np.newaxis,:,:,:])
 I_bg_minus_leak = np.maximum(0,I_bg_full[:,:9]-(I_bg_full[:,-1])[:,np.newaxis,:,:])
-
 
 # ### Writer setup
 uPTI_file_name = 'uPTI_subFOVs.zarr'
@@ -140,7 +129,6 @@ uPTI_file.create_dataset('overlap', data = N_edge)
 
 # ### Patch-wise processing
 t0 = time.time()
-
 for ll in range(len(ns)):
     
     position = ll
@@ -156,7 +144,8 @@ for ll in range(len(ns)):
     S_image_tm[0] = S_image_recon[0]/S_bg_recon[0,:,:,:,np.newaxis] -1
     S_image_tm[1] = S_image_recon[1]/S_bg_recon[0,:,:,:,np.newaxis] - S_bg_recon[1,:,:,:,np.newaxis]*S_image_recon[0]/S_bg_recon[0,:,:,:,np.newaxis]**2
     S_image_tm[2] = S_image_recon[2]/S_bg_recon[0,:,:,:,np.newaxis] - S_bg_recon[2,:,:,:,np.newaxis]*S_image_recon[0]/S_bg_recon[0,:,:,:,np.newaxis]**2
-    
+
+        
     f_tensor = setup.scattering_potential_tensor_recon_3D_vec(S_image_tm, reg_inc=reg_inc, cupy_det=True)
     _, _, _, mat_map = setup.scattering_potential_tensor_to_3D_orientation(f_tensor, S_image_tm,
                                                                             material_type='unknown', verbose=False,
@@ -167,14 +156,13 @@ for ll in range(len(ns)):
     writer.write(uPTI_array, p=ll)
     print('Finish process at (y, x) = (%d, %d), elapsed time: %.2f'%(ns[ll], ms[ll], time.time()-t0))
 
+
+
 # ### Image stitching
 # save stitched results
-
 uPTI_file_name = 'uPTI_subFOVs.zarr'
-
 reader = WaveorderReader(os.path.join(output_path, uPTI_file_name), 'zarr')
 uPTI_file = zarr.open(os.path.join(output_path,uPTI_file_name), mode='a')
-
 coord_list = (np.array(uPTI_file.row_list), np.array(uPTI_file.column_list))
 overlap = (int(np.array(uPTI_file.overlap)),int(np.array(uPTI_file.overlap)))
 file_loading_func = lambda x: np.transpose(reader.get_array(x),(3,4,0,1,2))
@@ -195,11 +183,9 @@ writer.write(uPTI_array_stitched, p=position)
 
 # ### Data analysis with stitched images
 # load the stitched scattering potential tensor
-
 Nc = 1024
 Mc = 1224
 n_start = [0, 0]
-
 
 uPTI_file_name = 'uPTI_stitched.zarr'
 reader = WaveorderReader(os.path.join(output_path, uPTI_file_name), 'zarr')
@@ -208,6 +194,7 @@ f_tensor = uPTI_array_stitched[:7]
 mat_map = uPTI_array_stitched[7:]
 
 # compute the physical properties from the scattering potential tensor
+
 retardance_pr_p, azimuth_p, theta_p = wo.scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='positive', reg_ret_pr = reg_ret_pr)
 retardance_pr_n, azimuth_n, theta_n = wo.scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type='negative', reg_ret_pr = reg_ret_pr)
 retardance_pr = np.array([retardance_pr_p,retardance_pr_n])
@@ -230,7 +217,7 @@ phys_data_array = np.transpose(np.array([phase_PT, np.abs(retardance_pr_PT[0]), 
 data_shape_phys = phys_data_array.shape
 chunk_size_phys = (1,1,1)+phys_data_array.shape[3:]
 dtype = 'float32'
-writer.init_array(position, data_shape_phys, chunk_size_phys, chan_names_phys, dtype, position_name='Stitched_physical', overwrite=True)
+writer.init_array(position, data_shape_phys, chunk_size_phys, chan_names_phys, dtype,  position_name='Stitched_physical', overwrite=True)
 writer.write(phys_data_array, p=position)
 
 # Visualize the results
@@ -242,7 +229,7 @@ phase_max = 0.035
 abs_min = -0.01
 abs_max = 0.01
 ret_min = 0
-ret_max = 0.005
+ret_max = 0.003325
 p_min = 0.4
 p_max = 0.6
 
@@ -269,20 +256,21 @@ plt.show()
 # create color-coded orientation images
 
 ret_min_color = 0
-ret_max_color = 0.003325
+ret_max_color = 0.002328
 
 orientation_3D_image = np.transpose(np.array([azimuth[0]/2/np.pi, theta[0], (np.clip(np.abs(retardance_pr_PT[0]),ret_min_color,ret_max_color)-ret_min_color)/(ret_max_color-ret_min_color)]),(3,1,2,0))
 orientation_3D_image_RGB = wo.orientation_3D_to_rgb(orientation_3D_image, interp_belt = 20/180*np.pi, sat_factor = 1)
 
 plt.figure(figsize=(15,15))
 plt.imshow(orientation_3D_image_RGB[z_layer], origin='lower')
+plt.show()
 plt.figure(figsize=(15,15))
 plt.imshow(orientation_3D_image_RGB[:,y_layer], origin='lower',aspect=z_step/ps)
+plt.show()
 # plot the top view of 3D orientation colorsphere
 plt.figure(figsize=(3,3))
 wo.orientation_3D_colorwheel(wheelsize=256, circ_size=50, interp_belt=20/180*np.pi, sat_factor=1)
 plt.show()
-
 
 # ### Render 3D orientation with 2 channels (in-plane orientation and out-of-plane tilt)
 # in-plane orientation
@@ -295,15 +283,16 @@ in_plane_orientation = hsv_to_rgb(I_hsv.copy())
 
 plt.figure(figsize=(15,15))
 plt.imshow(in_plane_orientation[z_layer], origin='lower')
+plt.show()
 plt.figure(figsize=(15,15))
 plt.imshow(in_plane_orientation[:,y_layer], origin='lower',aspect=z_step/ps)
+plt.show()
 plt.figure(figsize=(3,3))
 wo.orientation_2D_colorwheel()
 plt.show()
 
 # out-of-plane tilt
 threshold_inc = np.pi/90
-
 I_hsv = np.transpose(np.array([(-np.maximum(0,np.abs(theta[0]-np.pi/2)-threshold_inc)+np.pi/2+threshold_inc)/np.pi,
                                np.ones_like(retardance_pr_PT[0]),
                                (np.clip(np.abs(retardance_pr_PT[0]),ret_min_color,ret_max_color)-ret_min_color)/(ret_max_color-ret_min_color)]), (3,1,2,0))
@@ -311,14 +300,14 @@ out_of_plane_tilt = hsv_to_rgb(I_hsv.copy())
 
 plt.figure(figsize=(15,15))
 plt.imshow(out_of_plane_tilt[z_layer], origin='lower')
+plt.show()
 plt.figure(figsize=(15,15))
 plt.imshow(out_of_plane_tilt[:,y_layer], origin='lower',aspect=z_step/ps)
 plt.show()
 
-
 # ## Sub-FOV analysis
 ### FOV 1
-idx_crop = [300,400]
+idx_crop = [550,450]
 num_crop = [200,200]
 
 z_crop = [0,40]
@@ -355,9 +344,13 @@ wo.orientation_3D_hist(az, th, val, bins=36, num_col=1, size=5, contour_level = 
 plt.show()
 
 # ## Load H&E data
+
+# In[53]:
+
+
 # Load the H&E data and background (for white balancing)
-HE_path     = '/gpfs/CompMicro/rawdata/falcon/LiHao/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/smooth_muscle_2/fluor/'
-HE_bg_path     = '/gpfs/CompMicro/rawdata/falcon/LiHao/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/smooth_muscle_1/fluor_bg/'
+HE_path     = '/gpfs/CompMicro/rawdata/falcon/LiHao/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/cardiac_muscle_1/fluor/'
+HE_bg_path     = '/gpfs/CompMicro/rawdata/falcon/LiHao/20210317_Falcon_3D_uPTI_realign_H_and_E_770nm/cardiac_muscle_1/fluor_bg/'
 files_HE = sorted(glob.glob(HE_path+ 'img*.tif'), key=wo.numericalSort)
 files_HE_bg = sorted(glob.glob(HE_bg_path+ 'img*.tif'), key=wo.numericalSort)
 N_channel_HE = 3
@@ -383,8 +376,10 @@ I_HE_norm[:,:,:,2] = np.clip(I_HE_norm[:,:,:,2]/0.93734105,0,1)
 
 plt.figure(figsize=(15,15))
 plt.imshow(I_HE_norm[z_layer], origin='lower')
+plt.show()
 plt.figure(figsize=(15,15))
 plt.imshow(I_HE_norm[:,y_layer], origin='lower', aspect=z_step/ps)
+plt.show()
 
 # save results to zarr array
 writer = WaveorderWriter(output_path, hcs=False, hcs_meta=None, verbose=True)
@@ -393,12 +388,11 @@ writer.create_zarr_root('H_and_E.zarr')
 position = 0
 chan_names_HE = ['Red', 'Green', 'Blue']
 HE_data_array = np.transpose(I_HE_norm,(3,0,1,2))[np.newaxis,...]
-data_shape_HE = phys_data_array.shape
+data_shape_HE = HE_data_array.shape
 chunk_size_HE = (1,1,1)+HE_data_array.shape[3:]
 dtype = 'float32'
 writer.init_array(position, data_shape_HE, chunk_size_HE, chan_names_HE, dtype, position_name='H_and_E', overwrite=True)
 writer.write(HE_data_array, p=position)
-
 
 
 
