@@ -138,12 +138,13 @@ class waveorder_microscopy:
     
     '''
     
-    waveorder_microscopy contains methods to compute weak object transfer function 
-    for label-free image reconstruction with various types of dataset:
+    waveorder_microscopy contains reconstruction algorithms for label-free 
+    microscopy with various types of dataset:
     
-    1) 2D/3D phase reconstruction with a single brightfield defocused stack (Transport of intensity, TIE)
+    1) 2D/3D phase reconstruction with a single brightfield defocused stack 
+       (Transport of intensity equation, TIE)
     
-    2) 2D/3D phase reconstruction with intensities of asymetric illumination 
+    2) 2D/3D phase reconstruction with intensities of asymmetric illumination 
        (differential phase contrast, DPC)
        
     3) 2D/3D joint phase and polarization (2D orientation) reconstruction 
@@ -151,6 +152,71 @@ class waveorder_microscopy:
        
     4) 2D/3D joint phase and polarization (uniaxial permittivity tensor) reconstruction
        with asymmetrically-illuminated polarization-sensitive intensities (uPTI)
+    
+    The structure of waveorder_microscopy class:
+    
+    waveorder_microscopy class is structured like an actual microscope setup shown below. 
+    In experiment, we need to make the following choices: 
+    1) the microscope objective (detection system), 
+    2) the microscope condenser (illumination system)
+    3) whether to take defocused stack or not
+    4) what polarization sensitive devices are in use
+    
+    In order for the waveorder_microscopy to model these choices properly, its constructor
+    takes relevant parameters to setup individual components of a virtual microscope in the following:
+       
+              /////////////////////         
+              /////////////////////              #####################################################
+              /////////////////////              # Illumination system setup:                        #
+              /////////////////////              #                                                   #
+ LCD   #################*,,,,,,,,*########       # illu_mode  ('BF', 'PH', 'Arbitrary')              # 
+                        //////////               # NA_illu    (if under 'BF')                        # 
+ RCP   ,,,,,,,,,,,,,,,,,**********,,,,,,,,       # NA_illu_in (the inner radius of the ring in 'PH') #
+                       ,///////////              # Source     (if under 'Arbitrary')                 #
+                       ,///////////      --------# Source_PolState (if under 'Arbitrary')            #
+            @@@&%#(/**//(##%%&&&@@@@@            #                                                   #
+            @@@&%#(/**//(##%%&&&@@@@@            #####################################################
+ condenser  @@@&%#(/**//(##%%&&&@@@@@      
+            @@@&%#(/**//(##%%&&&@@@@@            #####################################################
+             @@&%#(/**//(##%%&&&@@@@             # Defocus kernel initialization:                    #
+               @%#(/**//(##%%&&&@@               #                                                   #
+                        ///              --------# z_defocus (an array of z positions)               #        
+                        //              /        # pad_z     (z-padding to avoid periodic artifacts) #
+ sample @@@@@@@@@@@@@@@//@@@@@@@@@@@@@@/         #                                                   #
+                      ///                        #####################################################
+                    ////                         
+               @%#(/**//(##%%&&&@@               #######################################################
+             @@&%#(/**//(##%%&&&@@@@             # Detection system setup:                             #
+            @@@&%#(/**//(##%%&&&@@@@@            #                                                     #
+ objective  @@@&%#(/**//(##%%&&&@@@@@            # img_dim     (image dimension)                       #
+            @@@&%#(/**//(##%%&&&@@@@@    --------# lambda_illu (illumination wavelength)               #
+            @@@&%#(/**//(##%%&&&@@@@@            # ps          (effective pixel size, camera ps / mag) #
+               //////////,                       # NA_obj      (objective NA)                          #
+               //////////,                       # n_media     (refractive index of immersion media)   #
+               //////////...                     #                                                     #
+          .....,,,,,,,,,,.............           #######################################################
+     ...........,,,,,,,,,...................
+          .......,,,,,,,,.............      
+                   //////                        ###########################################################
+                    /////                        # Polarization detection (or illumination) setup:         #
+               *******///**********              #                                                         #
+               ********************      --------# chi (swing of the LC, assuming 5-state acquisition)     # 
+           ############################          # A_matrix (instrument matrix of the polarization system) #
+ camera    ############################          #                                                         #
+           ############################          ###########################################################
+           
+    After setting up the microscope parameters, the following transfer functions 
+    are computed if the flags are turned on:
+    
+    1) Phase transfer functions (phase_deconv: None, '2D' or '3D'):
+       enable deconvolution supported by Phase_recon and Phase_recon_3D
+       
+    2) Polarization transfer functions (bire_in_plane_deconv: None, '2D' or '3D'):
+       enable deconvolution supported by Birefringence_recon_2D and Birefringence_recon_3D
+
+    3) uPTI transfer functions (inc_recon: None, '2D-vec-WOTF' or '3D'):
+       enable deconvolution supported by scattering_potential_tensor_recon_2D_vec,
+       scattering_potential_tensor_to_3D_orientation and scattering_potential_tensor_recon_3D_vec
     
     Parameters
     ----------
@@ -162,9 +228,6 @@ class waveorder_microscopy:
         
         ps                   : float
                                xy pixel size of the image space
-                          
-        psz                  : float
-                               z step size of the image space
         
         NA_obj               : float
                                numerical aperture of the detection objective
