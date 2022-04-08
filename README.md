@@ -59,7 +59,7 @@ Type `recOrder.help` for instructions on the two command-line modes: `recOrder.r
 
 ### `recOrder.reconstruct`
 
-`recOrder.reconstruct` uses configuration files to select reconstruction parameters. Start with an example configuration file `/examples/example_configs/config_example.yml` and modify the parameters to match your dataset.
+`recOrder.reconstruct` uses configuration files to select reconstruction parameters. Start with an example configuration file `/examples/example_configs/config_example_qlipp.yml` and modify the parameters to match your dataset.
 
 Run the reconstruction with
 ```buildoutcfg
