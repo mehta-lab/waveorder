@@ -1,5 +1,5 @@
 # recOrder
-This package offers a comprehensive pipeline, command line interface, and napari plugins for quantitative label-free microscopy.
+This package offers a comprehensive pipeline, command line interface, and napari plugin for quantitative label-free microscopy.
 
 In this repo you will find python tools and UI that allow the user to calibrate microscope hardware, acquire multi-modal data, reconstruct density and anisotropy, and visualize the data.
 
@@ -7,140 +7,89 @@ The acquisition, calibration, background correction, reconstruction, and applica
 
 ``` Syuan-Ming Guo, Li-Hao Yeh, Jenny Folkesson, Ivan E Ivanov, Anitha P Krishnan, Matthew G Keefe, Ezzat Hashemi, David Shin, Bryant B Chhun, Nathan H Cho, Manuel D Leonetti, May H Han, Tomasz J Nowakowski, Shalin B Mehta, "Revealing architectural order with quantitative label-free imaging and deep learning," eLife 2020;9:e55502 DOI: 10.7554/eLife.55502 (2020).```
 
-
-
 recOrder is to be used alongside the QLIPP module, whose design has been optimized to fit on a conventional widefield microscope (Panel A below).  The QLIPP module allows for the collection of label-free information consisting of the intrinsic anisotropy of the sample and its relative phase (density).  All of these measurements are collected through compensated, polarization diverse illumination and quantitatively recovered through recOrder's computational reconstruction pipeline.  The overall structure of recOrder can be visualized below in Panel B, highlighting the two different usage modes and their features: graphical user interface (GUI) through napari and command line interfact (CLI).
 
 <p align="center">
-
 <img src="./docs/images/recOrder_Fig1_Overview.png" width=95% height=95%>
-
 </p>
 
 ## Dataset
 
-[Slides](https://doi.org/10.5281/zenodo.5135889) and [dataset](https://doi.org/10.5281/zenodo.5178487) shared during a workshop on QLIPP and recOrder can be found on Zenodo.
+[Slides](https://doi.org/10.5281/zenodo.5135889) and a [dataset](https://doi.org/10.5281/zenodo.5178487) shared during a workshop on QLIPP and recOrder can be found on Zenodo.
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5178487.svg)](https://doi.org/10.5281/zenodo.5178487)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5135889.svg)](https://doi.org/10.5281/zenodo.5135889)
 
-
-
 ## Installation
 
-### Create a new conda environment
-Install conda package management system by installing anaconda or miniconda ([link](https://conda.io/)). 
+Install [`git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and `conda` (either [anaconda](https://www.anaconda.com/products/distribution) or [miniconda](https://docs.conda.io/en/latest/miniconda.html)).
 
-1) Creating a conda environment dedicated to `recOrder` will avoid version conflicts among packages required by `recOrder` and packages required by other python software.
->```buildoutcfg
->conda create -n <your-environment-name> python=3.7
->conda activate <your-environment-name> (or source activate <your-environment-name>)
->```
+Create a conda environment dedicated to `recOrder`:
+```
+conda create -n recorder python=3.7
+conda activate recorder
+```
 
-2) Then, install jupyter notebook with
->```buildoutcfg
->conda install jupyter
->```
+Clone this repository:
+```buildoutcfg
+git clone https://github.com/mehta-lab/recOrder.git
+```
 
-### Install `recOrder` and required packages
-Install the git version control system git : [link](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
+Install recOrder and its dependencies:
+```buildoutcfg
+cd recOrder
+pip install -e .
+```
 
-1) Use git to clone this repository to your current directory:
->```buildoutcfg
->git clone https://github.com/mehta-lab/recOrder.git
->```
+**Optional `napari` plugin**: `recOrder` includes a `napari` plugin that can be used to acquire data via MicroManager. To install `napari` use
+```
+pip install 'napari[all]'
+```
+To run the `recOrder` plugin use
+```
+napari -w recOrder
+```
 
-2) Then, you can install dependencies via pip (python index package) <br>
+To acquire data via MicroManager, follow the [instructions on the wiki](https://github.com/mehta-lab/recOrder/wiki/recOrder-Installation-and-MicroManager-Setup-Guide).
 
->    If you are running recOrder on your own machine, <br>
->
->    a) navigate to the cloned repository:
->
->    ```buildoutcfg
->    cd recOrder
->    ```
->    <br>
->    b) install recOrder and dependencies:
->
->    ```buildoutcfg
->    pip install -e .
->    ```
->    <br>
+**Optional GPU**: `recOrder` supports NVIDIA GPU computation with the `cupy` package. Follow [these instructions](https://github.com/cupy/cupy) to install `cupy` and check its installation with ```import cupy```. To enable gpu processing, set ```use_gpu: True``` in the config files.
 
-*`recOrder` supports NVIDIA GPU computation through cupy package, please follow [here](https://github.com/cupy/cupy) for installation (check cupy is properly installed by ```import cupy```). To enable gpu processing, set ```use_gpu: True``` when writing the config file for reconstruction.*
+## Usage
+Type `recOrder.help` for instructions on the two command-line modes: `recOrder.reconstruct` and `recOrder.convert`.
 
-## Usage and example
+### `recOrder.reconstruct`
 
-recOrder currently has two different command-line usage modes: `recOrder.reconstruct` and `recOrder.convert` 
+`recOrder.reconstruct` uses configuration files to select reconstruction parameters. Start with an example configuration file `/examples/example_configs/config_example.yml` and modify the parameters to match your dataset.
 
-Please type `recOrder` in order to print the usage instructions
+Run the reconstruction with
+```buildoutcfg
+recOrder.reconstruct --config <path/to/config.yml>
+```
 
-
-
-### recOrder.reconstruct
-
-In the following, we demonstrate how to run `recOrder` for reconstruction. <br>
-
-1) In the terminal, switch to the environment with waveorder installed 
->  ```buildoutcfg
->  conda activate <your-environment-name>
->  ```
-
-2) Navigate to the repository folder:
->  ```buildoutcfg
->  cd recOrder/examples/example_configs
->  ```
-
-3) Open `config_example.yml` and modify the parameters to match your dataset:
-
-3) Run reconstruction with the path to your config file
->  ```buildoutcfg
->  recOrder.reconstruct --config <path/to/config>
->  ```
-
-5. certain command-line arguments can override parameters specified in the config.  See the list below and the following example:
+The following command-line arguments override parameters specified in the configuration file:
 
    ```
-   --method (str) method of reconstruction: QLIPP,IPS,UPTI')
-   --mode (str) mode of reconstruction: 2D, 3D')
-   --data_dir (str) path to raw data folder')
-   --save_dir (str) path to folder where reconstructed data will be saved')
-   --name (str) name under which to save the reconstructed data')
+   --method (str) method of reconstruction: QLIPP,IPS,UPTI'
+   --mode (str) mode of reconstruction: 2D, 3D'
+   --data_dir (str) path to raw data folder'
+   --save_dir (str) path to folder where reconstructed data will be saved'
+   --name (str) name under which to save the reconstructed data'
    --config (str) path to configuration file (see /examples/example_configs')
-   --overwrite (bool) True/False whether or not to overwrite data that exists under save_dir/name')
+   --overwrite (bool) True/False whether or not to overwrite data that exists under save_dir/name'
    ```
 
->  ```buildoutcfg
->  recOrder.reconstruct --config /path/to/config.yml --method QLIPP --data_dir /path/to/data_folder --save_dir /path/to/folder/to/save/data --name Test_Data --overwrite True
->  ```
-
-
-
-### recOrder.convert
-
-In the following, we demonstrate how to run `recOrder.convert` to convert micromanager .tif files to ome-zarr data format. <br>
-
-1) Run the converter
-
->  ```buildoutcfg
->  recOrder.convert --input /path/to/folder/with/micromanager/tifs --output /path/to/desired/output/<name>.zarr  --data_type ometiff
->  ```
-
-2. you can also specify a handful of other arguments to format your data more specifically:
-
-```
---input (str) path to folder containing micromanager tif files')
---ouput (str) full path to save the ome-zarr data, i.e. /path/to/Data.zarr')
---data_type (str) micromananger data-type: ometiff, singlepagetiff')
---replace_pos_names (bool) [default=False] whether to replace zarr position names with ones listed in micro-manager metadata')
---format_hcs (bool) [default=False] if tiled micromanager dataset, format in ome-zarr HCS format')
+For example, this command uses the `QLIPP` reconstruction method even if the configuration file specifies a different reconstruction method
+```buildoutcfg
+recOrder.reconstruct --config /path/to/config.yml --method QLIPP
 ```
 
->  ```buildoutcfg
->  recOrder.convert --input /path/to/folder/with/micromanager/tifs --output /path/to/desired/output/<name>.zarr  --data_type ometiff --replace_pos_names True --format_hcs True
->  ```
+### `recOrder.convert`
 
-## 
+`recOrder.convert` converts MicroManager `tif` files to `ome-zarr` files. For example
+
+```buildoutcfg
+recOrder.convert --input <path/to/mm/tifs> --output <path/to/output.zarr>  --data_type ometiff
+```
 
 ## License
 
@@ -179,4 +128,4 @@ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
 SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
