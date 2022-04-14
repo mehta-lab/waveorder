@@ -1,18 +1,18 @@
-name: recOrder
+name: recOrder-napari
 schema_version: 0.1.0
 contributions:
   commands:
-  - id: recOrder.MainWidget
+  - id: recOrder-napari.MainWidget
     title: Create Main Widget
     python_name: recOrder.plugin.widget.napari_plugin_entry_point:MainWidget
-  - id: recOrder.get_reader
+  - id: recOrder-napari.get_reader
     title: Read ome-zarr files
     python_name: recOrder.io._reader:napari_get_reader
   readers:
-  - command: recOrder.get_reader
+  - command: recOrder-napari.get_reader
     accepts_directories: true
     filename_patterns: ['*.zarr']
   widgets:
-  - command: recOrder.MainWidget
+  - command: recOrder-napari.MainWidget
     display_name: Main Menu
 
