@@ -283,12 +283,12 @@ class QLIPP_Calibration():
         self.I_Ext = I_ext
 
         logging.debug("fine search done")
-        logging.info("LCA State0 (Extinction) = " + str(lca))
-        logging.debug("LCA State0 (Extinction) = " + str(lca))
-        logging.info("LCB State0 (Extinction) = " + str(lcb))
-        logging.debug("LCB State0 (Extinction) = " + str(lcb))
-        logging.info("Intensity (Extinction) = " + str(I_ext))
-        logging.debug("Intensity (Extinction) = " + str(I_ext))
+        logging.info(f'LCA State0 (Extinction) = {lca:.3f}')
+        logging.debug(f'LCA State0 (Extinction) = {lca:.5f}')
+        logging.info(f'LCB State0 (Extinction) = {lcb:.3f}')
+        logging.debug(f'LCB State0 (Extinction) = {lcb:.5f}')
+        logging.info(f'Intensity (Extinction) = {I_ext:.0f}')
+        logging.debug(f'Intensity (Extinction) = {I_ext:.3f}')
 
         logging.debug("--------done--------")
         logging.info("--------done--------")
@@ -314,12 +314,12 @@ class QLIPP_Calibration():
         self.I_Elliptical = ref
         self.swing0 = np.sqrt((self.lcb_0 - self.lcb_ext) ** 2 + (self.lca_0 - self.lca_ext) ** 2)
 
-        logging.info("LCA State1 (I0) = " + str(self.lca_0))
-        logging.debug("LCA State1 (I0) = " + str(self.lca_0))
-        logging.info("LCB State1 (I0) = " + str(self.lcb_0))
-        logging.debug("LCB State1 (I0) = " + str(self.lcb_0))
-        logging.info(f'Intensity (I0) = {ref}')
-        logging.debug(f'Intensity (I0) = {ref}')
+        logging.info(f'LCA State1 (I0) = {self.lca_0:.3f}')
+        logging.debug(f'LCA State1 (I0) = {self.lca_0:.5f}')
+        logging.info(f'LCB State1 (I0) = {self.lcb_0:.3f}')
+        logging.debug(f'LCB State1 (I0) = {self.lcb_0:.5f}')
+        logging.info(f'Intensity (I0) = {ref:.0f}')
+        logging.debug(f'Intensity (I0) = {ref:.3f}')
         logging.info("--------done--------")
         logging.debug("--------done--------")
 
@@ -349,12 +349,12 @@ class QLIPP_Calibration():
 
         self.swing45 = np.sqrt((self.lcb_45 - self.lcb_ext) ** 2 + (self.lca_45 - self.lca_ext) ** 2)
 
-        logging.info("LCA State2 (I45) = " + str(self.lca_45))
-        logging.debug("LCA State2 (I45) = " + str(self.lca_45))
-        logging.info("LCB State2 (I45) = " + str(self.lcb_45))
-        logging.debug("LCB State2 (I45) = " + str(self.lcb_45))
-        logging.info(f'Intensity (I45) = {intensity}')
-        logging.debug(f'Intensity (I45) = {intensity}')
+        logging.info(f'LCA State2 (I45) = {self.lca_45:.3f}')
+        logging.debug(f'LCA State2 (I45) = {self.lca_45:.5f}')
+        logging.info(f'LCB State2 (I45) = {self.lcb_45:.3f}')
+        logging.debug(f'LCB State2 (I45) = {self.lcb_45:.5f}')
+        logging.info(f'Intensity (I45) = {intensity:.0f}')
+        logging.debug(f'Intensity (I45) = {intensity:.3f}')
         logging.info("--------done--------")
         logging.debug("--------done--------")
 
@@ -437,12 +437,12 @@ class QLIPP_Calibration():
 
         self.swing90 = np.sqrt((self.lcb_90 - self.lcb_ext) ** 2 + (self.lca_90 - self.lca_ext) ** 2)
 
-        logging.info("LCA State3 (I90) = " + str(self.lca_90))
-        logging.debug("LCA State3 (I90) = " + str(self.lca_90))
-        logging.info("LCB State3 (I90) = " + str(self.lcb_90))
-        logging.debug("LCB State3 (I90) = " + str(self.lcb_90))
-        logging.info(f'Intensity (I90) = {intensity}')
-        logging.debug(f'Intensity (I90) = {intensity}')
+        logging.info(f'LCA State3 (I90) = {self.lca_90:.3f}')
+        logging.debug(f'LCA State3 (I90) = {self.lca_90:.5f}')
+        logging.info(f'LCB State3 (I90) = {self.lcb_90:.3f}')
+        logging.debug(f'LCB State3 (I90) = {self.lcb_90:.5f}')
+        logging.info(f'Intensity (I90) = {intensity:.0f}')
+        logging.debug(f'Intensity (I90) = {intensity:.3f}')
         logging.info("--------done--------")
         logging.debug("--------done--------")
 
@@ -506,7 +506,9 @@ class QLIPP_Calibration():
         lca, lcb value at optimized state
         intensity value at optimized state
         """
-        print('Calibrating State4 (I135)...')
+
+        logging.info('Calibrating State3 (I135)...')
+        logging.debug('Calibrating State3 (I135)...')
         self.inten = []
 
         self.set_lc(self.lca_ext, 'LCA')
@@ -520,12 +522,12 @@ class QLIPP_Calibration():
 
         self.swing135 = np.sqrt((self.lcb_135 - self.lcb_ext) ** 2 + (self.lca_135 - self.lca_ext) ** 2)
 
-        logging.info("LCA State4 (I135) = " + str(self.lca_135))
-        logging.debug("LCA State4 (I135) = " + str(self.lca_135))
-        logging.info("LCB State4 (I135) = " + str(self.lcb_135))
-        logging.debug("LCB State4 (I135) = " + str(self.lcb_135))
-        logging.info(f'Intensity (I135) = {intensity}')
-        logging.debug(f'Intensity (I135) = {intensity}')
+        logging.info(f'LCA State4 (I135) = {self.lca_135:.3f}')
+        logging.debug(f'LCA State4 (I135) = {self.lca_135:.5f}')
+        logging.info(f'LCB State4 (I135) = {self.lcb_135:.3f}')
+        logging.debug(f'LCB State4 (I135) = {self.lcb_135:.5f}')
+        logging.info(f'Intensity (I135) = {intensity:.0f}')
+        logging.debug(f'Intensity (I135) = {intensity:.3f}')
         logging.info("--------done--------")
         logging.debug("--------done--------")
 
