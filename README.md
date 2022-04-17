@@ -9,9 +9,7 @@ The acquisition, calibration, background correction, reconstruction, and applica
 
 recOrder is to be used alongside the QLIPP module, whose design has been optimized to fit on a conventional widefield microscope (Panel A below).  The QLIPP module allows for the collection of label-free information consisting of the intrinsic anisotropy of the sample and its relative phase (density).  All of these measurements are collected through compensated, polarization diverse illumination and quantitatively recovered through recOrder's computational reconstruction pipeline.  The overall structure of recOrder can be visualized below in Panel B, highlighting the two different usage modes and their features: graphical user interface (GUI) through napari and command line interfact (CLI).
 
-<p align="center">
-<img src="./docs/images/recOrder_Fig1_Overview.png" width=95% height=95%>
-</p>
+![Flow Chart](https://github.com/mehta-lab/recOrder/blob/main/docs/images/recOrder_Fig1_Overview.png?raw=true)
 
 ## Dataset
 
@@ -47,7 +45,7 @@ pip install 'napari[all]'
 ```
 To run the `recOrder` plugin use
 ```
-napari -w recOrder
+napari -w recOrder-napari
 ```
 
 To acquire data via MicroManager, follow the [instructions on the wiki](https://github.com/mehta-lab/recOrder/wiki/recOrder-Installation-and-MicroManager-Setup-Guide).
