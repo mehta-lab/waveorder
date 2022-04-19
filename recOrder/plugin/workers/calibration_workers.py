@@ -69,11 +69,11 @@ class CalibrationWorker(WorkerBase):
         self._check_abort()
 
         # Calculate Blacklevel
-        logging.info('Calculating Blacklevel ...')
-        logging.debug('Calculating Blacklevel ...')
+        logging.info('Calculating Black Level ...')
+        logging.debug('Calculating Black Level ...')
         self.calib.calc_blacklevel()
-        logging.info(f'Blacklevel: {self.calib.I_Black}\n')
-        logging.debug(f'Blacklevel: {self.calib.I_Black}\n')
+        logging.info(f'Black Level: {self.calib.I_Black:.0f}\n')
+        logging.debug(f'Black Level: {self.calib.I_Black:.0f}\n')
 
         self._check_abort()
         self.progress_update.emit((10, 'Calibrating Extinction State...'))
@@ -126,9 +126,9 @@ class CalibrationWorker(WorkerBase):
         self._check_abort()
 
         logging.info("\n=======Finished Calibration=======\n")
-        logging.info(f"EXTINCTION = {extinction_ratio}")
+        logging.info(f"EXTINCTION = {extinction_ratio:.2f}")
         logging.debug("\n=======Finished Calibration=======\n")
-        logging.debug(f"EXTINCTION = {extinction_ratio}")
+        logging.debug(f"EXTINCTION = {extinction_ratio:.2f}")
 
     def _check_abort(self):
         """
