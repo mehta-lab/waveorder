@@ -1,4 +1,5 @@
 name: recOrder-napari
+display_name: recOrder-napari
 contributions:
   commands:
   - id: recOrder-napari.MainWidget
