@@ -1510,22 +1510,31 @@ class MainWidget(QWidget):
             bridge = Bridge(convert_camel_case=False)
             self.mmc = bridge.get_core()
             self.mm = bridge.get_studio()
+
+            # set calibration channel group
+            calib_channels = ['State0', 'State1', 'State2', 'State3', 'State4']
             self.ui.cb_config_group.clear()
             groups = self.mmc.getAvailableConfigGroups()
-            group_list = []
+            config_group_found = False
             for i in range(groups.size()):
-                group_list.append(groups.get(i))
-            self.ui.cb_config_group.addItems(group_list)
+                group = groups.get(i)
+                configs = self.mmc.getAvailableConfigs(group)
+                config_list = []
+                for j in range(configs.size()):
+                    config_list.append(configs.get(j))
+                if np.all([ch in config_list for ch in calib_channels]):
+                    config_group_found = True
+                    self.config_group = group
+                    self.ui.cb_config_group.addItem(group)
+                for ch in config_list:
+                    if ch not in calib_channels:
+                        self.ui.cb_acq_channel.addItem(ch)
+            if not config_group_found:
+                msg = f'No config group contains channels {calib_channels}. ' \
+                      'Please refer to the recOrder wiki on how to set up the config properly.'
+                self.ui.cb_config_group.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                raise KeyError(msg)
             self.mm_status_changed.emit(True)
-
-            avoid = ['State0', 'State1', 'State2', 'State3', 'State4']
-            for group in group_list:
-                config = self.mmc.getAvailableConfigs(group)
-                for i in range(config.size()):
-                    chan = config.get(i)
-                    if chan not in avoid:
-                        self.ui.cb_acq_channel.addItem(chan)
-
         except:
             self.mm_status_changed.emit(False)
 
@@ -1816,7 +1825,7 @@ class MainWidget(QWidget):
             self.ui.label_lca.show()
             self.ui.label_lcb.show()
 
-            cfg = self.mmc.getConfigData('Channel', 'State0')
+            cfg = self.mmc.getConfigData(self.config_group, 'State0')
 
             # Update the DAC combo boxes with available DAC's from the config.  Necessary for the user
             # to specify which DAC output corresponds to which LC for voltage-space calibration
@@ -1831,6 +1840,8 @@ class MainWidget(QWidget):
                         memory.add(dac)
                     else:
                         continue
+            self.ui.cb_lca.setCurrentIndex(0)
+            self.ui.cb_lcb.setCurrentIndex(1)
 
     @pyqtSlot()
     def enter_dac_lca(self):
@@ -2332,7 +2343,7 @@ class MainWidget(QWidget):
         Calibration is then executed by the calibration worker
         """
 
-        self.calib = QLIPP_Calibration(self.mmc, self.mm, mode=self.calib_mode)
+        self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, mode=self.calib_mode)
 
         if self.calib_mode == 'voltage':
             self.calib.set_dacs(self.lca_dac, self.lcb_dac)
