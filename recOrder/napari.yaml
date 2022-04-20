@@ -1,5 +1,4 @@
 name: recOrder-napari
-schema_version: 0.1.0
 contributions:
   commands:
   - id: recOrder-napari.MainWidget
