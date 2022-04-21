@@ -49,8 +49,9 @@ class QLIPP_Calibration():
         self.LC_DAC_conversion = 4  # convert between the input range of LCs (0-20V) and the output range of the DAC (0-5V)
 
         # Initialize calibration class
+        interp_method = 'schnoor_fit'  # 'linear'
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.calib = CalibrationData(os.path.join(dir_path, './calibration_data.csv')) if self.mode != 'MM-Retardance' else None
+        self.calib = CalibrationData(os.path.join(dir_path, './calibration_data.csv'), interp_method=interp_method)
 
         # Optimizer
         if optimization == 'min_scalar':
@@ -108,9 +109,7 @@ class QLIPP_Calibration():
 
     def set_wavelength(self, wavelength):
         self.wavelength = wavelength
-
-        if self.mode == 'DAC':
-            self.calib.set_wavelength(wavelength)
+        self.calib.set_wavelength(wavelength)
 
     def set_lc(self, val, device_property):
         """
@@ -962,6 +961,8 @@ class CalibrationData:
         calib_wavelengths = np.array([i[:3] for i in header[1::3]]).astype('double')
 
         self.wavelength = None
+        self.V_min = 0
+        self.V_max = 20
         self.set_wavelength(wavelength)
 
         if interp_method == 'linear':
@@ -972,6 +973,9 @@ class CalibrationData:
             self.fit_params = self.fit_data(raw_data, calib_wavelengths)
         else:
             raise ValueError('Unknown interpolation method.')
+
+        self.ret_min = self.get_retardance(self.V_max)
+        self.ret_max = self.get_retardance(self.V_min)
 
     @staticmethod
     def read_data(path):
@@ -1057,6 +1061,7 @@ class CalibrationData:
         return res.flatten()
 
     def set_wavelength(self, wavelength):
+        # TODO: this needed still?
         self.wavelength = wavelength
 
         # Interpolation of calib beyond this range produce strange results.
@@ -1175,14 +1180,19 @@ class CalibrationData:
         voltage = None
         ret_nanometers = retardance*self.wavelength
 
-        if self.interp_method == 'linear':
-            if ret_nanometers.ndim > 0:
-                ret_nanometers = ret_nanometers[:,np.newaxis]
-                voltage = np.abs(self.curve - ret_nanometers).argmin(axis=1) / 1000
-            else:
-                voltage = np.abs(self.curve - ret_nanometers).argmin() / 1000
-        elif self.interp_method == 'schnoor_fit':
-            voltage = self.schnoor_fit_inv(ret_nanometers, *self.fit_params, self.wavelength)
+        if retardance < self.ret_min:
+            voltage = self.V_max
+        elif retardance > self.ret_max:
+            voltage = self.V_min
+        else:
+            if self.interp_method == 'linear':
+                if ret_nanometers.ndim > 0:
+                    ret_nanometers = ret_nanometers[:,np.newaxis]
+                    voltage = np.abs(self.curve - ret_nanometers).argmin(axis=1) / 1000
+                else:
+                    voltage = np.abs(self.curve - ret_nanometers).argmin() / 1000
+            elif self.interp_method == 'schnoor_fit':
+                voltage = self.schnoor_fit_inv(ret_nanometers, *self.fit_params, self.wavelength)
 
         return voltage
 
@@ -1196,17 +1206,23 @@ class CalibrationData:
 
         Returns
         -------
-        retardance
+        retardance : float
             retardance in waves
 
         """
 
         volts = np.asarray(volts, dtype='double')
         ret_nanometers = None
-        if self.interp_method == 'linear':
-            ret_nanometers = self.voltage_to_retardance(volts*1000)
-        elif self.interp_method == 'schnoor_fit':
-            ret_nanometers = self.schnoor_fit(volts, *self.fit_params, self.wavelength)
-        retardance = ret_nanometers / self.wavelength
+
+        if volts < self.V_min:
+            retardance = self.ret_max
+        elif volts > self.V_max:
+            retardance = self.ret_min
+        else:
+            if self.interp_method == 'linear':
+                ret_nanometers = self.voltage_to_retardance(volts*1000)
+            elif self.interp_method == 'schnoor_fit':
+                ret_nanometers = self.schnoor_fit(volts, *self.fit_params, self.wavelength)
+            retardance = ret_nanometers / self.wavelength
 
         return retardance

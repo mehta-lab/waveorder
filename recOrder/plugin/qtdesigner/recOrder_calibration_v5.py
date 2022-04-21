@@ -283,6 +283,7 @@ class Ui_Form(object):
         self.cb_calib_mode.setObjectName("cb_calib_mode")
         self.cb_calib_mode.addItem("")
         self.cb_calib_mode.addItem("")
+        self.cb_calib_mode.addItem("")
         self.gridLayout_2.addWidget(self.cb_calib_mode, 5, 2, 1, 1)
         self.label_cfg_group = QtWidgets.QLabel(self.calib_params)
         font = QtGui.QFont()
