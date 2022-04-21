@@ -53,7 +53,7 @@ class QLIPP_Calibration():
         self.LC_DAC_conversion = 4  # convert between the input range of LCs (0-20V) and the output range of the DAC (0-5V)
 
         # Initialize calibration class
-        interp_method = 'schnoor_fit'  # 'linear'
+        interp_method = 'schnoor_fit'  # or 'linear'
         dir_path = os.path.dirname(os.path.realpath(__file__))
         self.calib = CalibrationData(os.path.join(dir_path, './calibration_data.csv'), interp_method=interp_method)
 
