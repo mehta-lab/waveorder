@@ -80,7 +80,7 @@ class CalibrationWorker(WorkerBase):
 
         # Set LC Wavelength:
         self.calib.set_wavelength(int(self.calib_window.wavelength))
-        if self.calib_window.calib_mode == 'retardance':
+        if self.calib_window.calib_mode == 'MM-Retardance':
             self.calib_window.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.calib_window.wavelength)
 
         self._check_abort()

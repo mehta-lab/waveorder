@@ -18,7 +18,7 @@ from datetime import datetime
 
 class QLIPP_Calibration():
 
-    def __init__(self, mmc, mm, group='Channel', optimization='min_scalar', mode='retardance', print_details=True):
+    def __init__(self, mmc, mm, group='Channel', optimization='min_scalar', mode='MM-Retardance', print_details=True):
 
         # Micromanager API
         self.mm = mm
@@ -43,10 +43,14 @@ class QLIPP_Calibration():
         self.plot_sequence_emitter = MockEmitter()
 
         #Set Mode
+        allowed_modes = ['MM-Retardance', 'MM-Voltage', 'DAC']
+        assert mode in allowed_modes, f'LC control mode must be one of {allowed_modes}'
         self.mode = mode
         self.LC_DAC_conversion = 4  # convert between the input range of LCs (0-20V) and the output range of the DAC (0-5V)
+
+        # Initialize calibration class
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.curves = CalibrationData(os.path.join(dir_path, './calibration_data.csv')) if self.mode != 'retardance' else None
+        self.calib = CalibrationData(os.path.join(dir_path, './calibration_data.csv')) if self.mode != 'MM-Retardance' else None
 
         # Optimizer
         if optimization == 'min_scalar':
@@ -105,8 +109,8 @@ class QLIPP_Calibration():
     def set_wavelength(self, wavelength):
         self.wavelength = wavelength
 
-        if self.mode == 'voltage':
-            self.curves.set_wavelength(wavelength)
+        if self.mode == 'DAC':
+            self.calib.set_wavelength(wavelength)
 
     def set_lc(self, val, device_property):
         """
@@ -122,10 +126,10 @@ class QLIPP_Calibration():
 
         """
 
-        if self.mode == 'retardance':
+        if self.mode == 'MM-Retardance':
             set_lc_waves(self.mmc, val, self.PROPERTIES[device_property])
-        else:
-            volts = self.curves.get_voltage(val)
+        elif self.mode == 'DAC':
+            volts = self.calib.get_voltage(val)
             dac_volts = volts / self.LC_DAC_conversion
             set_lc_volts(self.mmc, dac_volts, self.PROPERTIES[f'{device_property}-DAC'])
 
@@ -141,20 +145,20 @@ class QLIPP_Calibration():
             LC retardance in waves or voltage in volts, depending on the control mode
         """
 
-        if self.mode == 'retardance':
+        if self.mode == 'MM-Retardance':
             return get_lc_waves(self.mmc, self.PROPERTIES[device_property])
-        else:
+        elif self.mode == 'DAC':
             dac_volts = get_lc_volts(self.mmc, self.PROPERTIES[f'{device_property}-DAC'])
             volts = dac_volts * self.LC_DAC_conversion
-            return self.curves.get_retardance(volts)
+            return self.calib.get_retardance(volts)
 
     def define_lc_state(self, state, lca, lcb):
 
-        if self.mode == 'retardance':
+        if self.mode == 'MM-Retardance':
             define_lc_state(self.mmc, state, lca, lcb, self.PROPERTIES)
-        else:
-            lca_volts = self.curves.get_voltage(lca) / 4000
-            lcb_volts = self.curves.get_voltage(lcb) / 4000
+        elif self.mode == 'DAC':
+            lca_volts = self.calib.get_voltage(lca) / self.LC_DAC_conversion
+            lcb_volts = self.calib.get_voltage(lcb) / self.LC_DAC_conversion
             define_lc_state_volts(self.mmc, self.group, state, lca_volts, lcb_volts, self.PROPERTIES)
 
     def opt_lc(self, x, device_property, reference, normalize=False):
@@ -670,7 +674,7 @@ class QLIPP_Calibration():
         logging.debug(f'Blacklevel: {self.I_Black}\n')
 
         # Set LC Wavelength:
-        if self.mode == 'retardance':
+        if self.mode == 'MM-Retardance':
             self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
 
         self.opt_Iext()
@@ -729,7 +733,7 @@ class QLIPP_Calibration():
         print(f'Blacklevel: {self.I_Black}\n')
 
         # Set LC Wavelength:
-        if self.mode == 'retardance':
+        if self.mode == 'MM-Retardance':
             self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
 
         self.opt_Iext()
@@ -1055,7 +1059,7 @@ class CalibrationData:
     def set_wavelength(self, wavelength):
         self.wavelength = wavelength
 
-        # Interpolation of curves beyond this range produce strange results.
+        # Interpolation of calib beyond this range produce strange results.
         if self.wavelength < 450:
             self.wavelength = 450
         if self.wavelength > 720:
@@ -1080,7 +1084,7 @@ class CalibrationData:
         # 0V to 20V step size 1 mV
         self.x_range = np.arange(0, np.max(raw_data[:, ::3]), 1)
 
-        # interpolate curves - only LCA data is used
+        # interpolate calib - only LCA data is used
         self.spline490 = interp1d(raw_data[:, 0], raw_data[:, 1])
         self.spline546 = interp1d(raw_data[:, 3], raw_data[:, 4])
         self.spline630 = interp1d(raw_data[:, 5], raw_data[:, 7])

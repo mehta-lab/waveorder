@@ -154,7 +154,7 @@ class MainWidget(QWidget):
         self.swing = 0.1
         self.wavelength = 532
         self.calib_scheme = '4-State'
-        self.calib_mode = 'retardance'
+        self.calib_mode = 'MM-Retardance'
         self.config_group = 'Channel'
         self.last_calib_meta_file = None
         self.use_cropped_roi = False
@@ -1811,13 +1811,13 @@ class MainWidget(QWidget):
     def enter_calib_mode(self):
         index = self.ui.cb_calib_mode.currentIndex()
         if index == 0:
-            self.calib_mode = 'retardance'
+            self.calib_mode = 'MM-Retardance'
             self.ui.label_lca.hide()
             self.ui.label_lcb.hide()
             self.ui.cb_lca.hide()
             self.ui.cb_lcb.hide()
-        else:
-            self.calib_mode = 'voltage'
+        elif index == 2:
+            self.calib_mode = 'DAC'
             self.ui.cb_lca.clear()
             self.ui.cb_lcb.clear()
             self.ui.cb_lca.show()
@@ -2345,7 +2345,7 @@ class MainWidget(QWidget):
 
         self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, mode=self.calib_mode)
 
-        if self.calib_mode == 'voltage':
+        if self.calib_mode == 'DAC':
             self.calib.set_dacs(self.lca_dac, self.lcb_dac)
 
         # Reset Styling
