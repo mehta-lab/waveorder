@@ -8,10 +8,12 @@ from recOrder.io.core_functions import define_lc_state, snap_image, set_lc_waves
 from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from scipy.interpolate import interp1d
+from scipy.stats import linregress
 from scipy.optimize import least_squares
 import json
 import os
 import logging
+import warnings
 from recOrder.io.utils import MockEmitter
 from datetime import datetime
 
@@ -960,22 +962,22 @@ class CalibrationData:
         """
 
         header, raw_data = self.read_data(path)
-        calib_wavelengths = np.array([i[:3] for i in header[1::3]]).astype('double')
+        self.calib_wavelengths = np.array([i[:3] for i in header[1::3]]).astype('double')
 
         self.wavelength = None
         self.V_min = 0
         self.V_max = 20
-        self.set_wavelength(wavelength)
 
         if interp_method == 'linear':
             self.interp_method = interp_method
-            self.interpolate_data(raw_data, calib_wavelengths)
+            self.interpolate_data(raw_data, self.calib_wavelengths)
         elif interp_method == 'schnoor_fit':
             self.interp_method = interp_method
-            self.fit_params = self.fit_data(raw_data, calib_wavelengths)
+            self.fit_params = self.fit_data(raw_data, self.calib_wavelengths)
         else:
             raise ValueError('Unknown interpolation method.')
 
+        self.set_wavelength(wavelength)
         self.ret_min = self.get_retardance(self.V_max)
         self.ret_max = self.get_retardance(self.V_min)
 
@@ -1063,20 +1065,26 @@ class CalibrationData:
         return res.flatten()
 
     def set_wavelength(self, wavelength):
-        # TODO: this needed still?
-        self.wavelength = wavelength
+        if len(self.calib_wavelengths) == 1 and wavelength != self.calib_wavelengths:
+            raise ValueError("Calibration is not provided at this wavelength. "
+                             "Wavelength dependence of LC retardance vs voltage cannot be extrapolated.")
 
-        # Interpolation of calib beyond this range produce strange results.
-        if self.wavelength < 450:
-            self.wavelength = 450
-        if self.wavelength > 720:
-            self.wavelength = 720
+        if wavelength < self.calib_wavelengths.min() or \
+                wavelength > self.calib_wavelengths.max():
+            warnings.warn("Specified wavelength is outside of the calibration range. "
+                          "LC retardance vs voltage data will be extrapolated at this wavelength.")
+
+        self.wavelength = wavelength
+        if self.interp_method == 'linear':
+            # Interpolation of calib beyond this range produce strange results.
+            if self.wavelength < 450:
+                self.wavelength = 450
+                warnings.warn("Wavelength is limited to 450-720 nm for this interpolation method.")
+            if self.wavelength > 720:
+                self.wavelength = 720
+                warnings.warn("Wavelength is limited to 450-720 nm for this interpolation method.")
 
     def fit_data(self, raw_data, calib_wavelengths):
-        # TODO: add checks that the fit has worked properly
-        # TODO: check that the fit works when only a single wavelength is provided
-        # TODO: implement boundaries on wavelength extrapolation based on wavelengths used in calibration data
-
         xdata = raw_data[:, 0::3] / 1000    # convert to volts
         ydata = raw_data[:, 1::3]           # in nanometers
 
@@ -1084,6 +1092,16 @@ class CalibrationData:
         p = least_squares(self._fun, x0, method='trf', args=(calib_wavelengths, xdata, ydata),
                           bounds=((-np.inf, 0, 0, 0, 0, 0), (np.inf,)*6),
                           x_scale=[10, 1000, 1e7, 1, 10, 0.1])
+
+        if not p.success:
+            raise RuntimeError("Schnoor fit to calibration data did not work.")
+
+        y = ydata.flatten()
+        y_hat = y - p.fun
+        slope, intercept, r_value, *_ = linregress(y, y_hat)
+        r_squared = r_value**2
+        if r_squared < 0.999:
+            warnings.warn(f'Schnoor fit has R2 value of {r_squared:.5f}, fit may not have worked well.')
 
         return p.x
 
@@ -1168,7 +1186,7 @@ class CalibrationData:
 
         Parameters
         ----------
-        retardance : float, list, or ndarray
+        retardance : float
             retardance in waves
 
         Returns
@@ -1188,11 +1206,7 @@ class CalibrationData:
             voltage = self.V_min
         else:
             if self.interp_method == 'linear':
-                if ret_nanometers.ndim > 0:
-                    ret_nanometers = ret_nanometers[:,np.newaxis]
-                    voltage = np.abs(self.curve - ret_nanometers).argmin(axis=1) / 1000
-                else:
-                    voltage = np.abs(self.curve - ret_nanometers).argmin() / 1000
+                voltage = np.abs(self.curve - ret_nanometers).argmin() / 1000
             elif self.interp_method == 'schnoor_fit':
                 voltage = self.schnoor_fit_inv(ret_nanometers, *self.fit_params, self.wavelength)
 
@@ -1203,7 +1217,7 @@ class CalibrationData:
 
         Parameters
         ----------
-        volts : float, list, or ndarray
+        volts : float
             voltage in volts
 
         Returns
