@@ -1124,8 +1124,8 @@ class CalibrationData:
 
             temp_curve = np.asarray([[i, 2 * new_a1_y[i] - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i])]
                           for i in range(len(new_a1_y))])
-            self.voltage_to_retardance = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.voltage_to_retardance(self.x_range)
+            self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
+            self.curve = self.spline(self.x_range)
 
         elif self.wavelength > 630:
 
@@ -1138,8 +1138,8 @@ class CalibrationData:
 
             temp_curve = np.asarray([[i, 2 * new_a1_y[i] - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i])]
                                      for i in range(len(new_a1_y))])
-            self.voltage_to_retardance = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.voltage_to_retardance(self.x_range)
+            self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
+            self.curve = self.spline(self.x_range)
 
 
         elif 490 < self.wavelength < 546:
@@ -1151,8 +1151,8 @@ class CalibrationData:
             fact2 = np.abs(546 - self.wavelength) / (546 - 490)
 
             temp_curve = np.asarray([[i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]] for i in range(len(new_a1_y))])
-            self.voltage_to_retardance = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.voltage_to_retardance(self.x_range)
+            self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
+            self.curve = self.spline(self.x_range)
 
         elif 546 < self.wavelength < 630:
 
@@ -1163,20 +1163,20 @@ class CalibrationData:
             fact2 = np.abs(630 - self.wavelength) / (630 - 546)
 
             temp_curve = np.asarray([[i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]] for i in range(len(new_a1_y))])
-            self.voltage_to_retardance = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.voltage_to_retardance(self.x_range)
+            self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
+            self.curve = self.spline(self.x_range)
 
         elif self.wavelength == 490:
             self.curve = self.spline490(self.x_range)
-            self.voltage_to_retardance = self.spline490
+            self.spline = self.spline490
 
         elif self.wavelength == 546:
             self.curve = self.spline546(self.x_range)
-            self.voltage_to_retardance = self.spline546
+            self.spline = self.spline546
 
         elif self.wavelength == 630:
             self.curve = self.spline630(self.x_range)
-            self.voltage_to_retardance = self.spline630
+            self.spline = self.spline630
 
         else:
             raise ValueError(f'Wavelength {self.wavelength} not understood')
@@ -1236,7 +1236,7 @@ class CalibrationData:
             retardance = self.ret_min
         else:
             if self.interp_method == 'linear':
-                ret_nanometers = self.voltage_to_retardance(volts*1000)
+                ret_nanometers = self.spline(volts * 1000)
             elif self.interp_method == 'schnoor_fit':
                 ret_nanometers = self.schnoor_fit(volts, *self.fit_params, self.wavelength)
             retardance = ret_nanometers / self.wavelength
