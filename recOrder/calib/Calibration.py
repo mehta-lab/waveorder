@@ -27,15 +27,17 @@ class QLIPP_Calibration():
 
         # Meadowlark LC Device Adapter Property Names
         self.PROPERTIES = {'LCA': 'Retardance LC-A [in waves]',
-                          'LCB': 'Retardance LC-B [in waves]',
-                          'State0': 'Pal. elem. 00; enter 0 to define; 1 to activate',
-                          'State1': 'Pal. elem. 01; enter 0 to define; 1 to activate',
-                          'State2': 'Pal. elem. 02; enter 0 to define; 1 to activate',
-                          'State3': 'Pal. elem. 03; enter 0 to define; 1 to activate',
-                          'State4': 'Pal. elem. 04; enter 0 to define; 1 to activate',
-                          'LCA-DAC': 'TS_DAC01',
-                          'LCB-DAC': 'TS_DAC02'
-                          }
+                           'LCB': 'Retardance LC-B [in waves]',
+                           'LCA-Voltage': 'Voltage (mV) LC-A',
+                           'LCB-Voltage': 'Voltage (mV) LC-B',
+                           'LCA-DAC': 'TS_DAC01',
+                           'LCB-DAC': 'TS_DAC02',
+                           'State0': 'Pal. elem. 00; enter 0 to define; 1 to activate',
+                           'State1': 'Pal. elem. 01; enter 0 to define; 1 to activate',
+                           'State2': 'Pal. elem. 02; enter 0 to define; 1 to activate',
+                           'State3': 'Pal. elem. 03; enter 0 to define; 1 to activate',
+                           'State4': 'Pal. elem. 04; enter 0 to define; 1 to activate'
+                           }
         self.group = group
 
         # GUI Emitter
