@@ -143,3 +143,4 @@ dmypy.json
 # written by setuptools_scm
 */_version.py
 recOrder/_version.py
+*.autosave
