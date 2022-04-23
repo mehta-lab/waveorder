@@ -1131,7 +1131,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
             else:
                 writer.init_array(0, (1, 4, birefringence.shape[-3], birefringence.shape[-2], birefringence.shape[-1]),
                                   chunk_size, ['Retardance', 'Orientation', 'BF', 'Pol'])
-                z = slice(0, birefringence.shape[-3])
+                z = [0, birefringence.shape[-3]]
 
             # Write the data to disk
             writer.write(birefringence, p=0, t=0, c=slice(0, 4), z=z)
@@ -1160,7 +1160,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
             # Check if 3D
             else:
                 writer.init_array(0, (1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase3D'])
-                z = slice(0, phase.shape[-3])
+                z = [0, phase.shape[-3]]
 
             # Write data to disk
             writer.write(phase, p=0, t=0, c=0, z=z)
