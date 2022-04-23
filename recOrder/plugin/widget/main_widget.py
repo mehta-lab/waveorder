@@ -54,6 +54,7 @@ class MainWidget(QWidget):
         # Calibration Tab
         self.ui.qbutton_browse.clicked[bool].connect(self.browse_dir_path)
         self.ui.le_directory.editingFinished.connect(self.enter_dir_path)
+        self.ui.le_directory.setText(str(Path.cwd()))
         self.ui.le_swing.editingFinished.connect(self.enter_swing)
         self.ui.le_wavelength.editingFinished.connect(self.enter_wavelength)
         self.ui.cb_calib_scheme.currentIndexChanged[int].connect(self.enter_calib_scheme)
@@ -145,10 +146,10 @@ class MainWidget(QWidget):
         self.mm = None
         self.mmc = None
         self.calib = None
-        self.current_dir_path = str(Path.home())
-        self.current_save_path = str(Path.home())
-        self.current_bg_path = str(Path.home())
-        self.directory = None
+        self.current_dir_path = str(Path.cwd())
+        self.current_save_path = str(Path.cwd())
+        self.current_bg_path = str(Path.cwd())
+        self.directory = str(Path.cwd())
 
         # Reconstruction / Calibration Parameter Defaults
         self.swing = 0.1
@@ -161,7 +162,7 @@ class MainWidget(QWidget):
         self.bg_folder_name = 'BG'
         self.n_avg = 5
         self.intensity_monitor = []
-        self.save_directory = None
+        self.save_directory = str(Path.cwd())
         self.save_name = None
         self.bg_option = 'None'
         self.birefringence_dim = '2D'
@@ -186,10 +187,10 @@ class MainWidget(QWidget):
         self.pause_updates = False
         self.method = 'QLIPP'
         self.mode = '3D'
-        self.calib_path = str(Path.home())
-        self.data_dir = str(Path.home())
-        self.config_path = str(Path.home())
-        self.save_config_path = str(Path.home())
+        self.calib_path = str(Path.cwd())
+        self.data_dir = str(Path.cwd())
+        self.config_path = str(Path.cwd())
+        self.save_config_path = str(Path.cwd())
         self.colormap = 'HSV'
         self.use_full_volume = False
         self.display_slice = 0
