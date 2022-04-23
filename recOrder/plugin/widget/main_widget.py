@@ -80,6 +80,7 @@ class MainWidget(QWidget):
         self.ui.qbutton_gui_mode.clicked[bool].connect(self.change_gui_mode)
         self.ui.qbutton_browse_save_dir.clicked[bool].connect(self.browse_save_path)
         self.ui.le_save_dir.editingFinished.connect(self.enter_save_path)
+        self.ui.le_save_dir.setText(str(Path.cwd()))
         self.ui.le_data_save_name.editingFinished.connect(self.enter_save_name)
         self.ui.qbutton_listen.clicked[bool].connect(self.listen_and_reconstruct)
         self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
