@@ -36,7 +36,6 @@
     <widget class="QGroupBox" name="recon_status">
      <property name="font">
       <font>
-       <weight>75</weight>
        <italic>false</italic>
        <bold>true</bold>
       </font>
@@ -58,7 +57,6 @@
         </property>
         <property name="font">
          <font>
-          <weight>50</weight>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -78,7 +76,6 @@
         </property>
         <property name="font">
          <font>
-          <weight>50</weight>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -98,7 +95,6 @@
         </property>
         <property name="font">
          <font>
-          <weight>50</weight>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -136,7 +132,6 @@
      </property>
      <property name="font">
       <font>
-       <weight>50</weight>
        <italic>false</italic>
        <bold>false</bold>
       </font>
@@ -196,6 +191,7 @@
          <property name="font">
           <font>
            <italic>false</italic>
+           <bold>false</bold>
           </font>
          </property>
          <property name="widgetResizable">
@@ -206,8 +202,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>590</width>
-            <height>1345</height>
+            <width>594</width>
+            <height>1302</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -236,7 +232,6 @@
             <widget class="QGroupBox" name="calib_params">
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -264,7 +259,6 @@
                <widget class="QComboBox" name="cb_lcb">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -283,7 +277,6 @@
                <widget class="QLineEdit" name="le_directory">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -300,7 +293,6 @@
                <widget class="QComboBox" name="cb_calib_scheme">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -324,7 +316,6 @@
                <widget class="QLabel" name="label_dir">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -338,7 +329,6 @@
                <widget class="QLabel" name="label_wavelength">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -352,7 +342,6 @@
                <widget class="QLineEdit" name="le_wavelength">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -366,7 +355,6 @@
                <widget class="QLineEdit" name="le_swing">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -380,7 +368,6 @@
                <widget class="QPushButton" name="qbutton_browse">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -403,7 +390,6 @@
                <widget class="QLabel" name="label_scheme">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -417,7 +403,6 @@
                <widget class="QLabel" name="label_swing">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -431,7 +416,6 @@
                <widget class="QCheckBox" name="chb_use_roi">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -445,7 +429,6 @@
                <widget class="QLabel" name="label_lca">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -462,7 +445,6 @@
                <widget class="QComboBox" name="cb_lca">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -481,7 +463,6 @@
                <widget class="QLabel" name="label_lcb">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -498,7 +479,6 @@
                <widget class="QLabel" name="label_calib_mode">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -512,7 +492,6 @@
                <widget class="QComboBox" name="cb_calib_mode">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                   <kerning>true</kerning>
@@ -537,7 +516,6 @@
                <widget class="QLabel" name="label_cfg_group">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -551,7 +529,6 @@
                <widget class="QComboBox" name="cb_config_group">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -568,7 +545,6 @@
             <widget class="QGroupBox" name="connect_to_micromanager">
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -587,7 +563,6 @@
                <widget class="QLineEdit" name="le_mm_status">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -601,7 +576,6 @@
                <widget class="QPushButton" name="qbutton_mm_connect">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -618,7 +592,6 @@
             <widget class="QGroupBox" name="run_calib">
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -637,7 +610,6 @@
                <widget class="QLabel" name="labell_calib_assessment">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -651,7 +623,6 @@
                <widget class="QLabel" name="label_progress">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -671,7 +642,6 @@
                 </property>
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -691,7 +661,6 @@
                 </property>
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -709,6 +678,7 @@
                 <property name="font">
                  <font>
                   <italic>false</italic>
+                  <bold>true</bold>
                  </font>
                 </property>
                 <property name="value">
@@ -720,7 +690,6 @@
                <widget class="QPushButton" name="qbutton_calc_extinction">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -742,6 +711,7 @@
                  <font>
                   <pointsize>13</pointsize>
                   <italic>false</italic>
+                  <bold>true</bold>
                  </font>
                 </property>
                 <property name="readOnly">
@@ -753,7 +723,6 @@
                <widget class="QPushButton" name="qbutton_stop_calib">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -767,7 +736,6 @@
                <widget class="QPushButton" name="qbutton_load_calib">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -781,7 +749,6 @@
                <widget class="QTextBrowser" name="tb_calib_assessment">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -801,7 +768,6 @@
              </property>
              <property name="font">
               <font>
-               <weight>50</weight>
                <italic>false</italic>
                <bold>false</bold>
               </font>
@@ -822,6 +788,7 @@
                  <property name="font">
                   <font>
                    <italic>false</italic>
+                   <bold>false</bold>
                   </font>
                  </property>
                  <property name="widgetResizable">
@@ -832,8 +799,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>550</width>
-                    <height>300</height>
+                    <width>568</width>
+                    <height>280</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -842,6 +809,7 @@
                      <property name="font">
                       <font>
                        <italic>false</italic>
+                       <bold>false</bold>
                       </font>
                      </property>
                      <property name="text">
@@ -860,6 +828,7 @@
                      <property name="font">
                       <font>
                        <italic>false</italic>
+                       <bold>false</bold>
                       </font>
                      </property>
                     </widget>
@@ -891,8 +860,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>550</width>
-                    <height>300</height>
+                    <width>568</width>
+                    <height>280</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -988,7 +957,6 @@
             <widget class="QGroupBox" name="capture_background">
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -1007,7 +975,6 @@
                <widget class="QLabel" name="label_bg_folder">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -1021,7 +988,6 @@
                <widget class="QPushButton" name="qbutton_capture_bg">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -1035,7 +1001,6 @@
                <widget class="QLineEdit" name="le_bg_folder">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -1049,7 +1014,6 @@
                <widget class="QLineEdit" name="le_n_avg">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -1063,7 +1027,6 @@
                <widget class="QLabel" name="label_n_avg">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -1139,8 +1102,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>590</width>
-            <height>1208</height>
+            <width>594</width>
+            <height>1160</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -1163,7 +1126,6 @@
              </property>
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -1191,13 +1153,12 @@
                 </property>
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>3</number>
                 </property>
                 <widget class="QWidget" name="General">
                  <attribute name="title">
@@ -1232,7 +1193,6 @@
                       <widget class="QLabel" name="label_data_dir">
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1253,7 +1213,6 @@
                       <widget class="QPushButton" name="qbutton_browse_data_dir">
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1267,7 +1226,6 @@
                       <widget class="QLabel" name="label_save_dir">
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1288,7 +1246,6 @@
                       <widget class="QPushButton" name="qbutton_browse_save_dir">
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1332,7 +1289,6 @@
                       <widget class="QLineEdit" name="le_calibration_metadata">
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1573,7 +1529,6 @@
                        </property>
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1611,6 +1566,8 @@
                        <property name="font">
                         <font>
                          <pointsize>10</pointsize>
+                         <italic>false</italic>
+                         <bold>false</bold>
                         </font>
                        </property>
                        <property name="text">
@@ -2327,7 +2284,7 @@
                <widget class="QCheckBox" name="chb_pause_updates">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2363,7 +2320,6 @@
              </property>
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -2382,7 +2338,6 @@
                <widget class="QPushButton" name="qbutton_acq_phase">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2396,7 +2351,7 @@
                <widget class="QPushButton" name="qbutton_stop_acq">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2409,7 +2364,7 @@
                <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2422,7 +2377,6 @@
                <widget class="QPushButton" name="qbutton_acq_birefringence">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2436,7 +2390,7 @@
                <widget class="QPushButton" name="qbutton_listen">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2465,7 +2419,6 @@
              </property>
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -2497,7 +2450,7 @@
                <widget class="QComboBox" name="cb_fluor_dim">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2520,7 +2473,6 @@
                <widget class="QComboBox" name="cb_birefringence">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2551,7 +2503,6 @@
                <widget class="QLabel" name="label_zstart">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2565,13 +2516,12 @@
                <widget class="QLabel" name="label_zstep">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
                 <property name="text">
-                 <string>Z_Step (um)</string>
+                 <string>Z Step (um)</string>
                 </property>
                </widget>
               </item>
@@ -2579,7 +2529,6 @@
                <widget class="QLabel" name="label_zend">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2596,7 +2545,6 @@
                <widget class="QLabel" name="label_birefringence">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2613,7 +2561,6 @@
                <widget class="QLabel" name="label_phase">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2627,7 +2574,6 @@
                <widget class="QComboBox" name="cb_phase">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2691,8 +2637,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>574</width>
-            <height>814</height>
+            <width>600</width>
+            <height>862</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
@@ -2706,7 +2652,6 @@
              </property>
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -2722,7 +2667,6 @@
                <widget class="QLineEdit" name="le_sat_max">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2742,7 +2686,7 @@
                <widget class="QPushButton" name="qbutton_create_overlay">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2761,7 +2705,6 @@
                 </property>
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2775,7 +2718,7 @@
                <widget class="QSlider" name="slider_saturation">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2788,7 +2731,6 @@
                <widget class="QComboBox" name="cb_colormap">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2812,7 +2754,7 @@
                <widget class="QComboBox" name="cb_value">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2825,7 +2767,7 @@
                <widget class="QComboBox" name="cb_hue">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2838,7 +2780,7 @@
                <widget class="QLabel" name="label_value">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2851,7 +2793,7 @@
                <widget class="QComboBox" name="cb_saturation">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2864,7 +2806,7 @@
                <widget class="QCheckBox" name="chb_display_volume">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2883,7 +2825,7 @@
                 </property>
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2896,7 +2838,7 @@
                <widget class="Line" name="line">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2912,7 +2854,7 @@
                <widget class="QLabel" name="label_colormap">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2925,7 +2867,7 @@
                <widget class="QLabel" name="label_hue">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2938,7 +2880,7 @@
                <widget class="QLabel" name="label_saturation">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2951,7 +2893,6 @@
                <widget class="QLineEdit" name="le_sat_min">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2971,7 +2912,6 @@
                <widget class="QLineEdit" name="le_val_min">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2988,7 +2928,6 @@
                <widget class="QLineEdit" name="le_val_max">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>

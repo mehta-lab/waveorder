@@ -1543,7 +1543,7 @@ class MainWidget(QWidget):
     @pyqtSlot(bool)
     def handle_mm_status_update(self, value):
         if value:
-            self.ui.le_mm_status.setText('Sucess!')
+            self.ui.le_mm_status.setText('Success!')
             self.ui.le_mm_status.setStyleSheet("background-color: green;")
 
         else:
