@@ -201,7 +201,7 @@
           <property name="geometry">
            <rect>
             <x>0</x>
-            <y>0</y>
+            <y>-240</y>
             <width>594</width>
             <height>1302</height>
            </rect>
@@ -1158,7 +1158,7 @@
                  </font>
                 </property>
                 <property name="currentIndex">
-                 <number>3</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="General">
                  <attribute name="title">
@@ -3007,32 +3007,124 @@
   </customwidget>
  </customwidgets>
  <tabstops>
+  <tabstop>le_gui_mode</tabstop>
+  <tabstop>qbutton_gui_mode</tabstop>
   <tabstop>tabWidget</tabstop>
+  <tabstop>scrollArea</tabstop>
+  <tabstop>qbutton_mm_connect</tabstop>
+  <tabstop>le_mm_status</tabstop>
   <tabstop>le_directory</tabstop>
+  <tabstop>qbutton_browse</tabstop>
   <tabstop>le_swing</tabstop>
   <tabstop>le_wavelength</tabstop>
   <tabstop>cb_calib_scheme</tabstop>
   <tabstop>cb_calib_mode</tabstop>
   <tabstop>cb_lca</tabstop>
   <tabstop>cb_lcb</tabstop>
+  <tabstop>cb_config_group</tabstop>
   <tabstop>chb_use_roi</tabstop>
   <tabstop>qbutton_calibrate</tabstop>
   <tabstop>qbutton_load_calib</tabstop>
   <tabstop>qbutton_calc_extinction</tabstop>
   <tabstop>qbutton_stop_calib</tabstop>
-  <tabstop>tabWidget_3</tabstop>
-  <tabstop>qbutton_browse</tabstop>
-  <tabstop>qbutton_capture_bg</tabstop>
+  <tabstop>le_extinction</tabstop>
+  <tabstop>tb_calib_assessment</tabstop>
   <tabstop>le_bg_folder</tabstop>
-  <tabstop>scrollArea</tabstop>
-  <tabstop>le_mm_status</tabstop>
-  <tabstop>le_n_avg</tabstop>
-  <tabstop>tabWidget_2</tabstop>
-  <tabstop>cb_loglevel</tabstop>
+  <tabstop>scrollArea_4</tabstop>
+  <tabstop>qbutton_acq_fluor</tabstop>
+  <tabstop>qbutton_acq_birefringence</tabstop>
+  <tabstop>qbutton_acq_phase</tabstop>
+  <tabstop>qbutton_acq_birefringence_phase</tabstop>
+  <tabstop>qbutton_listen</tabstop>
+  <tabstop>qbutton_stop_acq</tabstop>
+  <tabstop>acq_settings</tabstop>
+  <tabstop>le_zstart</tabstop>
+  <tabstop>le_zend</tabstop>
+  <tabstop>le_zstep</tabstop>
+  <tabstop>cb_birefringence</tabstop>
+  <tabstop>cb_phase</tabstop>
+  <tabstop>chb_phase_from_bf</tabstop>
+  <tabstop>cb_fluor_dim</tabstop>
+  <tabstop>cb_acq_channel</tabstop>
+  <tabstop>chb_pause_updates</tabstop>
+  <tabstop>tabWidget_3</tabstop>
+  <tabstop>le_data_dir</tabstop>
+  <tabstop>le_save_dir</tabstop>
+  <tabstop>le_data_save_name</tabstop>
+  <tabstop>le_calibration_metadata</tabstop>
+  <tabstop>cb_bg_method</tabstop>
+  <tabstop>le_bg_path</tabstop>
+  <tabstop>le_gpu_id</tabstop>
+  <tabstop>qbutton_browse_data_dir</tabstop>
+  <tabstop>qbutton_browse_save_dir</tabstop>
+  <tabstop>qbutton_browse_calib_meta</tabstop>
+  <tabstop>qbutton_browse_bg_path</tabstop>
+  <tabstop>chb_use_gpu</tabstop>
+  <tabstop>qbutton_load_default_config</tabstop>
+  <tabstop>qbutton_load_config</tabstop>
+  <tabstop>qbutton_save_config</tabstop>
+  <tabstop>cb_method</tabstop>
+  <tabstop>cb_mode</tabstop>
+  <tabstop>le_positions</tabstop>
+  <tabstop>le_timepoints</tabstop>
+  <tabstop>le_focus_zidx</tabstop>
+  <tabstop>le_fluor_chan</tabstop>
+  <tabstop>le_output_channels</tabstop>
+  <tabstop>le_recon_wavelength</tabstop>
+  <tabstop>le_obj_na</tabstop>
+  <tabstop>le_cond_na</tabstop>
+  <tabstop>le_ps</tabstop>
+  <tabstop>le_n_media</tabstop>
+  <tabstop>le_mag</tabstop>
+  <tabstop>le_pad_z</tabstop>
+  <tabstop>cb_phase_denoiser</tabstop>
+  <tabstop>le_phase_strength</tabstop>
+  <tabstop>le_rho</tabstop>
+  <tabstop>le_itr</tabstop>
+  <tabstop>le_fluor_strength</tabstop>
+  <tabstop>chb_preproc_denoise_use</tabstop>
+  <tabstop>le_preproc_denoise_channels</tabstop>
+  <tabstop>le_preproc_denoise_threshold</tabstop>
+  <tabstop>le_preproc_denoise_level</tabstop>
+  <tabstop>chb_postproc_fluor_use</tabstop>
+  <tabstop>le_postproc_fluor_wavelength_nm</tabstop>
+  <tabstop>le_postproc_fluor_channels</tabstop>
+  <tabstop>le_postproc_fluor_bg</tabstop>
+  <tabstop>registration</tabstop>
+  <tabstop>chb_postproc_reg_use</tabstop>
+  <tabstop>le_postproc_reg_shift</tabstop>
+  <tabstop>le_postproc_reg_channel_idx</tabstop>
+  <tabstop>cb_colormap</tabstop>
+  <tabstop>cb_hue</tabstop>
+  <tabstop>le_sat_min</tabstop>
+  <tabstop>le_sat_max</tabstop>
+  <tabstop>cb_saturation</tabstop>
+  <tabstop>slider_saturation</tabstop>
+  <tabstop>le_val_min</tabstop>
+  <tabstop>le_val_max</tabstop>
+  <tabstop>cb_value</tabstop>
+  <tabstop>slider_value</tabstop>
+  <tabstop>le_overlay_slice</tabstop>
+  <tabstop>chb_display_volume</tabstop>
+  <tabstop>qbutton_create_overlay</tabstop>
+  <tabstop>qbutton_capture_bg</tabstop>
+  <tabstop>chb_autocalc_bg</tabstop>
+  <tabstop>le_postproc_denoise_level</tabstop>
+  <tabstop>le_postproc_denoise_channels</tabstop>
+  <tabstop>scrollArea_5</tabstop>
   <tabstop>te_log</tabstop>
-  <tabstop>scrollArea_2</tabstop>
+  <tabstop>le_fluor_bg</tabstop>
+  <tabstop>le_n_avg</tabstop>
   <tabstop>scrollArea_3</tabstop>
-  <tabstop>qbutton_mm_connect</tabstop>
+  <tabstop>qbutton_reconstruct</tabstop>
+  <tabstop>le_notes_field</tabstop>
+  <tabstop>qbutton_stop_reconstruct</tabstop>
+  <tabstop>chb_postproc_denoise_use</tabstop>
+  <tabstop>le_postproc_denoise_threshold</tabstop>
+  <tabstop>denoising_2</tabstop>
+  <tabstop>scrollArea_2</tabstop>
+  <tabstop>cb_loglevel</tabstop>
+  <tabstop>qbutton_push_note</tabstop>
  </tabstops>
  <resources/>
  <connections/>
