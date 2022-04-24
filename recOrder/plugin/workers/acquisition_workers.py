@@ -690,7 +690,7 @@ class FluorescenceAcquisitionWorker(WorkerBase):
             writer.init_array(0, (1, 1, fluor.shape[-3], fluor.shape[-2], fluor.shape[-1]), chunk_size,
                               ['FluorDeconvolved3D'])
 
-            z = [0, fluor.shape[-3]]
+            z = slice(0, fluor.shape[-3])
 
 
         # Write data to disk
@@ -739,7 +739,7 @@ class FluorescenceAcquisitionWorker(WorkerBase):
         elif recon.gpu_id != self.calib_window.gpu_id:
             changed = True
 
-        elif recon.mode != self.dim+'-WF':
+        elif recon.deconv_mode != self.dim+'-WF':
             changed = True
 
         else:
