@@ -13,6 +13,7 @@ import os
 import logging
 from recOrder.io.utils import MockEmitter
 from datetime import datetime
+import pkg_resources
 
 
 class QLIPP_Calibration():
@@ -771,6 +772,8 @@ class QLIPP_Calibration():
         if self.calib_scheme == '4-State':
             data = {'Summary':
                     {'Timestamp': str(datetime.now()),
+                     'recOrder-napari version': str(pkg_resources.require("recOrder-napari")[0]),
+                     'waveorder version': str(pkg_resources.require("waveorder")[0]),
                      'Acquired Using': '4-State',
                      'Swing (fraction)': self.swing,
                      'Wavelength (nm)': self.wavelength,
@@ -793,6 +796,8 @@ class QLIPP_Calibration():
         elif self.calib_scheme == '5-State':
             data = {'Summary':
                     {'Timestamp': str(datetime.now()),
+                     'recOrder-napari version': str(pkg_resources.require("recOrder-napari")[0]),
+                     'waveorder version': str(pkg_resources.require("waveorder")[0]),
                      'Acquired Using': '5-State',
                      'Swing (fraction)': self.swing,
                      'Wavelength (nm)': self.wavelength,
