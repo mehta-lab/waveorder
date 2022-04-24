@@ -208,11 +208,8 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes=None):
 
     # Don't do background correction if BG data isn't provided
     if recon.bg_option == 'None' or bg_stokes is None:
-        if len(stokes_data.shape) == 4:
-            return np.transpose(stokes_data, (0, 2, 3, 1))
-        else:
-            return stokes_data
-
+        return stokes_data
+        
     # Compute Stokes with background correction
     else:
         if len(np.shape(stokes_data)) == 4:

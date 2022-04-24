@@ -1131,7 +1131,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
             else:
                 writer.init_array(0, (1, 4, birefringence.shape[-3], birefringence.shape[-2], birefringence.shape[-1]),
                                   chunk_size, ['Retardance', 'Orientation', 'BF', 'Pol'])
-                z = [0, birefringence.shape[-3]]
+                z = slice(0, birefringence.shape[-3])
 
             # Write the data to disk
             writer.write(birefringence, p=0, t=0, c=slice(0, 4), z=z)
