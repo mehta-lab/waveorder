@@ -1160,7 +1160,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
             # Check if 3D
             else:
                 writer.init_array(0, (1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase3D'])
-                z = [0, phase.shape[-3]]
+                z = slice(0, phase.shape[-3])
 
             # Write data to disk
             writer.write(phase, p=0, t=0, c=0, z=z)
