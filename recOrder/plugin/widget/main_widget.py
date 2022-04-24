@@ -1489,6 +1489,7 @@ class MainWidget(QWidget):
             self._hide_offline_ui(True)
             self._hide_acquisition_ui(False)
             self.gui_mode = 'online'
+            self.connect_to_mm()
         else:
             self.ui.qbutton_gui_mode.setText('Switch to Online')
             self.ui.le_gui_mode.setText('Offline')
