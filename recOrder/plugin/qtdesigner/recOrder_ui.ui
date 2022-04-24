@@ -201,9 +201,9 @@
           <property name="geometry">
            <rect>
             <x>0</x>
-            <y>-240</y>
+            <y>0</y>
             <width>594</width>
-            <height>1302</height>
+            <height>1053</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -250,10 +250,10 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_2">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>20</number>
+               <number>6</number>
               </property>
               <item row="5" column="4">
                <widget class="QComboBox" name="cb_lcb">
@@ -601,10 +601,10 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_12">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>20</number>
+               <number>6</number>
               </property>
               <item row="8" column="0">
                <widget class="QLabel" name="labell_calib_assessment">
@@ -776,7 +776,7 @@
               <enum>Qt::ClickFocus</enum>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>2</number>
              </property>
              <widget class="QWidget" name="tab_plot">
               <attribute name="title">
@@ -966,10 +966,10 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_3">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>20</number>
+               <number>6</number>
               </property>
               <item row="0" column="0">
                <widget class="QLabel" name="label_bg_folder">
@@ -1103,7 +1103,7 @@
             <x>0</x>
             <y>0</y>
             <width>594</width>
-            <height>1160</height>
+            <height>909</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -1138,10 +1138,10 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_9">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>25</number>
+               <number>6</number>
               </property>
               <item row="2" column="0" colspan="4">
                <widget class="QTabWidget" name="tabWidget_3">
@@ -1189,6 +1189,9 @@
                      <bool>false</bool>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_20">
+                     <property name="verticalSpacing">
+                      <number>6</number>
+                     </property>
                      <item row="0" column="0">
                       <widget class="QLabel" name="label_data_dir">
                        <property name="font">
@@ -1457,7 +1460,7 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_26">
                      <property name="verticalSpacing">
-                      <number>20</number>
+                      <number>6</number>
                      </property>
                      <item row="3" column="0">
                       <widget class="QLabel" name="label_timepoints">
@@ -1661,7 +1664,7 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_30">
                      <property name="verticalSpacing">
-                      <number>20</number>
+                      <number>6</number>
                      </property>
                      <item row="0" column="0">
                       <widget class="QLabel" name="label_recon_wavelength">
@@ -1859,7 +1862,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_23">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>12</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="0" column="0">
                       <widget class="QLabel" name="label_phase_regularizer">
@@ -1940,7 +1946,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_24">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>6</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="2" column="0">
                       <widget class="QLabel" name="label_fluor_bg">
@@ -2009,7 +2018,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_25">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>12</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="3" column="0">
                       <widget class="QLabel" name="label_preproc_denoise_level">
@@ -2098,7 +2110,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_28">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>6</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="2" column="0">
                       <widget class="QLabel" name="label_postproc_reg_channel_idx">
@@ -2154,7 +2169,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_29">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>6</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="2" column="0">
                       <widget class="QLabel" name="label_postproc_fluor_channel">
@@ -2210,7 +2228,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_27">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>6</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="1" column="0">
                       <widget class="QLabel" name="labelpostproc_denoise_channels">
@@ -2329,10 +2350,10 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_13">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>20</number>
+               <number>6</number>
               </property>
               <item row="2" column="0">
                <widget class="QPushButton" name="qbutton_acq_phase">
@@ -2434,10 +2455,10 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_8">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>20</number>
+               <number>6</number>
               </property>
               <item row="5" column="0">
                <widget class="QLabel" name="label_fluor">
@@ -2661,7 +2682,10 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_17">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
+              </property>
+              <property name="verticalSpacing">
+               <number>6</number>
               </property>
               <item row="8" column="3">
                <widget class="QLineEdit" name="le_sat_max">
