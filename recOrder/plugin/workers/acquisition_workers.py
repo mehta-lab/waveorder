@@ -1033,7 +1033,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         # reconstruct both phase and birefringence
         if self.mode == 'all':
             if self.calib_window.birefringence_dim == '2D':
-                birefringence = reconstruct_qlipp_birefringence(stokes[:, :, :, stokes.shape[-1]//2], recon)
+                birefringence = reconstruct_qlipp_birefringence(stokes[:, stokes.shape[1]//2, :, :], recon)
             else:
                 birefringence = reconstruct_qlipp_birefringence(stokes, recon)
             birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
