@@ -8,7 +8,7 @@ from recOrder.plugin.workers.calibration_workers import CalibrationWorker, Backg
 from recOrder.plugin.workers.acquisition_workers import PolarizationAcquisitionWorker, ListeningWorker, \
     FluorescenceAcquisitionWorker, BFAcquisitionWorker
 from recOrder.plugin.workers.reconstruction_workers import ReconstructionWorker
-from recOrder.plugin.qtdesigner import recOrder_calibration_v5
+from recOrder.plugin.qtdesigner import recOrder_ui
 from recOrder.postproc.post_processing import ret_ori_overlay, generic_hsv_overlay
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.utils import load_bg
@@ -43,7 +43,7 @@ class MainWidget(QWidget):
         self.viewer = napari_viewer
 
         # Setup GUI Elements
-        self.ui = recOrder_calibration_v5.Ui_Form()
+        self.ui = recOrder_ui.Ui_Form()
         self.ui.setupUi(self)
         self._promote_slider_init()
 
