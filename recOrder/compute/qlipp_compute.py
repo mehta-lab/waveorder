@@ -208,15 +208,15 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes=None):
 
     # Don't do background correction if BG data isn't provided
     if recon.bg_option == 'None' or bg_stokes is None:
-        return stokes_data
-        
+        return stokes_data # C(Z)YX
+
     # Compute Stokes with background correction
     else:
         if len(np.shape(stokes_data)) == 4:
             s_image = recon.Polscope_bg_correction(np.transpose(stokes_data, (-4, -2, -1, -3)), bg_stokes)
             s_image = np.transpose(s_image, (0, 3, 1, 2)) # Tranpose to CZYX
         else:
-            s_image = recon.Polscope_bg_correction(stokes_data, bg_stokes)
+            s_image = recon.Polscope_bg_correction(stokes_data, bg_stokes) # CYX
 
         return s_image
 
