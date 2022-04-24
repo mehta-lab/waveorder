@@ -55,8 +55,15 @@ class MainWidget(QWidget):
         self.ui.qbutton_browse.clicked[bool].connect(self.browse_dir_path)
         self.ui.le_directory.editingFinished.connect(self.enter_dir_path)
         self.ui.le_directory.setText(str(Path.cwd()))
+
         self.ui.le_swing.editingFinished.connect(self.enter_swing)
+        self.ui.le_swing.setText('0.1')
+        self.enter_swing()
+
         self.ui.le_wavelength.editingFinished.connect(self.enter_wavelength)
+        self.ui.le_wavelength.setText('532')
+        self.enter_wavelength()
+
         self.ui.cb_calib_scheme.currentIndexChanged[int].connect(self.enter_calib_scheme)
         self.ui.cb_calib_mode.currentIndexChanged[int].connect(self.enter_calib_mode)
         self.ui.cb_lca.currentIndexChanged[int].connect(self.enter_dac_lca)
@@ -83,16 +90,44 @@ class MainWidget(QWidget):
         self.ui.le_save_dir.setText(str(Path.cwd()))
         self.ui.le_data_save_name.editingFinished.connect(self.enter_save_name)
         self.ui.qbutton_listen.clicked[bool].connect(self.listen_and_reconstruct)
+
         self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
+        self.ui.le_zstart.setText('-1')
+        self.enter_zstart()
+
         self.ui.le_zend.editingFinished.connect(self.enter_zend)
+        self.ui.le_zend.setText('1')
+        self.enter_zend()
+
         self.ui.le_zstep.editingFinished.connect(self.enter_zstep)
+        self.ui.le_zstep.setText('0.25')
+        self.enter_zstep()
+
         self.ui.chb_use_gpu.stateChanged[int].connect(self.enter_use_gpu)
         self.ui.le_gpu_id.editingFinished.connect(self.enter_gpu_id)
+
+        self.ui.le_recon_wavelength.setText('532') # This parameter seems to be wired differently than others...investigate later
+
         self.ui.le_obj_na.editingFinished.connect(self.enter_obj_na)
+        self.ui.le_obj_na.setText('1.3')
+        self.enter_obj_na()
+
         self.ui.le_cond_na.editingFinished.connect(self.enter_cond_na)
+        self.ui.le_cond_na.setText('0.5')
+        self.enter_cond_na()
+
         self.ui.le_mag.editingFinished.connect(self.enter_mag)
+        self.ui.le_mag.setText('60')
+        self.enter_mag()
+
         self.ui.le_ps.editingFinished.connect(self.enter_ps)
+        self.ui.le_ps.setText('6.9')
+        self.enter_ps()
+
         self.ui.le_n_media.editingFinished.connect(self.enter_n_media)
+        self.ui.le_n_media.setText('1.3')
+        self.enter_n_media()
+
         self.ui.le_pad_z.editingFinished.connect(self.enter_pad_z)
         self.ui.chb_pause_updates.stateChanged[int].connect(self.enter_pause_updates)
         self.ui.cb_birefringence.currentIndexChanged[int].connect(self.enter_birefringence_dim)
@@ -153,8 +188,6 @@ class MainWidget(QWidget):
         self.directory = str(Path.cwd())
 
         # Reconstruction / Calibration Parameter Defaults
-        self.swing = 0.1
-        self.wavelength = 532
         self.calib_scheme = '4-State'
         self.calib_mode = 'retardance'
         self.config_group = 'Channel'
@@ -168,16 +201,8 @@ class MainWidget(QWidget):
         self.bg_option = 'None'
         self.birefringence_dim = '2D'
         self.phase_dim = '2D'
-        self.z_start = None
-        self.z_end = None
-        self.z_step = None
         self.gpu_id = 0
         self.use_gpu = False
-        self.obj_na = None
-        self.cond_na = None
-        self.mag = None
-        self.ps = None
-        self.n_media = 1.003
         self.pad_z = 0
         self.phase_reconstructor = None
         self.fluor_reconstructor = None
