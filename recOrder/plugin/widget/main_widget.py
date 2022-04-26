@@ -1719,6 +1719,10 @@ class MainWidget(QWidget):
 
     @pyqtSlot(dict)
     def handle_meta_update(self, meta):
+        if self.last_calib_meta_file is None:
+            print("\nWARNING: No calibration file has been loaded\n")
+            return
+
         with open(self.last_calib_meta_file, 'r') as file:
             current_json = json.load(file)
 
@@ -1959,6 +1963,7 @@ class MainWidget(QWidget):
     @pyqtSlot()
     def enter_zstart(self):
         self.z_start = float(self.ui.le_zstart.text())
+        print(self.bg_option, "BG")
 
     @pyqtSlot()
     def enter_zend(self):
@@ -2029,9 +2034,9 @@ class MainWidget(QWidget):
             self.ui.qbutton_browse_bg_path.setHidden(False)
             self.bg_option = 'Global'
         elif state == 2:
-            self.ui.label_bg_path.setHidden(False)
-            self.ui.le_bg_path.setHidden(False)
-            self.ui.qbutton_browse_bg_path.setHidden(False)
+            self.ui.label_bg_path.setHidden(True)
+            self.ui.le_bg_path.setHidden(True)
+            self.ui.qbutton_browse_bg_path.setHidden(True)
             self.bg_option = 'local_fit'
 
     @pyqtSlot()
