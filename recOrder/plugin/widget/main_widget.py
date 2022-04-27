@@ -1963,7 +1963,6 @@ class MainWidget(QWidget):
     @pyqtSlot()
     def enter_zstart(self):
         self.z_start = float(self.ui.le_zstart.text())
-        print(self.bg_option, "BG")
 
     @pyqtSlot()
     def enter_zend(self):
