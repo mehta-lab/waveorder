@@ -49,8 +49,10 @@ def setup_test_data():
 
     # download files to temp folder
     output = temp_data + "/recOrder_testData.zip"
-    download(url, out=output)
-    shutil.unpack_archive(output, extract_dir=temp_data)
+    if not os.path.isdir(temp_data+'/recOrder/'): # only download if the data hasn't already been downloaded
+        print("Downloading test files...")
+        download(url, out=output)
+        shutil.unpack_archive(output, extract_dir=temp_data)
 
     ometiff_data = os.path.join(temp_data,
                                 'recOrder/2021_06_11_recOrder_pytest_20x_04NA/2T_3P_81Z_231Y_498X_Kazansky_2')
@@ -60,16 +62,3 @@ def setup_test_data():
                            'recOrder/2021_06_11_recOrder_pytest_20x_04NA_BF_zarr/2T_3P_81Z_231Y_498X_Kazansky.zarr')
 
     yield temp_data, ometiff_data, zarr_data, bf_data
-
-    # breakdown files
-    try:
-        # remove zip file
-        os.remove(output)
-
-        # remove unzipped folder
-        shutil.rmtree(temp_data)
-
-        # remove temp folder
-        shutil.rmtree(temp_folder)
-    except OSError as e:
-        print(f"Error while deleting temp folder: {e.strerror}")
