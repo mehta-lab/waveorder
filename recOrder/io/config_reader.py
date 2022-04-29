@@ -73,7 +73,7 @@ POSTPROCESSING = {
         'channels': None,
         'wavelength_nm': None,
         'regularization': None,
-        'background': None,
+        #'background': None,
         'pixel_size_um': None,
         'NA_obj': None,
         'magnification': None,
