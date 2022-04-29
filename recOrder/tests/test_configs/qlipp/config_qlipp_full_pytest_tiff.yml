@@ -51,7 +51,7 @@ processing:
   ##   'local_fit': for estimating background with polynomial fit
   ##   'global': for normal background subtraction with the provided background
 
-  flatfield_correction: False
+  # flatfield_correction: False
   # (bool) perform flat-field correction on fluorescence images if True
 
   use_gpu: False
