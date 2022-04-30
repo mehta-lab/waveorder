@@ -20,7 +20,7 @@ from datetime import datetime
 
 class QLIPP_Calibration():
 
-    def __init__(self, mmc, mm, group='Channel', optimization='min_scalar', mode='MM-Retardance', print_details=True):
+    def __init__(self, mmc, mm, group='Channel', mode='MM-Retardance', wavelength=532, optimization='min_scalar', print_details=True):
 
         # Micromanager API
         self.mm = mm
@@ -53,9 +53,10 @@ class QLIPP_Calibration():
         self.LC_DAC_conversion = 4  # convert between the input range of LCs (0-20V) and the output range of the DAC (0-5V)
 
         # Initialize calibration class
-        interp_method = 'schnoor_fit'  # or 'linear'
+        interp_method = 'schnoor_fit'  # 'schnoor_fit' or 'linear', schnoor_fit is preferred
         dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.calib = CalibrationData(os.path.join(dir_path, './calibration_data.csv'), interp_method=interp_method)
+        self.calib = CalibrationData(os.path.join(dir_path, './calibration_data.csv'), interp_method=interp_method,
+                                     wavelength=wavelength)
 
         # Optimizer
         if optimization == 'min_scalar':
@@ -112,8 +113,8 @@ class QLIPP_Calibration():
         self.PROPERTIES['LCB-DAC'] = f'TS_{lcb_dac}'
 
     def set_wavelength(self, wavelength):
-        self.wavelength = wavelength
         self.calib.set_wavelength(wavelength)
+        self.wavelength = self.calib.wavelength
 
     def set_lc(self, val, device_property):
         """
@@ -968,16 +969,17 @@ class CalibrationData:
         self.V_min = 0
         self.V_max = 20
 
-        if interp_method == 'linear':
+        if interp_method in ['linear', 'schnoor_fit']:
             self.interp_method = interp_method
-            self.interpolate_data(raw_data, self.calib_wavelengths)
-        elif interp_method == 'schnoor_fit':
-            self.interp_method = interp_method
-            self.fit_params = self.fit_data(raw_data, self.calib_wavelengths)
         else:
             raise ValueError('Unknown interpolation method.')
 
         self.set_wavelength(wavelength)
+        if interp_method == 'linear':
+            self.interpolate_data(raw_data, self.calib_wavelengths)
+        elif interp_method == 'schnoor_fit':
+            self.fit_params = self.fit_data(raw_data, self.calib_wavelengths)
+
         self.ret_min = self.get_retardance(self.V_max)
         self.ret_max = self.get_retardance(self.V_min)
 
@@ -1107,16 +1109,16 @@ class CalibrationData:
 
     def interpolate_data(self, raw_data, calib_wavelengths):
         # 0V to 20V step size 1 mV
-        self.x_range = np.arange(0, np.max(raw_data[:, ::3]), 1)
+        x_range = np.arange(0, np.max(raw_data[:, ::3]), 1)
 
         # interpolate calib - only LCA data is used
-        self.spline490 = interp1d(raw_data[:, 0], raw_data[:, 1])
-        self.spline546 = interp1d(raw_data[:, 3], raw_data[:, 4])
-        self.spline630 = interp1d(raw_data[:, 5], raw_data[:, 7])
+        spline490 = interp1d(raw_data[:, 0], raw_data[:, 1])
+        spline546 = interp1d(raw_data[:, 3], raw_data[:, 4])
+        spline630 = interp1d(raw_data[:, 6], raw_data[:, 7])
 
         if self.wavelength < 490:
-            new_a1_y = np.interp(self.x_range, self.x_range, self.spline490(self.x_range))
-            new_a2_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
+            new_a1_y = np.interp(x_range, x_range, spline490(x_range))
+            new_a2_y = np.interp(x_range, x_range, spline546(x_range))
 
             wavelength_new = 490 + (490 - self.wavelength)
             fact1 = np.abs(490 - wavelength_new) / (546 - 490)
@@ -1125,12 +1127,12 @@ class CalibrationData:
             temp_curve = np.asarray([[i, 2 * new_a1_y[i] - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i])]
                           for i in range(len(new_a1_y))])
             self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.spline(self.x_range)
+            self.curve = self.spline(x_range)
 
         elif self.wavelength > 630:
 
-            new_a1_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
-            new_a2_y = np.interp(self.x_range, self.x_range, self.spline630(self.x_range))
+            new_a1_y = np.interp(x_range, x_range, spline546(x_range))
+            new_a2_y = np.interp(x_range, x_range, spline630(x_range))
 
             wavelength_new = 630 + (630 - self.wavelength)
             fact1 = np.abs(630 - wavelength_new) / (630 - 546)
@@ -1139,44 +1141,44 @@ class CalibrationData:
             temp_curve = np.asarray([[i, 2 * new_a1_y[i] - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i])]
                                      for i in range(len(new_a1_y))])
             self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.spline(self.x_range)
+            self.curve = self.spline(x_range)
 
 
         elif 490 < self.wavelength < 546:
 
-            new_a1_y = np.interp(self.x_range, self.x_range, self.spline490(self.x_range))
-            new_a2_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
+            new_a1_y = np.interp(x_range, x_range, spline490(x_range))
+            new_a2_y = np.interp(x_range, x_range, spline546(x_range))
 
             fact1 = np.abs(490 - self.wavelength) / (546 - 490)
             fact2 = np.abs(546 - self.wavelength) / (546 - 490)
 
             temp_curve = np.asarray([[i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]] for i in range(len(new_a1_y))])
             self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.spline(self.x_range)
+            self.curve = self.spline(x_range)
 
         elif 546 < self.wavelength < 630:
 
-            new_a1_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
-            new_a2_y = np.interp(self.x_range, self.x_range, self.spline630(self.x_range))
+            new_a1_y = np.interp(x_range, x_range, spline546(x_range))
+            new_a2_y = np.interp(x_range, x_range, spline630(x_range))
 
             fact1 = np.abs(546 - self.wavelength) / (630 - 546)
             fact2 = np.abs(630 - self.wavelength) / (630 - 546)
 
             temp_curve = np.asarray([[i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]] for i in range(len(new_a1_y))])
             self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.spline(self.x_range)
+            self.curve = self.spline(x_range)
 
         elif self.wavelength == 490:
-            self.curve = self.spline490(self.x_range)
-            self.spline = self.spline490
+            self.curve = spline490(x_range)
+            self.spline = spline490
 
         elif self.wavelength == 546:
-            self.curve = self.spline546(self.x_range)
-            self.spline = self.spline546
+            self.curve = spline546(x_range)
+            self.spline = spline546
 
         elif self.wavelength == 630:
-            self.curve = self.spline630(self.x_range)
-            self.spline = self.spline630
+            self.curve = spline630(x_range)
+            self.spline = spline630
 
         else:
             raise ValueError(f'Wavelength {self.wavelength} not understood')
@@ -1231,14 +1233,17 @@ class CalibrationData:
         ret_nanometers = None
 
         if volts < self.V_min:
-            retardance = self.ret_max
-        elif volts > self.V_max:
-            retardance = self.ret_min
-        else:
+            volts = self.V_min
+        elif volts >= self.V_max:
             if self.interp_method == 'linear':
-                ret_nanometers = self.spline(volts * 1000)
-            elif self.interp_method == 'schnoor_fit':
-                ret_nanometers = self.schnoor_fit(volts, *self.fit_params, self.wavelength)
-            retardance = ret_nanometers / self.wavelength
+                volts = self.V_max - 1e-3   # interpolation breaks down at upper boundary
+            else:
+                volts = self.V_max
+
+        if self.interp_method == 'linear':
+            ret_nanometers = self.spline(volts * 1000)
+        elif self.interp_method == 'schnoor_fit':
+            ret_nanometers = self.schnoor_fit(volts, *self.fit_params, self.wavelength)
+        retardance = ret_nanometers / self.wavelength
 
         return retardance
