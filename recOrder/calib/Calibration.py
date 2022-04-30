@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import tifffile as tiff
 import time
-from recOrder.io.core_functions import define_lc_state, snap_image, set_lc_waves, set_lc_volts, set_lc_state, \
-    snap_and_average, snap_and_get_image, get_lc_waves, get_lc_volts, define_lc_state_volts
+from recOrder.io.core_functions import define_meadowlark_state, snap_image, set_lc_waves, set_lc_voltage, set_lc_daq, \
+    set_lc_state, snap_and_average, snap_and_get_image, get_lc, define_config_state
 from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from scipy.interpolate import interp1d
@@ -28,17 +28,17 @@ class QLIPP_Calibration():
         self.snap_manager = mm.getSnapLiveManager()
 
         # Meadowlark LC Device Adapter Property Names
-        self.PROPERTIES = {'LCA': 'Retardance LC-A [in waves]',
-                           'LCB': 'Retardance LC-B [in waves]',
-                           'LCA-Voltage': 'Voltage (mV) LC-A',
-                           'LCB-Voltage': 'Voltage (mV) LC-B',
-                           'LCA-DAC': 'TS_DAC01',
-                           'LCB-DAC': 'TS_DAC02',
-                           'State0': 'Pal. elem. 00; enter 0 to define; 1 to activate',
-                           'State1': 'Pal. elem. 01; enter 0 to define; 1 to activate',
-                           'State2': 'Pal. elem. 02; enter 0 to define; 1 to activate',
-                           'State3': 'Pal. elem. 03; enter 0 to define; 1 to activate',
-                           'State4': 'Pal. elem. 04; enter 0 to define; 1 to activate'
+        self.PROPERTIES = {'LCA': ('MeadowlarkLcOpenSource', 'Retardance LC-A [in waves]'),
+                           'LCB': ('MeadowlarkLcOpenSource', 'Retardance LC-B [in waves]'),
+                           'LCA-Voltage': ('MeadowlarkLcOpenSource', 'Voltage (mV) LC-A'),
+                           'LCB-Voltage': ('MeadowlarkLcOpenSource', 'Voltage (mV) LC-B'),
+                           'LCA-DAC': ('TS_DAC01', 'Volts'),
+                           'LCB-DAC': ('TS_DAC02', 'Volts'),
+                           'State0': ('MeadowlarkLcOpenSource', 'Pal. elem. 00; enter 0 to define; 1 to activate'),
+                           'State1': ('MeadowlarkLcOpenSource', 'Pal. elem. 01; enter 0 to define; 1 to activate'),
+                           'State2': ('MeadowlarkLcOpenSource', 'Pal. elem. 02; enter 0 to define; 1 to activate'),
+                           'State3': ('MeadowlarkLcOpenSource', 'Pal. elem. 03; enter 0 to define; 1 to activate'),
+                           'State4': ('MeadowlarkLcOpenSource', 'Pal. elem. 04; enter 0 to define; 1 to activate')
                            }
         self.group = group
 
@@ -108,21 +108,23 @@ class QLIPP_Calibration():
         self.inst_mat = None
 
     def set_dacs(self, lca_dac, lcb_dac):
-        self.PROPERTIES['LCA-DAC'] = f'TS_{lca_dac}'
-        self.PROPERTIES['LCB-DAC'] = f'TS_{lcb_dac}'
+        self.PROPERTIES['LCA-DAC'] = (f'TS_{lca_dac}', 'Volts')
+        self.PROPERTIES['LCB-DAC'] = (f'TS_{lcb_dac}', 'Volts')
 
     def set_wavelength(self, wavelength):
         self.wavelength = wavelength
         self.calib.set_wavelength(wavelength)
 
-    def set_lc(self, val, device_property):
+    def set_lc(self, retardance, LC: str):
         """
+        Set LC state to given retardance in waves
 
         Parameters
         ----------
-        val : float
-            Retardance in waves or voltage in volts, depending on the LC control mode
-        device_property
+        retardance : float
+            Retardance in waves
+        LC : str
+            LCA or LCB
 
         Returns
         -------
@@ -130,39 +132,74 @@ class QLIPP_Calibration():
         """
 
         if self.mode == 'MM-Retardance':
-            set_lc_waves(self.mmc, val, self.PROPERTIES[device_property])
+            set_lc_waves(self.mmc, self.PROPERTIES[f'{LC}'], retardance)
+        elif self.mode == 'MM-Voltage':
+            volts = self.calib.get_voltage(retardance) * 1000  # input is in mV
+            set_lc_voltage(self.mmc, self.PROPERTIES[f'{LC}-Voltage'], volts)
         elif self.mode == 'DAC':
-            volts = self.calib.get_voltage(val)
+            volts = self.calib.get_voltage(retardance)
             dac_volts = volts / self.LC_DAC_conversion
-            set_lc_volts(self.mmc, dac_volts, self.PROPERTIES[f'{device_property}-DAC'])
+            set_lc_daq(self.mmc, self.PROPERTIES[f'{LC}-DAC'], dac_volts)
 
-    def get_lc(self, device_property):
+    def get_lc(self, LC: str):
         """
+        Get LC retardance in waves
 
         Parameters
         ----------
-        device_property
+        LC : str
+            LCA or LCB
 
         Returns
         -------
-            LC retardance in waves or voltage in volts, depending on the control mode
+            LC retardance in waves
         """
 
         if self.mode == 'MM-Retardance':
-            return get_lc_waves(self.mmc, self.PROPERTIES[device_property])
+            retardance = get_lc(self.mmc, self.PROPERTIES[f'{LC}'])
+        elif self.mode == 'MM-Voltage':
+            volts = get_lc(self.mmc, self.PROPERTIES[f'{LC}-Voltage'])  # returned value is in volts
+            retardance = self.calib.get_retardance(volts)
         elif self.mode == 'DAC':
-            dac_volts = get_lc_volts(self.mmc, self.PROPERTIES[f'{device_property}-DAC'])
+            dac_volts = get_lc(self.mmc, self.PROPERTIES[f'{LC}-DAC'])
             volts = dac_volts * self.LC_DAC_conversion
-            return self.calib.get_retardance(volts)
+            retardance = self.calib.get_retardance(volts)
 
-    def define_lc_state(self, state, lca, lcb):
+        return retardance
+
+    def define_lc_state(self, state, lca_retardance, lcb_retardance):
+        """
+        Define of the two LCs after calibration
+
+        Parameters
+        ----------
+        state: str
+            Polarization stage (e.g. State0)
+        lca_retardance: float
+            LCA retardance in waves
+        lcb_retardance: float
+            LCB retardance in waves
+
+        Returns
+        -------
+
+        """
+        # TODO: add logging and metadata with LC voltages
 
         if self.mode == 'MM-Retardance':
-            define_lc_state(self.mmc, state, lca, lcb, self.PROPERTIES)
+            self.set_lc(lca_retardance, self.PROPERTIES['LCA'])
+            self.set_lc(lcb_retardance, self.PROPERTIES['LCB'])
+            define_meadowlark_state(self.mmc, self.PROPERTIES[state])
         elif self.mode == 'DAC':
-            lca_volts = self.calib.get_voltage(lca) / self.LC_DAC_conversion
-            lcb_volts = self.calib.get_voltage(lcb) / self.LC_DAC_conversion
-            define_lc_state_volts(self.mmc, self.group, state, lca_volts, lcb_volts, self.PROPERTIES)
+            lca_volts = self.calib.get_voltage(lca_retardance) / self.LC_DAC_conversion
+            lcb_volts = self.calib.get_voltage(lcb_retardance) / self.LC_DAC_conversion
+            define_config_state(self.mmc, self.group, state,
+                                [self.PROPERTIES['LCA-DAC'], self.PROPERTIES['LCB-DAC']], [lca_volts, lcb_volts])
+        elif self.mode == 'MM-Voltage':
+            lca_volts = self.calib.get_voltage(lca_retardance) * 1000  # input is in mV
+            lcb_volts = self.calib.get_voltage(lcb_retardance) * 1000
+            define_config_state(self.mmc, self.group, state,
+                                [self.PROPERTIES['LCA-Voltage'], self.PROPERTIES['LCB-Voltage']], [lca_volts, lcb_volts])
 
     def opt_lc(self, x, device_property, reference, normalize=False):
 

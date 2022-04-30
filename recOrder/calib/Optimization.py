@@ -12,8 +12,8 @@ class BrentOptimizer:
 
     def _check_bounds(self, lca_bound, lcb_bound):
 
-        current_lca = self.calib.get_lc(self.calib.mmc, self.calib.PROPERTIES['LCA'])
-        current_lcb = self.calib.get_lc(self.calib.mmc, self.calib.PROPERTIES['LCB'])
+        current_lca = self.calib.get_lc('LCA')
+        current_lcb = self.calib.get_lc('LCB')
 
         # check that bounds don't exceed range of LC
         lca_lower_bound = 0.01 if (current_lca - lca_bound) <= 0.01 else current_lca - lca_bound
@@ -86,14 +86,14 @@ class BrentOptimizer:
                 results_lca = self.opt_lca(self.calib.opt_lc, lca_lower_bound, lca_upper_bound,
                                             reference, (self.calib.PROPERTIES['LCA'], reference))
 
-                self.calib.set_lc(self.calib.mmc, results_lca[0], self.calib.PROPERTIES['LCA'])
+                self.calib.set_lc(self.calib.mmc, results_lca[0], 'LCA')
 
                 optimal.append(results_lca)
 
                 results_lcb = self.opt_lcb(self.calib.opt_lc, lcb_lower_bound, lcb_upper_bound,
                                             reference, (self.calib.PROPERTIES['LCB'], reference))
 
-                self.calib.set_lc(self.calib.mmc, results_lca[1], self.calib.PROPERTIES['LCB'])
+                self.calib.set_lc(self.calib.mmc, results_lca[1], 'LCB')
 
                 optimal.append(results_lcb)
 
