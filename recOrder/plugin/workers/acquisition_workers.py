@@ -310,7 +310,7 @@ class BFAcquisitionWorker(WorkerBase):
             writer.init_array(0, (1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]), chunk_size,
                               ['Phase3D'])
 
-            z = [0, phase.shape[-3]]
+            z = slice(0, phase.shape[-3])
 
 
         # Write data to disk
@@ -690,7 +690,7 @@ class FluorescenceAcquisitionWorker(WorkerBase):
             writer.init_array(0, (1, 1, fluor.shape[-3], fluor.shape[-2], fluor.shape[-1]), chunk_size,
                               ['FluorDeconvolved3D'])
 
-            z = [0, fluor.shape[-3]]
+            z = slice(0, fluor.shape[-3])
 
 
         # Write data to disk
@@ -739,7 +739,7 @@ class FluorescenceAcquisitionWorker(WorkerBase):
         elif recon.gpu_id != self.calib_window.gpu_id:
             changed = True
 
-        elif recon.mode != self.dim+'-WF':
+        elif recon.deconv_mode != self.dim+'-WF':
             changed = True
 
         else:
@@ -1033,7 +1033,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         # reconstruct both phase and birefringence
         if self.mode == 'all':
             if self.calib_window.birefringence_dim == '2D':
-                birefringence = reconstruct_qlipp_birefringence(stokes[:, :, :, stokes.shape[-1]//2], recon)
+                birefringence = reconstruct_qlipp_birefringence(stokes[:, stokes.shape[1]//2, :, :], recon)
             else:
                 birefringence = reconstruct_qlipp_birefringence(stokes, recon)
             birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
@@ -1131,7 +1131,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
             else:
                 writer.init_array(0, (1, 4, birefringence.shape[-3], birefringence.shape[-2], birefringence.shape[-1]),
                                   chunk_size, ['Retardance', 'Orientation', 'BF', 'Pol'])
-                z = [0, birefringence.shape[-3]]
+                z = slice(0, birefringence.shape[-3])
 
             # Write the data to disk
             writer.write(birefringence, p=0, t=0, c=slice(0, 4), z=z)
@@ -1160,7 +1160,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
             # Check if 3D
             else:
                 writer.init_array(0, (1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase3D'])
-                z = [0, phase.shape[-3]]
+                z = slice(0, phase.shape[-3])
 
             # Write data to disk
             writer.write(phase, p=0, t=0, c=0, z=z)

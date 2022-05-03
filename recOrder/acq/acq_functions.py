@@ -82,7 +82,7 @@ def generate_acq_settings(mm, channel_group, channels=None, zstart=None, zend=No
     original_json['prefix'] = prefix if prefix else 'Untitled'
     original_json['channels'] = channel_list
     original_json['zReference'] = 0.0
-    original_json['channelGroup'] = 'Channel'
+    original_json['channelGroup'] = channel_group
     original_json['usePositionList'] = False
     original_json['shouldDisplayImages'] = True
     original_json['useSlices'] = do_z

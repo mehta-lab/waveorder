@@ -8,7 +8,7 @@ from recOrder.plugin.workers.calibration_workers import CalibrationWorker, Backg
 from recOrder.plugin.workers.acquisition_workers import PolarizationAcquisitionWorker, ListeningWorker, \
     FluorescenceAcquisitionWorker, BFAcquisitionWorker
 from recOrder.plugin.workers.reconstruction_workers import ReconstructionWorker
-from recOrder.plugin.qtdesigner import recOrder_calibration_v5
+from recOrder.plugin.qtdesigner import recOrder_ui
 from recOrder.postproc.post_processing import ret_ori_overlay, generic_hsv_overlay
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.utils import load_bg
@@ -43,7 +43,7 @@ class MainWidget(QWidget):
         self.viewer = napari_viewer
 
         # Setup GUI Elements
-        self.ui = recOrder_calibration_v5.Ui_Form()
+        self.ui = recOrder_ui.Ui_Form()
         self.ui.setupUi(self)
         self._promote_slider_init()
 
@@ -54,8 +54,16 @@ class MainWidget(QWidget):
         # Calibration Tab
         self.ui.qbutton_browse.clicked[bool].connect(self.browse_dir_path)
         self.ui.le_directory.editingFinished.connect(self.enter_dir_path)
+        self.ui.le_directory.setText(str(Path.cwd()))
+
         self.ui.le_swing.editingFinished.connect(self.enter_swing)
+        self.ui.le_swing.setText('0.1')
+        self.enter_swing()
+
         self.ui.le_wavelength.editingFinished.connect(self.enter_wavelength)
+        self.ui.le_wavelength.setText('532')
+        self.enter_wavelength()
+
         self.ui.cb_calib_scheme.currentIndexChanged[int].connect(self.enter_calib_scheme)
         self.ui.cb_calib_mode.currentIndexChanged[int].connect(self.enter_calib_mode)
         self.ui.cb_lca.currentIndexChanged[int].connect(self.enter_dac_lca)
@@ -79,18 +87,47 @@ class MainWidget(QWidget):
         self.ui.qbutton_gui_mode.clicked[bool].connect(self.change_gui_mode)
         self.ui.qbutton_browse_save_dir.clicked[bool].connect(self.browse_save_path)
         self.ui.le_save_dir.editingFinished.connect(self.enter_save_path)
+        self.ui.le_save_dir.setText(str(Path.cwd()))
         self.ui.le_data_save_name.editingFinished.connect(self.enter_save_name)
         self.ui.qbutton_listen.clicked[bool].connect(self.listen_and_reconstruct)
+
         self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
+        self.ui.le_zstart.setText('-1')
+        self.enter_zstart()
+
         self.ui.le_zend.editingFinished.connect(self.enter_zend)
+        self.ui.le_zend.setText('1')
+        self.enter_zend()
+
         self.ui.le_zstep.editingFinished.connect(self.enter_zstep)
+        self.ui.le_zstep.setText('0.25')
+        self.enter_zstep()
+
         self.ui.chb_use_gpu.stateChanged[int].connect(self.enter_use_gpu)
         self.ui.le_gpu_id.editingFinished.connect(self.enter_gpu_id)
+
+        self.ui.le_recon_wavelength.setText('532') # This parameter seems to be wired differently than others...investigate later
+
         self.ui.le_obj_na.editingFinished.connect(self.enter_obj_na)
+        self.ui.le_obj_na.setText('1.3')
+        self.enter_obj_na()
+
         self.ui.le_cond_na.editingFinished.connect(self.enter_cond_na)
+        self.ui.le_cond_na.setText('0.5')
+        self.enter_cond_na()
+
         self.ui.le_mag.editingFinished.connect(self.enter_mag)
+        self.ui.le_mag.setText('60')
+        self.enter_mag()
+
         self.ui.le_ps.editingFinished.connect(self.enter_ps)
+        self.ui.le_ps.setText('6.9')
+        self.enter_ps()
+
         self.ui.le_n_media.editingFinished.connect(self.enter_n_media)
+        self.ui.le_n_media.setText('1.3')
+        self.enter_n_media()
+
         self.ui.le_pad_z.editingFinished.connect(self.enter_pad_z)
         self.ui.chb_pause_updates.stateChanged[int].connect(self.enter_pause_updates)
         self.ui.cb_birefringence.currentIndexChanged[int].connect(self.enter_birefringence_dim)
@@ -145,14 +182,12 @@ class MainWidget(QWidget):
         self.mm = None
         self.mmc = None
         self.calib = None
-        self.current_dir_path = str(Path.home())
-        self.current_save_path = str(Path.home())
-        self.current_bg_path = str(Path.home())
-        self.directory = None
+        self.current_dir_path = str(Path.cwd())
+        self.current_save_path = str(Path.cwd())
+        self.current_bg_path = str(Path.cwd())
+        self.directory = str(Path.cwd())
 
         # Reconstruction / Calibration Parameter Defaults
-        self.swing = 0.1
-        self.wavelength = 532
         self.calib_scheme = '4-State'
         self.calib_mode = 'retardance'
         self.config_group = 'Channel'
@@ -161,21 +196,13 @@ class MainWidget(QWidget):
         self.bg_folder_name = 'BG'
         self.n_avg = 5
         self.intensity_monitor = []
-        self.save_directory = None
+        self.save_directory = str(Path.cwd())
         self.save_name = None
         self.bg_option = 'None'
         self.birefringence_dim = '2D'
         self.phase_dim = '2D'
-        self.z_start = None
-        self.z_end = None
-        self.z_step = None
         self.gpu_id = 0
         self.use_gpu = False
-        self.obj_na = None
-        self.cond_na = None
-        self.mag = None
-        self.ps = None
-        self.n_media = 1.003
         self.pad_z = 0
         self.phase_reconstructor = None
         self.fluor_reconstructor = None
@@ -186,10 +213,10 @@ class MainWidget(QWidget):
         self.pause_updates = False
         self.method = 'QLIPP'
         self.mode = '3D'
-        self.calib_path = str(Path.home())
-        self.data_dir = str(Path.home())
-        self.config_path = str(Path.home())
-        self.save_config_path = str(Path.home())
+        self.calib_path = str(Path.cwd())
+        self.data_dir = str(Path.cwd())
+        self.config_path = str(Path.cwd())
+        self.save_config_path = str(Path.cwd())
         self.colormap = 'HSV'
         self.use_full_volume = False
         self.display_slice = 0
@@ -1487,6 +1514,7 @@ class MainWidget(QWidget):
             self._hide_offline_ui(True)
             self._hide_acquisition_ui(False)
             self.gui_mode = 'online'
+            self.connect_to_mm()
         else:
             self.ui.qbutton_gui_mode.setText('Switch to Online')
             self.ui.le_gui_mode.setText('Offline')
@@ -1541,7 +1569,7 @@ class MainWidget(QWidget):
     @pyqtSlot(bool)
     def handle_mm_status_update(self, value):
         if value:
-            self.ui.le_mm_status.setText('Sucess!')
+            self.ui.le_mm_status.setText('Success!')
             self.ui.le_mm_status.setStyleSheet("background-color: green;")
 
         else:
@@ -1691,6 +1719,10 @@ class MainWidget(QWidget):
 
     @pyqtSlot(dict)
     def handle_meta_update(self, meta):
+        if self.last_calib_meta_file is None:
+            print("\nWARNING: No calibration file has been loaded\n")
+            return
+
         with open(self.last_calib_meta_file, 'r') as file:
             current_json = json.load(file)
 
@@ -2001,9 +2033,9 @@ class MainWidget(QWidget):
             self.ui.qbutton_browse_bg_path.setHidden(False)
             self.bg_option = 'Global'
         elif state == 2:
-            self.ui.label_bg_path.setHidden(False)
-            self.ui.le_bg_path.setHidden(False)
-            self.ui.qbutton_browse_bg_path.setHidden(False)
+            self.ui.label_bg_path.setHidden(True)
+            self.ui.le_bg_path.setHidden(True)
+            self.ui.qbutton_browse_bg_path.setHidden(True)
             self.bg_option = 'local_fit'
 
     @pyqtSlot()

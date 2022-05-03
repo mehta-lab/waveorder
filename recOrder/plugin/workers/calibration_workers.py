@@ -215,10 +215,10 @@ class CalibrationWorker(WorkerBase):
 
         if self.calib.extinction_ratio >= 100:
             self.calib_assessment.emit('good')
-            self.calib_assessment_msg.emit('Sucessful Calibration')
+            self.calib_assessment_msg.emit('Successful Calibration')
         elif 80 <= self.calib.extinction_ratio < 100:
             self.calib_assessment.emit('okay')
-            self.calib_assessment_msg.emit('Sucessful Calibration, Okay Extinction Ratio')
+            self.calib_assessment_msg.emit('Successful Calibration, Okay Extinction Ratio')
         else:
             self.calib_assessment.emit('bad')
             message = ("Possibilities are: a) linear polarizer and LC are not oriented properly, "
