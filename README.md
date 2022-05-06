@@ -1,4 +1,10 @@
 # recOrder
+[![License](https://img.shields.io/pypi/l/recOrder-napari.svg)](https://github.com/recOrder/LICENSE)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/recOrder-napari)
+[![Downloads](https://pepy.tech/badge/recOrder-napari)](https://pepy.tech/project/recOrder-napari)
+[![Python package index](https://img.shields.io/pypi/v/recOrder-napari.svg)](https://pypi.org/project/recOrder-napari)
+[![Development Status](https://img.shields.io/pypi/status/napari.svg)](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha)
+
 This package offers a comprehensive pipeline, command line interface, and napari plugin for quantitative label-free microscopy.
 
 In this repo you will find python tools and UI that allow the user to calibrate microscope hardware, acquire multi-modal data, reconstruct density and anisotropy, and visualize the data.
