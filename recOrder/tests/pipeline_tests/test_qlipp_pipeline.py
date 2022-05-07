@@ -1,4 +1,3 @@
-import pytest
 from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_manager import PipelineManager
 from recOrder.pipelines.qlipp_pipeline import QLIPP
