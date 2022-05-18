@@ -769,61 +769,66 @@ class QLIPP_Calibration():
         inst_mat = self.calc_inst_matrix()
         inst_mat = inst_mat.tolist()
 
-        if self.calib_scheme == '4-State':
-            data = {'Summary':
+        metadata = {'Summary':
                     {'Timestamp': str(datetime.now()),
                      'recOrder-napari version': str(pkg_resources.require("recOrder-napari")[0]),
                      'waveorder version': str(pkg_resources.require("waveorder")[0]),
-                     'Acquired Using': '4-State',
-                     'Swing (fraction)': self.swing,
+                     'Calibration scheme': self.calib_scheme,
+                     'Swing (waves)': self.swing,
                      'Wavelength (nm)': self.wavelength,
-                     'BlackLevel': np.round(self.I_Black, 2),
-                     'Extinction Ratio': self.extinction_ratio,
-                     'ChNames': ["State0", "State1", "State2", "State3"],
-                     '[LCA_Ext, LCB_Ext]': [self.lca_ext, self.lcb_ext],
-                     '[LCA_0, LCB_0]': [self.lca_0, self.lcb_0],
-                     '[LCA_60, LCB_60]': [self.lca_60, self.lcb_60],
-                     '[LCA_120, LCB_120]': [self.lca_120, self.lcb_120],
-                     'Swing0': self.swing0,
-                     'Swing60': self.swing60,
-                     'Swing120': self.swing120,
-                     'ROI Used (x, y, width, height)': self.ROI,
-                     'Instrument_Matrix': inst_mat},
+                     'Black level': np.round(self.I_Black, 2),
+                     'Extinction ratio': self.extinction_ratio,
+                     'ROI (x, y, width, height)': self.ROI},
                     'Notes': notes,
                     'Microscope Parameters': microscope_params
                     }
 
+        if self.calib_scheme == '4-State':
+            metadata['Summary'].update({
+                'Channel names': [f"State{i}" for i in range(4)],
+                'LC retardance': {
+                    'LCA_Ext': self.lca_ext,
+                    'LCB_Ext': self.lcb_ext,
+                    'LCA_0': self.lca_0,
+                    'LCB_0': self.lcb_0,
+                    'LCA_60': self.lca_60,
+                    'LCB_60': self.lcb_60,
+                    'LCA_120': self.lca_120,
+                    'LCB_120': self.lcb_120},
+                'LC voltage': {},
+                'Swing_0': self.swing0,
+                'Swing_60': self.swing60,
+                'Swing_120': self.swing120,
+                'Instrument_Matrix': inst_mat
+            })
+
         elif self.calib_scheme == '5-State':
-            data = {'Summary':
-                    {'Timestamp': str(datetime.now()),
-                     'recOrder-napari version': str(pkg_resources.require("recOrder-napari")[0]),
-                     'waveorder version': str(pkg_resources.require("waveorder")[0]),
-                     'Acquired Using': '5-State',
-                     'Swing (fraction)': self.swing,
-                     'Wavelength (nm)': self.wavelength,
-                     'BlackLevel': np.round(self.I_Black, 2),
-                     'Extinction Ratio': self.extinction_ratio,
-                     'ChNames': ["State0", "State1", "State2", "State3", "State4"],
-                     '[LCA_Ext, LCB_Ext]': [self.lca_ext, self.lcb_ext],
-                     '[LCA_0, LCB_0]': [self.lca_0, self.lcb_0],
-                     '[LCA_45, LCB_45]': [self.lca_45, self.lcb_45],
-                     '[LCA_90, LCB_90]': [self.lca_90, self.lcb_90],
-                     '[LCA_135, LCB_135]': [self.lca_135, self.lcb_135],
-                     'Swing0': self.swing0,
-                     'Swing45': self.swing45,
-                     'Swing90': self.swing90,
-                     'Swing135': self.swing135,
-                     'ROI Used (x, y, width, height)': self.ROI,
-                     'Instrument_Matrix': inst_mat},
-                    'Notes': notes,
-                    'Microscope Parameters': microscope_params
-                    }
+            metadata['Summary'].update({
+                'Channel names': [f"State{i}" for i in range(5)],
+                'LC retardance': {
+                    'LCA_Ext': self.lca_ext,
+                    'LCB_Ext': self.lcb_ext,
+                    'LCA_0': self.lca_0,
+                    'LCB_0': self.lcb_0,
+                    'LCA_45': self.lca_45,
+                    'LCB_45': self.lcb_45,
+                    'LCA_90': self.lca_90,
+                    'LCB_90': self.lcb_90,
+                    'LCA_135': self.lca_135,
+                    'LCB_135': self.lcb_135},
+                'LC voltage': {},
+                'Swing_0': self.swing0,
+                'Swing_45': self.swing45,
+                'Swing_90': self.swing90,
+                'Swing_135': self.swing135,
+                'Instrument_Matrix': inst_mat
+            })
 
         if not self.meta_file.endswith('.txt'):
             self.meta_file += '.txt'
 
         with open(self.meta_file, 'w') as metafile:
-            json.dump(data, metafile, indent=1)
+            json.dump(metadata, metafile, indent=1)
 
     def _add_colorbar(self, mappable):
         last_axes = plt.gca()
