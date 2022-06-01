@@ -350,7 +350,7 @@ def load_calibration(calib, meta: dict):
     """
 
     # State 0 and State 1 are the same for both algorithms
-    state0 = meta['Summary']['[LCA_Ext, LCB_Ext]']
+    state0 = meta['Summary']['[LCA_ext, LCB_ext]']
     state1 = meta['Summary']['[LCA_0, LCB_0]']
 
     define_lc_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
