@@ -794,7 +794,7 @@ class QLIPP_Calibration():
                 'Swing_0': np.around(self.swing0, decimals=3),
                 'Swing_60': np.around(self.swing60, decimals=3),
                 'Swing_120': np.around(self.swing120, decimals=3),
-                'Instrument_Matrix': inst_mat
+                'Instrument matrix': inst_mat
             })
 
         elif self.calib_scheme == '5-State':
@@ -808,7 +808,7 @@ class QLIPP_Calibration():
                 'Swing_45': np.around(self.swing45, decimals=3),
                 'Swing_90': np.around(self.swing90, decimals=3),
                 'Swing_135': np.around(self.swing135, decimals=3),
-                'Instrument_Matrix': inst_mat
+                'Instrument matrix': inst_mat
             })
 
         if not self.meta_file.endswith('.txt'):
