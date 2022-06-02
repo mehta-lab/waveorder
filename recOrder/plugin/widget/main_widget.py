@@ -2644,28 +2644,30 @@ class MainWidget(QWidget):
     @pyqtSlot(int)
     def update_sat_scale(self):
         idx = self.ui.cb_saturation.currentIndex()
-        layer = self.ui.cb_saturation.itemText(idx)
-        data = self.viewer.layers[layer].data
-        min_, max_ = np.min(data), np.max(data)
-        self.ui.slider_saturation.setMinimum(min_)
-        self.ui.slider_saturation.setMaximum(max_)
-        self.ui.slider_saturation.setSingleStep((max_ - min_)/250)
-        self.ui.slider_saturation.setValue((min_, max_))
-        self.ui.le_sat_max.setText(str(np.round(max_, 3)))
-        self.ui.le_sat_min.setText(str(np.round(min_, 3)))
+        if idx != -1:
+            layer = self.ui.cb_saturation.itemText(idx)
+            data = self.viewer.layers[layer].data
+            min_, max_ = np.min(data), np.max(data)
+            self.ui.slider_saturation.setMinimum(min_)
+            self.ui.slider_saturation.setMaximum(max_)
+            self.ui.slider_saturation.setSingleStep((max_ - min_)/250)
+            self.ui.slider_saturation.setValue((min_, max_))
+            self.ui.le_sat_max.setText(str(np.round(max_, 3)))
+            self.ui.le_sat_min.setText(str(np.round(min_, 3)))
 
     @pyqtSlot(int)
     def update_value_scale(self):
         idx = self.ui.cb_value.currentIndex()
-        layer = self.ui.cb_value.itemText(idx)
-        data = self.viewer.layers[layer].data
-        min_, max_ = np.min(data), np.max(data)
-        self.ui.slider_value.setMinimum(min_)
-        self.ui.slider_value.setMaximum(max_)
-        self.ui.slider_value.setSingleStep((max_ - min_)/250)
-        self.ui.slider_value.setValue((min_, max_))
-        self.ui.le_val_max.setText(str(np.round(max_, 3)))
-        self.ui.le_val_min.setText(str(np.round(min_, 3)))
+        if idx != -1:
+            layer = self.ui.cb_value.itemText(idx)
+            data = self.viewer.layers[layer].data
+            min_, max_ = np.min(data), np.max(data)
+            self.ui.slider_value.setMinimum(min_)
+            self.ui.slider_value.setMaximum(max_)
+            self.ui.slider_value.setSingleStep((max_ - min_)/250)
+            self.ui.slider_value.setValue((min_, max_))
+            self.ui.le_val_max.setText(str(np.round(max_, 3)))
+            self.ui.le_val_min.setText(str(np.round(min_, 3)))
 
     @pyqtSlot(bool)
     def create_overlay(self):
