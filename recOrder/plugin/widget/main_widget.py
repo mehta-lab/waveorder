@@ -16,6 +16,7 @@ from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, P
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
+from packaging import version
 import numpy as np
 import os
 import json
@@ -1538,6 +1539,12 @@ class MainWidget(QWidget):
             bridge = Bridge(convert_camel_case=False)
             self.mmc = bridge.get_core()
             self.mm = bridge.get_studio()
+
+            # Check MicroManager version compatibility.
+            bridge._master_socket.send({"command": "connect", "debug": False}) # latest versions of pycromanager use '_main_socket'
+            reply_json = bridge._master_socket.receive(timeout=500) # latest versions of pycromanager use '_main_socket'
+            if version.parse(reply_json['version']) < version.parse('4.0.0'):
+                print('WARNING: MicroManager version is incompatible with recOrder. Please upgrade to the latest tested MicroManager nightly build 20210713.')
 
             # set calibration channel group
             calib_channels = ['State0', 'State1', 'State2', 'State3', 'State4']
