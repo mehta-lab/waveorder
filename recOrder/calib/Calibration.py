@@ -787,7 +787,7 @@ class QLIPP_Calibration():
         if self.calib_scheme == '4-State':
             metadata['Calibration'].update({
                 'Channel names': [f"State{i}" for i in range(4)],
-                'LC retardance': {f'LC{i}_{j}': np.around(getattr(self, f'lc{i.lower()}_{j}'), decimals=5)
+                'LC retardance': {f'LC{i}_{j}': np.around(getattr(self, f'lc{i.lower()}_{j}'), decimals=6)
                                   for j in ['ext', '0', '60', '120']
                                   for i in ['A', 'B']},
                 'LC voltage': {},
@@ -800,7 +800,7 @@ class QLIPP_Calibration():
         elif self.calib_scheme == '5-State':
             metadata['Calibration'].update({
                 'Channel names': [f"State{i}" for i in range(5)],
-                'LC retardance': {f'LC{i}_{j}': np.around(getattr(self, f'lc{i.lower()}_{j}'), decimals=5)
+                'LC retardance': {f'LC{i}_{j}': np.around(getattr(self, f'lc{i.lower()}_{j}'), decimals=6)
                                   for j in ['ext', '0', '45', '90', '135']
                                   for i in ['A', 'B']},
                 'LC voltage': {},
