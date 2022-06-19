@@ -9,8 +9,17 @@ def load_json(path):
 
 
 class MetadataReader:
+    """
+    Calibration metadata reader class. Helps load metadata from different metadata formats and naming conventions
+    """
 
     def __init__(self, path: str):
+        """
+
+        Parameters
+        ----------
+        path: full path to calibration metadata
+        """
         self.metadata_path = path
         self.json_metadata = load_json(self.metadata_path)
 
