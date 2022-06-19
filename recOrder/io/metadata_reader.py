@@ -17,20 +17,20 @@ class MetadataReader:
         self.Timestamp = self.get_json_attr('Timestamp')
         self.recOrder_napari_verion = self.get_json_attr('recOrder-napari version')
         self.waveorder_version = self.get_json_attr('waveorder version')
-        self.Calibration_scheme = self.get_json_attr('Calibration scheme')
-        self.Swing = self.get_json_attr('Swing (waves)')
+        self.Calibration_scheme = self.get_calibration_scheme()
+        self.Swing = self.get_swing_param()
         self.Wavelength = self.get_json_attr('Wavelength (nm)')
-        self.Black_level = self.get_json_attr('Black level')
-        self.Extinction_ratio = self.get_json_attr('Extinction ratio')
-        self.ROI = self.get_json_attr('ROI (x, y, width, height)')
-        self.Channel_names = self.get_json_attr('Channel names')
+        self.Black_level = self.get_black_level()
+        self.Extinction_ratio = self.get_extinction_ratio()
+        self.ROI = self.get_roi()
+        self.Channel_names = self.get_channel_names()
         self.LCA_retardane = self.get_lc_retardance('LCA')
         self.LCB_retardane = self.get_lc_retardance('LCB')
         self.LCA_voltage = self.get_lc_voltage('LCA')
         self.LCB_voltage = self.get_lc_voltage('LCB')
         self.Swing = self.get_swing()
         self.Notes = self.json_metadata['Notes']
-        self.Microscope_parameters = self.json_metadata['Microscope parameters']
+        self.Microscope_parameters = self.get_microscope_parameters()
 
     def get_json_attr(self, attr):
         try:
@@ -63,10 +63,11 @@ class MetadataReader:
         try:
             val = [self.json_metadata['Calibration']['LC retardance'][f'{lc}_{state}'] for state in states]
         except KeyError:
+            states[0] = 'Ext'
             if lc == 'LCA':
-                val = [self.json_metadata['Summary'][f'LCA_{state}, LCB_{state}'][0] for state in states]
+                val = [self.json_metadata['Summary'][f'[LCA_{state}, LCB_{state}]'][0] for state in states]
             elif lc == 'LCB':
-                val = [self.json_metadata['Summary'][f'LCA_{state}, LCB_{state}'][1] for state in states]
+                val = [self.json_metadata['Summary'][f'[LCA_{state}, LCB_{state}]'][1] for state in states]
 
         return val
 
@@ -83,18 +84,69 @@ class MetadataReader:
         """
         states = self.get_cal_states()
 
-        lc_voltage = self.json_metadata['Calibration']['LC voltage']
-        if lc_voltage:
-            val = [lc_voltage[f'{lc}_{state}'] for state in states]
-        else:
-            val = None
+        val = None
+        if 'Calibration' in self.json_metadata:
+            lc_voltage = self.json_metadata['Calibration']['LC voltage']
+            if lc_voltage:
+                val = [self.json_metadata['Calibration']['LC voltage'][f'{lc}_{state}'] for state in states]
 
+        return val
+
+    def get_swing_param(self):
+        try:
+            val = self.json_metadata['Calibration']['Swing (waves)']
+        except KeyError:
+            val = self.json_metadata['Summary']['Swing (fraction)']
         return val
 
     def get_swing(self):
         states = self.get_cal_states()
+        try:
+            val = [self.json_metadata['Calibration'][f'Swing_{state}'] for state in states[1:]]
+        except KeyError:
+            val = [self.json_metadata['Summary'][f'Swing{state}'] for state in states[1:]]
 
-        val = [self.json_metadata['Calibration'][f'Swing_{state}'] for state in states[1:]]
+        return val
 
+    def get_calibration_scheme(self):
+        try:
+            val = self.json_metadata['Calibration']['Calibration scheme']
+        except KeyError:
+            val = self.json_metadata['Summary']['Acquired Using']
+        return val
+
+    def get_black_level(self):
+        try:
+            val = self.json_metadata['Calibration']['Black level']
+        except KeyError:
+            val = self.json_metadata['Summary']['BlackLevel']
+        return val
+
+    def get_extinction_ratio(self):
+        try:
+            val = self.json_metadata['Calibration']['Extinction ratio']
+        except KeyError:
+            val = self.json_metadata['Summary']['Extinction Ratio']
+        return val
+
+    def get_roi(self):
+        try:
+            val = self.json_metadata['Calibration']['ROI (x, y, width, height)']
+        except KeyError:
+            val = self.json_metadata['Summary']['ROI Used (x, y, width, height)']
+        return val
+
+    def get_channel_names(self):
+        try:
+            val = self.json_metadata['Calibration']['Channel names']
+        except KeyError:
+            val = self.json_metadata['Summary']['ChNames']
+        return val
+
+    def get_microscope_parameters(self):
+        try:
+            val = self.json_metadata['Microscope parameters']
+        except KeyError:
+            val = self.json_metadata['Microscope Parameters']
         return val
 
