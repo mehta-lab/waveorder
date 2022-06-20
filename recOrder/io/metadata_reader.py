@@ -1,11 +1,18 @@
 import json
+import os
+from natsort import natsorted
 
 
 def load_json(path):
-    with open(path) as f:
+    with open(path, 'r') as f:
         data = json.load(f)
 
     return data
+
+
+def get_last_metadata_file(path):
+    last_metadata_file = natsorted([file for file in os.listdir(path) if file.startswith('calibration_metadata')])[-1]
+    return os.path.join(path, last_metadata_file)
 
 
 class MetadataReader:
