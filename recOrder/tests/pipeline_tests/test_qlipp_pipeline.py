@@ -1,4 +1,5 @@
 from recOrder.io.config_reader import ConfigReader
+from recOrder.io import MetadataReader
 from recOrder.pipelines.pipeline_manager import PipelineManager
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from waveorder.io.writer import WaveorderWriter
@@ -54,7 +55,7 @@ def test_qlipp_pipeline_initiate(setup_test_data, setup_data_save_folder):
     assert(pipeline.slices == manager.data.slices)
     assert(pipeline.img_dim == (manager.data.height, manager.data.width, manager.data.slices))
     assert(pipeline.chan_names == manager.data.channel_names)
-    assert(isinstance(pipeline.calib_meta, dict))
+    assert(isinstance(pipeline.calib_meta, MetadataReader))
     assert(pipeline.bg_path == manager.config.background)
 
     assert(pipeline.s0_idx == 0)
