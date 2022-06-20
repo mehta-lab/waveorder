@@ -4,6 +4,7 @@ from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
 from recOrder.io.core_functions import define_lc_state, set_lc_state, snap_and_average
 from recOrder.io.utils import MockEmitter
+from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
 import os
 import numpy as np
 import glob
@@ -334,7 +335,7 @@ class BackgroundCaptureWorker(WorkerBase):
 
 
 @thread_worker
-def load_calibration(calib, meta: dict):
+def load_calibration(calib, metadata: MetadataReader):
     """
     Sets MM properties based upon calibration metadata file
 
@@ -342,36 +343,21 @@ def load_calibration(calib, meta: dict):
     Parameters
     ----------
     calib:          (object) recOrder Calibration Class
-    meta:           (dict) JSON dict read from the calibration metadata file
+    metadata:       (object) MetadataReader instance
 
     Returns
     -------
     calib           (object) updated recOrder Calibration Class
     """
 
-    # State 0 and State 1 are the same for both algorithms
-    state0 = meta['Summary']['[LCA_ext, LCB_ext]']
-    state1 = meta['Summary']['[LCA_0, LCB_0]']
-
+    state0, state1, state2, state3 = zip(metadata.LCA_retardane[:4], metadata.LCB_retardane[:4])
     define_lc_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
     define_lc_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
+    define_lc_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
+    define_lc_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
 
-    # Update algorithm specific states
-    if meta['Summary']['Acquired Using'] == '4-State':
-        state2 = meta['Summary']['[LCA_60, LCB_60]']
-        state3 = meta['Summary']['[LCA_120, LCB_120]']
-
-        define_lc_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
-        define_lc_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
-
-    # 5-State Algorithm
-    else:
-        state2 = meta['Summary']['[LCA_45, LCB_45]']
-        state3 = meta['Summary']['[LCA_90, LCB_90]']
-        state4 = meta['Summary']['[LCA_135, LCB_135]']
-
-        define_lc_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
-        define_lc_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
+    if metadata.Calibration_scheme == '5-State':
+        state4 = (metadata.LCA_retardane[4], metadata.LCB_retardane[4])
         define_lc_state(calib.mmc, 'State4', state4[0], state4[1], calib.PROPERTIES)
 
     # Calculate Blacklevel after loading these properties
