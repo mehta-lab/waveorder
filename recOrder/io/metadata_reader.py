@@ -34,7 +34,7 @@ class MetadataReader:
         self.recOrder_napari_verion = self.get_json_attr('recOrder-napari version')
         self.waveorder_version = self.get_json_attr('waveorder version')
         self.Calibration_scheme = self.get_calibration_scheme()
-        self.Swing = self.get_swing_param()
+        self.Swing = self.get_swing()
         self.Wavelength = self.get_json_attr('Wavelength (nm)')
         self.Black_level = self.get_black_level()
         self.Extinction_ratio = self.get_extinction_ratio()
@@ -44,7 +44,7 @@ class MetadataReader:
         self.LCB_retardane = self.get_lc_retardance('LCB')
         self.LCA_voltage = self.get_lc_voltage('LCA')
         self.LCB_voltage = self.get_lc_voltage('LCB')
-        self.Swing = self.get_swing()
+        self.Swing_measured = self.get_swing_measured()
         self.Notes = self.json_metadata['Notes']
         self.Microscope_parameters = self.get_microscope_parameters()
 
@@ -108,14 +108,14 @@ class MetadataReader:
 
         return val
 
-    def get_swing_param(self):
+    def get_swing(self):
         try:
             val = self.json_metadata['Calibration']['Swing (waves)']
         except KeyError:
             val = self.json_metadata['Summary']['Swing (fraction)']
         return val
 
-    def get_swing(self):
+    def get_swing_measured(self):
         states = self.get_cal_states()
         try:
             val = [self.json_metadata['Calibration'][f'Swing_{state}'] for state in states[1:]]
