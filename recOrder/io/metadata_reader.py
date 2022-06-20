@@ -30,12 +30,12 @@ class MetadataReader:
         self.metadata_path = path
         self.json_metadata = load_json(self.metadata_path)
 
-        self.Timestamp = self.get_json_attr('Timestamp')
-        self.recOrder_napari_verion = self.get_json_attr('recOrder-napari version')
-        self.waveorder_version = self.get_json_attr('waveorder version')
+        self.Timestamp = self.get_summary_calibration_attr('Timestamp')
+        self.recOrder_napari_verion = self.get_summary_calibration_attr('recOrder-napari version')
+        self.waveorder_version = self.get_summary_calibration_attr('waveorder version')
         self.Calibration_scheme = self.get_calibration_scheme()
         self.Swing = self.get_swing()
-        self.Wavelength = self.get_json_attr('Wavelength (nm)')
+        self.Wavelength = self.get_summary_calibration_attr('Wavelength (nm)')
         self.Black_level = self.get_black_level()
         self.Extinction_ratio = self.get_extinction_ratio()
         self.ROI = self.get_roi()
@@ -48,11 +48,14 @@ class MetadataReader:
         self.Notes = self.json_metadata['Notes']
         self.Microscope_parameters = self.get_microscope_parameters()
 
-    def get_json_attr(self, attr):
+    def get_summary_calibration_attr(self, attr):
         try:
             val = self.json_metadata['Summary'][attr]
         except KeyError:
-            val = self.json_metadata['Calibration'][attr]
+            try:
+                val = self.json_metadata['Calibration'][attr]
+            except KeyError:
+                val = None
         return val
 
     def get_cal_states(self):
