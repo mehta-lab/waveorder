@@ -1538,11 +1538,20 @@ class MainWidget(QWidget):
         RECOMMENDED_MM = '20210713'
         ZMQ_TARGET_VERSION = '4.0.0'
         try:
-            bridge = Bridge(convert_camel_case=False)
-            self.mmc = bridge.get_core()
-            self.mm = bridge.get_studio()
+            # Try to open Bridge. Requires micromanager to be open with server running.
+            # This does not fail gracefully, so I'm wrapping it in its own try-except block.
+            try:
+                bridge = Bridge(convert_camel_case=False)
+                self.mmc = bridge.get_core()
+                self.mm = bridge.get_studio()
+            except:
+                print(("Could not establish pycromanager bridge.\n"
+                       "Is micromanager open?\n"
+                       "Is Tools > Options > Run server on port 4827 checked?\n"
+                       f"Are you using nightly build {RECOMMENDED_MM}?"))
+                raise EnvironmentError
 
-            # Check MicroManager version compatibility.
+            # Warn the use if there is a MicroManager/ZMQ version mismatch
             bridge._master_socket.send({"command": "connect", "debug": False}) # latest versions of pycromanager use '_main_socket'
             reply_json = bridge._master_socket.receive(timeout=500) # latest versions of pycromanager use '_main_socket'
             zmq_mm_version = reply_json['version']
