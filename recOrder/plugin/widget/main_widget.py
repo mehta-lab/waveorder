@@ -11,6 +11,7 @@ from recOrder.plugin.workers.reconstruction_workers import ReconstructionWorker
 from recOrder.plugin.qtdesigner import recOrder_ui
 from recOrder.postproc.post_processing import ret_ori_overlay, generic_hsv_overlay
 from recOrder.io.core_functions import set_lc_state, snap_and_average
+from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
 from recOrder.io.utils import load_bg
 from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, POSTPROCESSING
 from waveorder.io.reader import WaveorderReader
@@ -2318,13 +2319,12 @@ class MainWidget(QWidget):
         Uses previous JSON calibration metadata to load previous calibration
         """
 
-        result = self._open_file_dialog(self.current_dir_path, 'file')
-        with open(result, 'r') as file:
-            meta = json.load(file)
+        metadata_path = self._open_file_dialog(self.current_dir_path, 'file')
+        metadata = MetadataReader(metadata_path)
 
         # Update Properties
-        self.wavelength = meta['Summary']['Wavelength (nm)']
-        self.swing = meta['Summary']['Swing (fraction)']
+        self.wavelength = metadata.Wavelength
+        self.swing = metadata.Swing
 
         # Initialize calibration class
         self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group)
@@ -2334,15 +2334,15 @@ class MainWidget(QWidget):
         self.ui.le_wavelength.setText(str(self.wavelength))
 
         # Update Calibration Scheme Combo Box
-        if meta['Summary']['Acquired Using'] == '4-State':
+        if metadata.Calibration_scheme == '4-State':
             self.ui.cb_calib_scheme.setCurrentIndex(0)
         else:
             self.ui.cb_calib_scheme.setCurrentIndex(1)
 
-        self.last_calib_meta_file = result
+        self.last_calib_meta_file = metadata_path
 
         # Update the Microscope Parameters with those from the previous calibration (if they're present)
-        params = meta['Microscope Parameters']
+        params = metadata.Microscope_parameters
         if params is not None:
             self.ui.le_pad_z.setText(str(params['pad_z']) if params['pad_z'] is not None else '')
             self.ui.le_n_media.setText(str(params['n_objective_media']) if params['n_objective_media'] is not None else '')
@@ -2352,7 +2352,7 @@ class MainWidget(QWidget):
             self.ui.le_ps.setText(str(params['pixel_size']) if params['pixel_size'] is not None else '')
 
         # Move the load calibration function to a separate thread
-        self.worker = load_calibration(self.calib, meta)
+        self.worker = load_calibration(self.calib, metadata)
 
         def update_extinction(extinction):
             self.calib.extinction_ratio = float(extinction)
@@ -2556,10 +2556,10 @@ class MainWidget(QWidget):
 
         # Init reconstructor
         if self.bg_option != 'None':
-            with open(os.path.join(self.current_bg_path, 'calibration_metadata.txt')) as file:
-                js = json.load(file)
-                roi = js['Summary']['ROI Used (x, y, width, height)']
-                height, width = roi[2], roi[3]
+            metadata_file = get_last_metadata_file(self.current_bg_path)
+            metadata = MetadataReader(metadata_file)
+            roi = metadata.ROI
+            height, width = roi[2], roi[3]
             bg_data = load_bg(self.current_bg_path, height, width, roi)
         else:
             bg_data = None

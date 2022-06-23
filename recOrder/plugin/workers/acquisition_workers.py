@@ -7,11 +7,11 @@ from recOrder.compute import QLIPPBirefringenceCompute
 from recOrder.compute.fluorescence_compute import initialize_fluorescence_reconstructor, deconvolve_fluorescence_3D, \
     deconvolve_fluorescence_2D, calculate_background
 from recOrder.io.zarr_converter import ZarrConverter
+from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
 from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import logging
 from waveorder.io.writer import WaveorderWriter
 import tifffile as tiff
-import json
 import numpy as np
 import os
 import zarr
@@ -1186,9 +1186,9 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
         #TODO: Change to just accept ROI
         try:
-            meta_path = open(os.path.join(path, 'calibration_metadata.txt'))
-            roi = json.load(meta_path)['Summary']['ROI Used (x, y, width, height)']
-            meta_path.close()
+            metadata_path = get_last_metadata_file(path)
+            metadata = MetadataReader(metadata_path)
+            roi = metadata.ROI
         except:
             roi = None
 
