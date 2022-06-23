@@ -1546,7 +1546,7 @@ class MainWidget(QWidget):
             if version.parse(reply_json['version']) < version.parse('4.0.0'):
                 print('WARNING: MicroManager version is incompatible with recOrder. Please upgrade to the latest tested MicroManager nightly build 20210713.')
 
-            # set calibration channel group
+            # Find and set calibration channel group
             calib_channels = ['State0', 'State1', 'State2', 'State3', 'State4']
             self.ui.cb_config_group.clear()
             groups = self.mmc.getAvailableConfigGroups()
@@ -1564,11 +1564,13 @@ class MainWidget(QWidget):
                 for ch in config_list:
                     if ch not in calib_channels:
                         self.ui.cb_acq_channel.addItem(ch)
+
             if not config_group_found:
-                msg = f'No config group contains channels {calib_channels}. ' \
-                      'Please refer to the recOrder wiki on how to set up the config properly.'
+                print((f"No config group contains channels {calib_channels}.\n"
+                       "Please refer to the recOrder wiki on how to set up the config properly."))
                 self.ui.cb_config_group.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                raise KeyError(msg)
+                raise KeyError
+
             self.mm_status_changed.emit(True)
         except:
             self.mm_status_changed.emit(False)
