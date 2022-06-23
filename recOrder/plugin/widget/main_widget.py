@@ -1535,6 +1535,8 @@ class MainWidget(QWidget):
         -------
 
         """
+        RECOMMENDED_MM = '20210713'
+        ZMQ_TARGET_VERSION = '4.0.0'
         try:
             bridge = Bridge(convert_camel_case=False)
             self.mmc = bridge.get_core()
@@ -1543,8 +1545,11 @@ class MainWidget(QWidget):
             # Check MicroManager version compatibility.
             bridge._master_socket.send({"command": "connect", "debug": False}) # latest versions of pycromanager use '_main_socket'
             reply_json = bridge._master_socket.receive(timeout=500) # latest versions of pycromanager use '_main_socket'
-            if version.parse(reply_json['version']) < version.parse('4.0.0'):
-                print('WARNING: MicroManager version is incompatible with recOrder. Please upgrade to the latest tested MicroManager nightly build 20210713.')
+            zmq_mm_version = reply_json['version']
+            if zmq_mm_version != ZMQ_TARGET_VERSION:
+                upgrade_str = 'upgrade' if version.parse(zmq_mm_version) < version.parse(ZMQ_TARGET_VERSION) else 'downgrade'
+                print(("WARNING: This version of Micromanager has not been tested with recOrder.\n"
+                      f"Please {upgrade_str} to MicroManager nightly build {RECOMMENDED_MM}."))
 
             # Find and set calibration channel group
             calib_channels = ['State0', 'State1', 'State2', 'State3', 'State4']
