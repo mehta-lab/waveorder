@@ -17,6 +17,7 @@ from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, P
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
+from packaging import version
 import numpy as np
 import os
 import json
@@ -1535,12 +1536,32 @@ class MainWidget(QWidget):
         -------
 
         """
+        RECOMMENDED_MM = '20210713'
+        ZMQ_TARGET_VERSION = '4.0.0'
         try:
-            bridge = Bridge(convert_camel_case=False)
-            self.mmc = bridge.get_core()
-            self.mm = bridge.get_studio()
+            # Try to open Bridge. Requires micromanager to be open with server running.
+            # This does not fail gracefully, so I'm wrapping it in its own try-except block.
+            try:
+                bridge = Bridge(convert_camel_case=False)
+                self.mmc = bridge.get_core()
+                self.mm = bridge.get_studio()
+            except:
+                print(("Could not establish pycromanager bridge.\n"
+                       "Is micromanager open?\n"
+                       "Is Tools > Options > Run server on port 4827 checked?\n"
+                       f"Are you using nightly build {RECOMMENDED_MM}?"))
+                raise EnvironmentError
 
-            # set calibration channel group
+            # Warn the use if there is a MicroManager/ZMQ version mismatch
+            bridge._master_socket.send({"command": "connect", "debug": False}) # latest versions of pycromanager use '_main_socket'
+            reply_json = bridge._master_socket.receive(timeout=500) # latest versions of pycromanager use '_main_socket'
+            zmq_mm_version = reply_json['version']
+            if zmq_mm_version != ZMQ_TARGET_VERSION:
+                upgrade_str = 'upgrade' if version.parse(zmq_mm_version) < version.parse(ZMQ_TARGET_VERSION) else 'downgrade'
+                print(("WARNING: This version of Micromanager has not been tested with recOrder.\n"
+                      f"Please {upgrade_str} to MicroManager nightly build {RECOMMENDED_MM}."))
+
+            # Find and set calibration channel group
             calib_channels = ['State0', 'State1', 'State2', 'State3', 'State4']
             self.ui.cb_config_group.clear()
             groups = self.mmc.getAvailableConfigGroups()
@@ -1558,11 +1579,13 @@ class MainWidget(QWidget):
                 for ch in config_list:
                     if ch not in calib_channels:
                         self.ui.cb_acq_channel.addItem(ch)
+
             if not config_group_found:
-                msg = f'No config group contains channels {calib_channels}. ' \
-                      'Please refer to the recOrder wiki on how to set up the config properly.'
+                print((f"No config group contains channels {calib_channels}.\n"
+                       "Please refer to the recOrder wiki on how to set up the config properly."))
                 self.ui.cb_config_group.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                raise KeyError(msg)
+                raise KeyError
+
             self.mm_status_changed.emit(True)
         except:
             self.mm_status_changed.emit(False)
