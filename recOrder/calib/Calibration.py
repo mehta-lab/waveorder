@@ -377,21 +377,22 @@ class QLIPP_Calibration():
         logging.info('Calibrating State1 (I0)...')
         logging.debug('Calibrating State1 (I0)...')
 
-        self.define_lc_state('State1', self.lca_ext - self.swing, self.lcb_ext)
-
-        ref = snap_and_average(self.snap_manager)
-
         self.lca_0 = self.lca_ext - self.swing
         self.lcb_0 = self.lcb_ext
-        self.I_Elliptical = ref
+        self.set_lc(self.lca_0, 'LCA')
+        self.set_lc(self.lcb_0, 'LCB')
+
+        self.define_lc_state('State1', self.lca_0, self.lcb_0)
+        intensity = snap_and_average(self.snap_manager)
+        self.I_Elliptical = intensity
         self.swing0 = np.sqrt((self.lcb_0 - self.lcb_ext) ** 2 + (self.lca_0 - self.lca_ext) ** 2)
 
         logging.info(f'LCA State1 (I0) = {self.lca_0:.3f}')
         logging.debug(f'LCA State1 (I0) = {self.lca_0:.5f}')
         logging.info(f'LCB State1 (I0) = {self.lcb_0:.3f}')
         logging.debug(f'LCB State1 (I0) = {self.lcb_0:.5f}')
-        logging.info(f'Intensity (I0) = {ref:.0f}')
-        logging.debug(f'Intensity (I0) = {ref:.3f}')
+        logging.info(f'Intensity (I0) = {intensity:.0f}')
+        logging.debug(f'Intensity (I0) = {intensity:.3f}')
         logging.info("--------done--------")
         logging.debug("--------done--------")
 
