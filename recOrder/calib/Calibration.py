@@ -47,6 +47,7 @@ class QLIPP_Calibration():
         self.plot_sequence_emitter = MockEmitter()
 
         #Set Mode
+        # TODO: make sure LC or TriggerScope are loaded in the respective modes
         allowed_modes = ['MM-Retardance', 'MM-Voltage', 'DAC']
         assert mode in allowed_modes, f'LC control mode must be one of {allowed_modes}'
         self.mode = mode
@@ -188,8 +189,8 @@ class QLIPP_Calibration():
         # TODO: add logging and metadata with LC voltages
 
         if self.mode == 'MM-Retardance':
-            self.set_lc(lca_retardance, self.PROPERTIES['LCA'])
-            self.set_lc(lcb_retardance, self.PROPERTIES['LCB'])
+            self.set_lc(lca_retardance, 'LCA')
+            self.set_lc(lcb_retardance, 'LCB')
             define_meadowlark_state(self.mmc, self.PROPERTIES[state])
         elif self.mode == 'DAC':
             lca_volts = self.calib.get_voltage(lca_retardance) / self.LC_DAC_conversion
