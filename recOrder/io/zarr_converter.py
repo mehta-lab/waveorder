@@ -252,7 +252,7 @@ class ZarrConverter:
             if self.p > 1:
                 try:
                     name = self.summary_metadata['StagePositions'][p]['Label']
-                except:
+                except KeyError:
                     name = ''
             else:
                 name = ''
