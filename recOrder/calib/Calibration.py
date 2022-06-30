@@ -28,17 +28,17 @@ class QLIPP_Calibration():
         self.snap_manager = mm.getSnapLiveManager()
 
         # Meadowlark LC Device Adapter Property Names
-        self.PROPERTIES = {'LCA': ('MeadowlarkLcOpenSource', 'Retardance LC-A [in waves]'),
-                           'LCB': ('MeadowlarkLcOpenSource', 'Retardance LC-B [in waves]'),
-                           'LCA-Voltage': ('MeadowlarkLcOpenSource', 'Voltage (mV) LC-A'),
-                           'LCB-Voltage': ('MeadowlarkLcOpenSource', 'Voltage (mV) LC-B'),
+        self.PROPERTIES = {'LCA': ('MeadowlarkLC', 'Retardance LC-A [in waves]'),
+                           'LCB': ('MeadowlarkLC', 'Retardance LC-B [in waves]'),
+                           'LCA-Voltage': ('MeadowlarkLC', 'Voltage (V) LC-A'),
+                           'LCB-Voltage': ('MeadowlarkLC', 'Voltage (V) LC-B'),
                            'LCA-DAC': ('TS_DAC01', 'Volts'),
                            'LCB-DAC': ('TS_DAC02', 'Volts'),
-                           'State0': ('MeadowlarkLcOpenSource', 'Pal. elem. 00; enter 0 to define; 1 to activate'),
-                           'State1': ('MeadowlarkLcOpenSource', 'Pal. elem. 01; enter 0 to define; 1 to activate'),
-                           'State2': ('MeadowlarkLcOpenSource', 'Pal. elem. 02; enter 0 to define; 1 to activate'),
-                           'State3': ('MeadowlarkLcOpenSource', 'Pal. elem. 03; enter 0 to define; 1 to activate'),
-                           'State4': ('MeadowlarkLcOpenSource', 'Pal. elem. 04; enter 0 to define; 1 to activate')
+                           'State0': ('MeadowlarkLC', 'Pal. elem. 00; enter 0 to define; 1 to activate'),
+                           'State1': ('MeadowlarkLC', 'Pal. elem. 01; enter 0 to define; 1 to activate'),
+                           'State2': ('MeadowlarkLC', 'Pal. elem. 02; enter 0 to define; 1 to activate'),
+                           'State3': ('MeadowlarkLC', 'Pal. elem. 03; enter 0 to define; 1 to activate'),
+                           'State4': ('MeadowlarkLC', 'Pal. elem. 04; enter 0 to define; 1 to activate')
                            }
         self.group = group
 
@@ -136,7 +136,7 @@ class QLIPP_Calibration():
         if self.mode == 'MM-Retardance':
             set_lc_waves(self.mmc, self.PROPERTIES[f'{LC}'], retardance)
         elif self.mode == 'MM-Voltage':
-            volts = self.calib.get_voltage(retardance) * 1000  # input is in mV
+            volts = self.calib.get_voltage(retardance)
             set_lc_voltage(self.mmc, self.PROPERTIES[f'{LC}-Voltage'], volts)
         elif self.mode == 'DAC':
             volts = self.calib.get_voltage(retardance)
@@ -198,8 +198,8 @@ class QLIPP_Calibration():
             define_config_state(self.mmc, self.group, state,
                                 [self.PROPERTIES['LCA-DAC'], self.PROPERTIES['LCB-DAC']], [lca_volts, lcb_volts])
         elif self.mode == 'MM-Voltage':
-            lca_volts = self.calib.get_voltage(lca_retardance) * 1000  # input is in mV
-            lcb_volts = self.calib.get_voltage(lcb_retardance) * 1000
+            lca_volts = self.calib.get_voltage(lca_retardance)
+            lcb_volts = self.calib.get_voltage(lcb_retardance)
             define_config_state(self.mmc, self.group, state,
                                 [self.PROPERTIES['LCA-Voltage'], self.PROPERTIES['LCB-Voltage']], [lca_volts, lcb_volts])
 
@@ -718,7 +718,7 @@ class QLIPP_Calibration():
 
         # Set LC Wavelength:
         if self.mode == 'MM-Retardance':
-            self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
+            self.mmc.setProperty('MeadowlarkLC', 'Wavelength', self.wavelength)
 
         self.opt_Iext()
         self.opt_I0()
@@ -777,7 +777,7 @@ class QLIPP_Calibration():
 
         # Set LC Wavelength:
         if self.mode == 'MM-Retardance':
-            self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
+            self.mmc.setProperty('MeadowlarkLC', 'Wavelength', self.wavelength)
 
         self.opt_Iext()
         self.opt_I0()

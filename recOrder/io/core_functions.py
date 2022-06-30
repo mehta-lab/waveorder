@@ -88,7 +88,8 @@ def set_lc_waves(mmc, device_property: tuple, value: float):
     prop_name = device_property[1]
 
     if value > 1.6 or value < 0.001:
-        raise ValueError("Retardance in waves must be greater than 0.001 and less than 1.6")
+        raise ValueError(f"Requested retardance value is {value} waves. "
+                         f"Retardance must be greater than 0.001 and less than 1.6 waves.")
 
     mmc.setProperty(device_name, prop_name, str(value))
     time.sleep(20/1000)
@@ -115,9 +116,9 @@ def set_lc_voltage(mmc, device_property: tuple, value: float):
     prop_name = device_property[1]
 
     if value > 20.0 or value < 0.0:
-        raise ValueError("LC voltage must be greater than 0.0 and less than 20.0")
+        raise ValueError(f"Requested LC voltage is {value} V. "
+                         f"LC voltage must be greater than 0.0 and less than 20.0 V.")
 
-    value *= 1000  # Voltage input for Meadowlark LC is in mV
     mmc.setProperty(device_name, prop_name, str(value))
     time.sleep(20 / 1000)
 
@@ -183,7 +184,7 @@ def define_meadowlark_state(mmc, device_property: tuple):
         MM Core object
     device_property : tuple
         (device_name, property_name) set, e.g.
-        ('MeadowlarkLcOpenSource', 'Pal. elem. 00; enter 0 to define; 1 to activate')
+        ('MeadowlarkLC', 'Pal. elem. 00; enter 0 to define; 1 to activate')
 
     Returns
     -------

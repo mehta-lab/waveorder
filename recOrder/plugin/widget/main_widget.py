@@ -1816,6 +1816,12 @@ class MainWidget(QWidget):
             self.ui.label_lcb.hide()
             self.ui.cb_lca.hide()
             self.ui.cb_lcb.hide()
+        elif index == 1:
+            self.calib_mode = 'MM-Voltage'
+            self.ui.label_lca.hide()
+            self.ui.label_lcb.hide()
+            self.ui.cb_lca.hide()
+            self.ui.cb_lcb.hide()
         elif index == 2:
             self.calib_mode = 'DAC'
             self.ui.cb_lca.clear()
