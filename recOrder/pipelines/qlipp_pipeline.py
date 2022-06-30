@@ -1,10 +1,10 @@
 from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
+from recOrder.io import MetadataReader
 from recOrder.io.utils import load_bg, MockEmitter
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, \
     reconstruct_phase2D, reconstruct_phase3D, initialize_reconstructor
-import json
 import numpy as np
 from recOrder.pipelines.base import PipelineInterface
 
@@ -53,12 +53,15 @@ class QLIPP(PipelineInterface):
 
         # Metadata
         self.chan_names = self.data.channel_names
-        self.calib_meta = json.load(open(self.config.calibration_metadata)) \
-            if self.config.calibration_metadata else None
-        self.calib_scheme = self.calib_meta['Summary']['Acquired Using'] if self.calib_meta \
-            else '4-State'
         self.bg_path = self.config.background if self.config.background else None
-        self.bg_roi = self.calib_meta['Summary']['ROI Used (x, y, width, height)'] if self.calib_meta else None
+        if self.config.calibration_metadata:
+            self.calib_meta = MetadataReader(self.config.calibration_metadata)
+            self.calib_scheme = self.calib_meta.Calibration_scheme
+            self.bg_roi = self.calib_meta.ROI
+        else:
+            self.calib_meta = None
+            self.calib_scheme = '4-State'
+            self.bg_roi = None
 
         # identify the image indicies corresponding to each polarization orientation
         self.s0_idx, self.s1_idx, \
@@ -74,7 +77,7 @@ class QLIPP(PipelineInterface):
             self.reconstructor = initialize_reconstructor(pipeline='birefringence',
                                                           image_dim=(self.img_dim[0], self.img_dim[1]),
                                                           wavelength_nm=self.config.wavelength,
-                                                          swing=self.calib_meta['Summary']['Swing (fraction)'],
+                                                          swing=self.calib_meta.Swing,
                                                           calibration_scheme=self.calib_scheme,
                                                           pad_z=self.config.pad_z,
                                                           bg_correction=self.config.background_correction,
@@ -86,7 +89,7 @@ class QLIPP(PipelineInterface):
             self.reconstructor = initialize_reconstructor(pipeline='QLIPP',
                                                           image_dim=(self.img_dim[0], self.img_dim[1]),
                                                           wavelength_nm=self.config.wavelength,
-                                                          swing=self.calib_meta['Summary']['Swing (fraction)'],
+                                                          swing=self.calib_meta.Swing,
                                                           calibration_scheme=self.calib_scheme,
                                                           NA_obj=self.config.NA_objective,
                                                           NA_illu=self.config.NA_condenser,
@@ -298,10 +301,9 @@ class QLIPP(PipelineInterface):
         s2_idx = None
         s3_idx = None
         s4_idx = None
-        try:
-            self.calib_meta['Summary']['PolScope_Plugin_Version']
+        if 'PolScope_Plugin_Version' in self.calib_meta.json_metadata['Summary']:
             open_pol = True
-        except:
+        else:
             open_pol = False
 
         for channel in range(len(channel_list)):

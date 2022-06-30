@@ -1,4 +1,10 @@
 # recOrder
+[![License](https://img.shields.io/pypi/l/recOrder-napari.svg)](https://github.com/recOrder/LICENSE)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/recOrder-napari)
+[![Downloads](https://pepy.tech/badge/recOrder-napari)](https://pepy.tech/project/recOrder-napari)
+[![Python package index](https://img.shields.io/pypi/v/recOrder-napari.svg)](https://pypi.org/project/recOrder-napari)
+[![Development Status](https://img.shields.io/pypi/status/napari.svg)](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha)
+
 This package offers a comprehensive pipeline, command line interface, and napari plugin for quantitative label-free microscopy.
 
 In this repo you will find python tools and UI that allow the user to calibrate microscope hardware, acquire multi-modal data, reconstruct density and anisotropy, and visualize the data.
@@ -20,11 +26,26 @@ recOrder is to be used alongside the QLIPP module, whose design has been optimiz
 
 ## Installation
 
+**Easy installation:**
+
+(Optional but recommended) install [anaconda](https://www.anaconda.com/products/distribution) and create a virtual environment  
+```
+conda create -n recorder python
+conda activate recorder
+```
+Install napari:
+```
+pip install "napari[all]"
+```
+Open `napari` and use the `Plugin > Install/Uninstall Plugins...` menu to install `recOrder-napari`.
+
+**Developer installation:**
+
 Install [`git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) and `conda` (either [anaconda](https://www.anaconda.com/products/distribution) or [miniconda](https://docs.conda.io/en/latest/miniconda.html)).
 
 Create a conda environment dedicated to `recOrder`:
 ```
-conda create -n recorder python=3.7
+conda create -n recorder python
 conda activate recorder
 ```
 
@@ -36,12 +57,12 @@ git clone https://github.com/mehta-lab/recOrder.git
 Install recOrder and its dependencies:
 ```buildoutcfg
 cd recOrder
-pip install -e .
+pip install -e ".[dev]"
 ```
 
 **Optional `napari` plugin**: `recOrder` includes a `napari` plugin that can be used to acquire data via MicroManager. To install `napari` use
 ```
-pip install 'napari[all]'
+pip install "napari[all]"
 ```
 To run the `recOrder` plugin use
 ```
@@ -52,7 +73,7 @@ To acquire data via MicroManager, follow the [instructions on the wiki](https://
 
 **Optional GPU**: `recOrder` supports NVIDIA GPU computation with the `cupy` package. Follow [these instructions](https://github.com/cupy/cupy) to install `cupy` and check its installation with ```import cupy```. To enable gpu processing, set ```use_gpu: True``` in the config files.
 
-## Usage
+## Command-line usage
 Type `recOrder.help` for instructions on the two command-line modes: `recOrder.reconstruct` and `recOrder.convert`.
 
 ### `recOrder.reconstruct`

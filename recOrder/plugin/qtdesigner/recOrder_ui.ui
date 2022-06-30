@@ -36,7 +36,6 @@
     <widget class="QGroupBox" name="recon_status">
      <property name="font">
       <font>
-       <weight>75</weight>
        <italic>false</italic>
        <bold>true</bold>
       </font>
@@ -58,7 +57,6 @@
         </property>
         <property name="font">
          <font>
-          <weight>50</weight>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -78,7 +76,6 @@
         </property>
         <property name="font">
          <font>
-          <weight>50</weight>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -98,7 +95,6 @@
         </property>
         <property name="font">
          <font>
-          <weight>50</weight>
           <italic>false</italic>
           <bold>false</bold>
          </font>
@@ -136,7 +132,6 @@
      </property>
      <property name="font">
       <font>
-       <weight>50</weight>
        <italic>false</italic>
        <bold>false</bold>
       </font>
@@ -196,6 +191,7 @@
          <property name="font">
           <font>
            <italic>false</italic>
+           <bold>false</bold>
           </font>
          </property>
          <property name="widgetResizable">
@@ -206,8 +202,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>590</width>
-            <height>1345</height>
+            <width>594</width>
+            <height>1053</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -236,7 +232,6 @@
             <widget class="QGroupBox" name="calib_params">
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -255,16 +250,15 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_2">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>20</number>
+               <number>6</number>
               </property>
               <item row="5" column="4">
                <widget class="QComboBox" name="cb_lcb">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -283,7 +277,6 @@
                <widget class="QLineEdit" name="le_directory">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -300,7 +293,6 @@
                <widget class="QComboBox" name="cb_calib_scheme">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -324,7 +316,6 @@
                <widget class="QLabel" name="label_dir">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -338,7 +329,6 @@
                <widget class="QLabel" name="label_wavelength">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -352,7 +342,6 @@
                <widget class="QLineEdit" name="le_wavelength">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -366,7 +355,6 @@
                <widget class="QLineEdit" name="le_swing">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -380,7 +368,6 @@
                <widget class="QPushButton" name="qbutton_browse">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -403,7 +390,6 @@
                <widget class="QLabel" name="label_scheme">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -417,7 +403,6 @@
                <widget class="QLabel" name="label_swing">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -431,7 +416,6 @@
                <widget class="QCheckBox" name="chb_use_roi">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -445,7 +429,6 @@
                <widget class="QLabel" name="label_lca">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -462,7 +445,6 @@
                <widget class="QComboBox" name="cb_lca">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -481,7 +463,6 @@
                <widget class="QLabel" name="label_lcb">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -498,7 +479,6 @@
                <widget class="QLabel" name="label_calib_mode">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -512,7 +492,6 @@
                <widget class="QComboBox" name="cb_calib_mode">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                   <kerning>true</kerning>
@@ -537,7 +516,6 @@
                <widget class="QLabel" name="label_cfg_group">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -551,7 +529,6 @@
                <widget class="QComboBox" name="cb_config_group">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -568,7 +545,6 @@
             <widget class="QGroupBox" name="connect_to_micromanager">
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -587,7 +563,6 @@
                <widget class="QLineEdit" name="le_mm_status">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -601,7 +576,6 @@
                <widget class="QPushButton" name="qbutton_mm_connect">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -618,7 +592,6 @@
             <widget class="QGroupBox" name="run_calib">
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -628,16 +601,15 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_12">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>20</number>
+               <number>6</number>
               </property>
               <item row="8" column="0">
                <widget class="QLabel" name="labell_calib_assessment">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -651,7 +623,6 @@
                <widget class="QLabel" name="label_progress">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -671,7 +642,6 @@
                 </property>
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -691,7 +661,6 @@
                 </property>
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -709,6 +678,7 @@
                 <property name="font">
                  <font>
                   <italic>false</italic>
+                  <bold>true</bold>
                  </font>
                 </property>
                 <property name="value">
@@ -720,7 +690,6 @@
                <widget class="QPushButton" name="qbutton_calc_extinction">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -742,6 +711,7 @@
                  <font>
                   <pointsize>13</pointsize>
                   <italic>false</italic>
+                  <bold>true</bold>
                  </font>
                 </property>
                 <property name="readOnly">
@@ -753,7 +723,6 @@
                <widget class="QPushButton" name="qbutton_stop_calib">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -767,7 +736,6 @@
                <widget class="QPushButton" name="qbutton_load_calib">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -781,7 +749,6 @@
                <widget class="QTextBrowser" name="tb_calib_assessment">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -801,7 +768,6 @@
              </property>
              <property name="font">
               <font>
-               <weight>50</weight>
                <italic>false</italic>
                <bold>false</bold>
               </font>
@@ -810,7 +776,7 @@
               <enum>Qt::ClickFocus</enum>
              </property>
              <property name="currentIndex">
-              <number>0</number>
+              <number>2</number>
              </property>
              <widget class="QWidget" name="tab_plot">
               <attribute name="title">
@@ -822,6 +788,7 @@
                  <property name="font">
                   <font>
                    <italic>false</italic>
+                   <bold>false</bold>
                   </font>
                  </property>
                  <property name="widgetResizable">
@@ -832,8 +799,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>550</width>
-                    <height>300</height>
+                    <width>568</width>
+                    <height>280</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -842,6 +809,7 @@
                      <property name="font">
                       <font>
                        <italic>false</italic>
+                       <bold>false</bold>
                       </font>
                      </property>
                      <property name="text">
@@ -860,6 +828,7 @@
                      <property name="font">
                       <font>
                        <italic>false</italic>
+                       <bold>false</bold>
                       </font>
                      </property>
                     </widget>
@@ -891,8 +860,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>550</width>
-                    <height>300</height>
+                    <width>568</width>
+                    <height>280</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -988,7 +957,6 @@
             <widget class="QGroupBox" name="capture_background">
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -998,16 +966,15 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_3">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>20</number>
+               <number>6</number>
               </property>
               <item row="0" column="0">
                <widget class="QLabel" name="label_bg_folder">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -1021,7 +988,6 @@
                <widget class="QPushButton" name="qbutton_capture_bg">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -1035,7 +1001,6 @@
                <widget class="QLineEdit" name="le_bg_folder">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -1049,7 +1014,6 @@
                <widget class="QLineEdit" name="le_n_avg">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -1063,7 +1027,6 @@
                <widget class="QLabel" name="label_n_avg">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -1139,8 +1102,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>590</width>
-            <height>1208</height>
+            <width>594</width>
+            <height>909</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -1163,7 +1126,6 @@
              </property>
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -1176,10 +1138,10 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_9">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>25</number>
+               <number>6</number>
               </property>
               <item row="2" column="0" colspan="4">
                <widget class="QTabWidget" name="tabWidget_3">
@@ -1191,7 +1153,6 @@
                 </property>
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -1228,11 +1189,13 @@
                      <bool>false</bool>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_20">
+                     <property name="verticalSpacing">
+                      <number>6</number>
+                     </property>
                      <item row="0" column="0">
                       <widget class="QLabel" name="label_data_dir">
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1253,7 +1216,6 @@
                       <widget class="QPushButton" name="qbutton_browse_data_dir">
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1267,7 +1229,6 @@
                       <widget class="QLabel" name="label_save_dir">
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1288,7 +1249,6 @@
                       <widget class="QPushButton" name="qbutton_browse_save_dir">
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1332,7 +1292,6 @@
                       <widget class="QLineEdit" name="le_calibration_metadata">
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1501,7 +1460,7 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_26">
                      <property name="verticalSpacing">
-                      <number>20</number>
+                      <number>6</number>
                      </property>
                      <item row="3" column="0">
                       <widget class="QLabel" name="label_timepoints">
@@ -1573,7 +1532,6 @@
                        </property>
                        <property name="font">
                         <font>
-                         <weight>50</weight>
                          <italic>false</italic>
                          <bold>false</bold>
                         </font>
@@ -1611,6 +1569,8 @@
                        <property name="font">
                         <font>
                          <pointsize>10</pointsize>
+                         <italic>false</italic>
+                         <bold>false</bold>
                         </font>
                        </property>
                        <property name="text">
@@ -1704,7 +1664,7 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_30">
                      <property name="verticalSpacing">
-                      <number>20</number>
+                      <number>6</number>
                      </property>
                      <item row="0" column="0">
                       <widget class="QLabel" name="label_recon_wavelength">
@@ -1902,7 +1862,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_23">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>12</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="0" column="0">
                       <widget class="QLabel" name="label_phase_regularizer">
@@ -1983,7 +1946,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_24">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>6</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="2" column="0">
                       <widget class="QLabel" name="label_fluor_bg">
@@ -2052,7 +2018,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_25">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>12</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="3" column="0">
                       <widget class="QLabel" name="label_preproc_denoise_level">
@@ -2141,7 +2110,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_28">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>6</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="2" column="0">
                       <widget class="QLabel" name="label_postproc_reg_channel_idx">
@@ -2197,7 +2169,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_29">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>6</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="2" column="0">
                       <widget class="QLabel" name="label_postproc_fluor_channel">
@@ -2253,7 +2228,10 @@
                     </property>
                     <layout class="QGridLayout" name="gridLayout_27">
                      <property name="topMargin">
-                      <number>25</number>
+                      <number>6</number>
+                     </property>
+                     <property name="verticalSpacing">
+                      <number>6</number>
                      </property>
                      <item row="1" column="0">
                       <widget class="QLabel" name="labelpostproc_denoise_channels">
@@ -2327,7 +2305,7 @@
                <widget class="QCheckBox" name="chb_pause_updates">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2363,7 +2341,6 @@
              </property>
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -2373,16 +2350,15 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_13">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>20</number>
+               <number>6</number>
               </property>
               <item row="2" column="0">
                <widget class="QPushButton" name="qbutton_acq_phase">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2396,7 +2372,7 @@
                <widget class="QPushButton" name="qbutton_stop_acq">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2409,7 +2385,7 @@
                <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2422,7 +2398,6 @@
                <widget class="QPushButton" name="qbutton_acq_birefringence">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2436,7 +2411,7 @@
                <widget class="QPushButton" name="qbutton_listen">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2465,7 +2440,6 @@
              </property>
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -2481,10 +2455,10 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_8">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
               </property>
               <property name="verticalSpacing">
-               <number>20</number>
+               <number>6</number>
               </property>
               <item row="5" column="0">
                <widget class="QLabel" name="label_fluor">
@@ -2497,7 +2471,7 @@
                <widget class="QComboBox" name="cb_fluor_dim">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2520,7 +2494,6 @@
                <widget class="QComboBox" name="cb_birefringence">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2551,7 +2524,6 @@
                <widget class="QLabel" name="label_zstart">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2565,13 +2537,12 @@
                <widget class="QLabel" name="label_zstep">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
                 <property name="text">
-                 <string>Z_Step (um)</string>
+                 <string>Z Step (um)</string>
                 </property>
                </widget>
               </item>
@@ -2579,7 +2550,6 @@
                <widget class="QLabel" name="label_zend">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2596,7 +2566,6 @@
                <widget class="QLabel" name="label_birefringence">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2613,7 +2582,6 @@
                <widget class="QLabel" name="label_phase">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2627,7 +2595,6 @@
                <widget class="QComboBox" name="cb_phase">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2691,8 +2658,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>574</width>
-            <height>814</height>
+            <width>600</width>
+            <height>862</height>
            </rect>
           </property>
           <layout class="QGridLayout" name="gridLayout_4">
@@ -2706,7 +2673,6 @@
              </property>
              <property name="font">
               <font>
-               <weight>75</weight>
                <italic>false</italic>
                <bold>true</bold>
               </font>
@@ -2716,13 +2682,15 @@
              </property>
              <layout class="QGridLayout" name="gridLayout_17">
               <property name="topMargin">
-               <number>25</number>
+               <number>12</number>
+              </property>
+              <property name="verticalSpacing">
+               <number>6</number>
               </property>
               <item row="8" column="3">
                <widget class="QLineEdit" name="le_sat_max">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2742,7 +2710,7 @@
                <widget class="QPushButton" name="qbutton_create_overlay">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2761,7 +2729,6 @@
                 </property>
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2775,7 +2742,7 @@
                <widget class="QSlider" name="slider_saturation">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2788,7 +2755,6 @@
                <widget class="QComboBox" name="cb_colormap">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2812,7 +2778,7 @@
                <widget class="QComboBox" name="cb_value">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2825,7 +2791,7 @@
                <widget class="QComboBox" name="cb_hue">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2838,7 +2804,7 @@
                <widget class="QLabel" name="label_value">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2851,7 +2817,7 @@
                <widget class="QComboBox" name="cb_saturation">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2864,7 +2830,7 @@
                <widget class="QCheckBox" name="chb_display_volume">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2883,7 +2849,7 @@
                 </property>
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2896,7 +2862,7 @@
                <widget class="Line" name="line">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2912,7 +2878,7 @@
                <widget class="QLabel" name="label_colormap">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2925,7 +2891,7 @@
                <widget class="QLabel" name="label_hue">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2938,7 +2904,7 @@
                <widget class="QLabel" name="label_saturation">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
+                  <italic>false</italic>
                   <bold>false</bold>
                  </font>
                 </property>
@@ -2951,7 +2917,6 @@
                <widget class="QLineEdit" name="le_sat_min">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2971,7 +2936,6 @@
                <widget class="QLineEdit" name="le_val_min">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -2988,7 +2952,6 @@
                <widget class="QLineEdit" name="le_val_max">
                 <property name="font">
                  <font>
-                  <weight>50</weight>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
@@ -3068,32 +3031,124 @@
   </customwidget>
  </customwidgets>
  <tabstops>
+  <tabstop>le_gui_mode</tabstop>
+  <tabstop>qbutton_gui_mode</tabstop>
   <tabstop>tabWidget</tabstop>
+  <tabstop>scrollArea</tabstop>
+  <tabstop>qbutton_mm_connect</tabstop>
+  <tabstop>le_mm_status</tabstop>
   <tabstop>le_directory</tabstop>
+  <tabstop>qbutton_browse</tabstop>
   <tabstop>le_swing</tabstop>
   <tabstop>le_wavelength</tabstop>
   <tabstop>cb_calib_scheme</tabstop>
   <tabstop>cb_calib_mode</tabstop>
   <tabstop>cb_lca</tabstop>
   <tabstop>cb_lcb</tabstop>
+  <tabstop>cb_config_group</tabstop>
   <tabstop>chb_use_roi</tabstop>
   <tabstop>qbutton_calibrate</tabstop>
   <tabstop>qbutton_load_calib</tabstop>
   <tabstop>qbutton_calc_extinction</tabstop>
   <tabstop>qbutton_stop_calib</tabstop>
-  <tabstop>tabWidget_3</tabstop>
-  <tabstop>qbutton_browse</tabstop>
-  <tabstop>qbutton_capture_bg</tabstop>
+  <tabstop>le_extinction</tabstop>
+  <tabstop>tb_calib_assessment</tabstop>
   <tabstop>le_bg_folder</tabstop>
-  <tabstop>scrollArea</tabstop>
-  <tabstop>le_mm_status</tabstop>
-  <tabstop>le_n_avg</tabstop>
-  <tabstop>tabWidget_2</tabstop>
-  <tabstop>cb_loglevel</tabstop>
+  <tabstop>scrollArea_4</tabstop>
+  <tabstop>qbutton_acq_fluor</tabstop>
+  <tabstop>qbutton_acq_birefringence</tabstop>
+  <tabstop>qbutton_acq_phase</tabstop>
+  <tabstop>qbutton_acq_birefringence_phase</tabstop>
+  <tabstop>qbutton_listen</tabstop>
+  <tabstop>qbutton_stop_acq</tabstop>
+  <tabstop>acq_settings</tabstop>
+  <tabstop>le_zstart</tabstop>
+  <tabstop>le_zend</tabstop>
+  <tabstop>le_zstep</tabstop>
+  <tabstop>cb_birefringence</tabstop>
+  <tabstop>cb_phase</tabstop>
+  <tabstop>chb_phase_from_bf</tabstop>
+  <tabstop>cb_fluor_dim</tabstop>
+  <tabstop>cb_acq_channel</tabstop>
+  <tabstop>chb_pause_updates</tabstop>
+  <tabstop>tabWidget_3</tabstop>
+  <tabstop>le_data_dir</tabstop>
+  <tabstop>le_save_dir</tabstop>
+  <tabstop>le_data_save_name</tabstop>
+  <tabstop>le_calibration_metadata</tabstop>
+  <tabstop>cb_bg_method</tabstop>
+  <tabstop>le_bg_path</tabstop>
+  <tabstop>le_gpu_id</tabstop>
+  <tabstop>qbutton_browse_data_dir</tabstop>
+  <tabstop>qbutton_browse_save_dir</tabstop>
+  <tabstop>qbutton_browse_calib_meta</tabstop>
+  <tabstop>qbutton_browse_bg_path</tabstop>
+  <tabstop>chb_use_gpu</tabstop>
+  <tabstop>qbutton_load_default_config</tabstop>
+  <tabstop>qbutton_load_config</tabstop>
+  <tabstop>qbutton_save_config</tabstop>
+  <tabstop>cb_method</tabstop>
+  <tabstop>cb_mode</tabstop>
+  <tabstop>le_positions</tabstop>
+  <tabstop>le_timepoints</tabstop>
+  <tabstop>le_focus_zidx</tabstop>
+  <tabstop>le_fluor_chan</tabstop>
+  <tabstop>le_output_channels</tabstop>
+  <tabstop>le_recon_wavelength</tabstop>
+  <tabstop>le_obj_na</tabstop>
+  <tabstop>le_cond_na</tabstop>
+  <tabstop>le_ps</tabstop>
+  <tabstop>le_n_media</tabstop>
+  <tabstop>le_mag</tabstop>
+  <tabstop>le_pad_z</tabstop>
+  <tabstop>cb_phase_denoiser</tabstop>
+  <tabstop>le_phase_strength</tabstop>
+  <tabstop>le_rho</tabstop>
+  <tabstop>le_itr</tabstop>
+  <tabstop>le_fluor_strength</tabstop>
+  <tabstop>chb_preproc_denoise_use</tabstop>
+  <tabstop>le_preproc_denoise_channels</tabstop>
+  <tabstop>le_preproc_denoise_threshold</tabstop>
+  <tabstop>le_preproc_denoise_level</tabstop>
+  <tabstop>chb_postproc_fluor_use</tabstop>
+  <tabstop>le_postproc_fluor_wavelength_nm</tabstop>
+  <tabstop>le_postproc_fluor_channels</tabstop>
+  <tabstop>le_postproc_fluor_bg</tabstop>
+  <tabstop>registration</tabstop>
+  <tabstop>chb_postproc_reg_use</tabstop>
+  <tabstop>le_postproc_reg_shift</tabstop>
+  <tabstop>le_postproc_reg_channel_idx</tabstop>
+  <tabstop>cb_colormap</tabstop>
+  <tabstop>cb_hue</tabstop>
+  <tabstop>le_sat_min</tabstop>
+  <tabstop>le_sat_max</tabstop>
+  <tabstop>cb_saturation</tabstop>
+  <tabstop>slider_saturation</tabstop>
+  <tabstop>le_val_min</tabstop>
+  <tabstop>le_val_max</tabstop>
+  <tabstop>cb_value</tabstop>
+  <tabstop>slider_value</tabstop>
+  <tabstop>le_overlay_slice</tabstop>
+  <tabstop>chb_display_volume</tabstop>
+  <tabstop>qbutton_create_overlay</tabstop>
+  <tabstop>qbutton_capture_bg</tabstop>
+  <tabstop>chb_autocalc_bg</tabstop>
+  <tabstop>le_postproc_denoise_level</tabstop>
+  <tabstop>le_postproc_denoise_channels</tabstop>
+  <tabstop>scrollArea_5</tabstop>
   <tabstop>te_log</tabstop>
-  <tabstop>scrollArea_2</tabstop>
+  <tabstop>le_fluor_bg</tabstop>
+  <tabstop>le_n_avg</tabstop>
   <tabstop>scrollArea_3</tabstop>
-  <tabstop>qbutton_mm_connect</tabstop>
+  <tabstop>qbutton_reconstruct</tabstop>
+  <tabstop>le_notes_field</tabstop>
+  <tabstop>qbutton_stop_reconstruct</tabstop>
+  <tabstop>chb_postproc_denoise_use</tabstop>
+  <tabstop>le_postproc_denoise_threshold</tabstop>
+  <tabstop>denoising_2</tabstop>
+  <tabstop>scrollArea_2</tabstop>
+  <tabstop>cb_loglevel</tabstop>
+  <tabstop>qbutton_push_note</tabstop>
  </tabstops>
  <resources/>
  <connections/>
