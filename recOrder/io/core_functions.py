@@ -1,5 +1,4 @@
 import time
-import logging
 import numpy as np
 
 
@@ -67,136 +66,183 @@ def snap_and_average(snap_manager, display=True):
 
     return snap_manager.getDisplay().getImagePlus().getStatistics().umean
 
-# =========== Methods to set/get LC properties ===============
 
-
-def set_lc_waves(mmc, waves: float, device_property: str):
+def set_lc_waves(mmc, device_property: tuple, value: float):
     """
-    Puts a retardance value for either LCA or LCB
+    Set retardance in waves for LC in device_property
 
     Parameters
     ----------
-    mmc:                (object) MM Core object
-    waves:              (float) Retardance to set in fraction of wavelength
-    device_property:    (str) 'Retardance LC-A [in waves]' or 'Retardance LC-B [in waves]'
+    mmc : object
+        MM Core object
+    device_property : tuple
+        (device_name, property_name) set
+    value : float
+        Retardance to set as fraction of a wavelength
 
     Returns
     -------
 
     """
-    if waves > 1.6 or waves < 0.001:
-        raise ValueError("waves must be float, greater than 0.001 and less than 1.6")
-    mmc.setProperty('MeadowlarkLcOpenSource', device_property, str(waves))
+    device_name = device_property[0]
+    prop_name = device_property[1]
+
+    if value > 1.6 or value < 0.001:
+        raise ValueError(f"Requested retardance value is {value} waves. "
+                         f"Retardance must be greater than 0.001 and less than 1.6 waves.")
+
+    mmc.setProperty(device_name, prop_name, str(value))
     time.sleep(20/1000)
 
 
-def set_lc_volts(mmc, volts: float, device_property: str):
+def set_lc_voltage(mmc, device_property: tuple, value: float):
     """
-    Puts a retardance value for either LCA or LCB
+    Set LC retardance by specifying LC voltage
 
     Parameters
     ----------
-    mmc:                (object) MM Core object
-    waves:              (float) Voltage to set on triggerscope DAC, 0-5 V
-    device_property:    (str) 'LCA' or 'LCB'
+    mmc : object
+        MM Core object
+    device_property : tuple
+        (device_name, property_name) set
+    value : float
+        LC voltage in volts. Applied voltage is limited to 20V
 
     Returns
     -------
 
     """
-    if volts > 5.0 or volts < 0.0:
-        raise ValueError("Voltages must be float, greater than 0 and less than 5")
+    device_name = device_property[0]
+    prop_name = device_property[1]
 
-    mmc.setProperty(device_property, 'Volts', str(volts))
-    time.sleep(20/1000) # 10 ms?
+    if value > 20.0 or value < 0.0:
+        raise ValueError(f"Requested LC voltage is {value} V. "
+                         f"LC voltage must be greater than 0.0 and less than 20.0 V.")
+
+    mmc.setProperty(device_name, prop_name, str(value))
+    time.sleep(20 / 1000)
 
 
-def get_lc_waves(mmc, device_property: str) -> float:
+def set_lc_daq(mmc, device_property: tuple, value: float):
     """
-    Get LC Retardance Value
+    Set LC retardance based on DAQ output
 
     Parameters
     ----------
-    mmc:                (object) MM Core object
-    device_property:    (str) 'LCA' or 'LCB'
-
-    Returns
-    -------
-    retardance:         (float) Retardance of desires LC in fraction of wavelength
-
-    """
-    return float(mmc.getProperty('MeadowlarkLcOpenSource', device_property))
-
-
-def get_lc_volts(mmc, device_property):
-    return float(mmc.getProperty(device_property, 'Volts'))
-
-
-def define_lc_state_volts(mmc, group, state, lca_volts, lcb_volts, PROPERTIES: dict):
-    """
-    Write specific LC state to the register, corresponds to 'State{i}' in MM config
-
-    Parameters
-    ----------
-    mmc:                (object) MM Core object
-    state:              (string) State upon which LC values will be saved to.  'State{i}'
-    lca_volts:                (float) Voltage of LCA DAC
-    lcb_volts:                (float) Voltage of LCB DAC
-    PROPERTIES:         (dict) Properties dictionary which shortcuts MM device property names
+    mmc : object
+        MM Core object
+    device_property : tuple
+        (device_name, property_name) set
+    value : float
+        DAQ output voltage in volts. DAQ output must be in 0-5V range
 
     Returns
     -------
 
     """
-    set_lc_volts(mmc, lca_volts, PROPERTIES['LCA-DAC'])
-    set_lc_volts(mmc, lcb_volts, PROPERTIES['LCB-DAC'])
+    device_name = device_property[0]
+    prop_name = device_property[1]
 
-    logging.debug(f'Setting LCA to {lca_volts} volts')
-    logging.debug(f'Setting LCB to {lcb_volts} volts')
+    if value > 5.0 or value < 0.0:
+        raise ValueError("DAC voltage must be greater than 0.0 and less than 5.0")
 
-    mmc.defineConfig(group, state, PROPERTIES['LCA-DAC'], 'Volts', str(lca_volts))
-    mmc.defineConfig(group, state, PROPERTIES['LCB-DAC'], 'Volts', str(lcb_volts))
-    mmc.waitForConfig(group, state)
+    mmc.setProperty(device_name, prop_name, str(value))
+    time.sleep(20 / 1000)
 
 
-def define_lc_state(mmc, state, lca, lcb, PROPERTIES: dict):
+def get_lc(mmc, device_property: tuple):
     """
-    Write specific LC state to the register, corresponds to 'State{i}' in MM config
+    Get LC state in the native units of the device property
 
     Parameters
     ----------
-    mmc:                (object) MM Core object
-    state:              (string) State upon which LC values will be saved to.  'State{i}'
-    lca:                (float) Retardance of desires LC in fraction of wavelength
-    lcb:                (float) Retardance of desires LC in fraction of wavelength
-    PROPERTIES:         (dict) Properties dictionary which shortcuts MM device property names
+    mmc : object
+        MM Core object
+    device_property : tuple
+        (device_name, property_name) set
 
     Returns
     -------
 
     """
-    set_lc_waves(mmc, lca, PROPERTIES['LCA'])
-    set_lc_waves(mmc, lcb, PROPERTIES['LCB'])
 
-    logging.debug(f'Setting LCA to {lca} waves')
-    logging.debug(f'Setting LCB to {lcb} waves')
+    device_name = device_property[0]
+    prop_name = device_property[1]
 
-    mmc.setProperty('MeadowlarkLcOpenSource', PROPERTIES[state], 0)
-    mmc.waitForDevice('MeadowlarkLcOpenSource')
+    val = float(mmc.getProperty(device_name, prop_name))
+    return val
 
 
-def set_lc_state(mmc, group: str, state: str):
+def define_meadowlark_state(mmc, device_property: tuple):
+    """
+    Defines pallet element in the Meadowlark device adapter for the given state.
+    Make sure LC values for this state are set before calling this function
+
+    Parameters
+    ----------
+    mmc : object
+        MM Core object
+    device_property : tuple
+        (device_name, property_name) set, e.g.
+        ('MeadowlarkLC', 'Pal. elem. 00; enter 0 to define; 1 to activate')
+
+    Returns
+    -------
+
+    """
+
+    device_name = device_property[0]
+    prop_name = device_property[1]
+
+    # define LC state
+    # setting pallet elements to 0 defines LC state
+    mmc.setProperty(device_name, prop_name, 0)
+    mmc.waitForDevice(device_name)
+
+
+def define_config_state(mmc, group: str, config: str, device_properties: list, values: list):
+    """
+    Define config state by specifying the values for all device properties in this config
+
+    Parameters
+    ----------
+    mmc : object
+        MM Core object
+    group : str
+        Name of config group
+    config : str
+        Name of config, e.g. State0
+    device_properties: list
+        List of (device_name, property_name) tuples in config
+    values: list
+        List of matching device property values
+
+    Returns
+    -------
+
+    """
+
+    for device_property, value in zip(device_properties, values):
+        device_name = device_property[0]
+        prop_name = device_property[1]
+        mmc.defineConfig(group, config, device_name, prop_name, str(value))
+    mmc.waitForConfig(group, config)
+
+
+def set_lc_state(mmc, group: str, config: str):
     """
     Change to the specific LC State
 
     Parameters
     ----------
-    mmc:                (object) MM Core object
-    state:              (string) State to switch to.  'State{i}'
+    mmc : object
+        MM Core object
+    group : str
+        Name of config group
+    config : str
+        Name of config, e.g. State0
 
     """
-    try:
-        mmc.setConfig(group, state)
-    except ValueError:
-        print('ERROR: No MicroManager Config Group/Preset named Channel')
-    time.sleep(20/1000) # delay for LC settle time
+
+    mmc.setConfig(group, config)
+    time.sleep(20/1000)  # delay for LC settle time

@@ -2,7 +2,7 @@ from PyQt5.QtCore import pyqtSignal
 from napari.qt.threading import WorkerBaseSignals, WorkerBase, thread_worker
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
-from recOrder.io.core_functions import define_lc_state, set_lc_state, snap_and_average
+from recOrder.io.core_functions import define_meadowlark_state, set_lc_state, snap_and_average
 from recOrder.io.utils import MockEmitter
 import os
 import numpy as np
@@ -81,7 +81,7 @@ class CalibrationWorker(WorkerBase):
         # Set LC Wavelength:
         self.calib.set_wavelength(int(self.calib_window.wavelength))
         if self.calib_window.calib_mode == 'MM-Retardance':
-            self.calib_window.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.calib_window.wavelength)
+            self.calib_window.mmc.setProperty('MeadowlarkLC', 'Wavelength', self.calib_window.wavelength)
 
         self._check_abort()
 
@@ -353,16 +353,16 @@ def load_calibration(calib, meta: dict):
     state0 = meta['Summary']['[LCA_Ext, LCB_Ext]']
     state1 = meta['Summary']['[LCA_0, LCB_0]']
 
-    define_lc_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
-    define_lc_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
+    define_meadowlark_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
+    define_meadowlark_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
 
     # Update algorithm specific states
     if meta['Summary']['Acquired Using'] == '4-State':
         state2 = meta['Summary']['[LCA_60, LCB_60]']
         state3 = meta['Summary']['[LCA_120, LCB_120]']
 
-        define_lc_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
-        define_lc_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
+        define_meadowlark_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
+        define_meadowlark_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
 
     # 5-State Algorithm
     else:
@@ -370,9 +370,9 @@ def load_calibration(calib, meta: dict):
         state3 = meta['Summary']['[LCA_90, LCB_90]']
         state4 = meta['Summary']['[LCA_135, LCB_135]']
 
-        define_lc_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
-        define_lc_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
-        define_lc_state(calib.mmc, 'State4', state4[0], state4[1], calib.PROPERTIES)
+        define_meadowlark_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
+        define_meadowlark_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
+        define_meadowlark_state(calib.mmc, 'State4', state4[0], state4[1], calib.PROPERTIES)
 
     # Calculate Blacklevel after loading these properties
     calib.intensity_emitter = MockEmitter()
