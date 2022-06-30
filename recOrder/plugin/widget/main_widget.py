@@ -1551,9 +1551,10 @@ class MainWidget(QWidget):
                 config_list = []
                 for j in range(configs.size()):
                     config_list.append(configs.get(j))
-                if np.all([ch in config_list for ch in calib_channels]):
-                    config_group_found = True
-                    self.config_group = group
+                if np.all([np.any([ch in config for config in config_list]) for ch in calib_channels]):
+                    if not config_group_found:
+                        self.config_group = group  # set to first config group found
+                        config_group_found = True
                     self.ui.cb_config_group.addItem(group)
                 for ch in config_list:
                     if ch not in calib_channels:
