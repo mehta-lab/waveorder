@@ -351,14 +351,14 @@ def load_calibration(calib, metadata: MetadataReader):
     """
 
     state0, state1, state2, state3 = zip(metadata.LCA_retardance[:4], metadata.LCB_retardance[:4])
-    define_lc_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
-    define_lc_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
-    define_lc_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
-    define_lc_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
+    define_meadowlark_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
+    define_meadowlark_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
+    define_meadowlark_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
+    define_meadowlark_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
 
     if metadata.Calibration_scheme == '5-State':
         state4 = (metadata.LCA_retardance[4], metadata.LCB_retardance[4])
-        define_lc_state(calib.mmc, 'State4', state4[0], state4[1], calib.PROPERTIES)
+        define_meadowlark_state(calib.mmc, 'State4', state4[0], state4[1], calib.PROPERTIES)
 
     # Calculate Blacklevel after loading these properties
     calib.intensity_emitter = MockEmitter()
