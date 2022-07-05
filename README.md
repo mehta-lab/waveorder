@@ -30,8 +30,8 @@ recOrder is to be used alongside the QLIPP module, whose design has been optimiz
 
 (Optional but recommended) install [anaconda](https://www.anaconda.com/products/distribution) and create a virtual environment  
 ```
-conda create -n recorder python
-conda activate recorder
+conda create -n recOrder python
+conda activate recOrder
 ```
 Install napari:
 ```
@@ -45,8 +45,8 @@ Install [`git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) a
 
 Create a conda environment dedicated to `recOrder`:
 ```
-conda create -n recorder python
-conda activate recorder
+conda create -n recOrder python
+conda activate recOrder
 ```
 
 Clone this repository:
