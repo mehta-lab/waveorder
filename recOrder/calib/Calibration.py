@@ -863,7 +863,9 @@ class QLIPP_Calibration():
                 'LC retardance': {f'LC{i}_{j}': np.around(getattr(self, f'lc{i.lower()}_{j}'), decimals=6)
                                   for j in ['ext', '0', '60', '120']
                                   for i in ['A', 'B']},
-                'LC voltage': {},
+                'LC voltage': {f'LC{i}_{j}': np.around(self.calib.get_voltage(getattr(self, f'lc{i.lower()}_{j}')), decimals=4)
+                               for j in ['ext', '0', '60', '120']
+                               for i in ['A', 'B']},
                 'Swing_0': np.around(self.swing0, decimals=3),
                 'Swing_60': np.around(self.swing60, decimals=3),
                 'Swing_120': np.around(self.swing120, decimals=3),
@@ -876,7 +878,9 @@ class QLIPP_Calibration():
                 'LC retardance': {f'LC{i}_{j}': np.around(getattr(self, f'lc{i.lower()}_{j}'), decimals=6)
                                   for j in ['ext', '0', '45', '90', '135']
                                   for i in ['A', 'B']},
-                'LC voltage': {},
+                'LC voltage': {f'LC{i}_{j}': np.around(self.calib.get_voltage(getattr(self, f'lc{i.lower()}_{j}')), decimals=4)
+                               for j in ['ext', '0', '45', '90', '135']
+                               for i in ['A', 'B']},
                 'Swing_0': np.around(self.swing0, decimals=3),
                 'Swing_45': np.around(self.swing45, decimals=3),
                 'Swing_90': np.around(self.swing90, decimals=3),
