@@ -1145,7 +1145,16 @@ class CalibrationData:
         if r_squared < 0.999:
             warnings.warn(f'Schnoor fit has R2 value of {r_squared:.5f}, fit may not have worked well.')
 
+        self.xvoltage = xdata.flatten()
+        self.nm_err = y - y_hat
         return p.x
+
+    def plot_error(self, filename):
+        import matplotlib.pyplot as plt
+        plt.plot(self.xvoltage, self.nm_err)
+        plt.xlabel('Voltage (V)')
+        plt.ylabel('Retardance error between data and Schnoor fit (nm)')
+        plt.savefig(filename)
 
     def interpolate_data(self, raw_data, calib_wavelengths):
         # 0V to 20V step size 1 mV
