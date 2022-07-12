@@ -7,3 +7,4 @@ opencv-python>=3.4.1
 tifffile>=2020.11.26
 zarr>=2.6.1
 natsort>=7.1.1
+pycromanager>=0.13.2
