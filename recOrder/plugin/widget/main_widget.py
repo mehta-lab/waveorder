@@ -2382,7 +2382,7 @@ class MainWidget(QWidget):
         Calibration is then executed by the calibration worker
         """
 
-        self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, mode=self.calib_mode,
+        self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, lc_control_mode=self.calib_mode,
                                        wavelength=self.wavelength)
 
         if self.calib_mode == 'DAC':

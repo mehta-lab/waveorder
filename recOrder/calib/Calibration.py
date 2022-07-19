@@ -21,7 +21,8 @@ import pkg_resources
 
 class QLIPP_Calibration():
 
-    def __init__(self, mmc, mm, group='Channel', mode='MM-Retardance', wavelength=532, optimization='min_scalar', print_details=True):
+    def __init__(self, mmc, mm, group='Channel', lc_control_mode='MM-Retardance', interp_method='schnoor_fit',
+                 wavelength=532, optimization='min_scalar', print_details=True):
 
         # Micromanager API
         self.mm = mm
@@ -50,12 +51,14 @@ class QLIPP_Calibration():
         #Set Mode
         # TODO: make sure LC or TriggerScope are loaded in the respective modes
         allowed_modes = ['MM-Retardance', 'MM-Voltage', 'DAC']
-        assert mode in allowed_modes, f'LC control mode must be one of {allowed_modes}'
-        self.mode = mode
+        assert lc_control_mode in allowed_modes, f'LC control mode must be one of {allowed_modes}'
+        self.mode = lc_control_mode
         self.LC_DAC_conversion = 4  # convert between the input range of LCs (0-20V) and the output range of the DAC (0-5V)
 
         # Initialize calibration class
-        interp_method = 'schnoor_fit'  # 'schnoor_fit' or 'linear', schnoor_fit is preferred
+        allowed_interp_methods = ['schnoor_fit', 'linear']
+        assert interp_method in allowed_interp_methods,\
+            f'LC calibration data interpolation method must be one of {allowed_interp_methods}'
         dir_path = os.path.dirname(os.path.realpath(__file__))
         self.calib = CalibrationData(os.path.join(dir_path, './calibration_data.csv'), interp_method=interp_method,
                                      wavelength=wavelength)
