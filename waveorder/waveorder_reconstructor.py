@@ -755,13 +755,16 @@ class waveorder_microscopy:
         self.H_im = np.squeeze(self.H_im)
         
             
-    def gen_2D_vec_WOTF(self, inc_option):
-        
+    def gen_2D_vec_WOTF(self, inc_option=False):
+
         '''
     
-        generate 2D vectorial transfer functions for 2D QUTIPP
-        
-                             
+        generate 2D vectorial transfer functions for 2D PTI
+
+         Parameters
+        ----------
+        inc_option  :   boolean
+                        generate OTFs for multiple patterns of illumination used for reconstructing illumination.                 
         '''
         
         if inc_option == True:
@@ -896,7 +899,7 @@ class waveorder_microscopy:
         
         '''
     
-        generate 3D vectorial transfer functions for 3D QUTIPP
+        generate 3D vectorial transfer functions for 3D PTI
         
                              
         '''
@@ -1651,7 +1654,7 @@ class waveorder_microscopy:
         
         '''
     
-        Tikhonov reconstruction of 2D scattering potential tensor components with vectorial model in QUTIPP
+        Tikhonov reconstruction of 2D scattering potential tensor components with vectorial model in PTI
         
         Parameters
         ----------
@@ -1735,7 +1738,7 @@ class waveorder_microscopy:
         
         '''
     
-        Tikhonov reconstruction of 3D scattering potential tensor components with vectorial model in QUTIPP
+        Tikhonov reconstruction of 3D scattering potential tensor components with vectorial model in PTI
         
         Parameters
         ----------
