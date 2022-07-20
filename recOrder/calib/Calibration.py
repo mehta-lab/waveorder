@@ -59,8 +59,8 @@ class QLIPP_Calibration():
         allowed_interp_methods = ['schnoor_fit', 'linear']
         assert interp_method in allowed_interp_methods,\
             f'LC calibration data interpolation method must be one of {allowed_interp_methods}'
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.calib = CalibrationData(os.path.join(dir_path, './calibration_data.csv'), interp_method=interp_method,
+        dir_path = mmc.getDeviceAdapterSearchPaths().get(0) # MM device adapter directory
+        self.calib = CalibrationData(os.path.join(dir_path, 'calibration_data.csv'), interp_method=interp_method,
                                      wavelength=wavelength)
 
         # Optimizer
