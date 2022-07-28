@@ -1,18 +1,18 @@
-# User Guide
+# Napari Plugin Guide
 
-## Launching recOrder
+## Launching `recOrder`
 
-Open Terminal and activate recOrder environment
+Activate the `recOrder` environment
 ```
 conda activate recOrder
 ```
    
-Launch napari and recOrder with the command
+Launch `napari` with `recOrder`
 ```
-napari -w recorder-napari
+napari -w recOrder-napari
 ```
 
-## recOrder Calibration
+## `recOrder` Calibration
 
 The first step in the QLIPP process is to calibrate the universal polarizer. This process involves generating the polarization states and acquiring a background **on an empty FOV**.  The light path must also be in **Kohler Illumination** in order to ensure uniform illumination of the sample. Steps on Kohler illumination can be found here https://www.microscopyu.com/tutorials/kohler.
 

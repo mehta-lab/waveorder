@@ -1,4 +1,4 @@
-# recOrder CLI reconstruction
+# Command Line Guide
 
 This command-line interface command allows the user to move through quantitative reconstruction of Phase, Birefringence, and Fluorescence Deconvolution through a user-defined config file.  The user should copy one of the example config files from `/examples/example_configs/`.
 

@@ -1,4 +1,4 @@
-# Setup Guide
+# Microscope Installation Guide
 
 This guide will walk through a complete recOrder installation consisting of:
 1. Installing and launching the latest stable version of `recOrder` via `pip`. 
