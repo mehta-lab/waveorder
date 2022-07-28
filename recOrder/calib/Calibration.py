@@ -853,6 +853,8 @@ class QLIPP_Calibration():
                         'Calibration scheme': self.calib_scheme,
                         'Swing (waves)': self.swing,
                         'Wavelength (nm)': self.wavelength,
+                        'Retardance to voltage interpolation method': self.calib.interp_method,
+                        'LC control mode': self.mode,
                         'Black level': np.round(self.I_Black, 2),
                         'Extinction ratio': self.extinction_ratio,
                         'ROI (x, y, width, height)': self.ROI},
