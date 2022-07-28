@@ -35,13 +35,13 @@ Clone this repository:
 git clone https://github.com/mehta-lab/recOrder.git
 ```
 
-Install recOrder and its developer dependencies:
+Install `recOrder` and its developer dependencies:
 ```
 cd recOrder
 pip install -e ".[dev]"
 ```
 
-To acquire data via MicroManager, follow  [microscope installation guide](./microscope-installation-guide.md).
+To acquire data via `Micromanager`, follow  [microscope installation guide](./microscope-installation-guide.md).
 
 **Optional GPU**: `recOrder` supports NVIDIA GPU computation with the `cupy` package. Follow [these instructions](https://github.com/cupy/cupy) to install `cupy` and check its installation with ```import cupy```. To enable gpu processing, set ```use_gpu: True``` in the config files.
 

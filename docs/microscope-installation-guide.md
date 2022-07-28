@@ -17,10 +17,8 @@ conda activate recOrder
 
 Install `napari` and `recOrder`:
 ```
-pip install "napari[all]"
-pip install recOrder-napari
+pip install "napari[all]" recOrder-napari
 ```
-
 Check your installation:
 ```
 napari -w recOrder-napari
@@ -51,6 +49,6 @@ Finally, enable port access so that micromanager can communicate with recOrder t
 
 ## Connect `recOrder` to `Micromanager`
 
-From the `recOrder` window, click `Switch to Online`. If you see `Success`, your installation is complete and you can [proceed to the user guide](https://github.com/mehta-lab/recOrder/wiki/recOrder-User-Guide). 
+From the `recOrder` window, click `Switch to Online`. If you see `Success`, your installation is complete and you can [proceed to the napari plugin guide](./napari-plugin-guide.md). 
 
 If you you see `Failed`, check that `Micromanager` is open, check that you've enabled `Run server on port 4827`. If the connection continues to fail, report an issue with you stack trace for support. 
