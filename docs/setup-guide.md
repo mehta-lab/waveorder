@@ -7,7 +7,7 @@ This guide will walk through a complete recOrder installation consisting of:
 
 Before you start you will need a machine with Windows 10, a Meadowlark DS5020 connected to a liquid crystal device, and a microscope system compatible with `Micromanager`. 
 
-# Install recOrder software
+## Install recOrder software
 
 (Optional but recommended) install [anaconda](https://www.anaconda.com/products/distribution) and create a virtual environment  
 ```
@@ -27,7 +27,7 @@ napari -w recOrder-napari
 ```
 should launch napari (may take 15 seconds on a fresh installation) with the recOrder plugin in "Offline" mode. 
  
-# Install and configure MicroManager
+## Install and configure `Micromanager`
 
 Install `Micromanager 2.0` nightly build `20210713` (https://micro-manager.org/Micro-Manager_Nightly_Builds). 
 
@@ -49,7 +49,7 @@ Finally, enable port access so that micromanager can communicate with recOrder t
 
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/run_port.png)
 
-# Connect `recOrder` to `Micromanager`
+## Connect `recOrder` to `Micromanager`
 
 From the `recOrder` window, click `Switch to Online`. If you see `Success`, your installation is complete and you can [proceed to the user guide](https://github.com/mehta-lab/recOrder/wiki/recOrder-User-Guide). 
 
