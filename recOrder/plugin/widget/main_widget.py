@@ -1,4 +1,4 @@
-from recOrder.calib.Calibration import QLIPP_Calibration
+from recOrder.calib.Calibration import QLIPP_Calibration, lc_device_name
 from pycromanager import Bridge
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy, QSlider
@@ -191,7 +191,9 @@ class MainWidget(QWidget):
         # Reconstruction / Calibration Parameter Defaults
         self.calib_scheme = '4-State'
         self.calib_mode = 'MM-Retardance'
+        self.interp_method = 'schnoor_fit'
         self.config_group = 'Channel'
+        self.calib_channels = ['State0', 'State1', 'State2', 'State3', 'State4']
         self.last_calib_meta_file = None
         self.use_cropped_roi = False
         self.bg_folder_name = 'BG'
@@ -1541,7 +1543,6 @@ class MainWidget(QWidget):
             self.mm = bridge.get_studio()
 
             # set calibration channel group
-            calib_channels = ['State0', 'State1', 'State2', 'State3', 'State4']
             self.ui.cb_config_group.clear()
             groups = self.mmc.getAvailableConfigGroups()
             config_group_found = False
@@ -1551,20 +1552,33 @@ class MainWidget(QWidget):
                 config_list = []
                 for j in range(configs.size()):
                     config_list.append(configs.get(j))
-                if np.all([np.any([ch in config for config in config_list]) for ch in calib_channels]):
+                if np.all([np.any([ch in config for config in config_list]) for ch in self.calib_channels]):
                     if not config_group_found:
                         self.config_group = group  # set to first config group found
                         config_group_found = True
                     self.ui.cb_config_group.addItem(group)
                 for ch in config_list:
-                    if ch not in calib_channels:
+                    if ch not in self.calib_channels:
                         self.ui.cb_acq_channel.addItem(ch)
             if not config_group_found:
-                msg = f'No config group contains channels {calib_channels}. ' \
+                msg = f'No config group contains channels {self.calib_channels}. ' \
                       'Please refer to the recOrder wiki on how to set up the config properly.'
                 self.ui.cb_config_group.setStyleSheet("border: 1px solid rgb(200,0,0);")
                 raise KeyError(msg)
+
+
+            # set LC control mode
+            _devices = self.mmc.getLoadedDevices()
+            loaded_devices = [_devices.get(i) for i in range(_devices.size())]
+            if lc_device_name in loaded_devices:
+                self.calib_mode = 'MM-Voltage'
+                self.ui.cb_calib_mode.setCurrentIndex(1)
+            else:
+                self.calib_mode = 'DAC'
+                self.ui.cb_calib_mode.setCurrentIndex(2)
+
             self.mm_status_changed.emit(True)
+
         except:
             self.mm_status_changed.emit(False)
 
@@ -2383,7 +2397,7 @@ class MainWidget(QWidget):
         """
 
         self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, lc_control_mode=self.calib_mode,
-                                       wavelength=self.wavelength)
+                                       interp_method=self.interp_method, wavelength=self.wavelength)
 
         if self.calib_mode == 'DAC':
             self.calib.set_dacs(self.lca_dac, self.lcb_dac)
