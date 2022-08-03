@@ -4,6 +4,7 @@ from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
 from recOrder.io.core_functions import define_meadowlark_state, set_lc_state, snap_and_average
 from recOrder.io.utils import MockEmitter
+from recOrder.calib.Calibration import meadowlark_dev_adapter_name
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
 import os
 import numpy as np
@@ -82,7 +83,7 @@ class CalibrationWorker(WorkerBase):
         # Set LC Wavelength:
         self.calib.set_wavelength(int(self.calib_window.wavelength))
         if self.calib_window.calib_mode == 'MM-Retardance':
-            self.calib_window.mmc.setProperty('MeadowlarkLC', 'Wavelength', self.calib_window.wavelength)
+            self.calib_window.mmc.setProperty(meadowlark_dev_adapter_name, 'Wavelength', self.calib_window.wavelength)
 
         self._check_abort()
 
