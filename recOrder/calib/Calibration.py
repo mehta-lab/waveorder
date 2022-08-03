@@ -18,7 +18,7 @@ from recOrder.io.utils import MockEmitter
 from datetime import datetime
 import pkg_resources
 
-meadowlark_dev_adapter_name = 'MeadowlarkLcOpenSource'
+lc_device_name = 'MeadowlarkLC'
 
 
 class QLIPP_Calibration():
@@ -32,17 +32,17 @@ class QLIPP_Calibration():
         self.snap_manager = mm.getSnapLiveManager()
 
         # Meadowlark LC Device Adapter Property Names
-        self.PROPERTIES = {'LCA': (meadowlark_dev_adapter_name, 'Retardance LC-A [in waves]'),
-                           'LCB': (meadowlark_dev_adapter_name, 'Retardance LC-B [in waves]'),
-                           'LCA-Voltage': (meadowlark_dev_adapter_name, 'Voltage (V) LC-A'),
-                           'LCB-Voltage': (meadowlark_dev_adapter_name, 'Voltage (V) LC-B'),
+        self.PROPERTIES = {'LCA': (lc_device_name, 'Retardance LC-A [in waves]'),
+                           'LCB': (lc_device_name, 'Retardance LC-B [in waves]'),
+                           'LCA-Voltage': (lc_device_name, 'Voltage (V) LC-A'),
+                           'LCB-Voltage': (lc_device_name, 'Voltage (V) LC-B'),
                            'LCA-DAC': ('TS_DAC01', 'Volts'),
                            'LCB-DAC': ('TS_DAC02', 'Volts'),
-                           'State0': (meadowlark_dev_adapter_name, 'Pal. elem. 00; enter 0 to define; 1 to activate'),
-                           'State1': (meadowlark_dev_adapter_name, 'Pal. elem. 01; enter 0 to define; 1 to activate'),
-                           'State2': (meadowlark_dev_adapter_name, 'Pal. elem. 02; enter 0 to define; 1 to activate'),
-                           'State3': (meadowlark_dev_adapter_name, 'Pal. elem. 03; enter 0 to define; 1 to activate'),
-                           'State4': (meadowlark_dev_adapter_name, 'Pal. elem. 04; enter 0 to define; 1 to activate')
+                           'State0': (lc_device_name, 'Pal. elem. 00; enter 0 to define; 1 to activate'),
+                           'State1': (lc_device_name, 'Pal. elem. 01; enter 0 to define; 1 to activate'),
+                           'State2': (lc_device_name, 'Pal. elem. 02; enter 0 to define; 1 to activate'),
+                           'State3': (lc_device_name, 'Pal. elem. 03; enter 0 to define; 1 to activate'),
+                           'State4': (lc_device_name, 'Pal. elem. 04; enter 0 to define; 1 to activate')
                            }
         self.group = group
 
@@ -724,7 +724,7 @@ class QLIPP_Calibration():
 
         # Set LC Wavelength:
         if self.mode == 'MM-Retardance':
-            self.mmc.setProperty(meadowlark_dev_adapter_name, 'Wavelength', self.wavelength)
+            self.mmc.setProperty(lc_device_name, 'Wavelength', self.wavelength)
 
         self.opt_Iext()
         self.opt_I0()
@@ -783,7 +783,7 @@ class QLIPP_Calibration():
 
         # Set LC Wavelength:
         if self.mode == 'MM-Retardance':
-            self.mmc.setProperty(meadowlark_dev_adapter_name, 'Wavelength', self.wavelength)
+            self.mmc.setProperty(lc_device_name, 'Wavelength', self.wavelength)
 
         self.opt_Iext()
         self.opt_I0()
