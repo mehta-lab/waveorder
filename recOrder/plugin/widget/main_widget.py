@@ -69,7 +69,6 @@ class MainWidget(QWidget):
         self.ui.cb_calib_mode.currentIndexChanged[int].connect(self.enter_calib_mode)
         self.ui.cb_lca.currentIndexChanged[int].connect(self.enter_dac_lca)
         self.ui.cb_lcb.currentIndexChanged[int].connect(self.enter_dac_lcb)
-        self.ui.cb_interp_mode.currentIndexChanged[int].connect(self.enter_interp_mode)
         self.ui.chb_use_roi.stateChanged[int].connect(self.enter_use_cropped_roi)
         self.ui.qbutton_calibrate.clicked[bool].connect(self.run_calibration)
         self.ui.qbutton_load_calib.clicked[bool].connect(self.load_calibration)
@@ -192,7 +191,6 @@ class MainWidget(QWidget):
         # Reconstruction / Calibration Parameter Defaults
         self.calib_scheme = '4-State'
         self.calib_mode = 'MM-Retardance'
-        self.interp_mode = 'schnoor_fit'
         self.config_group = 'Channel'
         self.last_calib_meta_file = None
         self.use_cropped_roi = False
@@ -1896,14 +1894,6 @@ class MainWidget(QWidget):
         self.lcb_dac = dac
 
     @pyqtSlot()
-    def enter_interp_mode(self):
-        index = self.ui.cb_interp_mode.currentIndex()
-        if index == 0:
-            self.interp_mode = 'schnoor_fit'
-        elif index == 1:
-            self.interp_mode = 'linear'
-
-    @pyqtSlot()
     def enter_config_group(self):
         """
         callback for changing the config group combo box.  User needs to specify a config group that has the
@@ -2393,7 +2383,7 @@ class MainWidget(QWidget):
         """
 
         self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, lc_control_mode=self.calib_mode,
-                                       interp_method=self.interp_mode, wavelength=self.wavelength)
+                                       wavelength=self.wavelength)
 
         if self.calib_mode == 'DAC':
             self.calib.set_dacs(self.lca_dac, self.lcb_dac)
