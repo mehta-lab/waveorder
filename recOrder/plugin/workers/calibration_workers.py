@@ -351,6 +351,7 @@ def load_calibration(calib, metadata: MetadataReader):
     calib           (object) updated recOrder Calibration Class
     """
 
+    #TODO: fix these issues; call define_config_state with right properties based on current calib settings
     state0, state1, state2, state3 = zip(metadata.LCA_retardance[:4], metadata.LCB_retardance[:4])
     define_meadowlark_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
     define_meadowlark_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
