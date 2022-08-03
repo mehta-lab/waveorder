@@ -18,7 +18,7 @@ from recOrder.io.utils import MockEmitter
 from datetime import datetime
 import pkg_resources
 
-lc_device_name = 'MeadowlarkLC'
+lc_device_name = 'MeadowlarkLcOpenSource'
 
 
 class QLIPP_Calibration():
