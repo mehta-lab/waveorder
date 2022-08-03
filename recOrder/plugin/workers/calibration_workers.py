@@ -2,7 +2,7 @@ from PyQt5.QtCore import pyqtSignal
 from napari.qt.threading import WorkerBaseSignals, WorkerBase, thread_worker
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
-from recOrder.io.core_functions import define_meadowlark_state, set_lc_state, snap_and_average
+from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.utils import MockEmitter
 from recOrder.calib.Calibration import lc_device_name
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
@@ -351,18 +351,10 @@ def load_calibration(calib, metadata: MetadataReader):
     calib           (object) updated recOrder Calibration Class
     """
 
-    #TODO: fix these issues; call define_config_state with right properties based on current calib settings
-    state0, state1, state2, state3 = zip(metadata.LCA_retardance[:4], metadata.LCB_retardance[:4])
-    define_meadowlark_state(calib.mmc, 'State0', state0[0], state0[1], calib.PROPERTIES)
-    define_meadowlark_state(calib.mmc, 'State1', state1[0], state1[1], calib.PROPERTIES)
-    define_meadowlark_state(calib.mmc, 'State2', state2[0], state2[1], calib.PROPERTIES)
-    define_meadowlark_state(calib.mmc, 'State3', state3[0], state3[1], calib.PROPERTIES)
+    for state, lca, lcb in zip([f'State{i}' for i in range(5)], metadata.LCA_retardance, metadata.LCB_retardance):
+        calib.define_lc_state(state, lca, lcb)
 
-    if metadata.Calibration_scheme == '5-State':
-        state4 = (metadata.LCA_retardance[4], metadata.LCB_retardance[4])
-        define_meadowlark_state(calib.mmc, 'State4', state4[0], state4[1], calib.PROPERTIES)
-
-    # Calculate Blacklevel after loading these properties
+    # Calculate black level after loading these properties
     calib.intensity_emitter = MockEmitter()
     calib.calc_blacklevel()
     set_lc_state(calib.mmc, calib.group, 'State0')
