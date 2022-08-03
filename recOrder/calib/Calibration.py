@@ -16,7 +16,7 @@ import logging
 import warnings
 from recOrder.io.utils import MockEmitter
 from datetime import datetime
-import pkg_resources
+from importlib_metadata import version
 
 lc_device_name = 'MeadowlarkLcOpenSource'
 
@@ -192,7 +192,6 @@ class QLIPP_Calibration():
         -------
 
         """
-        # TODO: add logging and metadata with LC voltages
 
         if self.mode == 'MM-Retardance':
             self.set_lc(lca_retardance, 'LCA')
@@ -849,8 +848,8 @@ class QLIPP_Calibration():
 
         metadata = {'Summary': {
                         'Timestamp': str(datetime.now()),
-                        'recOrder-napari version': str(pkg_resources.require("recOrder-napari")[0]),
-                        'waveorder version': str(pkg_resources.require("waveorder")[0])},
+                        'recOrder-napari version': version('recOrder-napari'),
+                        'waveorder version': version('waveorder')},
                     'Calibration': {
                         'Calibration scheme': self.calib_scheme,
                         'Swing (waves)': self.swing,
