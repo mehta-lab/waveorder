@@ -62,7 +62,7 @@ class QLIPP_Calibration():
         assert interp_method in allowed_interp_methods,\
             f'LC calibration data interpolation method must be one of {allowed_interp_methods}'
         dir_path = mmc.getDeviceAdapterSearchPaths().get(0) # MM device adapter directory
-        self.calib = CalibrationData(os.path.join(dir_path, 'lc_calibration_data.csv'), interp_method=interp_method,
+        self.calib = CalibrationData(os.path.join(dir_path, 'mmgr_dal_MeadowlarkLC.csv'), interp_method=interp_method,
                                      wavelength=wavelength)
 
         # Optimizer
@@ -1034,11 +1034,23 @@ class CalibrationData:
         """
         Read raw calibration data
 
+        Example calibration data format:
+
+            Voltage(mv),490-A,490-B,Voltage(mv),546-A,546-B,Voltage(mv),630-A,630-B
+            -,-,-,-,-,-,-,-,-
+            0,490,490,0,546,546,0,630,630
+            0,970.6205,924.4288,0,932.2446,891.2008,0,899.6626,857.2885
+            200,970.7488,924.4422,200,932.2028,891.1546,200,899.5908,857.3078
+            ...
+            20000,40.5954,40.4874,20000,38.6905,39.5402,20000,35.5043,38.1445
+            -,-,-,-,-,-,-,-,-
+
         The first row of the CSV file is a header row, structured as [Voltage (mV), XXX-A, XXX-B,
-         Voltage (nm), XXX-A, XXX-B, ...] where XXX is the calibration wavelength in nanometers. For example 532-A would
-         contain measurements of the retardance of LCA as a function of applied voltage at 532 nm. Retardance is
-         recorded in nanometers and voltage is recorded in millivolts. Measurements are repeated for a number
-         of wavelengths in subsequent columns.
+        Voltage (nm), XXX-A, XXX-B, ...] where XXX is the calibration wavelength in nanometers. For example 532-A would
+        contain measurements of the retardance of LCA as a function of applied voltage at 532 nm. The second row
+        contains dashes in every column. The third row contains "0" in the Voltage column and the calibration wavelength
+        in the retardance columns, e.g [0, 532, 532]. The following rows contain the LC calibration data. Retardance is
+        recorded in nanometers and voltage is recorded in millivolts. The last row contains dashes in every column.
 
         Parameters
         ----------
@@ -1056,7 +1068,7 @@ class CalibrationData:
         with open(path, 'r') as f:
             header = f.readline().strip().split(',')
 
-        raw_data = np.loadtxt(path, delimiter=',', skiprows=1)
+        raw_data = np.loadtxt(path, delimiter=',', comments='-', skiprows=3)
         return header, raw_data
 
     @staticmethod
