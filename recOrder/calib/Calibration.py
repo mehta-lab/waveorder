@@ -25,6 +25,36 @@ class QLIPP_Calibration():
 
     def __init__(self, mmc, mm, group='Channel', lc_control_mode='MM-Retardance', interp_method='schnoor_fit',
                  wavelength=532, optimization='min_scalar', print_details=True):
+        '''
+
+        Parameters
+        ----------
+        mmc : object
+            MicroManager core instance
+        mm : object
+            MicroManager Studio instance
+        group : str
+            Name of the MicroManager channel group used defining LC states [State0, State1, State2, ...]
+        lc_control_mode : str
+            Defined the control mode of the liquid crystals. One of the following:
+            * MM-Retardance: the retardance of the LC is set directly through the MicroManager LC device adapter. The
+            MicroManager device adapter determines the corresponding voltage which is sent to the LC
+            * MM-Voltage: the CalibrationData class in recOrder uses the LC calibration data to determine the correct
+            LC voltage for a given retardance. The LC voltage is set through the MicroManager LC device adapter
+            * DAC: the CalibrationData class in recOrder uses the LC calibration data to determine the correct
+            LC voltage for a given retardance. The voltage is applied to the IO port of the LC controller through the
+            TriggerScope DAC outputs
+        interp_method : str
+            Method of interpolating the LC retardance-to-voltage calibration curve. One of the following:
+            * linear: linear interpolation of retardance as a function of voltage and wavelength
+            * schnoor_fit: Schnoor fit interpolation as described in https://doi.org/10.1364/AO.408383
+        wavelength : float
+            Measurement wavelength
+        optimization : str
+            LC retardance optimization method, 'min_scalar' (default) or 'brent'
+        print_details : bool
+            Set verbose option
+        '''
 
         # Micromanager API
         self.mm = mm
@@ -1005,7 +1035,7 @@ class CalibrationData:
         wavelength : int
             usage wavelength, in nanometers
         interp_method : str
-            interpolation method, either "linear" or "schnoor_fit"
+            interpolation method, either "linear" or "schnoor_fit" (https://doi.org/10.1364/AO.408383)
         """
 
         header, raw_data = self.read_data(path)
