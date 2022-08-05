@@ -105,11 +105,14 @@ class QLIPP(PipelineInterface):
                                                           gpu_id=self.config.gpu_id)
 
         # Compute BG stokes if necessary
-        if self.config.background_correction != 'None':
+        if self.config.background_correction == 'global':
+            print("Loading bg from "+self.bg_path)
             bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
             self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
             self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
-
+        elif self.config.background_correction == 'local_fit':
+            self.bg_stokes = np.zeros((5, self.img_dim[0], self.img_dim[1]))
+            self.bg_stokes[0, ...] = 1 # Set background to "identity" Stokes parameters. waveorder's 'local_fit' applies this identity correction.
         else:
             self.bg_stokes = None
 
