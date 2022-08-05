@@ -69,7 +69,8 @@ def init_fluor_decon_pipeline_manager(get_zarr_data_dir, setup_data_save_folder)
     folder, zarr_data = get_zarr_data_dir
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.abspath('./test_configs/fluor_deconv/config_fluor_full_pytest.yml')
+    file_path = os.path.dirname(__file__)
+    path_to_config = os.path.abspath(os.path.join(file_path, './test_configs/fluor_deconv/config_fluor_full_pytest.yml'))
     config = ConfigReader(path_to_config, data_dir=zarr_data, save_dir=save_folder)
     manager = PipelineManager(config)
 
@@ -81,7 +82,8 @@ def init_phase_bf_pipeline_manager(get_bf_data_dir, setup_data_save_folder):
     folder, bf_data = get_bf_data_dir
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.abspath('./test_configs/phase/config_phase_full_pytest.yml')
+    file_path = os.path.dirname(__file__)
+    path_to_config = os.path.abspath(os.path.join(file_path, './test_configs/phase/config_phase_full_pytest.yml'))
     config = ConfigReader(path_to_config, data_dir=bf_data, save_dir=save_folder)
     manager = PipelineManager(config)
 
@@ -93,7 +95,8 @@ def init_qlipp_pipeline_manager(get_zarr_data_dir, setup_data_save_folder):
     folder, zarr_data = get_zarr_data_dir
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.abspath('./test_configs/qlipp/config_qlipp_full_pytest.yml')
+    file_path = os.path.dirname(__file__)
+    path_to_config = os.path.abspath(os.path.join(file_path, './test_configs/qlipp/config_qlipp_full_pytest.yml'))
     config = ConfigReader(path_to_config, data_dir=zarr_data, save_dir=save_folder)
     manager = PipelineManager(config)
 
@@ -105,7 +108,8 @@ def init_qlipp_tiff_pipeline_manager(get_ometiff_data_dir, setup_data_save_folde
     folder, ometiff_data = get_ometiff_data_dir
     save_folder = setup_data_save_folder
 
-    path_to_config = os.path.abspath('./test_configs/qlipp/config_qlipp_full_pytest_tiff.yml')
+    file_path = os.path.dirname(__file__)
+    path_to_config = os.path.abspath(os.path.join(file_path, './test_configs/qlipp/config_qlipp_full_pytest_tiff.yml'))
     config = ConfigReader(path_to_config, data_dir=ometiff_data, save_dir=save_folder)
     manager = PipelineManager(config)
 
