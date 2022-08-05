@@ -48,7 +48,7 @@ class ZarrConverter:
 
         print('Initializing Data...')
         self.reader = WaveorderReader(self.data_directory, data_type, extract_data=False)
-        self.data_type = self.reader.data_type
+        self.data_type = data_type  #Note: may be None, replace with self.reader.data_type after waveorder update
         print('Finished initializing data')
 
         self.summary_metadata = self.reader.mm_meta['Summary'] if self.reader.mm_meta else None
@@ -72,7 +72,7 @@ class ZarrConverter:
         self.t_dim = None
         self.c_dim = None
         self.z_dim = None
-        self.dtype = self.reader.reader.dtype
+        self.dtype = self.reader.reader.dtype  #Note: replace with self.reader.dtype after waveorder update
         self.p = self.reader.get_num_positions()
         self.t = self.reader.frames
         self.c = self.reader.channels
