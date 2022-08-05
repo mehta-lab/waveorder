@@ -1,4 +1,4 @@
-from recOrder.calib.Calibration import QLIPP_Calibration, lc_device_name
+from recOrder.calib.Calibration import QLIPP_Calibration, LC_DEVICE_NAME
 from pycromanager import Bridge
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy, QSlider
@@ -1587,7 +1587,7 @@ class MainWidget(QWidget):
             # set LC control mode
             _devices = self.mmc.getLoadedDevices()
             loaded_devices = [_devices.get(i) for i in range(_devices.size())]
-            if lc_device_name in loaded_devices:
+            if LC_DEVICE_NAME in loaded_devices:
                 self.calib_mode = 'MM-Voltage'
                 self.ui.cb_calib_mode.setCurrentIndex(1)
             else:
