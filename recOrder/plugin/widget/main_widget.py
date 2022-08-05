@@ -19,6 +19,7 @@ from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
 from numpydoc.docscrape import NumpyDocString
+from packaging import version
 import numpy as np
 import os
 import json
@@ -1554,12 +1555,31 @@ class MainWidget(QWidget):
         -------
 
         """
+        RECOMMENDED_MM = '20210713'
+        ZMQ_TARGET_VERSION = '4.0.0'
         try:
-            bridge = Bridge(convert_camel_case=False)
-            self.mmc = bridge.get_core()
-            self.mm = bridge.get_studio()
+            # Try to open Bridge. Requires micromanager to be open with server running.
+            # This does not fail gracefully, so I'm wrapping it in its own try-except block.
+            try:
+                bridge = Bridge(convert_camel_case=False)
+                self.mmc = bridge.get_core()
+                self.mm = bridge.get_studio()
+            except:
+                print(("Could not establish pycromanager bridge.\n"
+                       "Is micromanager open?\n"
+                       "Is Tools > Options > Run server on port 4827 checked?\n"
+                       f"Are you using nightly build {RECOMMENDED_MM}?"))
+                raise EnvironmentError
 
-            # set calibration channel group
+            # Warn the use if there is a MicroManager/ZMQ version mismatch
+            bridge._master_socket.send({"command": "connect", "debug": False}) # latest versions of pycromanager use '_main_socket'
+            reply_json = bridge._master_socket.receive(timeout=500) # latest versions of pycromanager use '_main_socket'
+            zmq_mm_version = reply_json['version']
+            if zmq_mm_version != ZMQ_TARGET_VERSION:
+                upgrade_str = 'upgrade' if version.parse(zmq_mm_version) < version.parse(ZMQ_TARGET_VERSION) else 'downgrade'
+                print(("WARNING: This version of Micromanager has not been tested with recOrder.\n"
+                      f"Please {upgrade_str} to MicroManager nightly build {RECOMMENDED_MM}."))
+
             self.ui.cb_config_group.clear()
             groups = self.mmc.getAvailableConfigGroups()
             config_group_found = False
@@ -1577,6 +1597,7 @@ class MainWidget(QWidget):
                 for ch in config_list:
                     if ch not in self.calib_channels:
                         self.ui.cb_acq_channel.addItem(ch)
+
             if not config_group_found:
                 msg = f'No config group contains channels {self.calib_channels}. ' \
                       'Please refer to the recOrder wiki on how to set up the config properly.'
@@ -1593,6 +1614,7 @@ class MainWidget(QWidget):
             else:
                 self.calib_mode = 'DAC'
                 self.ui.cb_calib_mode.setCurrentIndex(2)
+
 
             self.mm_status_changed.emit(True)
 
@@ -2683,28 +2705,30 @@ class MainWidget(QWidget):
     @pyqtSlot(int)
     def update_sat_scale(self):
         idx = self.ui.cb_saturation.currentIndex()
-        layer = self.ui.cb_saturation.itemText(idx)
-        data = self.viewer.layers[layer].data
-        min_, max_ = np.min(data), np.max(data)
-        self.ui.slider_saturation.setMinimum(min_)
-        self.ui.slider_saturation.setMaximum(max_)
-        self.ui.slider_saturation.setSingleStep((max_ - min_)/250)
-        self.ui.slider_saturation.setValue((min_, max_))
-        self.ui.le_sat_max.setText(str(np.round(max_, 3)))
-        self.ui.le_sat_min.setText(str(np.round(min_, 3)))
+        if idx != -1:
+            layer = self.ui.cb_saturation.itemText(idx)
+            data = self.viewer.layers[layer].data
+            min_, max_ = np.min(data), np.max(data)
+            self.ui.slider_saturation.setMinimum(min_)
+            self.ui.slider_saturation.setMaximum(max_)
+            self.ui.slider_saturation.setSingleStep((max_ - min_)/250)
+            self.ui.slider_saturation.setValue((min_, max_))
+            self.ui.le_sat_max.setText(str(np.round(max_, 3)))
+            self.ui.le_sat_min.setText(str(np.round(min_, 3)))
 
     @pyqtSlot(int)
     def update_value_scale(self):
         idx = self.ui.cb_value.currentIndex()
-        layer = self.ui.cb_value.itemText(idx)
-        data = self.viewer.layers[layer].data
-        min_, max_ = np.min(data), np.max(data)
-        self.ui.slider_value.setMinimum(min_)
-        self.ui.slider_value.setMaximum(max_)
-        self.ui.slider_value.setSingleStep((max_ - min_)/250)
-        self.ui.slider_value.setValue((min_, max_))
-        self.ui.le_val_max.setText(str(np.round(max_, 3)))
-        self.ui.le_val_min.setText(str(np.round(min_, 3)))
+        if idx != -1:
+            layer = self.ui.cb_value.itemText(idx)
+            data = self.viewer.layers[layer].data
+            min_, max_ = np.min(data), np.max(data)
+            self.ui.slider_value.setMinimum(min_)
+            self.ui.slider_value.setMaximum(max_)
+            self.ui.slider_value.setSingleStep((max_ - min_)/250)
+            self.ui.slider_value.setValue((min_, max_))
+            self.ui.le_val_max.setText(str(np.round(max_, 3)))
+            self.ui.le_val_min.setText(str(np.round(min_, 3)))
 
     @pyqtSlot(bool)
     def create_overlay(self):

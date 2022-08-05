@@ -1,5 +1,5 @@
 # recOrder
-[![License](https://img.shields.io/pypi/l/recOrder-napari.svg)](https://github.com/recOrder/LICENSE)
+[![License](https://img.shields.io/pypi/l/recOrder-napari.svg)](https://github.com/mehta-lab/recOrder/blob/main/LICENSE)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/recOrder-napari)
 [![Downloads](https://pepy.tech/badge/recOrder-napari)](https://pepy.tech/project/recOrder-napari)
 [![Python package index](https://img.shields.io/pypi/v/recOrder-napari.svg)](https://pypi.org/project/recOrder-napari)
@@ -13,7 +13,7 @@ The acquisition, calibration, background correction, reconstruction, and applica
 
 ``` Syuan-Ming Guo, Li-Hao Yeh, Jenny Folkesson, Ivan E Ivanov, Anitha P Krishnan, Matthew G Keefe, Ezzat Hashemi, David Shin, Bryant B Chhun, Nathan H Cho, Manuel D Leonetti, May H Han, Tomasz J Nowakowski, Shalin B Mehta, "Revealing architectural order with quantitative label-free imaging and deep learning," eLife 2020;9:e55502 DOI: 10.7554/eLife.55502 (2020).```
 
-recOrder is to be used alongside the QLIPP module, whose design has been optimized to fit on a conventional widefield microscope (Panel A below).  The QLIPP module allows for the collection of label-free information consisting of the intrinsic anisotropy of the sample and its relative phase (density).  All of these measurements are collected through compensated, polarization diverse illumination and quantitatively recovered through recOrder's computational reconstruction pipeline.  The overall structure of recOrder can be visualized below in Panel B, highlighting the two different usage modes and their features: graphical user interface (GUI) through napari and command line interfact (CLI).
+recOrder is to be used alongside the QLIPP module, whose design has been optimized to fit on a conventional widefield microscope (Panel A below).  The QLIPP module allows for the collection of label-free information consisting of the intrinsic anisotropy of the sample and its relative phase (density).  All of these measurements are collected through compensated, polarization diverse illumination and quantitatively recovered through recOrder's computational reconstruction pipeline.  The overall structure of recOrder is shown in Panel B, highlighting the two different usage modes and their features: graphical user interface (GUI) through napari and command line interfact (CLI).
 
 ![Flow Chart](https://github.com/mehta-lab/recOrder/blob/main/docs/images/recOrder_Fig1_Overview.png?raw=true)
 
@@ -30,8 +30,8 @@ recOrder is to be used alongside the QLIPP module, whose design has been optimiz
 
 (Optional but recommended) install [anaconda](https://www.anaconda.com/products/distribution) and create a virtual environment  
 ```
-conda create -n recorder python
-conda activate recorder
+conda create -n recOrder python
+conda activate recOrder
 ```
 Install napari:
 ```
@@ -45,8 +45,8 @@ Install [`git`](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git) a
 
 Create a conda environment dedicated to `recOrder`:
 ```
-conda create -n recorder python
-conda activate recorder
+conda create -n recOrder python
+conda activate recOrder
 ```
 
 Clone this repository:
