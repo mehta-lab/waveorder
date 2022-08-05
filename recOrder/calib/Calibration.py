@@ -1052,7 +1052,7 @@ class CalibrationData:
 
         self.set_wavelength(wavelength)
         if interp_method == 'linear':
-            self.interpolate_data(raw_data, self.calib_wavelengths)
+            self.interpolate_data(raw_data, self.calib_wavelengths)  # calib_wavelengths is not used, values hardcoded
         elif interp_method == 'schnoor_fit':
             self.fit_params = self.fit_data(raw_data, self.calib_wavelengths)
 
@@ -1175,6 +1175,21 @@ class CalibrationData:
                 warnings.warn("Wavelength is limited to 450-720 nm for this interpolation method.")
 
     def fit_data(self, raw_data, calib_wavelengths):
+        """
+        Perform Schnoor fit on interpolation data
+
+        Parameters
+        ----------
+        raw_data : np.array
+            LC calibration data in (Voltage, LCA retardance, LCB retardance) format. Only the LCA retardance vs voltage
+            curve is used.
+        calib_wavelengths : 1D np.array
+            Calibration wavelength for each (Voltage, LCA retardance, LCB retardance) set in the calibration data
+
+        Returns
+        -------
+
+        """
         xdata = raw_data[:, 0::3] / 1000    # convert to volts
         ydata = raw_data[:, 1::3]           # in nanometers
 
@@ -1196,6 +1211,22 @@ class CalibrationData:
         return p.x
 
     def interpolate_data(self, raw_data, calib_wavelengths):
+        """
+        Perform linear interpolation of LC calibration data
+
+        Parameters
+        ----------
+        raw_data : np.array
+            LC calibration data in (Voltage, LCA retardance, LCB retardance) format. Only the LCA retardance vs voltage
+            curve is used.
+        calib_wavelengths : 1D np.array
+            Calibration wavelength for each (Voltage, LCA retardance, LCB retardance) set in the calibration data
+            These values are not used in this method. Instead, the [490, 546, 630] wavelengths are hardcoded.
+
+        Returns
+        -------
+
+        """
         # 0V to 20V step size 1 mV
         x_range = np.arange(0, np.max(raw_data[:, ::3]), 1)
 

@@ -1580,6 +1580,13 @@ class MainWidget(QWidget):
                 print(("WARNING: This version of Micromanager has not been tested with recOrder.\n"
                       f"Please {upgrade_str} to MicroManager nightly build {RECOMMENDED_MM}."))
 
+            # Find config group containing calibration channels
+            # calib_channels is typically ['State0', 'State1', 'State2', ...]
+            # config_list may be something line ['GFP', 'RFP', 'State0', 'State1', 'State2', ...]
+            # config_list may also be of the form ['GFP', 'RFP', 'LF-State0', 'LF-State1', 'LF-State2', ...]
+            # in this version of the code we correctly parse 'LF-State0', but these channels, for not cannot be used
+            # by the Calibration class.
+            # A valid config group contains all channels in calib_channels
             self.ui.cb_config_group.clear()
             groups = self.mmc.getAvailableConfigGroups()
             config_group_found = False
@@ -1594,6 +1601,8 @@ class MainWidget(QWidget):
                         self.config_group = group  # set to first config group found
                         config_group_found = True
                     self.ui.cb_config_group.addItem(group)
+                # not entirely sure what this part does, but I left it in
+                # I think it tried to find a channel such as 'BF'
                 for ch in config_list:
                     if ch not in self.calib_channels:
                         self.ui.cb_acq_channel.addItem(ch)
