@@ -262,7 +262,6 @@ class Ui_Form(object):
         self.cb_calib_mode.setObjectName("cb_calib_mode")
         self.cb_calib_mode.addItem("")
         self.cb_calib_mode.addItem("")
-        self.cb_calib_mode.addItem("")
         self.gridLayout_2.addWidget(self.cb_calib_mode, 5, 2, 1, 1)
         self.label_cfg_group = QtWidgets.QLabel(self.calib_params)
         font = QtGui.QFont()
@@ -1718,19 +1717,6 @@ class Ui_Form(object):
         self.cb_lca.setItemText(0, _translate("Form", "-"))
         self.label_lcb.setText(_translate("Form", "LC-B"))
         self.label_calib_mode.setText(_translate("Form", "Calibration Mode"))
-        self.cb_calib_mode.setItemText(0, _translate("Form", "MM-Retardance"))
-        self.cb_calib_mode.setItemText(1, _translate("Form", "MM-Voltage"))
-        self.cb_calib_mode.setItemText(2, _translate("Form", "DAC"))
-        self.cb_calib_mode.setItemData(0, "The retardance of the LC is set directly through the MicroManager LC device\n"
-                                          "adapter. The device adapter determines the corresponding voltage which is\n"
-                                          "sent to the LC", QtCore.Qt.ToolTipRole)
-        self.cb_calib_mode.setItemData(1, "The CalibrationData class in recOrder uses the LC calibration data to\n"
-                                          "determine the correct LC voltage for a given retardance. The LC voltage is\n"
-                                          "set through the MicroManager LC device adapter", QtCore.Qt.ToolTipRole)
-        self.cb_calib_mode.setItemData(2, "The CalibrationData class in recOrder uses the LC calibration data to\n"
-                                          "determine the correct LC voltage for a given retardance. The voltage is\n"
-                                          "applied to the IO port of the LC controller through the TriggerScope DAC "
-                                          "outputs", QtCore.Qt.ToolTipRole)
         self.label_cfg_group.setText(_translate("Form", "Config Group"))
         self.qbutton_mm_connect.setText(_translate("Form", "Connect to MM"))
         self.run_calib.setTitle(_translate("Form", "Run Calibration"))

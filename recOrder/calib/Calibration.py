@@ -37,13 +37,13 @@ class QLIPP_Calibration():
             Name of the MicroManager channel group used defining LC states [State0, State1, State2, ...]
         lc_control_mode : str
             Defined the control mode of the liquid crystals. One of the following:
-            * MM-Retardance: the retardance of the LC is set directly through the MicroManager LC device adapter. The
-            MicroManager device adapter determines the corresponding voltage which is sent to the LC
-            * MM-Voltage: the CalibrationData class in recOrder uses the LC calibration data to determine the correct
-            LC voltage for a given retardance. The LC voltage is set through the MicroManager LC device adapter
-            * DAC: the CalibrationData class in recOrder uses the LC calibration data to determine the correct
+            * MM-Retardance: The retardance of the LC is set directly through the MicroManager LC device adapter. The
+            MicroManager device adapter determines the corresponding voltage which is sent to the LC.
+            * MM-Voltage: The CalibrationData class in recOrder uses the LC calibration data to determine the correct
+            LC voltage for a given retardance. The LC voltage is set through the MicroManager LC device adapter.
+            * DAC: The CalibrationData class in recOrder uses the LC calibration data to determine the correct
             LC voltage for a given retardance. The voltage is applied to the IO port of the LC controller through the
-            TriggerScope DAC outputs
+            TriggerScope DAC outputs.
         interp_method : str
             Method of interpolating the LC retardance-to-voltage calibration curve. One of the following:
             * linear: linear interpolation of retardance as a function of voltage and wavelength

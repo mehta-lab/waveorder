@@ -4,6 +4,7 @@ from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy, QSlider
 from PyQt5.QtGui import QPixmap, QColor
 from superqt import QDoubleRangeSlider, QRangeSlider
+from recOrder.calib import Calibration
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
 from recOrder.plugin.workers.acquisition_workers import PolarizationAcquisitionWorker, ListeningWorker, \
     FluorescenceAcquisitionWorker, BFAcquisitionWorker
@@ -17,11 +18,13 @@ from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, P
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
+from numpydoc.docscrape import NumpyDocString
 import numpy as np
 import os
 import json
 import logging
 import pathlib
+import textwrap
 
 
 #TODO: Parse Denoising Parameters correctly from line edits
@@ -53,6 +56,20 @@ class MainWidget(QWidget):
         self.ui.qbutton_mm_connect.clicked[bool].connect(self.connect_to_mm)
 
         # Calibration Tab
+
+        # Remove QT creator calibration mode items
+        self.ui.cb_calib_mode.removeItem(0)
+        self.ui.cb_calib_mode.removeItem(0)
+
+        # Populate calibration modes from docstring
+        cal_docs = NumpyDocString(Calibration.QLIPP_Calibration.__init__.__doc__)
+        mode_docs = ' '.join(cal_docs['Parameters'][3].desc).split('* ')[1:]
+        for i, mode_doc in enumerate(mode_docs):
+            mode_name, mode_tooltip = mode_doc.split(': ')
+            wrapped_tooltip = '\n'.join(textwrap.wrap(mode_tooltip, width=70))
+            self.ui.cb_calib_mode.addItem(mode_name)
+            self.ui.cb_calib_mode.setItemData(i, wrapped_tooltip, Qt.ToolTipRole)
+
         self.ui.qbutton_browse.clicked[bool].connect(self.browse_dir_path)
         self.ui.le_directory.editingFinished.connect(self.enter_dir_path)
         self.ui.le_directory.setText(str(Path.cwd()))
