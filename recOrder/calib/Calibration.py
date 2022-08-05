@@ -3,22 +3,58 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import tifffile as tiff
 import time
-from recOrder.io.core_functions import define_lc_state, snap_image, set_lc_waves, set_lc_volts, set_lc_state, \
-    snap_and_average, snap_and_get_image, get_lc_waves, get_lc_volts, define_lc_state_volts
+from recOrder.io.core_functions import define_meadowlark_state, snap_image, set_lc_waves, set_lc_voltage, set_lc_daq, \
+    set_lc_state, snap_and_average, snap_and_get_image, get_lc, define_config_state
 from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from scipy.interpolate import interp1d
+from scipy.stats import linregress
+from scipy.optimize import least_squares
 import json
 import os
 import logging
+import warnings
 from recOrder.io.utils import MockEmitter
 from datetime import datetime
-import pkg_resources
+from importlib_metadata import version
+
+LC_DEVICE_NAME = 'MeadowlarkLcOpenSource'
 
 
 class QLIPP_Calibration():
 
-    def __init__(self, mmc, mm, group='Channel', optimization='min_scalar', mode='retardance', print_details=True):
+    def __init__(self, mmc, mm, group='Channel', lc_control_mode='MM-Retardance', interp_method='schnoor_fit',
+                 wavelength=532, optimization='min_scalar', print_details=True):
+        '''
+
+        Parameters
+        ----------
+        mmc : object
+            MicroManager core instance
+        mm : object
+            MicroManager Studio instance
+        group : str
+            Name of the MicroManager channel group used defining LC states [State0, State1, State2, ...]
+        lc_control_mode : str
+            Defined the control mode of the liquid crystals. One of the following:
+            * MM-Retardance: The retardance of the LC is set directly through the MicroManager LC device adapter. The
+            MicroManager device adapter determines the corresponding voltage which is sent to the LC.
+            * MM-Voltage: The CalibrationData class in recOrder uses the LC calibration data to determine the correct
+            LC voltage for a given retardance. The LC voltage is set through the MicroManager LC device adapter.
+            * DAC: The CalibrationData class in recOrder uses the LC calibration data to determine the correct
+            LC voltage for a given retardance. The voltage is applied to the IO port of the LC controller through the
+            TriggerScope DAC outputs.
+        interp_method : str
+            Method of interpolating the LC retardance-to-voltage calibration curve. One of the following:
+            * linear: linear interpolation of retardance as a function of voltage and wavelength
+            * schnoor_fit: Schnoor fit interpolation as described in https://doi.org/10.1364/AO.408383
+        wavelength : float
+            Measurement wavelength
+        optimization : str
+            LC retardance optimization method, 'min_scalar' (default) or 'brent'
+        print_details : bool
+            Set verbose option
+        '''
 
         # Micromanager API
         self.mm = mm
@@ -26,16 +62,18 @@ class QLIPP_Calibration():
         self.snap_manager = mm.getSnapLiveManager()
 
         # Meadowlark LC Device Adapter Property Names
-        self.PROPERTIES = {'LCA': 'Retardance LC-A [in waves]',
-                          'LCB': 'Retardance LC-B [in waves]',
-                          'State0': 'Pal. elem. 00; enter 0 to define; 1 to activate',
-                          'State1': 'Pal. elem. 01; enter 0 to define; 1 to activate',
-                          'State2': 'Pal. elem. 02; enter 0 to define; 1 to activate',
-                          'State3': 'Pal. elem. 03; enter 0 to define; 1 to activate',
-                          'State4': 'Pal. elem. 04; enter 0 to define; 1 to activate',
-                          'LCA-DAC': 'TS_DAC01',
-                          'LCB-DAC': 'TS_DAC02'
-                          }
+        self.PROPERTIES = {'LCA': (LC_DEVICE_NAME, 'Retardance LC-A [in waves]'),
+                           'LCB': (LC_DEVICE_NAME, 'Retardance LC-B [in waves]'),
+                           'LCA-Voltage': (LC_DEVICE_NAME, 'Voltage (V) LC-A'),
+                           'LCB-Voltage': (LC_DEVICE_NAME, 'Voltage (V) LC-B'),
+                           'LCA-DAC': ('TS_DAC01', 'Volts'),
+                           'LCB-DAC': ('TS_DAC02', 'Volts'),
+                           'State0': (LC_DEVICE_NAME, 'Pal. elem. 00; enter 0 to define; 1 to activate'),
+                           'State1': (LC_DEVICE_NAME, 'Pal. elem. 01; enter 0 to define; 1 to activate'),
+                           'State2': (LC_DEVICE_NAME, 'Pal. elem. 02; enter 0 to define; 1 to activate'),
+                           'State3': (LC_DEVICE_NAME, 'Pal. elem. 03; enter 0 to define; 1 to activate'),
+                           'State4': (LC_DEVICE_NAME, 'Pal. elem. 04; enter 0 to define; 1 to activate')
+                           }
         self.group = group
 
         # GUI Emitter
@@ -43,9 +81,19 @@ class QLIPP_Calibration():
         self.plot_sequence_emitter = MockEmitter()
 
         #Set Mode
-        self.mode = mode
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        self.curves = CalibrationCurves(os.path.join(dir_path, './Meadowlark_Curves.npy')) if self.mode != 'retardance' else None
+        # TODO: make sure LC or TriggerScope are loaded in the respective modes
+        allowed_modes = ['MM-Retardance', 'MM-Voltage', 'DAC']
+        assert lc_control_mode in allowed_modes, f'LC control mode must be one of {allowed_modes}'
+        self.mode = lc_control_mode
+        self.LC_DAC_conversion = 4  # convert between the input range of LCs (0-20V) and the output range of the DAC (0-5V)
+
+        # Initialize calibration class
+        allowed_interp_methods = ['schnoor_fit', 'linear']
+        assert interp_method in allowed_interp_methods,\
+            f'LC calibration data interpolation method must be one of {allowed_interp_methods}'
+        dir_path = mmc.getDeviceAdapterSearchPaths().get(0) # MM device adapter directory
+        self.calib = CalibrationData(os.path.join(dir_path, 'mmgr_dal_MeadowlarkLC.csv'), interp_method=interp_method,
+                                     wavelength=wavelength)
 
         # Optimizer
         if optimization == 'min_scalar':
@@ -98,39 +146,97 @@ class QLIPP_Calibration():
         self.inst_mat = None
 
     def set_dacs(self, lca_dac, lcb_dac):
-        self.PROPERTIES['LCA-DAC'] = f'TS_{lca_dac}'
-        self.PROPERTIES['LCB-DAC'] = f'TS_{lcb_dac}'
+        self.PROPERTIES['LCA-DAC'] = (f'TS_{lca_dac}', 'Volts')
+        self.PROPERTIES['LCB-DAC'] = (f'TS_{lcb_dac}', 'Volts')
 
     def set_wavelength(self, wavelength):
-        self.wavelength = wavelength
+        self.calib.set_wavelength(wavelength)
+        self.wavelength = self.calib.wavelength
 
-        if self.mode == 'voltage':
-            self.curves.set_wavelength(wavelength)
+    def set_lc(self, retardance, LC: str):
+        """
+        Set LC state to given retardance in waves
 
-    def set_lc(self, val, device_property):
+        Parameters
+        ----------
+        retardance : float
+            Retardance in waves
+        LC : str
+            LCA or LCB
 
-        if self.mode == 'retardance':
-            set_lc_waves(self.mmc, val, self.PROPERTIES[device_property])
-        else:
-            volt = self.curves.get_voltage(val)/4000
-            set_lc_volts(self.mmc, volt, self.PROPERTIES[f'{device_property}-DAC'])
+        Returns
+        -------
 
-    def get_lc(self, device_property):
+        """
 
-        if self.mode == 'retardance':
-            return get_lc_waves(self.mmc, self.PROPERTIES[device_property])
-        else:
-            volts = get_lc_volts(self.mmc, self.PROPERTIES[f'{device_property}-DAC'])*4000
-            return self.curves.get_retardance(volts)
+        if self.mode == 'MM-Retardance':
+            set_lc_waves(self.mmc, self.PROPERTIES[f'{LC}'], retardance)
+        elif self.mode == 'MM-Voltage':
+            volts = self.calib.get_voltage(retardance)
+            set_lc_voltage(self.mmc, self.PROPERTIES[f'{LC}-Voltage'], volts)
+        elif self.mode == 'DAC':
+            volts = self.calib.get_voltage(retardance)
+            dac_volts = volts / self.LC_DAC_conversion
+            set_lc_daq(self.mmc, self.PROPERTIES[f'{LC}-DAC'], dac_volts)
 
-    def define_lc_state(self, state, lca, lcb):
+    def get_lc(self, LC: str):
+        """
+        Get LC retardance in waves
 
-        if self.mode == 'retardance':
-            define_lc_state(self.mmc, state, lca, lcb, self.PROPERTIES)
-        else:
-            lca_volts = self.curves.get_voltage(lca) / 4000
-            lcb_volts = self.curves.get_voltage(lcb) / 4000
-            define_lc_state_volts(self.mmc, self.group, state, lca_volts, lcb_volts, self.PROPERTIES)
+        Parameters
+        ----------
+        LC : str
+            LCA or LCB
+
+        Returns
+        -------
+            LC retardance in waves
+        """
+
+        if self.mode == 'MM-Retardance':
+            retardance = get_lc(self.mmc, self.PROPERTIES[f'{LC}'])
+        elif self.mode == 'MM-Voltage':
+            volts = get_lc(self.mmc, self.PROPERTIES[f'{LC}-Voltage'])  # returned value is in volts
+            retardance = self.calib.get_retardance(volts)
+        elif self.mode == 'DAC':
+            dac_volts = get_lc(self.mmc, self.PROPERTIES[f'{LC}-DAC'])
+            volts = dac_volts * self.LC_DAC_conversion
+            retardance = self.calib.get_retardance(volts)
+
+        return retardance
+
+    def define_lc_state(self, state, lca_retardance, lcb_retardance):
+        """
+        Define of the two LCs after calibration
+
+        Parameters
+        ----------
+        state: str
+            Polarization stage (e.g. State0)
+        lca_retardance: float
+            LCA retardance in waves
+        lcb_retardance: float
+            LCB retardance in waves
+
+        Returns
+        -------
+
+        """
+
+        if self.mode == 'MM-Retardance':
+            self.set_lc(lca_retardance, 'LCA')
+            self.set_lc(lcb_retardance, 'LCB')
+            define_meadowlark_state(self.mmc, self.PROPERTIES[state])
+        elif self.mode == 'DAC':
+            lca_volts = self.calib.get_voltage(lca_retardance) / self.LC_DAC_conversion
+            lcb_volts = self.calib.get_voltage(lcb_retardance) / self.LC_DAC_conversion
+            define_config_state(self.mmc, self.group, state,
+                                [self.PROPERTIES['LCA-DAC'], self.PROPERTIES['LCB-DAC']], [lca_volts, lcb_volts])
+        elif self.mode == 'MM-Voltage':
+            lca_volts = self.calib.get_voltage(lca_retardance)
+            lcb_volts = self.calib.get_voltage(lcb_retardance)
+            define_config_state(self.mmc, self.group, state,
+                                [self.PROPERTIES['LCA-Voltage'], self.PROPERTIES['LCB-Voltage']], [lca_volts, lcb_volts])
 
     def opt_lc(self, x, device_property, reference, normalize=False):
 
@@ -306,21 +412,22 @@ class QLIPP_Calibration():
         logging.info('Calibrating State1 (I0)...')
         logging.debug('Calibrating State1 (I0)...')
 
-        self.define_lc_state('State1', self.lca_ext - self.swing, self.lcb_ext)
-
-        ref = snap_and_average(self.snap_manager)
-
         self.lca_0 = self.lca_ext - self.swing
         self.lcb_0 = self.lcb_ext
-        self.I_Elliptical = ref
+        self.set_lc(self.lca_0, 'LCA')
+        self.set_lc(self.lcb_0, 'LCB')
+
+        self.define_lc_state('State1', self.lca_0, self.lcb_0)
+        intensity = snap_and_average(self.snap_manager)
+        self.I_Elliptical = intensity
         self.swing0 = np.sqrt((self.lcb_0 - self.lcb_ext) ** 2 + (self.lca_0 - self.lca_ext) ** 2)
 
         logging.info(f'LCA State1 (I0) = {self.lca_0:.3f}')
         logging.debug(f'LCA State1 (I0) = {self.lca_0:.5f}')
         logging.info(f'LCB State1 (I0) = {self.lcb_0:.3f}')
         logging.debug(f'LCB State1 (I0) = {self.lcb_0:.5f}')
-        logging.info(f'Intensity (I0) = {ref:.0f}')
-        logging.debug(f'Intensity (I0) = {ref:.3f}')
+        logging.info(f'Intensity (I0) = {intensity:.0f}')
+        logging.debug(f'Intensity (I0) = {intensity:.3f}')
         logging.info("--------done--------")
         logging.debug("--------done--------")
 
@@ -645,8 +752,8 @@ class QLIPP_Calibration():
         logging.debug(f'Blacklevel: {self.I_Black}\n')
 
         # Set LC Wavelength:
-        if self.mode == 'retardance':
-            self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
+        if self.mode == 'MM-Retardance':
+            self.mmc.setProperty(LC_DEVICE_NAME, 'Wavelength', self.wavelength)
 
         self.opt_Iext()
         self.opt_I0()
@@ -704,8 +811,8 @@ class QLIPP_Calibration():
         print(f'Blacklevel: {self.I_Black}\n')
 
         # Set LC Wavelength:
-        if self.mode == 'retardance':
-            self.mmc.setProperty('MeadowlarkLcOpenSource', 'Wavelength', self.wavelength)
+        if self.mode == 'MM-Retardance':
+            self.mmc.setProperty(LC_DEVICE_NAME, 'Wavelength', self.wavelength)
 
         self.opt_Iext()
         self.opt_I0()
@@ -771,12 +878,14 @@ class QLIPP_Calibration():
 
         metadata = {'Summary': {
                         'Timestamp': str(datetime.now()),
-                        'recOrder-napari version': str(pkg_resources.require("recOrder-napari")[0]),
-                        'waveorder version': str(pkg_resources.require("waveorder")[0])},
+                        'recOrder-napari version': version('recOrder-napari'),
+                        'waveorder version': version('waveorder')},
                     'Calibration': {
                         'Calibration scheme': self.calib_scheme,
                         'Swing (waves)': self.swing,
                         'Wavelength (nm)': self.wavelength,
+                        'Retardance to voltage interpolation method': self.calib.interp_method,
+                        'LC control mode': self.mode,
                         'Black level': np.round(self.I_Black, 2),
                         'Extinction ratio': self.extinction_ratio,
                         'ROI (x, y, width, height)': self.ROI},
@@ -790,7 +899,9 @@ class QLIPP_Calibration():
                 'LC retardance': {f'LC{i}_{j}': np.around(getattr(self, f'lc{i.lower()}_{j}'), decimals=6)
                                   for j in ['ext', '0', '60', '120']
                                   for i in ['A', 'B']},
-                'LC voltage': {},
+                'LC voltage': {f'LC{i}_{j}': np.around(self.calib.get_voltage(getattr(self, f'lc{i.lower()}_{j}')), decimals=4)
+                               for j in ['ext', '0', '60', '120']
+                               for i in ['A', 'B']},
                 'Swing_0': np.around(self.swing0, decimals=3),
                 'Swing_60': np.around(self.swing60, decimals=3),
                 'Swing_120': np.around(self.swing120, decimals=3),
@@ -803,7 +914,9 @@ class QLIPP_Calibration():
                 'LC retardance': {f'LC{i}_{j}': np.around(getattr(self, f'lc{i.lower()}_{j}'), decimals=6)
                                   for j in ['ext', '0', '45', '90', '135']
                                   for i in ['A', 'B']},
-                'LC voltage': {},
+                'LC voltage': {f'LC{i}_{j}': np.around(self.calib.get_voltage(getattr(self, f'lc{i.lower()}_{j}')), decimals=4)
+                               for j in ['ext', '0', '45', '90', '135']
+                               for i in ['A', 'B']},
                 'Swing_0': np.around(self.swing0, decimals=3),
                 'Swing_45': np.around(self.swing45, decimals=3),
                 'Swing_90': np.around(self.swing90, decimals=3),
@@ -907,39 +1020,224 @@ class QLIPP_Calibration():
         return np.asarray(imgs)
 
 
-class CalibrationCurves:
+class CalibrationData:
+    """
+    Interpolates LC calibration data between retardance (in waves), voltage (in mV), and wavelength (in nm)
+    """
 
-    def __init__(self, path, wavelength = None):
+    def __init__(self, path, wavelength=532, interp_method='linear'):
+        """
 
-        self.raw_curves = np.load(path)
+        Parameters
+        ----------
+        path : str
+            path to .csv calibration data file
+        wavelength : int
+            usage wavelength, in nanometers
+        interp_method : str
+            interpolation method, either "linear" or "schnoor_fit" (https://doi.org/10.1364/AO.408383)
+        """
 
-        # 0V to 20V step size 1 mV
-        self.x_range = np.arange(0, 20000, 1)
+        header, raw_data = self.read_data(path)
+        self.calib_wavelengths = np.array([i[:3] for i in header[1::3]]).astype('double')
 
-        # interpolate curves
-        self.spline490 = interp1d(self.raw_curves[0, 0], self.raw_curves[0, 1])
-        self.spline546 = interp1d(self.raw_curves[1, 0], self.raw_curves[1, 1])
-        self.spline630 = interp1d(self.raw_curves[2, 0], self.raw_curves[2, 1])
+        self.wavelength = None
+        self.V_min = 0
+        self.V_max = 20
 
-        self.wavelength = wavelength
-        self.curve = None
+        if interp_method in ['linear', 'schnoor_fit']:
+            self.interp_method = interp_method
+        else:
+            raise ValueError('Unknown interpolation method.')
+
+        self.set_wavelength(wavelength)
+        if interp_method == 'linear':
+            self.interpolate_data(raw_data, self.calib_wavelengths)  # calib_wavelengths is not used, values hardcoded
+        elif interp_method == 'schnoor_fit':
+            self.fit_params = self.fit_data(raw_data, self.calib_wavelengths)
+
+        self.ret_min = self.get_retardance(self.V_max)
+        self.ret_max = self.get_retardance(self.V_min)
+
+    @staticmethod
+    def read_data(path):
+        """
+        Read raw calibration data
+
+        Example calibration data format:
+
+            Voltage(mv),490-A,490-B,Voltage(mv),546-A,546-B,Voltage(mv),630-A,630-B
+            -,-,-,-,-,-,-,-,-
+            0,490,490,0,546,546,0,630,630
+            0,970.6205,924.4288,0,932.2446,891.2008,0,899.6626,857.2885
+            200,970.7488,924.4422,200,932.2028,891.1546,200,899.5908,857.3078
+            ...
+            20000,40.5954,40.4874,20000,38.6905,39.5402,20000,35.5043,38.1445
+            -,-,-,-,-,-,-,-,-
+
+        The first row of the CSV file is a header row, structured as [Voltage (mV), XXX-A, XXX-B,
+        Voltage (nm), XXX-A, XXX-B, ...] where XXX is the calibration wavelength in nanometers. For example 532-A would
+        contain measurements of the retardance of LCA as a function of applied voltage at 532 nm. The second row
+        contains dashes in every column. The third row contains "0" in the Voltage column and the calibration wavelength
+        in the retardance columns, e.g [0, 532, 532]. The following rows contain the LC calibration data. Retardance is
+        recorded in nanometers and voltage is recorded in millivolts. The last row contains dashes in every column.
+
+        Parameters
+        ----------
+        path : str
+            path to .csv calibration data file
+
+        Returns
+        -------
+        header : list
+            Calibration data file header line. Contains information on calibration wavelength
+        raw_data : ndarray
+            Calibration data. Voltage is in millivolts and retardance is in nanometers
+
+        """
+        with open(path, 'r') as f:
+            header = f.readline().strip().split(',')
+
+        raw_data = np.loadtxt(path, delimiter=',', comments='-', skiprows=3)
+        return header, raw_data
+
+    @staticmethod
+    def schnoor_fit(V, a, b1, b2, c, d, e, wavelength):
+        """
+
+        Parameters
+        ----------
+        V : float
+            Voltage in volts
+        a, b1, b2, c, d, e : float
+            Fit parameters
+        wavelength : float
+            Wavelength in nanometers
+
+        Returns
+        -------
+        retardance : float
+            Retardance in nanometers
+
+        """
+        retardance = a + (b1 + b2 / wavelength ** 2) / (1 + (V / c) ** d) ** e
+
+        return retardance
+
+    @staticmethod
+    def schnoor_fit_inv(retardance, a, b1, b2, c, d, e, wavelength):
+        """
+
+        Parameters
+        ----------
+        retardance : float
+            Retardance in nanometers
+        a, b1, b2, c, d, e : float
+            Fit parameters
+        wavelength : float
+            Wavelength in nanometers
+
+        Returns
+        -------
+        voltage : float
+            Voltage in volts
+
+        """
+
+        voltage = c * (((b1 + b2 / wavelength ** 2) / (retardance - a)) ** (1 / e) - 1) ** (1 / d)
+
+        return voltage
+
+    @staticmethod
+    def _fun(x, wavelengths, xdata, ydata):
+        fval = CalibrationData.schnoor_fit(xdata, *x, wavelengths)
+        res = ydata - fval
+        return res.flatten()
 
     def set_wavelength(self, wavelength):
+        if len(self.calib_wavelengths) == 1 and wavelength != self.calib_wavelengths:
+            raise ValueError("Calibration is not provided at this wavelength. "
+                             "Wavelength dependence of LC retardance vs voltage cannot be extrapolated.")
+
+        if wavelength < self.calib_wavelengths.min() or \
+                wavelength > self.calib_wavelengths.max():
+            warnings.warn("Specified wavelength is outside of the calibration range. "
+                          "LC retardance vs voltage data will be extrapolated at this wavelength.")
+
         self.wavelength = wavelength
+        if self.interp_method == 'linear':
+            # Interpolation of calib beyond this range produce strange results.
+            if self.wavelength < 450:
+                self.wavelength = 450
+                warnings.warn("Wavelength is limited to 450-720 nm for this interpolation method.")
+            if self.wavelength > 720:
+                self.wavelength = 720
+                warnings.warn("Wavelength is limited to 450-720 nm for this interpolation method.")
 
-        # Interpolation of curves beyond this range produce strange results.
-        if self.wavelength < 450:
-            self.wavelength = 450
-        if self.wavelength > 720:
-            self.wavelength = 720
+    def fit_data(self, raw_data, calib_wavelengths):
+        """
+        Perform Schnoor fit on interpolation data
 
-        self.create_wavelength_curve()
+        Parameters
+        ----------
+        raw_data : np.array
+            LC calibration data in (Voltage, LCA retardance, LCB retardance) format. Only the LCA retardance vs voltage
+            curve is used.
+        calib_wavelengths : 1D np.array
+            Calibration wavelength for each (Voltage, LCA retardance, LCB retardance) set in the calibration data
 
-    def create_wavelength_curve(self):
+        Returns
+        -------
+
+        """
+        xdata = raw_data[:, 0::3] / 1000    # convert to volts
+        ydata = raw_data[:, 1::3]           # in nanometers
+
+        x0 = [10, 1000, 1e7, 1, 10, 0.1]
+        p = least_squares(self._fun, x0, method='trf', args=(calib_wavelengths, xdata, ydata),
+                          bounds=((-np.inf, 0, 0, 0, 0, 0), (np.inf,)*6),
+                          x_scale=[10, 1000, 1e7, 1, 10, 0.1])
+
+        if not p.success:
+            raise RuntimeError("Schnoor fit to calibration data did not work.")
+
+        y = ydata.flatten()
+        y_hat = y - p.fun
+        slope, intercept, r_value, *_ = linregress(y, y_hat)
+        r_squared = r_value**2
+        if r_squared < 0.999:
+            warnings.warn(f'Schnoor fit has R2 value of {r_squared:.5f}, fit may not have worked well.')
+
+        return p.x
+
+    def interpolate_data(self, raw_data, calib_wavelengths):
+        """
+        Perform linear interpolation of LC calibration data
+
+        Parameters
+        ----------
+        raw_data : np.array
+            LC calibration data in (Voltage, LCA retardance, LCB retardance) format. Only the LCA retardance vs voltage
+            curve is used.
+        calib_wavelengths : 1D np.array
+            Calibration wavelength for each (Voltage, LCA retardance, LCB retardance) set in the calibration data
+            These values are not used in this method. Instead, the [490, 546, 630] wavelengths are hardcoded.
+
+        Returns
+        -------
+
+        """
+        # 0V to 20V step size 1 mV
+        x_range = np.arange(0, np.max(raw_data[:, ::3]), 1)
+
+        # interpolate calib - only LCA data is used
+        spline490 = interp1d(raw_data[:, 0], raw_data[:, 1])
+        spline546 = interp1d(raw_data[:, 3], raw_data[:, 4])
+        spline630 = interp1d(raw_data[:, 6], raw_data[:, 7])
 
         if self.wavelength < 490:
-            new_a1_y = np.interp(self.x_range, self.x_range, self.spline490(self.x_range))
-            new_a2_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
+            new_a1_y = np.interp(x_range, x_range, spline490(x_range))
+            new_a2_y = np.interp(x_range, x_range, spline546(x_range))
 
             wavelength_new = 490 + (490 - self.wavelength)
             fact1 = np.abs(490 - wavelength_new) / (546 - 490)
@@ -948,12 +1246,12 @@ class CalibrationCurves:
             temp_curve = np.asarray([[i, 2 * new_a1_y[i] - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i])]
                           for i in range(len(new_a1_y))])
             self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.spline(self.x_range)
+            self.curve = self.spline(x_range)
 
         elif self.wavelength > 630:
 
-            new_a1_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
-            new_a2_y = np.interp(self.x_range, self.x_range, self.spline630(self.x_range))
+            new_a1_y = np.interp(x_range, x_range, spline546(x_range))
+            new_a2_y = np.interp(x_range, x_range, spline630(x_range))
 
             wavelength_new = 630 + (630 - self.wavelength)
             fact1 = np.abs(630 - wavelength_new) / (630 - 546)
@@ -962,56 +1260,109 @@ class CalibrationCurves:
             temp_curve = np.asarray([[i, 2 * new_a1_y[i] - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i])]
                                      for i in range(len(new_a1_y))])
             self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.spline(self.x_range)
+            self.curve = self.spline(x_range)
 
 
         elif 490 < self.wavelength < 546:
 
-            new_a1_y = np.interp(self.x_range, self.x_range, self.spline490(self.x_range))
-            new_a2_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
+            new_a1_y = np.interp(x_range, x_range, spline490(x_range))
+            new_a2_y = np.interp(x_range, x_range, spline546(x_range))
 
             fact1 = np.abs(490 - self.wavelength) / (546 - 490)
             fact2 = np.abs(546 - self.wavelength) / (546 - 490)
 
             temp_curve = np.asarray([[i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]] for i in range(len(new_a1_y))])
             self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.spline(self.x_range)
+            self.curve = self.spline(x_range)
 
         elif 546 < self.wavelength < 630:
 
-            new_a1_y = np.interp(self.x_range, self.x_range, self.spline546(self.x_range))
-            new_a2_y = np.interp(self.x_range, self.x_range, self.spline630(self.x_range))
+            new_a1_y = np.interp(x_range, x_range, spline546(x_range))
+            new_a2_y = np.interp(x_range, x_range, spline630(x_range))
 
             fact1 = np.abs(546 - self.wavelength) / (630 - 546)
             fact2 = np.abs(630 - self.wavelength) / (630 - 546)
 
             temp_curve = np.asarray([[i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]] for i in range(len(new_a1_y))])
             self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
-            self.curve = self.spline(self.x_range)
+            self.curve = self.spline(x_range)
 
         elif self.wavelength == 490:
-            self.curve = self.spline490(self.x_range)
-            self.spline = self.spline490
+            self.curve = spline490(x_range)
+            self.spline = spline490
 
         elif self.wavelength == 546:
-            self.curve = self.spline546(self.x_range)
-            self.spline = self.spline546
+            self.curve = spline546(x_range)
+            self.spline = spline546
 
         elif self.wavelength == 630:
-            self.curve = self.spline630(self.x_range)
-            self.spline = self.spline630
+            self.curve = spline630(x_range)
+            self.spline = spline630
 
         else:
             raise ValueError(f'Wavelength {self.wavelength} not understood')
 
     def get_voltage(self, retardance):
+        """
 
-        ret_abs = retardance*self.wavelength
+        Parameters
+        ----------
+        retardance : float
+            retardance in waves
 
-        # Since x-step is 1mV starting at 0, returned index = voltage (mV)
-        index = np.abs(self.curve - ret_abs).argmin()
+        Returns
+        -------
+        voltage
+            voltage in volts
 
-        return index
+        """
 
-    def get_retardance(self, volt):
-        return self.spline(volt) / self.wavelength
+        retardance = np.asarray(retardance, dtype='double')
+        voltage = None
+        ret_nanometers = retardance*self.wavelength
+
+        if retardance < self.ret_min:
+            voltage = self.V_max
+        elif retardance > self.ret_max:
+            voltage = self.V_min
+        else:
+            if self.interp_method == 'linear':
+                voltage = np.abs(self.curve - ret_nanometers).argmin() / 1000
+            elif self.interp_method == 'schnoor_fit':
+                voltage = self.schnoor_fit_inv(ret_nanometers, *self.fit_params, self.wavelength)
+
+        return voltage
+
+    def get_retardance(self, volts):
+        """
+
+        Parameters
+        ----------
+        volts : float
+            voltage in volts
+
+        Returns
+        -------
+        retardance : float
+            retardance in waves
+
+        """
+
+        volts = np.asarray(volts, dtype='double')
+        ret_nanometers = None
+
+        if volts < self.V_min:
+            volts = self.V_min
+        elif volts >= self.V_max:
+            if self.interp_method == 'linear':
+                volts = self.V_max - 1e-3   # interpolation breaks down at upper boundary
+            else:
+                volts = self.V_max
+
+        if self.interp_method == 'linear':
+            ret_nanometers = self.spline(volts * 1000)
+        elif self.interp_method == 'schnoor_fit':
+            ret_nanometers = self.schnoor_fit(volts, *self.fit_params, self.wavelength)
+        retardance = ret_nanometers / self.wavelength
+
+        return retardance
