@@ -72,7 +72,7 @@ class ZarrConverter:
         self.t_dim = None
         self.c_dim = None
         self.z_dim = None
-        self.dtype = self.reader.dtype
+        self.dtype = self.reader.reader.dtype
         self.p = self.reader.get_num_positions()
         self.t = self.reader.frames
         self.c = self.reader.channels
