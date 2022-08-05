@@ -3,39 +3,29 @@ import shutil
 import zarr
 import tifffile as tiff
 from waveorder.io import WaveorderReader, WaveorderWriter
-import glob
 import numpy as np
 from recOrder.io.zarr_converter import ZarrConverter
 
-def test_converter_initialize(setup_data_save_folder, setup_test_data):
+def test_ometiff_converter_initialize(setup_data_save_folder, get_ometiff_data_dir):
 
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
+    folder, ometiff_data = get_ometiff_data_dir
     save_folder = setup_data_save_folder
 
     input = ometiff_data
-    output = os.path.join(save_folder,'2T_3P_81Z_231Y_498X_Kazansky.zarr')
+    output = os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr')
 
     if os.path.exists(output):
         shutil.rmtree(output)
 
-    converter = ZarrConverter(input, output, 'ometiff')
+    converter = ZarrConverter(input, output)
     tf = tiff.TiffFile(os.path.join(ometiff_data, '2T_3P_81Z_231Y_498X_Kazansky_2_MMStack.ome.tif'))
 
-    assert(converter.files == glob.glob(os.path.join(ometiff_data, '*.ome.tif')))
     assert(converter.dtype == 'uint16')
     assert(isinstance(converter.reader, WaveorderReader))
     assert(isinstance(converter.writer, WaveorderWriter))
     assert(converter.summary_metadata == tf.micromanager_metadata['Summary'])
 
-    converter._gen_coordset()
-    coords = []
-    for t in range(2):
-        for p in range(3):
-            for c in range(4):
-                for z in range(81):
-                    coords.append((t, p, c, z))
-
-    assert(converter.coords == coords)
+    assert(converter.dim_order == ['time', 'position', 'channel', 'z'])
     assert(converter.p_dim == 1)
     assert(converter.t_dim == 0)
     assert(converter.c_dim == 2)
@@ -45,9 +35,9 @@ def test_converter_initialize(setup_data_save_folder, setup_test_data):
     assert(converter.c == 4)
     assert(converter.z == 81)
 
-def test_converter_run(setup_data_save_folder, setup_test_data):
+def test_ometiff_converter_run(setup_data_save_folder, get_ometiff_data_dir):
 
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
+    folder, ometiff_data = get_ometiff_data_dir
     save_folder = setup_data_save_folder
 
     input = ometiff_data
@@ -56,23 +46,13 @@ def test_converter_run(setup_data_save_folder, setup_test_data):
     if os.path.exists(output):
         shutil.rmtree(output)
 
-    converter = ZarrConverter(input, output, 'ometiff')
+    converter = ZarrConverter(input, output)
     tf = tiff.TiffFile(os.path.join(ometiff_data, '2T_3P_81Z_231Y_498X_Kazansky_2_MMStack.ome.tif'))
 
     converter.run_conversion()
-
     zs = zarr.open(output, 'r')
 
     assert(os.path.exists(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_ImagePlaneMetadata.txt')))
-
-    coords = []
-    for t in range(2):
-        for p in range(3):
-            for c in range(4):
-                for z in range(81):
-                    coords.append((t, p, c, z))
-
-    assert(converter.coords == coords)
 
     cnt = 0
     for t in range(2):
@@ -83,7 +63,6 @@ def test_converter_run(setup_data_save_folder, setup_test_data):
                     tiff_image = tf.pages.get(cnt).asarray()
                     assert(np.array_equal(image, tiff_image))
                     cnt += 1
-
 
 # def test_converter_upti():
 #

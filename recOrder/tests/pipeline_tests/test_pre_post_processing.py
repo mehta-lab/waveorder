@@ -9,8 +9,9 @@ import numpy as np
 import os
 import zarr
 
-def test_pre_processing(setup_test_data, setup_data_save_folder):
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
+def test_pre_processing(get_ometiff_data_dir, setup_data_save_folder):
+
+    folder, ometiff_data = get_ometiff_data_dir
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))),
@@ -44,9 +45,9 @@ def test_pre_processing(setup_test_data, setup_data_save_folder):
         np.abs(stokes_denoise[3, z, :, :])) ** 2 < 0.1)
 
 
-def test_post_processing(setup_test_data, setup_data_save_folder):
+def test_post_processing(get_ometiff_data_dir, setup_data_save_folder):
 
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
+    folder, ometiff_data = get_ometiff_data_dir
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/config_postprocessing_pytest.yml')

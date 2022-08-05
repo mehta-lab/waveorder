@@ -18,12 +18,12 @@ dataset:
   ##   !!python/tuple [0, N] for pos 0 through N
   ## [0, 1, 5] for pos 0, 1, and 5
 
-  background: './pytest_temp/rawdata/recOrder/2021_06_11_recOrder_pytest_20x_04NA_zarr/BG'
+  background: './pytest_temp/test_data/2021_06_11_recOrder_pytest_20x_04NA_zarr/BG'
 
   #(str or list) Background folder(s) within the experiment folder
   ##   a list, e.g. ['/path/to/bg_1', '/path/to/bg_2'], of one background dataset per sample
 
-  calibration_metadata: './pytest_temp/rawdata/recOrder/2021_06_11_recOrder_pytest_20x_04NA_zarr/calib_metadata.txt'
+  calibration_metadata: './pytest_temp/test_data/2021_06_11_recOrder_pytest_20x_04NA_zarr/calib_metadata.txt'
 
 pre_processing:
   denoise:

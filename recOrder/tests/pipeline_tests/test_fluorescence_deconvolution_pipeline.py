@@ -10,32 +10,21 @@ import numpy as np
 import os
 import zarr
 
-def test_pipeline_manager_initiate(setup_test_data, setup_data_save_folder):
 
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
-    save_folder = setup_data_save_folder
+def test_pipeline_manager_initiate(init_fluor_decon_pipeline_manager):
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))),
-                                  'test_configs/fluor_deconv/config_fluor_full_pytest.yml')
+    save_folder, config, manager = init_fluor_decon_pipeline_manager
 
-    config = ConfigReader(path_to_config, data_dir=zarr_data, save_dir=save_folder)
-
-    manager = PipelineManager(config)
     assert(manager.config is not None)
     assert(manager.data is not None)
     assert(manager.data.get_num_positions()*manager.data.frames == len(manager.pt_set))
     assert(manager.pipeline is not None)
     assert(isinstance(manager.pipeline, FluorescenceDeconvolution))
 
-def test_fluor_decon_pipeline_initiate(setup_test_data, setup_data_save_folder):
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
-    save_folder = setup_data_save_folder
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))),
-                                  'test_configs/fluor_deconv/config_fluor_full_pytest.yml')
-    config = ConfigReader(path_to_config, data_dir=zarr_data, save_dir=save_folder)
+def test_fluor_decon_pipeline_initiate(init_fluor_decon_pipeline_manager):
 
-    manager = PipelineManager(config)
+    save_folder, config, manager = init_fluor_decon_pipeline_manager
 
     pipeline = manager.pipeline
     assert(pipeline.config == manager.config)
@@ -51,16 +40,10 @@ def test_fluor_decon_pipeline_initiate(setup_test_data, setup_data_save_folder):
     assert(isinstance(pipeline.writer, WaveorderWriter))
     assert(pipeline.reconstructor is not None)
 
-def test_pipeline_manager_run(setup_test_data, setup_data_save_folder):
 
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
-    save_folder = setup_data_save_folder
+def test_pipeline_manager_run(init_fluor_decon_pipeline_manager):
 
-    path_to_config = os.path.join(dirname(dirname(abspath(__file__))),
-                                  'test_configs/fluor_deconv/config_fluor_full_pytest.yml')
-    config = ConfigReader(path_to_config, data_dir=zarr_data, save_dir=save_folder)
-
-    manager = PipelineManager(config)
+    save_folder, config, manager = init_fluor_decon_pipeline_manager
     manager.run()
 
     store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'))
@@ -72,8 +55,10 @@ def test_pipeline_manager_run(setup_test_data, setup_data_save_folder):
     assert (store['Row_0']['Col_2']['Pos_002'])
     assert (array.shape == (2, 2, 81, manager.data.height, manager.data.width))
 
-def test_3D_reconstruction(setup_test_data, setup_data_save_folder):
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
+
+def test_3D_reconstruction(get_zarr_data_dir, setup_data_save_folder):
+
+    folder, zarr_data = get_zarr_data_dir
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))),
@@ -101,8 +86,10 @@ def test_3D_reconstruction(setup_test_data, setup_data_save_folder):
     # Check deconvolved fluor
     assert (np.sum(np.abs(fluor3D[z] - array[0, 0, z]) ** 2) / np.sum(np.abs(fluor3D[z])**2) < 0.1)
 
-def test_2D_reconstruction(setup_test_data, setup_data_save_folder):
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
+
+def test_2D_reconstruction(get_zarr_data_dir, setup_data_save_folder):
+
+    folder, zarr_data = get_zarr_data_dir
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))),
@@ -131,9 +118,9 @@ def test_2D_reconstruction(setup_test_data, setup_data_save_folder):
     assert (np.sum(np.abs(fluor2D - array[0, 0, 0]) ** 2) / np.sum(np.abs(fluor2D)**2) < 0.1)
 
 
-def test_deconvolution_and_registration(setup_test_data, setup_data_save_folder):
+def test_deconvolution_and_registration(get_zarr_data_dir, setup_data_save_folder):
 
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
+    folder, zarr_data = get_zarr_data_dir
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))),

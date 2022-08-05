@@ -3,13 +3,17 @@ import os
 from os.path import dirname, abspath
 import yaml
 
-def test_napari_get_reader(setup_test_data):
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
+def test_napari_get_reader(get_ometiff_data_dir, get_zarr_data_dir):
+
+    _, ometiff_data = get_ometiff_data_dir
+    _, zarr_data = get_zarr_data_dir
     assert(napari_get_reader(ometiff_data).__name__ == 'ome_tif_reader')
     assert(napari_get_reader(zarr_data).__name__ == 'ome_zarr_reader')
 
-def test_readers(setup_test_data):
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
+def test_readers(get_ometiff_data_dir, get_zarr_data_dir):
+
+    _, ometiff_data = get_ometiff_data_dir
+    _, zarr_data = get_zarr_data_dir
 
     data_from_ome = ome_tif_reader(ometiff_data)
     data_from_zarr = ome_zarr_reader(zarr_data)
