@@ -79,6 +79,7 @@ class QLIPP(PipelineInterface):
                                                           wavelength_nm=self.config.wavelength,
                                                           swing=self.calib_meta.Swing,
                                                           calibration_scheme=self.calib_scheme,
+                                                          n_slices=self.data.slices,
                                                           pad_z=self.config.pad_z,
                                                           bg_correction=self.config.background_correction,
                                                           mode=self.mode,
