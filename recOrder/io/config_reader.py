@@ -206,7 +206,7 @@ class ConfigReader(object):
                                    'Only 3D reconstructions can be performed in 3D mode')
 
             elif key == 'background_correction' and self.config['dataset']['method'] == 'QLIPP':
-                if self.config['processing'][key] == 'None' or self.config['processing'][key] == 'local_filter':
+                if self.config['processing'][key] == 'None' or self.config['processing'][key] == 'local_fit':
                     pass
                 else:
                     assert self.config['dataset']['background'] is not None, \
