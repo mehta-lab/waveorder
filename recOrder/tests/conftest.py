@@ -20,9 +20,9 @@ def setup_test_data():
     url = 'https://zenodo.org/record/6941042/files/recOrder_test_data.zip?download=1'
     output = os.path.join(test_data, "recOrder_test_Data.zip")
     if not os.listdir(test_data):
-        print("Downloading test files...")
-        download(url, out=output)
-        shutil.unpack_archive(output, extract_dir=test_data)
+        # print("Downloading test files...")
+        # download(url, out=output)
+        shutil.unpack_archive(r'C:\Users\labelfree\Documents\recOrder_test_data.zip', extract_dir=test_data)
 
     yield test_data
 
@@ -38,7 +38,7 @@ def get_ometiff_data_dir(setup_test_data):
     test_data = setup_test_data
 
     ometiff_data = os.path.join(test_data,
-                                '2021_06_11_recOrder_pytest_20x_04NA', '2T_3P_81Z_231Y_498X_Kazansky_2')
+                                '2022_08_04_recOrder_pytest_20x_04NA', '2T_3P_16Z_128Y_256X_Kazansky_1')
 
     return test_data, ometiff_data
 
@@ -48,7 +48,7 @@ def get_zarr_data_dir(setup_test_data):
     test_data = setup_test_data
 
     zarr_data = os.path.join(test_data,
-                             '2021_06_11_recOrder_pytest_20x_04NA_zarr', '2T_3P_81Z_231Y_498X_Kazansky.zarr')
+                             '2022_08_04_recOrder_pytest_20x_04NA_zarr', '2T_3P_16Z_128Y_256X_Kazansky.zarr')
 
     return test_data, zarr_data
 
@@ -58,7 +58,7 @@ def get_bf_data_dir(setup_test_data):
     test_data = setup_test_data
 
     bf_data = os.path.join(test_data,
-                           '2021_06_11_recOrder_pytest_20x_04NA_BF_zarr', '2T_3P_81Z_231Y_498X_Kazansky.zarr')
+                           '2022_08_04_recOrder_pytest_20x_04NA_BF', '2T_3P_16Z_128Y_256X_Kazansky_BF_1')
 
     return test_data, bf_data
 

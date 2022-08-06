@@ -18,12 +18,12 @@ dataset:
   ##   !!python/tuple [0, N] for pos 0 through N
   ## [0, 1, 5] for pos 0, 1, and 5
 
-  background: './pytest_temp/test_data/2021_06_11_recOrder_pytest_20x_04NA_zarr/BG'
+  background: './pytest_temp/test_data/2022_08_04_recOrder_pytest_20x_04NA_zarr/BG'
 
   #(str or list) Background folder(s) within the experiment folder
   ##   a list, e.g. ['/path/to/bg_1', '/path/to/bg_2'], of one background dataset per sample
 
-  calibration_metadata: './pytest_temp/test_data/2021_06_11_recOrder_pytest_20x_04NA_zarr/calib_metadata.txt'
+  calibration_metadata: './pytest_temp/test_data/2022_08_04_recOrder_pytest_20x_04NA_zarr/calibration_metadata.txt'
 
 pre_processing:
   denoise:
@@ -79,7 +79,7 @@ processing:
   n_objective_media: 1.0
   # (float) Refractive index of the objective immersion oil
 
-  focus_zidx: 40
+  focus_zidx: 8
   # (int) Index of the focused z slice of the dataset for 2D phase reconstruction
 
   pad_z: 0

@@ -42,7 +42,7 @@ def test_pipeline_manager_run(init_phase_bf_pipeline_manager):
     save_folder, config, manager = init_phase_bf_pipeline_manager
     manager.run()
 
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'))
+    store = zarr.open(os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky.zarr'))
     array = store['Row_0']['Col_0']['Pos_000']['arr_0']
 
     assert (store.attrs.asdict()['Config'] == config.yaml_dict)
@@ -63,7 +63,7 @@ def test_3D_reconstruction(get_bf_data_dir, setup_data_save_folder):
     assert(manager.pipeline.mode == '3D')
     manager.run()
 
-    pos, t, z = 1, 0, 40
+    pos, t, z = 1, 0, 8
     data = manager.data.get_array(pos)
     recon = manager.pipeline.reconstructor
 
@@ -71,7 +71,7 @@ def test_3D_reconstruction(get_bf_data_dir, setup_data_save_folder):
                                   reg_re=config.Tik_reg_ph_3D, rho=config.rho_3D, lambda_re=config.TV_reg_ph_3D,
                                   itr=config.itr_3D)
 
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'), 'r')
+    store = zarr.open(os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky.zarr'), 'r')
     array = store['Row_0']['Col_1']['Pos_001']['arr_0']
 
     # Check Shape
@@ -99,7 +99,7 @@ def test_2D_reconstruction(get_bf_data_dir, setup_data_save_folder):
     phase2D = reconstruct_phase2D(data[t, 0], recon, method=config.phase_denoiser_2D,
                                   reg_p=config.Tik_reg_ph_2D, rho=config.rho_2D, lambda_p=config.TV_reg_ph_2D,
                                   itr=config.itr_2D)
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'), 'r')
+    store = zarr.open(os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky.zarr'), 'r')
     array = store['Row_0']['Col_1']['Pos_001']['arr_0']
 
     # Check Shapes

@@ -23,7 +23,7 @@ def test_pre_processing(get_ometiff_data_dir, setup_data_save_folder):
 
     manager.run()
 
-    pos, t, z = 1, 0, 40
+    pos, t, z = 1, 0, 8
     data = manager.data.get_array(pos)
     recon = manager.pipeline.reconstructor
 
@@ -31,7 +31,7 @@ def test_pre_processing(get_ometiff_data_dir, setup_data_save_folder):
     params = [['S0', 0.5, 1], ['S1', 0.5, 1], ['S2', 0.5, 1], ['S3', 0.5, 1]]
     stokes_denoise = preproc_denoise(stokes, params)
 
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'), 'r')
+    store = zarr.open(os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky_1.zarr'), 'r')
     array = store['Row_0']['Col_0']['Pos_001']['arr_0']
 
     # Check Stokes
@@ -56,7 +56,7 @@ def test_post_processing(get_ometiff_data_dir, setup_data_save_folder):
     manager = PipelineManager(config)
     manager.run()
 
-    pos, t, z = 1, 0, 40
+    pos, t, z = 1, 0, 8
     data = manager.data.get_array(pos)
     recon = manager.pipeline.reconstructor
 
@@ -67,7 +67,7 @@ def test_post_processing(get_ometiff_data_dir, setup_data_save_folder):
     ret_denoise = post_proc_denoise(birefringence[0], params)
     ret_denoise = ret_denoise / (2*np.pi)*config.wavelength
 
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky_2.zarr'), 'r')
+    store = zarr.open(os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky_1.zarr'), 'r')
     array = store['Row_0']['Col_0']['Pos_001']['arr_0']
 
     data_decon = np.asarray([data[t, 1], data[t, 2]])

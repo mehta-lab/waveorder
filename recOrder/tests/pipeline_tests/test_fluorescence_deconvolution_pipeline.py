@@ -46,14 +46,14 @@ def test_pipeline_manager_run(init_fluor_decon_pipeline_manager):
     save_folder, config, manager = init_fluor_decon_pipeline_manager
     manager.run()
 
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'))
+    store = zarr.open(os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky.zarr'))
     array = store['Row_0']['Col_0']['Pos_000']['arr_0']
 
     assert (store.attrs.asdict()['Config'] == config.yaml_dict)
     assert (store['Row_0']['Col_0']['Pos_000'])
     assert (store['Row_0']['Col_1']['Pos_001'])
     assert (store['Row_0']['Col_2']['Pos_002'])
-    assert (array.shape == (2, 2, 81, manager.data.height, manager.data.width))
+    assert (array.shape == (2, 2, 16, manager.data.height, manager.data.width))
 
 
 def test_3D_reconstruction(get_zarr_data_dir, setup_data_save_folder):
@@ -69,7 +69,7 @@ def test_3D_reconstruction(get_zarr_data_dir, setup_data_save_folder):
     assert(manager.pipeline.mode == '3D')
     manager.run()
 
-    pos, t, z = 1, 0, 40
+    pos, t, z = 1, 0, 8
     data = manager.data.get_array(pos)
     bg_level = calculate_background(data[t, 0, manager.data.slices // 2])
     recon = manager.pipeline.reconstructor
@@ -77,11 +77,11 @@ def test_3D_reconstruction(get_zarr_data_dir, setup_data_save_folder):
     fluor3D = deconvolve_fluorescence_3D(data[t, 0], recon, bg_level, [config.reg])
     # fluor3D = np.transpose(fluor3D, (-1, -3, -2))
 
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'), 'r')
+    store = zarr.open(os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky.zarr'), 'r')
     array = store['Row_0']['Col_1']['Pos_001']['arr_0']
 
     # Check Shape
-    assert(array.shape == (1, len(config.output_channels), 81, 231, 498))
+    assert(array.shape == (1, len(config.output_channels), 16, 128, 256))
 
     # Check deconvolved fluor
     assert (np.sum(np.abs(fluor3D[z] - array[0, 0, z]) ** 2) / np.sum(np.abs(fluor3D[z])**2) < 0.1)
@@ -101,18 +101,18 @@ def test_2D_reconstruction(get_zarr_data_dir, setup_data_save_folder):
     assert(manager.pipeline.mode == '2D')
     manager.run()
 
-    pos, t, z = 1, 0, 40
+    pos, t, z = 1, 0, 8
     data = manager.data.get_array(pos)[t, 0, z]
     data = np.expand_dims(data, axis=0)
     bg_level = calculate_background(data)
     recon = manager.pipeline.reconstructor
 
     fluor2D = deconvolve_fluorescence_2D(data, recon, bg_level, reg=[config.reg])
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'), 'r')
+    store = zarr.open(os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky.zarr'), 'r')
     array = store['Row_0']['Col_1']['Pos_001']['arr_0']
 
     # Check Shapes
-    assert(array.shape == (1, len(config.output_channels), 1, 231, 498))
+    assert(array.shape == (1, len(config.output_channels), 1, 128, 256))
 
     # Check Deconvolved Fluor
     assert (np.sum(np.abs(fluor2D - array[0, 0, 0]) ** 2) / np.sum(np.abs(fluor2D)**2) < 0.1)
@@ -139,7 +139,7 @@ def test_deconvolution_and_registration(get_zarr_data_dir, setup_data_save_folde
     fluor3D = deconvolve_fluorescence_3D(data_decon, recon, bg_level, reg=[config.reg]*2)
     # fluor3D = np.transpose(fluor3D, (-4, -1, -3, -2))
 
-    store = zarr.open(os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr'), 'r')
+    store = zarr.open(os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky.zarr'), 'r')
     array = store['Row_0']['Col_1']['Pos_001']['arr_0']
 
     # Check Registration - Chan0

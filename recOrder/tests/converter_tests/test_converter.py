@@ -12,7 +12,7 @@ def test_ometiff_converter_initialize(setup_data_save_folder, get_ometiff_data_d
     save_folder = setup_data_save_folder
 
     input = ometiff_data
-    output = os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr')
+    output = os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky.zarr')
 
     if os.path.exists(output):
         shutil.rmtree(output)
@@ -41,7 +41,7 @@ def test_ometiff_converter_run(setup_data_save_folder, get_ometiff_data_dir):
     save_folder = setup_data_save_folder
 
     input = ometiff_data
-    output = os.path.join(save_folder, '2T_3P_81Z_231Y_498X_Kazansky.zarr')
+    output = os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky.zarr')
 
     if os.path.exists(output):
         shutil.rmtree(output)

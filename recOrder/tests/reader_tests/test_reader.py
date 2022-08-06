@@ -20,4 +20,4 @@ def test_readers(get_ometiff_data_dir, get_zarr_data_dir):
 
     for data in [data_from_ome, data_from_zarr]:
         assert(len(data) == 3)
-        assert(data[0][0].shape == (2, 4, 81, 231, 498))
+        assert(data[0][0].shape == (2, 4, 16, 128, 256))
