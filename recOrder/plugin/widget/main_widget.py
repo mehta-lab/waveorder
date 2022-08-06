@@ -134,7 +134,20 @@ class MainWidget(QWidget):
         self.ui.chb_pause_updates.stateChanged[int].connect(self.enter_pause_updates)
         self.ui.cb_birefringence.currentIndexChanged[int].connect(self.enter_birefringence_dim)
         self.ui.cb_phase.currentIndexChanged[int].connect(self.enter_phase_dim)
+
+        # Populate background correction GUI element
+        for i in range(3):
+            self.ui.cb_bg_method.removeItem(0)
+        bg_options = ['None','Measured','Estimated','Measured + Estimated']
+        tooltips = ['No background correction.',
+                    'Correct with a measured background from file.',
+                    'Correct with a background estimated from the raw image.',
+                    'Correct with a measured background from file then correct further with an estimated background.']
+        for i, bg_option in enumerate(bg_options):
+            self.ui.cb_bg_method.addItem(bg_option)
+            self.ui.cb_bg_method.setItemData(i, tooltips[i], Qt.ToolTipRole)
         self.ui.cb_bg_method.currentIndexChanged[int].connect(self.enter_bg_correction)
+
         self.ui.le_bg_path.editingFinished.connect(self.enter_acq_bg_path)
         self.ui.qbutton_browse_bg_path.clicked[bool].connect(self.browse_acq_bg_path)
         self.ui.qbutton_acq_birefringence.clicked[bool].connect(self.acq_birefringence)
@@ -736,7 +749,7 @@ class MainWidget(QWidget):
                 raise_error = True
                 self._set_tab_red('General', True)
 
-            if self.bg_option == 'local_fit' or self.bg_option == 'Global':
+            if self.bg_option == 'local_fit' or self.bg_option == 'local_fit+' or self.bg_option == 'Global':
                 success = self._check_line_edit('bg_path')
                 if not success:
                     raise_error = True
@@ -1028,7 +1041,7 @@ class MainWidget(QWidget):
         for key, value in PROCESSING.items():
             if key not in skip:
                 if key == 'background_correction':
-                    bg_map = {0: 'None', 1: 'global', 2: 'local_fit'}
+                    bg_map = {0: 'None', 1: 'global', 2: 'local_fit', 3: 'local_fit+'}
                     setattr(self.config_reader, key, bg_map[self.ui.cb_bg_method.currentIndex()])
 
                 elif key == 'output_channels':
@@ -1347,6 +1360,8 @@ class MainWidget(QWidget):
             self.ui.cb_bg_method.setCurrentIndex(1)
         elif self.bg_option == 'local_fit':
             self.ui.cb_bg_method.setCurrentIndex(2)
+        elif self.bg_option == 'local_fit+':
+            self.ui.cb_bg_method.setCurrentIndex(3)
         else:
             print(f'Did not understand method from config: {self.method}')
             self.ui.cb_method.setStyleSheet("border: 1px solid rgb(200,0,0);")
@@ -2061,6 +2076,11 @@ class MainWidget(QWidget):
             self.ui.le_bg_path.setHidden(True)
             self.ui.qbutton_browse_bg_path.setHidden(True)
             self.bg_option = 'local_fit'
+        elif state == 3:
+            self.ui.label_bg_path.setHidden(False)
+            self.ui.le_bg_path.setHidden(False)
+            self.ui.qbutton_browse_bg_path.setHidden(False)
+            self.bg_option = 'local_fit+'
 
     @pyqtSlot()
     def enter_gpu_id(self):
