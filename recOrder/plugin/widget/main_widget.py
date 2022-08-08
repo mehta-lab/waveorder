@@ -23,6 +23,7 @@ import os
 import json
 import logging
 import pathlib
+import textwrap
 
 
 #TODO: Parse Denoising Parameters correctly from line edits
@@ -140,12 +141,13 @@ class MainWidget(QWidget):
             self.ui.cb_bg_method.removeItem(0)
         bg_options = ['None','Measured','Estimated','Measured + Estimated']
         tooltips = ['No background correction.',
-                    'Correct with a measured background from file.',
-                    'Correct with a background estimated from the raw image.',
-                    'Correct with a measured background from file then correct further with an estimated background.']
+                    'Correct sample images with a background image acquired at an empty field of view, loaded from "Background Path".',
+                    'Estimate sample background by fitting a 2D surface to the sample images. Works well when structures are spatially distributed across the field of view and a clear background is unavailable.',
+                    'Apply "Measured" background correction and then "Estimated" background correction. Use to remove residual background from "Measured"-corrected datasets.']
         for i, bg_option in enumerate(bg_options):
+            wrapped_tooltip = '\n'.join(textwrap.wrap(tooltips[i], width=70))
             self.ui.cb_bg_method.addItem(bg_option)
-            self.ui.cb_bg_method.setItemData(i, tooltips[i], Qt.ToolTipRole)
+            self.ui.cb_bg_method.setItemData(i, wrapped_tooltip, Qt.ToolTipRole)
         self.ui.cb_bg_method.currentIndexChanged[int].connect(self.enter_bg_correction)
 
         self.ui.le_bg_path.editingFinished.connect(self.enter_acq_bg_path)
