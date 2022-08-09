@@ -143,7 +143,7 @@ class MainWidget(QWidget):
         tooltips = ['No background correction.',
                     'Correct sample images with a background image acquired at an empty field of view, loaded from "Background Path".',
                     'Estimate sample background by fitting a 2D surface to the sample images. Works well when structures are spatially distributed across the field of view and a clear background is unavailable.',
-                    'Apply "Measured" background correction and then "Estimated" background correction. Use to remove residual background from "Measured"-corrected datasets.']
+                    'Apply "Measured" background correction and then "Estimated" background correction. Use to remove residual background after the sample retardance is corrected with measured background.']
         for i, bg_option in enumerate(bg_options):
             wrapped_tooltip = '\n'.join(textwrap.wrap(tooltips[i], width=70))
             self.ui.cb_bg_method.addItem(bg_option)
