@@ -131,5 +131,3 @@ def setup_data_save_folder():
         shutil.rmtree(data_save_folder)
     except OSError as e:
         print(f"Error while deleting temp folder: {e.strerror}")
-
-# TODO: replace large Kazansky dataset with smaller dataset

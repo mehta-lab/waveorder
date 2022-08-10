@@ -1,7 +1,7 @@
 import os
 import shutil
 import zarr
-import tifffile as tiff
+from tifffile import TiffFile
 from waveorder.io import WaveorderReader, WaveorderWriter
 import numpy as np
 from recOrder.io.zarr_converter import ZarrConverter
@@ -18,12 +18,13 @@ def test_ometiff_converter_initialize(setup_data_save_folder, get_ometiff_data_d
         shutil.rmtree(output)
 
     converter = ZarrConverter(input, output)
-    tf = tiff.TiffFile(os.path.join(ometiff_data, '2T_3P_16Z_128Y_256X_Kazansky_1_MMStack_Pos0.ome.tif'))
+
+    with TiffFile(os.path.join(ometiff_data, '2T_3P_16Z_128Y_256X_Kazansky_1_MMStack_Pos0.ome.tif')) as tf:
+        assert (converter.summary_metadata == tf.micromanager_metadata['Summary'])
 
     assert(converter.dtype == 'uint16')
     assert(isinstance(converter.reader, WaveorderReader))
     assert(isinstance(converter.writer, WaveorderWriter))
-    assert(converter.summary_metadata == tf.micromanager_metadata['Summary'])
 
     assert(converter.dim_order == ['time', 'position', 'z', 'channel'])
     assert(converter.p_dim == 1)
@@ -57,14 +58,14 @@ def test_ometiff_converter_run(setup_data_save_folder, get_ometiff_data_dir):
     for t in range(2):
         for p in range(3):
             cnt = t*16*4
-            tf = tiff.TiffFile(os.path.join(ometiff_data, f'2T_3P_16Z_128Y_256X_Kazansky_1_MMStack_Pos{p}.ome.tif'))
+            tf = TiffFile(os.path.join(ometiff_data, f'2T_3P_16Z_128Y_256X_Kazansky_1_MMStack_Pos{p}.ome.tif'))
             for z in range(16):
                 for c in range(4):
-                    print(t, p, c, z)
                     image = zs['Row_0'][f'Col_{p}'][f'Pos_00{p}']['arr_0'][t, c, z]
                     tiff_image = tf.pages.get(cnt).asarray()
                     assert(np.array_equal(image, tiff_image))
                     cnt += 1
+            tf.close()
 
 # def test_converter_upti():
 #
