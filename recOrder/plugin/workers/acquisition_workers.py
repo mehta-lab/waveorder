@@ -145,6 +145,9 @@ class BFAcquisitionWorker(WorkerBase):
         stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
         self._check_abort()
 
+        # Cleanup acquisition by closing window, converting to zarr, and deleting temp directory
+        self._cleanup_acq()
+
         # Reconstruct snapped images
         self.n_slices = stack.shape[2]
 
@@ -163,9 +166,6 @@ class BFAcquisitionWorker(WorkerBase):
         # Emit the images and let thread know function is finished
         self.phase_image_emitter.emit(phase)
         self.meta_emitter.emit(meta)
-
-        # Cleanup acquisition by closing window + deleting temp directory
-        self._cleanup_acq()
 
     def _reconstruct(self, stack):
         """
@@ -529,6 +529,9 @@ class FluorescenceAcquisitionWorker(WorkerBase):
             stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
             self._check_abort()
 
+        # Cleanup acquisition by closing window, converting to zarr, and deleting temp directory
+        self._cleanup_acq()
+
         # Reconstruct snapped images
         self._check_abort()
         self.n_slices = stack.shape[2]
@@ -547,9 +550,6 @@ class FluorescenceAcquisitionWorker(WorkerBase):
         # Emit the images and let thread know function is finished
         self.fluor_image_emitter.emit(fluor)
         self.meta_emitter.emit(meta)
-
-        # Cleanup acquisition by closing window + deleting temp directory
-        self._cleanup_acq()
 
     def _reconstruct(self, stack):
         """
@@ -883,6 +883,9 @@ class PolarizationAcquisitionWorker(WorkerBase):
             stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
             self._check_abort()
 
+        # Cleanup acquisition by closing window, converting to zarr, and deleting temp directory
+        self._cleanup_acq()
+
         # Reconstruct snapped images
         self._check_abort()
         self.n_slices = stack.shape[2]
@@ -902,9 +905,6 @@ class PolarizationAcquisitionWorker(WorkerBase):
         self.bire_image_emitter.emit(birefringence)
         self.phase_image_emitter.emit(phase)
         self.meta_emitter.emit(meta)
-
-        # Cleanup acquisition by closing window + deleting temp directory
-        self._cleanup_acq()
 
     def _reconstruct(self, stack):
         """
