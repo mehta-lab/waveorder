@@ -17,12 +17,12 @@ def setup_test_data():
         os.mkdir(test_data)
 
     #  download data to /pytest_temp/ folder if it doesn't already exist
-    url = 'https://zenodo.org/record/6941042/files/recOrder_test_data.zip?download=1'
+    url = 'https://zenodo.org/record/6983916/files/recOrder_test_data.zip?download=1'
     output = os.path.join(test_data, "recOrder_test_Data.zip")
     if not os.listdir(test_data):
-        # print("Downloading test files...")
-        # download(url, out=output)
-        shutil.unpack_archive(r'C:\Users\labelfree\Documents\recOrder_test_data.zip', extract_dir=test_data)
+        print("Downloading test files...")
+        download(url, out=output)
+        shutil.unpack_archive(output, extract_dir=test_data)
 
     yield test_data
 
