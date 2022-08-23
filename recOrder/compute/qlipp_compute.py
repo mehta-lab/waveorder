@@ -154,6 +154,7 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
 
     print('Initializing Reconstructor...')
     start_time = time.time()
+    print(bg_correction)
     recon = waveorder_microscopy(img_dim=image_dim,
                                  lambda_illu=lambda_illu,
                                  ps=ps,
@@ -207,7 +208,7 @@ def reconstruct_qlipp_stokes(data, recon, bg_stokes=None):
     stokes_data = recon.Stokes_transform(stokes_data)
 
     # Don't do background correction if BG data isn't provided
-    if recon.bg_option == 'None' or bg_stokes is None:
+    if recon.bg_option == 'None':
         return stokes_data # C(Z)YX
 
     # Compute Stokes with background correction

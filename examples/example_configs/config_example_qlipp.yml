@@ -28,10 +28,10 @@ dataset:
   ##   [0, 1, 5] for pos 0, 1, and 5
   ##   [!!python/tuple [0, 15], [19, 25]] for timepoints 0 through 15, 19, and 25
 
-  background: './pytest_temp/pipeline_test/2021_06_11_recOrder_pytest_20x_04NA/BG'
+  background: './pytest_temp/pipeline_test/2022_08_04_recOrder_pytest_20x_04NA/BG'
   # (str) Background folder within the experiment folder
 
-  calibration_metadata: './pytest_temp/pipeline_test/2021_06_11_recOrder_pytest_20x_04NA/calib_metadata.txt'
+  calibration_metadata: './pytest_temp/pipeline_test/2022_08_04_recOrder_pytest_20x_04NA/calibration_metadata.txt'
   # (str) path to the qlipp calibration metadata file
 
 pre_processing:

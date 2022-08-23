@@ -1,9 +1,10 @@
-from recOrder.calib.Calibration import QLIPP_Calibration
+from recOrder.calib.Calibration import QLIPP_Calibration, LC_DEVICE_NAME
 from pycromanager import Bridge
 from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
 from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy, QSlider
 from PyQt5.QtGui import QPixmap, QColor
 from superqt import QDoubleRangeSlider, QRangeSlider
+from recOrder.calib import Calibration
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
 from recOrder.plugin.workers.acquisition_workers import PolarizationAcquisitionWorker, ListeningWorker, \
     FluorescenceAcquisitionWorker, BFAcquisitionWorker
@@ -17,12 +18,14 @@ from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, P
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
+from numpydoc.docscrape import NumpyDocString
 from packaging import version
 import numpy as np
 import os
 import json
 import logging
 import pathlib
+import textwrap
 
 
 #TODO: Parse Denoising Parameters correctly from line edits
@@ -54,6 +57,20 @@ class MainWidget(QWidget):
         self.ui.qbutton_mm_connect.clicked[bool].connect(self.connect_to_mm)
 
         # Calibration Tab
+
+        # Remove QT creator calibration mode items
+        self.ui.cb_calib_mode.removeItem(0)
+        self.ui.cb_calib_mode.removeItem(0)
+
+        # Populate calibration modes from docstring
+        cal_docs = NumpyDocString(Calibration.QLIPP_Calibration.__init__.__doc__)
+        mode_docs = ' '.join(cal_docs['Parameters'][3].desc).split('* ')[1:]
+        for i, mode_doc in enumerate(mode_docs):
+            mode_name, mode_tooltip = mode_doc.split(': ')
+            wrapped_tooltip = '\n'.join(textwrap.wrap(mode_tooltip, width=70))
+            self.ui.cb_calib_mode.addItem(mode_name)
+            self.ui.cb_calib_mode.setItemData(i, wrapped_tooltip, Qt.ToolTipRole)
+
         self.ui.qbutton_browse.clicked[bool].connect(self.browse_dir_path)
         self.ui.le_directory.editingFinished.connect(self.enter_dir_path)
         self.ui.le_directory.setText(str(Path.cwd()))
@@ -134,7 +151,21 @@ class MainWidget(QWidget):
         self.ui.chb_pause_updates.stateChanged[int].connect(self.enter_pause_updates)
         self.ui.cb_birefringence.currentIndexChanged[int].connect(self.enter_birefringence_dim)
         self.ui.cb_phase.currentIndexChanged[int].connect(self.enter_phase_dim)
+
+        # Populate background correction GUI element
+        for i in range(3):
+            self.ui.cb_bg_method.removeItem(0)
+        bg_options = ['None','Measured','Estimated','Measured + Estimated']
+        tooltips = ['No background correction.',
+                    'Correct sample images with a background image acquired at an empty field of view, loaded from "Background Path".',
+                    'Estimate sample background by fitting a 2D surface to the sample images. Works well when structures are spatially distributed across the field of view and a clear background is unavailable.',
+                    'Apply "Measured" background correction and then "Estimated" background correction. Use to remove residual background after the sample retardance is corrected with measured background.']
+        for i, bg_option in enumerate(bg_options):
+            wrapped_tooltip = '\n'.join(textwrap.wrap(tooltips[i], width=70))
+            self.ui.cb_bg_method.addItem(bg_option)
+            self.ui.cb_bg_method.setItemData(i, wrapped_tooltip, Qt.ToolTipRole)
         self.ui.cb_bg_method.currentIndexChanged[int].connect(self.enter_bg_correction)
+
         self.ui.le_bg_path.editingFinished.connect(self.enter_acq_bg_path)
         self.ui.qbutton_browse_bg_path.clicked[bool].connect(self.browse_acq_bg_path)
         self.ui.qbutton_acq_birefringence.clicked[bool].connect(self.acq_birefringence)
@@ -191,8 +222,10 @@ class MainWidget(QWidget):
 
         # Reconstruction / Calibration Parameter Defaults
         self.calib_scheme = '4-State'
-        self.calib_mode = 'retardance'
+        self.calib_mode = 'MM-Retardance'
+        self.interp_method = 'schnoor_fit'
         self.config_group = 'Channel'
+        self.calib_channels = ['State0', 'State1', 'State2', 'State3', 'State4']
         self.last_calib_meta_file = None
         self.use_cropped_roi = False
         self.bg_folder_name = 'BG'
@@ -736,7 +769,7 @@ class MainWidget(QWidget):
                 raise_error = True
                 self._set_tab_red('General', True)
 
-            if self.bg_option == 'local_fit' or self.bg_option == 'Global':
+            if self.bg_option == 'local_fit' or self.bg_option == 'local_fit+' or self.bg_option == 'Global':
                 success = self._check_line_edit('bg_path')
                 if not success:
                     raise_error = True
@@ -1028,7 +1061,7 @@ class MainWidget(QWidget):
         for key, value in PROCESSING.items():
             if key not in skip:
                 if key == 'background_correction':
-                    bg_map = {0: 'None', 1: 'global', 2: 'local_fit'}
+                    bg_map = {0: 'None', 1: 'global', 2: 'local_fit', 3: 'local_fit+'}
                     setattr(self.config_reader, key, bg_map[self.ui.cb_bg_method.currentIndex()])
 
                 elif key == 'output_channels':
@@ -1347,6 +1380,8 @@ class MainWidget(QWidget):
             self.ui.cb_bg_method.setCurrentIndex(1)
         elif self.bg_option == 'local_fit':
             self.ui.cb_bg_method.setCurrentIndex(2)
+        elif self.bg_option == 'local_fit+':
+            self.ui.cb_bg_method.setCurrentIndex(3)
         else:
             print(f'Did not understand method from config: {self.method}')
             self.ui.cb_method.setStyleSheet("border: 1px solid rgb(200,0,0);")
@@ -1561,8 +1596,13 @@ class MainWidget(QWidget):
                 print(("WARNING: This version of Micromanager has not been tested with recOrder.\n"
                       f"Please {upgrade_str} to MicroManager nightly build {RECOMMENDED_MM}."))
 
-            # Find and set calibration channel group
-            calib_channels = ['State0', 'State1', 'State2', 'State3', 'State4']
+            # Find config group containing calibration channels
+            # calib_channels is typically ['State0', 'State1', 'State2', ...]
+            # config_list may be something line ['GFP', 'RFP', 'State0', 'State1', 'State2', ...]
+            # config_list may also be of the form ['GFP', 'RFP', 'LF-State0', 'LF-State1', 'LF-State2', ...]
+            # in this version of the code we correctly parse 'LF-State0', but these channels, for not cannot be used
+            # by the Calibration class.
+            # A valid config group contains all channels in calib_channels
             self.ui.cb_config_group.clear()
             groups = self.mmc.getAvailableConfigGroups()
             config_group_found = False
@@ -1572,21 +1612,37 @@ class MainWidget(QWidget):
                 config_list = []
                 for j in range(configs.size()):
                     config_list.append(configs.get(j))
-                if np.all([ch in config_list for ch in calib_channels]):
-                    config_group_found = True
-                    self.config_group = group
+                if np.all([np.any([ch in config for config in config_list]) for ch in self.calib_channels]):
+                    if not config_group_found:
+                        self.config_group = group  # set to first config group found
+                        config_group_found = True
                     self.ui.cb_config_group.addItem(group)
+                # not entirely sure what this part does, but I left it in
+                # I think it tried to find a channel such as 'BF'
                 for ch in config_list:
-                    if ch not in calib_channels:
+                    if ch not in self.calib_channels:
                         self.ui.cb_acq_channel.addItem(ch)
 
             if not config_group_found:
-                print((f"No config group contains channels {calib_channels}.\n"
-                       "Please refer to the recOrder wiki on how to set up the config properly."))
+                msg = f'No config group contains channels {self.calib_channels}. ' \
+                      'Please refer to the recOrder wiki on how to set up the config properly.'
                 self.ui.cb_config_group.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                raise KeyError
+                raise KeyError(msg)
+
+
+            # set LC control mode
+            _devices = self.mmc.getLoadedDevices()
+            loaded_devices = [_devices.get(i) for i in range(_devices.size())]
+            if LC_DEVICE_NAME in loaded_devices:
+                self.calib_mode = 'MM-Voltage'
+                self.ui.cb_calib_mode.setCurrentIndex(1)
+            else:
+                self.calib_mode = 'DAC'
+                self.ui.cb_calib_mode.setCurrentIndex(2)
+
 
             self.mm_status_changed.emit(True)
+
         except:
             self.mm_status_changed.emit(False)
 
@@ -1867,13 +1923,19 @@ class MainWidget(QWidget):
     def enter_calib_mode(self):
         index = self.ui.cb_calib_mode.currentIndex()
         if index == 0:
-            self.calib_mode = 'retardance'
+            self.calib_mode = 'MM-Retardance'
             self.ui.label_lca.hide()
             self.ui.label_lcb.hide()
             self.ui.cb_lca.hide()
             self.ui.cb_lcb.hide()
-        else:
-            self.calib_mode = 'voltage'
+        elif index == 1:
+            self.calib_mode = 'MM-Voltage'
+            self.ui.label_lca.hide()
+            self.ui.label_lcb.hide()
+            self.ui.cb_lca.hide()
+            self.ui.cb_lcb.hide()
+        elif index == 2:
+            self.calib_mode = 'DAC'
             self.ui.cb_lca.clear()
             self.ui.cb_lcb.clear()
             self.ui.cb_lca.show()
@@ -2061,6 +2123,11 @@ class MainWidget(QWidget):
             self.ui.le_bg_path.setHidden(True)
             self.ui.qbutton_browse_bg_path.setHidden(True)
             self.bg_option = 'local_fit'
+        elif state == 3:
+            self.ui.label_bg_path.setHidden(False)
+            self.ui.le_bg_path.setHidden(False)
+            self.ui.qbutton_browse_bg_path.setHidden(False)
+            self.bg_option = 'local_fit+'
 
     @pyqtSlot()
     def enter_gpu_id(self):
@@ -2398,9 +2465,10 @@ class MainWidget(QWidget):
         Calibration is then executed by the calibration worker
         """
 
-        self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, mode=self.calib_mode)
+        self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, lc_control_mode=self.calib_mode,
+                                       interp_method=self.interp_method, wavelength=self.wavelength)
 
-        if self.calib_mode == 'voltage':
+        if self.calib_mode == 'DAC':
             self.calib.set_dacs(self.lca_dac, self.lcb_dac)
 
         # Reset Styling

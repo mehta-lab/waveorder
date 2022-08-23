@@ -3,9 +3,9 @@ import os
 from os.path import dirname, abspath
 import yaml
 
-def test_config_reader(setup_test_data):
+def test_config_reader(get_zarr_data_dir):
 
-    folder, ometiff_data, zarr_data, bf_data = setup_test_data
+    folder, zarr_data = get_zarr_data_dir
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))), 'test_configs/qlipp/config_qlipp_full_pytest.yml')
 
     raw = yaml.full_load(open(path_to_config))

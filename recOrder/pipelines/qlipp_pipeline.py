@@ -72,6 +72,12 @@ class QLIPP(PipelineInterface):
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.data_shape[-2], self.data_shape[-1])
 
+        # Convert 'local_fit+' to 'local_fit' for waveorder
+        if self.config.background_correction == 'local_fit+':
+            wo_background_correction = 'local_fit'
+        else:
+            wo_background_correction = self.config.background_correction
+
         # Initialize Reconstructor
         if self.no_phase:
             self.reconstructor = initialize_reconstructor(pipeline='birefringence',
@@ -79,8 +85,9 @@ class QLIPP(PipelineInterface):
                                                           wavelength_nm=self.config.wavelength,
                                                           swing=self.calib_meta.Swing,
                                                           calibration_scheme=self.calib_scheme,
+                                                          n_slices=self.data.slices,
                                                           pad_z=self.config.pad_z,
-                                                          bg_correction=self.config.background_correction,
+                                                          bg_correction=wo_background_correction,
                                                           mode=self.mode,
                                                           use_gpu=self.config.use_gpu,
                                                           gpu_id=self.config.gpu_id)
@@ -99,19 +106,22 @@ class QLIPP(PipelineInterface):
                                                           z_step_um=self.data.z_step_size,
                                                           pad_z=self.config.pad_z,
                                                           pixel_size_um=self.config.pixel_size,
-                                                          bg_correction=self.config.background_correction,
+                                                          bg_correction=wo_background_correction,
                                                           mode=self.mode,
                                                           use_gpu=self.config.use_gpu,
                                                           gpu_id=self.config.gpu_id)
 
-        # Compute BG stokes if necessary
-        if self.config.background_correction != 'None':
+        # Prepare background corrections for waveorder
+        if self.config.background_correction in ['global', 'local_fit+']:
             bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
             self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
             self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
-
+        elif self.config.background_correction == 'local_fit':
+            self.bg_stokes = np.zeros((5, self.img_dim[0], self.img_dim[1]))
+            self.bg_stokes[0, ...] = 1  # Set background to "identity" Stokes parameters.
         else:
             self.bg_stokes = None
+
 
     def _check_output_channels(self, output_channels):
         self.no_birefringence = True

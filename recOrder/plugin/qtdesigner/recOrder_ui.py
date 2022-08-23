@@ -1717,8 +1717,6 @@ class Ui_Form(object):
         self.cb_lca.setItemText(0, _translate("Form", "-"))
         self.label_lcb.setText(_translate("Form", "LC-B"))
         self.label_calib_mode.setText(_translate("Form", "Calibration Mode"))
-        self.cb_calib_mode.setItemText(0, _translate("Form", "Retardance"))
-        self.cb_calib_mode.setItemText(1, _translate("Form", "Voltage"))
         self.label_cfg_group.setText(_translate("Form", "Config Group"))
         self.qbutton_mm_connect.setText(_translate("Form", "Connect to MM"))
         self.run_calib.setTitle(_translate("Form", "Run Calibration"))

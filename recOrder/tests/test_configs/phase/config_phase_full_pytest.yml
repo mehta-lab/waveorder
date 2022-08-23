@@ -3,7 +3,7 @@ dataset:
 
   mode: '3D'
 
-  data_type: 'zarr'
+  data_type: 'ometiff'
   # (str) the datatype of the raw data. One of 'ometiff', 'singlepagetiff', or 'zarr'
 
   positions: 'all'
@@ -54,22 +54,22 @@ processing:
   pixel_size: 6.5
   # (float) Camera pixel size in the unit of um
 
-  magnification: 63
+  magnification: 20
   # (float) Magnification of the objective
 
-  NA_objective: 1.2
+  NA_objective: 0.55
   # (float) Numerical aperture of the objective
 
   NA_condenser: 0.4
   # (float) Numerical aperture of the condenser
 
-  n_objective_media: 1.33
+  n_objective_media: 1
   # (float) Refractive index of the objective immersion oil
 
-  z_step: 0.25
+  z_step: 2
   # (int) Step size of the z-dimension in um
 
-  focus_zidx: 40
+  focus_zidx: 8
   # (int) Index of the focused z slice of the dataset for 2D phase reconstruction
 
   pad_z: 0
