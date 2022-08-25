@@ -76,6 +76,6 @@ def get_autocontrast_limits(img, clip=.01):
     """
 
     low = np.percentile(img, clip*100)
-    high = np.percentile(img, 1-clip*100)
+    high = np.percentile(img, (1-clip)*100)
 
     return low, high

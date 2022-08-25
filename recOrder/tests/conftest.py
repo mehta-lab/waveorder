@@ -64,6 +64,15 @@ def get_bf_data_dir(setup_test_data):
 
 
 @pytest.fixture()
+def get_pycromanager_data_dir(setup_test_data):
+    test_data = setup_test_data
+
+    pm_data = os.path.join(test_data, 'mm2.0-20210713_pm0.13.2_2p_3t_2c_7z_1')
+
+    return test_data, pm_data
+
+
+@pytest.fixture()
 def init_fluor_decon_pipeline_manager(get_zarr_data_dir, setup_data_save_folder):
     folder, zarr_data = get_zarr_data_dir
     save_folder = setup_data_save_folder
