@@ -1,5 +1,4 @@
 # recOrder
-[![License](https://img.shields.io/pypi/l/recOrder-napari.svg)](https://github.com/mehta-lab/recOrder/blob/main/LICENSE)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/recOrder-napari)
 [![Downloads](https://pepy.tech/badge/recOrder-napari)](https://pepy.tech/project/recOrder-napari)
 [![Python package index](https://img.shields.io/pypi/v/recOrder-napari.svg)](https://pypi.org/project/recOrder-napari)
