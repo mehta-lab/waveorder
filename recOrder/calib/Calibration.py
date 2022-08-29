@@ -145,6 +145,11 @@ class QLIPP_Calibration():
         self.directory = None
         self.inst_mat = None
 
+        # Shutter
+        self.shutter_device = self.mmc.getShutterDevice()
+        self._auto_shutter_state = None
+        self._shutter_state = None
+
     def set_dacs(self, lca_dac, lcb_dac):
         self.PROPERTIES['LCA-DAC'] = (f'TS_{lca_dac}', 'Volts')
         self.PROPERTIES['LCB-DAC'] = (f'TS_{lcb_dac}', 'Volts')
@@ -639,13 +644,41 @@ class QLIPP_Calibration():
         logging.info("--------done--------")
         logging.debug("--------done--------")
 
+    def close_shutter(self):
+        self._auto_shutter_state = self.mmc.getAutoShutter()
+        self._shutter_state = self.mmc.getShutterOpen()
+
+        if not self.shutter_device:
+            # ask user to close shutter
+            pass
+        else:
+            self.mmc.setAutoShutter(False)
+            self.mmc.setShutterOpen(False)
+
+    def open_shutter(self):
+        if not self.shutter_device:
+            # ask user to open shutter
+            pass
+        else:
+            self.mmc.setShutterOpen(True)
+
+    def reset_shutter(self):
+        """
+        Return autoshutter to its original state before closing
+
+        Returns
+        -------
+
+        """
+        if not self.shutter_device:
+            # ask user to open shutter
+            pass
+        else:
+            self.mmc.setAutoShutter(self._auto_shutter_state)
+            self.mmc.setShutterOpen(self._shutter_state)
+
     def calc_blacklevel(self):
-
-        auto_shutter = self.mmc.getAutoShutter()
-        shutter = self.mmc.getShutterOpen()
-
-        self.mmc.setAutoShutter(False)
-        self.mmc.setShutterOpen(False)
+        # make sure shutter is closed before running this function
 
         n_avg = 20
         avgs = []
@@ -655,12 +688,6 @@ class QLIPP_Calibration():
             avgs.append(mean)
 
         blacklevel = np.mean(avgs)
-
-        self.mmc.setAutoShutter(auto_shutter)
-
-        if not auto_shutter:
-            self.mmc.setShutterOpen(shutter)
-
         self.I_Black = blacklevel
 
         return blacklevel
@@ -746,10 +773,16 @@ class QLIPP_Calibration():
                 self.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
                 self.ROI = (rect.x, rect.y, rect.width, rect.height)
 
+        # Close shutter
+        self.close_shutter()
+
         # Calculate Blacklevel
         logging.debug('Calculating Blacklevel ...')
         self.I_Black = self.calc_blacklevel()
         logging.debug(f'Blacklevel: {self.I_Black}\n')
+
+        # Open shutter
+        self.open_shutter()
 
         # Set LC Wavelength:
         if self.mode == 'MM-Retardance':
@@ -760,6 +793,9 @@ class QLIPP_Calibration():
         self.opt_I45(0.05, 0.05)
         self.opt_I90(0.05, 0.05)
         self.opt_I135(0.05, 0.05)
+
+        # Reset shutter
+        self.reset_shutter()
 
         # Calculate Extinction
         self.extinction_ratio = self.calculate_extinction()
@@ -805,10 +841,16 @@ class QLIPP_Calibration():
                 self.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
                 self.ROI = (rect.x, rect.y, rect.width, rect.height)
 
+        # Close shutter
+        self.close_shutter()
+
         # Calculate Blacklevel
         print('Calculating Blacklevel ...')
         self.I_Black = self.calc_blacklevel()
         print(f'Blacklevel: {self.I_Black}\n')
+
+        # Open shutter
+        self.open_shutter()
 
         # Set LC Wavelength:
         if self.mode == 'MM-Retardance':
@@ -818,6 +860,9 @@ class QLIPP_Calibration():
         self.opt_I0()
         self.opt_I60(0.05, 0.05)
         self.opt_I120(0.05, 0.05)
+
+        # Reset shutter
+        self.reset_shutter()
 
         # Calculate Extinction
         self.extinction_ratio = self.calculate_extinction()

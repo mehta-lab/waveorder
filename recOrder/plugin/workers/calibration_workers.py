@@ -70,6 +70,9 @@ class CalibrationWorker(WorkerBase):
 
         self._check_abort()
 
+        # Close shutter
+        self.calib.close_shutter()
+
         # Calculate Blacklevel
         logging.info('Calculating Black Level ...')
         logging.debug('Calculating Black Level ...')
@@ -80,6 +83,9 @@ class CalibrationWorker(WorkerBase):
         self._check_abort()
         self.progress_update.emit((10, 'Calibrating Extinction State...'))
 
+        # Open shutter
+        self.calib.open_shutter()
+
         # Set LC Wavelength:
         self.calib.set_wavelength(int(self.calib_window.wavelength))
         if self.calib_window.calib_mode == 'MM-Retardance':
@@ -89,6 +95,9 @@ class CalibrationWorker(WorkerBase):
 
         # Optimize States
         self._calibrate_4state() if self.calib_window.calib_scheme == '4-State' else self._calibrate_5state()
+
+        # Reset shutter autoshutter
+        self.calib.reset_shutter()
 
         # Return ROI to full FOV
         if self.calib_window.use_cropped_roi:
