@@ -878,6 +878,22 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
             self._check_abort()
 
+            # Check that all LF channels have the same exposure settings
+            channel_exposures = []
+            for i in range(len(settings['channels'])):
+                channel_exposures.append(settings['channels'][i]['exposure'])
+
+            channel_exposures = np.array(channel_exposures)
+            if not np.all(channel_exposures == channel_exposures[0]):
+                # TODO: warn user that not all channels exposures were the same
+                # setting all channel exposures to the exposure of State0
+                for i in range(len(settings['channels'])):
+                    settings['channels'][i]['exposure'] = channel_exposures[0]
+
+            # set acquisition order to channel-first
+            settings['slicesFirst'] = False
+            settings['acqOrderMode'] = 0  # TIME_POS_SLICE_CHANNEL
+
             # Acquire from MDA settings uses MM MDA GUI
             # Returns (1, 4/5, Z, Y, X) array
             stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
