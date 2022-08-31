@@ -16,10 +16,10 @@ def test_cli_config(setup_test_data, setup_data_save_folder):
     path_to_config = os.path.abspath(os.path.join(file_path, './test_configs/qlipp/config_qlipp_full_pytest.yml'))
     zarr_data = os.path.join(setup_test_data, '2022_08_04_recOrder_pytest_20x_04NA_zarr', '2T_3P_16Z_128Y_256X_Kazansky.zarr')
 
-    result = subprocess.run(['recOrder.reconstruct', '--config', path_to_config,
-                             '--data_dir', zarr_data,
-                             '--save_dir', setup_data_save_folder],
-                            shell=True)
+    cmd_string = ' '.join(['recOrder.reconstruct', '--config', path_to_config, '--data_dir', zarr_data,
+                           '--save_dir', setup_data_save_folder])
+
+    result = subprocess.run(cmd_string, shell=True)
     assert(result.returncode == 0)
 
 def test_pipeline_manager_initiate(init_qlipp_pipeline_manager):
