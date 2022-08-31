@@ -1799,25 +1799,21 @@ class MainWidget(QWidget):
 
     @pyqtSlot(dict)
     def handle_meta_update(self, meta):
-        # Don't update microscope parameters saved in calibration metadata file
+        if self.last_calib_meta_file is None:
+            print("\nWARNING: No calibration file has been loaded\n")
+            return
 
-        # if self.last_calib_meta_file is None:
-        #     print("\nWARNING: No calibration file has been loaded\n")
-        #     return
-        #
-        # with open(self.last_calib_meta_file, 'r') as file:
-        #     current_json = json.load(file)
-        #
-        # for key, value in current_json['Microscope Parameters'].items():
-        #     if key in meta:
-        #         current_json['Microscope Parameters'][key] = meta[key]
-        #     else:
-        #         current_json['Microscope Parameters'][key] = None
-        #
-        # with open(self.last_calib_meta_file, 'w') as file:
-        #     json.dump(current_json, file, indent=1)
+        with open(self.last_calib_meta_file, 'r') as file:
+            current_json = json.load(file)
 
-        pass
+        for key, value in current_json['Microscope Parameters'].items():
+            if key in meta:
+                current_json['Microscope Parameters'][key] = meta[key]
+            else:
+                current_json['Microscope Parameters'][key] = None
+
+        with open(self.last_calib_meta_file, 'w') as file:
+            json.dump(current_json, file, indent=1)
 
     @pyqtSlot(str)
     def handle_calib_file_update(self, value):
