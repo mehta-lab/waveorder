@@ -18,7 +18,8 @@ def test_cli_config(setup_test_data, setup_data_save_folder):
 
     result = subprocess.run(['recOrder.reconstruct', '--config', path_to_config,
                              '--data_dir', zarr_data,
-                             '--save_dir', setup_data_save_folder])
+                             '--save_dir', setup_data_save_folder],
+                            shell=True)
     assert(result.returncode == 0)
 
 def test_pipeline_manager_initiate(init_qlipp_pipeline_manager):
@@ -168,4 +169,3 @@ def test_2D_reconstruction(get_zarr_data_dir, setup_data_save_folder):
     # Check Phase
     assert (np.sum(np.abs(phase2D - array[0, 3, 0]) ** 2) / np.sum(np.abs(phase2D)**2) < 0.1)
 
-#TODO: Add tests/test data for 5 state reconstruction?
