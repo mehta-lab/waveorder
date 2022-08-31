@@ -648,7 +648,7 @@ class QLIPP_Calibration():
         self._auto_shutter_state = self.mmc.getAutoShutter()
         self._shutter_state = self.mmc.getShutterOpen()
 
-        if not self.shutter_device:
+        if self.shutter_device == '': # no shutter
             # ask user to close shutter
             pass
         else:
@@ -656,7 +656,7 @@ class QLIPP_Calibration():
             self.mmc.setShutterOpen(False)
 
     def open_shutter(self):
-        if not self.shutter_device:
+        if self.shutter_device == '': # no shutter
             # ask user to open shutter
             pass
         else:
@@ -670,7 +670,7 @@ class QLIPP_Calibration():
         -------
 
         """
-        if not self.shutter_device:
+        if self.shutter_device == '': # no shutter
             # ask user to open shutter
             pass
         else:
