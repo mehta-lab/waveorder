@@ -649,16 +649,15 @@ class QLIPP_Calibration():
         self._shutter_state = self.mmc.getShutterOpen()
 
         if self.shutter_device == '': # no shutter
-            # ask user to close shutter
-            pass
+            input('recOrder could not find an automatic shutter configured through MicroManager.\n'
+                  'Please manually close the shutter and hit <Enter>.')
         else:
             self.mmc.setAutoShutter(False)
             self.mmc.setShutterOpen(False)
 
     def open_shutter(self):
         if self.shutter_device == '': # no shutter
-            # ask user to open shutter
-            pass
+            input('Please manually open the shutter and hit <Enter>.')
         else:
             self.mmc.setShutterOpen(True)
 
@@ -671,8 +670,7 @@ class QLIPP_Calibration():
 
         """
         if self.shutter_device == '': # no shutter
-            # ask user to open shutter
-            pass
+            input('Please manually open the shutter and hit <Enter>.')
         else:
             self.mmc.setAutoShutter(self._auto_shutter_state)
             self.mmc.setShutterOpen(self._shutter_state)
