@@ -72,7 +72,7 @@ def load_bg(bg_path, height, width, ROI=None):
     for i in range(len(bg_paths)):
         img = tiff.imread(bg_paths[i])
 
-        if ROI is not None and ROI != (0, 0, height, width):
+        if ROI is not None and ROI != (0, 0, width, height):
             bg_data[i, :, :] = np.mean(img[ROI[1]:ROI[1] + ROI[3], ROI[0]:ROI[0] + ROI[2]])
 
         else:
