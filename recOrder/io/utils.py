@@ -165,3 +165,21 @@ def get_unimodal_threshold(input_image):
             max_dist = per_dist
     assert best_threshold > -np.inf, 'Error in unimodal thresholding'
     return best_threshold
+def rec_bkg_to_wo_bkg(recorder_option) -> str:
+    """
+    Converts recOrder's background options to waveorder's background options.
+
+    Parameters
+    ----------
+    recorder_option
+
+    Returns
+    -------
+    waveorder_option
+
+    """
+    if recorder_option == 'local_fit+':
+        return 'local_fit'
+    else:
+        return recorder_option
+
