@@ -769,7 +769,7 @@ class MainWidget(QWidget):
                 raise_error = True
                 self._set_tab_red('General', True)
 
-            if self.bg_option == 'local_fit' or self.bg_option == 'local_fit+' or self.bg_option == 'Global':
+            if self.bg_option == 'local_fit' or self.bg_option == 'local_fit+' or self.bg_option == 'global':
                 success = self._check_line_edit('bg_path')
                 if not success:
                     raise_error = True
@@ -1376,7 +1376,7 @@ class MainWidget(QWidget):
         self.bg_option = self.config_reader.background_correction
         if self.bg_option == 'None':
             self.ui.cb_bg_method.setCurrentIndex(0)
-        elif self.bg_option == 'Global':
+        elif self.bg_option == 'global':
             self.ui.cb_bg_method.setCurrentIndex(1)
         elif self.bg_option == 'local_fit':
             self.ui.cb_bg_method.setCurrentIndex(2)
@@ -2117,7 +2117,7 @@ class MainWidget(QWidget):
             self.ui.label_bg_path.setHidden(False)
             self.ui.le_bg_path.setHidden(False)
             self.ui.qbutton_browse_bg_path.setHidden(False)
-            self.bg_option = 'Global'
+            self.bg_option = 'global'
         elif state == 2:
             self.ui.label_bg_path.setHidden(True)
             self.ui.le_bg_path.setHidden(True)

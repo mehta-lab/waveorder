@@ -8,6 +8,7 @@ from recOrder.compute.fluorescence_compute import initialize_fluorescence_recons
     deconvolve_fluorescence_2D, calculate_background
 from recOrder.io.zarr_converter import ZarrConverter
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
+from recOrder.io.utils import rec_bkg_to_wo_bkg
 from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import logging
 from waveorder.io.writer import WaveorderWriter
@@ -959,6 +960,8 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
         self._check_abort()
 
+        wo_background_correction = rec_bkg_to_wo_bkg(self.calib_window.bg_option)
+
         # Initialize the heavy reconstuctor
         if self.mode == 'phase' or self.mode == 'all':
 
@@ -981,7 +984,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
                                                  z_step_um=self.calib_window.z_step,
                                                  pad_z=self.calib_window.pad_z,
                                                  pixel_size_um=self.calib_window.ps,
-                                                 bg_correction=self.calib_window.bg_option,
+                                                 bg_correction=wo_background_correction,
                                                  n_obj_media=self.calib_window.n_media,
                                                  mode=self.calib_window.phase_dim,
                                                  use_gpu=self.calib_window.use_gpu,
@@ -1010,7 +1013,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
                                                      z_step_um=self.calib_window.z_step,
                                                      pad_z=self.calib_window.pad_z,
                                                      pixel_size_um=self.calib_window.ps,
-                                                     bg_correction=self.calib_window.bg_option,
+                                                     bg_correction=wo_background_correction,
                                                      n_obj_media=self.calib_window.n_media,
                                                      mode=self.calib_window.phase_dim,
                                                      use_gpu=self.calib_window.use_gpu,
@@ -1033,11 +1036,12 @@ class PolarizationAcquisitionWorker(WorkerBase):
                                              calibration_scheme=self.calib_window.calib_scheme,
                                              wavelength_nm=self.calib_window.wavelength,
                                              swing=self.calib_window.swing,
-                                             bg_correction=self.calib_window.bg_option,
+                                             bg_correction=wo_background_correction,
                                              n_slices=self.n_slices)
 
-        # Check to see if background correction is desired and compute BG stokes
-        if self.calib_window.bg_option != 'None':
+        # Prepare background corrections for waveorder
+        # This block mimics qlipp_pipeline.py L110-119.
+        if self.calib_window.bg_option in ['global', 'local_fit+']:
             logging.debug('Loading BG Data')
             self._check_abort()
             bg_data = self._load_bg(self.calib_window.acq_bg_directory, stack.shape[-2], stack.shape[-1])
@@ -1046,6 +1050,9 @@ class PolarizationAcquisitionWorker(WorkerBase):
             self._check_abort()
             bg_stokes = recon.Stokes_transform(bg_stokes)
             self._check_abort()
+        elif self.calib_window.bg_option == 'local_fit':
+            bg_stokes = np.zeros((5, stack.shape[-2], stack.shape[-1]))
+            bg_stokes[0, ...] = 1  # Set background to "identity" Stokes parameters.
         else:
             logging.debug('No Background Correction method chosen')
             bg_stokes = None
