@@ -855,7 +855,8 @@ class PolarizationAcquisitionWorker(WorkerBase):
                                              channel_group=self.channel_group,
                                              channels=channels,
                                              save_dir=self.snap_dir,
-                                             prefix=self.prefix)
+                                             prefix=self.prefix,
+                                             keep_shutter_open_channels=True)
             self._check_abort()
 
             # Acquire from MDA settings uses MM MDA GUI
@@ -874,7 +875,9 @@ class PolarizationAcquisitionWorker(WorkerBase):
                                              zend=self.calib_window.z_end,
                                              zstep=self.calib_window.z_step,
                                              save_dir=self.snap_dir,
-                                             prefix=self.prefix)
+                                             prefix=self.prefix,
+                                             keep_shutter_open_channels=True,
+                                             keep_shutter_open_slices=True)
 
             self._check_abort()
 
