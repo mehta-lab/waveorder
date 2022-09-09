@@ -26,13 +26,6 @@ def setup_test_data():
 
     yield test_data
 
-    try:
-        # remove temp folder
-        shutil.rmtree(temp_folder)
-    except OSError as e:
-        print(f"Error while deleting temp folder: {e.strerror}")
-
-
 @pytest.fixture()
 def get_ometiff_data_dir(setup_test_data):
     test_data = setup_test_data

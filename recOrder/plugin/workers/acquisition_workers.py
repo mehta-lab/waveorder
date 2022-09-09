@@ -851,24 +851,22 @@ class PolarizationAcquisitionWorker(WorkerBase):
             logging.debug('Acquiring 2D stack')
 
             # Generate MDA Settings
-            settings = generate_acq_settings(self.calib_window.mm,
+            self.settings = generate_acq_settings(self.calib_window.mm,
                                              channel_group=self.channel_group,
                                              channels=channels,
                                              save_dir=self.snap_dir,
                                              prefix=self.prefix,
                                              keep_shutter_open_channels=True)
             self._check_abort()
-
-            # Acquire from MDA settings uses MM MDA GUI
-            # Returns (1, 4/5, 1, Y, X) array
-            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
+            # acquire images
+            stack = self._acquire()
 
         # Acquire 3D stack
         else:
             logging.debug('Acquiring 3D stack')
 
             # Generate MDA Settings
-            settings = generate_acq_settings(self.calib_window.mm,
+            self.settings = generate_acq_settings(self.calib_window.mm,
                                              channel_group=self.channel_group,
                                              channels=channels,
                                              zstart=self.calib_window.z_start,
@@ -885,10 +883,8 @@ class PolarizationAcquisitionWorker(WorkerBase):
             settings['slicesFirst'] = False
             settings['acqOrderMode'] = 0  # TIME_POS_SLICE_CHANNEL
 
-            # Acquire from MDA settings uses MM MDA GUI
-            # Returns (1, 4/5, Z, Y, X) array
-            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
-            self._check_abort()
+            # acquire images
+            stack = self._acquire()
 
         # Cleanup acquisition by closing window, converting to zarr, and deleting temp directory
         self._cleanup_acq()
@@ -912,6 +908,44 @@ class PolarizationAcquisitionWorker(WorkerBase):
         self.bire_image_emitter.emit(birefringence)
         self.phase_image_emitter.emit(phase)
         self.meta_emitter.emit(meta)
+
+    def _check_exposure(self) -> None:
+        """
+        Check that all LF channels have the same exposure settings. If not, abort Acquisition.
+        """
+        logging.debug('Verifying exposure times...')
+        # parse exposure times
+        channel_exposures = []
+        for channel in self.settings['channels']:
+            channel_exposures.append(channel['exposure'])
+
+        channel_exposures = np.array(channel_exposures)
+        # check if exposure times are equal
+        if not np.all(channel_exposures == channel_exposures[0]):
+            error_exposure_msg = f'The MDA exposure times are not equal! Aborting Acquisition.\n' \
+                                 f'Please manually set the exposure times to the same value from the MDA menu.'
+
+            raise ValueError(error_exposure_msg)        
+
+        self._check_abort()
+
+    def _acquire(self) -> np.ndarray:
+        """
+        Acquire images.
+
+        Returns
+        -------
+        stack:          (nd-array) Dimensions are (C, Z, Y, X). Z=1 for 2D acquisition.
+        """
+        # check if exposure times are the same
+        self._check_exposure()
+
+        # Acquire from MDA settings uses MM MDA GUI
+        # Returns (1, 4/5, Z, Y, X) array
+        stack = acquire_from_settings(self.calib_window.mm, self.settings, grab_images=True)
+        self._check_abort()
+
+        return stack
 
     def _reconstruct(self, stack):
         """
