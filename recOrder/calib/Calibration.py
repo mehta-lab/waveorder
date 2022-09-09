@@ -7,6 +7,7 @@ from recOrder.io.core_functions import define_meadowlark_state, snap_image, set_
     set_lc_state, snap_and_average, snap_and_get_image, get_lc, define_config_state
 from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+from napari.utils.notifications import show_warning
 from scipy.interpolate import interp1d
 from scipy.stats import linregress
 from scipy.optimize import least_squares
@@ -644,20 +645,9 @@ class QLIPP_Calibration():
         logging.info("--------done--------")
         logging.debug("--------done--------")
 
-    def close_shutter(self):
-        self._auto_shutter_state = self.mmc.getAutoShutter()
-        self._shutter_state = self.mmc.getShutterOpen()
-
-        if self.shutter_device == '': # no shutter
-            input('recOrder could not find an automatic shutter configured through MicroManager.\n'
-                  'Please manually close the shutter and hit <Enter>.')
-        else:
-            self.mmc.setAutoShutter(False)
-            self.mmc.setShutterOpen(False)
-
     def open_shutter(self):
         if self.shutter_device == '': # no shutter
-            input('Please manually open the shutter and hit <Enter>.')
+            input('Please manually open the shutter and press <Enter>')
         else:
             self.mmc.setShutterOpen(True)
 
@@ -670,13 +660,26 @@ class QLIPP_Calibration():
 
         """
         if self.shutter_device == '': # no shutter
-            input('Please manually open the shutter and hit <Enter>.')
+            input('Please reset the shutter to its original state and press <Enter>')
         else:
             self.mmc.setAutoShutter(self._auto_shutter_state)
             self.mmc.setShutterOpen(self._shutter_state)
 
-    def calc_blacklevel(self):
-        # make sure shutter is closed before running this function
+    def close_shutter_and_calc_blacklevel(self):
+        self._auto_shutter_state = self.mmc.getAutoShutter()
+        self._shutter_state = self.mmc.getShutterOpen()
+
+        if self.shutter_device == '':  # no shutter
+            show_warning('No shutter found. Please follow the command-line instructions...')
+            in_string = input('recOrder could not find an automatic shutter configured through MicroManager.\n'
+                        'If you would like manually enter the black level, enter an integer or float and press <Enter>\n'
+                        'If you would like to estimate the black level, please close the shutter and press <Enter> ')
+            if in_string.isdigit(): # True if positive integer
+                self.I_Black = float(in_string)
+                return
+        else:
+            self.mmc.setAutoShutter(False)
+            self.mmc.setShutterOpen(False)
 
         n_avg = 20
         avgs = []
@@ -687,8 +690,7 @@ class QLIPP_Calibration():
 
         blacklevel = np.mean(avgs)
         self.I_Black = blacklevel
-
-        return blacklevel
+        return
 
     def get_full_roi(self):
         # Get Image Parameters

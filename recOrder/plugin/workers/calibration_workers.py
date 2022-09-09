@@ -70,13 +70,11 @@ class CalibrationWorker(WorkerBase):
 
         self._check_abort()
 
-        # Close shutter
-        self.calib.close_shutter()
-
-        # Calculate Blacklevel
         logging.info('Calculating Black Level ...')
         logging.debug('Calculating Black Level ...')
-        self.calib.calc_blacklevel()
+        self.calib.close_shutter_and_calc_blacklevel()
+
+        # Calculate Blacklevel
         logging.info(f'Black Level: {self.calib.I_Black:.0f}\n')
         logging.debug(f'Black Level: {self.calib.I_Black:.0f}\n')
 
@@ -365,8 +363,7 @@ def load_calibration(calib, metadata: MetadataReader):
 
     # Calculate black level after loading these properties
     calib.intensity_emitter = MockEmitter()
-    calib.close_shutter()
-    calib.calc_blacklevel()
+    calib.close_shutter_and_calc_blacklevel()
     calib.open_shutter()
     set_lc_state(calib.mmc, calib.group, 'State0')
     calib.I_Ext = snap_and_average(calib.snap_manager)
