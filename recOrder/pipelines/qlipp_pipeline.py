@@ -74,7 +74,7 @@ class QLIPP(PipelineInterface):
 
         wo_background_correction = rec_bkg_to_wo_bkg(self.config.background_correction)
 
-         # Initialize Reconstructor
+        # Initialize Reconstructor
         if self.no_phase:
             self.reconstructor = initialize_reconstructor(pipeline='birefringence',
                                                           image_dim=(self.img_dim[0], self.img_dim[1]),
