@@ -1,5 +1,6 @@
 import click
 import sys
+import os
 from recOrder.io.zarr_converter import ZarrConverter
 from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_manager import PipelineManager
