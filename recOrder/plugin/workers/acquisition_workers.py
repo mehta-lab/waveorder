@@ -1224,15 +1224,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
         """
 
-        #TODO: Change to just accept ROI
-        try:
-            metadata_path = get_last_metadata_file(path)
-            metadata = MetadataReader(metadata_path)
-            roi = metadata.ROI
-        except:
-            roi = None
-
-        bg_data = load_bg(path, height, width, roi)
+        bg_data = load_bg(path, height, width)
 
         return bg_data
 
