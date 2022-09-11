@@ -298,14 +298,10 @@ class BackgroundCaptureWorker(WorkerBase):
         self.calib.meta_file = os.path.join(bg_path, 'calibration_metadata.txt')
 
         microscope_params = {
-             'phase_dimension': None,
-             'pad_z': float(self.calib_window.ui.le_pad_z.text()) if self.calib_window.ui.le_pad_z.text() != '' else None,
              'n_objective_media': float(self.calib_window.ui.le_n_media.text()) if self.calib_window.ui.le_n_media.text() != '' else None,
-             'bg_correction_option': self.calib_window.bg_option,
              'objective_NA': float(self.calib_window.ui.le_obj_na.text()) if self.calib_window.ui.le_obj_na.text() != '' else None,
              'condenser_NA': float(self.calib_window.ui.le_cond_na.text()) if self.calib_window.ui.le_cond_na.text() != '' else None,
              'magnification': float(self.calib_window.ui.le_mag.text()) if self.calib_window.ui.le_mag.text() != '' else None,
-             'swing': self.calib_window.swing,
              'pixel_size': float(self.calib_window.ui.le_ps.text()) if self.calib_window.ui.le_ps.text() != '' else None
         }
 
