@@ -57,11 +57,9 @@ class QLIPP(PipelineInterface):
         if self.config.calibration_metadata:
             self.calib_meta = MetadataReader(self.config.calibration_metadata)
             self.calib_scheme = self.calib_meta.Calibration_scheme
-            self.bg_roi = self.calib_meta.ROI
         else:
             self.calib_meta = None
             self.calib_scheme = '4-State'
-            self.bg_roi = None
 
         # identify the image indicies corresponding to each polarization orientation
         self.s0_idx, self.s1_idx, \
@@ -109,7 +107,7 @@ class QLIPP(PipelineInterface):
 
         # Prepare background corrections for waveorder
         if self.config.background_correction in ['global', 'local_fit+']:
-            bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1], self.bg_roi)
+            bg_data = load_bg(self.bg_path, self.img_dim[0], self.img_dim[1])
             self.bg_stokes = self.reconstructor.Stokes_recon(bg_data)
             self.bg_stokes = self.reconstructor.Stokes_transform(self.bg_stokes)
         elif self.config.background_correction == 'local_fit':

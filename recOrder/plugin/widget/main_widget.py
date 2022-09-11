@@ -2651,7 +2651,7 @@ class MainWidget(QWidget):
             metadata = MetadataReader(metadata_file)
             roi = metadata.ROI
             height, width = roi[2], roi[3]
-            bg_data = load_bg(self.current_bg_path, height, width, roi)
+            bg_data = load_bg(self.current_bg_path, height, width)
         else:
             bg_data = None
 

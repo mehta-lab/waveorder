@@ -1044,7 +1044,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         if self.calib_window.bg_option in ['global', 'local_fit+']:
             logging.debug('Loading BG Data')
             self._check_abort()
-            bg_data = self._load_bg(self.calib_window.acq_bg_directory, stack.shape[-2], stack.shape[-1])
+            bg_data = load_bg(self.calib_window.acq_bg_directory, stack.shape[-2], stack.shape[-1])
             self._check_abort()
             bg_stokes = recon.Stokes_recon(bg_data)
             self._check_abort()
@@ -1208,25 +1208,6 @@ class PolarizationAcquisitionWorker(WorkerBase):
             current_meta = writer.store.attrs.asdict()
             current_meta['recOrder'] = meta
             writer.store.attrs.put(current_meta)
-
-    def _load_bg(self, path, height, width):
-        """
-        Load background and calibration metadata.
-
-        Parameters
-        ----------
-        path:           (str) path to the BG folder
-        height:         (int) height of BG image
-        width:          (int) widht of BG image
-
-        Returns
-        -------
-
-        """
-
-        bg_data = load_bg(path, height, width)
-
-        return bg_data
 
     def _reconstructor_changed(self):
         """
