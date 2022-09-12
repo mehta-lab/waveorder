@@ -52,13 +52,14 @@ def extract_reconstruction_parameters(reconstructor, magnification=None):
     return attr_dict
 
 
-def load_bg(bg_path, height, width):
+def load_bg(bg_path, height, width, ROI=None):
     """
     Parameters
     ----------
     bg_path         : (str) path to the folder containing background images
     height          : (int) height of image in pixels
     width           : (int) width of image in pixels
+    ROI             : (tuple)  ROI of the background images to use, if None, full FOV will be used
 
     Returns
     -------
@@ -71,7 +72,15 @@ def load_bg(bg_path, height, width):
 
     for i in range(len(bg_paths)):
         img = tiff.imread(bg_paths[i])
-        bg_data[i, :, :] = img
+
+        if ROI is not None and ROI != (0, 0, width, height):
+            msg = "Warning: the background is being averaged over the ROI."
+            show_warning(msg)
+            print(msg)
+            bg_data[i, :, :] = np.mean(img[ROI[1]:ROI[1] + ROI[3], ROI[0]:ROI[0] + ROI[2]])
+
+        else:
+            bg_data[i, :, :] = img
 
     return bg_data
 
