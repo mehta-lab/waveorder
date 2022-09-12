@@ -880,8 +880,8 @@ class PolarizationAcquisitionWorker(WorkerBase):
             self._check_abort()
 
             # set acquisition order to channel-first
-            settings['slicesFirst'] = False
-            settings['acqOrderMode'] = 0  # TIME_POS_SLICE_CHANNEL
+            self.settings['slicesFirst'] = False
+            self.settings['acqOrderMode'] = 0  # TIME_POS_SLICE_CHANNEL
 
             # acquire images
             stack = self._acquire()
