@@ -1,4 +1,5 @@
 import glob
+import logging
 import os
 import tifffile as tiff
 import numpy as np
@@ -77,7 +78,7 @@ def load_bg(bg_path, height, width, ROI=None):
             Warning: earlier versions of recOrder would have averaged over the background ROI. This behavior is 
             now considered a bug, and future versions of recOrder will not average over the background. 
             """
-            print(warning_msg)
+            logging.warning(warning_msg)
         else:
             bg_data[i, :, :] = img
 
