@@ -2,6 +2,7 @@ import glob
 import os
 import tifffile as tiff
 import numpy as np
+from napari.utils.notifications import show_warning
 from waveorder.waveorder_reconstructor import fluorescence_microscopy, waveorder_microscopy
 
 
