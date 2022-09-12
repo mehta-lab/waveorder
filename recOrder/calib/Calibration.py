@@ -694,7 +694,6 @@ class QLIPP_Calibration():
 
         blacklevel = np.mean(avgs)
         self.I_Black = blacklevel
-        return
 
     def get_full_roi(self):
         # Get Image Parameters
