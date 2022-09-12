@@ -8,7 +8,7 @@ from recOrder.compute.fluorescence_compute import initialize_fluorescence_recons
     deconvolve_fluorescence_2D, calculate_background
 from recOrder.io.zarr_converter import ZarrConverter
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
-from recOrder.io.utils import rec_bkg_to_wo_bkg
+from recOrder.io.utils import ram_message, rec_bkg_to_wo_bkg
 from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import logging
 from waveorder.io.writer import WaveorderWriter
@@ -106,7 +106,7 @@ class BFAcquisitionWorker(WorkerBase):
         """
         Function that runs the 2D or 3D acquisition and reconstructs the data
         """
-
+        logging.info(ram_message())
         logging.info('Running Acquisition...')
         self._check_abort()
 
@@ -472,7 +472,7 @@ class FluorescenceAcquisitionWorker(WorkerBase):
         """
         Function that runs the 2D or 3D acquisition and reconstructs the data
         """
-
+        logging.info(ram_message())
         logging.info('Running Acquisition...')
 
         self._check_abort()
@@ -837,7 +837,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         """
         Function that runs the 2D or 3D acquisition and reconstructs the data
         """
-
+        logging.info(ram_message())
         logging.info('Running Acquisition...')
 
         # List the Channels to acquire, if 5-state then append 5th channel

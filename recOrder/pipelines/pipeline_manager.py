@@ -4,7 +4,7 @@ from waveorder.io.writer import WaveorderWriter
 import time
 import os
 import shutil
-from recOrder.io.utils import MockEmitter
+from recOrder.io.utils import MockEmitter, ram_message
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
 from recOrder.pipelines.fluor_deconv_pipeline import FluorescenceDeconvolution
@@ -22,6 +22,7 @@ class PipelineManager:
     """
 
     def __init__(self, config: ConfigReader, overwrite: bool = False, emitter=MockEmitter()):
+        print(ram_message())
 
         start = time.time()
         print('Reading Data...')
