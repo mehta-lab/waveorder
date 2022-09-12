@@ -1,5 +1,4 @@
 # recOrder
-[![License](https://img.shields.io/pypi/l/recOrder-napari.svg)](https://github.com/mehta-lab/recOrder/blob/main/LICENSE)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/recOrder-napari)
 [![Downloads](https://pepy.tech/badge/recOrder-napari)](https://pepy.tech/project/recOrder-napari)
 [![Python package index](https://img.shields.io/pypi/v/recOrder-napari.svg)](https://pypi.org/project/recOrder-napari)
@@ -31,9 +30,9 @@ The acquisition, calibration, background correction, reconstruction, and applica
 conda create -y -n recOrder python=3.9
 conda activate recOrder
 ```
-Install `napari` and `recOrder-napari`:
+Install `recOrder-napari`:
 ```
-pip install "napari[all]" recOrder-napari
+pip install recOrder-napari
 ```
 Open `napari` with `recOrder-napari`:
 ```

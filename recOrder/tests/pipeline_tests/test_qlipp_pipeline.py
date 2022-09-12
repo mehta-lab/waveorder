@@ -8,7 +8,19 @@ from recOrder.compute.qlipp_compute import reconstruct_qlipp_stokes, reconstruct
 from os.path import dirname, abspath
 import numpy as np
 import os
+import subprocess
 import zarr
+
+def test_cli_config(setup_test_data, setup_data_save_folder):
+    file_path = os.path.dirname(os.path.dirname(__file__))
+    path_to_config = os.path.abspath(os.path.join(file_path, './test_configs/qlipp/config_qlipp_full_pytest.yml'))
+    zarr_data = os.path.join(setup_test_data, '2022_08_04_recOrder_pytest_20x_04NA_zarr', '2T_3P_16Z_128Y_256X_Kazansky.zarr')
+
+    cmd_string = ' '.join(['recOrder.reconstruct', '--config', path_to_config, '--data_dir', zarr_data,
+                           '--save_dir', setup_data_save_folder])
+
+    result = subprocess.run(cmd_string, shell=True)
+    assert(result.returncode == 0)
 
 def test_pipeline_manager_initiate(init_qlipp_pipeline_manager):
 
@@ -156,5 +168,4 @@ def test_2D_reconstruction(get_zarr_data_dir, setup_data_save_folder):
 
     # Check Phase
     assert (np.sum(np.abs(phase2D - array[0, 3, 0]) ** 2) / np.sum(np.abs(phase2D)**2) < 0.1)
-
-#TODO: Add tests/test data for 5 state reconstruction?
+    #TODO: Add tests/test data for 5 state reconstruction?

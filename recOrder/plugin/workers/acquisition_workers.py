@@ -8,7 +8,7 @@ from recOrder.compute.fluorescence_compute import initialize_fluorescence_recons
     deconvolve_fluorescence_2D, calculate_background
 from recOrder.io.zarr_converter import ZarrConverter
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
-from recOrder.io.utils import ram_message
+from recOrder.io.utils import ram_message, rec_bkg_to_wo_bkg
 from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import logging
 from waveorder.io.writer import WaveorderWriter
@@ -852,37 +852,40 @@ class PolarizationAcquisitionWorker(WorkerBase):
             logging.debug('Acquiring 2D stack')
 
             # Generate MDA Settings
-            settings = generate_acq_settings(self.calib_window.mm,
+            self.settings = generate_acq_settings(self.calib_window.mm,
                                              channel_group=self.channel_group,
                                              channels=channels,
                                              save_dir=self.snap_dir,
-                                             prefix=self.prefix)
+                                             prefix=self.prefix,
+                                             keep_shutter_open_channels=True)
             self._check_abort()
-
-            # Acquire from MDA settings uses MM MDA GUI
-            # Returns (1, 4/5, 1, Y, X) array
-            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
+            # acquire images
+            stack = self._acquire()
 
         # Acquire 3D stack
         else:
             logging.debug('Acquiring 3D stack')
 
             # Generate MDA Settings
-            settings = generate_acq_settings(self.calib_window.mm,
+            self.settings = generate_acq_settings(self.calib_window.mm,
                                              channel_group=self.channel_group,
                                              channels=channels,
                                              zstart=self.calib_window.z_start,
                                              zend=self.calib_window.z_end,
                                              zstep=self.calib_window.z_step,
                                              save_dir=self.snap_dir,
-                                             prefix=self.prefix)
+                                             prefix=self.prefix,
+                                             keep_shutter_open_channels=True,
+                                             keep_shutter_open_slices=True)
 
             self._check_abort()
 
-            # Acquire from MDA settings uses MM MDA GUI
-            # Returns (1, 4/5, Z, Y, X) array
-            stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
-            self._check_abort()
+            # set acquisition order to channel-first
+            self.settings['slicesFirst'] = False
+            self.settings['acqOrderMode'] = 0  # TIME_POS_SLICE_CHANNEL
+
+            # acquire images
+            stack = self._acquire()
 
         # Cleanup acquisition by closing window, converting to zarr, and deleting temp directory
         self._cleanup_acq()
@@ -907,6 +910,44 @@ class PolarizationAcquisitionWorker(WorkerBase):
         self.phase_image_emitter.emit(phase)
         self.meta_emitter.emit(meta)
 
+    def _check_exposure(self) -> None:
+        """
+        Check that all LF channels have the same exposure settings. If not, abort Acquisition.
+        """
+        logging.debug('Verifying exposure times...')
+        # parse exposure times
+        channel_exposures = []
+        for channel in self.settings['channels']:
+            channel_exposures.append(channel['exposure'])
+
+        channel_exposures = np.array(channel_exposures)
+        # check if exposure times are equal
+        if not np.all(channel_exposures == channel_exposures[0]):
+            error_exposure_msg = f'The MDA exposure times are not equal! Aborting Acquisition.\n' \
+                                 f'Please manually set the exposure times to the same value from the MDA menu.'
+
+            raise ValueError(error_exposure_msg)        
+
+        self._check_abort()
+
+    def _acquire(self) -> np.ndarray:
+        """
+        Acquire images.
+
+        Returns
+        -------
+        stack:          (nd-array) Dimensions are (C, Z, Y, X). Z=1 for 2D acquisition.
+        """
+        # check if exposure times are the same
+        self._check_exposure()
+
+        # Acquire from MDA settings uses MM MDA GUI
+        # Returns (1, 4/5, Z, Y, X) array
+        stack = acquire_from_settings(self.calib_window.mm, self.settings, grab_images=True)
+        self._check_abort()
+
+        return stack
+
     def _reconstruct(self, stack):
         """
         Method to reconstruct, given a 2D or 3D stack.  First need to initialize the reconstructor given
@@ -926,6 +967,8 @@ class PolarizationAcquisitionWorker(WorkerBase):
         stack = stack[:, 0] if self.n_slices == 1 else stack
 
         self._check_abort()
+
+        wo_background_correction = rec_bkg_to_wo_bkg(self.calib_window.bg_option)
 
         # Initialize the heavy reconstuctor
         if self.mode == 'phase' or self.mode == 'all':
@@ -949,7 +992,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
                                                  z_step_um=self.calib_window.z_step,
                                                  pad_z=self.calib_window.pad_z,
                                                  pixel_size_um=self.calib_window.ps,
-                                                 bg_correction=self.calib_window.bg_option,
+                                                 bg_correction=wo_background_correction,
                                                  n_obj_media=self.calib_window.n_media,
                                                  mode=self.calib_window.phase_dim,
                                                  use_gpu=self.calib_window.use_gpu,
@@ -978,7 +1021,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
                                                      z_step_um=self.calib_window.z_step,
                                                      pad_z=self.calib_window.pad_z,
                                                      pixel_size_um=self.calib_window.ps,
-                                                     bg_correction=self.calib_window.bg_option,
+                                                     bg_correction=wo_background_correction,
                                                      n_obj_media=self.calib_window.n_media,
                                                      mode=self.calib_window.phase_dim,
                                                      use_gpu=self.calib_window.use_gpu,
@@ -1001,11 +1044,12 @@ class PolarizationAcquisitionWorker(WorkerBase):
                                              calibration_scheme=self.calib_window.calib_scheme,
                                              wavelength_nm=self.calib_window.wavelength,
                                              swing=self.calib_window.swing,
-                                             bg_correction=self.calib_window.bg_option,
+                                             bg_correction=wo_background_correction,
                                              n_slices=self.n_slices)
 
-        # Check to see if background correction is desired and compute BG stokes
-        if self.calib_window.bg_option != 'None':
+        # Prepare background corrections for waveorder
+        # This block mimics qlipp_pipeline.py L110-119.
+        if self.calib_window.bg_option in ['global', 'local_fit+']:
             logging.debug('Loading BG Data')
             self._check_abort()
             bg_data = self._load_bg(self.calib_window.acq_bg_directory, stack.shape[-2], stack.shape[-1])
@@ -1014,6 +1058,9 @@ class PolarizationAcquisitionWorker(WorkerBase):
             self._check_abort()
             bg_stokes = recon.Stokes_transform(bg_stokes)
             self._check_abort()
+        elif self.calib_window.bg_option == 'local_fit':
+            bg_stokes = np.zeros((5, stack.shape[-2], stack.shape[-1]))
+            bg_stokes[0, ...] = 1  # Set background to "identity" Stokes parameters.
         else:
             logging.debug('No Background Correction method chosen')
             bg_stokes = None

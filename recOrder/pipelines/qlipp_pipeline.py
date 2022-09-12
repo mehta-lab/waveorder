@@ -2,7 +2,7 @@ from recOrder.io.config_reader import ConfigReader
 from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
 from recOrder.io import MetadataReader
-from recOrder.io.utils import load_bg, MockEmitter
+from recOrder.io.utils import load_bg, MockEmitter, rec_bkg_to_wo_bkg
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, \
     reconstruct_phase2D, reconstruct_phase3D, initialize_reconstructor
 import numpy as np
@@ -72,11 +72,7 @@ class QLIPP(PipelineInterface):
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
         self.chunk_size = (1, 1, 1, self.data_shape[-2], self.data_shape[-1])
 
-        # Convert 'local_fit+' to 'local_fit' for waveorder
-        if self.config.background_correction == 'local_fit+':
-            wo_background_correction = 'local_fit'
-        else:
-            wo_background_correction = self.config.background_correction
+        wo_background_correction = rec_bkg_to_wo_bkg(self.config.background_correction)
 
         # Initialize Reconstructor
         if self.no_phase:
@@ -121,7 +117,6 @@ class QLIPP(PipelineInterface):
             self.bg_stokes[0, ...] = 1  # Set background to "identity" Stokes parameters.
         else:
             self.bg_stokes = None
-
 
     def _check_output_channels(self, output_channels):
         self.no_birefringence = True
