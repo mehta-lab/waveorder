@@ -661,6 +661,7 @@ class QLIPP_Calibration():
         """
         if self.shutter_device == '': # no shutter
             input('Please reset the shutter to its original state and press <Enter>')
+            logging.info("This is the end of the command-line instructions. You can return to the napari window.")
         else:
             self.mmc.setAutoShutter(self._auto_shutter_state)
             self.mmc.setShutterOpen(self._shutter_state)
