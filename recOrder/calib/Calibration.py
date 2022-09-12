@@ -671,9 +671,13 @@ class QLIPP_Calibration():
 
         if self.shutter_device == '':  # no shutter
             show_warning('No shutter found. Please follow the command-line instructions...')
-            in_string = input('recOrder could not find an automatic shutter configured through MicroManager.\n'
-                        'If you would like manually enter the black level, enter an integer or float and press <Enter>\n'
-                        'If you would like to estimate the black level, please close the shutter and press <Enter> ')
+            shutter_warning_msg = """
+            recOrder could not find an automatic shutter configured through Micro-Manager.
+            >>> If you would like manually enter the black level, enter an integer or float and press <Enter>
+            >>> If you would like to estimate the black level, please close the shutter and press <Enter> 
+            """
+
+            in_string = input(shutter_warning_msg)
             if in_string.isdigit(): # True if positive integer
                 self.I_Black = float(in_string)
                 return
