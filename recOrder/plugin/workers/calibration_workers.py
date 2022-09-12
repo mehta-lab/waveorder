@@ -70,15 +70,19 @@ class CalibrationWorker(WorkerBase):
 
         self._check_abort()
 
-        # Calculate Blacklevel
         logging.info('Calculating Black Level ...')
         logging.debug('Calculating Black Level ...')
-        self.calib.calc_blacklevel()
+        self.calib.close_shutter_and_calc_blacklevel()
+
+        # Calculate Blacklevel
         logging.info(f'Black Level: {self.calib.I_Black:.0f}\n')
         logging.debug(f'Black Level: {self.calib.I_Black:.0f}\n')
 
         self._check_abort()
         self.progress_update.emit((10, 'Calibrating Extinction State...'))
+
+        # Open shutter
+        self.calib.open_shutter()
 
         # Set LC Wavelength:
         self.calib.set_wavelength(int(self.calib_window.wavelength))
@@ -89,6 +93,9 @@ class CalibrationWorker(WorkerBase):
 
         # Optimize States
         self._calibrate_4state() if self.calib_window.calib_scheme == '4-State' else self._calibrate_5state()
+
+        # Reset shutter autoshutter
+        self.calib.reset_shutter()
 
         # Return ROI to full FOV
         if self.calib_window.use_cropped_roi:
@@ -298,14 +305,10 @@ class BackgroundCaptureWorker(WorkerBase):
         self.calib.meta_file = os.path.join(bg_path, 'calibration_metadata.txt')
 
         microscope_params = {
-             'phase_dimension': None,
-             'pad_z': float(self.calib_window.ui.le_pad_z.text()) if self.calib_window.ui.le_pad_z.text() != '' else None,
              'n_objective_media': float(self.calib_window.ui.le_n_media.text()) if self.calib_window.ui.le_n_media.text() != '' else None,
-             'bg_correction_option': self.calib_window.bg_option,
              'objective_NA': float(self.calib_window.ui.le_obj_na.text()) if self.calib_window.ui.le_obj_na.text() != '' else None,
              'condenser_NA': float(self.calib_window.ui.le_cond_na.text()) if self.calib_window.ui.le_cond_na.text() != '' else None,
              'magnification': float(self.calib_window.ui.le_mag.text()) if self.calib_window.ui.le_mag.text() != '' else None,
-             'swing': self.calib_window.swing,
              'pixel_size': float(self.calib_window.ui.le_ps.text()) if self.calib_window.ui.le_ps.text() != '' else None
         }
 
@@ -356,11 +359,13 @@ def load_calibration(calib, metadata: MetadataReader):
 
     # Calculate black level after loading these properties
     calib.intensity_emitter = MockEmitter()
-    calib.calc_blacklevel()
+    calib.close_shutter_and_calc_blacklevel()
+    calib.open_shutter()
     set_lc_state(calib.mmc, calib.group, 'State0')
     calib.I_Ext = snap_and_average(calib.snap_manager)
     set_lc_state(calib.mmc, calib.group, 'State1')
     calib.I_Elliptical = snap_and_average(calib.snap_manager)
+    calib.reset_shutter()
 
     yield str(calib.calculate_extinction(calib.swing, calib.I_Black, calib.I_Ext, calib.I_Elliptical))
 

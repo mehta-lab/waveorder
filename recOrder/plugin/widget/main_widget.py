@@ -1799,21 +1799,25 @@ class MainWidget(QWidget):
 
     @pyqtSlot(dict)
     def handle_meta_update(self, meta):
-        if self.last_calib_meta_file is None:
-            print("\nWARNING: No calibration file has been loaded\n")
-            return
+        # Don't update microscope parameters saved in calibration metadata file
 
-        with open(self.last_calib_meta_file, 'r') as file:
-            current_json = json.load(file)
+        # if self.last_calib_meta_file is None:
+        #     print("\nWARNING: No calibration file has been loaded\n")
+        #     return
+        #
+        # with open(self.last_calib_meta_file, 'r') as file:
+        #     current_json = json.load(file)
+        #
+        # for key, value in current_json['Microscope Parameters'].items():
+        #     if key in meta:
+        #         current_json['Microscope Parameters'][key] = meta[key]
+        #     else:
+        #         current_json['Microscope Parameters'][key] = None
+        #
+        # with open(self.last_calib_meta_file, 'w') as file:
+        #     json.dump(current_json, file, indent=1)
 
-        for key, value in current_json['Microscope Parameters'].items():
-            if key in meta:
-                current_json['Microscope Parameters'][key] = meta[key]
-            else:
-                current_json['Microscope Parameters'][key] = None
-
-        with open(self.last_calib_meta_file, 'w') as file:
-            json.dump(current_json, file, indent=1)
+        pass
 
     @pyqtSlot(str)
     def handle_calib_file_update(self, value):
@@ -2417,7 +2421,8 @@ class MainWidget(QWidget):
         self.swing = metadata.Swing
 
         # Initialize calibration class
-        self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group)
+        self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, lc_control_mode=self.calib_mode,
+                                       interp_method=self.interp_method, wavelength=self.wavelength)
         self.calib.swing = self.swing
         self.ui.le_swing.setText(str(self.swing))
         self.calib.wavelength = self.wavelength

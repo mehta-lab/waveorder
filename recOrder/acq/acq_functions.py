@@ -7,7 +7,7 @@ import time
 import glob
 
 def generate_acq_settings(mm, channel_group, channels=None, zstart=None, zend=None, zstep=None,
-                          save_dir=None, prefix=None, keep_shutter_open = False):
+                          save_dir=None, prefix=None, keep_shutter_open_channels=False, keep_shutter_open_slices=False):
     """
     This function generates a json file specific to the micromanager SequenceSettings.
     It has default parameters for a multi-channels z-stack acquisition but does not yet
@@ -74,7 +74,8 @@ def generate_acq_settings(mm, channel_group, channels=None, zstart=None, zend=No
     original_json['relativeZSlice'] = True
     original_json['slicesFirst'] = True
     original_json['timeFirst'] = False
-    original_json['keepShutterOpenSlices'] = keep_shutter_open
+    original_json['keepShutterOpenSlices'] = keep_shutter_open_slices
+    original_json['keepShutterOpenChannels'] = keep_shutter_open_channels
     original_json['useAutofocus'] = False
     original_json['saveMode'] = 'MULTIPAGE_TIFF'
     original_json['save'] = True if save_dir else False

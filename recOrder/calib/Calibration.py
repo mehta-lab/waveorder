@@ -7,6 +7,7 @@ from recOrder.io.core_functions import define_meadowlark_state, snap_image, set_
     set_lc_state, snap_and_average, snap_and_get_image, get_lc, define_config_state
 from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+from napari.utils.notifications import show_warning
 from scipy.interpolate import interp1d
 from scipy.stats import linregress
 from scipy.optimize import least_squares
@@ -144,6 +145,11 @@ class QLIPP_Calibration():
         self.width = None
         self.directory = None
         self.inst_mat = None
+
+        # Shutter
+        self.shutter_device = self.mmc.getShutterDevice()
+        self._auto_shutter_state = None
+        self._shutter_state = None
 
     def set_dacs(self, lca_dac, lcb_dac):
         self.PROPERTIES['LCA-DAC'] = (f'TS_{lca_dac}', 'Volts')
@@ -639,13 +645,46 @@ class QLIPP_Calibration():
         logging.info("--------done--------")
         logging.debug("--------done--------")
 
-    def calc_blacklevel(self):
+    def open_shutter(self):
+        if self.shutter_device == '': # no shutter
+            input('Please manually open the shutter and press <Enter>')
+        else:
+            self.mmc.setShutterOpen(True)
 
-        auto_shutter = self.mmc.getAutoShutter()
-        shutter = self.mmc.getShutterOpen()
+    def reset_shutter(self):
+        """
+        Return autoshutter to its original state before closing
 
-        self.mmc.setAutoShutter(False)
-        self.mmc.setShutterOpen(False)
+        Returns
+        -------
+
+        """
+        if self.shutter_device == '': # no shutter
+            input('Please reset the shutter to its original state and press <Enter>')
+            logging.info("This is the end of the command-line instructions. You can return to the napari window.")
+        else:
+            self.mmc.setAutoShutter(self._auto_shutter_state)
+            self.mmc.setShutterOpen(self._shutter_state)
+
+    def close_shutter_and_calc_blacklevel(self):
+        self._auto_shutter_state = self.mmc.getAutoShutter()
+        self._shutter_state = self.mmc.getShutterOpen()
+
+        if self.shutter_device == '':  # no shutter
+            show_warning('No shutter found. Please follow the command-line instructions...')
+            shutter_warning_msg = """
+            recOrder could not find an automatic shutter configured through Micro-Manager.
+            >>> If you would like manually enter the black level, enter an integer or float and press <Enter>
+            >>> If you would like to estimate the black level, please close the shutter and press <Enter> 
+            """
+
+            in_string = input(shutter_warning_msg)
+            if in_string.isdigit(): # True if positive integer
+                self.I_Black = float(in_string)
+                return
+        else:
+            self.mmc.setAutoShutter(False)
+            self.mmc.setShutterOpen(False)
 
         n_avg = 20
         avgs = []
@@ -655,15 +694,7 @@ class QLIPP_Calibration():
             avgs.append(mean)
 
         blacklevel = np.mean(avgs)
-
-        self.mmc.setAutoShutter(auto_shutter)
-
-        if not auto_shutter:
-            self.mmc.setShutterOpen(shutter)
-
         self.I_Black = blacklevel
-
-        return blacklevel
 
     def get_full_roi(self):
         # Get Image Parameters
@@ -717,131 +748,6 @@ class QLIPP_Calibration():
 
         else:
             raise ValueError('Did not understand your answer, please check spelling')
-
-    def run_5state_calibration(self, param):
-        """
-        Param is a list or tuple of:
-            (swing, wavelength, lc_bounds, black level)
-        """
-        self.swing = param[0]
-        self.wavelength = param[1]
-        self.meta_file = param[2]
-        use_full_FOV = param[3]
-
-        # Get Image Parameters
-        self.mmc.snapImage()
-        self.mmc.getImage()
-        self.height, self.width = self.mmc.getImageHeight(), self.mmc.getImageWidth()
-        self.ROI = (0, 0, self.width, self.height)
-
-        # Check if change of ROI is needed
-        if use_full_FOV is False:
-            rect = self.check_and_get_roi()
-            cont = self.display_and_check_ROI(rect)
-
-            if not cont:
-                print('\n---------Stopping Calibration---------\n')
-                return
-            else:
-                self.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
-                self.ROI = (rect.x, rect.y, rect.width, rect.height)
-
-        # Calculate Blacklevel
-        logging.debug('Calculating Blacklevel ...')
-        self.I_Black = self.calc_blacklevel()
-        logging.debug(f'Blacklevel: {self.I_Black}\n')
-
-        # Set LC Wavelength:
-        if self.mode == 'MM-Retardance':
-            self.mmc.setProperty(LC_DEVICE_NAME, 'Wavelength', self.wavelength)
-
-        self.opt_Iext()
-        self.opt_I0()
-        self.opt_I45(0.05, 0.05)
-        self.opt_I90(0.05, 0.05)
-        self.opt_I135(0.05, 0.05)
-
-        # Calculate Extinction
-        self.extinction_ratio = self.calculate_extinction()
-
-        # Write Metadata
-        self.write_metadata()
-
-        # Return ROI to full FOV
-        if use_full_FOV is False:
-            self.mmc.clearROI()
-
-        logging.info("\n=======Finished Calibration=======\n")
-        logging.info(f"EXTINCTION = {self.extinction_ratio}")
-        logging.debug("\n=======Finished Calibration=======\n")
-        logging.debug(f"EXTINCTION = {self.extinction_ratio}")
-
-    def run_4state_calibration(self, param):
-        """
-        Param is a list or tuple of:
-            (swing, wavelength, lc_bounds, black level, <mode>)
-            where <mode> is one of 'full','coarse','fine'
-        """
-        self.swing = param[0]
-        self.wavelength = param[1]
-        self.meta_file = param[2]
-        use_full_FOV = param[3]
-
-        # Get Image Parameters
-        self.mmc.snapImage()
-        self.mmc.getImage()
-        self.height, self.width = self.mmc.getImageHeight(), self.mmc.getImageWidth()
-        self.ROI = (0, 0, self.width, self.height)
-
-        # Check if change of ROI is needed
-        if use_full_FOV is False:
-            rect = self.check_and_get_roi()
-            cont = self.display_and_check_ROI(rect)
-
-            if not cont:
-                print('\n---------Stopping Calibration---------\n')
-                return
-            else:
-                self.mmc.setROI(rect.x, rect.y, rect.width, rect.height)
-                self.ROI = (rect.x, rect.y, rect.width, rect.height)
-
-        # Calculate Blacklevel
-        print('Calculating Blacklevel ...')
-        self.I_Black = self.calc_blacklevel()
-        print(f'Blacklevel: {self.I_Black}\n')
-
-        # Set LC Wavelength:
-        if self.mode == 'MM-Retardance':
-            self.mmc.setProperty(LC_DEVICE_NAME, 'Wavelength', self.wavelength)
-
-        self.opt_Iext()
-        self.opt_I0()
-        self.opt_I60(0.05, 0.05)
-        self.opt_I120(0.05, 0.05)
-
-        # Calculate Extinction
-        self.extinction_ratio = self.calculate_extinction()
-
-        # Write Metadata
-        self.write_metadata()
-
-        # Return ROI to full FOV
-        if use_full_FOV is False:
-            self.mmc.clearROI()
-
-        print("\n=======Finished Calibration=======\n")
-        print(f"EXTINCTION = {self.extinction_ratio}")
-
-    def run_calibration(self, scheme, options):
-
-        if scheme == '5-State':
-            self.run_5state_calibration(options)
-
-        elif scheme == '4-State Extinction':
-            self.run_4state_calibration(options)
-
-        else:
-            raise ValueError('Please define the calibration scheme')
 
     def calculate_extinction(self, swing, black_level, intensity_extinction, intensity_elliptical):
         return np.round((1 / np.sin(np.pi * swing) ** 2) * \
