@@ -1211,6 +1211,8 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
     def _load_bg(self, path, height, width):
         """
+        # TODO: remove ROI for 1.0.0
+
         Load background and calibration metadata.
 
         Parameters

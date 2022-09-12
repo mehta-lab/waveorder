@@ -2,7 +2,6 @@ import glob
 import os
 import tifffile as tiff
 import numpy as np
-from napari.utils.notifications import show_warning
 from waveorder.waveorder_reconstructor import fluorescence_microscopy, waveorder_microscopy
 
 
@@ -73,12 +72,12 @@ def load_bg(bg_path, height, width, ROI=None):
     for i in range(len(bg_paths)):
         img = tiff.imread(bg_paths[i])
 
-        if ROI is not None and ROI != (0, 0, width, height):
-            msg = "Warning: the background is being averaged over the ROI."
-            show_warning(msg)
-            print(msg)
-            bg_data[i, :, :] = np.mean(img[ROI[1]:ROI[1] + ROI[3], ROI[0]:ROI[0] + ROI[2]])
-
+        if ROI is not None and ROI != (0, 0, width, height): # TODO: Remove for 1.0.0
+            warning_msg = """
+            Warning: earlier versions of recOrder would have averaged over the background ROI. This behavior is 
+            now considered a bug, and future versions of recOrder will not average over the background. 
+            """
+            print(warning_msg)
         else:
             bg_data[i, :, :] = img
 
