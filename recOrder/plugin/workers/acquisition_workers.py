@@ -106,7 +106,7 @@ class BFAcquisitionWorker(WorkerBase):
         """
         Function that runs the 2D or 3D acquisition and reconstructs the data
         """
-        print(ram_message())
+        logging.info(ram_message())
         logging.info('Running Acquisition...')
         self._check_abort()
 
@@ -472,7 +472,7 @@ class FluorescenceAcquisitionWorker(WorkerBase):
         """
         Function that runs the 2D or 3D acquisition and reconstructs the data
         """
-        print(ram_message())
+        logging.info(ram_message())
         logging.info('Running Acquisition...')
 
         self._check_abort()
@@ -837,7 +837,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         """
         Function that runs the 2D or 3D acquisition and reconstructs the data
         """
-        print(ram_message())
+        logging.info(ram_message())
         logging.info('Running Acquisition...')
 
         # List the Channels to acquire, if 5-state then append 5th channel
