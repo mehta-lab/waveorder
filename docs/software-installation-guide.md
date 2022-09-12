@@ -7,9 +7,9 @@
 conda create -y -n recOrder python=3.9
 conda activate recOrder
 ```
-Install `napari` and `recOrder-napari`:
+Install `recOrder-napari`:
 ```
-pip install "napari[all]" recOrder-napari
+pip install recOrder-napari
 ```
 Open `napari` with `recOrder-napari`:
 ```

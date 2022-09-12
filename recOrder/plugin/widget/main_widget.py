@@ -2421,7 +2421,8 @@ class MainWidget(QWidget):
         self.swing = metadata.Swing
 
         # Initialize calibration class
-        self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group)
+        self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, lc_control_mode=self.calib_mode,
+                                       interp_method=self.interp_method, wavelength=self.wavelength)
         self.calib.swing = self.swing
         self.ui.le_swing.setText(str(self.swing))
         self.calib.wavelength = self.wavelength

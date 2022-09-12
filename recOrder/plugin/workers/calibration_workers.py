@@ -70,15 +70,19 @@ class CalibrationWorker(WorkerBase):
 
         self._check_abort()
 
-        # Calculate Blacklevel
         logging.info('Calculating Black Level ...')
         logging.debug('Calculating Black Level ...')
-        self.calib.calc_blacklevel()
+        self.calib.close_shutter_and_calc_blacklevel()
+
+        # Calculate Blacklevel
         logging.info(f'Black Level: {self.calib.I_Black:.0f}\n')
         logging.debug(f'Black Level: {self.calib.I_Black:.0f}\n')
 
         self._check_abort()
         self.progress_update.emit((10, 'Calibrating Extinction State...'))
+
+        # Open shutter
+        self.calib.open_shutter()
 
         # Set LC Wavelength:
         self.calib.set_wavelength(int(self.calib_window.wavelength))
@@ -89,6 +93,9 @@ class CalibrationWorker(WorkerBase):
 
         # Optimize States
         self._calibrate_4state() if self.calib_window.calib_scheme == '4-State' else self._calibrate_5state()
+
+        # Reset shutter autoshutter
+        self.calib.reset_shutter()
 
         # Return ROI to full FOV
         if self.calib_window.use_cropped_roi:
@@ -352,11 +359,13 @@ def load_calibration(calib, metadata: MetadataReader):
 
     # Calculate black level after loading these properties
     calib.intensity_emitter = MockEmitter()
-    calib.calc_blacklevel()
+    calib.close_shutter_and_calc_blacklevel()
+    calib.open_shutter()
     set_lc_state(calib.mmc, calib.group, 'State0')
     calib.I_Ext = snap_and_average(calib.snap_manager)
     set_lc_state(calib.mmc, calib.group, 'State1')
     calib.I_Elliptical = snap_and_average(calib.snap_manager)
+    calib.reset_shutter()
 
     yield str(calib.calculate_extinction(calib.swing, calib.I_Black, calib.I_Ext, calib.I_Elliptical))
 
