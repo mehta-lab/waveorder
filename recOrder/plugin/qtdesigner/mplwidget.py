@@ -1,5 +1,5 @@
 # Imports
-from PyQt5 import QtWidgets
+from qtpy import QtWidgets
 import matplotlib
 matplotlib.use('QT5Agg')
 from matplotlib.figure import Figure

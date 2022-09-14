@@ -1,4 +1,4 @@
-from PyQt5.QtCore import pyqtSignal
+from qtpy.QtCore import Signal
 from recOrder.pipelines.pipeline_manager import PipelineManager
 from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import time
@@ -9,9 +9,9 @@ class ReconstructionSignals(WorkerBaseSignals):
     Custom Signals class that includes napari native signals
     """
 
-    dimension_emitter = pyqtSignal(tuple)
-    store_emitter = pyqtSignal(str)
-    aborted = pyqtSignal()
+    dimension_emitter = Signal(tuple)
+    store_emitter = Signal(str)
+    aborted = Signal()
 
 
 class ReconstructionWorker(WorkerBase):

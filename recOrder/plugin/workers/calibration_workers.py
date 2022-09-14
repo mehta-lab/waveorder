@@ -1,4 +1,4 @@
-from PyQt5.QtCore import pyqtSignal
+from qtpy.QtCore import Signal
 from napari.qt.threading import WorkerBaseSignals, WorkerBase, thread_worker
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
     reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes
@@ -18,14 +18,14 @@ class CalibrationSignals(WorkerBaseSignals):
     Custom Signals class that includes napari native signals
     """
 
-    progress_update = pyqtSignal(tuple)
-    extinction_update = pyqtSignal(str)
-    intensity_update = pyqtSignal(object)
-    calib_assessment = pyqtSignal(str)
-    calib_assessment_msg = pyqtSignal(str)
-    calib_file_emit = pyqtSignal(str)
-    plot_sequence_emit = pyqtSignal(str)
-    aborted = pyqtSignal()
+    progress_update = Signal(tuple)
+    extinction_update = Signal(str)
+    intensity_update = Signal(object)
+    calib_assessment = Signal(str)
+    calib_assessment_msg = Signal(str)
+    calib_file_emit = Signal(str)
+    plot_sequence_emit = Signal(str)
+    aborted = Signal()
 
 
 class BackgroundSignals(WorkerBaseSignals):
@@ -33,9 +33,9 @@ class BackgroundSignals(WorkerBaseSignals):
     Custom Signals class that includes napari native signals
     """
 
-    bg_image_emitter = pyqtSignal(object)
-    bire_image_emitter = pyqtSignal(object)
-    aborted = pyqtSignal()
+    bg_image_emitter = Signal(object)
+    bire_image_emitter = Signal(object)
+    aborted = Signal()
 
 
 class CalibrationWorker(WorkerBase):

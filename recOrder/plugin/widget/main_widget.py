@@ -1,8 +1,8 @@
 from recOrder.calib.Calibration import QLIPP_Calibration, LC_DEVICE_NAME
 from pycromanager import Bridge
-from PyQt5.QtCore import pyqtSlot, pyqtSignal, Qt
-from PyQt5.QtWidgets import QWidget, QFileDialog, QSizePolicy, QSlider
-from PyQt5.QtGui import QPixmap, QColor
+from qtpy.QtCore import Slot, Signal, Qt
+from qtpy.QtWidgets import QWidget, QFileDialog, QSizePolicy, QSlider
+from qtpy.QtGui import QPixmap, QColor
 from superqt import QDoubleRangeSlider, QRangeSlider
 from recOrder.calib import Calibration
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
@@ -39,9 +39,9 @@ class MainWidget(QWidget):
     """
 
     # Initialize Custom Signals
-    mm_status_changed = pyqtSignal(bool)
-    intensity_changed = pyqtSignal(float)
-    log_changed = pyqtSignal(str)
+    mm_status_changed = Signal(bool)
+    intensity_changed = Signal(float)
+    log_changed = Signal(str)
 
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
@@ -1535,7 +1535,7 @@ class MainWidget(QWidget):
                         attr = str(getattr(self.config_reader.postprocessing, f'denoise_{key_child}'))
                         le.setText(attr)
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def change_gui_mode(self):
         """
         Switches between offline/online mode and updates the corresponding GUI elements
@@ -1560,7 +1560,7 @@ class MainWidget(QWidget):
             self._hide_acquisition_ui(True)
             self.gui_mode = 'offline'
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def connect_to_mm(self):
         """
         Function to establish the python/java bridge to MicroManager.  Micromanager must be open with a config loaded
@@ -1646,7 +1646,7 @@ class MainWidget(QWidget):
         except:
             self.mm_status_changed.emit(False)
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def handle_mm_status_update(self, value):
         if value:
             self.ui.le_mm_status.setText('Success!')
@@ -1656,16 +1656,16 @@ class MainWidget(QWidget):
             self.ui.le_mm_status.setText('Failed.')
             self.ui.le_mm_status.setStyleSheet("background-color: rgb(200,0,0);")
 
-    @pyqtSlot(tuple)
+    @Slot(tuple)
     def handle_progress_update(self, value):
         self.ui.progress_bar.setValue(value[0])
         self.ui.label_progress.setText('Progress: ' + value[1])
 
-    @pyqtSlot(str)
+    @Slot(str)
     def handle_extinction_update(self, value):
         self.ui.le_extinction.setText(value)
 
-    @pyqtSlot(object)
+    @Slot(object)
     def handle_plot_update(self, value):
         """
         handles the plotting of the intensity values during calibration.  Calibration class will emit a signal
@@ -1691,11 +1691,11 @@ class MainWidget(QWidget):
                                     yRange=(0, np.max(self.intensity_monitor[self.plot_sequence[1]:])),
                                     padding=0.1)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def handle_calibration_assessment_update(self, value):
         self.calib_assessment_level = value
 
-    @pyqtSlot(str)
+    @Slot(str)
     def handle_calibration_assessment_msg_update(self, value):
         self.ui.tb_calib_assessment.setText(value)
 
@@ -1708,7 +1708,7 @@ class MainWidget(QWidget):
         else:
             pass
 
-    @pyqtSlot(object)
+    @Slot(object)
     def handle_bg_image_update(self, value):
 
         if 'Background Images' in self.viewer.layers:
@@ -1716,7 +1716,7 @@ class MainWidget(QWidget):
         else:
             self.viewer.add_image(value, name='Background Images', colormap='gray')
 
-    @pyqtSlot(object)
+    @Slot(object)
     def handle_bg_bire_image_update(self, value):
 
         # Separate Background Retardance and Background Orientation
@@ -1731,7 +1731,7 @@ class MainWidget(QWidget):
         else:
             self.viewer.add_image(value[1], name='Background Orientation', colormap='gray')
 
-    @pyqtSlot(object)
+    @Slot(object)
     def handle_bire_image_update(self, value):
 
         channel_names = {'Orientation': 1,
@@ -1759,7 +1759,7 @@ class MainWidget(QWidget):
                     cmap = 'gray' if key != 'Orientation' else 'hsv'
                     self.viewer.add_image(value[chan], name=key+self.birefringence_dim, colormap=cmap)
 
-    @pyqtSlot(object)
+    @Slot(object)
     def handle_phase_image_update(self, value):
 
         name = 'Phase2D' if self.phase_dim == '2D' else 'Phase3D'
@@ -1775,7 +1775,7 @@ class MainWidget(QWidget):
         if 'Phase' not in [self.ui.cb_value.itemText(i) for i in range(self.ui.cb_value.count())]:
             self.ui.cb_value.addItem('Retardance')
 
-    @pyqtSlot(object)
+    @Slot(object)
     def handle_fluor_image_update(self, value):
 
         mode = '2D' if self.ui.cb_fluor_dim.currentIndex() == 0 else '3D'
@@ -1787,17 +1787,17 @@ class MainWidget(QWidget):
         else:
             self.viewer.add_image(value, name=name, colormap='gray')
 
-    @pyqtSlot(object)
+    @Slot(object)
     def handle_qlipp_reconstructor_update(self, value):
         # Saves phase reconstructor to be re-used if possible
         self.phase_reconstructor = value
 
-    @pyqtSlot(object)
+    @Slot(object)
     def handle_fluor_reconstructor_update(self, value):
         # Saves fluorescence deconvolution reconstructor to be re-used if possible
         self.fluor_reconstructor = value
 
-    @pyqtSlot(dict)
+    @Slot(dict)
     def handle_meta_update(self, meta):
         # Don't update microscope parameters saved in calibration metadata file
 
@@ -1819,30 +1819,30 @@ class MainWidget(QWidget):
 
         pass
 
-    @pyqtSlot(str)
+    @Slot(str)
     def handle_calib_file_update(self, value):
         self.last_calib_meta_file = value
 
-    @pyqtSlot(str)
+    @Slot(str)
     def handle_plot_sequence_update(self, value):
         current_idx = len(self.intensity_monitor)
         self.plot_sequence = (value, current_idx)
 
-    @pyqtSlot(tuple)
+    @Slot(tuple)
     def handle_sat_slider_move(self, value):
         self.ui.le_sat_min.setText(str(np.round(value[0], 3)))
         self.ui.le_sat_max.setText(str(np.round(value[1], 3)))
 
-    @pyqtSlot(tuple)
+    @Slot(tuple)
     def handle_val_slider_move(self, value):
         self.ui.le_val_min.setText(str(np.round(value[0], 3)))
         self.ui.le_val_max.setText(str(np.round(value[1], 3)))
 
-    @pyqtSlot(str)
+    @Slot(str)
     def handle_reconstruction_store_update(self, value):
         self.reconstruction_data_path = value
 
-    @pyqtSlot(tuple)
+    @Slot(tuple)
     def handle_reconstruction_dim_update(self, value):
         p, t, c = value
         layer_name = self.worker.manager.config.data_save_name
@@ -1869,7 +1869,7 @@ class MainWidget(QWidget):
 
         self.last_p = p
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def browse_dir_path(self):
         result = self._open_file_dialog(self.current_dir_path, 'dir')
         self.directory = result
@@ -1878,26 +1878,26 @@ class MainWidget(QWidget):
         self.ui.le_save_dir.setText(result)
         self.save_directory = result
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def browse_save_path(self):
         result = self._open_file_dialog(self.current_save_path, 'dir')
         self.save_directory = result
         self.current_save_path = result
         self.ui.le_save_dir.setText(result)
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def browse_data_dir(self):
         path = self._open_file_dialog(self.data_dir, 'dir')
         self.data_dir = path
         self.ui.le_data_dir.setText(self.data_dir)
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def browse_calib_meta(self):
         path = self._open_file_dialog(self.calib_path, 'file')
         self.calib_path = path
         self.ui.le_calibration_metadata.setText(self.calib_path)
 
-    @pyqtSlot()
+    @Slot()
     def enter_dir_path(self):
         path = self.ui.le_directory.text()
         if os.path.exists(path):
@@ -1907,15 +1907,15 @@ class MainWidget(QWidget):
         else:
             self.ui.le_directory.setText('Path Does Not Exist')
 
-    @pyqtSlot()
+    @Slot()
     def enter_swing(self):
         self.swing = float(self.ui.le_swing.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_wavelength(self):
         self.wavelength = int(self.ui.le_wavelength.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_calib_scheme(self):
         index = self.ui.cb_calib_scheme.currentIndex()
         if index == 0:
@@ -1923,7 +1923,7 @@ class MainWidget(QWidget):
         else:
             self.calib_scheme = '5-State'
 
-    @pyqtSlot()
+    @Slot()
     def enter_calib_mode(self):
         index = self.ui.cb_calib_mode.currentIndex()
         if index == 0:
@@ -1965,17 +1965,17 @@ class MainWidget(QWidget):
             self.ui.cb_lca.setCurrentIndex(0)
             self.ui.cb_lcb.setCurrentIndex(1)
 
-    @pyqtSlot()
+    @Slot()
     def enter_dac_lca(self):
         dac = self.ui.cb_lca.currentText()
         self.lca_dac = dac
 
-    @pyqtSlot()
+    @Slot()
     def enter_dac_lcb(self):
         dac = self.ui.cb_lcb.currentText()
         self.lcb_dac = dac
 
-    @pyqtSlot()
+    @Slot()
     def enter_config_group(self):
         """
         callback for changing the config group combo box.  User needs to specify a config group that has the
@@ -2012,7 +2012,7 @@ class MainWidget(QWidget):
         else:
             self.ui.cb_config_group.setStyleSheet("")
 
-    @pyqtSlot()
+    @Slot()
     def enter_use_cropped_roi(self):
         state = self.ui.chb_use_roi.checkState()
         if state == 2:
@@ -2020,15 +2020,15 @@ class MainWidget(QWidget):
         elif state == 0:
             self.use_cropped_roi = False
 
-    @pyqtSlot()
+    @Slot()
     def enter_bg_folder_name(self):
         self.bg_folder_name = self.ui.le_bg_folder.text()
 
-    @pyqtSlot()
+    @Slot()
     def enter_n_avg(self):
         self.n_avg = int(self.ui.le_n_avg.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_log_level(self):
         index = self.ui.cb_loglevel.currentIndex()
         if index == 0:
@@ -2036,7 +2036,7 @@ class MainWidget(QWidget):
         else:
             logging.getLogger().setLevel(logging.DEBUG)
 
-    @pyqtSlot()
+    @Slot()
     def enter_save_path(self):
         path = self.ui.le_save_dir.text()
         if os.path.exists(path):
@@ -2045,24 +2045,24 @@ class MainWidget(QWidget):
         else:
             self.ui.le_save_dir.setText('Path Does Not Exist')
 
-    @pyqtSlot()
+    @Slot()
     def enter_save_name(self):
         name = self.ui.le_data_save_name.text()
         self.save_name = name
 
-    @pyqtSlot()
+    @Slot()
     def enter_zstart(self):
         self.z_start = float(self.ui.le_zstart.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_zend(self):
         self.z_end = float(self.ui.le_zend.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_zstep(self):
         self.z_step = float(self.ui.le_zstep.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_birefringence_dim(self):
         state = self.ui.cb_birefringence.currentIndex()
         if state == 0:
@@ -2070,7 +2070,7 @@ class MainWidget(QWidget):
         elif state == 1:
             self.birefringence_dim = '3D'
 
-    @pyqtSlot()
+    @Slot()
     def enter_phase_dim(self):
         state = self.ui.cb_phase.currentIndex()
         if state == 0:
@@ -2078,7 +2078,7 @@ class MainWidget(QWidget):
         elif state == 1:
             self.phase_dim = '3D'
 
-    @pyqtSlot()
+    @Slot()
     def enter_phase_denoiser(self):
         state = self.ui.cb_phase_denoiser.currentIndex()
         if state == 0:
@@ -2093,7 +2093,7 @@ class MainWidget(QWidget):
             self.ui.le_rho.setHidden(False)
             self.ui.le_itr.setHidden(False)
 
-    @pyqtSlot()
+    @Slot()
     def enter_acq_bg_path(self):
         path = self.ui.le_bg_path.text()
         if os.path.exists(path):
@@ -2102,14 +2102,14 @@ class MainWidget(QWidget):
         else:
             self.ui.le_bg_path.setText('Path Does Not Exist')
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def browse_acq_bg_path(self):
         result = self._open_file_dialog(self.current_bg_path, 'dir')
         self.acq_bg_directory = result
         self.current_bg_path = result
         self.ui.le_bg_path.setText(result)
 
-    @pyqtSlot()
+    @Slot()
     def enter_bg_correction(self):
         state = self.ui.cb_bg_method.currentIndex()
         if state == 0:
@@ -2133,11 +2133,11 @@ class MainWidget(QWidget):
             self.ui.qbutton_browse_bg_path.setHidden(False)
             self.bg_option = 'local_fit+'
 
-    @pyqtSlot()
+    @Slot()
     def enter_gpu_id(self):
         self.gpu_id = int(self.ui.le_gpu_id.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_use_gpu(self):
         state = self.ui.chb_use_gpu.checkState()
         if state == 2:
@@ -2145,31 +2145,31 @@ class MainWidget(QWidget):
         elif state == 0:
             self.use_gpu = False
 
-    @pyqtSlot()
+    @Slot()
     def enter_obj_na(self):
         self.obj_na = float(self.ui.le_obj_na.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_cond_na(self):
         self.cond_na = float(self.ui.le_cond_na.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_mag(self):
         self.mag = float(self.ui.le_mag.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_ps(self):
         self.ps = float(self.ui.le_ps.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_n_media(self):
         self.n_media = float(self.ui.le_n_media.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_pad_z(self):
         self.pad_z = int(self.ui.le_pad_z.text())
 
-    @pyqtSlot()
+    @Slot()
     def enter_pause_updates(self):
         """
         pauses the updating of the dimension slider for offline reconstruction or live listening mode.
@@ -2184,7 +2184,7 @@ class MainWidget(QWidget):
         elif state == 0:
             self.pause_updates = False
 
-    @pyqtSlot(int)
+    @Slot(int)
     def enter_method(self):
         """
         Handles the updating of UI elements depending on the method of offline reconstruction.
@@ -2246,7 +2246,7 @@ class MainWidget(QWidget):
             self.ui.le_fluor_chan.setPlaceholderText('list of integers or int')
             self.ui.label_chan_desc.setText('Fluor1, Fluor2 (ex. DAPI, GFP)')
 
-    @pyqtSlot(int)
+    @Slot(int)
     def enter_mode(self):
         idx = self.ui.cb_mode.currentIndex()
 
@@ -2259,7 +2259,7 @@ class MainWidget(QWidget):
             self.ui.label_focus_zidx.show()
             self.ui.le_focus_zidx.show()
 
-    @pyqtSlot()
+    @Slot()
     def enter_data_dir(self):
         entry = self.ui.le_data_dir.text()
         if not os.path.exists(entry):
@@ -2269,7 +2269,7 @@ class MainWidget(QWidget):
             self.ui.le_data_dir.setStyleSheet("")
             self.data_dir = entry
 
-    @pyqtSlot()
+    @Slot()
     def enter_calib_meta(self):
         entry = self.ui.le_calibration_metadata.text()
         if not os.path.exists(entry):
@@ -2279,7 +2279,7 @@ class MainWidget(QWidget):
             self.ui.le_calibration_metadata.setStyleSheet("")
             self.calib_path = entry
 
-    @pyqtSlot()
+    @Slot()
     def enter_colormap(self):
         """
         Handles the update of the display colormap.  Will display different png image legend
@@ -2312,7 +2312,7 @@ class MainWidget(QWidget):
 
                     self.viewer.layers['BirefringenceOverlay2D'].data = overlay
 
-    @pyqtSlot(int)
+    @Slot(int)
     def enter_use_full_volume(self):
         state = self.ui.chb_display_volume.checkState()
 
@@ -2324,36 +2324,36 @@ class MainWidget(QWidget):
             self.ui.le_overlay_slice.setEnabled(True)
             self.use_full_volume = True
 
-    @pyqtSlot()
+    @Slot()
     def enter_display_slice(self):
         slice = int(self.ui.le_overlay_slice.text())
         self.display_slice = slice
 
-    @pyqtSlot()
+    @Slot()
     def enter_sat_min(self):
         val = float(self.ui.le_sat_min.text())
         slider_val = self.ui.slider_saturation.value()
         self.ui.slider_saturation.setValue((val, slider_val[1]))
 
-    @pyqtSlot()
+    @Slot()
     def enter_sat_max(self):
         val = float(self.ui.le_sat_max.text())
         slider_val = self.ui.slider_saturation.value()
         self.ui.slider_saturation.setValue((slider_val[0], val))
 
-    @pyqtSlot()
+    @Slot()
     def enter_val_min(self):
         val = float(self.ui.le_val_min.text())
         slider_val = self.ui.slider_value.value()
         self.ui.slider_value.setValue((val, slider_val[1]))
 
-    @pyqtSlot()
+    @Slot()
     def enter_val_max(self):
         val = float(self.ui.le_val_max.text())
         slider_val = self.ui.slider_value.value()
         self.ui.slider_value.setValue((slider_val[0], val))
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def push_note(self):
         """
         Pushes a note to the last calibration metadata file.
@@ -2385,7 +2385,7 @@ class MainWidget(QWidget):
             with open(self.last_calib_meta_file, 'w') as file:
                 json.dump(current_json, file, indent=1)
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def calc_extinction(self):
         """
         Calculates the extinction when the user uses the Load Calibration functionality.  This if performed
@@ -2407,7 +2407,7 @@ class MainWidget(QWidget):
         extinction = self.calib.calculate_extinction(self.swing, self.calib.I_Black, extinction, state1)
         self.ui.le_extinction.setText(str(extinction))
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def load_calibration(self):
         """
         Uses previous JSON calibration metadata to load previous calibration
@@ -2463,7 +2463,7 @@ class MainWidget(QWidget):
         self.worker.finished.connect(self._handle_load_finished)
         self.worker.start()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def run_calibration(self):
         """
         Wrapper function to create calibration worker and move that worker to a thread.
@@ -2515,7 +2515,7 @@ class MainWidget(QWidget):
 
         self.worker.start()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def capture_bg(self):
         """
         Wrapper function to capture a set of background images.  Will snap images and display reconstructed
@@ -2542,7 +2542,7 @@ class MainWidget(QWidget):
         # Start Capture Background Thread
         self.worker.start()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def acq_birefringence(self):
         """
         Wrapper function to acquire birefringence stack/image and plot in napari
@@ -2566,7 +2566,7 @@ class MainWidget(QWidget):
         # Start Thread
         self.worker.start()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def acq_phase(self):
         """
         Wrapper function to acquire phase stack and plot in napari
@@ -2591,7 +2591,7 @@ class MainWidget(QWidget):
         # Start thread
         self.worker.start()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def acq_birefringence_phase(self):
         """
         Wrapper function to acquire both birefringence and phase stack and plot in napari
@@ -2616,7 +2616,7 @@ class MainWidget(QWidget):
         # Start Thread
         self.worker.start()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def acquire_fluor_deconvolved(self):
         """
         Wrapper function to acquire a fluorescence stack, deconvolve, and plot in napari
@@ -2639,7 +2639,7 @@ class MainWidget(QWidget):
         # Start Thread
         self.worker.start()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def listen_and_reconstruct(self):
         """
         Wrapper function for on the fly data listening and reconstructing.  Only works if the user is acquiring
@@ -2675,7 +2675,7 @@ class MainWidget(QWidget):
         # Start Thread
         self.worker.start()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def reconstruct(self):
         """
         Wrapper function for offline reconstruction.
@@ -2698,7 +2698,7 @@ class MainWidget(QWidget):
 
         self.worker.start()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def save_config(self):
         path = self._open_file_dialog(self.save_config_path, 'save')
         self.save_config_path = path
@@ -2715,7 +2715,7 @@ class MainWidget(QWidget):
 
         self.config_reader.save_yaml(dir_=dir_, name=name)
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def load_config(self):
         """
         Populates the GUI elements with values from a pre-defined config file.
@@ -2732,12 +2732,12 @@ class MainWidget(QWidget):
             self.config_reader = ConfigReader(self.config_path)
             self._populate_from_config()
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def load_default_config(self):
         self.config_reader = ConfigReader(mode='3D', method='QLIPP')
         self._populate_from_config()
 
-    @pyqtSlot(int)
+    @Slot(int)
     def update_sat_scale(self):
         idx = self.ui.cb_saturation.currentIndex()
         if idx != -1:
@@ -2751,7 +2751,7 @@ class MainWidget(QWidget):
             self.ui.le_sat_max.setText(str(np.round(max_, 3)))
             self.ui.le_sat_min.setText(str(np.round(min_, 3)))
 
-    @pyqtSlot(int)
+    @Slot(int)
     def update_value_scale(self):
         idx = self.ui.cb_value.currentIndex()
         if idx != -1:
@@ -2765,7 +2765,7 @@ class MainWidget(QWidget):
             self.ui.le_val_max.setText(str(np.round(max_, 3)))
             self.ui.le_val_min.setText(str(np.round(min_, 3)))
 
-    @pyqtSlot(bool)
+    @Slot(bool)
     def create_overlay(self):
         """
         Creates HSV or JCh overlay with the specified channels from the combo boxes.  Will compute and then
@@ -2823,7 +2823,7 @@ class MainWidget(QWidget):
         # add overlay image to napari
         self.viewer.add_image(hsv_image, name=f'HSV_Overlay_{idx}', rgb=True)
 
-    @pyqtSlot(object)
+    @Slot(object)
     def add_listener_data(self, store):
 
         self.viewer.add_image(store['Birefringence'], name=self.worker.prefix)
@@ -2832,7 +2832,7 @@ class MainWidget(QWidget):
         self.viewer.dims.set_axis_label(2, 'C')
         self.viewer.dims.set_axis_label(3, 'Z')
 
-    @pyqtSlot(tuple)
+    @Slot(tuple)
     def update_dims(self, dims):
 
         if not self.pause_updates:
