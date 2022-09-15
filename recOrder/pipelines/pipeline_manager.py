@@ -3,7 +3,9 @@ from waveorder.io.reader import WaveorderReader, ZarrReader
 from waveorder.io.writer import WaveorderWriter
 import time
 import os
+import logging
 import shutil
+from napari.utils.notifications import show_warning
 from recOrder.io.utils import MockEmitter, ram_message
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
@@ -22,8 +24,8 @@ class PipelineManager:
     """
 
     def __init__(self, config: ConfigReader, overwrite: bool = False, emitter=MockEmitter()):
-        print(ram_message())
-
+        self._check_ram()
+        
         start = time.time()
         print('Reading Data...')
         data = WaveorderReader(config.data_dir, extract_data=True)
@@ -90,6 +92,17 @@ class PipelineManager:
                                                                               pad_z=params['pad_z'],
                                                                               use_gpu=params['use_gpu'],
                                                                               gpu_id=params['gpu_id'])
+
+    def _check_ram(self):
+        """
+        Show a warning if RAM < 32 GB.
+        """
+        is_warning, msg = ram_message()
+        if is_warning:
+            logging.warning(msg)
+            show_warning(msg)
+        else:
+            logging.info(msg)
 
     def _update_hcs_meta_from_config(self, hcs_meta):
         """

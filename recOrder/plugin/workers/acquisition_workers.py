@@ -10,6 +10,7 @@ from recOrder.io.zarr_converter import ZarrConverter
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
 from recOrder.io.utils import ram_message, rec_bkg_to_wo_bkg
 from napari.qt.threading import WorkerBaseSignals, WorkerBase
+from napari.utils.notifications import show_warning
 import logging
 from waveorder.io.writer import WaveorderWriter
 import tifffile as tiff
@@ -102,11 +103,21 @@ class BFAcquisitionWorker(WorkerBase):
             self.aborted.emit()
             raise TimeoutError('Stop Requested')
 
+    def _check_ram(self):
+        """
+        Show a warning if RAM < 32 GB.
+        """
+        is_warning, msg = ram_message()
+        if is_warning:
+            show_warning(msg)
+        else:
+            logging.info(msg)
+
     def work(self):
         """
         Function that runs the 2D or 3D acquisition and reconstructs the data
         """
-        logging.info(ram_message())
+        self._check_ram()
         logging.info('Running Acquisition...')
         self._check_abort()
 
@@ -468,11 +479,21 @@ class FluorescenceAcquisitionWorker(WorkerBase):
             self.aborted.emit()
             raise TimeoutError('Stop Requested')
 
+    def _check_ram(self):
+        """
+        Show a warning if RAM < 32 GB.
+        """
+        is_warning, msg = ram_message()
+        if is_warning:
+            show_warning(msg)
+        else:
+            logging.info(msg)
+
     def work(self):
         """
         Function that runs the 2D or 3D acquisition and reconstructs the data
         """
-        logging.info(ram_message())
+        self._check_ram()
         logging.info('Running Acquisition...')
 
         self._check_abort()
@@ -833,11 +854,21 @@ class PolarizationAcquisitionWorker(WorkerBase):
             self.aborted.emit()
             raise TimeoutError('Stop Requested')
 
+    def _check_ram(self):
+        """
+        Show a warning if RAM < 32 GB.
+        """
+        is_warning, msg = ram_message()
+        if is_warning:
+            show_warning(msg)
+        else:
+            logging.info(msg)
+
     def work(self):
         """
         Function that runs the 2D or 3D acquisition and reconstructs the data
         """
-        logging.info(ram_message())
+        self._check_ram()
         logging.info('Running Acquisition...')
 
         # List the Channels to acquire, if 5-state then append 5th channel
