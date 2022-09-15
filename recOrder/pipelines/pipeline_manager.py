@@ -5,6 +5,7 @@ import time
 import os
 import logging
 import shutil
+from napari.utils.notifications import show_warning
 from recOrder.io.utils import MockEmitter, ram_message
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
@@ -99,6 +100,7 @@ class PipelineManager:
         is_warning, msg = ram_message()
         if is_warning:
             logging.warning(msg)
+            show_warning(msg)
         else:
             logging.info(msg)
 
