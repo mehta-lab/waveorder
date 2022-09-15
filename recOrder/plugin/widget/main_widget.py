@@ -314,6 +314,7 @@ class MainWidget(QWidget):
         self.red_text = QColor(200, 0, 0, 255)
         self.original_tab_text = self.ui.tabWidget_3.tabBar().tabTextColor(0)
         self.ui.tabWidget.parent().setObjectName('recOrder') # make sure the top says recOrder and not 'Form'
+        self.ui.tabWidget_2.setCurrentIndex(0) # set focus to "Plot" tab by default
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
