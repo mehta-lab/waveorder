@@ -70,8 +70,6 @@ def load_bg(bg_path, height, width, ROI=None):
 
     bg_paths = glob.glob(os.path.join(bg_path, '*.tif'))
     bg_paths.sort()
-    bg_data = np.zeros([len(bg_paths), height, width])
-
     
     # Backwards compatibility warning
     if ROI is not None and ROI != (0, 0, width, height): # TODO: Remove for 1.0.0
@@ -82,11 +80,13 @@ def load_bg(bg_path, height, width, ROI=None):
         """
         logging.warning(warning_msg)
 
-    for i in range(len(bg_paths)):
-        img = tiff.imread(bg_paths[i])
-        bg_data[i, :, :] = img
+    # Load background images 
+    bg_img_list = []
+    for bg_path in bg_paths:
+        bg_img_list.append(tiff.imread(bg_path))
+    bg_img_arr = np.array(bg_img_list) # CYX
 
-    return bg_data
+    return bg_img_arr # CYX
 
 
 def create_grid_from_coordinates(xy_coords, rows, columns):
