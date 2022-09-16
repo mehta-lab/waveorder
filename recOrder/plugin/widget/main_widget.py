@@ -1,3 +1,5 @@
+from multiprocessing.sharedctypes import Value
+from tkinter.messagebox import showerror
 from recOrder.calib.Calibration import QLIPP_Calibration, LC_DEVICE_NAME
 from pycromanager import Bridge
 from qtpy.QtCore import Slot, Signal, Qt
@@ -18,6 +20,7 @@ from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, P
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
+from napari.utils.notifications import show_warning
 from numpydoc.docscrape import NumpyDocString
 from packaging import version
 import numpy as np
@@ -2535,6 +2538,12 @@ class MainWidget(QWidget):
         -------
 
         """
+
+        if self.calib is None:
+            no_calibration_message = """Capturing a background requires calibrated liquid crystals. \
+                Please either run a calibration or load a calibration from file."""
+            show_warning(no_calibration_message)
+            return
 
         # Init worker and thread
         self.worker = BackgroundCaptureWorker(self, self.calib)
