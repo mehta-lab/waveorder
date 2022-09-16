@@ -1,5 +1,3 @@
-from multiprocessing.sharedctypes import Value
-from tkinter.messagebox import showerror
 from recOrder.calib.Calibration import QLIPP_Calibration, LC_DEVICE_NAME
 from pycromanager import Bridge
 from qtpy.QtCore import Slot, Signal, Qt
