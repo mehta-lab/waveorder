@@ -301,6 +301,15 @@ class MainWidget(QWidget):
         self.ui.label_focus_zidx.setHidden(True)
         self.ui.le_focus_zidx.setHidden(True)
 
+        # Hide temporarily unsupported "Listen" functions
+        self.ui.qbutton_listen.setHidden(True)
+        self.ui.chb_pause_updates.setHidden(True)
+
+        # Hide temporarily unsupported "Overlay" functions
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.Display), "Orientation Legend")
+        self.ui.label_orientation_legend.setHidden(True)
+        self.ui.DisplayOptions.setHidden(True)
+
         # Set initial UI Properties
         self.ui.le_gui_mode.setStyleSheet("border: 1px solid rgb(200,0,0); color: rgb(200,0,0);")
         self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
