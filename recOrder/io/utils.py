@@ -59,9 +59,9 @@ def load_bg(bg_path, height, width, ROI=None):
     Parameters
     ----------
     bg_path         : (str) path to the folder containing background images
-    height          : (int) height of image in pixels
-    width           : (int) width of image in pixels
-    ROI             : (tuple)  ROI of the background images to use, if None, full FOV will be used
+    height          : (int) height of image in pixels # Remove for 1.0.0
+    width           : (int) width of image in pixels # Remove for 1.0.0
+    ROI             : (tuple)  ROI of the background images to use, if None, full FOV will be used # Remove for 1.0.0
 
     Returns
     -------
@@ -72,6 +72,8 @@ def load_bg(bg_path, height, width, ROI=None):
     bg_paths.sort()
     bg_data = np.zeros([len(bg_paths), height, width])
 
+    
+    # Backwards compatibility warning
     if ROI is not None and ROI != (0, 0, width, height): # TODO: Remove for 1.0.0
         warning_msg = """
         Earlier versions of recOrder (0.1.2 and earlier) would have averaged over the background ROI. 
