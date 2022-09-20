@@ -31,7 +31,7 @@ Install `Micromanager 2.0` nightly build `20220901` (https://micro-manager.org/M
 
 **Note:** We have tested recOrder with `20220901`, but most features will work with newer builds. We recommend testing a minimal installation with `20220901` before testing with a different nightly build or additional device drivers. 
 
-Before launching `Micromanager`, download the Meadowlark device adapters and calibration files from the [release page](https://github.com/mehta-lab/recOrder/releases/) or [directly for 0.1.0](https://github.com/mehta-lab/recOrder/releases/download/0.1.0/recOrder-0.1.0-device-drivers.zip) and place these three unzipped files into your `Micromanager` folder (likely `C:\Program Files\Micro-Manager-2.0.1_2022_09_01` or similar). 
+Before launching `Micromanager`, download the Meadowlark device adapters and calibration files from the [release page](https://github.com/mehta-lab/recOrder/releases/) and place these three unzipped files into your `Micromanager` folder (likely `C:\Program Files\Micro-Manager-2.0.1_2022_09_` or similar). 
 
 Launch `Micromanager`, open `Devices > Hardware Configuration Wizard...`, and add the `MeadowlarkLcOpenSource` device to your configuration. Confirm your installation by opening `Devices > Device Property Browser...` and confirming that `MeadowlarkLCOpenSource` properties appear. 
 
