@@ -1581,8 +1581,8 @@ class MainWidget(QWidget):
         -------
 
         """
-        RECOMMENDED_MM = '20210713'
-        ZMQ_TARGET_VERSION = '4.0.0'
+        RECOMMENDED_MM = '20220901'
+        ZMQ_TARGET_VERSION = '4.2.0'
         try:
             # Try to open Bridge. Requires micromanager to be open with server running.
             # This does not fail gracefully, so I'm wrapping it in its own try-except block.
@@ -1598,8 +1598,8 @@ class MainWidget(QWidget):
                 raise EnvironmentError
 
             # Warn the use if there is a MicroManager/ZMQ version mismatch
-            bridge._master_socket.send({"command": "connect", "debug": False}) # latest versions of pycromanager use '_main_socket'
-            reply_json = bridge._master_socket.receive(timeout=500) # latest versions of pycromanager use '_main_socket'
+            bridge._main_socket.send({"command": "connect", "debug": False})
+            reply_json = bridge._main_socket.receive(timeout=500)
             zmq_mm_version = reply_json['version']
             if zmq_mm_version != ZMQ_TARGET_VERSION:
                 upgrade_str = 'upgrade' if version.parse(zmq_mm_version) < version.parse(ZMQ_TARGET_VERSION) else 'downgrade'
