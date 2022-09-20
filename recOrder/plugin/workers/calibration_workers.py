@@ -353,6 +353,28 @@ def load_calibration(calib, metadata: MetadataReader):
     -------
     calib           (object) updated recOrder Calibration Class
     """
+    calib.calib_scheme = metadata.Calibration_scheme
+
+    def _set_calib_attrs(calib, metadata):
+        """Set the retardance attributes in the recOrder Calibration object"""
+        if calib.calib_scheme == "4-State":
+            lc_states = ['ext', '0', '60', '120']
+        elif calib.calib_scheme == "5-State":
+            lc_states = ['ext', '0', '45', '90', '135']
+        else:
+            raise ValueError("Invalid calibration scheme in metadata: {calib.calib_scheme}")
+        for side in ("A", "B"):
+            retardance_values = metadata.__getattribute__("LC" + side + "_retardance")
+            for i, state in enumerate(lc_states):
+                # set the retardance value attribute (e.g. 'lca_0')
+                retardance_name = "lc" + side.lower() + "_" + state
+                setattr(calib, retardance_name, retardance_values[i])
+                # set the swing value attribute (e.g. 'swing0')
+                if state != "ext":
+                    swing_name = "swing" + state
+                    setattr(calib, swing_name, metadata.Swing_measured[i - 1])
+
+    _set_calib_attrs(calib, metadata)
 
     for state, lca, lcb in zip([f'State{i}' for i in range(5)], metadata.LCA_retardance, metadata.LCB_retardance):
         calib.define_lc_state(state, lca, lcb)
