@@ -74,7 +74,7 @@ class CalibrationWorkerBase(WorkerBase):
         calib : QLIPP_Calibration
             recOrder calibration backend object.
         """
-        super.__init__(SignalsClass=self.signals)
+        super().__init__(SignalsClass=self.signals)
         self.calib_window = calib_window
         self.calib = calib
 
