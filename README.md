@@ -10,7 +10,9 @@ In this repository you will find python tools and a napari plugin that allow the
 
 The acquisition, calibration, background correction, reconstruction, and applications of QLIPP (quantitative label-free imaging with phase and polarization)  are described in the following [E-Life Paper](https://elifesciences.org/articles/55502):
 
-``` Syuan-Ming Guo, Li-Hao Yeh, Jenny Folkesson, Ivan E Ivanov, Anitha P Krishnan, Matthew G Keefe, Ezzat Hashemi, David Shin, Bryant B Chhun, Nathan H Cho, Manuel D Leonetti, May H Han, Tomasz J Nowakowski, Shalin B Mehta, "Revealing architectural order with quantitative label-free imaging and deep learning," eLife 2020;9:e55502 DOI: 10.7554/eLife.55502 (2020).```
+```bibtex
+Syuan-Ming Guo, Li-Hao Yeh, Jenny Folkesson, Ivan E Ivanov, Anitha P Krishnan, Matthew G Keefe, Ezzat Hashemi, David Shin, Bryant B Chhun, Nathan H Cho, Manuel D Leonetti, May H Han, Tomasz J Nowakowski, Shalin B Mehta, "Revealing architectural order with quantitative label-free imaging and deep learning," eLife 2020;9:e55502 DOI: 10.7554/eLife.55502 (2020).
+```
 
 `recOrder` is to be used alongside a conventional widefield microscope fitted with a universal polarizer (Panel A below).  The universal polarizer allows for the collection of label-free information including the intrinsic anisotropy of the sample and its relative phase (density). These measurements are collected by acquiring data under calibrated, polarization-diverse illumination followed by a computational reconstruction.  The overall structure of `recOrder` is shown in Panel B, highlighting the two different usage modes and their features: graphical user interface (GUI) through a napari plugin, and a command line interface (CLI).
 
@@ -25,23 +27,36 @@ The acquisition, calibration, background correction, reconstruction, and applica
 
 ## Quick Start
 
-(Optional but recommended) install [anaconda](https://www.anaconda.com/products/distribution) and create a virtual environment  
-```
+(Optional but recommended) install [anaconda](https://www.anaconda.com/products/distribution) and create a virtual environment:
+
+```sh
 conda create -y -n recOrder python=3.9
 conda activate recOrder
 ```
+
+> *Apple Silicon users please use*:
+>
+> ```sh
+> CONDA_SUBDIR=osx-64 conda create -y -n recOrder python=3.9
+> conda activate recOrder
+> ```
+
 Install `recOrder-napari`:
-```
+
+```sh
 pip install recOrder-napari
 ```
+
 Open `napari` with `recOrder-napari`:
-```
+
+```sh
 napari -w recOrder-napari
 ```
+
 View command-line help by running
-```
+
+```sh
 recOrder.help
 ```
 
-For more help, see [`recOrder`s documentation](./docs). 
-
+For more help, see [`recOrder`s documentation](./docs).

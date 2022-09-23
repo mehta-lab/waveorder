@@ -2,25 +2,35 @@
 
 ## Install `recOrder` for development
 
-Install [conda](https://github.com/conda-forge/miniforge) and create a virtual environment:
+1. Install [conda](https://github.com/conda-forge/miniforge) and create a virtual environment:
 
-```sh
-conda create -y -n recOrder python=3.9
-conda activate recOrder
-```
+    ```sh
+    conda create -y -n recOrder python=3.9
+    conda activate recOrder
+    ```
 
-Clone `recOrder`:
+    > *Apple Silicon users please use*:
+    >
+    > ```sh
+    > CONDA_SUBDIR=osx-64 conda create -y -n recOrder python=3.9
+    > conda activate recOrder
+    > ```
+    >
+    > Reason: `napari` requires `PyQt5` which is not available for `arm64` from PyPI wheels.
+    > Specifying `CONDA_SUBDIR=osx-64` will install an `x86_64` version of `python` which has `PyQt5` wheels available.
 
-```sh
-git clone https://github.com/mehta-lab/recOrder.git
-```
+2. Clone the `recOrder` directory:
 
-Install `recOrder` in editable mode with development dependencies
+    ```sh
+    git clone https://github.com/mehta-lab/recOrder.git
+    ```
 
-```sh
-cd recOrder
-pip install -e ".[dev]"
-```
+3. Install `recOrder` in editable mode with development dependencies
+
+    ```sh
+    cd recOrder
+    pip install -e ".[dev]"
+    ```
 
 ## Set up a development environment
 
@@ -32,13 +42,13 @@ We are not currently specifying a code linter as most modern Python code editors
 
 We use `black` to format Python code, and a specific version is installed as a development dependency. Use the `black` in the `recOrder` virtual environment, either from commandline or the editor of your choice.
 
-> VS Code users: Install the [Black Formatter](https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter) plugin. Press `^/⌘ ⇧ P` and type 'format document with...', choose the Black Formatter and start formatting!
+> *VS Code users*: Install the [Black Formatter](https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter) plugin. Press `^/⌘ ⇧ P` and type 'format document with...', choose the Black Formatter and start formatting!
 
 ### Docstring style
 
 The [NumPy style](https://numpydoc.readthedocs.io/en/latest/format.html) docstrings are used in `recOrder`.
 
-> VS Code users: [this popular plugin](https://marketplace.visualstudio.com/items?itemName=njpwerner.autodocstring) helps auto-generate most popular docstring styles (including `numpydoc`).
+> *VS Code users*: [this popular plugin](https://marketplace.visualstudio.com/items?itemName=njpwerner.autodocstring) helps auto-generate most popular docstring styles (including `numpydoc`).
 
 ## Run automated tests
 
