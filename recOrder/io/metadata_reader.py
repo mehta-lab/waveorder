@@ -167,7 +167,7 @@ class MetadataReader:
             val = self.json_metadata['Microscope parameters']
         except KeyError:
             try:
-                val = self.json_metadata['Microscope Parameters']
+                val = self.json_metadata['Microscope parameters']
             except KeyError:
                 val = None
         return val
