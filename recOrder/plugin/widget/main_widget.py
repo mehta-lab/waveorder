@@ -2116,7 +2116,7 @@ class MainWidget(QWidget):
     def handle_bg_path_update(self, value:str):
         """
         Handles the update of the most recent background folderpath from
-        BackgroundWorker to display in the reconstruction texbox
+        BackgroundWorker to display in the reconstruction texbox.
 
         Parameters
         ----------
@@ -2124,14 +2124,16 @@ class MainWidget(QWidget):
             most recent captured background folderpath
         """
         path = value
-        try:
+        if os.path.exists(path):
             self.acq_bg_directory = path
             self.current_bg_path = path
             self.ui.le_bg_path.setText(path)
-        except OSError as err:
-            print(err)
-            self.ui.le_bg_path.setStyleSheet("border: 1px solid rgb(200,0,0);")
-            self.ui.le_bg_path.setText("Path Does Not Exist")
+        else:
+            msg = """ 
+                Background acquisition was not successful.
+                Check latest background capture saving directory!
+                """
+            raise RuntimeError(msg)
 
     @Slot(bool)
     def browse_acq_bg_path(self):
