@@ -1,3 +1,6 @@
+# TODO: remove in Python 3.11
+from __future__ import annotations
+
 from qtpy.QtCore import Signal
 from napari.qt.threading import WorkerBaseSignals, WorkerBase, thread_worker
 from recOrder.compute.qlipp_compute import initialize_reconstructor, \
@@ -11,6 +14,13 @@ import numpy as np
 import glob
 import logging
 import json
+
+# type hint/check
+from typing import TYPE_CHECKING
+# avoid circular import error
+if TYPE_CHECKING:
+    from recOrder.plugin.widget.main_widget import MainWidget
+    from recOrder.calib.Calibration import QLIPP_Calibration
 
 
 class CalibrationSignals(WorkerBaseSignals):
@@ -38,17 +48,74 @@ class BackgroundSignals(WorkerBaseSignals):
     aborted = Signal()
 
 
-class CalibrationWorker(WorkerBase):
+class CalibrationWorkerBase(WorkerBase):
+    """
+    Base class for creating calibration workers.
+    """
+
+    def __init_subclass__(cls, signals: WorkerBaseSignals):
+        """Called when creating calibration worker classes.
+
+        Parameters
+        ----------
+        signals : WorkerBaseSignals
+            Qt Signals class for the created worker class to send data across threads.
+        """
+        super().__init_subclass__()
+        cls.signals = signals
+        
+    def __init__(self, calib_window: MainWidget, calib: QLIPP_Calibration):
+        """Initialize the worker object.
+
+        Parameters
+        ----------
+        calib_window : MainWidget
+            The recOrder-napari plugin's main GUI widget object containing metadata input.
+        calib : QLIPP_Calibration
+            recOrder calibration backend object.
+        """
+        super().__init__(SignalsClass=self.signals)
+        self.calib_window = calib_window
+        self.calib = calib
+
+    def _check_abort(self):
+        """
+        Called if the user presses the STOP button.
+        Needs to be checked after every major step to stop the process
+        """
+        if self.abort_requested:
+            self.aborted.emit()
+            raise TimeoutError('Stop Requested.')
+    
+    @property
+    def _microscope_params(self):
+        """A dictionary containing microscope parameters from the current GUI"""
+        def _param_value(param_name: str, ui=self.calib_window.ui):
+            # refer to main widget class ui attribute names
+            ui_attr_name = "le_" + param_name
+            param_text = ui.__getattribute__(ui_attr_name).text()
+            # handle blank string
+            return float(param_text) if param_text != '' else None
+
+        return {
+            'n_objective_media': _param_value("n_media"),
+            'objective_NA': _param_value("obj_na"),
+            'condenser_NA': _param_value("cond_na"),
+            'magnification': _param_value("mag"),
+            'pixel_size': _param_value("ps")
+        }
+    
+    def _write_meta_file(self, meta_file: str):
+        self.calib.meta_file = meta_file
+        self.calib.write_metadata(notes=self.calib_window.ui.le_notes_field.text(), microscope_params=self._microscope_params)
+
+
+class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
     """
     Class to execute calibration
     """
-
     def __init__(self, calib_window, calib):
-        super().__init__(SignalsClass=CalibrationSignals)
-
-        # initialize current state of GUI + Calibration class
-        self.calib_window = calib_window
-        self.calib = calib
+        super().__init__(calib_window, calib)
 
     def work(self):
         """
@@ -112,18 +179,22 @@ class CalibrationWorker(WorkerBase):
         self.calib.extinction_ratio = extinction_ratio
         self.extinction_update.emit(str(extinction_ratio))
 
-        # Write Metadata
-        self.calib.meta_file = os.path.join(self.calib_window.directory, 'calibration_metadata.txt')
+        # determine metadata filename
+        def _meta_path(metadata_idx: str):
+            metadata_filename = "calibration_metadata" + metadata_idx + ".txt"
+            return os.path.join(self.calib_window.directory, metadata_filename)
+
+        meta_file = _meta_path("")
         idx = 1
-        while os.path.exists(self.calib.meta_file):
-            if self.calib.meta_file == os.path.join(self.calib_window.directory, 'calibration_metadata.txt'):
-                self.calib.meta_file = os.path.join(self.calib_window.directory, 'calibration_metadata_1.txt')
+        while os.path.exists(meta_file):
+            if meta_file == _meta_path(""):
+                meta_file = _meta_path("1")
             else:
                 idx += 1
-                self.calib.meta_file = os.path.join(self.calib_window.directory, f'calibration_metadata_{idx}.txt')
+                meta_file = _meta_path(str(idx))
 
-
-        self.calib.write_metadata(notes=self.calib_window.ui.le_notes_field.text())
+        # Write Metadata
+        self._write_meta_file(meta_file)
         self.calib_file_emit.emit(self.calib.meta_file)
         self.progress_update.emit((100, 'Finished'))
 
@@ -138,16 +209,6 @@ class CalibrationWorker(WorkerBase):
         logging.info(f"EXTINCTION = {extinction_ratio:.2f}")
         logging.debug("\n=======Finished Calibration=======\n")
         logging.debug(f"EXTINCTION = {extinction_ratio:.2f}")
-
-    def _check_abort(self):
-        """
-        Called if the user presses the STOP button.
-        Needed to be checked after every major step to stop the process
-        """
-
-        if self.abort_requested:
-            self.aborted.emit()
-            raise TimeoutError('Stop Requested')
 
     def _calibrate_4state(self):
         """
@@ -238,20 +299,13 @@ class CalibrationWorker(WorkerBase):
             self.calib_assessment_msg.emit('Poor Extinction. '+message)
 
 
-class BackgroundCaptureWorker(WorkerBase):
+class BackgroundCaptureWorker(CalibrationWorkerBase, signals=BackgroundSignals):
     """
     Class to execute background capture.
     """
 
     def __init__(self, calib_window, calib):
-        super().__init__(SignalsClass=BackgroundSignals)
-        self.calib_window = calib_window
-        self.calib = calib
-
-    def _check_abort(self):
-        if self.abort_requested:
-            self.aborted.emit()
-            return True
+        super().__init__(calib_window, calib)
 
     def work(self):
 
@@ -302,17 +356,8 @@ class BackgroundCaptureWorker(WorkerBase):
         retardance = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
 
         # Save metadata file and emit imgs
-        self.calib.meta_file = os.path.join(bg_path, 'calibration_metadata.txt')
-
-        microscope_params = {
-             'n_objective_media': float(self.calib_window.ui.le_n_media.text()) if self.calib_window.ui.le_n_media.text() != '' else None,
-             'objective_NA': float(self.calib_window.ui.le_obj_na.text()) if self.calib_window.ui.le_obj_na.text() != '' else None,
-             'condenser_NA': float(self.calib_window.ui.le_cond_na.text()) if self.calib_window.ui.le_cond_na.text() != '' else None,
-             'magnification': float(self.calib_window.ui.le_mag.text()) if self.calib_window.ui.le_mag.text() != '' else None,
-             'pixel_size': float(self.calib_window.ui.le_ps.text()) if self.calib_window.ui.le_ps.text() != '' else None
-        }
-
-        self.calib.write_metadata(notes=self.calib_window.ui.le_notes_field.text(), microscope_params=microscope_params)
+        meta_file = os.path.join(bg_path, 'calibration_metadata.txt')
+        self._write_meta_file(meta_file)
 
         # Update last calibration file
         note = self.calib_window.ui.le_notes_field.text()
@@ -326,7 +371,7 @@ class BackgroundCaptureWorker(WorkerBase):
         else:
             current_json['Notes'] = old_note + ', ' + note
 
-        current_json['Microscope Parameters'] = microscope_params
+        current_json['Microscope Parameters'] = self._microscope_params
 
         with open(self.calib_window.last_calib_meta_file, 'w') as file:
             json.dump(current_json, file, indent=1)
