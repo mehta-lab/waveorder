@@ -2113,15 +2113,25 @@ class MainWidget(QWidget):
             self.ui.le_bg_path.setText('Path Does Not Exist')
 
     @Slot(str)
-    def handle_bg_path_update(self,value):
-        #Path from Background Worker
+    def handle_bg_path_update(self, value:str):
+        """
+        Handles the update of the most recent background folderpath from
+        BackgroundWorker to display in the reconstruction texbox
+
+        Parameters
+        ----------
+        value : str
+            most recent captured background folderpath
+        """
         path = value
-        if os.path.exists(path):
+        try:
             self.acq_bg_directory = path
             self.current_bg_path = path
             self.ui.le_bg_path.setText(path)
-        else:
-            self.ui.le_bg_path.setText('Path Does Not Exist')
+        except OSError as err:
+            print(err)
+            self.ui.le_bg_path.setStyleSheet("border: 1px solid rgb(200,0,0);")
+            self.ui.le_bg_path.setText("Path Does Not Exist")
 
     @Slot(bool)
     def browse_acq_bg_path(self):
