@@ -35,6 +35,7 @@ class BackgroundSignals(WorkerBaseSignals):
 
     bg_image_emitter = Signal(object)
     bire_image_emitter = Signal(object)
+    bg_path_update_emmitter = Signal(str)
     aborted = Signal()
 
 
@@ -337,6 +338,8 @@ class BackgroundCaptureWorker(WorkerBase):
         self.bg_image_emitter.emit(imgs)
         self.bire_image_emitter.emit([retardance, birefringence[1]])
 
+        # Emit bg path
+        self.bg_path_update_emmitter.emit(bg_path)
 
 @thread_worker
 def load_calibration(calib, metadata: MetadataReader):
