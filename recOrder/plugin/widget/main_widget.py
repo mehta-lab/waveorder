@@ -2113,7 +2113,7 @@ class MainWidget(QWidget):
             self.ui.le_bg_path.setText('Path Does Not Exist')
 
     @Slot(str)
-    def handle_bg_path_update(self, value:str):
+    def handle_bg_path_update(self, value: str):
         """
         Handles the update of the most recent background folderpath from
         BackgroundWorker to display in the reconstruction texbox.
