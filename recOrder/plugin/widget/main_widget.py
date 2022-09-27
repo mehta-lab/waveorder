@@ -2578,7 +2578,7 @@ class MainWidget(QWidget):
         self.worker.aborted.connect(self._handle_calib_abort)
         
         # Connect to BG Correction Path
-        self.worker.bg_path_update_emmitter.connect(self.handle_bg_path_update)
+        self.worker.bg_path_update_emitter.connect(self.handle_bg_path_update)
 
         # Start Capture Background Thread
         self.worker.start()
