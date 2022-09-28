@@ -71,3 +71,17 @@ Although many of `recOrder`'s tests are automated, many features require manual 
 * Test the "Acquire Birefringence" button on a background FOV. Does a background-corrected background acquisition give random orientations?
 * Test the four "Acquire" buttons with varied combinations of 2D/3D, background correction settings, "Phase from BF" checkbox, and regularization parameters.
 * Use the data you collected to test "Offline" mode reconstructions with varied combinations of parameters.  
+
+## GUI development
+
+We use `QT Creator` for large parts of `recOrder`'s GUI. To modify the GUI, install `QT Creator` from [its website](https://www.qt.io/product/development-tools) or with `brew install --cask qt-creator`
+
+Open `/recOrder/recOrder/plugin/qtdesigner/recOrder_ui.ui` in `QT Creator` and make your changes. 
+
+Finally, convert the `.ui` to a `.py` file with 
+```sh
+pyuic5 -x recOrder_ui.ui -o recOrder_ui.py
+```
+Note: `pyuic5` is installed alongside `PyQt5`, so you can expect to find it installed in your `recOrder` conda environement. 
+
+Note: although much of the GUI is specified in the generated `recOrder_ui.py` file, the `main_widget.py` file makes extensive modifications to the GUI. 
