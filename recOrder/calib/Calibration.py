@@ -891,6 +891,8 @@ class QLIPP_Calibration():
             os.makedirs(directory)
 
         logging.info('Capturing Background')
+        self._auto_shutter_state = self.mmc.getAutoShutter()
+        self._shutter_state = self.mmc.getShutterOpen()
         self.open_shutter()
         logging.debug('Capturing Bacckground State0')
 
