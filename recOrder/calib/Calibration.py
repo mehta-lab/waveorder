@@ -621,8 +621,8 @@ class QLIPP_Calibration():
         intensity value at optimized state
         """
 
-        logging.info('Calibrating State3 (I135)...')
-        logging.debug('Calibrating State3 (I135)...')
+        logging.info('Calibrating State4 (I135)...')
+        logging.debug('Calibrating State4 (I135)...')
         self.inten = []
 
         self.set_lc(self.lca_ext, 'LCA')
