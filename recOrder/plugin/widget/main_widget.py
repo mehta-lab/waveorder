@@ -1719,8 +1719,33 @@ class MainWidget(QWidget):
             pass
 
     @Slot(object)
-    def handle_plot_lc_states_emit(self, value):
-        value.show()
+    def handle_lc_states_emit(self, value: tuple[tuple, dict[str, list]]):
+        """Receive and plot polarization state and calibrated LC retardance values from the calibration worker.
+
+        Parameters
+        ----------
+        value : tuple[tuple, dict[str, list]]
+            2-tuple consisting of a tuple of polarization state names and a dictionary of LC retardance values.
+        """
+        pol_states, lc_values = value
+        annot_offset = 0.004 # offset annotation text from data points
+
+        import matplotlib.pyplot as plt
+        with plt.rc_context({
+            "axes.spines.right": False,
+            "axes.spines.top": False,
+        }):
+            plt.figure("Calibrated LC States")
+            plt.scatter(lc_values["LCA"], lc_values["LCB"], c='r')
+            plt.axis("equal")
+            plt.xlabel("LCA retardance")
+            plt.ylabel("LCB retardance")
+            for i, pol in enumerate(pol_states):
+                plt.annotate(
+                    pol, 
+                    (lc_values["LCA"][i] + annot_offset, lc_values["LCB"][i] + annot_offset)
+            )
+            plt.show()
 
     @Slot(object)
     def handle_bg_image_update(self, value):
@@ -2545,7 +2570,7 @@ class MainWidget(QWidget):
         self.worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
         self.worker.calib_file_emit.connect(self.handle_calib_file_update)
         self.worker.plot_sequence_emit.connect(self.handle_plot_sequence_update)
-        self.worker.plot_lc_states_emit.connect(self.handle_plot_lc_states_emit)
+        self.worker.lc_states.connect(self.handle_lc_states_emit)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_error)

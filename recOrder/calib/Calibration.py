@@ -875,7 +875,7 @@ class QLIPP_Calibration():
         plt.show()
 
     @property
-    def _pol_states(self):
+    def pol_states(self):
         """The polarization states of this calibration.
 
         Returns
@@ -896,42 +896,23 @@ class QLIPP_Calibration():
             raise ValueError(f"Invalid calibration state: {self.calib_scheme}.")
         return pols
 
-    def plot_lc_states(self, annot_offset: float = 0.004):
-        """Generate a Matplotlib figure with a scatter plot of the calibrated LC states.
-
-        Parameters
-        ----------
-        annot_offset : float, optional
-            The offset of annotation text from data points, by default 0.004
+    @property
+    def lc_states(self):
+        """The optimized LC retardance values of this calibration.
 
         Returns
         -------
-        fig : matplotlib.figure.Figure
+        dict
+            `Dict{"LCA": List[ext, ...], "LCB": List[ext, ...]}`
         """
         lc_sides = ["A", "B"]
-        lc_values = {
+        return {
             f"LC{lc_side}": [
                 self.__getattribute__("lc" + lc_side.lower() + "_" + pol) 
-                for pol in self._pol_states
+                for pol in self.pol_states
             ]
             for lc_side in lc_sides
         }
-        with plt.rc_context({
-            "axes.spines.right": False,
-            "axes.spines.top": False,
-        }):
-            fig = plt.figure("Calibrated LC States")
-            plt.scatter(lc_values["LCA"], lc_values["LCB"], c='r')
-            plt.axis("equal")
-            plt.xlabel("LCA retardance")
-            plt.ylabel("LCB retardance")
-            for i, pol in enumerate(self._pol_states):
-                plt.annotate(
-                    pol, 
-                    (lc_values["LCA"][i] + annot_offset, lc_values["LCB"][i] + annot_offset)
-            )
-            return fig
-
 
     def capture_bg(self, n_avg, directory):
         """"

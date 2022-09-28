@@ -35,7 +35,7 @@ class CalibrationSignals(WorkerBaseSignals):
     calib_assessment_msg = Signal(str)
     calib_file_emit = Signal(str)
     plot_sequence_emit = Signal(str)
-    plot_lc_states_emit = Signal(object)
+    lc_states = Signal(tuple)
     aborted = Signal()
 
 
@@ -207,8 +207,8 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
 
         self._check_abort()
 
-        # Plot calibrated LC states
-        self._plot_lc_states()
+        # Emit calibrated LC states for plotting
+        self.lc_states.emit((self.calib.pol_states, self.calib.lc_states))
 
         logging.info("\n=======Finished Calibration=======\n")
         logging.info(f"EXTINCTION = {extinction_ratio:.2f}")
@@ -280,11 +280,6 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
         self.calib.opt_I135(0.05, 0.05)
         self.progress_update.emit((85, 'Writing Metadata...'))
 
-        self._check_abort()
-
-    def _plot_lc_states(self):
-        """Emit a Matplotlib scatter plot figure of the calibrated LC states."""
-        self.plot_lc_states_emit.emit(self.calib.plot_lc_states(annot_offset=0.004))
         self._check_abort()
 
     def _assess_calibration(self):
