@@ -1719,6 +1719,10 @@ class MainWidget(QWidget):
             pass
 
     @Slot(object)
+    def handle_plot_lc_states_emit(self, value):
+        value.show()
+
+    @Slot(object)
     def handle_bg_image_update(self, value):
 
         if 'Background Images' in self.viewer.layers:
@@ -2541,6 +2545,7 @@ class MainWidget(QWidget):
         self.worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
         self.worker.calib_file_emit.connect(self.handle_calib_file_update)
         self.worker.plot_sequence_emit.connect(self.handle_plot_sequence_update)
+        self.worker.plot_lc_states_emit.connect(self.handle_plot_lc_states_emit)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_error)
