@@ -212,6 +212,7 @@ class MainWidget(QWidget):
 
         # Instantiate Attributes:
         self.gui_mode = 'offline'
+        self.bridge = None
         self.mm = None
         self.mmc = None
         self.calib = None
@@ -488,7 +489,7 @@ class MainWidget(QWidget):
             self.ui.le_mm_status.setStyleSheet("border: 1px solid yellow;")
             self.mmc = None
             self.mm = None
-            self.ui.cb_config_group.clear()
+            # self.ui.cb_config_group.clear() # this might be the culprit because it clear the config
             self.ui.tabWidget.setCurrentIndex(0)
 
     def _hide_offline_ui(self, val: bool):
@@ -1558,10 +1559,11 @@ class MainWidget(QWidget):
             self.ui.qbutton_gui_mode.setText('Switch to Offline')
             self.ui.le_gui_mode.setText('Online')
             self.ui.le_gui_mode.setStyleSheet("border: 1px solid green; color: green;")
+            # self.connect_to_mm()  # Disabling this for now and letting the button for connect to MM do it's job for 1.0.0
             self._hide_offline_ui(True)
             self._hide_acquisition_ui(False)
             self.gui_mode = 'online'
-            self.connect_to_mm()
+
         else:
             self.ui.qbutton_gui_mode.setText('Switch to Online')
             self.ui.le_gui_mode.setText('Offline')
@@ -1569,6 +1571,11 @@ class MainWidget(QWidget):
             self._hide_offline_ui(False)
             self._hide_acquisition_ui(True)
             self.gui_mode = 'offline'
+            self.ui.cb_config_group.clear()
+
+            #Make sure button is still visible
+            self.ui.qbutton_mm_connect.setEnabled(True)
+
 
     @Slot(bool)
     def connect_to_mm(self):
@@ -1587,9 +1594,9 @@ class MainWidget(QWidget):
             # Try to open Bridge. Requires micromanager to be open with server running.
             # This does not fail gracefully, so I'm wrapping it in its own try-except block.
             try:
-                bridge = Bridge(convert_camel_case=False)
-                self.mmc = bridge.get_core()
-                self.mm = bridge.get_studio()
+                self.bridge = Bridge(convert_camel_case=False)
+                self.mmc = self.bridge.get_core()
+                self.mm = self.bridge.get_studio()
             except:
                 print(("Could not establish pycromanager bridge.\n"
                        "Is micromanager open?\n"
@@ -1598,8 +1605,8 @@ class MainWidget(QWidget):
                 raise EnvironmentError
 
             # Warn the use if there is a MicroManager/ZMQ version mismatch
-            bridge._main_socket.send({"command": "connect", "debug": False})
-            reply_json = bridge._main_socket.receive(timeout=500)
+            self.bridge._main_socket.send({"command": "connect", "debug": False})
+            reply_json = self.bridge._main_socket.receive(timeout=500)
             zmq_mm_version = reply_json['version']
             if zmq_mm_version != ZMQ_TARGET_VERSION:
                 upgrade_str = 'upgrade' if version.parse(zmq_mm_version) < version.parse(ZMQ_TARGET_VERSION) else 'downgrade'
@@ -1613,7 +1620,7 @@ class MainWidget(QWidget):
             # in this version of the code we correctly parse 'LF-State0', but these channels, for not cannot be used
             # by the Calibration class.
             # A valid config group contains all channels in calib_channels
-            self.ui.cb_config_group.clear()
+            # self.ui.cb_config_group.clear()    # This triggers the enter config we will clear when switching off
             groups = self.mmc.getAvailableConfigGroups()
             config_group_found = False
             for i in range(groups.size()):
@@ -1632,7 +1639,6 @@ class MainWidget(QWidget):
                 for ch in config_list:
                     if ch not in self.calib_channels:
                         self.ui.cb_acq_channel.addItem(ch)
-
             if not config_group_found:
                 msg = f'No config group contains channels {self.calib_channels}. ' \
                       'Please refer to the recOrder wiki on how to set up the config properly.'
@@ -1661,8 +1667,11 @@ class MainWidget(QWidget):
         if value:
             self.ui.le_mm_status.setText('Success!')
             self.ui.le_mm_status.setStyleSheet("background-color: green;")
-
+            #Disabling the button
+            self.ui.qbutton_mm_connect.setEnabled(False)
         else:
+            #Make sure button is still visible if it fails
+            self.ui.qbutton_mm_connect.setEnabled(True)
             self.ui.le_mm_status.setText('Failed.')
             self.ui.le_mm_status.setStyleSheet("background-color: rgb(200,0,0);")
 
@@ -1996,31 +2005,37 @@ class MainWidget(QWidget):
         -------
 
         """
+        #if/else takes care of the clearing of config
+        if self.ui.cb_config_group.count()!=0:
+            self.mmc = self.bridge.get_core()
+            self.mm = self.bridge.get_studio()
 
-        # Gather config groups and their children
-        self.config_group = self.ui.cb_config_group.currentText()
-        config = self.mmc.getAvailableConfigs(self.config_group)
+            # Gather config groups and their children
+            self.config_group = self.ui.cb_config_group.currentText()
+            config = self.mmc.getAvailableConfigs(self.config_group)
 
-        channels = []
-        for i in range(config.size()):
-            channels.append(config.get(i))
+            channels = [] 
+            for i in range(config.size()):
+                channels.append(config.get(i))
 
-        # Check to see if any states are missing
-        states = ['State0', 'State1', 'State2', 'State3', 'State4']
-        missing = []
-        for state in states:
-            if state not in channels:
-                missing.append(state)
+            # Check to see if any states are missing
+            states = ['State0', 'State1', 'State2', 'State3', 'State4']
+            missing = []
+            for state in states:
+                if state not in channels:
+                    missing.append(state)
 
-        # if states are missing, set the combo box red and alert the user
-        if len(missing) != 0:
-            msg = f'The chosen config group ({self.config_group}) is missing states: {missing}. '\
-                   'Please refer to the recOrder wiki on how to set up the config properly.'
+            # if states are missing, set the combo box red and alert the user
+            if len(missing) != 0:
+                msg = f'The chosen config group ({self.config_group}) is missing states: {missing}. '\
+                    'Please refer to the recOrder wiki on how to set up the config properly.'
 
-            self.ui.cb_config_group.setStyleSheet("border: 1px solid rgb(200,0,0);")
-            raise KeyError(msg)
+                self.ui.cb_config_group.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                raise KeyError(msg)
+            else:
+                self.ui.cb_config_group.setStyleSheet("")
         else:
-            self.ui.cb_config_group.setStyleSheet("")
+            print("CONFIG GROUP IS NOT EMPTY")
 
     @Slot()
     def enter_use_cropped_roi(self):
