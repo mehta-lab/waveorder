@@ -925,10 +925,10 @@ class QLIPP_Calibration():
             plt.axis("equal")
             plt.xlabel("LCA retardance")
             plt.ylabel("LCB retardance")
-            for pol in self._pol_states:
+            for i, pol in enumerate(self._pol_states):
                 plt.annotate(
                     pol, 
-                    (lc_values["LCA"] + annot_offset, lc_values["LCB"] + annot_offset)
+                    (lc_values["LCA"][i] + annot_offset, lc_values["LCB"][i] + annot_offset)
             )
             return fig
 
