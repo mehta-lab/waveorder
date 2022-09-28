@@ -890,7 +890,7 @@ class QLIPP_Calibration():
         """
         if self.calib_scheme == "4-State":
             pols = ("ext", "0", "60", "120")
-        elif self.calib_scheme == "4-State":
+        elif self.calib_scheme == "5-State":
             pols = ("ext", "0", "45", "90", "135")
         else:
             raise ValueError(f"Invalid calibration state: {self.calib_scheme}.")
