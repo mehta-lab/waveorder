@@ -919,10 +919,10 @@ class QLIPP_Calibration():
         with plt.rc_context({
             "axes.spines.right": False,
             "axes.spines.top": False,
-            "axes.axis": "equal",
         }):
             fig = plt.figure("Calibrated LC States")
             plt.scatter(lc_values["LCA"], lc_values["LCB"], 'ro')
+            plt.axis("equal")
             plt.xlabel("LCA retardance")
             plt.ylabel("LCB retardance")
             for pol in self._pol_states:
