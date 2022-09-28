@@ -928,7 +928,7 @@ class QLIPP_Calibration():
             for pol in self._pol_states:
                 plt.annotate(
                     pol, 
-                    (lc_sides["LCA"] + annot_offset, lc_values["LCB"] + annot_offset)
+                    (lc_values["LCA"] + annot_offset, lc_values["LCB"] + annot_offset)
             )
             return fig
 
