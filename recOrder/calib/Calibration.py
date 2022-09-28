@@ -930,6 +930,7 @@ class QLIPP_Calibration():
             os.makedirs(directory)
 
         logging.info('Capturing Background')
+        self.open_shutter()
         logging.debug('Capturing Bacckground State0')
 
         state0 = self._capture_state('State0', n_avg)
@@ -961,6 +962,7 @@ class QLIPP_Calibration():
             imgs.append(state4)
 
         # self._plot_bg_images(np.asarray(imgs))
+        self.reset_shutter()
 
         return np.asarray(imgs)
 
