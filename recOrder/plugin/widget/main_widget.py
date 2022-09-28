@@ -1718,7 +1718,7 @@ class MainWidget(QWidget):
         else:
             pass
 
-    @Slot(object)
+    @Slot(tuple)
     def handle_lc_states_emit(self, value: tuple[tuple, dict[str, list]]):
         """Receive and plot polarization state and calibrated LC retardance values from the calibration worker.
 
