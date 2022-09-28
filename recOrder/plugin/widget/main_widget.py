@@ -779,7 +779,8 @@ class MainWidget(QWidget):
                 raise_error = True
                 self._set_tab_red('General', True)
 
-            if self.bg_option == 'local_fit' or self.bg_option == 'local_fit+' or self.bg_option == 'global':
+            # check background path if 'Measured' or 'Measured + Estimated' is selected
+            if self.bg_option == 'local_fit+' or self.bg_option == 'global':
                 success = self._check_line_edit('bg_path')
                 if not success:
                     raise_error = True
