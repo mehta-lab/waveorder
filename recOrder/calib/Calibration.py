@@ -911,7 +911,7 @@ class QLIPP_Calibration():
         lc_sides = ("A", "B")
         lc_values = {
             "LC{lc_side}": [
-                self.__getattribute__("lc" + lc_side + pol) 
+                self.__getattribute__("lc" + lc_side.lower() + "_" + pol) 
                 for pol in self._pol_states
             ]
             for lc_side in lc_sides
