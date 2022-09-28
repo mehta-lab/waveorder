@@ -921,7 +921,7 @@ class QLIPP_Calibration():
             "axes.spines.top": False,
         }):
             fig = plt.figure("Calibrated LC States")
-            plt.scatter(lc_values["LCA"], lc_values["LCB"], 'r')
+            plt.scatter(lc_values["LCA"], lc_values["LCB"], c='r')
             plt.axis("equal")
             plt.xlabel("LCA retardance")
             plt.ylabel("LCB retardance")
