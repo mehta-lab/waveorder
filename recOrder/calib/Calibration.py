@@ -919,7 +919,7 @@ class QLIPP_Calibration():
         with plt.rc_context({
             "axes.spines.right": False,
             "axes.spines.top": False,
-            "axis.axis": "equal",
+            "axes.axis": "equal",
         }):
             fig = plt.figure("Calibrated LC States")
             plt.scatter(lc_values["LCA"], lc_values["LCB"], 'ro')
