@@ -908,7 +908,7 @@ class QLIPP_Calibration():
         -------
         fig : matplotlib.figure.Figure
         """
-        lc_sides = ("A", "B")
+        lc_sides = ["A", "B"]
         lc_values = {
             "LC{lc_side}": [
                 self.__getattribute__("lc" + lc_side.lower() + "_" + pol) 
