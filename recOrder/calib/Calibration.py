@@ -893,7 +893,7 @@ class QLIPP_Calibration():
         elif self.calib_scheme == "4-State":
             pols = ("ext", "0", "45", "90", "135")
         else:
-            raise ValueError("Invalid calibration state: {self.calib_scheme}.")
+            raise ValueError(f"Invalid calibration state: {self.calib_scheme}.")
         return pols
 
     def plot_lc_states(self, annot_offset: float = 0.004):
@@ -910,7 +910,7 @@ class QLIPP_Calibration():
         """
         lc_sides = ["A", "B"]
         lc_values = {
-            "LC{lc_side}": [
+            f"LC{lc_side}": [
                 self.__getattribute__("lc" + lc_side.lower() + "_" + pol) 
                 for pol in self._pol_states
             ]
