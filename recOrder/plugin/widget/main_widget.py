@@ -1734,7 +1734,7 @@ class MainWidget(QWidget):
         with plt.rc_context({
             "axes.spines.right": False,
             "axes.spines.top": False,
-        }):
+        }) and plt.ion():
             plt.figure("Calibrated LC States")
             plt.scatter(lc_values["LCA"], lc_values["LCB"], c='r')
             plt.axis("equal")
@@ -1745,7 +1745,6 @@ class MainWidget(QWidget):
                     pol, 
                     (lc_values["LCA"][i] + annot_offset, lc_values["LCB"][i] + annot_offset)
             )
-            plt.show()
 
     @Slot(object)
     def handle_bg_image_update(self, value):
