@@ -1735,6 +1735,7 @@ class MainWidget(QWidget):
         y_circ = self.swing*np.sin(theta) + lc_values["LCB"][0]
 
         import matplotlib.pyplot as plt
+        plt.close('all')
         with plt.rc_context({
             "axes.spines.right": False,
             "axes.spines.top": False,
