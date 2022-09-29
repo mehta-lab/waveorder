@@ -1103,7 +1103,7 @@
             <x>0</x>
             <y>0</y>
             <width>590</width>
-            <height>1017</height>
+            <height>1040</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -1242,7 +1242,7 @@
               <property name="verticalSpacing">
                <number>6</number>
               </property>
-              <item row="2" column="0" colspan="4">
+              <item row="3" column="0" colspan="4">
                <widget class="QTabWidget" name="tabWidget_3">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -1692,7 +1692,7 @@
                   <property name="verticalSpacing">
                    <number>20</number>
                   </property>
-                  <item row="1" column="0" colspan="2">
+                  <item row="2" column="0" colspan="2">
                    <widget class="QLabel" name="spacer">
                     <property name="text">
                      <string/>
@@ -1907,48 +1907,7 @@
                     </layout>
                    </widget>
                   </item>
-                 </layout>
-                </widget>
-                <widget class="QWidget" name="Physical">
-                 <attribute name="title">
-                  <string>Microscope Parameters</string>
-                 </attribute>
-                 <layout class="QGridLayout" name="gridLayout_11">
-                  <property name="leftMargin">
-                   <number>4</number>
-                  </property>
-                  <property name="topMargin">
-                   <number>15</number>
-                  </property>
-                  <property name="rightMargin">
-                   <number>4</number>
-                  </property>
-                  <property name="bottomMargin">
-                   <number>4</number>
-                  </property>
-                  <property name="verticalSpacing">
-                   <number>20</number>
-                  </property>
-                  <item row="0" column="0">
-                   <widget class="QGroupBox" name="groupBox_3">
-                    <property name="title">
-                     <string/>
-                    </property>
-                    <layout class="QGridLayout" name="gridLayout_30">
-                     <property name="verticalSpacing">
-                      <number>6</number>
-                     </property>
-                    </layout>
-                   </widget>
-                  </item>
-                 </layout>
-                </widget>
-                <widget class="QWidget" name="Regularization">
-                 <attribute name="title">
-                  <string>Regularization</string>
-                 </attribute>
-                 <layout class="QGridLayout" name="gridLayout_19">
-                  <item row="0" column="0" alignment="Qt::AlignTop">
+                  <item row="1" column="0">
                    <widget class="QGroupBox" name="phase">
                     <property name="sizePolicy">
                      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -1957,7 +1916,7 @@
                      </sizepolicy>
                     </property>
                     <property name="title">
-                     <string>Phase</string>
+                     <string>Phase Regularization</string>
                     </property>
                     <layout class="QGridLayout" name="gridLayout_23">
                      <property name="topMargin">
@@ -2038,6 +1997,47 @@
                     </layout>
                    </widget>
                   </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="Physical">
+                 <attribute name="title">
+                  <string>Microscope Parameters</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_11">
+                  <property name="leftMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="topMargin">
+                   <number>15</number>
+                  </property>
+                  <property name="rightMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="bottomMargin">
+                   <number>4</number>
+                  </property>
+                  <property name="verticalSpacing">
+                   <number>20</number>
+                  </property>
+                  <item row="0" column="0">
+                   <widget class="QGroupBox" name="groupBox_3">
+                    <property name="title">
+                     <string/>
+                    </property>
+                    <layout class="QGridLayout" name="gridLayout_30">
+                     <property name="verticalSpacing">
+                      <number>6</number>
+                     </property>
+                    </layout>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="Regularization">
+                 <attribute name="title">
+                  <string>Regularization</string>
+                 </attribute>
+                 <layout class="QGridLayout" name="gridLayout_19">
                   <item row="1" column="0" alignment="Qt::AlignTop">
                    <widget class="QGroupBox" name="fluorescence">
                     <property name="title">
@@ -2400,21 +2400,21 @@
                 </widget>
                </widget>
               </item>
-              <item row="4" column="0" colspan="4">
+              <item row="5" column="0" colspan="4">
                <widget class="QPushButton" name="qbutton_reconstruct">
                 <property name="text">
                  <string>Reconstruct</string>
                 </property>
                </widget>
               </item>
-              <item row="5" column="0" colspan="4">
+              <item row="6" column="0" colspan="4">
                <widget class="QPushButton" name="qbutton_stop_reconstruct">
                 <property name="text">
                  <string>STOP</string>
                 </property>
                </widget>
               </item>
-              <item row="0" column="0">
+              <item row="1" column="0">
                <widget class="QCheckBox" name="chb_pause_updates">
                 <property name="font">
                  <font>
