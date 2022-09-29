@@ -61,20 +61,20 @@ class ReconstructionWorker(WorkerBase):
 
             self._check_abort()
 
-            # will return either phase or fluorescent deconvolved volumes
+            # will return phase volumes
             deconvolve2D, deconvolve3D = self.manager.pipeline.deconvolve_volume(stokes)
 
             self._check_abort()
 
-            birefringence, deconvolve2D, deconvolve3D, modified_fluor = self.manager.post_processing(pt_data,
-                                                                                             deconvolve2D,
-                                                                                             deconvolve3D,
-                                                                                             birefringence)
+            birefringence, deconvolve2D, deconvolve3D = self.manager.post_processing(pt_data,
+                                                                                     deconvolve2D,
+                                                                                     deconvolve3D,
+                                                                                     birefringence)
 
             self._check_abort()
 
             self.manager.pipeline.write_data(self.manager.indices_map[pt[0]], pt[1], pt_data, stokes,
-                                     birefringence, deconvolve2D, deconvolve3D, modified_fluor)
+                                     birefringence, deconvolve2D, deconvolve3D)
 
             self._check_abort()
 

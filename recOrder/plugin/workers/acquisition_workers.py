@@ -283,7 +283,7 @@ class BFAcquisitionWorker(WorkerBase):
 
         Parameters
         ----------
-        fluor:      (nd-array or None) deconvolved fluorescence image or stack
+        phase:      (nd-array or None) phase image or stack
 
         Returns
         -------

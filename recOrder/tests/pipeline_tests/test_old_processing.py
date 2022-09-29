@@ -1,6 +1,5 @@
 from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_manager import PipelineManager
-from recOrder.preproc.pre_processing import preproc_denoise
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_stokes, reconstruct_qlipp_birefringence
 from os.path import dirname, abspath
 import numpy as np

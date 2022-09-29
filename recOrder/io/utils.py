@@ -42,14 +42,6 @@ def extract_reconstruction_parameters(reconstructor, magnification=None):
                      'swing': reconstructor.chi if reconstructor.N_channel == 4 else reconstructor.chi / 2 / np.pi,
                      'pixel_size': ps}
 
-    elif isinstance(reconstructor, fluorescence_microscopy):
-        attr_dict = {'fluor_wavelength (nm)': list(reconstructor.lambda_emiss * reconstructor.n_media * 1000),
-                     'pad_z': reconstructor.pad_z,
-                     'n_objective_media': reconstructor.n_media,
-                     'objective_NA': reconstructor.NA_obj * reconstructor.n_media,
-                     'magnification': magnification,
-                     'pixel_size': ps}
-
     else:
         attr_dict = dict()
 

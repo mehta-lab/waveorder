@@ -224,8 +224,7 @@ class QLIPP(PipelineInterface):
                                 stokes[:, slice(None) if self.slices != 1 else self.focus_slice, :, :],
                                 self.reconstructor)
 
-    # todo: think about better way to write fluor/registered data?
-    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, modified_fluor):
+    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
         If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
@@ -273,15 +272,6 @@ class QLIPP(PipelineInterface):
                 self.writer.write(stokes[2, slice_, :, :], p=p, t=t, c=chan, z=z)
             elif 'S3' in self.output_channels[chan]:
                 self.writer.write(stokes[3, slice_, :, :], p=p, t=t, c=chan, z=z)
-
-            # Assume any other output channel in config is fluorescence
-            else:
-                if self.config.postprocessing.registration_use or self.config.postprocessing.deconvolution_use:
-                    self.writer.write(modified_fluor[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
-                    fluor_idx += 1
-                else:
-                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
-                    fluor_idx += 1
 
             self.dimension_emitter.emit((p, t, chan))
 

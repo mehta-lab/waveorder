@@ -12,7 +12,7 @@ from recOrder.plugin.qtdesigner import recOrder_ui
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
 from recOrder.io.utils import load_bg, ret_ori_overlay, generic_hsv_overlay
-from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, POSTPROCESSING
+from recOrder.io.config_reader import ConfigReader, PROCESSING
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
@@ -25,10 +25,6 @@ import logging
 import pathlib
 import textwrap
 
-
-#TODO: Parse Denoising Parameters correctly from line edits
-#TODO: Populate pre/post processing fields to config file from line edit
-#todo: populate line edit / fields from config file values
 class MainWidget(QWidget):
     """
     This is the main recOrder widget that houses all of the GUI components of recOrder.
@@ -520,19 +516,6 @@ class MainWidget(QWidget):
         # Processing Settings
         self.ui.groupBox_2.setHidden(val)
         
-        # Pre/Post Processing
-        self.ui.tabWidget_3.setTabEnabled(4, not val)
-        if val:
-            self.ui.tabWidget_3.setStyleSheet("QTabBar::tab::disabled {width: 0; height: 0; margin: 0; padding: 0; border: none;} ")
-        else:
-            self.ui.tabWidget_3.setStyleSheet("")
-
-        self.ui.tabWidget_3.setTabEnabled(5, not val)
-        if val:
-            self.ui.tabWidget_3.setStyleSheet("QTabBar::tab::disabled {width: 0; height: 0; margin: 0; padding: 0; border: none;} ")
-        else:
-            self.ui.tabWidget_3.setStyleSheet("")
-
     def _enable_buttons(self):
         """
         enables the buttons that were disabled during acquisition, calibration, or reconstruction
@@ -989,19 +972,6 @@ class MainWidget(QWidget):
             vals = map(lambda x: int(x), vals)
             self.config_reader.timepoints = list(vals)
 
-        for key, value in PREPROCESSING.items():
-            if isinstance(value, dict):
-                for key_child, value_child in PREPROCESSING[key].items():
-                    if key_child == 'use':
-                        field = getattr(self.ui, f'chb_preproc_{key}_{key_child}')
-                        val = True if field.checkState() == 2 else False
-                        setattr(self.config_reader.preprocessing, f'{key}_{key_child}', val)
-                    else:
-                        field = getattr(self.ui, f'le_preproc_{key}_{key_child}')
-                        setattr(self.config_reader.preprocessing, f'{key}_{key_child}', field.text())
-            else:
-                setattr(self.config_reader.preprocessing, key, getattr(self, key))
-
         attrs = dir(self.ui)
         skip = ['wavelength', 'pixel_size', 'magnification', 'NA_objective', 'NA_condenser', 'n_objective_media']
         # TODO: Figure out how to catch errors in regularizer strength field
@@ -1180,16 +1150,6 @@ class MainWidget(QWidget):
                 self.ui.le_timepoints.setText(text)
         else:
             self.ui.le_timepoints.setText(str(self.config_reader.timepoints))
-
-        # Parse Preprocessing automatically
-        for key, val in PREPROCESSING.items():
-            for key_child, val_child in val.items():
-                if key_child == 'use':
-                    attr = getattr(self.config_reader.preprocessing, 'denoise_use')
-                    self.ui.chb_preproc_denoise_use.setCheckState(attr)
-                else:
-                    le = getattr(self.ui, f'le_preproc_denoise_{key_child}')
-                    le.setText(str(getattr(self.config_reader.preprocessing, f'denoise_{key_child}')))
 
         # Parse Processing name mismatch fields
         wavelengths = self.config_reader.wavelength

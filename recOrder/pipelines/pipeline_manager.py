@@ -9,8 +9,6 @@ from napari.utils.notifications import show_warning
 from recOrder.io.utils import MockEmitter, ram_message
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
-from recOrder.postproc.post_processing import *
-from recOrder.preproc.pre_processing import *
 
 
 class PipelineManager:
@@ -266,7 +264,7 @@ class PipelineManager:
             deconvolve2D, deconvolve3D = self.pipeline.deconvolve_volume(stokes)
 
             self.pipeline.write_data(self.indices_map[pt[0]], pt[1], pt_data, stokes,
-                                     birefringence, deconvolve2D, deconvolve3D, modified_fluor)
+                                     birefringence, deconvolve2D, deconvolve3D)
 
             end_time = time.time()
             print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f}) min')
