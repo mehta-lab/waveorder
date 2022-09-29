@@ -310,7 +310,7 @@ class MainWidget(QWidget):
         self.ui.label_orientation_legend.setHidden(True)
         self.ui.DisplayOptions.setHidden(True)
 
-        # Hide "Use Cropped ROI "
+        # Hide "Use Cropped ROI"
         self.ui.chb_use_roi.setHidden(True)
 
         # Hide unused "Reconstruction Settings" tabs
@@ -333,6 +333,7 @@ class MainWidget(QWidget):
         self.original_tab_text = self.ui.tabWidget_3.tabBar().tabTextColor(0)
         self.ui.tabWidget.parent().setObjectName('recOrder') # make sure the top says recOrder and not 'Form'
         self.ui.tabWidget_2.setCurrentIndex(0) # set focus to "Plot" tab by default
+        self.ui.tabWidget_3.setCurrentIndex(0) # set focus to "General" tab by default
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
@@ -2236,53 +2237,22 @@ class MainWidget(QWidget):
 
         if idx == 0:
             self.method = 'QLIPP'
-            self.ui.le_cond_na.show()
-            self.ui.label_cond_na.show()
-            self.ui.cb_bg_method.show()
-            self.ui.le_bg_path.hide() if self.bg_option == 'None' else self.ui.le_bg_path.show()
             self.ui.qbutton_browse_bg_path.hide() if self.bg_option == 'None' else self.ui.qbutton_browse_bg_path.show()
-            self.ui.label_bg_path.hide() if self.bg_option == 'None' else self.ui.label_bg_path.show()
-            self.ui.label_bg_method.hide() if self.bg_option == 'None' else self.ui.label_bg_method.show()
-            self.ui.phase.show()
-            self.ui.fluor.show()
             self.ui.label_fluor_chan.hide()
             self.ui.le_fluor_chan.hide()
-            self.ui.label_chan_desc.setText('Retardance, Orientation, BF, Phase3D, Phase2D, Fluor1, '
-                                            'Fluor2 (ex. DAPI, GFP), S0, S1, S2, S3')
+            self.ui.label_chan_desc.setText('Retardance, Orientation, BF, Phase3D, S0, S1, S2, S3')
 
         elif idx == 1:
             self.method = 'PhaseFromBF'
-            self.ui.le_cond_na.show()
-            self.ui.label_cond_na.show()
-            self.ui.cb_bg_method.show()
             self.ui.le_bg_path.hide() if self.bg_option == 'None' else self.ui.le_bg_path.show()
             self.ui.qbutton_browse_bg_path.hide() if self.bg_option == 'None' else self.ui.qbutton_browse_bg_path.show()
             self.ui.label_bg_path.hide() if self.bg_option == 'None' else self.ui.label_bg_path.show()
             self.ui.label_bg_method.hide() if self.bg_option == 'None' else self.ui.label_bg_method.show()
-            self.ui.phase.show()
-            self.ui.fluor.show()
             self.ui.label_fluor_chan.show()
             self.ui.le_fluor_chan.show()
             self.ui.label_fluor_chan.setText('Brightfield Channel Index')
             self.ui.le_fluor_chan.setPlaceholderText('int')
-            self.ui.label_chan_desc.setText('Phase3D, Phase2D, Fluor1, Fluor2 (ex. DAPI, GFP)')
-
-        else:
-            self.method = 'FluorDeconv'
-            self.ui.le_cond_na.hide()
-            self.ui.label_cond_na.hide()
-            self.ui.cb_bg_method.hide()
-            self.ui.label_bg_path.hide()
-            self.ui.label_bg_method.hide()
-            self.ui.le_bg_path.hide()
-            self.ui.qbutton_browse_bg_path.hide()
-            self.ui.phase.hide()
-            self.ui.fluor.hide()
-            self.ui.label_fluor_chan.show()
-            self.ui.le_fluor_chan.show()
-            self.ui.label_fluor_chan.setText('Fluor Channel Index')
-            self.ui.le_fluor_chan.setPlaceholderText('list of integers or int')
-            self.ui.label_chan_desc.setText('Fluor1, Fluor2 (ex. DAPI, GFP)')
+            self.ui.label_chan_desc.setText('Phase3D, Phase2D')
 
     @Slot(int)
     def enter_mode(self):
