@@ -24,12 +24,6 @@ class PhaseFromBF(PipelineInterface):
         self._check_output_channels(self.output_channels)
         self.mode = '2D' if 'Phase2D' in self.output_channels else '3D'
         self.bf_chan_idx = self.config.brightfield_channel_index
-        self.fluor_idxs = []
-
-        # Assume any other channel in the data is fluorescence
-        for i in range(self.data.channels):
-            if i != self.bf_chan_idx:
-                self.fluor_idxs.append(i)
 
         self.slices = self.data.slices
         self.focus_slice = None
@@ -145,8 +139,7 @@ class PhaseFromBF(PipelineInterface):
     def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
-        If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
-        in the data.  Dimensions differ between data type to make compute easier with waveOrder backend.
+        Dimensions differ between data type to make compute easier with waveOrder backend.
 
         Parameters
         ----------
@@ -165,7 +158,6 @@ class PhaseFromBF(PipelineInterface):
         """
         z = 0 if self.mode == '2D' else None
         slice_ = self.focus_slice if self.mode == '2D' else slice(None)
-        fluor_idx = 0
 
         for chan in range(len(self.output_channels)):
             if 'Phase3D' in self.output_channels[chan]:

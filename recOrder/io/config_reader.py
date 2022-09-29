@@ -30,8 +30,6 @@ PROCESSING = {
     'NA_condenser': None,
     'n_objective_media': 1.003,
     'brightfield_channel_index': 0,
-    'fluorescence_channel_indices': None,
-    'fluorescence_background': None,
     'z_step': None,
     'focus_zidx': None,
     'reg': 1e-4,

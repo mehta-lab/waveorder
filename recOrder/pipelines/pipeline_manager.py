@@ -63,7 +63,7 @@ class PipelineManager:
 
         else:
             raise NotImplementedError(f'Method {self.config.method} is not currently implemented '
-                                      'please specify one of the following: QLIPP, PhaseFromBF, or FluorDeconv')
+                                      'please specify one of the following: QLIPP or PhaseFromBF')
 
     def _check_ram(self):
         """
@@ -260,7 +260,7 @@ class PipelineManager:
             # will return None if the pipeline doesn't support birefringence reconstruction
             birefringence = self.pipeline.reconstruct_birefringence_volume(stokes)
 
-            # will return either phase or fluorescent deconvolved volumes
+            # will return phase volumes
             deconvolve2D, deconvolve3D = self.pipeline.deconvolve_volume(stokes)
 
             self.pipeline.write_data(self.indices_map[pt[0]], pt[1], pt_data, stokes,

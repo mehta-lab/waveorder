@@ -7,13 +7,12 @@ import tifffile as tiff
 import numpy as np
 from colorspacious import cspace_convert
 from matplotlib.colors import hsv_to_rgb
-from waveorder.waveorder_reconstructor import fluorescence_microscopy, waveorder_microscopy
+from waveorder.waveorder_reconstructor import waveorder_microscopy
 
 
 def extract_reconstruction_parameters(reconstructor, magnification=None):
     """
-    Function that extracts the reconstruction parameters from a waveorder reconstructor.  Works
-    for both fluorescence_microscopy class and waveorder_microscopy class.
+    Function that extracts the reconstruction parameters from a waveorder reconstructor.  Works for waveorder_microscopy class.
 
     Parameters
     ----------

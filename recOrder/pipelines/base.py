@@ -20,5 +20,5 @@ class PipelineInterface(ABC):
         pass
 
     @abstractmethod
-    def write_data(self, p, t, pt_data, stokes, birefringence, deconvolve2D, deconvolve3D, modified_fluor):
+    def write_data(self, p, t, pt_data, stokes, birefringence, deconvolve2D, deconvolve3D):
         pass

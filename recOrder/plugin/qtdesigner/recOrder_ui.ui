@@ -1866,7 +1866,7 @@
                         <string/>
                        </property>
                        <property name="placeholderText">
-                        <string>Required for 2D Phase or 2D Fluor Deconvolution</string>
+                        <string>Required for 2D Phase</string>
                        </property>
                       </widget>
                      </item>

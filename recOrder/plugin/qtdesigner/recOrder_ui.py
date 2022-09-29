@@ -1579,7 +1579,7 @@ class Ui_Form(object):
         self.label_pipeline.setText(_translate("Form", "Pipeline"))
         self.cb_method.setItemText(0, _translate("Form", "QLIPP"))
         self.cb_method.setItemText(1, _translate("Form", "PhaseFromBF"))
-        self.le_focus_zidx.setPlaceholderText(_translate("Form", "Required for 2D Phase or 2D Fluor Deconvolution"))
+        self.le_focus_zidx.setPlaceholderText(_translate("Form", "Required for 2D Phase"))
         self.label_mode.setText(_translate("Form", "Mode"))
         self.cb_mode.setItemText(0, _translate("Form", "3D"))
         self.cb_mode.setItemText(1, _translate("Form", "2D"))

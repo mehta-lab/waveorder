@@ -32,10 +32,6 @@ processing:
   #    'Retardance', 'Orientation','Brightfield', 'Phase3D'
   #     order of the channels specifies the order in which they will be written
 
-  #    can also specify custom names of fluorescence channels 'GFP' or 'DAPI' or 'Nuclei'.
-  #    The order in which fluor channels are listed corresponds to their order in
-  #    the acquisition.  Specified name stored in the metadata.
-
   background_correction: 'local_fit'
   # (str) Background correction method, one of the following
   ##   'None': no background correction will be performed

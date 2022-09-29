@@ -54,7 +54,7 @@ processing:
   ##   'global': for normal background subtraction with the provided background
 
   # flatfield_correction: False
-  # (bool) perform flat-field correction on fluorescence images if True
+  # (bool) perform flat-field correction if True
 
   use_gpu: False
   # (bool) Option to use GPU processing if True (require cupy to be installed)

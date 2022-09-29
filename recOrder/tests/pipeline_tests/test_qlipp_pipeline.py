@@ -63,7 +63,6 @@ def test_qlipp_pipeline_initiate(init_qlipp_pipeline_manager):
     assert(pipeline.s1_idx == 1)
     assert(pipeline.s2_idx == 2)
     assert(pipeline.s3_idx == 3)
-    assert(pipeline.fluor_idxs == [])
     assert(pipeline.data_shape == (manager.data.frames, manager.data.channels,
                                    manager.data.slices, manager.data.height, manager.data.width))
     assert(pipeline.chunk_size == (1, 1, 1, manager.data.height, manager.data.width))
