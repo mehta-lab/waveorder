@@ -1728,8 +1728,7 @@ class MainWidget(QWidget):
             2-tuple consisting of a tuple of polarization state names and a dictionary of LC retardance values.
         """
         pol_states, lc_values = value
-        annot_offset = 0.004 # offset annotation text from data points
-
+    
         # Calculate circle 
         theta = np.linspace(0, 2*np.pi, 100)
         x_circ = self.swing*np.cos(theta) + lc_values["LCA"][0]
@@ -1749,7 +1748,10 @@ class MainWidget(QWidget):
             for i, pol in enumerate(pol_states):
                 plt.annotate(
                     pol, 
-                    (lc_values["LCA"][i] + annot_offset, lc_values["LCB"][i] + annot_offset)
+                    xy=(lc_values["LCA"][i], lc_values["LCB"][i]),
+                    xycoords='data',
+                    xytext=(10,10), # annotation offset
+                    textcoords='offset points'
             )
 
     @Slot(object)
