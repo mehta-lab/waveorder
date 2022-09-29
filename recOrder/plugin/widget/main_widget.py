@@ -238,7 +238,6 @@ class MainWidget(QWidget):
         self.use_gpu = False
         self.pad_z = 0
         self.phase_reconstructor = None
-        self.fluor_reconstructor = None
         self.acq_bg_directory = None
         self.auto_shutter = True
         self.lca_dac = None
@@ -556,7 +555,6 @@ class MainWidget(QWidget):
         self.ui.qbutton_acq_birefringence.setEnabled(True)
         self.ui.qbutton_acq_phase.setEnabled(True)
         self.ui.qbutton_acq_birefringence_phase.setEnabled(True)
-        self.ui.qbutton_acq_fluor.setEnabled(True)
         self.ui.qbutton_load_calib.setEnabled(True)
         self.ui.qbutton_listen.setEnabled(True)
         self.ui.qbutton_create_overlay.setEnabled(True)
@@ -580,7 +578,6 @@ class MainWidget(QWidget):
         self.ui.qbutton_acq_birefringence.setEnabled(False)
         self.ui.qbutton_acq_phase.setEnabled(False)
         self.ui.qbutton_acq_birefringence_phase.setEnabled(False)
-        self.ui.qbutton_acq_fluor.setEnabled(False)
         self.ui.qbutton_load_calib.setEnabled(False)
         self.ui.qbutton_listen.setEnabled(False)
         self.ui.qbutton_create_overlay.setEnabled(False)
@@ -842,8 +839,7 @@ class MainWidget(QWidget):
         birefringence_required = {'calibration_metadata', 'recon_wavelength'}
         phase_required = {'recon_wavelength', 'mag', 'obj_na', 'cond_na', 'n_media',
                           'phase_strength', 'ps'}
-        fluor_decon_required = {'recon_wavelength', 'mag', 'obj_na', 'n_media', 'fluor_strength', 'ps'}
-
+        
         # intialize all UI elements in the default state
         for field in always_required:
             le = getattr(self.ui, f'le_{field}')
@@ -851,10 +847,6 @@ class MainWidget(QWidget):
         for field in phase_required:
             le = getattr(self.ui, f'le_{field}')
             le.setStyleSheet("")
-        for field in fluor_decon_required:
-            le = getattr(self.ui, f'le_{field}')
-            le.setStyleSheet("")
-
         for field in always_required:
             cont = self._check_line_edit(field)
             if not cont:
@@ -912,7 +904,7 @@ class MainWidget(QWidget):
                 success = False
 
         elif self.method == 'PhaseFromBF':
-            cont = self._check_line_edit('fluor_chan')
+            cont = self._check_line_edit('bf_chan')
             tab = getattr(self.ui, f'le_bf_chan').parent().parent().objectName()
             if not cont:
                 self._set_tab_red(tab, True)
@@ -937,28 +929,6 @@ class MainWidget(QWidget):
                 self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
                 print('User did not specify any PhaseFromBF Specific Channels (Phase2D, Phase3D)')
                 success = False
-
-        elif self.method == 'FluorDeconv':
-            cont = self._check_line_edit('fluor_chan')
-            tab = getattr(self.ui, f'le_bf_chan').parent().parent().objectName()
-            if not cont:
-                self._set_tab_red(tab, True)
-                success = False
-
-            for field in fluor_decon_required:
-                cont = self._check_line_edit(field)
-                tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
-                if not cont:
-                    self._set_tab_red(tab, True)
-                    success = False
-                else:
-                    continue
-
-            if self.mode == '2D':
-                cont = self._check_line_edit('focus_zidx')
-                if not cont:
-                    self._set_tab_red('Processing', True)
-                    success = False
 
         else:
             print('Error in parameter checks')
@@ -1142,85 +1112,7 @@ class MainWidget(QWidget):
                 setattr(self.config_reader, 'rho_2D', float(self.ui.le_rho.text()))
                 setattr(self.config_reader, 'itr_2D', int(self.ui.le_itr.text()))
 
-
-        if self.method == 'FluorDeconv':
-
-            wavelengths = self.ui.le_recon_wavelength.text()
-            wavelengths = wavelengths.split(',')
-            wavelengths = [int(i.replace(' ', '')) for i in wavelengths]
-            setattr(self.config_reader, 'wavelength', wavelengths)
-
-            fluor_chan = self.ui.le_bf_chan.text()
-            channels = fluor_chan.split(',')
-            channels = [int(i.replace(' ', '')) for i in channels]
-            setattr(self.config_reader, 'fluorescence_channel_indices', channels)
-
-            val = self.ui.le_fluor_strength.text()
-            regs = val.split(',')
-            regs = [float(i.replace(' ', '')) for i in regs]
-
-            if len(regs) == 1:
-                setattr(self.config_reader, 'reg', regs[0])
-            else:
-                if len(regs) != len(wavelengths):
-                    self._set_tab_red('Regularization', True)
-                    self.ui.le_recon_wavelength.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                    self.ui.le_fluor_strength.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                    raise ValueError('Length of regularization values must match wavelengths')
-                else:
-                    self._set_tab_red('Regularization', False)
-                    self.ui.le_recon_wavelength.setStyleSheet("")
-                    self.ui.le_fluor_strength.setStyleSheet("")
-                    setattr(self.config_reader, 'reg', regs)
-
-            if self.ui.chb_autocalc_bg.isChecked():
-                setattr(self.config_reader, 'fluorescence_background', None)
-            else:
-                val = self.ui.le_fluor_bg.text()
-                bg = val.split(',')
-                bg = [float(i.replace(' ', '')) for i in bg]
-
-                if len(bg) != len(channels):
-                    self._set_tab_red('Regularization', True)
-                    self.ui.le_recon_wavelength.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                    self.ui.le_fluor_bg.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                    raise ValueError('Length of background values must match wavelengths')
-                else:
-                    self._set_tab_red('Regularization', False)
-                    self.ui.le_recon_wavelength.setStyleSheet("")
-                    self.ui.le_fluor_bg.setStyleSheet("")
-                    setattr(self.config_reader, 'fluorescence_background', bg)
-
-            if len(wavelengths) != len(channels):
-                self._set_tab_red('Processing', True)
-                self.ui.le_recon_wavelength.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                self.ui.le_bf_chan.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                raise ValueError('Wavelengths and output channels must be the same length')
-            elif len(wavelengths) != len(self.config_reader.output_channels):
-                self.ui.le_recon_wavelength.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                self.ui.le_output_channels.setStyleSheet("border: 1px solid rgb(200,0,0);")
-
-            else:
-                self._set_tab_red('Processing', False)
-                self.ui.le_bf_chan.setStyleSheet("")
-                self.ui.le_recon_wavelength.setStyleSheet("")
-                self.ui.le_output_channels.setStyleSheet("")
-
-            if self.mode == '2D':
-                focus_zidx = self.ui.le_focus_zidx.text()
-                indices = focus_zidx.split(',')
-                indices = [int(i.replace(' ', '')) for i in indices]
-                setattr(self.config_reader, 'focus_zidx', indices)
-
-                if len(indices) != len(channels):
-                    self._set_tab_red('Processing', True)
-                    self.ui.le_focus_zidx.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                    raise ValueError('Wavelengths, Focused z-indices, and channels must be the same length')
-                else:
-                    self._set_tab_red('Processing', False)
-                    self.ui.le_focus_zidx.setStyleSheet("")
-
-        elif self.method == 'PhaseFromBF':
+        if self.method == 'PhaseFromBF':
             setattr(self.config_reader, 'wavelength', int(self.ui.le_recon_wavelength.text()))
             setattr(self.config_reader, 'brightfield_channel_index',
                       int(self.ui.le_bf_chan.text()))
@@ -1242,96 +1134,6 @@ class MainWidget(QWidget):
                 if self.ui.le_n_media.text() != '' else None)
         setattr(self.config_reader, 'magnification', float(self.ui.le_mag.text()) if self.ui.le_mag.text() != ''
                 else None)
-
-        #TODO: Figure out how to parse pre/post processing parameters
-
-        # # Parse Postprocessing automatically
-        # for key, val in POSTPROCESSING.items():
-        #     for key_child, val_child in val.items():
-        #         if key == 'deconvolution':
-        #             if key_child == 'use':
-        #                 cb = getattr(self.ui, f'chb_postproc_fluor_{key_child}')
-        #                 val = True if cb.checkState() == 2 else False
-        #                 setattr(self.config_reader.postprocessing, f'deconvolution_{key_child}', val)
-        #             elif key_child == 'reg':
-        #                 regs = self.ui.le_fluor_strength.text()
-        #                 regs = regs.replace('[', '')
-        #                 reg_vals = regs.split(',')
-        #                 reg_vals = [float(i.replace(' ', '')) for i in reg_vals]
-        #                 setattr(self.config_reader.postprocessing, 'deconvolution_reg', reg_vals)
-        #             elif key_child == 'wavelength_nm':
-        #                 lambdas = self.ui.le_postproc_fluor_wavelength_nm.text()
-        #                 lambdas = lambdas.replace('[', '')
-        #                 vals = lambdas.split(',')
-        #                 vals = [int(i.replace(' ', '')) for i in vals]
-        #                 setattr(self.config_reader.postprocessing, 'deconvolution_wavelength_nm', vals)
-        #             elif key_child == 'background':
-        #                 text = self.ui.le_postproc_fluor_bg.text()
-        #                 text = text.replace('[', '')
-        #                 vals = text.split(',')
-        #                 vals = [float(i.replace(' ', '')) for i in vals]
-        #                 setattr(self.config_reader.postprocessing, 'deconvolution_background', vals)
-        #             elif key_child == 'channels':
-        #                 text = self.ui.le_postproc_fluor_channels.text()
-        #                 text = text.replace('[', '')
-        #                 vals = text.split(',')
-        #                 vals = [int(i.replace(' ', '')) for i in vals]
-        #                 setattr(self.config_reader.postprocessing, 'deconvolution_channels', vals)
-        #             elif key_child == 'pixel_size_um':
-        #                 text = self.ui.le_postproc_fluor_bg.text()
-        #                 text = text.replace('[', '')
-        #                 vals = text.split(',')
-        #                 vals = [int(i.replace(' ', '')) for i in vals]
-        #                 setattr(self.config_reader.postprocessing, 'deconvolution_background', vals)
-        #             elif key_child == 'use_gpu':
-        #                 if self.ui.chb_use_gpu.isChecked():
-        #                     setattr(self.config_reader.postprocessing, 'deconvolution_use_gpu', True)
-        #                 else:
-        #                     setattr(self.config_reader.postprocessing, 'deconvolution_use_gpu', False)
-        #             elif key_child == 'pixel_size_um':
-        #                 setattr(self.config_reader.postprocessing, 'deconvolution_pixel_size_um',
-        #                         float(self.ui.le_ps.text()))
-        #             elif key_child == 'NA_obj':
-        #                 setattr(self.config_reader.postprocessing, 'deconvolution_NA_obj',
-        #                         float(self.ui.le_obj_na.text()))
-        #             elif key_child == 'n_objective_media':
-        #                 setattr(self.config_reader.postprocessing, 'deconvolution_n_objective_media',
-        #                         float(self.ui.le_n_media.text()))
-        #             elif key_child == 'gpu_id':
-        #                 setattr(self.config_reader.postprocessing, 'deconvolution_gpu_id',
-        #                         int(self.ui.le_gpu_id.text()))
-        #             else:
-        #                 pass
-        #
-        #         elif key == 'registration':
-        #             if key_child == 'use':
-        #                 cb = getattr(self.ui, 'chb_postproc_reg_use')
-        #                 val = cb.isChecked()
-        #                 setattr(self.config_reader.postprocessing, f'{key}_{key_child}', val)
-        #             elif key_child == 'channel_idx':
-        #                 le = getattr(self.ui, f'le_postproc_reg_{key_child}')
-        #                 text = le.text()
-        #                 text = text.replace('[', '')
-        #                 vals = text.split(',')
-        #                 vals = [int(i.replace(' ', '')) for i in vals]
-        #                 setattr(self.config_reader.postprocessing, f'{key}_{key_child}', vals)
-        #             elif key_child == 'shift':
-        #                 le = getattr(self.ui, f'le_postproc_reg_{key_child}')
-        #                 text = le.text()
-        #                 text = text.replace('[', '')
-        #                 vals = eval(text)
-        #                 vals = [i for i in vals]
-        #                 setattr(self.config_reader.postprocessing, f'{key}_{key_child}', vals)
-        #
-        #         #TODO: Parse correctly from line edit
-        #         elif key == 'denoise':
-        #             if key_child == 'use':
-        #                 cb = getattr(self.ui, 'chb_postproc_denoise_use')
-        #                 val = True if cb.checkState() == 2 else False
-        #                 setattr(self.config_reader.postprocessing, f'{key}_{key_child}', val)
-        #             else:
-        #                 le = getattr(self.ui, f'le_postproc_denoise_{key_child}')
-        #                 setattr(self.config_reader.postprocessing, f'{key}_{key_child}', le.text())
 
     def _populate_from_config(self):
         """
@@ -1359,8 +1161,6 @@ class MainWidget(QWidget):
             self.ui.cb_method.setCurrentIndex(0)
         elif self.method == 'PhaseFromBF':
             self.ui.cb_method.setCurrentIndex(1)
-        elif self.method == 'FluorDeconv':
-            self.ui.cb_method.setCurrentIndex(2)
         else:
             print(f'Did not understand method from config: {self.method}')
             self.ui.cb_method.setStyleSheet("border: 1px solid rgb(200,0,0);")
@@ -1422,17 +1222,10 @@ class MainWidget(QWidget):
         self.ui.le_n_media.setText(str(self.config_reader.n_objective_media))
         self.ui.le_mag.setText(str(self.config_reader.magnification))
 
-        # Parse for FluorDeconv and PhaseFromBF
+        # Parse PhaseFromBF
         if self.method == 'PhaseFromBF':
             self.ui.le_bf_chan.setText(str(self.config_reader.brightfield_channel_index))
-        if self.method == 'FluorDeconv':
-            channels = self.config_reader.fluorescence_channel_indices
-            text = ''
-            for idx, chan in enumerate(channels):
-                text += f'{chan}, ' if idx != len(channels) - 1 else f'{chan}'
-
-            self.ui.le_bf_chan.setText(text)
-
+        
         # Parse processing automatically
         denoiser = None
         for key, val in PROCESSING.items():
@@ -1504,11 +1297,7 @@ class MainWidget(QWidget):
                     if key_child == 'use':
                         attr = getattr(self.config_reader.postprocessing, 'registration_use')
                         self.ui.chb_preproc_denoise_use.setCheckState(attr)
-                    if hasattr(self.ui, f'le_postproc_fluor_{key_child}'):
-                        le = getattr(self.ui, f'le_postproc_fluor_{key_child}')
-                        attr = str(getattr(self.config_reader.postprocessing, f'{key}_{key_child}'))
-                        le.setText(attr)
-
+                    
                 elif key == 'registration':
                     if key_child == 'use':
                         attr = getattr(self.config_reader.postprocessing, 'registration_use')
@@ -1768,26 +1557,9 @@ class MainWidget(QWidget):
             self.ui.cb_value.addItem('Retardance')
 
     @Slot(object)
-    def handle_fluor_image_update(self, value):
-
-        mode = '2D' if self.ui.cb_fluor_dim.currentIndex() == 0 else '3D'
-        name = f'FluorDeconvolved{mode}'
-
-        # Add new layer if none exists, otherwise update layer data
-        if name in self.viewer.layers:
-            self.viewer.layers[name].data = value
-        else:
-            self.viewer.add_image(value, name=name, colormap='gray')
-
-    @Slot(object)
     def handle_qlipp_reconstructor_update(self, value):
         # Saves phase reconstructor to be re-used if possible
         self.phase_reconstructor = value
-
-    @Slot(object)
-    def handle_fluor_reconstructor_update(self, value):
-        # Saves fluorescence deconvolution reconstructor to be re-used if possible
-        self.fluor_reconstructor = value
 
     @Slot(dict)
     def handle_meta_update(self, meta):
