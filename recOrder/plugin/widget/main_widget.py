@@ -9,10 +9,9 @@ from recOrder.plugin.workers.calibration_workers import CalibrationWorker, Backg
 from recOrder.plugin.workers.acquisition_workers import PolarizationAcquisitionWorker, ListeningWorker, BFAcquisitionWorker
 from recOrder.plugin.workers.reconstruction_workers import ReconstructionWorker
 from recOrder.plugin.qtdesigner import recOrder_ui
-from recOrder.postproc.post_processing import ret_ori_overlay, generic_hsv_overlay
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
-from recOrder.io.utils import load_bg
+from recOrder.io.utils import load_bg, ret_ori_overlay, generic_hsv_overlay
 from recOrder.io.config_reader import ConfigReader, PROCESSING, PREPROCESSING, POSTPROCESSING
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath

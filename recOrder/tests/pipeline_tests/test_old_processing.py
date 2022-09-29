@@ -1,7 +1,5 @@
 from recOrder.io.config_reader import ConfigReader
 from recOrder.pipelines.pipeline_manager import PipelineManager
-from recOrder.postproc.post_processing import post_proc_denoise
-from recOrder.compute.fluorescence_compute import calculate_background, deconvolve_fluorescence_3D
 from recOrder.preproc.pre_processing import preproc_denoise
 from recOrder.compute.qlipp_compute import reconstruct_qlipp_stokes, reconstruct_qlipp_birefringence
 from os.path import dirname, abspath
@@ -9,13 +7,13 @@ import numpy as np
 import os
 import zarr
 
-def test_pre_processing(get_ometiff_data_dir, setup_data_save_folder):
+def test_old_processing(get_ometiff_data_dir, setup_data_save_folder):
 
     folder, ometiff_data = get_ometiff_data_dir
     save_folder = setup_data_save_folder
 
     path_to_config = os.path.join(dirname(dirname(abspath(__file__))),
-                                  'test_configs/config_preprocessing_pytest.yml')
+                                  'test_configs/config_old_processing_pytest.yml')
 
     config = ConfigReader(path_to_config, data_dir=ometiff_data, save_dir=save_folder)
 
