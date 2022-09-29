@@ -1250,7 +1250,7 @@
                  </font>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>1</number>
                 </property>
                 <widget class="QWidget" name="General">
                  <attribute name="title">
@@ -1892,9 +1892,9 @@
                       </widget>
                      </item>
                      <item row="6" column="0">
-                      <widget class="QLabel" name="label_fluor_chan">
+                      <widget class="QLabel" name="label_bf_chan">
                        <property name="text">
-                        <string>Fluor Channel Index</string>
+                        <string>Brightfield Channel Index</string>
                        </property>
                       </widget>
                      </item>
@@ -1913,7 +1913,7 @@
                       </widget>
                      </item>
                      <item row="6" column="1">
-                      <widget class="QLineEdit" name="le_fluor_chan">
+                      <widget class="QLineEdit" name="le_bf_chan">
                        <property name="placeholderText">
                         <string>list: 0, 1, 2 or single value: 0</string>
                        </property>
@@ -3056,7 +3056,7 @@
   <tabstop>le_positions</tabstop>
   <tabstop>le_timepoints</tabstop>
   <tabstop>le_focus_zidx</tabstop>
-  <tabstop>le_fluor_chan</tabstop>
+  <tabstop>le_bf_chan</tabstop>
   <tabstop>le_output_channels</tabstop>
   <tabstop>cb_phase_denoiser</tabstop>
   <tabstop>le_phase_strength</tabstop>

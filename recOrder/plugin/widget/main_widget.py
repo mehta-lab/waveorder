@@ -294,8 +294,8 @@ class MainWidget(QWidget):
         self.ui.label_phase_rho.setHidden(True)
         self.ui.le_itr.setHidden(True)
         self.ui.label_itr.setHidden(True)
-        self.ui.le_fluor_chan.setHidden(True)
-        self.ui.label_fluor_chan.setHidden(True)
+        self.ui.le_bf_chan.setHidden(True)
+        self.ui.label_bf_chan.setHidden(True)
         self.ui.label_focus_zidx.setHidden(True)
         self.ui.le_focus_zidx.setHidden(True)
 
@@ -913,7 +913,7 @@ class MainWidget(QWidget):
 
         elif self.method == 'PhaseFromBF':
             cont = self._check_line_edit('fluor_chan')
-            tab = getattr(self.ui, f'le_fluor_chan').parent().parent().objectName()
+            tab = getattr(self.ui, f'le_bf_chan').parent().parent().objectName()
             if not cont:
                 self._set_tab_red(tab, True)
                 success = False
@@ -940,7 +940,7 @@ class MainWidget(QWidget):
 
         elif self.method == 'FluorDeconv':
             cont = self._check_line_edit('fluor_chan')
-            tab = getattr(self.ui, f'le_fluor_chan').parent().parent().objectName()
+            tab = getattr(self.ui, f'le_bf_chan').parent().parent().objectName()
             if not cont:
                 self._set_tab_red(tab, True)
                 success = False
@@ -1150,7 +1150,7 @@ class MainWidget(QWidget):
             wavelengths = [int(i.replace(' ', '')) for i in wavelengths]
             setattr(self.config_reader, 'wavelength', wavelengths)
 
-            fluor_chan = self.ui.le_fluor_chan.text()
+            fluor_chan = self.ui.le_bf_chan.text()
             channels = fluor_chan.split(',')
             channels = [int(i.replace(' ', '')) for i in channels]
             setattr(self.config_reader, 'fluorescence_channel_indices', channels)
@@ -1194,7 +1194,7 @@ class MainWidget(QWidget):
             if len(wavelengths) != len(channels):
                 self._set_tab_red('Processing', True)
                 self.ui.le_recon_wavelength.setStyleSheet("border: 1px solid rgb(200,0,0);")
-                self.ui.le_fluor_chan.setStyleSheet("border: 1px solid rgb(200,0,0);")
+                self.ui.le_bf_chan.setStyleSheet("border: 1px solid rgb(200,0,0);")
                 raise ValueError('Wavelengths and output channels must be the same length')
             elif len(wavelengths) != len(self.config_reader.output_channels):
                 self.ui.le_recon_wavelength.setStyleSheet("border: 1px solid rgb(200,0,0);")
@@ -1202,7 +1202,7 @@ class MainWidget(QWidget):
 
             else:
                 self._set_tab_red('Processing', False)
-                self.ui.le_fluor_chan.setStyleSheet("")
+                self.ui.le_bf_chan.setStyleSheet("")
                 self.ui.le_recon_wavelength.setStyleSheet("")
                 self.ui.le_output_channels.setStyleSheet("")
 
@@ -1223,7 +1223,7 @@ class MainWidget(QWidget):
         elif self.method == 'PhaseFromBF':
             setattr(self.config_reader, 'wavelength', int(self.ui.le_recon_wavelength.text()))
             setattr(self.config_reader, 'brightfield_channel_index',
-                      int(self.ui.le_fluor_chan.text()))
+                      int(self.ui.le_bf_chan.text()))
 
             focus_zidx = self.ui.le_focus_zidx.text()
             setattr(self.config_reader, 'focus_zidx', int(focus_zidx) if focus_zidx != '' else None)
@@ -1424,14 +1424,14 @@ class MainWidget(QWidget):
 
         # Parse for FluorDeconv and PhaseFromBF
         if self.method == 'PhaseFromBF':
-            self.ui.le_fluor_chan.setText(str(self.config_reader.brightfield_channel_index))
+            self.ui.le_bf_chan.setText(str(self.config_reader.brightfield_channel_index))
         if self.method == 'FluorDeconv':
             channels = self.config_reader.fluorescence_channel_indices
             text = ''
             for idx, chan in enumerate(channels):
                 text += f'{chan}, ' if idx != len(channels) - 1 else f'{chan}'
 
-            self.ui.le_fluor_chan.setText(text)
+            self.ui.le_bf_chan.setText(text)
 
         # Parse processing automatically
         denoiser = None
@@ -2213,16 +2213,16 @@ class MainWidget(QWidget):
 
         if idx == 0:
             self.method = 'QLIPP'
-            self.ui.label_fluor_chan.hide()
-            self.ui.le_fluor_chan.hide()
+            self.ui.label_bf_chan.hide()
+            self.ui.le_bf_chan.hide()
             self.ui.label_chan_desc.setText('Retardance, Orientation, BF, Phase3D, S0, S1, S2, S3')
 
         elif idx == 1:
             self.method = 'PhaseFromBF'
-            self.ui.label_fluor_chan.show()
-            self.ui.le_fluor_chan.show()
-            self.ui.label_fluor_chan.setText('Brightfield Channel Index')
-            self.ui.le_fluor_chan.setPlaceholderText('int')
+            self.ui.label_bf_chan.show()
+            self.ui.le_bf_chan.show()
+            self.ui.label_bf_chan.setText('Brightfield Channel Index')
+            self.ui.le_bf_chan.setPlaceholderText('int')
             self.ui.label_chan_desc.setText('Phase3D, Phase2D')
 
     @Slot(int)
