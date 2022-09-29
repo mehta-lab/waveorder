@@ -325,7 +325,7 @@ class ZarrConverter:
             clip = 0.01
             low = np.percentile(img, clip*100)
             high = np.percentile(img, (1-clip)*100)
-            clims.append(low, high)
+            clims.append((low, high))
 
         return clims
 
