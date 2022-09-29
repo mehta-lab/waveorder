@@ -313,6 +313,12 @@ class MainWidget(QWidget):
         # Hide "Use Cropped ROI "
         self.ui.chb_use_roi.setHidden(True)
 
+        # Hide unused "Reconstruction Settings" tabs
+        self.ui.tabWidget_3.removeTab(5)
+        self.ui.tabWidget_3.removeTab(4)
+        self.ui.tabWidget_3.removeTab(3)
+        self.ui.tabWidget_3.removeTab(2) 
+
         # Set initial UI Properties
         self.ui.le_gui_mode.setStyleSheet("border: 1px solid rgb(200,0,0); color: rgb(200,0,0);")
         self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
@@ -521,12 +527,8 @@ class MainWidget(QWidget):
         self.ui.qbutton_stop_reconstruct.setHidden(val)
 
         # Processing Settings
-        self.ui.tabWidget_3.setTabEnabled(1, not val)
-        if val:
-            self.ui.tabWidget_3.setStyleSheet("QTabBar::tab::disabled {width: 0; height: 0; margin: 0; padding: 0; border: none;} ")
-        else:
-            self.ui.tabWidget_3.setStyleSheet("")
-
+        self.ui.groupBox_2.setHidden(val)
+        
         # Pre/Post Processing
         self.ui.tabWidget_3.setTabEnabled(4, not val)
         if val:
