@@ -9,9 +9,6 @@ from napari.utils.notifications import show_warning
 from recOrder.io.utils import MockEmitter, ram_message
 from recOrder.pipelines.qlipp_pipeline import QLIPP
 from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
-from recOrder.pipelines.fluor_deconv_pipeline import FluorescenceDeconvolution
-from recOrder.compute.fluorescence_compute import initialize_fluorescence_reconstructor, \
-    deconvolve_fluorescence_3D, calculate_background
 from recOrder.postproc.post_processing import *
 from recOrder.preproc.pre_processing import *
 

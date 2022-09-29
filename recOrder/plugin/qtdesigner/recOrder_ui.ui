@@ -799,8 +799,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>102</width>
-                    <height>298</height>
+                    <width>550</width>
+                    <height>302</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -860,8 +860,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>111</width>
-                    <height>258</height>
+                    <width>550</width>
+                    <height>302</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -1103,7 +1103,7 @@
             <x>0</x>
             <y>0</y>
             <width>590</width>
-            <height>1040</height>
+            <height>990</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -1140,7 +1140,7 @@
               <property name="verticalSpacing">
                <number>6</number>
               </property>
-              <item row="2" column="0">
+              <item row="2" column="1">
                <widget class="QPushButton" name="qbutton_acq_phase">
                 <property name="font">
                  <font>
@@ -1153,20 +1153,7 @@
                 </property>
                </widget>
               </item>
-              <item row="4" column="0" colspan="2">
-               <widget class="QPushButton" name="qbutton_stop_acq">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>STOP</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
+              <item row="2" column="2">
                <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
                 <property name="font">
                  <font>
@@ -1179,7 +1166,7 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="1">
+              <item row="2" column="0">
                <widget class="QPushButton" name="qbutton_acq_birefringence">
                 <property name="font">
                  <font>
@@ -1192,7 +1179,7 @@
                 </property>
                </widget>
               </item>
-              <item row="3" column="0" colspan="2">
+              <item row="3" column="0" colspan="3">
                <widget class="QPushButton" name="qbutton_listen">
                 <property name="font">
                  <font>
@@ -1205,10 +1192,16 @@
                 </property>
                </widget>
               </item>
-              <item row="0" column="0">
-               <widget class="QPushButton" name="qbutton_acq_fluor">
+              <item row="4" column="0" colspan="3">
+               <widget class="QPushButton" name="qbutton_stop_acq">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
                 <property name="text">
-                 <string>Acquire Deconvolved Fluor</string>
+                 <string>STOP</string>
                 </property>
                </widget>
               </item>
@@ -1257,7 +1250,7 @@
                  </font>
                 </property>
                 <property name="currentIndex">
-                 <number>1</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="General">
                  <attribute name="title">
@@ -2461,66 +2454,6 @@
               <property name="verticalSpacing">
                <number>6</number>
               </property>
-              <item row="5" column="0">
-               <widget class="QLabel" name="label_fluor">
-                <property name="text">
-                 <string>Fluorescence</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="1">
-               <widget class="QComboBox" name="cb_fluor_dim">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>2D</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>3D</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLineEdit" name="le_zend"/>
-              </item>
-              <item row="3" column="1">
-               <widget class="QComboBox" name="cb_birefringence">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>2D</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>3D</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item row="4" column="2">
-               <widget class="QCheckBox" name="chb_phase_from_bf">
-                <property name="text">
-                 <string>Phase From BF</string>
-                </property>
-               </widget>
-              </item>
               <item row="1" column="0">
                <widget class="QLabel" name="label_zstart">
                 <property name="font">
@@ -2531,19 +2464,6 @@
                 </property>
                 <property name="text">
                  <string>Z Start (um)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QLabel" name="label_zstep">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Z Step (um)</string>
                 </property>
                </widget>
               </item>
@@ -2560,8 +2480,18 @@
                 </property>
                </widget>
               </item>
-              <item row="2" column="2">
-               <widget class="QLineEdit" name="le_zstep"/>
+              <item row="1" column="2">
+               <widget class="QLabel" name="label_zstep">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Z Step (um)</string>
+                </property>
+               </widget>
               </item>
               <item row="3" column="0">
                <widget class="QLabel" name="label_birefringence">
@@ -2578,19 +2508,6 @@
               </item>
               <item row="2" column="0">
                <widget class="QLineEdit" name="le_zstart"/>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_phase">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Phase</string>
-                </property>
-               </widget>
               </item>
               <item row="4" column="1">
                <widget class="QComboBox" name="cb_phase">
@@ -2615,19 +2532,68 @@
                 </item>
                </widget>
               </item>
-              <item row="6" column="0">
-               <widget class="QLabel" name="labe_acq_channel">
+              <item row="2" column="2">
+               <widget class="QLineEdit" name="le_zstep"/>
+              </item>
+              <item row="4" column="2">
+               <widget class="QCheckBox" name="chb_phase_from_bf">
                 <property name="text">
-                 <string>Acq Channel (BF/Fluor Only)</string>
+                 <string>Phase From BF</string>
                 </property>
                </widget>
               </item>
-              <item row="6" column="1">
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_phase">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Phase</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
                <widget class="QComboBox" name="cb_acq_channel">
                 <property name="currentText">
                  <string/>
                 </property>
                </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QComboBox" name="cb_birefringence">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>2D</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>3D</string>
+                 </property>
+                </item>
+               </widget>
+              </item>
+              <item row="5" column="0">
+               <widget class="QLabel" name="labe_acq_channel">
+                <property name="text">
+                 <string>Acq Channel (BF Only)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="le_zend"/>
               </item>
              </layout>
             </widget>
@@ -3056,8 +3022,6 @@
   <tabstop>tb_calib_assessment</tabstop>
   <tabstop>le_bg_folder</tabstop>
   <tabstop>scrollArea_4</tabstop>
-  <tabstop>qbutton_acq_fluor</tabstop>
-  <tabstop>qbutton_acq_birefringence</tabstop>
   <tabstop>qbutton_acq_phase</tabstop>
   <tabstop>qbutton_acq_birefringence_phase</tabstop>
   <tabstop>qbutton_listen</tabstop>
@@ -3069,7 +3033,6 @@
   <tabstop>cb_birefringence</tabstop>
   <tabstop>cb_phase</tabstop>
   <tabstop>chb_phase_from_bf</tabstop>
-  <tabstop>cb_fluor_dim</tabstop>
   <tabstop>cb_acq_channel</tabstop>
   <tabstop>chb_pause_updates</tabstop>
   <tabstop>tabWidget_3</tabstop>

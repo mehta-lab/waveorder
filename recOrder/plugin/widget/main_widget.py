@@ -6,8 +6,7 @@ from qtpy.QtGui import QPixmap, QColor
 from superqt import QDoubleRangeSlider, QRangeSlider
 from recOrder.calib import Calibration
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker, BackgroundCaptureWorker, load_calibration
-from recOrder.plugin.workers.acquisition_workers import PolarizationAcquisitionWorker, ListeningWorker, \
-    FluorescenceAcquisitionWorker, BFAcquisitionWorker
+from recOrder.plugin.workers.acquisition_workers import PolarizationAcquisitionWorker, ListeningWorker, BFAcquisitionWorker
 from recOrder.plugin.workers.reconstruction_workers import ReconstructionWorker
 from recOrder.plugin.qtdesigner import recOrder_ui
 from recOrder.postproc.post_processing import ret_ori_overlay, generic_hsv_overlay
@@ -171,7 +170,6 @@ class MainWidget(QWidget):
         self.ui.qbutton_acq_birefringence.clicked[bool].connect(self.acq_birefringence)
         self.ui.qbutton_acq_phase.clicked[bool].connect(self.acq_phase)
         self.ui.qbutton_acq_birefringence_phase.clicked[bool].connect(self.acq_birefringence_phase)
-        self.ui.qbutton_acq_fluor.clicked[bool].connect(self.acquire_fluor_deconvolved)
         self.ui.cb_colormap.currentIndexChanged[int].connect(self.enter_colormap)
         self.ui.chb_display_volume.stateChanged[int].connect(self.enter_use_full_volume)
         self.ui.le_overlay_slice.editingFinished.connect(self.enter_display_slice)
@@ -748,7 +746,7 @@ class MainWidget(QWidget):
 
         Parameters
         ----------
-        mode:           (str) 'birefringence', 'phase', or 'fluor' which denotes the type of acquisition
+        mode:           (str) 'birefringence' or 'phase' which denotes the type of acquisition
 
         Returns
         -------
@@ -768,18 +766,13 @@ class MainWidget(QWidget):
         phase_required = {'wavelength', 'mag', 'cond_na', 'obj_na', 'n_media',
                           'phase_strength', 'ps', 'zstep'}
 
-        fluor_required = {'recon_wavelength', 'mag', 'obj_na', 'n_media', 'fluor_strength', 'ps'}
-
         # Initalize all fields in their default style (not red).
         for field in phase_required:
             le = getattr(self.ui, f'le_{field}')
             le.setStyleSheet("")
-        for field in fluor_required:
-            le = getattr(self.ui, f'le_{field}')
-            le.setStyleSheet("")
-
+        
         # Check generally required fields
-        if mode == 'birefringence' or mode == 'phase' or mode == 'fluor':
+        if mode == 'birefringence' or mode == 'phase':
             success = self._check_line_edit('save_dir')
             if not success:
                 raise_error = True
@@ -811,23 +804,6 @@ class MainWidget(QWidget):
                         self._set_tab_red(tab, True)
                 else:
                     continue
-
-        # Check fluorescence deconvolution specific parameters
-        if mode == 'fluor':
-            for field in fluor_required:
-                cont = self._check_line_edit(field)
-                tab = getattr(self.ui, f'le_{field}').parent().parent().objectName()
-                if not cont:
-                    raise_error = True
-                    self._set_tab_red(tab, True)
-                else:
-                    continue
-            if self.ui.chb_autocalc_bg.checkState() != 2:
-                cont = self._check_line_edit('fluor_bg')
-                tab = getattr(self.ui, f'le_fluor_bg').parent().parent().objectName()
-                if not cont:
-                    raise_error = True
-                    self._set_tab_red(tab, True)
 
         # Alert the user to check and enter in the missing parameters
         if raise_error:
@@ -2619,29 +2595,6 @@ class MainWidget(QWidget):
         self.worker.phase_reconstructor_emitter.connect(self.handle_qlipp_reconstructor_update)
         self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
         self.worker.meta_emitter.connect(self.handle_meta_update)
-        self.worker.started.connect(self._disable_buttons)
-        self.worker.finished.connect(self._enable_buttons)
-        self.worker.errored.connect(self._handle_acq_error)
-        self.ui.qbutton_stop_acq.clicked.connect(self.worker.quit)
-
-        # Start Thread
-        self.worker.start()
-
-    @Slot(bool)
-    def acquire_fluor_deconvolved(self):
-        """
-        Wrapper function to acquire a fluorescence stack, deconvolve, and plot in napari
-        """
-
-        self._check_requirements_for_acq('fluor')
-
-        # Init worker
-        self.worker = FluorescenceAcquisitionWorker(self)
-
-        # connect handlers
-        self.worker.fluor_image_emitter.connect(self.handle_fluor_image_update)
-        self.worker.meta_emitter.connect(self.handle_meta_update)
-        self.worker.fluor_reconstructor_emitter.connect(self.handle_fluor_reconstructor_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_acq_error)
