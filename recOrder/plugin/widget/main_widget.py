@@ -1730,6 +1730,11 @@ class MainWidget(QWidget):
         pol_states, lc_values = value
         annot_offset = 0.004 # offset annotation text from data points
 
+        # Calculate circle 
+        theta = np.linspace(0, 2*np.pi, 100)
+        x_circ = self.swing*np.cos(theta) + lc_values["LCA"][0]
+        y_circ = self.swing*np.sin(theta) + lc_values["LCB"][0]
+
         import matplotlib.pyplot as plt
         with plt.rc_context({
             "axes.spines.right": False,
@@ -1737,6 +1742,7 @@ class MainWidget(QWidget):
         }) and plt.ion():
             plt.figure("Calibrated LC States")
             plt.scatter(lc_values["LCA"], lc_values["LCB"], c='r')
+            plt.plot(x_circ, y_circ, 'k--', alpha=0.25)
             plt.axis("equal")
             plt.xlabel("LCA retardance")
             plt.ylabel("LCB retardance")
