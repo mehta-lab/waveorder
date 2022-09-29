@@ -26,17 +26,16 @@ def test_old_processing(get_ometiff_data_dir, setup_data_save_folder):
 
     stokes = reconstruct_qlipp_stokes(data[t], recon, manager.pipeline.bg_stokes)
     params = [['S0', 0.5, 1], ['S1', 0.5, 1], ['S2', 0.5, 1], ['S3', 0.5, 1]]
-    stokes_denoise = preproc_denoise(stokes, params)
-
+    
     store = zarr.open(os.path.join(save_folder, '2T_3P_16Z_128Y_256X_Kazansky_1.zarr'), 'r')
     array = store['Row_0']['Col_0']['Pos_001']['arr_0']
 
     # Check Stokes
-    assert (np.sum(np.abs(stokes_denoise[0, z, :, :] - array[0, 0, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[0, z, :, :])) ** 2 < 0.1)
-    assert (np.sum(np.abs(stokes_denoise[1, z, :, :] - array[0, 1, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[1, z, :, :])) ** 2 < 0.1)
-    assert (np.sum(np.abs(stokes_denoise[2, z, :, :] - array[0, 2, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[2, z, :, :])) ** 2 < 0.1)
-    assert (np.sum(np.abs(stokes_denoise[3, z, :, :] - array[0, 3, z]) ** 2) / np.sum(
-        np.abs(stokes_denoise[3, z, :, :])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes[0, z, :, :] - array[0, 0, z]) ** 2) / np.sum(
+        np.abs(stokes[0, z, :, :])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes[1, z, :, :] - array[0, 1, z]) ** 2) / np.sum(
+        np.abs(stokes[1, z, :, :])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes[2, z, :, :] - array[0, 2, z]) ** 2) / np.sum(
+        np.abs(stokes[2, z, :, :])) ** 2 < 0.1)
+    assert (np.sum(np.abs(stokes[3, z, :, :] - array[0, 3, z]) ** 2) / np.sum(
+        np.abs(stokes[3, z, :, :])) ** 2 < 0.1)

@@ -1,4 +1,4 @@
-from recOrder.io.config_reader import ConfigReader, DATASET, PREPROCESSING, POSTPROCESSING, PROCESSING
+from recOrder.io.config_reader import ConfigReader, DATASET, PROCESSING
 import os
 from os.path import dirname, abspath
 import yaml
@@ -27,20 +27,11 @@ def test_config_reader(get_zarr_data_dir):
     assert([raw['dataset']['timepoints']] == config.timepoints)
     assert(config.background_ROI == None)
 
-    for key, value in PREPROCESSING.items():
-        for sub_key, sub_value in PREPROCESSING[key].items():
-            assert(raw['pre_processing'][key][sub_key] == getattr(config.preprocessing, f'{key}_{sub_key}'))
-
     for key, value in PROCESSING.items():
         if key not in avoid:
             assert(raw['processing'][key] == getattr(config, key))
 
     assert(config.qlipp_birefringence_only == False)
-
-    for key, value in POSTPROCESSING.items():
-        for sub_key, sub_value in POSTPROCESSING[key].items():
-            assert(raw['post_processing'][key][sub_key] == getattr(config.postprocessing, f'{key}_{sub_key}'))
-
 
 
 
