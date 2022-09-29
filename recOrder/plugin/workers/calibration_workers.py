@@ -99,7 +99,6 @@ class CalibrationWorkerBase(WorkerBase):
             return float(param_text) if param_text != '' else None
 
         return {
-            'pad_z': _param_value("pad_z"),
             'n_objective_media': _param_value("n_media"),
             'objective_NA': _param_value("obj_na"),
             'condenser_NA': _param_value("cond_na"),
