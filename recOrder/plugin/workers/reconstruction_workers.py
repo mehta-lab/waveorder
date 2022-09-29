@@ -66,13 +66,6 @@ class ReconstructionWorker(WorkerBase):
 
             self._check_abort()
 
-            birefringence, deconvolve2D, deconvolve3D = self.manager.post_processing(pt_data,
-                                                                                     deconvolve2D,
-                                                                                     deconvolve3D,
-                                                                                     birefringence)
-
-            self._check_abort()
-
             self.manager.pipeline.write_data(self.manager.indices_map[pt[0]], pt[1], pt_data, stokes,
                                      birefringence, deconvolve2D, deconvolve3D)
 

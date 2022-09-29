@@ -14,7 +14,7 @@ from recOrder.pipelines.phase_from_bf_pipeline import PhaseFromBF
 class PipelineManager:
     """
     This will pull the necessary pipeline based off the config and run through the pipeline.
-    This also handles all pre/post processing.  Managed pipelines must conform to pipeline ABC.
+    Managed pipelines must conform to pipeline ABC.
 
     """
 
@@ -127,32 +127,6 @@ class PipelineManager:
         meta_new['well'] = well_meta_new
 
         return meta_new
-
-    def _get_preprocessing_params(self):
-        """
-        method to get pre-processing functions and parameters.
-        Only supports denoising at the moment
-
-        Returns
-        -------
-        denoise_params:     (list) [[channels, thresholds, levels]]
-
-        """
-        # CAN ADD OTHER PREPROC FUNCTIONS IN FUTURE
-        denoise_params = []
-        if self.config.preprocessing.denoise_use:
-            for i in range(len(self.config.preprocessing.denoise_channels)):
-                threshold = 0.1 if self.config.preprocessing.denoise_threshold is None \
-                    else self.config.preprocessing.denoise_threshold[i]
-                level = 1 if self.config.preprocessing.denoise_level is None \
-                    else self.config.preprocessing.denoise_level[i]
-
-                denoise_params.append([self.config.preprocessing.denoise_channels[i], threshold, level])
-
-            return denoise_params
-
-        else:
-            return None
 
     def _gen_coord_set(self):
         """

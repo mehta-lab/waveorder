@@ -12,7 +12,7 @@ from recOrder.pipelines.base import PipelineInterface
 class QLIPP(PipelineInterface):
 
     """
-    This class contains methods to reconstruct an entire dataset alongside pre/post-processing
+    This class contains methods to reconstruct an entire QLIPP dataset
     """
 
     def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderWriter, mode: str, num_t: int, emitter=MockEmitter()):
