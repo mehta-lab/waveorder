@@ -310,12 +310,6 @@ class MainWidget(QWidget):
         # Hide "Use Cropped ROI"
         self.ui.chb_use_roi.setHidden(True)
 
-        # Hide unused "Reconstruction Settings" tabs
-        self.ui.tabWidget_3.removeTab(5)
-        self.ui.tabWidget_3.removeTab(4)
-        self.ui.tabWidget_3.removeTab(3)
-        self.ui.tabWidget_3.removeTab(2) 
-
         # Set initial UI Properties
         self.ui.le_gui_mode.setStyleSheet("border: 1px solid rgb(200,0,0); color: rgb(200,0,0);")
         self.ui.te_log.setStyleSheet('background-color: rgb(32,34,40);')
@@ -699,11 +693,7 @@ class MainWidget(QWidget):
 
         # this map corresponds to the tab index in the TabWidget GUI element
         name_map = {'General': 0,
-                    'Processing': 1,
-                    'Physical': 2,
-                    'Regularization': 3,
-                    'preprocessing': 4,
-                    'postprocessing': 5}
+                    'Processing': 1}
 
         index = name_map[name]
 
@@ -819,11 +809,7 @@ class MainWidget(QWidget):
 
         # Initalize all tab elements and reconstruct button to default state (not red)
         self._set_tab_red('General', False)
-        self._set_tab_red('Physical', False)
         self._set_tab_red('Processing', False)
-        self._set_tab_red('Regularization', False)
-        self._set_tab_red('preprocessing', False)
-        self._set_tab_red('postprocessing', False)
         self.ui.qbutton_reconstruct.setStyleSheet("")
 
         # initalize the success variable of the requirement check
@@ -1289,32 +1275,6 @@ class MainWidget(QWidget):
                     self.ui.le_phase_strength.setText(str(strength))
                     self.ui.le_rho.setText(str(getattr(self.config_reader, f'rho_{self.mode}')))
                     self.ui.le_itr.setText(str(getattr(self.config_reader, f'itr_{self.mode}')))
-
-        # Parse Postprocessing automatically
-        for key, val in POSTPROCESSING.items():
-            for key_child, val_child in val.items():
-                if key == 'deconvolution':
-                    if key_child == 'use':
-                        attr = getattr(self.config_reader.postprocessing, 'registration_use')
-                        self.ui.chb_preproc_denoise_use.setCheckState(attr)
-                    
-                elif key == 'registration':
-                    if key_child == 'use':
-                        attr = getattr(self.config_reader.postprocessing, 'registration_use')
-                        self.ui.chb_postproc_reg_use.setCheckState(attr)
-                    else:
-                        le = getattr(self.ui, f'le_postproc_reg_{key_child}')
-                        attr = str(getattr(self.config_reader.postprocessing, f'registration_{key_child}'))
-                        le.setText(attr)
-
-                elif key == 'denoise':
-                    if key_child == 'use':
-                        attr = getattr(self.config_reader.postprocessing, 'denoise_use')
-                        self.ui.chb_postproc_denoise_use.setCheckState(attr)
-                    else:
-                        le = getattr(self.ui, f'le_postproc_denoise_{key_child}')
-                        attr = str(getattr(self.config_reader.postprocessing, f'denoise_{key_child}'))
-                        le.setText(attr)
 
     @Slot(bool)
     def change_gui_mode(self):
