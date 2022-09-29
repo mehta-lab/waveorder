@@ -25,14 +25,6 @@ dataset:
 
   calibration_metadata: './pytest_temp/test_data/2022_08_04_recOrder_pytest_20x_04NA_zarr/calibration_metadata.txt'
 
-pre_processing:
-  denoise:
-    use: False
-    channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [0.1, 0.1, 0.1, 0.1]
-    level: [1, 1, 1, 1]
-
-
 processing:
   output_channels: ['Retardance', 'Orientation','Brightfield', 'Phase3D']
 
@@ -118,28 +110,3 @@ processing:
   TV_reg_ph_3D: 5.0e-5
   # (float) TV regularization parameter for 3D phase
   ##   5.0e-5 is generally good
-
-post_processing:
-  denoise:
-    use: False
-    channels: ['Retardance', 'Phase3D'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [0.1, 0.1]
-    level: [1, 1]
-
-  deconvolution:
-    use: False # set to true if you want to deconvolve raw fluorescence channels
-    channels: [1, 2] # specify the index of fluorescent channels you wish to deconvolve in numerical order
-    wavelength_nm: [488, 562] # specify the wavelengths of the fluorescence channel emissions (in same order as channels)
-    regularization: [1e-4, 1e-4] # regularization parameters to use for each channel
-    pixel_size_um: 6.5 # specify pixel size of the camera in um
-    NA_obj: 0.4 # specify the numerical aperture of the objective
-    magnification: 20
-    n_objective_media: 1.0 # specify the refractive index of objective immersion media (1.0 for air)
-    pad_z: 0 # specify padding to eliminate potential boundary artifacts
-    use_gpu: False
-    gpu_id: 0
-
-  registration:
-    use: False
-    channel_idx: [3] # if multiple channels, must match order of the fluorescence channels
-    shift: [[0, 50, 50]] # up and to the right [0, +y, -x]

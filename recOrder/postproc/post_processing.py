@@ -1,6 +1,4 @@
-from scipy.ndimage import affine_transform
 import numpy as np
-from waveorder.util import wavelet_softThreshold
 from colorspacious import cspace_convert
 from matplotlib.colors import hsv_to_rgb
 
@@ -114,54 +112,3 @@ def ret_ori_overlay(retardance, orientation, scale, mode='2D', cmap='JCh'):
             raise ValueError(f'Colormap {cmap} not understood')
 
     return overlay_final[0] if mode == '2D' else overlay_final
-
-def post_proc_denoise(data_volume, params):
-    """
-    performs denoising on a data value with given parameters
-
-    Parameters
-    ----------
-    data_volume:        (nd-array) data volume of (Z, Y, X) or (1, Y, X) to be denoised
-    params:             (tuple) list of tuples corresponding to the level and threshold of the wavelet denoising
-
-    Returns
-    -------
-    data_volume_denosied: (nd-array) denosied data volume of size (Z, Y, X) or (Y, X).
-
-    """
-
-    data_volume_denoised = np.copy(data_volume)
-
-    if len(data_volume) == 1:
-        data_volume_denoised = wavelet_softThreshold(data_volume[0], 'db8', params[1], params[2])
-    else:
-        for z in range(len(data_volume)):
-            data_volume_denoised[z, :, :] = wavelet_softThreshold(data_volume[z], 'db8', params[1], params[2])
-
-    return data_volume_denoised
-
-
-def translate_3D(image_stack, shift):
-    """
-    Parameters
-    ----------
-    image_stack: img stack of shape (Z, Y, X)
-        list of images to translate
-
-    shift: shift in terms of translation in [z, y, x]
-
-        Shift directions: If you want to shift the image up and to the right shift = [0, +y, -x]
-
-    Returns
-    -------
-    registered_image_stack:
-    """
-
-    registered_images = []
-
-    matrix = [[1, 0, shift[1]], [0, 1, shift[2]]]
-    for img in image_stack:
-        image = affine_transform(img, matrix, order=1)
-        registered_images.append(image)
-
-    return np.asarray(registered_images)

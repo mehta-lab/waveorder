@@ -18,13 +18,6 @@ dataset:
   ##   !!python/tuple [0, N] for pos 0 through N
   ## [0, 1, 5] for pos 0, 1, and 5
 
-pre_processing:
-  denoise:
-    use: False
-    channels: ['BF'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [0.1, 0.1, 0.1, 0.1]
-    level: [1, 1, 1, 1]
-
 processing:
   output_channels: ['Phase3D']
 
