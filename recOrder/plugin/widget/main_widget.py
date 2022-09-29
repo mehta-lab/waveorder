@@ -2237,17 +2237,12 @@ class MainWidget(QWidget):
 
         if idx == 0:
             self.method = 'QLIPP'
-            self.ui.qbutton_browse_bg_path.hide() if self.bg_option == 'None' else self.ui.qbutton_browse_bg_path.show()
             self.ui.label_fluor_chan.hide()
             self.ui.le_fluor_chan.hide()
             self.ui.label_chan_desc.setText('Retardance, Orientation, BF, Phase3D, S0, S1, S2, S3')
 
         elif idx == 1:
             self.method = 'PhaseFromBF'
-            self.ui.le_bg_path.hide() if self.bg_option == 'None' else self.ui.le_bg_path.show()
-            self.ui.qbutton_browse_bg_path.hide() if self.bg_option == 'None' else self.ui.qbutton_browse_bg_path.show()
-            self.ui.label_bg_path.hide() if self.bg_option == 'None' else self.ui.label_bg_path.show()
-            self.ui.label_bg_method.hide() if self.bg_option == 'None' else self.ui.label_bg_method.show()
             self.ui.label_fluor_chan.show()
             self.ui.le_fluor_chan.show()
             self.ui.label_fluor_chan.setText('Brightfield Channel Index')
