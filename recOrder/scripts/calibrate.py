@@ -7,7 +7,7 @@ from recOrder.plugin.widget.main_widget import MainWidget
 from recOrder.calib.Calibration import QLIPP_Calibration
 from recOrder.plugin.workers.calibration_workers import CalibrationWorker
 
-save_dir = "Q:\\Talon\\2022_09_30_calibration\\"
+save_dir = "Q:\\Talon\\2022_09_30_calibration_5state\\"
 swings = [0.1, 0.03, 0.01, 0.005]
 repeats = 5
 
@@ -16,6 +16,7 @@ def main():
     recorder = MainWidget(viewer)
     viewer.window.add_dock_widget(recorder)
     recorder.ui.qbutton_gui_mode.click()
+    recorder.calib_scheme = '5-State'
 
     for repeat in range(repeats):
         for swing in swings:
