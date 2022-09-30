@@ -724,10 +724,8 @@ class MainWidget(QWidget):
 
         # Initialize all tabs in their default style (not red)
         self._set_tab_red('General', False)
-        self._set_tab_red('Physical', False)
         self._set_tab_red('Processing', False)
-        self._set_tab_red('Regularization', False)
-
+        
         # initialize the variable to keep track of the success of the requirement check
         raise_error = False
 
