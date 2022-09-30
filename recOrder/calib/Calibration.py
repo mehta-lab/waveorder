@@ -987,8 +987,8 @@ class CalibrationData:
         self.calib_wavelengths = np.array([i[:3] for i in header[1::3]]).astype('double')
 
         self.wavelength = None
-        self.V_min = 0
-        self.V_max = 20
+        self.V_min = 0.0
+        self.V_max = 20.0
 
         if interp_method in ['linear', 'schnoor_fit']:
             self.interp_method = interp_method
