@@ -845,13 +845,26 @@ class QLIPP_Calibration():
         plt.sca(last_axes)
         return cbar
 
-    def _capture_state(self, state, n_avg):
-        set_lc_state(self.mmc, self.group, state)
+    def _capture_state(self, state: str, n_avg: int):
+        """Set the LCs to a certain state, then snap and average over a number of images.
+
+        Parameters
+        ----------
+        state : str
+            Name of the LC config, e.g. `"State0"`
+        n_avg : int
+            Number of images to capture and average
+
+        Returns
+        -------
+        ndarray
+            Average of N images
+        """
         with suspend_live_sm(self.snap_manager) as sm:
+            set_lc_state(self.mmc, self.group, state)
             imgs = []
             for i in range(n_avg):
                 imgs.append(snap_and_get_image(sm))
-
         return np.mean(imgs, axis=0)
 
     def _plot_bg_images(self, imgs):
