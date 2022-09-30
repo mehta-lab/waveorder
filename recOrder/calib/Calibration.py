@@ -3,8 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import tifffile as tiff
 import time
-from recOrder.io.core_functions import define_meadowlark_state, snap_image, set_lc_waves, set_lc_voltage, set_lc_daq, \
-    set_lc_state, snap_and_average, snap_and_get_image, get_lc, define_config_state
+from recOrder.io.core_functions import *
 from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from napari.utils.notifications import show_warning
@@ -848,10 +847,10 @@ class QLIPP_Calibration():
 
     def _capture_state(self, state, n_avg):
         set_lc_state(self.mmc, self.group, state)
-
-        imgs = []
-        for i in range(n_avg):
-            imgs.append(snap_and_get_image(self.snap_manager))
+        with suspend_live_sm(self.snap_manager) as sm:
+            imgs = []
+            for i in range(n_avg):
+                imgs.append(snap_and_get_image(sm))
 
         return np.mean(imgs, axis=0)
 

@@ -1,5 +1,6 @@
 import time
 import numpy as np
+from contextlib import contextmanager
 
 
 def snap_image(mmc):
@@ -20,6 +21,34 @@ def snap_image(mmc):
     time.sleep(0.3) # sleep after snap to make sure the image we grab is the correct one
 
     return mmc.getImage()
+
+
+@contextmanager
+def suspend_live_sm(snap_manager):
+    """Context manager that suspends/unsuspends MM live mode for `SnapLiveManager`.
+
+    Parameters
+    ----------
+    snap_manager : object
+        `org.micromanager.internal.SnapLiveManager` object via pycromanager
+
+    Yields
+    ------
+    object
+        `org.micromanager.internal.SnapLiveManager` object via pycromanager
+
+    Usage
+    -----
+    ```py
+    with suspend_live_sm(snap_manager) as sm:
+        pass # do something with MM that can't be done in live mode
+    ```
+    """
+    snap_manager.setSuspended(True)
+    try:
+        yield snap_manager
+    finally:
+        snap_manager.setSuspended(False)
 
 
 def snap_and_get_image(snap_manager):
