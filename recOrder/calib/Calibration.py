@@ -874,6 +874,45 @@ class QLIPP_Calibration():
                         break
         plt.show()
 
+    @property
+    def pol_states(self):
+        """The polarization states of this calibration.
+
+        Returns
+        -------
+        tuple
+            Names of all the polarization states.
+
+        Raises
+        ------
+        ValueError
+            Found illegal calibration state.
+        """
+        if self.calib_scheme == "4-State":
+            pols = ("ext", "0", "60", "120")
+        elif self.calib_scheme == "5-State":
+            pols = ("ext", "0", "45", "90", "135")
+        else:
+            raise ValueError(f"Invalid calibration state: {self.calib_scheme}.")
+        return pols
+
+    @property
+    def lc_states(self):
+        """The optimized LC retardance values of this calibration.
+
+        Returns
+        -------
+        dict
+            `Dict{"LCA": List[ext, ...], "LCB": List[ext, ...]}`
+        """
+        lc_sides = ["A", "B"]
+        return {
+            f"LC{lc_side}": [
+                self.__getattribute__("lc" + lc_side.lower() + "_" + pol) 
+                for pol in self.pol_states
+            ]
+            for lc_side in lc_sides
+        }
 
     def capture_bg(self, n_avg, directory):
         """"
