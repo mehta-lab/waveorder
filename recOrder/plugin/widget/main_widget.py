@@ -2476,7 +2476,6 @@ class MainWidget(QWidget):
         # Update the Microscope Parameters with those from the previous calibration (if they're present)
         params = metadata.Microscope_parameters
         if params is not None:
-            self.ui.le_pad_z.setText(str(params['pad_z']) if params['pad_z'] is not None else '')
             self.ui.le_n_media.setText(str(params['n_objective_media']) if params['n_objective_media'] is not None else '')
             self.ui.le_obj_na.setText(str(params['objective_NA']) if params['objective_NA'] is not None else '')
             self.ui.le_cond_na.setText(str(params['condenser_NA']) if params['condenser_NA'] is not None else '')
