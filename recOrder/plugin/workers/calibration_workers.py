@@ -35,6 +35,7 @@ class CalibrationSignals(WorkerBaseSignals):
     calib_assessment_msg = Signal(str)
     calib_file_emit = Signal(str)
     plot_sequence_emit = Signal(str)
+    lc_states = Signal(tuple)
     aborted = Signal()
 
 
@@ -205,6 +206,9 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
         self._assess_calibration()
 
         self._check_abort()
+
+        # Emit calibrated LC states for plotting
+        self.lc_states.emit((self.calib.pol_states, self.calib.lc_states))
 
         logging.info("\n=======Finished Calibration=======\n")
         logging.info(f"EXTINCTION = {extinction_ratio:.2f}")

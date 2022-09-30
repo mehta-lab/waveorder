@@ -1722,6 +1722,43 @@ class MainWidget(QWidget):
         else:
             pass
 
+    @Slot(tuple)
+    def handle_lc_states_emit(self, value: tuple[tuple, dict[str, list]]):
+        """Receive and plot polarization state and calibrated LC retardance values from the calibration worker.
+
+        Parameters
+        ----------
+        value : tuple[tuple, dict[str, list]]
+            2-tuple consisting of a tuple of polarization state names and a dictionary of LC retardance values.
+        """
+        pol_states, lc_values = value
+    
+        # Calculate circle 
+        theta = np.linspace(0, 2*np.pi, 100)
+        x_circ = self.swing*np.cos(theta) + lc_values["LCA"][0]
+        y_circ = self.swing*np.sin(theta) + lc_values["LCB"][0]
+
+        import matplotlib.pyplot as plt
+        plt.close('all')
+        with plt.rc_context({
+            "axes.spines.right": False,
+            "axes.spines.top": False,
+        }) and plt.ion():
+            plt.figure("Calibrated LC States")
+            plt.scatter(lc_values["LCA"], lc_values["LCB"], c='r')
+            plt.plot(x_circ, y_circ, 'k--', alpha=0.25)
+            plt.axis("equal")
+            plt.xlabel("LCA retardance")
+            plt.ylabel("LCB retardance")
+            for i, pol in enumerate(pol_states):
+                plt.annotate(
+                    pol, 
+                    xy=(lc_values["LCA"][i], lc_values["LCB"][i]),
+                    xycoords='data',
+                    xytext=(10,10), # annotation offset
+                    textcoords='offset points'
+            )
+
     @Slot(object)
     def handle_bg_image_update(self, value):
 
@@ -2544,6 +2581,7 @@ class MainWidget(QWidget):
         self.worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
         self.worker.calib_file_emit.connect(self.handle_calib_file_update)
         self.worker.plot_sequence_emit.connect(self.handle_plot_sequence_update)
+        self.worker.lc_states.connect(self.handle_lc_states_emit)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_error)
