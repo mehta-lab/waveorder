@@ -3,8 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import tifffile as tiff
 import time
-from recOrder.io.core_functions import define_meadowlark_state, snap_image, set_lc_waves, set_lc_voltage, set_lc_daq, \
-    set_lc_state, snap_and_average, snap_and_get_image, get_lc, define_config_state
+from recOrder.io.core_functions import *
 from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from napari.utils.notifications import show_warning
@@ -846,13 +845,26 @@ class QLIPP_Calibration():
         plt.sca(last_axes)
         return cbar
 
-    def _capture_state(self, state, n_avg):
-        set_lc_state(self.mmc, self.group, state)
+    def _capture_state(self, state: str, n_avg: int):
+        """Set the LCs to a certain state, then snap and average over a number of images.
 
-        imgs = []
-        for i in range(n_avg):
-            imgs.append(snap_and_get_image(self.snap_manager))
+        Parameters
+        ----------
+        state : str
+            Name of the LC config, e.g. `"State0"`
+        n_avg : int
+            Number of images to capture and average
 
+        Returns
+        -------
+        ndarray
+            Average of N images
+        """
+        with suspend_live_sm(self.snap_manager) as sm:
+            set_lc_state(self.mmc, self.group, state)
+            imgs = []
+            for i in range(n_avg):
+                imgs.append(snap_and_get_image(sm))
         return np.mean(imgs, axis=0)
 
     def _plot_bg_images(self, imgs):
@@ -930,6 +942,9 @@ class QLIPP_Calibration():
             os.makedirs(directory)
 
         logging.info('Capturing Background')
+        self._auto_shutter_state = self.mmc.getAutoShutter()
+        self._shutter_state = self.mmc.getShutterOpen()
+        self.open_shutter()
         logging.debug('Capturing Bacckground State0')
 
         state0 = self._capture_state('State0', n_avg)
@@ -961,6 +976,7 @@ class QLIPP_Calibration():
             imgs.append(state4)
 
         # self._plot_bg_images(np.asarray(imgs))
+        self.reset_shutter()
 
         return np.asarray(imgs)
 
