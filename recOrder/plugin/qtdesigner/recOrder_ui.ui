@@ -1250,7 +1250,7 @@
                  </font>
                 </property>
                 <property name="currentIndex">
-                 <number>1</number>
+                 <number>0</number>
                 </property>
                 <widget class="QWidget" name="General">
                  <attribute name="title">
@@ -2622,7 +2622,14 @@
   <tabstop>le_extinction</tabstop>
   <tabstop>tb_calib_assessment</tabstop>
   <tabstop>le_bg_folder</tabstop>
+  <tabstop>le_n_avg</tabstop>
+  <tabstop>qbutton_capture_bg</tabstop>
+  <tabstop>scrollArea_3</tabstop>
+  <tabstop>scrollArea_2</tabstop>
+  <tabstop>cb_loglevel</tabstop>
+  <tabstop>te_log</tabstop>
   <tabstop>scrollArea_4</tabstop>
+  <tabstop>qbutton_acq_birefringence</tabstop>
   <tabstop>qbutton_acq_phase</tabstop>
   <tabstop>qbutton_acq_birefringence_phase</tabstop>
   <tabstop>qbutton_listen</tabstop>
@@ -2635,58 +2642,59 @@
   <tabstop>cb_phase</tabstop>
   <tabstop>chb_phase_from_bf</tabstop>
   <tabstop>cb_acq_channel</tabstop>
+  <tabstop>le_overlay_slice</tabstop>
   <tabstop>chb_pause_updates</tabstop>
   <tabstop>tabWidget_3</tabstop>
   <tabstop>le_data_dir</tabstop>
+  <tabstop>qbutton_browse_data_dir</tabstop>
   <tabstop>le_save_dir</tabstop>
+  <tabstop>qbutton_browse_save_dir</tabstop>
   <tabstop>le_data_save_name</tabstop>
   <tabstop>le_calibration_metadata</tabstop>
+  <tabstop>qbutton_browse_calib_meta</tabstop>
   <tabstop>cb_bg_method</tabstop>
   <tabstop>le_bg_path</tabstop>
-  <tabstop>le_gpu_id</tabstop>
-  <tabstop>qbutton_browse_data_dir</tabstop>
-  <tabstop>qbutton_browse_save_dir</tabstop>
-  <tabstop>qbutton_browse_calib_meta</tabstop>
   <tabstop>qbutton_browse_bg_path</tabstop>
+  <tabstop>le_gpu_id</tabstop>
   <tabstop>chb_use_gpu</tabstop>
+  <tabstop>le_recon_wavelength</tabstop>
+  <tabstop>le_obj_na</tabstop>
+  <tabstop>le_cond_na</tabstop>
+  <tabstop>le_ps</tabstop>
+  <tabstop>le_n_media</tabstop>
+  <tabstop>le_mag</tabstop>
   <tabstop>qbutton_load_default_config</tabstop>
   <tabstop>qbutton_load_config</tabstop>
   <tabstop>qbutton_save_config</tabstop>
+  <tabstop>le_notes_field</tabstop>
   <tabstop>cb_method</tabstop>
   <tabstop>cb_mode</tabstop>
   <tabstop>le_positions</tabstop>
   <tabstop>le_timepoints</tabstop>
   <tabstop>le_focus_zidx</tabstop>
+  <tabstop>le_pad_z</tabstop>
   <tabstop>le_bf_chan</tabstop>
   <tabstop>le_output_channels</tabstop>
   <tabstop>cb_phase_denoiser</tabstop>
   <tabstop>le_phase_strength</tabstop>
   <tabstop>le_rho</tabstop>
   <tabstop>le_itr</tabstop>
-  <tabstop>cb_colormap</tabstop>
-  <tabstop>cb_hue</tabstop>
+  <tabstop>qbutton_reconstruct</tabstop>
+  <tabstop>qbutton_stop_reconstruct</tabstop>
   <tabstop>le_sat_min</tabstop>
   <tabstop>le_sat_max</tabstop>
-  <tabstop>cb_saturation</tabstop>
-  <tabstop>slider_saturation</tabstop>
+  <tabstop>qbutton_push_note</tabstop>
+  <tabstop>cb_hue</tabstop>
   <tabstop>le_val_min</tabstop>
+  <tabstop>scrollArea_5</tabstop>
+  <tabstop>cb_saturation</tabstop>
   <tabstop>le_val_max</tabstop>
   <tabstop>cb_value</tabstop>
-  <tabstop>slider_value</tabstop>
-  <tabstop>le_overlay_slice</tabstop>
+  <tabstop>cb_colormap</tabstop>
   <tabstop>chb_display_volume</tabstop>
+  <tabstop>slider_saturation</tabstop>
+  <tabstop>slider_value</tabstop>
   <tabstop>qbutton_create_overlay</tabstop>
-  <tabstop>qbutton_capture_bg</tabstop>
-  <tabstop>scrollArea_5</tabstop>
-  <tabstop>te_log</tabstop>
-  <tabstop>le_n_avg</tabstop>
-  <tabstop>scrollArea_3</tabstop>
-  <tabstop>qbutton_reconstruct</tabstop>
-  <tabstop>le_notes_field</tabstop>
-  <tabstop>qbutton_stop_reconstruct</tabstop>
-  <tabstop>scrollArea_2</tabstop>
-  <tabstop>cb_loglevel</tabstop>
-  <tabstop>qbutton_push_note</tabstop>
  </tabstops>
  <resources/>
  <connections/>
