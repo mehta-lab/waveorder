@@ -54,7 +54,11 @@ class MainWidget(QWidget):
 
         # Setup Connections between elements
         # Connect to MicroManager
-        self.ui.qbutton_mm_connect.clicked[bool].connect(self.connect_to_mm)
+        # Disconnecting and hiding for 0.2.0, TODO: reinstate for 1.0.0
+        # self.ui.qbutton_mm_connect.clicked[bool].connect(self.connect_to_mm)
+        self.ui.connect_to_micromanager.hide()
+        self.ui.qbutton_mm_connect.hide()
+        self.ui.le_mm_status.hide()
 
         # Calibration Tab
 
@@ -1559,10 +1563,10 @@ class MainWidget(QWidget):
             self.ui.qbutton_gui_mode.setText('Switch to Offline')
             self.ui.le_gui_mode.setText('Online')
             self.ui.le_gui_mode.setStyleSheet("border: 1px solid green; color: green;")
-            # self.connect_to_mm()  # Disabling this for now and letting the button for connect to MM do it's job for 1.0.0
             self._hide_offline_ui(True)
             self._hide_acquisition_ui(False)
             self.gui_mode = 'online'
+            self.connect_to_mm()
 
         else:
             self.ui.qbutton_gui_mode.setText('Switch to Online')
@@ -2006,7 +2010,7 @@ class MainWidget(QWidget):
 
         """
         #if/else takes care of the clearing of config
-        if self.ui.cb_config_group.count()!=0:
+        if self.ui.cb_config_group.count() != 0:
             self.mmc = self.bridge.get_core()
             self.mm = self.bridge.get_studio()
 
@@ -2034,9 +2038,7 @@ class MainWidget(QWidget):
                 raise KeyError(msg)
             else:
                 self.ui.cb_config_group.setStyleSheet("")
-        else:
-            print("CONFIG GROUP IS NOT EMPTY")
-
+       
     @Slot()
     def enter_use_cropped_roi(self):
         state = self.ui.chb_use_roi.checkState()
