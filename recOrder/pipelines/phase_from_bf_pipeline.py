@@ -24,12 +24,6 @@ class PhaseFromBF(PipelineInterface):
         self._check_output_channels(self.output_channels)
         self.mode = '2D' if 'Phase2D' in self.output_channels else '3D'
         self.bf_chan_idx = self.config.brightfield_channel_index
-        self.fluor_idxs = []
-
-        # Assume any other channel in the data is fluorescence
-        for i in range(self.data.channels):
-            if i != self.bf_chan_idx:
-                self.fluor_idxs.append(i)
 
         self.slices = self.data.slices
         self.focus_slice = None
@@ -142,11 +136,10 @@ class PhaseFromBF(PipelineInterface):
 
         return phase2D, phase3D
 
-    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, modified_fluor):
+    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
-        If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
-        in the data.  Dimensions differ between data type to make compute easier with waveOrder backend.
+        Dimensions differ between data type to make compute easier with waveOrder backend.
 
         Parameters
         ----------
@@ -157,8 +150,7 @@ class PhaseFromBF(PipelineInterface):
         birefringence:      (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
         phase2D:            (nd-array) None or nd-array w/ dimensions (Y, X)
         phase3D:            (nd-array) None or nd-array w/ dimensions (Z, Y, X)
-        modified_fluor:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
-
+    
         Returns
         -------
         Writes a zarr array to to given save directory.
@@ -166,21 +158,11 @@ class PhaseFromBF(PipelineInterface):
         """
         z = 0 if self.mode == '2D' else None
         slice_ = self.focus_slice if self.mode == '2D' else slice(None)
-        fluor_idx = 0
 
         for chan in range(len(self.output_channels)):
             if 'Phase3D' in self.output_channels[chan]:
                 self.writer.write(phase3D, p=p, t=t, c=chan, z=z)
             elif 'Phase2D' in self.output_channels[chan]:
                 self.writer.write(phase2D, p=p, t=t, c=chan, z=z)
-
-            # Assume any other output channel in config is fluorescence
-            else:
-                if self.config.postprocessing.registration_use or self.config.postprocessing.deconvolution_use:
-                    self.writer.write(modified_fluor[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
-                    fluor_idx += 1
-                else:
-                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
-                    fluor_idx += 1
 
             self.dimension_emitter.emit((p, t, chan))

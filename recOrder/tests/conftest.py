@@ -64,20 +64,6 @@ def get_pycromanager_data_dir(setup_test_data):
 
     return test_data, pm_data
 
-
-@pytest.fixture()
-def init_fluor_decon_pipeline_manager(get_zarr_data_dir, setup_data_save_folder):
-    folder, zarr_data = get_zarr_data_dir
-    save_folder = setup_data_save_folder
-
-    file_path = os.path.dirname(__file__)
-    path_to_config = os.path.abspath(os.path.join(file_path, './test_configs/fluor_deconv/config_fluor_full_pytest.yml'))
-    config = ConfigReader(path_to_config, data_dir=zarr_data, save_dir=save_folder)
-    manager = PipelineManager(config)
-
-    return save_folder, config, manager
-
-
 @pytest.fixture()
 def init_phase_bf_pipeline_manager(get_bf_data_dir, setup_data_save_folder):
     folder, bf_data = get_bf_data_dir

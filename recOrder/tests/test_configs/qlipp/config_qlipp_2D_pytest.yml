@@ -25,24 +25,12 @@ dataset:
 
   calibration_metadata: './pytest_temp/test_data/2022_08_04_recOrder_pytest_20x_04NA_zarr/calibration_metadata.txt'
 
-pre_processing:
-  denoise:
-    use: False
-    channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [0.1, 0.1, 0.1, 0.1]
-    level: [1, 1, 1, 1]
-
-
 processing:
   output_channels: ['Retardance', 'Orientation', 'Brightfield', 'Phase2D', 'S0', 'S1', 'S2', 'S3']
 
   # (list) Any combination of the following values.
   #    'Retardance', 'Orientation','Brightfield', 'Phase3D'
   #     order of the channels specifies the order in which they will be written
-
-  #    can also specify custom names of fluorescence channels 'GFP' or 'DAPI' or 'Nuclei'.
-  #    The order in which fluor channels are listed corresponds to their order in
-  #    the acquisition.  Specified name stored in the metadata.
 
   background_correction: 'local_fit'
   # (str) Background correction method, one of the following
@@ -112,14 +100,3 @@ processing:
   TV_reg_ph_3D: 5.0e-5
   # (float) TV regularization parameter for 3D phase
   ##   5.0e-5 is generally good
-
-post_processing:
-  denoise:
-    use: False
-    channels: ['Retardance', 'Phase3D'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [0.1, 0.1]
-    level: [1, 1]
-  registration:
-    use: False
-    channel_idx: [3] # if multiple channels, must match order of the fluorescence channels
-    shift: [[0, 50, 50]] # up and to the right [0, +y, -x]

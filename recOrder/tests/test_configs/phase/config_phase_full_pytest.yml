@@ -18,23 +18,12 @@ dataset:
   ##   !!python/tuple [0, N] for pos 0 through N
   ## [0, 1, 5] for pos 0, 1, and 5
 
-pre_processing:
-  denoise:
-    use: False
-    channels: ['BF'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [0.1, 0.1, 0.1, 0.1]
-    level: [1, 1, 1, 1]
-
 processing:
   output_channels: ['Phase3D']
 
   # (list) Any combination of the following values.
   #    'Retardance', 'Orientation','Brightfield', 'Phase3D'
   #     order of the channels specifies the order in which they will be written
-
-  #    can also specify custom names of fluorescence channels 'GFP' or 'DAPI' or 'Nuclei'.
-  #    The order in which fluor channels are listed corresponds to their order in
-  #    the acquisition.  Specified name stored in the metadata.
 
   #brightfield_channel_idx: 0
 
@@ -90,14 +79,3 @@ processing:
 
   #### 3D TV parameters ####
   # For more noisy data, raise TV_reg to enforce stronger denoising effect
-
-post_processing:
-  denoise:
-    use: False
-    channels: ['Retardance', 'Phase3D'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [0.1, 0.1]
-    level: [1, 1]
-  registration:
-    use: False
-    channel_idx: [3] # if multiple channels, must match order of the fluorescence channels
-    shift: [[0, 50, 50]] # up and to the right [0, +y, -x]

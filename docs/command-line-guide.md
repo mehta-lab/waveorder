@@ -1,6 +1,6 @@
 # Command Line Guide
 
-This command-line interface command allows the user to move through quantitative reconstruction of Phase, Birefringence, and Fluorescence Deconvolution through a user-defined config file.  The user should copy one of the example config files from `/examples/example_configs/`.
+This command-line interface command allows the user to move through quantitative reconstruction of phase and birefringence through a user-defined config file.  The user should copy one of the example config files from `/examples/example_configs/`.
 
 ## Using the command
 
@@ -13,7 +13,7 @@ recOrder.reconstruct
 
 Any of these optional commands will override the corresponding fields that the user may have defined or omitted in the config file.
 
---method (str) [optional with config] Method of reconstruction: PhaseFromBF, QLIPP, FluorDeconv
+--method (str) [optional with config] Method of reconstruction: PhaseFromBF, QLIPP
 --mode (str) [optional with config] Mode of reconstruction: 2D or 3D
 --data_dir (str) [optional with config] path to raw data folder (root zarr path or folder containing micromanager tif files)
 --save_dir (str) [optional with config] path to the directory in which the processed data will be saved
@@ -32,7 +32,7 @@ At any time you can type the `recOrder.help` command in order to display the ava
 ```
 dataset:
   method: 'QLIPP'
-  # Reconstruction Method 'QLIPP', 'PhaseFromBF', or 'FluorDeconv'.
+  # Reconstruction Method 'QLIPP', or 'PhaseFromBF'.
 
   mode: '2D'
   # Mode for reconstruction, '2D' or '3D'
@@ -71,19 +71,6 @@ dataset:
   # (str) path to the qlipp calibration metadata file
 ```
 
-### Preprocessing
-
-This section in the config allows you to denoise the raw stokes channels S0, S1, S2, S3, or BF with the Wavelet Soft Thresholding algorithm.  Further documentation on this can be found here: [https://pywavelets.readthedocs.io/en/latest/](https://pywavelets.readthedocs.io/en/latest/).  The user can omit this section from the config altogether or specify `use: False` in order to skip pre-processing.
-
-```
-pre_processing:
-  denoise:
-    use: False
-    channels: ['S0', 'S1', 'S2', 'S3'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [0.1, 0.1, 0.1, 0.1] # Must match length of channels
-    level: [1, 1, 1, 1] # must match length of channels
-```
-
 ### Processing
 
 This is the section that allows the user to define the output of the reconstruction.
@@ -95,10 +82,6 @@ processing:
   # (list) Any combination of the following values.
   #    'Retardance', 'Orientation','Brightfield', 'Phase3D'. 'S0', 'S1', 'S2', 'S3'
   #     order of the channels specifies the order in which they will be written
-
-  #    can also specify custom names of fluorescence channels 'GFP' or 'DAPI' or 'Nuclei'.
-  #    The order in which fluor channels are listed corresponds to their order in
-  #    the acquisition.  Specified name stored in the ome-zarr metadata.
 
   background_correction: 'local_fit'
   # (str) Background correction method, one of the following
@@ -200,38 +183,6 @@ processing:
   TV_reg_ph_3D: 5.0e-5
   # (float) TV regularization parameter for 3D phase
   ##   5.0e-5 is generally good
-```
-
-### Post Processing
-
-This section allows the user to denoise processed channels, preform registrations via affine transformations or deconvolve fluorescence channels (if PhaseFromBF pipeline or QLIPP pipeline are being used).  Can be omitted if the user doesn't want to perform any post-processing.
-
-```
-post_processing:
-  denoise:
-    use: False # set to true if you want to denoise the data before writing
-    channels: ['Retardance', 'Phase3D'] # Choose which channels to denoise.
-    threshold: [0.1, 0.1] # Must match length of channels
-    level: [1, 1] # must match length of channels
-
-  deconvolution:
-    use: False # set to true if you want to deconvolve raw fluorescence channels
-    channels: [1, 2] # specify the index of fluorescent channels you wish to deconvolve
-    mode: '3D' # 2D or 3D deconvolution
-    wavelength_nm: [488, 562] # specify the wavelengths of the fluorescence channel emissions (in same order as channels)
-    pixel_size_um: 6.5 # specify pixel size of the camera in um
-    NA_obj: 0.4 # specify the numerical aperture of the objective
-    magnification: 20 # effective magnification
-    n_objective_media: 1.0 # specify the refractive index of objective immersion media (1.0 for air)
-    pad_z: 0 # specify padding to eliminate potential boundary artifacts
-    use_gpu: False
-    gpu_id: 0
-
-  registration:
-    use: False # set to true if you want to register a channel before writing
-    channel_idx: [3] # Index of desired raw data channel to register.  Index corresponds to its position in raw data
-                         # if multiple channels, must match order of the fluorescence channels in output_channels
-    shift: [[0, 50, -50]] # up and to the right [0, +y, -x].  Must match length of channels
 ```
 
 # recOrder Data Conversion

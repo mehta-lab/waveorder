@@ -60,7 +60,7 @@ def initialize_reconstructor(pipeline, image_dim=None, wavelength_nm=None, swing
                             refractive index of the objective immersion media
 
         mode               : str
-                            '2D' or '3D' (phase, fluorescence reconstruction only)
+                            '2D' or '3D' (phase reconstruction only)
 
         use_gpu           : bool
                             option to use gpu or not

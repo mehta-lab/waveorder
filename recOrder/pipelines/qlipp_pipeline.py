@@ -12,7 +12,7 @@ from recOrder.pipelines.base import PipelineInterface
 class QLIPP(PipelineInterface):
 
     """
-    This class contains methods to reconstruct an entire dataset alongside pre/post-processing
+    This class contains methods to reconstruct an entire QLIPP dataset
     """
 
     def __init__(self, config: ConfigReader, data: WaveorderReader, writer: WaveorderWriter, mode: str, num_t: int, emitter=MockEmitter()):
@@ -66,7 +66,7 @@ class QLIPP(PipelineInterface):
         # identify the image indicies corresponding to each polarization orientation
         self.s0_idx, self.s1_idx, \
         self.s2_idx, self.s3_idx, \
-        self.s4_idx, self.fluor_idxs = self.parse_channel_idx(self.data.channel_names)
+        self.s4_idx, = self.parse_channel_idx(self.data.channel_names)
 
         # Writer Parameters
         self.data_shape = (self.t, len(self.output_channels), self.slices, self.img_dim[0], self.img_dim[1])
@@ -224,12 +224,10 @@ class QLIPP(PipelineInterface):
                                 stokes[:, slice(None) if self.slices != 1 else self.focus_slice, :, :],
                                 self.reconstructor)
 
-    # todo: think about better way to write fluor/registered data?
-    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D, modified_fluor):
+    def write_data(self, p, t, pt_data, stokes, birefringence, phase2D, phase3D):
         """
         This function will iteratively write the data into its proper position, time, channel, z index.
-        If any fluorescence channel is specificed in the config, it will be written in the order in which it appears
-        in the data.  Dimensions differ between data type to make compute easier with waveOrder backend.
+        Dimensions differ between data type to make compute easier with waveOrder backend.
 
         Parameters
         ----------
@@ -240,7 +238,6 @@ class QLIPP(PipelineInterface):
         birefringence:      (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
         phase2D:            (nd-array) None or nd-array w/ dimensions (Y, X)
         phase3D:            (nd-array) None or nd-array w/ dimensions (Z, Y, X)
-        modified_fluor:  (nd-array) None or nd-array w/ dimensions (C, Z, Y, X)
 
         Returns
         -------
@@ -251,8 +248,7 @@ class QLIPP(PipelineInterface):
         z = 0 if self.mode == '2D' else None
         slice_ = self.focus_slice if self.mode == '2D' else slice(None)
         # stokes = np.transpose(stokes, (-1, -4, -3, -2)) if len(stokes.shape) == 4 else stokes
-        fluor_idx = 0
-
+        
         for chan in range(len(self.output_channels)):
             if 'Retardance' in self.output_channels[chan]:
                 ret = birefringence[0] / (2 * np.pi) * self.config.wavelength
@@ -274,15 +270,6 @@ class QLIPP(PipelineInterface):
             elif 'S3' in self.output_channels[chan]:
                 self.writer.write(stokes[3, slice_, :, :], p=p, t=t, c=chan, z=z)
 
-            # Assume any other output channel in config is fluorescence
-            else:
-                if self.config.postprocessing.registration_use or self.config.postprocessing.deconvolution_use:
-                    self.writer.write(modified_fluor[fluor_idx][slice_], p=p, t=t, c=chan, z=z)
-                    fluor_idx += 1
-                else:
-                    self.writer.write(pt_data[self.fluor_idxs[fluor_idx], slice_], p=p, t=t, c=chan, z=z)
-                    fluor_idx += 1
-
             self.dimension_emitter.emit((p, t, chan))
 
     def parse_channel_idx(self, channel_list):
@@ -296,11 +283,10 @@ class QLIPP(PipelineInterface):
 
         Returns
         -------
-        s0_idx, s1_idx, s2_idx, s3_idx, s4_idx, fluor_idx:      (int) Index corresponding to where each state
+        s0_idx, s1_idx, s2_idx, s3_idx, s4_idx :      (int) Index corresponding to where each state
                                                                         sits in the channel order
 
         """
-        fluor_idx = []
         s0_idx = None
         s1_idx = None
         s2_idx = None
@@ -322,12 +308,10 @@ class QLIPP(PipelineInterface):
                 s3_idx = channel
             elif 'State4' in channel_list[channel]:
                 s4_idx = channel
-            else:
-                fluor_idx.append(channel)
 
         if open_pol:
             s1_idx, s2_idx, s3_idx, s4_idx = s4_idx, s3_idx, s1_idx, s2_idx
 
-        return s0_idx, s1_idx, s2_idx, s3_idx, s4_idx, fluor_idx
+        return s0_idx, s1_idx, s2_idx, s3_idx, s4_idx
 
 

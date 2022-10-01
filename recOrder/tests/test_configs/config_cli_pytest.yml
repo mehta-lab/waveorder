@@ -46,19 +46,12 @@ processing:
   #    'Retardance', 'Orientation','Brightfield', 'Phase3D'
   #     order of the channels specifies the order in which they will be written
 
-  #    can also specify custom names of fluorescence channels 'GFP' or 'DAPI' or 'Nuclei'.
-  #    The order in which fluor channels are listed corresponds to their order in
-  #    the acquisition.  Specified name stored in the metadata.
-
   background_correction: 'local_fit'
   # (str) Background correction method, one of the following
   ##   'None': no background correction will be performed
   ##   'local': for estimating background with scipy uniform filter
   ##   'local_fit': for estimating background with polynomial fit
   ##   'global': for normal background subtraction with the provided background
-
-  # flatfield_correction: False
-  # (bool) perform flat-field correction on fluorescence images if True
 
   use_gpu: False
   # (bool) Option to use GPU processing if True (require cupy to be installed)
@@ -124,14 +117,3 @@ processing:
   TV_reg_ph_3D: 5.0e-5
   # (float) TV regularization parameter for 3D phase
   ##   5.0e-5 is generally good
-
-post_processing:
-  denoise:
-    use: False
-    channels: ['Retardance', 'Phase3D'] # Choose which channels to denoise: S0, S1, S2, S3 or BF
-    threshold: [0.1, 0.1]
-    level: [1, 1]
-  registration:
-    use: False
-    channel_idx: [3] # if multiple channels, must match order of the fluorescence channels
-    shift: [[0, 50, 50]] # up and to the right [0, +y, -x]

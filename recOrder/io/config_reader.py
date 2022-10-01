@@ -3,7 +3,6 @@ import pathlib
 import os
 import warnings
 
-
 DATASET = {
     'method': None,
     'mode': None,
@@ -16,15 +15,6 @@ DATASET = {
     'background': None,
     'background_ROI': None,
     'calibration_metadata': None
-}
-
-PREPROCESSING = {
-    'denoise': {
-        'use': False,
-        'channels': None,
-        'threshold': None,
-        'level': None
-    }
 }
 
 PROCESSING = {
@@ -40,8 +30,6 @@ PROCESSING = {
     'NA_condenser': None,
     'n_objective_media': 1.003,
     'brightfield_channel_index': 0,
-    'fluorescence_channel_indices': None,
-    'fluorescence_background': None,
     'z_step': None,
     'focus_zidx': None,
     'reg': 1e-4,
@@ -60,52 +48,14 @@ PROCESSING = {
     'pad_z': 0
 }
 
-POSTPROCESSING = {
-    'denoise': {
-        'use': False,
-        'channels': None,
-        'threshold': None,
-        'level': None
-    },
-
-    'deconvolution': {
-        'use': False,
-        'channels': None,
-        'wavelength_nm': None,
-        'regularization': None,
-        #'background': None,
-        'pixel_size_um': None,
-        'NA_obj': None,
-        'magnification': None,
-        'n_objective_media': None,
-        'pad_z': None,
-        'use_gpu': False,
-        'gpu_id': 0
-    },
-
-    'registration': {
-        'use': False,
-        'channel_idx': None,
-        'shift': None
-    }
-}
-
-class Object():
-    pass
-
-class ConfigReader(object):
+class ConfigReader():
     """
-    @DynamicAttrs # for pycharm
-
     Config Reader handles all of the requirements necessary for running the pipeline.  Default values
     are used for those that do not need to be specified.  CLI will always overried config
 
     """
 
     def __init__(self, cfg_path=None, data_dir=None, save_dir=None, method=None, mode=None, name=None, immutable=True):
-
-        self.preprocessing = Object()
-        self.postprocessing = Object()
 
         self.immutable = immutable
 
@@ -128,22 +78,8 @@ class ConfigReader(object):
             else:
                 setattr(self, key, value)
 
-        for key, value in PREPROCESSING.items():
-            if isinstance(value, dict):
-                for key_child, value_child in PREPROCESSING[key].items():
-                    setattr(self.preprocessing, f'{key}_{key_child}', value_child)
-            else:
-                setattr(self.preprocessing, key, value)
-
         for key, value in PROCESSING.items():
             setattr(self, key, value)
-
-        for key, value in POSTPROCESSING.items():
-            if isinstance(value, dict):
-                for key_child, value_child in POSTPROCESSING[key].items():
-                    setattr(self.postprocessing, f'{key}_{key_child}', value_child)
-            else:
-                setattr(self.postprocessing, key, value)
 
         # parse config
         if cfg_path:
@@ -206,25 +142,12 @@ class ConfigReader(object):
                                    'Only 3D reconstructions can be performed in 3D mode')
 
             elif key == 'background_correction' and self.config['dataset']['method'] == 'QLIPP':
-                if self.config['processing'][key] == 'None' or self.config['processing'][key] == 'local_fit':
+                mode = self.config['processing'][key]
+                if mode == 'None' or mode == 'local_fit' or mode == 'local_fit+':
                     pass
                 else:
                     assert self.config['dataset']['background'] is not None, \
                         'path to background data must be specified for this background correction method'
-
-        if 'preprocessing' in self.config:
-            for key, value in PREPROCESSING.items():
-                if self.config['preprocessing'][key]['use']:
-                    for key_child, value_child in PREPROCESSING[key].items():
-                        assert key_child in self.config['preprocessing'][key], \
-                            f'User must specify {key_child} to use for {key}'
-
-        if 'postprocessing' in self.config:
-            for key, value in POSTPROCESSING.items():
-                if self.config['postprocessing'][key]['use']:
-                    for key_child, value_child in POSTPROCESSING[key].items():
-                        assert key_child in self.config['postprocessing'][key], \
-                            f'User must specify {key_child} to use for {key}'
 
     def save_yaml(self, dir_=None, name=None):
         self.immutable = False
@@ -244,31 +167,13 @@ class ConfigReader(object):
     def _create_yaml_dict(self):
 
         yaml_dict = {'dataset': {},
-                     'pre_processing': {},
-                     'processing': {},
-                     'post_processing': {}}
+                     'processing': {}}
 
         for key, value in DATASET.items():
             yaml_dict['dataset'][key] = getattr(self, key)
 
-        for key, value in PREPROCESSING.items():
-            if isinstance(value, dict):
-                yaml_dict['pre_processing'][key] = {}
-                for key_child, value_child in PREPROCESSING[key].items():
-                    yaml_dict['pre_processing'][key][key_child] = getattr(self.preprocessing, f'{key}_{key_child}')
-            else:
-                yaml_dict['pre_processing'][key] = getattr(self, key)
-
         for key, value in PROCESSING.items():
             yaml_dict['processing'][key] = getattr(self, key)
-
-        for key, value in POSTPROCESSING.items():
-            if isinstance(value, dict):
-                yaml_dict['post_processing'][key] = {}
-                for key_child, value_child in POSTPROCESSING[key].items():
-                    yaml_dict['post_processing'][key][key_child] = getattr(self.postprocessing, f'{key}_{key_child}')
-            else:
-                yaml_dict['post_processing'][key] = getattr(self, key)
 
         return yaml_dict
 
@@ -319,19 +224,6 @@ class ConfigReader(object):
             else:
                 warnings.warn(f'yaml DATASET config field {key} is not recognized')
 
-    def _parse_preprocessing(self):
-
-        if 'pre_processing' in self.config:
-            for key, value in self.config['pre_processing'].items():
-                if key in PREPROCESSING.keys():
-                    for key_child, value_child in self.config['pre_processing'][key].items():
-                        if key_child in PREPROCESSING[key].keys():
-                            setattr(self.preprocessing, f'{key}_{key_child}', value_child)
-                        else:
-                            warnings.warn(f'yaml PREPROCESSING config field {key}, {key_child} is not recognized')
-                else:
-                    warnings.warn(f'yaml PREPROCESSING config field {key} is not recognized')
-
     def _parse_processing(self):
         for key, value in self.config['processing'].items():
             if key in PROCESSING.keys():
@@ -342,19 +234,6 @@ class ConfigReader(object):
         if 'Phase3D' not in self.output_channels and 'Phase2D' not in self.output_channels:
             super().__setattr__('qlipp_birefringence_only', True)
 
-    def _parse_postprocessing(self):
-
-        if 'post_processing' in self.config:
-            for key, value in self.config['post_processing'].items():
-                if key in POSTPROCESSING.keys():
-                    for key_child, value_child in self.config['post_processing'][key].items():
-                        if key_child in POSTPROCESSING[key].keys():
-                            setattr(self.postprocessing, f'{key}_{key_child}', value_child)
-                        else:
-                            warnings.warn(f'yaml POSTPROCESSING config field {key}, {key_child} is not recognized')
-                else:
-                    warnings.warn(f'yaml POSTPROCESSING config field {key} is not recognized')
-
     def read_config(self, cfg_path, data_dir, save_dir, method, mode, name):
 
         if isinstance(cfg_path, str):
@@ -364,9 +243,7 @@ class ConfigReader(object):
 
         self._check_assertions(data_dir, save_dir, method, mode, name)
         self._parse_dataset()
-        self._parse_preprocessing()
         self._parse_processing()
-        self._parse_postprocessing()
-
+        
         if not self.data_save_name:
             self._use_default_name()

@@ -1,4 +1,4 @@
-from recOrder.io.config_reader import ConfigReader, DATASET, PREPROCESSING, POSTPROCESSING, PROCESSING
+from recOrder.io.config_reader import ConfigReader, DATASET, PROCESSING
 import os
 from os.path import dirname, abspath
 import yaml
@@ -14,8 +14,8 @@ def test_config_reader(get_zarr_data_dir):
     avoid = ['data_dir', 'save_dir', 'data_save_name', 'positions', 'timepoints',
              'background_ROI', 'qlipp_birefringence_only', 'phase_denoiser_2D',
              'Tik_reg_abs_2D', 'Tik_reg_ph_2D', 'rho_2D', 'itr_2D', 'TV_reg_abs_2D',
-             'TV_reg_ph_2D', 'brightfield_channel_index', 'fluorescence_channel_indices',
-             'reg', 'fluorescence_background']
+             'TV_reg_ph_2D', 'brightfield_channel_index',
+             'reg']
 
     for key, value in DATASET.items():
         if key not in avoid:
@@ -27,20 +27,11 @@ def test_config_reader(get_zarr_data_dir):
     assert([raw['dataset']['timepoints']] == config.timepoints)
     assert(config.background_ROI == None)
 
-    for key, value in PREPROCESSING.items():
-        for sub_key, sub_value in PREPROCESSING[key].items():
-            assert(raw['pre_processing'][key][sub_key] == getattr(config.preprocessing, f'{key}_{sub_key}'))
-
     for key, value in PROCESSING.items():
         if key not in avoid:
             assert(raw['processing'][key] == getattr(config, key))
 
     assert(config.qlipp_birefringence_only == False)
-
-    for key, value in POSTPROCESSING.items():
-        for sub_key, sub_value in POSTPROCESSING[key].items():
-            assert(raw['post_processing'][key][sub_key] == getattr(config.postprocessing, f'{key}_{sub_key}'))
-
 
 
 

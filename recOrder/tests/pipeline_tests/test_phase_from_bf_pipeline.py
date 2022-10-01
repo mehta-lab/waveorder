@@ -30,7 +30,6 @@ def test_bf_pipeline_initiate(init_phase_bf_pipeline_manager):
     assert(pipeline.slices == manager.data.slices)
     assert(pipeline.img_dim == (manager.data.height, manager.data.width, manager.data.slices))
     assert(pipeline.bf_chan_idx == 0)
-    assert(pipeline.fluor_idxs == [])
     assert(pipeline.data_shape == (manager.data.frames, manager.data.channels,
                                    manager.data.slices, manager.data.height, manager.data.width))
     assert(pipeline.chunk_size == (1, 1, 1, manager.data.height, manager.data.width))

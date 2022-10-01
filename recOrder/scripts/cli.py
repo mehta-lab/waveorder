@@ -28,8 +28,7 @@ def help():
     recOrder has two command-line interfaces:
 
     \033[96mrecOrder.reconstruct \033[0m\n
-    Allows you to reconstruct data through a variety of pipelines:
-    Fluorescence Deconvolution, QLIPP, and Phase from Brightfield
+    Allows you to reconstruct data from a QLIPP or Phase from Brightfield pipelines.
     Please see example config files in /examples/example_configs
 
     \033[96mrecOrder.convert \033[0m\n

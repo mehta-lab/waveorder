@@ -144,7 +144,7 @@ ________________________________________________________________________________
 
 ## recOrder Acquisition
 
-This acquisition module is designed to take single image volumes for both phase, birefringence, and fluorescence deconvolution measurements and allows the user to test the outcome of their calibration with small snapshots or volumes. *It should not be used as the main acquisition method for an experiment, please use the Micromanager MDA Acquisition instead.* 
+This acquisition module is designed to take single image volumes for both phase and birefringence measurements and allows the user to test the outcome of their calibration with small snapshots or volumes. *It should not be used as the main acquisition method for an experiment, please use the Micromanager MDA Acquisition instead.* 
 
 ### Save Path
 
@@ -186,7 +186,7 @@ Explanation of background correction methods:
 
 An explanation of phase reconstruction parameters:
  
-> <u>*Wavelength (nm):*</u> Wavelength used for illumination or fluorescence collection [list or str] (if using fluorescence deconvolution).
+> <u>*Wavelength (nm):*</u> Wavelength used for illumination [list or str]
 > <u>*Objective NA:*</u> Numerical Aperture of Objective, typically found next to magnification
 > <u>*Condenser NA:*</u> Numerical Aperture of Condenser
 > <u>*Magnification:*</u> Magnfication of the objective
@@ -200,13 +200,7 @@ Examples of Acquiring 2D birefringence data (Kidney Tissue) with this snap metho
 
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/acq_finished.png)
 
-### Listen For Data
-
-This feature allows a user to perform real-time reconstructions of data that is being collected by MicroManager.  Once this button is pressed, recOrder will wait for a MicroManager MDA Acquisition to begin (as initiated by the user through the MicroManager GUI) and as the data is collected, it will perform a birefringence reconstruction and display the live results in the napari window.
-
-*NOTE: This is only valid for an acquisition that is NOT MULTIMODAL and saved as IMAGE STACK FILE.  For this function to work properly the only channels being acquired can be the 4 or 5 polarization states depending on which scheme the user is using.  If there is also a fluorescence channel being acquired, the reconstruction will not be computed correctly. Future updates may correct for this inconvencience*. 
-
-__________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
+________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
 
 
 # recOrder Offline Reconstruction.
