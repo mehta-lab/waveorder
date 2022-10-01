@@ -945,33 +945,33 @@ class QLIPP_Calibration():
         self._auto_shutter_state = self.mmc.getAutoShutter()
         self._shutter_state = self.mmc.getShutterOpen()
         self.open_shutter()
-        logging.debug('Capturing Bacckground State0')
+        logging.debug('Capturing Background State0')
 
         state0 = self._capture_state('State0', n_avg)
-        logging.debug('Saving Bacckground State0')
+        logging.debug('Saving Background State0')
         tiff.imsave(os.path.join(directory, 'State0.tif'), state0)
 
-        logging.debug('Capturing Bacckground State1')
+        logging.debug('Capturing Background State1')
         state1 = self._capture_state('State1', n_avg)
-        logging.debug('Saving Bacckground State1')
+        logging.debug('Saving Background State1')
         tiff.imsave(os.path.join(directory, 'State1.tif'), state1)
 
-        logging.debug('Capturing Bacckground State2')
+        logging.debug('Capturing Background State2')
         state2 = self._capture_state('State2', n_avg)
-        logging.debug('Saving Bacckground State2')
+        logging.debug('Saving Background State2')
         tiff.imsave(os.path.join(directory, 'State2.tif'), state2)
 
-        logging.debug('Capturing Bacckground State3')
+        logging.debug('Capturing Background State3')
         state3 = self._capture_state('State3', n_avg)
-        logging.debug('Saving Bacckground State3')
+        logging.debug('Saving Background State3')
         tiff.imsave(os.path.join(directory, 'State3.tif'), state3)
 
         imgs = [state0, state1, state2, state3]
 
         if self.calib_scheme == '5-State':
-            logging.debug('Capturing Bacckground State4')
+            logging.debug('Capturing Background State4')
             state4 = self._capture_state('State4', n_avg)
-            logging.debug('Saving Bacckground State4')
+            logging.debug('Saving Background State4')
             tiff.imsave(os.path.join(directory, 'State4.tif'), state4)
             imgs.append(state4)
 
