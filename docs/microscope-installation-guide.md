@@ -27,9 +27,9 @@ should launch napari (may take 15 seconds on a fresh installation) with the recO
  
 ## Install and configure `Micromanager`
 
-Install `Micromanager 2.0` nightly build `20220901` (https://micro-manager.org/Micro-Manager_Nightly_Builds). 
+Install `Micromanager 2.0` nightly build `20220920` (https://micro-manager.org/Micro-Manager_Nightly_Builds). 
 
-**Note:** We have tested recOrder with `20220901`, but most features will work with newer builds. We recommend testing a minimal installation with `20220901` before testing with a different nightly build or additional device drivers. 
+**Note:** We have tested recOrder with `20220920`, but most features will work with newer builds. We recommend testing a minimal installation with `20220920` before testing with a different nightly build or additional device drivers. 
 
 Before launching `Micromanager`, download the Meadowlark device adapters and calibration files from the [release page](https://github.com/mehta-lab/recOrder/releases/) and place these three unzipped files into your `Micromanager` folder (likely `C:\Program Files\Micro-Manager` or similar). 
 

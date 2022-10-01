@@ -1270,7 +1270,7 @@ class MainWidget(QWidget):
         -------
 
         """
-        RECOMMENDED_MM = '20220901'
+        RECOMMENDED_MM = '20220920'
         ZMQ_TARGET_VERSION = '4.2.0'
         try:
             # Try to open Bridge. Requires micromanager to be open with server running.
