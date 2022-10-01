@@ -54,12 +54,12 @@ class MainWidget(QWidget):
 
         # Setup Connections between elements
         # Connect to MicroManager
-        # Disconnecting and hiding for 0.2.0, TODO: reinstate for 1.0.0
+        # I'm disconnecting and hiding this button for 0.2.0, TODO: reinstate for 1.0.0
+        # In 1.0.0 we'll only have a single "Switch to Online/Offline" button in the "Calibration tab"
+        
         # self.ui.qbutton_mm_connect.clicked[bool].connect(self.connect_to_mm)
-        self.ui.connect_to_micromanager.hide()
         self.ui.qbutton_mm_connect.hide()
-        self.ui.le_mm_status.hide()
-
+        
         # Calibration Tab
 
         # Remove QT creator calibration mode items
