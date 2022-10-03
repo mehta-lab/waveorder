@@ -223,6 +223,8 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
         Run through the 4-state calibration algorithm
         """
 
+        search_radius = np.min((self.calib.swing/self.calib.ratio, 0.05))
+
         self.calib.calib_scheme = '4-State'
 
         self._check_abort()
@@ -240,18 +242,20 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
         self._check_abort()
 
         # Optimize 60 deg state
-        self.calib.opt_I60(0.05, 0.05)
+        self.calib.opt_I60(search_radius, search_radius)
         self.progress_update.emit((75, 'Calibrating State 3...'))
 
         self._check_abort()
 
         # Optimize 120 deg state
-        self.calib.opt_I120(0.05, 0.05)
+        self.calib.opt_I120(search_radius, search_radius)
         self.progress_update.emit((85, 'Writing Metadata...'))
 
         self._check_abort()
 
     def _calibrate_5state(self):
+
+        search_radius = np.min((self.calib.swing, 0.05))
 
         self.calib.calib_scheme = '5-State'
 
@@ -268,19 +272,19 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
         self._check_abort()
 
         # Optimize 45 deg state
-        self.calib.opt_I45(0.05, 0.05)
+        self.calib.opt_I45(search_radius, search_radius)
         self.progress_update.emit((65, 'Calibrating State 3...'))
 
         self._check_abort()
 
         # Optimize 90 deg state
-        self.calib.opt_I90(0.05, 0.05)
+        self.calib.opt_I90(search_radius, search_radius)
         self.progress_update.emit((75, 'Calibrating State 4...'))
 
         self._check_abort()
 
         # Optimize 135 deg state
-        self.calib.opt_I135(0.05, 0.05)
+        self.calib.opt_I135(search_radius, search_radius)
         self.progress_update.emit((85, 'Writing Metadata...'))
 
         self._check_abort()
