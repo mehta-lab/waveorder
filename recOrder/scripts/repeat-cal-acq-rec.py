@@ -7,7 +7,7 @@ from pycromanager import Core
 import matplotlib.pyplot as plt
 from recOrder.plugin.widget.main_widget import MainWidget
 
-SAVE_DIR = "Q:\\Talon\\2022_10_01_repeats_0.05\\"
+SAVE_DIR = "Q:\\Talon\\2022_10_04\\"
 SWING = 0.05
 CAL_REPEATS = 3
 BKG_REPEATS = 3
@@ -128,6 +128,7 @@ def main():
             app.ui.cb_bg_method.setCurrentIndex(1) # Set to "Measured" bg correction
             app.enter_bg_correction()
             app.save_name = f"cal-{cal_repeat}-bkg-{bkg_repeat}"
+            app.enter_acq_bg_path()
             app.acq_birefringence()
             time.sleep(15)
 
