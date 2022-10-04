@@ -4,10 +4,8 @@ import napari
 import time
 import matplotlib.pyplot as plt
 from recOrder.plugin.widget.main_widget import MainWidget
-from recOrder.calib.Calibration import QLIPP_Calibration
-from recOrder.plugin.workers.calibration_workers import CalibrationWorker
 
-save_dir = "Q:\\Talon\\2022_09_30_calibration_5state\\"
+save_dir = "./"
 swings = [0.1, 0.03, 0.01, 0.005]
 repeats = 5
 
