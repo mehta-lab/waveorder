@@ -53,10 +53,6 @@ class ReconstructionWorker(WorkerBase):
 
             self._check_abort()
 
-            stokes = self.manager.pre_processing(stokes)
-
-            self._check_abort()
-
             birefringence = self.manager.pipeline.reconstruct_birefringence_volume(stokes)
 
             self._check_abort()
