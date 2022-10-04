@@ -4,7 +4,6 @@ import napari
 import time, random
 from contextlib import contextmanager
 from pycromanager import Core
-import matplotlib.pyplot as plt
 from recOrder.plugin.widget.main_widget import MainWidget
 
 SAVE_DIR = "Q:\\Talon\\2022_10_04\\"
