@@ -2255,9 +2255,9 @@ class MainWidget(QWidget):
 
     def _check_MM_config_setup(self):
         # Warns the user if the MM configuration is not correctly set up.
-
+        desc = self._channel_descriptions
         if self.calib_mode == 'MM-Retardance':
-            if all('String send to' in s for s in self._channel_descriptions) and not any('Voltage (V)' in s for s in self._channel_descriptions):
+            if all('String send to' in s for s in desc) and not any('Voltage (V)' in s for s in desc):
                 return
             else:
                 msg = ' \n'.join(textwrap.wrap("In \'MM-Retardance\' mode each preset must include the " \
@@ -2265,7 +2265,7 @@ class MainWidget(QWidget):
                 show_warning(msg)
        
         elif self.calib_mode == 'MM-Voltage':
-            if all('Voltage (V) LC-A' in s for s in self._channel_descriptions) and all('Voltage (V) LC-B' in s for s in self._channel_descriptions) and not any('String send to' in s for s in self._channel_descriptions):
+            if all('Voltage (V) LC-A' in s for s in desc) and all('Voltage (V) LC-B' in s for s in desc) and not any('String send to' in s for s in desc):
                 return
             else:
                 msg = ' \n'.join(textwrap.wrap("In \'MM-Voltage\' mode each preset must include the \'Voltage (V) LC-A\' " \
