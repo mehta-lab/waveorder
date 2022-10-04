@@ -1297,7 +1297,7 @@ class MainWidget(QWidget):
                        f"Are you using nightly build {RECOMMENDED_MM}?"))
                 raise EnvironmentError
 
-            # Warn the use if there is a MicroManager/ZMQ version mismatch
+            # Warn the user if there is a MicroManager/ZMQ version mismatch
             self.bridge._main_socket.send({"command": "connect", "debug": False})
             reply_json = self.bridge._main_socket.receive(timeout=500)
             zmq_mm_version = reply_json['version']
