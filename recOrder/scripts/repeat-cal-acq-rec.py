@@ -45,13 +45,15 @@ def stage_detour(app: MainWidget, dx: float, dy: float, wait=5):
     ox = app.mmc.getXPosition(xy_stage)
     oy = app.mmc.getYPosition(xy_stage)
     # go to a translated position
-    app.mmc.setRelativePosition(dx, dy)
+    # TODO: args are floored due to a pycromanager bug: https://github.com/micro-manager/pycro-manager/issues/67
+    app.mmc.setRelativeXYPosition(int(dx), int(dy))
     time.sleep(wait)
     try:
         yield app
     finally:
         # go back to the original position
-        app.mmc.setXYPosition(ox, oy)
+        # TODO: args are floored due to a pycromanager bug: https://github.com/micro-manager/pycro-manager/issues/67
+        app.mmc.setXYPosition(int(ox), int(oy))
         time.sleep(wait)
 
 
