@@ -1310,7 +1310,7 @@ class MainWidget(QWidget):
             # calib_channels is typically ['State0', 'State1', 'State2', ...]
             # config_list may be something line ['GFP', 'RFP', 'State0', 'State1', 'State2', ...]
             # config_list may also be of the form ['GFP', 'RFP', 'LF-State0', 'LF-State1', 'LF-State2', ...]
-            # in this version of the code we correctly parse 'LF-State0', but these channels, for not cannot be used
+            # in this version of the code we correctly parse 'LF-State0', but these channels cannot be used
             # by the Calibration class.
             # A valid config group contains all channels in calib_channels
             # self.ui.cb_config_group.clear()    # This triggers the enter config we will clear when switching off
