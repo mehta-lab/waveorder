@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from pycromanager import Core
 from recOrder.plugin.widget.main_widget import MainWidget
 
-SAVE_DIR = "Q:\\Talon\\2022_10_04\\"
+SAVE_DIR = "."
 SWING = 0.05
 CAL_REPEATS = 3
 BKG_REPEATS = 3
