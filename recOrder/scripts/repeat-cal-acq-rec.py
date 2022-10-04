@@ -6,9 +6,6 @@ from contextlib import contextmanager
 from pycromanager import Core
 import matplotlib.pyplot as plt
 from recOrder.plugin.widget.main_widget import MainWidget
-from recOrder.calib.Calibration import QLIPP_Calibration
-from recOrder.plugin.workers.calibration_workers import CalibrationWorker
-
 
 SAVE_DIR = "Q:\\Talon\\2022_10_01_repeats_0.05\\"
 SWING = 0.05
