@@ -2,7 +2,6 @@
 
 import napari
 import time
-import matplotlib.pyplot as plt
 from recOrder.plugin.widget.main_widget import MainWidget
 
 SAVE_DIR = "./"
