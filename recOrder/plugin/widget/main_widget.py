@@ -2249,7 +2249,7 @@ class MainWidget(QWidget):
     @property
     def _channel_descriptions(self):
         return [
-            self.mmc.getConfigData('Channel', calib_channel).getVerbose() 
+            self.mmc.getConfigData(self.config_group, calib_channel).getVerbose() 
             for calib_channel in self.calib_channels
         ]
 
