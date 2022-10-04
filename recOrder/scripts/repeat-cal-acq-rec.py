@@ -48,7 +48,7 @@ def stage_detour(app: MainWidget, dx: float, dy: float, wait=5):
     ox = app.mmc.getXPosition(xy_stage)
     oy = app.mmc.getYPosition(xy_stage)
     # go to a translated position
-    app.mmc.setRelativePosition(dx, dy)
+    app.mmc.setRelativeXYPosition(dx, dy)
     time.sleep(wait)
     try:
         yield app
