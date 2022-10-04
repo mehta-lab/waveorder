@@ -16,6 +16,7 @@ from recOrder.io.config_reader import ConfigReader, PROCESSING
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
+from napari.utils.notifications import show_warning
 from numpydoc.docscrape import NumpyDocString
 from packaging import version
 import numpy as np
@@ -1339,12 +1340,17 @@ class MainWidget(QWidget):
                 raise KeyError(msg)
 
 
-            # set LC control mode
+            # set startup LC control mode
             _devices = self.mmc.getLoadedDevices()
             loaded_devices = [_devices.get(i) for i in range(_devices.size())]
             if LC_DEVICE_NAME in loaded_devices:
-                self.calib_mode = 'MM-Voltage'
-                self.ui.cb_calib_mode.setCurrentIndex(1)
+                config_desc = self.mmc.getConfigData('Channel','State0').getVerbose()
+                if 'String send to' in config_desc:
+                    self.calib_mode = 'MM-Retardance'
+                    self.ui.cb_calib_mode.setCurrentIndex(0)
+                if 'Voltage (V)' in config_desc:
+                    self.calib_mode = 'MM-Voltage'
+                    self.ui.cb_calib_mode.setCurrentIndex(1)
             else:
                 self.calib_mode = 'DAC'
                 self.ui.cb_calib_mode.setCurrentIndex(2)
@@ -2192,6 +2198,8 @@ class MainWidget(QWidget):
         Calibration is then executed by the calibration worker
         """
 
+        self._check_MM_config_setup()
+        
         self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, lc_control_mode=self.calib_mode,
                                        interp_method=self.interp_method, wavelength=self.wavelength)
 
@@ -2237,6 +2245,40 @@ class MainWidget(QWidget):
         self.ui.qbutton_stop_calib.clicked.connect(self.worker.quit)
 
         self.worker.start()
+
+    def _check_MM_config_setup(self):
+        # Warns the user if the MM configuration is not correctly set up.
+
+        descriptions = []
+        if self.calib_mode == 'MM-Retardance':
+            for calib_channel in self.calib_channels:
+                descriptions.append(self.mmc.getConfigData('Channel', calib_channel).getVerbose())
+            if all('String send to' in s for s in descriptions) and not any('Voltage (V)' in s for s in descriptions):
+                return
+            else:
+                msg = ' \n'.join(textwrap.wrap("In \'MM-Retardance\' mode each preset must include the " \
+                    "\'String send to\' property, and no \'Voltage\' properties.", width=40))
+                show_warning(msg)
+       
+        elif self.calib_mode == 'MM-Voltage':
+            for calib_channel in self.calib_channels:
+                descriptions.append(self.mmc.getConfigData('Channel', calib_channel).getVerbose())
+            if all('Voltage (V) LC-A' in s for s in descriptions) and all('Voltage (V) LC-B' in s for s in descriptions) and not any('String send to' in s for s in descriptions):
+                return
+            else:
+                msg = ' \n'.join(textwrap.wrap("In \'MM-Voltage\' mode each preset must include the \'Voltage (V) LC-A\' " \
+                    "property, the \'Voltage (V) LC-B\' property, and no \'String send to\' properties.", width=40))
+                show_warning(msg)
+
+        elif self.calib_mode == 'DAC':
+            _devices = self.mmc.getLoadedDevices()
+            loaded_devices = [_devices.get(i) for i in range(_devices.size())]
+            if LC_DEVICE_NAME in loaded_devices:
+                show_warning("In \'DAC\' mode the MeadowLarkLC device adapter must not be loaded in MM.")
+        
+        else:
+            raise ValueError(f'self.calib_mode = {self.calib_mode} is an unrecognized state.')
+        
 
     @Slot(bool)
     def capture_bg(self):
