@@ -2143,6 +2143,27 @@ class MainWidget(QWidget):
         extinction = self.calib.calculate_extinction(self.swing, self.calib.I_Black, extinction, state1)
         self.ui.le_extinction.setText(str(extinction))
 
+    @property
+    def _microscope_params(self):
+        """
+        A dictionary containing microscope parameters from the current GUI
+        Unused in 0.2.0 --- candidate for deletion
+        """
+        def _param_value(param_name: str, ui=self.ui):
+            # refer to main widget class ui attribute names
+            ui_attr_name = "le_" + param_name
+            param_text = ui.__getattribute__(ui_attr_name).text()
+            # handle blank string
+            return float(param_text) if param_text != '' else None
+
+        return {
+            'n_objective_media': _param_value("n_media"),
+            'objective_NA': _param_value("obj_na"),
+            'condenser_NA': _param_value("cond_na"),
+            'magnification': _param_value("mag"),
+            'pixel_size': _param_value("ps")
+        }
+
     @Slot(bool)
     def load_calibration(self):
         """
@@ -2171,15 +2192,6 @@ class MainWidget(QWidget):
             self.ui.cb_calib_scheme.setCurrentIndex(1)
 
         self.last_calib_meta_file = metadata_path
-
-        # Update the Microscope Parameters with those from the previous calibration (if they're present)
-        params = metadata.Microscope_parameters
-        if params is not None:
-            self.ui.le_n_media.setText(str(params['n_objective_media']) if params['n_objective_media'] is not None else '')
-            self.ui.le_obj_na.setText(str(params['objective_NA']) if params['objective_NA'] is not None else '')
-            self.ui.le_cond_na.setText(str(params['condenser_NA']) if params['condenser_NA'] is not None else '')
-            self.ui.le_mag.setText(str(params['magnification']) if params['magnification'] is not None else '')
-            self.ui.le_ps.setText(str(params['pixel_size']) if params['pixel_size'] is not None else '')
 
         # Move the load calibration function to a separate thread
         self.worker = load_calibration(self.calib, metadata)
