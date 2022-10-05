@@ -1969,7 +1969,7 @@ class MainWidget(QWidget):
             self.method = 'QLIPP'
             self.ui.label_bf_chan.hide()
             self.ui.le_bf_chan.hide()
-            self.ui.label_chan_desc.setText('Retardance, Orientation, BF, Phase3D, S0, S1, S2, S3')
+            self.ui.label_chan_desc.setText('Retardance, Orientation, BF, Phase3D, Phase2D, S0, S1, S2, S3')
 
         elif idx == 1:
             self.method = 'PhaseFromBF'
