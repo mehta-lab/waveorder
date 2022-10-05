@@ -776,7 +776,7 @@ class QLIPP_Calibration():
 
             return inst_mat
 
-    def write_metadata(self, notes=None, microscope_params=None):
+    def write_metadata(self, notes=None):
 
         inst_mat = self.calc_inst_matrix()
         inst_mat = np.around(inst_mat, decimals=5).tolist()
@@ -794,8 +794,7 @@ class QLIPP_Calibration():
                         'Black level': np.round(self.I_Black, 2),
                         'Extinction ratio': self.extinction_ratio,
                         'ROI (x, y, width, height)': self.ROI},
-                    'Notes': notes,
-                    'Microscope parameters': microscope_params
+                    'Notes': notes
                     }
 
         if self.calib_scheme == '4-State':
