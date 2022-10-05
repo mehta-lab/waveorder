@@ -21,6 +21,7 @@ from numpydoc.docscrape import NumpyDocString
 from packaging import version
 import numpy as np
 import os
+from os.path import dirname
 import json
 import logging
 import pathlib
@@ -271,7 +272,7 @@ class MainWidget(QWidget):
         self.worker = None
 
         # Display/Initialiaze GUI Images (plotting legends, recOrder logo)
-        recorder_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        recorder_dir = dirname(dirname(dirname(dirname(os.path.abspath(__file__)))))
         jch_legend_path = os.path.join(recorder_dir, 'docs/images/JCh_legend.png')
         hsv_legend_path = os.path.join(recorder_dir, 'docs/images/HSV_legend.png')
         self.jch_pixmap = QPixmap(jch_legend_path)
@@ -280,6 +281,9 @@ class MainWidget(QWidget):
         logo_path = os.path.join(recorder_dir, 'docs/images/recOrder_plugin_logo.png')
         logo_pixmap = QPixmap(logo_path)
         self.ui.label_logo.setPixmap(logo_pixmap)
+
+        # Get default config file
+        self.default_offline_config = os.path.join(recorder_dir, "recOrder/plugin/config_offline_default.yml")
 
         # Hide initial UI elements for later implementation or for later pop-up purposes
         self.ui.label_lca.hide()
@@ -2486,7 +2490,7 @@ class MainWidget(QWidget):
 
     @Slot(bool)
     def load_default_config(self):
-        self.config_reader = ConfigReader(mode='3D', method='QLIPP')
+        self.config_reader = ConfigReader(self.default_offline_config)
         self._populate_from_config()
 
     @Slot(int)
