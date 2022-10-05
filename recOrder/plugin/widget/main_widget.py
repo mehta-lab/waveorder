@@ -331,6 +331,9 @@ class MainWidget(QWidget):
         self.ui.tabWidget_2.setCurrentIndex(0) # set focus to "Plot" tab by default
         self.ui.tabWidget_3.setCurrentIndex(0) # set focus to "General" tab by default
 
+        # No "Optional" text on offline mode's calibration metadata box
+        self.ui.le_calibration_metadata.setPlaceholderText("")
+
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
             if 'cb_' in attr_name:
