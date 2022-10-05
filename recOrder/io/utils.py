@@ -326,7 +326,7 @@ def ret_ori_overlay(retardance, orientation, ret_max = 10, mode="2D", cmap="JCh"
         ret_ = np.copy(
             retardance[i]
         )  # copy to avoid modifying original array.
-        ret_[ret_ > ret_max = 10] = ret_max = 10  # clip retardance to specified max.
+        ret_[ret_ > ret_max] = ret_max  # clip retardance to specified max.
 
         # FIX ME: this binning code leads to artifacts.
         # levels = 32
