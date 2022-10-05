@@ -1502,7 +1502,7 @@ class MainWidget(QWidget):
             channel_names['BirefringenceOverlay'] = None
             overlay = ret_ori_overlay(retardance=value[0],
                                       orientation=value[1],
-                                      scale=(0, np.percentile(value[0], 99.99)),
+                                      ret_max= np.percentile(value[0], 99.99),
                                       cmap=self.colormap)
 
         for key, chan in channel_names.items():
@@ -2040,7 +2040,7 @@ class MainWidget(QWidget):
 
                     overlay = ret_ori_overlay(retardance=self.viewer.layers['Retardance2D'].data,
                                               orientation=self.viewer.layers['Orientation2D'].data,
-                                              scale=(0, np.percentile(self.viewer.layers['Retardance2D'].data, 99.99)),
+                                              ret_max= np.percentile(self.viewer.layers['Retardance2D'].data, 99.99),
                                               cmap=self.colormap)
 
                     self.viewer.layers['BirefringenceOverlay2D'].data = overlay
