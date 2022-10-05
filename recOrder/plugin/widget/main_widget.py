@@ -2142,7 +2142,10 @@ class MainWidget(QWidget):
 
     @property
     def _microscope_params(self):
-        """A dictionary containing microscope parameters from the current GUI"""
+        """
+        A dictionary containing microscope parameters from the current GUI
+        Unused in 0.2.0 --- candidate for deletion
+        """
         def _param_value(param_name: str, ui=self.ui):
             # refer to main widget class ui attribute names
             ui_attr_name = "le_" + param_name
