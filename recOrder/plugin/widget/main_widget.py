@@ -16,10 +16,12 @@ from recOrder.io.config_reader import ConfigReader, PROCESSING
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
+from napari.utils.notifications import show_warning
 from numpydoc.docscrape import NumpyDocString
 from packaging import version
 import numpy as np
 import os
+from os.path import dirname
 import json
 import logging
 import pathlib
@@ -270,7 +272,7 @@ class MainWidget(QWidget):
         self.worker = None
 
         # Display/Initialiaze GUI Images (plotting legends, recOrder logo)
-        recorder_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        recorder_dir = dirname(dirname(dirname(dirname(os.path.abspath(__file__)))))
         jch_legend_path = os.path.join(recorder_dir, 'docs/images/JCh_legend.png')
         hsv_legend_path = os.path.join(recorder_dir, 'docs/images/HSV_legend.png')
         self.jch_pixmap = QPixmap(jch_legend_path)
@@ -279,6 +281,9 @@ class MainWidget(QWidget):
         logo_path = os.path.join(recorder_dir, 'docs/images/recOrder_plugin_logo.png')
         logo_pixmap = QPixmap(logo_path)
         self.ui.label_logo.setPixmap(logo_pixmap)
+
+        # Get default config file
+        self.default_offline_config = os.path.join(recorder_dir, "recOrder/plugin/config_offline_default.yml")
 
         # Hide initial UI elements for later implementation or for later pop-up purposes
         self.ui.label_lca.hide()
@@ -325,6 +330,9 @@ class MainWidget(QWidget):
         self.ui.tabWidget.parent().setObjectName('recOrder') # make sure the top says recOrder and not 'Form'
         self.ui.tabWidget_2.setCurrentIndex(0) # set focus to "Plot" tab by default
         self.ui.tabWidget_3.setCurrentIndex(0) # set focus to "General" tab by default
+
+        # No "Optional" text on offline mode's calibration metadata box
+        self.ui.le_calibration_metadata.setPlaceholderText("")
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
@@ -1297,7 +1305,7 @@ class MainWidget(QWidget):
                        f"Are you using nightly build {RECOMMENDED_MM}?"))
                 raise EnvironmentError
 
-            # Warn the use if there is a MicroManager/ZMQ version mismatch
+            # Warn the user if there is a MicroManager/ZMQ version mismatch
             self.bridge._main_socket.send({"command": "connect", "debug": False})
             reply_json = self.bridge._main_socket.receive(timeout=500)
             zmq_mm_version = reply_json['version']
@@ -1310,7 +1318,7 @@ class MainWidget(QWidget):
             # calib_channels is typically ['State0', 'State1', 'State2', ...]
             # config_list may be something line ['GFP', 'RFP', 'State0', 'State1', 'State2', ...]
             # config_list may also be of the form ['GFP', 'RFP', 'LF-State0', 'LF-State1', 'LF-State2', ...]
-            # in this version of the code we correctly parse 'LF-State0', but these channels, for not cannot be used
+            # in this version of the code we correctly parse 'LF-State0', but these channels cannot be used
             # by the Calibration class.
             # A valid config group contains all channels in calib_channels
             # self.ui.cb_config_group.clear()    # This triggers the enter config we will clear when switching off
@@ -1339,12 +1347,17 @@ class MainWidget(QWidget):
                 raise KeyError(msg)
 
 
-            # set LC control mode
+            # set startup LC control mode
             _devices = self.mmc.getLoadedDevices()
             loaded_devices = [_devices.get(i) for i in range(_devices.size())]
             if LC_DEVICE_NAME in loaded_devices:
-                self.calib_mode = 'MM-Voltage'
-                self.ui.cb_calib_mode.setCurrentIndex(1)
+                config_desc = self.mmc.getConfigData('Channel','State0').getVerbose()
+                if 'String send to' in config_desc:
+                    self.calib_mode = 'MM-Retardance'
+                    self.ui.cb_calib_mode.setCurrentIndex(0)
+                if 'Voltage (V)' in config_desc:
+                    self.calib_mode = 'MM-Voltage'
+                    self.ui.cb_calib_mode.setCurrentIndex(1)
             else:
                 self.calib_mode = 'DAC'
                 self.ui.cb_calib_mode.setCurrentIndex(2)
@@ -1492,7 +1505,7 @@ class MainWidget(QWidget):
             channel_names['BirefringenceOverlay'] = None
             overlay = ret_ori_overlay(retardance=value[0],
                                       orientation=value[1],
-                                      scale=(0, np.percentile(value[0], 99.99)),
+                                      ret_max= np.percentile(value[0], 99.99),
                                       cmap=self.colormap)
 
         for key, chan in channel_names.items():
@@ -1959,7 +1972,7 @@ class MainWidget(QWidget):
             self.method = 'QLIPP'
             self.ui.label_bf_chan.hide()
             self.ui.le_bf_chan.hide()
-            self.ui.label_chan_desc.setText('Retardance, Orientation, BF, Phase3D, S0, S1, S2, S3')
+            self.ui.label_chan_desc.setText('Retardance, Orientation, BF, Phase3D, Phase2D, S0, S1, S2, S3')
 
         elif idx == 1:
             self.method = 'PhaseFromBF'
@@ -2030,7 +2043,7 @@ class MainWidget(QWidget):
 
                     overlay = ret_ori_overlay(retardance=self.viewer.layers['Retardance2D'].data,
                                               orientation=self.viewer.layers['Orientation2D'].data,
-                                              scale=(0, np.percentile(self.viewer.layers['Retardance2D'].data, 99.99)),
+                                              ret_max= np.percentile(self.viewer.layers['Retardance2D'].data, 99.99),
                                               cmap=self.colormap)
 
                     self.viewer.layers['BirefringenceOverlay2D'].data = overlay
@@ -2130,6 +2143,27 @@ class MainWidget(QWidget):
         extinction = self.calib.calculate_extinction(self.swing, self.calib.I_Black, extinction, state1)
         self.ui.le_extinction.setText(str(extinction))
 
+    @property
+    def _microscope_params(self):
+        """
+        A dictionary containing microscope parameters from the current GUI
+        Unused in 0.2.0 --- candidate for deletion
+        """
+        def _param_value(param_name: str, ui=self.ui):
+            # refer to main widget class ui attribute names
+            ui_attr_name = "le_" + param_name
+            param_text = ui.__getattribute__(ui_attr_name).text()
+            # handle blank string
+            return float(param_text) if param_text != '' else None
+
+        return {
+            'n_objective_media': _param_value("n_media"),
+            'objective_NA': _param_value("obj_na"),
+            'condenser_NA': _param_value("cond_na"),
+            'magnification': _param_value("mag"),
+            'pixel_size': _param_value("ps")
+        }
+
     @Slot(bool)
     def load_calibration(self):
         """
@@ -2159,15 +2193,6 @@ class MainWidget(QWidget):
 
         self.last_calib_meta_file = metadata_path
 
-        # Update the Microscope Parameters with those from the previous calibration (if they're present)
-        params = metadata.Microscope_parameters
-        if params is not None:
-            self.ui.le_n_media.setText(str(params['n_objective_media']) if params['n_objective_media'] is not None else '')
-            self.ui.le_obj_na.setText(str(params['objective_NA']) if params['objective_NA'] is not None else '')
-            self.ui.le_cond_na.setText(str(params['condenser_NA']) if params['condenser_NA'] is not None else '')
-            self.ui.le_mag.setText(str(params['magnification']) if params['magnification'] is not None else '')
-            self.ui.le_ps.setText(str(params['pixel_size']) if params['pixel_size'] is not None else '')
-
         # Move the load calibration function to a separate thread
         self.worker = load_calibration(self.calib, metadata)
 
@@ -2192,6 +2217,8 @@ class MainWidget(QWidget):
         Calibration is then executed by the calibration worker
         """
 
+        self._check_MM_config_setup()
+        
         self.calib = QLIPP_Calibration(self.mmc, self.mm, group=self.config_group, lc_control_mode=self.calib_mode,
                                        interp_method=self.interp_method, wavelength=self.wavelength)
 
@@ -2237,6 +2264,42 @@ class MainWidget(QWidget):
         self.ui.qbutton_stop_calib.clicked.connect(self.worker.quit)
 
         self.worker.start()
+
+    @property
+    def _channel_descriptions(self):
+        return [
+            self.mmc.getConfigData(self.config_group, calib_channel).getVerbose() 
+            for calib_channel in self.calib_channels
+        ]
+
+    def _check_MM_config_setup(self):
+        # Warns the user if the MM configuration is not correctly set up.
+        desc = self._channel_descriptions
+        if self.calib_mode == 'MM-Retardance':
+            if all('String send to' in s for s in desc) and not any('Voltage (V)' in s for s in desc):
+                return
+            else:
+                msg = ' \n'.join(textwrap.wrap("In \'MM-Retardance\' mode each preset must include the " \
+                    "\'String send to\' property, and no \'Voltage\' properties.", width=40))
+                show_warning(msg)
+       
+        elif self.calib_mode == 'MM-Voltage':
+            if all('Voltage (V) LC-A' in s for s in desc) and all('Voltage (V) LC-B' in s for s in desc) and not any('String send to' in s for s in desc):
+                return
+            else:
+                msg = ' \n'.join(textwrap.wrap("In \'MM-Voltage\' mode each preset must include the \'Voltage (V) LC-A\' " \
+                    "property, the \'Voltage (V) LC-B\' property, and no \'String send to\' properties.", width=40))
+                show_warning(msg)
+
+        elif self.calib_mode == 'DAC':
+            _devices = self.mmc.getLoadedDevices()
+            loaded_devices = [_devices.get(i) for i in range(_devices.size())]
+            if LC_DEVICE_NAME in loaded_devices:
+                show_warning("In \'DAC\' mode the MeadowLarkLC device adapter must not be loaded in MM.")
+        
+        else:
+            raise ValueError(f'self.calib_mode = {self.calib_mode} is an unrecognized state.')
+        
 
     @Slot(bool)
     def capture_bg(self):
@@ -2442,7 +2505,7 @@ class MainWidget(QWidget):
 
     @Slot(bool)
     def load_default_config(self):
-        self.config_reader = ConfigReader(mode='3D', method='QLIPP')
+        self.config_reader = ConfigReader(self.default_offline_config)
         self._populate_from_config()
 
     @Slot(int)

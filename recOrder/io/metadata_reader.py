@@ -46,7 +46,6 @@ class MetadataReader:
         self.LCB_voltage = self.get_lc_voltage('LCB')
         self.Swing_measured = self.get_swing_measured()
         self.Notes = self.get_notes()
-        self.Microscope_parameters = self.get_microscope_parameters()
 
     def get_summary_calibration_attr(self, attr):
         try:
@@ -160,16 +159,6 @@ class MetadataReader:
             val = self.json_metadata['Calibration']['Channel names']
         except KeyError:
             val = self.json_metadata['Summary']['ChNames']
-        return val
-
-    def get_microscope_parameters(self):
-        try:
-            val = self.json_metadata['Microscope parameters']
-        except KeyError:
-            try:
-                val = self.json_metadata['Microscope parameters']
-            except KeyError:
-                val = None
         return val
 
     def get_notes(self):

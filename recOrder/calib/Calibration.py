@@ -513,12 +513,12 @@ class QLIPP_Calibration():
               | target ratio: {-self.ratio}')
         logging.debug(f'total swing = {self.swing60:.4f} | target = {swing_ell}')
 
-        logging.info("LCA State2 (I60) = " + str(self.lca_60))
-        logging.debug("LCA State2 (I60) = " + str(self.lca_60))
-        logging.info("LCB State2 (I60) = " + str(self.lcb_60))
-        logging.debug("LCB State2 (I60) = " + str(self.lcb_60))
-        logging.info(f'Intensity (I60) = {intensity}')
-        logging.debug(f'Intensity (I60) = {intensity}')
+        logging.info(f"LCA State2 (I60) = {self.lca_60:.3f}")
+        logging.debug(f"LCA State2 (I60) = {self.lca_60:.5f}")
+        logging.info(f"LCB State2 (I60) = {self.lcb_60:.3f}")
+        logging.debug(f"LCB State2 (I60) = {self.lcb_60:.5f}")
+        logging.info(f'Intensity (I60) = {intensity:.0f}')
+        logging.debug(f'Intensity (I60) = {intensity:.3f}')
         logging.info("--------done--------")
         logging.debug("--------done--------")
 
@@ -598,12 +598,12 @@ class QLIPP_Calibration():
         logging.debug(f'ratio: swing_LCB / swing_LCA = {(self.lcb_ext - self.lcb_120) / (self.lca_ext - self.lca_120):.4f}\
              | target ratio: {self.ratio}')
         logging.debug(f'total swing = {self.swing120:.4f} | target = {swing_ell}')
-        logging.info("LCA State3 (I120) = " + str(self.lca_120))
-        logging.debug("LCA State3 (I120) = " + str(self.lca_120))
-        logging.info("LCB State3 (I120) = " + str(self.lcb_120))
-        logging.debug("LCB State3 (I120) = " + str(self.lcb_120))
-        logging.info(f'Intensity (I120) = {intensity}')
-        logging.debug(f'Intensity (I120) = {intensity}')
+        logging.info(f"LCA State3 (I120) = {self.lca_120:.3f}")
+        logging.debug(f"LCA State3 (I120) = {self.lca_120:.5f}")
+        logging.info(f"LCB State3 (I120) = {self.lcb_120:.3f}")
+        logging.debug(f"LCB State3 (I120) = {self.lcb_120:.5f}")
+        logging.info(f'Intensity (I120) = {intensity:.0f}')
+        logging.debug(f'Intensity (I120) = {intensity:.3f}')
         logging.info("--------done--------")
         logging.debug("--------done--------")
 
@@ -776,7 +776,7 @@ class QLIPP_Calibration():
 
             return inst_mat
 
-    def write_metadata(self, notes=None, microscope_params=None):
+    def write_metadata(self, notes=None):
 
         inst_mat = self.calc_inst_matrix()
         inst_mat = np.around(inst_mat, decimals=5).tolist()
@@ -794,8 +794,7 @@ class QLIPP_Calibration():
                         'Black level': np.round(self.I_Black, 2),
                         'Extinction ratio': self.extinction_ratio,
                         'ROI (x, y, width, height)': self.ROI},
-                    'Notes': notes,
-                    'Microscope parameters': microscope_params
+                    'Notes': notes
                     }
 
         if self.calib_scheme == '4-State':
@@ -945,33 +944,33 @@ class QLIPP_Calibration():
         self._auto_shutter_state = self.mmc.getAutoShutter()
         self._shutter_state = self.mmc.getShutterOpen()
         self.open_shutter()
-        logging.debug('Capturing Bacckground State0')
+        logging.debug('Capturing Background State0')
 
         state0 = self._capture_state('State0', n_avg)
-        logging.debug('Saving Bacckground State0')
+        logging.debug('Saving Background State0')
         tiff.imsave(os.path.join(directory, 'State0.tif'), state0)
 
-        logging.debug('Capturing Bacckground State1')
+        logging.debug('Capturing Background State1')
         state1 = self._capture_state('State1', n_avg)
-        logging.debug('Saving Bacckground State1')
+        logging.debug('Saving Background State1')
         tiff.imsave(os.path.join(directory, 'State1.tif'), state1)
 
-        logging.debug('Capturing Bacckground State2')
+        logging.debug('Capturing Background State2')
         state2 = self._capture_state('State2', n_avg)
-        logging.debug('Saving Bacckground State2')
+        logging.debug('Saving Background State2')
         tiff.imsave(os.path.join(directory, 'State2.tif'), state2)
 
-        logging.debug('Capturing Bacckground State3')
+        logging.debug('Capturing Background State3')
         state3 = self._capture_state('State3', n_avg)
-        logging.debug('Saving Bacckground State3')
+        logging.debug('Saving Background State3')
         tiff.imsave(os.path.join(directory, 'State3.tif'), state3)
 
         imgs = [state0, state1, state2, state3]
 
         if self.calib_scheme == '5-State':
-            logging.debug('Capturing Bacckground State4')
+            logging.debug('Capturing Background State4')
             state4 = self._capture_state('State4', n_avg)
-            logging.debug('Saving Bacckground State4')
+            logging.debug('Saving Background State4')
             tiff.imsave(os.path.join(directory, 'State4.tif'), state4)
             imgs.append(state4)
 

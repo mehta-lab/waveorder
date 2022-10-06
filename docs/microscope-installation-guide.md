@@ -35,6 +35,17 @@ Before launching `Micromanager`, download the Meadowlark device adapters and cal
 
 Launch `Micromanager`, open `Devices > Hardware Configuration Wizard...`, and add the `MeadowlarkLcOpenSource` device to your configuration. Confirm your installation by opening `Devices > Device Property Browser...` and confirming that `MeadowlarkLCOpenSource` properties appear. 
 
+### Option 1 (recommended): Voltage-mode calibration installation
+ Create a new channel group and add the `MeadowlarkLcOpenSource-Voltage (V) LC-A` and `MeadowlarkLcOpenSource-Voltage (V) LC-B` properties. 
+
+![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/create_group_voltage.png)
+
+Add 5 presets to this group named `State0`, `State1`, `State2`, `State3`, and `State4`. You can set random voltages to add these presets, and `recOrder` will calibrate and set these voltages later.
+
+![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/create_preset_voltage.png)
+
+### Option 2 (soon deprecated): retardance mode calibration installation
+
 Create a new channel group and add the property `MeadowlarkLcOpenSource-String send to -`. 
 
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/create_group.png)
@@ -42,6 +53,8 @@ Create a new channel group and add the property `MeadowlarkLcOpenSource-String s
 Add 5 presets to this group named `State0`, `State1`, `State2`, `State3`, and `State4` and set the corresponding preset values to `state0`, `state1`, `state2`, `state3`, `state4` in the `MeadowlarkLcOpenSource-String send to –`* property. 
 
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/create_preset.png)
+
+### Enable port access
 
 Finally, enable port access so that micromanager can communicate with recOrder through the `pycromanager` bridge. To do so open MM and navigate to `Tools > Options` and check the box that says `Run server on port 4827`
 

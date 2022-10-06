@@ -1,0 +1,43 @@
+dataset:
+  background: ''
+  background_ROI: null
+  calibration_metadata: ''
+  data_dir: ''
+  data_save_name: ''
+  data_type: zarr
+  method: QLIPP
+  mode: 3D
+  positions:
+  - all
+  save_dir: ''
+  timepoints:
+  - all
+processing:
+  NA_condenser: 0.5
+  NA_objective: 1.3
+  TV_reg_abs_2D: 0.0001
+  TV_reg_ph_2D: 0.0001
+  TV_reg_ph_3D: 5.0e-05
+  Tik_reg_abs_2D: 0.0001
+  Tik_reg_ph_2D: 0.0001
+  Tik_reg_ph_3D: 0.0001
+  background_correction: None
+  brightfield_channel_index: 0
+  focus_zidx: null
+  gpu_id: 0
+  itr_2D: 50
+  itr_3D: 50
+  magnification: 60.0
+  n_objective_media: 1.3
+  output_channels:
+  - ''
+  pad_z: 0
+  phase_denoiser_2D: Tikhonov
+  phase_denoiser_3D: Tikhonov
+  pixel_size: 6.9
+  qlipp_birefringence_only: false
+  reg: 0.0001
+  rho_2D: 1
+  rho_3D: 0.001
+  use_gpu: false
+  wavelength: 532
