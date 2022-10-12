@@ -2,10 +2,12 @@ from qtpy.QtCore import Qt, QRect
 from qtpy.QtGui import QPalette, QPainter, QBrush, QColor, QPen
 from qtpy.QtWidgets import QWidget, QPushButton
 
+
 class Overlay(QWidget):
     """
     ADAPTED FROM AYDIN https://github.com/royerlab/aydin/blob/master/aydin/gui/_qt/custom_widgets/overlay.py
     """
+
     def __init__(self, parent=None):
 
         # super().__init__(self, parent)
@@ -13,7 +15,6 @@ class Overlay(QWidget):
         palette = QPalette(self.palette())
         palette.setColor(palette.Background, Qt.transparent)
         self.setPalette(palette)
-
 
     def paintEvent(self, event):
         painter = QPainter()

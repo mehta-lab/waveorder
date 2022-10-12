@@ -84,4 +84,14 @@ pyuic5 -x recOrder_ui.ui -o recOrder_ui.py
 ```
 Note: `pyuic5` is installed alongside `PyQt5`, so you can expect to find it installed in your `recOrder` conda environement. 
 
-Note: although much of the GUI is specified in the generated `recOrder_ui.py` file, the `main_widget.py` file makes extensive modifications to the GUI. 
+Note: although much of the GUI is specified in the generated `recOrder_ui.py` file, the `main_widget.py` file makes extensive modifications to the GUI.
+
+## Make `git blame` ignore formatting commits
+**Note:** `git --version` must be `>=2.23` to use this feature.
+
+If you would like `git blame` to ignore formatting commits, run this line: 
+```sh
+ git config --global blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
+The `\.git-blame-ignore-revs` file contains a list of commit hashes corresponding to formatting commits. If you make a formatting commit, please add the commit's hash to this file.

@@ -6,8 +6,19 @@ from waveorder.io.reader import WaveorderReader
 import time
 import glob
 
-def generate_acq_settings(mm, channel_group, channels=None, zstart=None, zend=None, zstep=None,
-                          save_dir=None, prefix=None, keep_shutter_open_channels=False, keep_shutter_open_slices=False):
+
+def generate_acq_settings(
+    mm,
+    channel_group,
+    channels=None,
+    zstart=None,
+    zend=None,
+    zstep=None,
+    save_dir=None,
+    prefix=None,
+    keep_shutter_open_channels=False,
+    keep_shutter_open_slices=False,
+):
     """
     This function generates a json file specific to the micromanager SequenceSettings.
     It has default parameters for a multi-channels z-stack acquisition but does not yet
@@ -46,58 +57,67 @@ def generate_acq_settings(mm, channel_group, channels=None, zstart=None, zend=No
         do_z = False
 
     # Structure of the channel properties
-    channel_dict = {'channelGroup': channel_group,
-                    'config': None,
-                    'exposure': None,
-                    'zOffset': 0,
-                    'doZStack': do_z,
-                    'color': {'value': -16747854, 'falpha': 0.0},
-                    'skipFactorFrame': 0,
-                    'useChannel': True if channels else False}
+    channel_dict = {
+        "channelGroup": channel_group,
+        "config": None,
+        "exposure": None,
+        "zOffset": 0,
+        "doZStack": do_z,
+        "color": {"value": -16747854, "falpha": 0.0},
+        "skipFactorFrame": 0,
+        "useChannel": True if channels else False,
+    }
 
     channel_list = None
     if channels:
         # Append all the channels with their current exposure settings
         channel_list = []
         for chan in channels:
-            #todo: think about how to deal with missing exposure
-            exposure = app.getChannelExposureTime(channel_group, chan, 10) # sets exposure to 10 if not found
+            # todo: think about how to deal with missing exposure
+            exposure = app.getChannelExposureTime(
+                channel_group, chan, 10
+            )  # sets exposure to 10 if not found
             channel = channel_dict.copy()
-            channel['config'] = chan
-            channel['exposure'] = exposure
+            channel["config"] = chan
+            channel["exposure"] = exposure
 
             channel_list.append(channel)
 
     # set other parameters
-    original_json['numFrames'] = 1
-    original_json['intervalMs'] = 0
-    original_json['relativeZSlice'] = True
-    original_json['slicesFirst'] = True
-    original_json['timeFirst'] = False
-    original_json['keepShutterOpenSlices'] = keep_shutter_open_slices
-    original_json['keepShutterOpenChannels'] = keep_shutter_open_channels
-    original_json['useAutofocus'] = False
-    original_json['saveMode'] = 'MULTIPAGE_TIFF'
-    original_json['save'] = True if save_dir else False
-    original_json['root'] = save_dir if save_dir else ''
-    original_json['prefix'] = prefix if prefix else 'Untitled'
-    original_json['channels'] = channel_list
-    original_json['zReference'] = 0.0
-    original_json['channelGroup'] = channel_group
-    original_json['usePositionList'] = False
-    original_json['shouldDisplayImages'] = True
-    original_json['useSlices'] = do_z
-    original_json['useFrames'] = False
-    original_json['useChannels'] = True if channels else False
-    original_json['slices'] = list(np.arange(float(zstart), float(zend+zstep), float(zstep))) if zstart else []
-    original_json['sliceZStepUm'] = zstep
-    original_json['sliceZBottomUm'] = zstart
-    original_json['sliceZTopUm'] = zend
-    original_json['acqOrderMode'] = 1
+    original_json["numFrames"] = 1
+    original_json["intervalMs"] = 0
+    original_json["relativeZSlice"] = True
+    original_json["slicesFirst"] = True
+    original_json["timeFirst"] = False
+    original_json["keepShutterOpenSlices"] = keep_shutter_open_slices
+    original_json["keepShutterOpenChannels"] = keep_shutter_open_channels
+    original_json["useAutofocus"] = False
+    original_json["saveMode"] = "MULTIPAGE_TIFF"
+    original_json["save"] = True if save_dir else False
+    original_json["root"] = save_dir if save_dir else ""
+    original_json["prefix"] = prefix if prefix else "Untitled"
+    original_json["channels"] = channel_list
+    original_json["zReference"] = 0.0
+    original_json["channelGroup"] = channel_group
+    original_json["usePositionList"] = False
+    original_json["shouldDisplayImages"] = True
+    original_json["useSlices"] = do_z
+    original_json["useFrames"] = False
+    original_json["useChannels"] = True if channels else False
+    original_json["slices"] = (
+        list(np.arange(float(zstart), float(zend + zstep), float(zstep)))
+        if zstart
+        else []
+    )
+    original_json["sliceZStepUm"] = zstep
+    original_json["sliceZBottomUm"] = zstart
+    original_json["sliceZTopUm"] = zend
+    original_json["acqOrderMode"] = 1
 
     return original_json
 
-def acquire_from_settings(mm, settings, grab_images = True):
+
+def acquire_from_settings(mm, settings, grab_images=True):
     """
     Function to acquire an MDA acquisition with the native MM MDA Engine.
     Assumes single position acquisition.
@@ -121,16 +141,19 @@ def acquire_from_settings(mm, settings, grab_images = True):
 
     time.sleep(3)
 
-    #TODO: speed improvements in reading the data with pycromanager acquisition?
+    # TODO: speed improvements in reading the data with pycromanager acquisition?
     if grab_images:
         # get the most recent acquisition if multiple
-        path = os.path.join(settings['root'], settings['prefix'])
-        files = glob.glob(path+'*')
-        index = max([int(x.split(path + '_')[1]) for x in files])
+        path = os.path.join(settings["root"], settings["prefix"])
+        files = glob.glob(path + "*")
+        index = max([int(x.split(path + "_")[1]) for x in files])
 
-        reader = WaveorderReader(path+f'_{index}', 'ometiff', extract_data=True)
+        reader = WaveorderReader(
+            path + f"_{index}", "ometiff", extract_data=True
+        )
 
         return reader.get_array(0)
+
 
 def acquire_2D(mm, mmc, scheme, snap_manager=None):
     """
@@ -152,20 +175,20 @@ def acquire_2D(mm, mmc, scheme, snap_manager=None):
     if not snap_manager:
         snap_manager = mm.getSnapLiveManager()
 
-    set_lc_state(mmc, 'State0')
+    set_lc_state(mmc, "State0")
     state0 = snap_and_get_image(snap_manager)
 
-    set_lc_state(mmc, 'State1')
+    set_lc_state(mmc, "State1")
     state1 = snap_and_get_image(snap_manager)
 
-    set_lc_state(mmc, 'State2')
+    set_lc_state(mmc, "State2")
     state2 = snap_and_get_image(snap_manager)
 
-    set_lc_state(mmc, 'State3')
+    set_lc_state(mmc, "State3")
     state3 = snap_and_get_image(snap_manager)
 
-    if scheme == '5-State':
-        set_lc_state(mmc, 'State4')
+    if scheme == "5-State":
+        set_lc_state(mmc, "State4")
         state4 = snap_and_get_image(snap_manager)
         return np.asarray([state0, state1, state2, state3, state4])
 
@@ -198,12 +221,14 @@ def acquire_3D(mm, mmc, scheme, z_start, z_end, z_step, snap_manager=None):
 
     stage = mmc.getFocusDevice()
     current_z = mmc.getPosition(stage)
-    n_channels = 4 if scheme == '4-State' else 5
+    n_channels = 4 if scheme == "4-State" else 5
     stack = []
     for c in range(n_channels):
-        set_lc_state(mmc, f'State{c}')
+        set_lc_state(mmc, f"State{c}")
         z_stack = []
-        for z in np.arange(current_z+z_start, current_z+z_end+z_step, z_step):
+        for z in np.arange(
+            current_z + z_start, current_z + z_end + z_step, z_step
+        ):
             mmc.setPosition(stage, z)
             z_stack.append(snap_and_get_image(snap_manager))
 

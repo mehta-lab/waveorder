@@ -1,7 +1,15 @@
 from qtpy.QtCore import Signal
-from recOrder.compute.qlipp_compute import initialize_reconstructor, \
-    reconstruct_qlipp_birefringence, reconstruct_qlipp_stokes, reconstruct_phase2D, reconstruct_phase3D
-from recOrder.acq.acq_functions import generate_acq_settings, acquire_from_settings
+from recOrder.compute.qlipp_compute import (
+    initialize_reconstructor,
+    reconstruct_qlipp_birefringence,
+    reconstruct_qlipp_stokes,
+    reconstruct_phase2D,
+    reconstruct_phase3D,
+)
+from recOrder.acq.acq_functions import (
+    generate_acq_settings,
+    acquire_from_settings,
+)
 from recOrder.io.utils import load_bg, extract_reconstruction_parameters
 from recOrder.compute import QLIPPBirefringenceCompute
 from recOrder.io.zarr_converter import ZarrConverter
@@ -42,6 +50,7 @@ class BFAcquisitionSignals(WorkerBaseSignals):
     meta_emitter = Signal(dict)
     aborted = Signal()
 
+
 class ListeningSignals(WorkerBaseSignals):
     """
     Custom Signals class that includes napari native signals
@@ -65,23 +74,39 @@ class BFAcquisitionWorker(WorkerBase):
         self.calib_window = calib_window
 
         # Init Properties
-        self.prefix = 'recOrderPluginSnap'
+        self.prefix = "recOrderPluginSnap"
         self.dm = self.calib_window.mm.displays()
-        self.dim = '2D' if self.calib_window.ui.cb_phase.currentIndex() == 0 else '3D'
+        self.dim = (
+            "2D" if self.calib_window.ui.cb_phase.currentIndex() == 0 else "3D"
+        )
         self.img_dim = None
 
-        save_dir = self.calib_window.save_directory if self.calib_window.save_directory else self.calib_window.directory
+        save_dir = (
+            self.calib_window.save_directory
+            if self.calib_window.save_directory
+            else self.calib_window.directory
+        )
 
         if save_dir is None:
-            raise ValueError('save directory is empty, please specify a directory in the plugin')
+            raise ValueError(
+                "save directory is empty, please specify a directory in the plugin"
+            )
 
         # increment filename one more than last found saved snap
         i = 0
         prefix = self.calib_window.save_name
-        snap_dir = f'recOrderPluginSnap_{i}' if not prefix else f'{prefix}_recOrderPluginSnap_{i}'
+        snap_dir = (
+            f"recOrderPluginSnap_{i}"
+            if not prefix
+            else f"{prefix}_recOrderPluginSnap_{i}"
+        )
         while os.path.exists(os.path.join(save_dir, snap_dir)):
             i += 1
-            snap_dir = f'recOrderPluginSnap_{i}' if not prefix else f'{prefix}_recOrderPluginSnap_{i}'
+            snap_dir = (
+                f"recOrderPluginSnap_{i}"
+                if not prefix
+                else f"{prefix}_recOrderPluginSnap_{i}"
+            )
 
         self.snap_dir = os.path.join(save_dir, snap_dir)
         os.mkdir(self.snap_dir)
@@ -89,7 +114,7 @@ class BFAcquisitionWorker(WorkerBase):
     def _check_abort(self):
         if self.abort_requested:
             self.aborted.emit()
-            raise TimeoutError('Stop Requested')
+            raise TimeoutError("Stop Requested")
 
     def _check_ram(self):
         """
@@ -106,7 +131,7 @@ class BFAcquisitionWorker(WorkerBase):
         Function that runs the 2D or 3D acquisition and reconstructs the data
         """
         self._check_ram()
-        logging.info('Running Acquisition...')
+        logging.info("Running Acquisition...")
         self._check_abort()
 
         channel_idx = self.calib_window.ui.cb_acq_channel.currentIndex()
@@ -126,23 +151,27 @@ class BFAcquisitionWorker(WorkerBase):
                     break
 
         # Acquire 3D stack
-        logging.debug('Acquiring 3D stack')
+        logging.debug("Acquiring 3D stack")
 
         # Generate MDA Settings
-        settings = generate_acq_settings(self.calib_window.mm,
-                                         channel_group=channel_group,
-                                         channels=[channel],
-                                         zstart=self.calib_window.z_start,
-                                         zend=self.calib_window.z_end,
-                                         zstep=self.calib_window.z_step,
-                                         save_dir=self.snap_dir,
-                                         prefix=self.prefix)
+        settings = generate_acq_settings(
+            self.calib_window.mm,
+            channel_group=channel_group,
+            channels=[channel],
+            zstart=self.calib_window.z_start,
+            zend=self.calib_window.z_end,
+            zstep=self.calib_window.z_step,
+            save_dir=self.snap_dir,
+            prefix=self.prefix,
+        )
 
         self._check_abort()
 
         # Acquire from MDA settings uses MM MDA GUI
         # Returns (1, 4/5, Z, Y, X) array
-        stack = acquire_from_settings(self.calib_window.mm, settings, grab_images=True)
+        stack = acquire_from_settings(
+            self.calib_window.mm, settings, grab_images=True
+        )
         self._check_abort()
 
         # Cleanup acquisition by closing window, converting to zarr, and deleting temp directory
@@ -155,13 +184,13 @@ class BFAcquisitionWorker(WorkerBase):
         self._check_abort()
 
         # Save images
-        logging.debug('Saving Images')
+        logging.debug("Saving Images")
         self._save_imgs(phase, meta)
 
         self._check_abort()
 
-        logging.info('Finished Acquisition')
-        logging.debug('Finished Acquisition')
+        logging.info("Finished Acquisition")
+        logging.debug("Finished Acquisition")
 
         # Emit the images and let thread know function is finished
         self.phase_image_emitter.emit(phase)
@@ -188,22 +217,26 @@ class BFAcquisitionWorker(WorkerBase):
 
         # if no reconstructor has been initialized before, create new reconstructor
         if not self.calib_window.phase_reconstructor:
-            logging.debug('Computing new reconstructor')
+            logging.debug("Computing new reconstructor")
 
-            recon = initialize_reconstructor('PhaseFromBF',
-                                             image_dim=(stack.shape[-2], stack.shape[-1]),
-                                             wavelength_nm=int(self.calib_window.ui.le_recon_wavelength.text()),
-                                             NA_obj=self.calib_window.obj_na,
-                                             NA_illu=self.calib_window.cond_na,
-                                             mag=self.calib_window.mag,
-                                             n_slices=self.img_dim[-1],
-                                             z_step_um=self.calib_window.z_step,
-                                             pad_z=self.calib_window.pad_z,
-                                             pixel_size_um=self.calib_window.ps,
-                                             n_obj_media=self.calib_window.n_media,
-                                             mode=self.calib_window.phase_dim,
-                                             use_gpu=self.calib_window.use_gpu,
-                                             gpu_id=self.calib_window.gpu_id)
+            recon = initialize_reconstructor(
+                "PhaseFromBF",
+                image_dim=(stack.shape[-2], stack.shape[-1]),
+                wavelength_nm=int(
+                    self.calib_window.ui.le_recon_wavelength.text()
+                ),
+                NA_obj=self.calib_window.obj_na,
+                NA_illu=self.calib_window.cond_na,
+                mag=self.calib_window.mag,
+                n_slices=self.img_dim[-1],
+                z_step_um=self.calib_window.z_step,
+                pad_z=self.calib_window.pad_z,
+                pixel_size_um=self.calib_window.ps,
+                n_obj_media=self.calib_window.n_media,
+                mode=self.calib_window.phase_dim,
+                use_gpu=self.calib_window.use_gpu,
+                gpu_id=self.calib_window.gpu_id,
+            )
 
             # Emit reconstructor to be saved for later reconstructions
             self.phase_reconstructor_emitter.emit(recon)
@@ -214,65 +247,81 @@ class BFAcquisitionWorker(WorkerBase):
 
             # compute new reconstructor if the old reconstructor properties have been modified
             if self._reconstructor_changed():
-                logging.debug('Reconstruction settings changed, updating reconstructor')
+                logging.debug(
+                    "Reconstruction settings changed, updating reconstructor"
+                )
 
-                recon = initialize_reconstructor('PhaseFromBF',
-                                                 image_dim=(stack.shape[-2], stack.shape[-1]),
-                                                 wavelength_nm=int(self.calib_window.ui.le_recon_wavelength.text()),
-                                                 NA_obj=self.calib_window.obj_na,
-                                                 NA_illu=self.calib_window.cond_na,
-                                                 mag=self.calib_window.mag,
-                                                 n_slices=self.n_slices,
-                                                 z_step_um=self.calib_window.z_step,
-                                                 pad_z=self.calib_window.pad_z,
-                                                 pixel_size_um=self.calib_window.ps,
-                                                 n_obj_media=self.calib_window.n_media,
-                                                 mode=self.calib_window.phase_dim,
-                                                 use_gpu=self.calib_window.use_gpu,
-                                                 gpu_id=self.calib_window.gpu_id)
+                recon = initialize_reconstructor(
+                    "PhaseFromBF",
+                    image_dim=(stack.shape[-2], stack.shape[-1]),
+                    wavelength_nm=int(
+                        self.calib_window.ui.le_recon_wavelength.text()
+                    ),
+                    NA_obj=self.calib_window.obj_na,
+                    NA_illu=self.calib_window.cond_na,
+                    mag=self.calib_window.mag,
+                    n_slices=self.n_slices,
+                    z_step_um=self.calib_window.z_step,
+                    pad_z=self.calib_window.pad_z,
+                    pixel_size_um=self.calib_window.ps,
+                    n_obj_media=self.calib_window.n_media,
+                    mode=self.calib_window.phase_dim,
+                    use_gpu=self.calib_window.use_gpu,
+                    gpu_id=self.calib_window.gpu_id,
+                )
 
                 # Emit reconstructor to be saved for later reconstructions
                 self.phase_reconstructor_emitter.emit(recon)
 
             # use previous reconstructor
             else:
-                logging.debug('Using previous reconstruction settings')
+                logging.debug("Using previous reconstruction settings")
                 recon = self.calib_window.phase_reconstructor
 
         # Begin reconstruction with stokes (needed for birefringence or phase)
-        logging.debug('Reconstructing...')
+        logging.debug("Reconstructing...")
         self._check_abort()
 
-        regularizer = 'Tikhonov' if self.calib_window.ui.cb_phase_denoiser.currentIndex() == 0 else 'TV'
+        regularizer = (
+            "Tikhonov"
+            if self.calib_window.ui.cb_phase_denoiser.currentIndex() == 0
+            else "TV"
+        )
         reg = float(self.calib_window.ui.le_phase_strength.text())
 
         # Perform deconvolution
-        if self.dim == '2D':
+        if self.dim == "2D":
 
-            phase = reconstruct_phase2D(stack[0],
-                                        recon,
-                                        method=regularizer,
-                                        reg_p=reg,
-                                        itr=int(self.calib_window.ui.le_itr.text()),
-                                        rho=float(self.calib_window.ui.le_rho.text()))
+            phase = reconstruct_phase2D(
+                stack[0],
+                recon,
+                method=regularizer,
+                reg_p=reg,
+                itr=int(self.calib_window.ui.le_itr.text()),
+                rho=float(self.calib_window.ui.le_rho.text()),
+            )
         else:
 
-            phase = reconstruct_phase3D(stack[0],
-                                        recon,
-                                        method=regularizer,
-                                        reg_re=reg,
-                                        itr=int(self.calib_window.ui.le_itr.text()),
-                                        rho=float(self.calib_window.ui.le_rho.text()))
+            phase = reconstruct_phase3D(
+                stack[0],
+                recon,
+                method=regularizer,
+                reg_re=reg,
+                itr=int(self.calib_window.ui.le_itr.text()),
+                rho=float(self.calib_window.ui.le_rho.text()),
+            )
 
         self._check_abort()
 
         # Update metadata in zarr attributes with reconstruction parameters
-        meta = extract_reconstruction_parameters(recon, magnification=self.calib_window.mag)
-        meta['regularization_method'] = regularizer
-        meta['regularization_strength'] = reg
-        if regularizer == 'TV':
-            meta['rho'] = float(self.calib_window.ui.le_rho.text())
-            meta['itr'] = int(self.calib_window.ui.le_itr.text())
+        meta = extract_reconstruction_parameters(
+            recon, magnification=self.calib_window.mag
+        )
+        meta["regularization_method"] = regularizer
+        meta["regularization_strength"] = reg
+        if regularizer == "TV":
+            meta["rho"] = float(self.calib_window.ui.le_rho.text())
+            meta["itr"] = int(self.calib_window.ui.le_itr.text())
 
         # return both variables, could contain images or could be null
         return phase, meta
@@ -295,29 +344,37 @@ class BFAcquisitionWorker(WorkerBase):
         # initialize
         chunk_size = (1, 1, 1, phase.shape[-2], phase.shape[-1])
         prefix = self.calib_window.save_name
-        name = f'PhaseSnap.zarr' if not prefix else f'{prefix}_PhaseSnap.zarr'
+        name = f"PhaseSnap.zarr" if not prefix else f"{prefix}_PhaseSnap.zarr"
 
         # create zarr root and position group
         writer.create_zarr_root(name)
 
         # Check if 2D
         if len(phase.shape) == 2:
-            writer.init_array(0, (1, 1, 1, phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase2D'])
+            writer.init_array(
+                0,
+                (1, 1, 1, phase.shape[-2], phase.shape[-1]),
+                chunk_size,
+                ["Phase2D"],
+            )
             z = 0
 
         # Check if 3D
         else:
-            writer.init_array(0, (1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]), chunk_size,
-                              ['Phase3D'])
+            writer.init_array(
+                0,
+                (1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]),
+                chunk_size,
+                ["Phase3D"],
+            )
 
             z = slice(0, phase.shape[-3])
-
 
         # Write data to disk
         writer.write(phase, p=0, t=0, c=0, z=z)
 
         current_meta = writer.store.attrs.asdict()
-        current_meta['recOrder'] = meta
+        current_meta["recOrder"] = meta
         writer.store.attrs.put(current_meta)
 
     def _reconstructor_changed(self):
@@ -333,26 +390,30 @@ class BFAcquisitionWorker(WorkerBase):
         changed = None
 
         # Attributes that are directly equivalent to worker attributes
-        attr_list = {'phase_dim': 'phase_deconv',
-                     'pad_z': 'pad_z',
-                     'n_media': 'n_media',
-                     'use_gpu': 'use_gpu',
-                     'gpu_id': 'gpu_id'
-                     }
+        attr_list = {
+            "phase_dim": "phase_deconv",
+            "pad_z": "pad_z",
+            "n_media": "n_media",
+            "use_gpu": "use_gpu",
+            "gpu_id": "gpu_id",
+        }
 
         # attributes that are modified upon passing them to reconstructor
-        attr_modified_list = {'obj_na': 'NA_obj',
-                              'cond_na': 'NA_illu',
-                              'wavelength': 'lambda_illu',
-                              'n_slices': 'N_defocus',
-                              'swing': 'chi',
-                              'ps': 'ps'
-                              }
+        attr_modified_list = {
+            "obj_na": "NA_obj",
+            "cond_na": "NA_illu",
+            "wavelength": "lambda_illu",
+            "n_slices": "N_defocus",
+            "swing": "chi",
+            "ps": "ps",
+        }
 
         self._check_abort()
         # check if equivalent attributes have diverged
         for key, value in attr_list.items():
-            if getattr(self.calib_window, key) != getattr(self.calib_window.phase_reconstructor, value):
+            if getattr(self.calib_window, key) != getattr(
+                self.calib_window.phase_reconstructor, value
+            ):
                 changed = True
                 break
             else:
@@ -361,29 +422,40 @@ class BFAcquisitionWorker(WorkerBase):
         if not changed:
             # modify attributes to be equivalent and check for divergence
             for key, value in attr_modified_list.items():
-                if key == 'wavelength':
-                    if self.calib_window.wavelength * 1e-3 / self.calib_window.n_media != \
-                            self.calib_window.phase_reconstructor.lambda_illu:
+                if key == "wavelength":
+                    if (
+                        self.calib_window.wavelength
+                        * 1e-3
+                        / self.calib_window.n_media
+                        != self.calib_window.phase_reconstructor.lambda_illu
+                    ):
                         changed = True
                         break
                     else:
                         changed = False
-                elif key == 'n_slices':
-                    if getattr(self, key) != getattr(self.calib_window.phase_reconstructor, value):
+                elif key == "n_slices":
+                    if getattr(self, key) != getattr(
+                        self.calib_window.phase_reconstructor, value
+                    ):
                         changed = True
                         break
                     else:
                         changed = False
 
-                elif key == 'ps':
-                    if getattr(self.calib_window, key) / float(self.calib_window.mag) != getattr(self.calib_window.phase_reconstructor, value):
+                elif key == "ps":
+                    if getattr(self.calib_window, key) / float(
+                        self.calib_window.mag
+                    ) != getattr(self.calib_window.phase_reconstructor, value):
                         changed = True
                         break
                     else:
                         changed = False
                 else:
-                    if getattr(self.calib_window, key)/self.calib_window.n_media != \
-                            getattr(self.calib_window.phase_reconstructor, value):
+                    if getattr(
+                        self.calib_window, key
+                    ) / self.calib_window.n_media != getattr(
+                        self.calib_window.phase_reconstructor, value
+                    ):
                         changed = True
                     else:
                         changed = False
@@ -410,14 +482,27 @@ class BFAcquisitionWorker(WorkerBase):
                     closed = disp.isClosed()
                 dp.close()
 
-
                 # Try to delete the data, sometime it isn't cleaned up quickly enough and will
                 # return an error.  In this case, catch the error and then try to close again (seems to work).
                 try:
-                    save_prefix = self.calib_window.save_name if self.calib_window.save_name else None
-                    name = f'RawBFDataSnap.zarr' if not save_prefix else f'{save_prefix}_RawBFDataSnap.zarr'
+                    save_prefix = (
+                        self.calib_window.save_name
+                        if self.calib_window.save_name
+                        else None
+                    )
+                    name = (
+                        f"RawBFDataSnap.zarr"
+                        if not save_prefix
+                        else f"{save_prefix}_RawBFDataSnap.zarr"
+                    )
                     out_path = os.path.join(self.snap_dir, name)
-                    converter = ZarrConverter(os.path.join(dir_, prefix), out_path, 'ometiff', False, False)
+                    converter = ZarrConverter(
+                        os.path.join(dir_, prefix),
+                        out_path,
+                        "ometiff",
+                        False,
+                        False,
+                    )
                     converter.run_conversion()
                     shutil.rmtree(os.path.join(dir_, prefix))
                 except PermissionError as ex:
@@ -425,6 +510,7 @@ class BFAcquisitionWorker(WorkerBase):
                 break
             else:
                 continue
+
 
 # TODO: Cache common OTF's on local computers and use those for reconstruction
 class PolarizationAcquisitionWorker(WorkerBase):
@@ -443,28 +529,45 @@ class PolarizationAcquisitionWorker(WorkerBase):
         self.calib = calib
         self.mode = mode
         self.n_slices = None
-        self.prefix = 'recOrderPluginSnap'
+        self.prefix = "recOrderPluginSnap"
         self.dm = self.calib_window.mm.displays()
         self.channel_group = self.calib_window.config_group
 
         # Determine whether 2D or 3D acquisition is needed
-        if self.mode == 'birefringence' and self.calib_window.birefringence_dim == '2D':
-            self.dim = '2D'
+        if (
+            self.mode == "birefringence"
+            and self.calib_window.birefringence_dim == "2D"
+        ):
+            self.dim = "2D"
         else:
-            self.dim = '3D'
+            self.dim = "3D"
 
-        save_dir = self.calib_window.save_directory if self.calib_window.save_directory else self.calib_window.directory
+        save_dir = (
+            self.calib_window.save_directory
+            if self.calib_window.save_directory
+            else self.calib_window.directory
+        )
 
         if save_dir is None:
-            raise ValueError('save directory is empty, please specify a directory in the plugin')
+            raise ValueError(
+                "save directory is empty, please specify a directory in the plugin"
+            )
 
         # increment filename one more than last found saved snap
         i = 0
         prefix = self.calib_window.save_name
-        snap_dir = f'recOrderPluginSnap_{i}' if not prefix else f'{prefix}_recOrderPluginSnap_{i}'
+        snap_dir = (
+            f"recOrderPluginSnap_{i}"
+            if not prefix
+            else f"{prefix}_recOrderPluginSnap_{i}"
+        )
         while os.path.exists(os.path.join(save_dir, snap_dir)):
             i += 1
-            snap_dir = f'recOrderPluginSnap_{i}' if not prefix else f'{prefix}_recOrderPluginSnap_{i}'
+            snap_dir = (
+                f"recOrderPluginSnap_{i}"
+                if not prefix
+                else f"{prefix}_recOrderPluginSnap_{i}"
+            )
 
         self.snap_dir = os.path.join(save_dir, snap_dir)
         os.mkdir(self.snap_dir)
@@ -472,7 +575,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
     def _check_abort(self):
         if self.abort_requested:
             self.aborted.emit()
-            raise TimeoutError('Stop Requested')
+            raise TimeoutError("Stop Requested")
 
     def _check_ram(self):
         """
@@ -489,51 +592,55 @@ class PolarizationAcquisitionWorker(WorkerBase):
         Function that runs the 2D or 3D acquisition and reconstructs the data
         """
         self._check_ram()
-        logging.info('Running Acquisition...')
+        logging.info("Running Acquisition...")
 
         # List the Channels to acquire, if 5-state then append 5th channel
-        channels = ['State0', 'State1', 'State2', 'State3']
-        if self.calib_window.calib_scheme == '5-State':
-            channels.append('State4')
+        channels = ["State0", "State1", "State2", "State3"]
+        if self.calib_window.calib_scheme == "5-State":
+            channels.append("State4")
 
         self._check_abort()
 
         # Acquire 2D stack
-        if self.dim == '2D':
-            logging.debug('Acquiring 2D stack')
+        if self.dim == "2D":
+            logging.debug("Acquiring 2D stack")
 
             # Generate MDA Settings
-            self.settings = generate_acq_settings(self.calib_window.mm,
-                                             channel_group=self.channel_group,
-                                             channels=channels,
-                                             save_dir=self.snap_dir,
-                                             prefix=self.prefix,
-                                             keep_shutter_open_channels=True)
+            self.settings = generate_acq_settings(
+                self.calib_window.mm,
+                channel_group=self.channel_group,
+                channels=channels,
+                save_dir=self.snap_dir,
+                prefix=self.prefix,
+                keep_shutter_open_channels=True,
+            )
             self._check_abort()
             # acquire images
             stack = self._acquire()
 
         # Acquire 3D stack
         else:
-            logging.debug('Acquiring 3D stack')
+            logging.debug("Acquiring 3D stack")
 
             # Generate MDA Settings
-            self.settings = generate_acq_settings(self.calib_window.mm,
-                                             channel_group=self.channel_group,
-                                             channels=channels,
-                                             zstart=self.calib_window.z_start,
-                                             zend=self.calib_window.z_end,
-                                             zstep=self.calib_window.z_step,
-                                             save_dir=self.snap_dir,
-                                             prefix=self.prefix,
-                                             keep_shutter_open_channels=True,
-                                             keep_shutter_open_slices=True)
+            self.settings = generate_acq_settings(
+                self.calib_window.mm,
+                channel_group=self.channel_group,
+                channels=channels,
+                zstart=self.calib_window.z_start,
+                zend=self.calib_window.z_end,
+                zstep=self.calib_window.z_step,
+                save_dir=self.snap_dir,
+                prefix=self.prefix,
+                keep_shutter_open_channels=True,
+                keep_shutter_open_slices=True,
+            )
 
             self._check_abort()
 
             # set acquisition order to channel-first
-            self.settings['slicesFirst'] = False
-            self.settings['acqOrderMode'] = 0  # TIME_POS_SLICE_CHANNEL
+            self.settings["slicesFirst"] = False
+            self.settings["acqOrderMode"] = 0  # TIME_POS_SLICE_CHANNEL
 
             # acquire images
             stack = self._acquire()
@@ -548,13 +655,13 @@ class PolarizationAcquisitionWorker(WorkerBase):
         self._check_abort()
 
         # Save images
-        logging.debug('Saving Images')
+        logging.debug("Saving Images")
         self._save_imgs(birefringence, phase, meta)
 
         self._check_abort()
 
-        logging.info('Finished Acquisition')
-        logging.debug('Finished Acquisition')
+        logging.info("Finished Acquisition")
+        logging.debug("Finished Acquisition")
 
         # Emit the images and let thread know function is finished
         self.bire_image_emitter.emit(birefringence)
@@ -565,19 +672,21 @@ class PolarizationAcquisitionWorker(WorkerBase):
         """
         Check that all LF channels have the same exposure settings. If not, abort Acquisition.
         """
-        logging.debug('Verifying exposure times...')
+        logging.debug("Verifying exposure times...")
         # parse exposure times
         channel_exposures = []
-        for channel in self.settings['channels']:
-            channel_exposures.append(channel['exposure'])
+        for channel in self.settings["channels"]:
+            channel_exposures.append(channel["exposure"])
 
         channel_exposures = np.array(channel_exposures)
         # check if exposure times are equal
         if not np.all(channel_exposures == channel_exposures[0]):
-            error_exposure_msg = f'The MDA exposure times are not equal! Aborting Acquisition.\n' \
-                                 f'Please manually set the exposure times to the same value from the MDA menu.'
+            error_exposure_msg = (
+                f"The MDA exposure times are not equal! Aborting Acquisition.\n"
+                f"Please manually set the exposure times to the same value from the MDA menu."
+            )
 
-            raise ValueError(error_exposure_msg)        
+            raise ValueError(error_exposure_msg)
 
         self._check_abort()
 
@@ -594,7 +703,9 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
         # Acquire from MDA settings uses MM MDA GUI
         # Returns (1, 4/5, Z, Y, X) array
-        stack = acquire_from_settings(self.calib_window.mm, self.settings, grab_images=True)
+        stack = acquire_from_settings(
+            self.calib_window.mm, self.settings, grab_images=True
+        )
         self._check_abort()
 
         return stack
@@ -619,35 +730,38 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
         self._check_abort()
 
-        wo_background_correction = rec_bkg_to_wo_bkg(self.calib_window.bg_option)
+        wo_background_correction = rec_bkg_to_wo_bkg(
+            self.calib_window.bg_option
+        )
 
         # Initialize the heavy reconstuctor
-        if self.mode == 'phase' or self.mode == 'all':
+        if self.mode == "phase" or self.mode == "all":
 
             self._check_abort()
 
             # if no reconstructor has been initialized before, create new reconstructor
             if not self.calib_window.phase_reconstructor:
-                logging.debug('Computing new reconstructor')
+                logging.debug("Computing new reconstructor")
 
-
-                recon = initialize_reconstructor('QLIPP',
-                                                 image_dim=(stack.shape[-2], stack.shape[-1]),
-                                                 wavelength_nm=self.calib_window.wavelength,
-                                                 swing=self.calib_window.swing,
-                                                 calibration_scheme=self.calib_window.calib_scheme,
-                                                 NA_obj=self.calib_window.obj_na,
-                                                 NA_illu=self.calib_window.cond_na,
-                                                 mag=self.calib_window.mag,
-                                                 n_slices=self.n_slices,
-                                                 z_step_um=self.calib_window.z_step,
-                                                 pad_z=self.calib_window.pad_z,
-                                                 pixel_size_um=self.calib_window.ps,
-                                                 bg_correction=wo_background_correction,
-                                                 n_obj_media=self.calib_window.n_media,
-                                                 mode=self.calib_window.phase_dim,
-                                                 use_gpu=self.calib_window.use_gpu,
-                                                 gpu_id=self.calib_window.gpu_id)
+                recon = initialize_reconstructor(
+                    "QLIPP",
+                    image_dim=(stack.shape[-2], stack.shape[-1]),
+                    wavelength_nm=self.calib_window.wavelength,
+                    swing=self.calib_window.swing,
+                    calibration_scheme=self.calib_window.calib_scheme,
+                    NA_obj=self.calib_window.obj_na,
+                    NA_illu=self.calib_window.cond_na,
+                    mag=self.calib_window.mag,
+                    n_slices=self.n_slices,
+                    z_step_um=self.calib_window.z_step,
+                    pad_z=self.calib_window.pad_z,
+                    pixel_size_um=self.calib_window.ps,
+                    bg_correction=wo_background_correction,
+                    n_obj_media=self.calib_window.n_media,
+                    mode=self.calib_window.phase_dim,
+                    use_gpu=self.calib_window.use_gpu,
+                    gpu_id=self.calib_window.gpu_id,
+                )
 
                 # Emit reconstructor to be saved for later reconstructions
                 self.phase_reconstructor_emitter.emit(recon)
@@ -658,66 +772,78 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
                 # compute new reconstructor if the old reconstructor properties have been modified
                 if self._reconstructor_changed():
-                    logging.debug('Reconstruction settings changed, updating reconstructor')
+                    logging.debug(
+                        "Reconstruction settings changed, updating reconstructor"
+                    )
 
-                    recon = initialize_reconstructor('QLIPP',
-                                                     image_dim=(stack.shape[-2], stack.shape[-1]),
-                                                     wavelength_nm=self.calib_window.wavelength,
-                                                     swing=self.calib_window.swing,
-                                                     calibration_scheme=self.calib_window.calib_scheme,
-                                                     NA_obj=self.calib_window.obj_na,
-                                                     NA_illu=self.calib_window.cond_na,
-                                                     mag=self.calib_window.mag,
-                                                     n_slices=self.n_slices,
-                                                     z_step_um=self.calib_window.z_step,
-                                                     pad_z=self.calib_window.pad_z,
-                                                     pixel_size_um=self.calib_window.ps,
-                                                     bg_correction=wo_background_correction,
-                                                     n_obj_media=self.calib_window.n_media,
-                                                     mode=self.calib_window.phase_dim,
-                                                     use_gpu=self.calib_window.use_gpu,
-                                                     gpu_id=self.calib_window.gpu_id)
+                    recon = initialize_reconstructor(
+                        "QLIPP",
+                        image_dim=(stack.shape[-2], stack.shape[-1]),
+                        wavelength_nm=self.calib_window.wavelength,
+                        swing=self.calib_window.swing,
+                        calibration_scheme=self.calib_window.calib_scheme,
+                        NA_obj=self.calib_window.obj_na,
+                        NA_illu=self.calib_window.cond_na,
+                        mag=self.calib_window.mag,
+                        n_slices=self.n_slices,
+                        z_step_um=self.calib_window.z_step,
+                        pad_z=self.calib_window.pad_z,
+                        pixel_size_um=self.calib_window.ps,
+                        bg_correction=wo_background_correction,
+                        n_obj_media=self.calib_window.n_media,
+                        mode=self.calib_window.phase_dim,
+                        use_gpu=self.calib_window.use_gpu,
+                        gpu_id=self.calib_window.gpu_id,
+                    )
 
                     self.phase_reconstructor_emitter.emit(recon)
 
                 # use previous reconstructor
                 else:
-                    logging.debug('Using previous reconstruction settings')
+                    logging.debug("Using previous reconstruction settings")
                     recon = self.calib_window.phase_reconstructor
 
         # if phase isn't desired, initialize the lighter birefringence only reconstructor
         # no need to save this reconstructor for later as it is pretty quick to compute
         else:
             self._check_abort()
-            logging.debug('Creating birefringence only reconstructor')
-            recon = initialize_reconstructor('birefringence',
-                                             image_dim=(stack.shape[-2], stack.shape[-1]),
-                                             calibration_scheme=self.calib_window.calib_scheme,
-                                             wavelength_nm=self.calib_window.wavelength,
-                                             swing=self.calib_window.swing,
-                                             bg_correction=wo_background_correction,
-                                             n_slices=self.n_slices)
+            logging.debug("Creating birefringence only reconstructor")
+            recon = initialize_reconstructor(
+                "birefringence",
+                image_dim=(stack.shape[-2], stack.shape[-1]),
+                calibration_scheme=self.calib_window.calib_scheme,
+                wavelength_nm=self.calib_window.wavelength,
+                swing=self.calib_window.swing,
+                bg_correction=wo_background_correction,
+                n_slices=self.n_slices,
+            )
 
         # Prepare background corrections for waveorder
         # This block mimics qlipp_pipeline.py L110-119.
-        if self.calib_window.bg_option in ['global', 'local_fit+']:
-            logging.debug('Loading BG Data')
+        if self.calib_window.bg_option in ["global", "local_fit+"]:
+            logging.debug("Loading BG Data")
             self._check_abort()
-            bg_data = self._load_bg(self.calib_window.acq_bg_directory, stack.shape[-2], stack.shape[-1])
+            bg_data = self._load_bg(
+                self.calib_window.acq_bg_directory,
+                stack.shape[-2],
+                stack.shape[-1],
+            )
             self._check_abort()
             bg_stokes = recon.Stokes_recon(bg_data)
             self._check_abort()
             bg_stokes = recon.Stokes_transform(bg_stokes)
             self._check_abort()
-        elif self.calib_window.bg_option == 'local_fit':
+        elif self.calib_window.bg_option == "local_fit":
             bg_stokes = np.zeros((5, stack.shape[-2], stack.shape[-1]))
-            bg_stokes[0, ...] = 1  # Set background to "identity" Stokes parameters.
+            bg_stokes[
+                0, ...
+            ] = 1  # Set background to "identity" Stokes parameters.
         else:
-            logging.debug('No Background Correction method chosen')
+            logging.debug("No Background Correction method chosen")
             bg_stokes = None
 
         # Begin reconstruction with stokes (needed for birefringence or phase)
-        logging.debug('Reconstructing...')
+        logging.debug("Reconstructing...")
         self._check_abort()
         stokes = reconstruct_qlipp_stokes(stack, recon, bg_stokes)
         self._check_abort()
@@ -726,68 +852,86 @@ class PolarizationAcquisitionWorker(WorkerBase):
         birefringence = None
         phase = None
 
-        regularizer = 'Tikhonov' if self.calib_window.ui.cb_phase_denoiser.currentIndex() == 0 else 'TV'
+        regularizer = (
+            "Tikhonov"
+            if self.calib_window.ui.cb_phase_denoiser.currentIndex() == 0
+            else "TV"
+        )
         reg = float(self.calib_window.ui.le_phase_strength.text())
 
         # reconstruct both phase and birefringence
-        if self.mode == 'all':
-            if self.calib_window.birefringence_dim == '2D':
-                birefringence = reconstruct_qlipp_birefringence(stokes[:, stokes.shape[1]//2, :, :], recon)
+        if self.mode == "all":
+            if self.calib_window.birefringence_dim == "2D":
+                birefringence = reconstruct_qlipp_birefringence(
+                    stokes[:, stokes.shape[1] // 2, :, :], recon
+                )
             else:
                 birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-            birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
+            birefringence[0] = (
+                birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
+            )
             self._check_abort()
 
-            if self.calib_window.phase_dim == '2D':
-                phase = reconstruct_phase2D(stokes[0],
-                                            recon,
-                                            method=regularizer,
-                                            reg_p=reg,
-                                            itr=int(self.calib_window.ui.le_itr.text()),
-                                            rho=float(self.calib_window.ui.le_rho.text()))
+            if self.calib_window.phase_dim == "2D":
+                phase = reconstruct_phase2D(
+                    stokes[0],
+                    recon,
+                    method=regularizer,
+                    reg_p=reg,
+                    itr=int(self.calib_window.ui.le_itr.text()),
+                    rho=float(self.calib_window.ui.le_rho.text()),
+                )
             else:
-                phase = reconstruct_phase3D(stokes[0],
-                                            recon,
-                                            method=regularizer,
-                                            reg_re=reg,
-                                            itr=int(self.calib_window.ui.le_itr.text()),
-                                            rho=float(self.calib_window.ui.le_rho.text()))
+                phase = reconstruct_phase3D(
+                    stokes[0],
+                    recon,
+                    method=regularizer,
+                    reg_re=reg,
+                    itr=int(self.calib_window.ui.le_itr.text()),
+                    rho=float(self.calib_window.ui.le_rho.text()),
+                )
 
             self._check_abort()
 
         # reconstruct phase only
-        elif self.mode == 'phase':
-            if self.calib_window.phase_dim == '2D':
-                phase = reconstruct_phase2D(stokes[0],
-                                            recon,
-                                            method=regularizer,
-                                            reg_p=reg,
-                                            itr=int(self.calib_window.ui.le_itr.text()),
-                                            rho=float(self.calib_window.ui.le_rho.text()))
+        elif self.mode == "phase":
+            if self.calib_window.phase_dim == "2D":
+                phase = reconstruct_phase2D(
+                    stokes[0],
+                    recon,
+                    method=regularizer,
+                    reg_p=reg,
+                    itr=int(self.calib_window.ui.le_itr.text()),
+                    rho=float(self.calib_window.ui.le_rho.text()),
+                )
             else:
-                phase = reconstruct_phase3D(stokes[0],
-                                            recon,
-                                            method=regularizer,
-                                            reg_re=reg,
-                                            itr=int(self.calib_window.ui.le_itr.text()),
-                                            rho=float(self.calib_window.ui.le_rho.text()))
+                phase = reconstruct_phase3D(
+                    stokes[0],
+                    recon,
+                    method=regularizer,
+                    reg_re=reg,
+                    itr=int(self.calib_window.ui.le_itr.text()),
+                    rho=float(self.calib_window.ui.le_rho.text()),
+                )
             self._check_abort()
 
         # reconstruct birefringence only
-        elif self.mode == 'birefringence':
+        elif self.mode == "birefringence":
             birefringence = reconstruct_qlipp_birefringence(stokes, recon)
-            birefringence[0] = birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
+            birefringence[0] = (
+                birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
+            )
             self._check_abort()
 
         else:
-            raise ValueError('Reconstruction Mode Not Understood')
+            raise ValueError("Reconstruction Mode Not Understood")
 
         meta = extract_reconstruction_parameters(recon, self.calib_window.mag)
-        meta['regularization_method'] = regularizer
-        meta['regularization_strength'] = reg
-        if regularizer == 'TV':
-            meta['rho'] = float(self.calib_window.ui.le_rho.text())
-            meta['itr'] = int(self.calib_window.ui.le_itr.text())
+        meta["regularization_method"] = regularizer
+        meta["regularization_strength"] = reg
+        if regularizer == "TV":
+            meta["rho"] = float(self.calib_window.ui.le_rho.text())
+            meta["itr"] = int(self.calib_window.ui.le_itr.text())
 
         # return both variables, could contain images or could be null
         return birefringence, phase, meta
@@ -811,32 +955,62 @@ class PolarizationAcquisitionWorker(WorkerBase):
         if birefringence is not None:
 
             # initialize
-            chunk_size = (1, 1, 1, birefringence.shape[-2],birefringence.shape[-1])
+            chunk_size = (
+                1,
+                1,
+                1,
+                birefringence.shape[-2],
+                birefringence.shape[-1],
+            )
 
             # increment filename one more than last found saved snap
             prefix = self.calib_window.save_name
-            name = f'BirefringenceSnap.zarr' if not prefix else f'{prefix}_BirefringenceSnap.zarr'
+            name = (
+                f"BirefringenceSnap.zarr"
+                if not prefix
+                else f"{prefix}_BirefringenceSnap.zarr"
+            )
 
             # create zarr root and position group
             writer.create_zarr_root(name)
 
             # Check if 2D
             if len(birefringence.shape) == 3:
-                writer.init_array(0, (1, 4, 1, birefringence.shape[-2], birefringence.shape[-1]),
-                                  chunk_size, ['Retardance', 'Orientation', 'BF', 'Pol'])
+                writer.init_array(
+                    0,
+                    (
+                        1,
+                        4,
+                        1,
+                        birefringence.shape[-2],
+                        birefringence.shape[-1],
+                    ),
+                    chunk_size,
+                    ["Retardance", "Orientation", "BF", "Pol"],
+                )
                 z = 0
 
             # Check if 3D
             else:
-                writer.init_array(0, (1, 4, birefringence.shape[-3], birefringence.shape[-2], birefringence.shape[-1]),
-                                  chunk_size, ['Retardance', 'Orientation', 'BF', 'Pol'])
+                writer.init_array(
+                    0,
+                    (
+                        1,
+                        4,
+                        birefringence.shape[-3],
+                        birefringence.shape[-2],
+                        birefringence.shape[-1],
+                    ),
+                    chunk_size,
+                    ["Retardance", "Orientation", "BF", "Pol"],
+                )
                 z = slice(0, birefringence.shape[-3])
 
             # Write the data to disk
             writer.write(birefringence, p=0, t=0, c=slice(0, 4), z=z)
 
             current_meta = writer.store.attrs.asdict()
-            current_meta['recOrder'] = meta
+            current_meta["recOrder"] = meta
             writer.store.attrs.put(current_meta)
 
         if phase is not None:
@@ -846,26 +1020,38 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
             # increment filename one more than last found saved snap
             prefix = self.calib_window.save_name
-            name = f'PhaseSnap.zarr' if not prefix else f'{prefix}_PhaseSnap.zarr'
+            name = (
+                f"PhaseSnap.zarr" if not prefix else f"{prefix}_PhaseSnap.zarr"
+            )
 
             # create zarr root and position group
             writer.create_zarr_root(name)
 
             # Check if 2D
             if len(phase.shape) == 2:
-                writer.init_array(0, (1, 1, 1, phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase2D'])
+                writer.init_array(
+                    0,
+                    (1, 1, 1, phase.shape[-2], phase.shape[-1]),
+                    chunk_size,
+                    ["Phase2D"],
+                )
                 z = 0
 
             # Check if 3D
             else:
-                writer.init_array(0, (1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]), chunk_size, ['Phase3D'])
+                writer.init_array(
+                    0,
+                    (1, 1, phase.shape[-3], phase.shape[-2], phase.shape[-1]),
+                    chunk_size,
+                    ["Phase3D"],
+                )
                 z = slice(0, phase.shape[-3])
 
             # Write data to disk
             writer.write(phase, p=0, t=0, c=0, z=z)
 
             current_meta = writer.store.attrs.asdict()
-            current_meta['recOrder'] = meta
+            current_meta["recOrder"] = meta
             writer.store.attrs.put(current_meta)
 
     def _load_bg(self, path, height, width):
@@ -885,7 +1071,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
         """
 
-        #TODO: Change to just accept ROI
+        # TODO: Change to just accept ROI
         try:
             metadata_path = get_last_metadata_file(path)
             metadata = MetadataReader(metadata_path)
@@ -910,27 +1096,31 @@ class PolarizationAcquisitionWorker(WorkerBase):
         changed = None
 
         # Attributes that are directly equivalent to worker attributes
-        attr_list = {'phase_dim': 'phase_deconv',
-                     'pad_z': 'pad_z',
-                     'n_media': 'n_media',
-                     'bg_option': 'bg_option',
-                     'use_gpu': 'use_gpu',
-                     'gpu_id': 'gpu_id'
-                     }
+        attr_list = {
+            "phase_dim": "phase_deconv",
+            "pad_z": "pad_z",
+            "n_media": "n_media",
+            "bg_option": "bg_option",
+            "use_gpu": "use_gpu",
+            "gpu_id": "gpu_id",
+        }
 
         # attributes that are modified upon passing them to reconstructor
-        attr_modified_list = {'obj_na': 'NA_obj',
-                              'cond_na': 'NA_illu',
-                              'wavelength': 'lambda_illu',
-                              'n_slices': 'N_defocus',
-                              'swing': 'chi',
-                              'ps': 'ps'
-                              }
+        attr_modified_list = {
+            "obj_na": "NA_obj",
+            "cond_na": "NA_illu",
+            "wavelength": "lambda_illu",
+            "n_slices": "N_defocus",
+            "swing": "chi",
+            "ps": "ps",
+        }
 
         self._check_abort()
         # check if equivalent attributes have diverged
         for key, value in attr_list.items():
-            if getattr(self.calib_window, key) != getattr(self.calib_window.phase_reconstructor, value):
+            if getattr(self.calib_window, key) != getattr(
+                self.calib_window.phase_reconstructor, value
+            ):
                 changed = True
                 break
             else:
@@ -939,41 +1129,58 @@ class PolarizationAcquisitionWorker(WorkerBase):
         if not changed:
             # modify attributes to be equivalent and check for divergence
             for key, value in attr_modified_list.items():
-                if key == 'swing':
-                    if self.calib_window.calib_scheme == '5-State':
-                        if self.calib_window.swing * 2 * np.pi != self.calib_window.phase_reconstructor.chi:
+                if key == "swing":
+                    if self.calib_window.calib_scheme == "5-State":
+                        if (
+                            self.calib_window.swing * 2 * np.pi
+                            != self.calib_window.phase_reconstructor.chi
+                        ):
                             changed = True
                         else:
                             changed = False
                     else:
-                        if self.calib_window.swing != self.calib_window.phase_reconstructor.chi:
+                        if (
+                            self.calib_window.swing
+                            != self.calib_window.phase_reconstructor.chi
+                        ):
                             changed = True
                         else:
                             changed = False
 
-                elif key == 'wavelength':
-                    if self.calib_window.wavelength * 1e-3 / self.calib_window.n_media != \
-                            self.calib_window.phase_reconstructor.lambda_illu:
+                elif key == "wavelength":
+                    if (
+                        self.calib_window.wavelength
+                        * 1e-3
+                        / self.calib_window.n_media
+                        != self.calib_window.phase_reconstructor.lambda_illu
+                    ):
                         changed = True
                         break
                     else:
                         changed = False
-                elif key == 'n_slices':
-                    if getattr(self, key) != getattr(self.calib_window.phase_reconstructor, value):
+                elif key == "n_slices":
+                    if getattr(self, key) != getattr(
+                        self.calib_window.phase_reconstructor, value
+                    ):
                         changed = True
                         break
                     else:
                         changed = False
 
-                elif key == 'ps':
-                    if getattr(self.calib_window, key) / float(self.calib_window.mag) != getattr(self.calib_window.phase_reconstructor, value):
+                elif key == "ps":
+                    if getattr(self.calib_window, key) / float(
+                        self.calib_window.mag
+                    ) != getattr(self.calib_window.phase_reconstructor, value):
                         changed = True
                         break
                     else:
                         changed = False
                 else:
-                    if getattr(self.calib_window, key)/self.calib_window.n_media != \
-                            getattr(self.calib_window.phase_reconstructor, value):
+                    if getattr(
+                        self.calib_window, key
+                    ) / self.calib_window.n_media != getattr(
+                        self.calib_window.phase_reconstructor, value
+                    ):
                         changed = True
                     else:
                         changed = False
@@ -1000,14 +1207,27 @@ class PolarizationAcquisitionWorker(WorkerBase):
                     closed = disp.isClosed()
                 dp.close()
 
-
                 # Try to delete the data, sometime it isn't cleaned up quickly enough and will
                 # return an error.  In this case, catch the error and then try to close again (seems to work).
                 try:
-                    save_prefix = self.calib_window.save_name if self.calib_window.save_name else None
-                    name = f'RawPolDataSnap.zarr' if not save_prefix else f'{save_prefix}_RawPolDataSnap.zarr'
+                    save_prefix = (
+                        self.calib_window.save_name
+                        if self.calib_window.save_name
+                        else None
+                    )
+                    name = (
+                        f"RawPolDataSnap.zarr"
+                        if not save_prefix
+                        else f"{save_prefix}_RawPolDataSnap.zarr"
+                    )
                     out_path = os.path.join(self.snap_dir, name)
-                    converter = ZarrConverter(os.path.join(dir_, prefix), out_path, 'ometiff', False, False)
+                    converter = ZarrConverter(
+                        os.path.join(dir_, prefix),
+                        out_path,
+                        "ometiff",
+                        False,
+                        False,
+                    )
                     converter.run_conversion()
                     shutil.rmtree(os.path.join(dir_, prefix))
                 except PermissionError as ex:
@@ -1046,7 +1266,7 @@ class ListeningWorker(WorkerBase):
     def _check_abort(self):
         if self.abort_requested:
             self.aborted.emit()
-            raise TimeoutError('Stop Requested')
+            raise TimeoutError("Stop Requested")
 
     def get_byte_offset(self, offsets, page):
         """
@@ -1073,7 +1293,9 @@ class ListeningWorker(WorkerBase):
 
         return array_offset
 
-    def listen_for_images(self, array, file, offsets, interval, dim3, dim2, dim1, dim0, dim_order):
+    def listen_for_images(
+        self, array, file, offsets, interval, dim3, dim2, dim1, dim0, dim_order
+    ):
         """
 
         Parameters
@@ -1101,16 +1323,36 @@ class ListeningWorker(WorkerBase):
 
         # Order dimensions that we will loop through in order to match the acquisition
         if dim_order == 0:
-            dims = [[dim3, self.n_frames], [dim2, self.n_pos], [dim1, self.n_slices], [dim0, self.n_channels]]
+            dims = [
+                [dim3, self.n_frames],
+                [dim2, self.n_pos],
+                [dim1, self.n_slices],
+                [dim0, self.n_channels],
+            ]
             channel_dim = 0
         elif dim_order == 1:
-            dims = [[dim3, self.n_frames], [dim2, self.n_pos], [dim1, self.n_channels], [dim0, self.n_slices]]
+            dims = [
+                [dim3, self.n_frames],
+                [dim2, self.n_pos],
+                [dim1, self.n_channels],
+                [dim0, self.n_slices],
+            ]
             channel_dim = 1
         elif dim_order == 2:
-            dims = [[dim3, self.n_pos], [dim2, self.n_frames], [dim1, self.n_slices], [dim0, self.n_channels]]
+            dims = [
+                [dim3, self.n_pos],
+                [dim2, self.n_frames],
+                [dim1, self.n_slices],
+                [dim0, self.n_channels],
+            ]
             channel_dim = 0
         else:
-            dims = [[dim3, self.n_pos], [dim2, self.n_frames], [dim1, self.n_channels], [dim0, self.n_slices]]
+            dims = [
+                [dim3, self.n_pos],
+                [dim2, self.n_frames],
+                [dim1, self.n_channels],
+                [dim0, self.n_slices],
+            ]
             channel_dim = 1
 
         # Loop through dimensions in the order they are acquired
@@ -1134,13 +1376,20 @@ class ListeningWorker(WorkerBase):
                                 self._check_abort()
                                 tf = tiff.TiffFile(file)
                                 time.sleep(interval)
-                                offsets = tf.micromanager_metadata['IndexMap']['Offset']
+                                offsets = tf.micromanager_metadata["IndexMap"][
+                                    "Offset"
+                                ]
                                 tf.close()
                                 offset = self.get_byte_offset(offsets, idx)
                         else:
                             offset = self.get_byte_offset(offsets, idx)
 
-                        if idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+                        if idx < (
+                            self.n_slices
+                            * self.n_channels
+                            * self.n_frames
+                            * self.n_pos
+                        ):
 
                             # Assign dimensions based off acquisition order to correctly add image to array
                             if dim_order == 0:
@@ -1155,11 +1404,20 @@ class ListeningWorker(WorkerBase):
                             self._check_abort()
 
                             # Add Image to array
-                            img = np.memmap(file, dtype=self.dtype, mode='r', offset=offset, shape=self.shape)
+                            img = np.memmap(
+                                file,
+                                dtype=self.dtype,
+                                mode="r",
+                                offset=offset,
+                                shape=self.shape,
+                            )
                             array[c, z] = img
 
                             # If Channel first, compute birefringence here
-                            if channel_dim == 0 and dim0 == self.n_channels - 1:
+                            if (
+                                channel_dim == 0
+                                and dim0 == self.n_channels - 1
+                            ):
                                 self._check_abort()
 
                                 # Compute birefringence
@@ -1168,7 +1426,12 @@ class ListeningWorker(WorkerBase):
                             idx += 1
 
                     # Reset Range to 0 to account for starting this function in middle of a dimension
-                    if idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+                    if idx < (
+                        self.n_slices
+                        * self.n_channels
+                        * self.n_frames
+                        * self.n_pos
+                    ):
                         dims[2][0] = 0
                         dims[3][0] = 0
 
@@ -1191,7 +1454,12 @@ class ListeningWorker(WorkerBase):
                         continue
 
                 # Reset range to 0 to account for starting this function in the middle of a dimension
-                if idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+                if idx < (
+                    self.n_slices
+                    * self.n_channels
+                    * self.n_frames
+                    * self.n_pos
+                ):
                     dims[1][0] = 0
 
         # Return at the end of the acquisition
@@ -1206,31 +1474,37 @@ class ListeningWorker(WorkerBase):
 
         # If the napari layer doesn't exist yet, create the zarr store to emit to napari
         if self.prefix not in self.calib_window.viewer.layers:
-            self.store = zarr.open(os.path.join(self.root, self.prefix+'.zarr'))
-            self.store.zeros(name='Birefringence',
-                             shape=(self.n_pos,
-                                    self.n_frames,
-                                    2,
-                                    self.n_slices,
-                                    self.shape[0],
-                                    self.shape[1]),
-                             chunks=(1, 1, 1, 1, self.shape[0], self.shape[1]),
-                             overwrite=True)
+            self.store = zarr.open(
+                os.path.join(self.root, self.prefix + ".zarr")
+            )
+            self.store.zeros(
+                name="Birefringence",
+                shape=(
+                    self.n_pos,
+                    self.n_frames,
+                    2,
+                    self.n_slices,
+                    self.shape[0],
+                    self.shape[1],
+                ),
+                chunks=(1, 1, 1, 1, self.shape[0], self.shape[1]),
+                overwrite=True,
+            )
 
             # Add data and send out the store.  Once the store has been emitted, we can add data to the store
             # without needing to emit the store again (thanks to napari's handling of zarr datasets)
             if len(birefringence.shape) == 4:
-                self.store['Birefringence'][p, t] = birefringence
+                self.store["Birefringence"][p, t] = birefringence
             else:
-                self.store['Birefringence'][p, t, :, z] = birefringence
+                self.store["Birefringence"][p, t, :, z] = birefringence
 
             self.store_emitter.emit(self.store)
 
         else:
             if len(birefringence.shape) == 4:
-                self.store['Birefringence'][p, t] = birefringence
+                self.store["Birefringence"][p, t] = birefringence
             else:
-                self.store['Birefringence'][p, t, :, z] = birefringence
+                self.store["Birefringence"][p, t, :, z] = birefringence
 
         # Emit the current dimensions so that we can update the napari dimension slider
         self.dim_emitter.emit((p, t, z))
@@ -1247,68 +1521,97 @@ class ListeningWorker(WorkerBase):
         s = acq_man.getAcquisitionSettings()
         self.root = s.root()
         self.prefix = s.prefix()
-        self.n_frames, self.interval = (s.numFrames(), s.intervalMs() / 1000) if s.useFrames() else (1, 1)
+        self.n_frames, self.interval = (
+            (s.numFrames(), s.intervalMs() / 1000) if s.useFrames() else (1, 1)
+        )
         self.n_channels = s.channels().size() if s.useChannels() else 1
         self.n_slices = s.slices().size() if s.useChannels() else 1
-        self.n_pos = 1 if not s.usePositionList() else \
-            self.calib_window.mm.getPositionListManager().getPositionList().getNumberOfPositions()
+        self.n_pos = (
+            1
+            if not s.usePositionList()
+            else self.calib_window.mm.getPositionListManager()
+            .getPositionList()
+            .getNumberOfPositions()
+        )
         dim_order = s.acqOrderMode()
 
         # Get File Path corresponding to current dataset
         path = os.path.join(self.root, self.prefix)
-        files = [fn for fn in glob.glob(path + '*') if '.zarr' not in fn]
-        index = max([int(x.strip(path + '_')) for x in files])
+        files = [fn for fn in glob.glob(path + "*") if ".zarr" not in fn]
+        index = max([int(x.strip(path + "_")) for x in files])
 
-        self.prefix = self.prefix + f'_{index}'
+        self.prefix = self.prefix + f"_{index}"
         full_path = os.path.join(self.root, self.prefix)
-        first_file_path = os.path.join(full_path, self.prefix + '_MMStack.ome.tif')
+        first_file_path = os.path.join(
+            full_path, self.prefix + "_MMStack.ome.tif"
+        )
 
         file = tiff.TiffFile(first_file_path)
         file_path = first_file_path
-        self.shape = (file.micromanager_metadata['Summary']['Height'], file.micromanager_metadata['Summary']['Width'])
+        self.shape = (
+            file.micromanager_metadata["Summary"]["Height"],
+            file.micromanager_metadata["Summary"]["Width"],
+        )
         self.dtype = file.pages[0].dtype
-        offsets = file.micromanager_metadata['IndexMap']['Offset']
+        offsets = file.micromanager_metadata["IndexMap"]["Offset"]
         file.close()
 
         self._check_abort()
 
         # Init Reconstruction Class
-        self.reconstructor = QLIPPBirefringenceCompute(self.shape,
-                                                       self.calib_window.calib_scheme,
-                                                       self.calib_window.wavelength,
-                                                       self.calib_window.swing,
-                                                       self.n_slices,
-                                                       self.calib_window.bg_option,
-                                                       self.bg_data)
+        self.reconstructor = QLIPPBirefringenceCompute(
+            self.shape,
+            self.calib_window.calib_scheme,
+            self.calib_window.wavelength,
+            self.calib_window.swing,
+            self.n_slices,
+            self.calib_window.bg_option,
+            self.bg_data,
+        )
 
         self._check_abort()
 
         # initialize dimensions / array for the loop
         idx, dim3, dim2, dim1, dim0 = 0, 0, 0, 0, 0
-        array = np.zeros((self.n_channels, self.n_slices, self.shape[0], self.shape[1]))
+        array = np.zeros(
+            (self.n_channels, self.n_slices, self.shape[0], self.shape[1])
+        )
         file_count = 0
         total_idx = 0
 
         # Run until the function has collected the totality of the data
-        while total_idx < (self.n_slices * self.n_channels * self.n_frames * self.n_pos):
+        while total_idx < (
+            self.n_slices * self.n_channels * self.n_frames * self.n_pos
+        ):
 
             self._check_abort()
 
             # this will loop through reading images in a single file as it's being written
             # when it has successfully loaded all of the images from the file, it'll move on to the next
-            array, idx, dim3, dim2, dim1, dim0 = self.listen_for_images(array,
-                                                            file_path,
-                                                            offsets,
-                                                            self.interval,
-                                                            dim3, dim2, dim1, dim0, dim_order)
+            array, idx, dim3, dim2, dim1, dim0 = self.listen_for_images(
+                array,
+                file_path,
+                offsets,
+                self.interval,
+                dim3,
+                dim2,
+                dim1,
+                dim0,
+                dim_order,
+            )
 
             total_idx += idx
 
             # If acquisition is not finished, grab the next file and listen for images
-            if total_idx != self.n_slices * self.n_channels * self.n_frames * self.n_pos:
+            if (
+                total_idx
+                != self.n_slices * self.n_channels * self.n_frames * self.n_pos
+            ):
                 time.sleep(1)
                 file_count += 1
-                file_path = os.path.join(full_path, self.prefix + f'_MMStack_{file_count}.ome.tif')
+                file_path = os.path.join(
+                    full_path, self.prefix + f"_MMStack_{file_count}.ome.tif"
+                )
                 file = tiff.TiffFile(file_path)
-                offsets = file.micromanager_metadata['IndexMap']['Offset']
+                offsets = file.micromanager_metadata["IndexMap"]["Offset"]
                 file.close()

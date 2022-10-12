@@ -18,7 +18,9 @@ def snap_image(mmc):
     """
 
     mmc.snapImage()
-    time.sleep(0.3) # sleep after snap to make sure the image we grab is the correct one
+    time.sleep(
+        0.3
+    )  # sleep after snap to make sure the image we grab is the correct one
 
     return mmc.getImage()
 
@@ -65,12 +67,16 @@ def snap_and_get_image(snap_manager):
 
     """
     snap_manager.snap(True)
-    time.sleep(0.3) # sleep after snap to make sure the image we grab is the correct one
+    time.sleep(
+        0.3
+    )  # sleep after snap to make sure the image we grab is the correct one
 
     # get pixels + dimensions
     height = snap_manager.getDisplay().getDisplayedImages().get(0).getHeight()
     width = snap_manager.getDisplay().getDisplayedImages().get(0).getWidth()
-    array = snap_manager.getDisplay().getDisplayedImages().get(0).getRawPixels()
+    array = (
+        snap_manager.getDisplay().getDisplayedImages().get(0).getRawPixels()
+    )
 
     return np.reshape(array, (height, width))
 
@@ -91,7 +97,9 @@ def snap_and_average(snap_manager, display=True):
     """
 
     snap_manager.snap(display)
-    time.sleep(0.3)  # sleep after snap to make sure the image we grab is the correct one
+    time.sleep(
+        0.3
+    )  # sleep after snap to make sure the image we grab is the correct one
 
     return snap_manager.getDisplay().getImagePlus().getStatistics().umean
 
@@ -117,11 +125,13 @@ def set_lc_waves(mmc, device_property: tuple, value: float):
     prop_name = device_property[1]
 
     if value > 1.6 or value < 0.001:
-        raise ValueError(f"Requested retardance value is {value} waves. "
-                         f"Retardance must be greater than 0.001 and less than 1.6 waves.")
+        raise ValueError(
+            f"Requested retardance value is {value} waves. "
+            f"Retardance must be greater than 0.001 and less than 1.6 waves."
+        )
 
     mmc.setProperty(device_name, prop_name, str(value))
-    time.sleep(20/1000)
+    time.sleep(20 / 1000)
 
 
 def set_lc_voltage(mmc, device_property: tuple, value: float):
@@ -145,8 +155,10 @@ def set_lc_voltage(mmc, device_property: tuple, value: float):
     prop_name = device_property[1]
 
     if value > 20.0 or value < 0.0:
-        raise ValueError(f"Requested LC voltage is {value} V. "
-                         f"LC voltage must be greater than 0.0 and less than 20.0 V.")
+        raise ValueError(
+            f"Requested LC voltage is {value} V. "
+            f"LC voltage must be greater than 0.0 and less than 20.0 V."
+        )
 
     mmc.setProperty(device_name, prop_name, str(value))
     time.sleep(20 / 1000)
@@ -173,7 +185,9 @@ def set_lc_daq(mmc, device_property: tuple, value: float):
     prop_name = device_property[1]
 
     if value > 5.0 or value < 0.0:
-        raise ValueError("DAC voltage must be greater than 0.0 and less than 5.0")
+        raise ValueError(
+            "DAC voltage must be greater than 0.0 and less than 5.0"
+        )
 
     mmc.setProperty(device_name, prop_name, str(value))
     time.sleep(20 / 1000)
@@ -229,7 +243,9 @@ def define_meadowlark_state(mmc, device_property: tuple):
     mmc.waitForDevice(device_name)
 
 
-def define_config_state(mmc, group: str, config: str, device_properties: list, values: list):
+def define_config_state(
+    mmc, group: str, config: str, device_properties: list, values: list
+):
     """
     Define config state by specifying the values for all device properties in this config
 
@@ -274,4 +290,4 @@ def set_lc_state(mmc, group: str, config: str):
     """
 
     mmc.setConfig(group, config)
-    time.sleep(20/1000)  # delay for LC settle time
+    time.sleep(20 / 1000)  # delay for LC settle time

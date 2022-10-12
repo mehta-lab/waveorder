@@ -4,6 +4,7 @@ from napari.qt.threading import WorkerBaseSignals, WorkerBase
 import time
 import os
 
+
 class ReconstructionSignals(WorkerBaseSignals):
     """
     Custom Signals class that includes napari native signals
@@ -15,7 +16,6 @@ class ReconstructionSignals(WorkerBaseSignals):
 
 
 class ReconstructionWorker(WorkerBase):
-
     def __init__(self, calib_window, config):
         super().__init__(SignalsClass=ReconstructionSignals)
 
@@ -26,17 +26,25 @@ class ReconstructionWorker(WorkerBase):
     def _check_abort(self):
         if self.abort_requested:
             self.aborted.emit()
-            raise TimeoutError('Stop Requested')
+            raise TimeoutError("Stop Requested")
 
     def work(self):
 
-        self.manager = PipelineManager(self.config, emitter=self.dimension_emitter)
+        self.manager = PipelineManager(
+            self.config, emitter=self.dimension_emitter
+        )
 
-        store_path = os.path.join(self.manager.config.save_dir, self.manager.config.data_save_name)
-        store_path = store_path + '.zarr' if not store_path.endswith('.zarr') else store_path
+        store_path = os.path.join(
+            self.manager.config.save_dir, self.manager.config.data_save_name
+        )
+        store_path = (
+            store_path + ".zarr"
+            if not store_path.endswith(".zarr")
+            else store_path
+        )
         self.store_emitter.emit(store_path)
 
-        print(f'Beginning Reconstruction...')
+        print(f"Beginning Reconstruction...")
 
         for pt in sorted(self.manager.pt_set):
             start_time = time.time()
@@ -45,7 +53,9 @@ class ReconstructionWorker(WorkerBase):
 
             self._check_abort()
 
-            pt_data = self.manager.data.get_zarr(pt[0])[pt[1]]  # (C, Z, Y, X) virtual
+            pt_data = self.manager.data.get_zarr(pt[0])[
+                pt[1]
+            ]  # (C, Z, Y, X) virtual
 
             self._check_abort()
 
@@ -53,25 +63,39 @@ class ReconstructionWorker(WorkerBase):
 
             self._check_abort()
 
-            birefringence = self.manager.pipeline.reconstruct_birefringence_volume(stokes)
+            birefringence = (
+                self.manager.pipeline.reconstruct_birefringence_volume(stokes)
+            )
 
             self._check_abort()
 
             # will return phase volumes
-            deconvolve2D, deconvolve3D = self.manager.pipeline.deconvolve_volume(stokes)
+            (
+                deconvolve2D,
+                deconvolve3D,
+            ) = self.manager.pipeline.deconvolve_volume(stokes)
 
             self._check_abort()
 
-            self.manager.pipeline.write_data(self.manager.indices_map[pt[0]], pt[1], pt_data, stokes,
-                                     birefringence, deconvolve2D, deconvolve3D)
+            self.manager.pipeline.write_data(
+                self.manager.indices_map[pt[0]],
+                pt[1],
+                pt_data,
+                stokes,
+                birefringence,
+                deconvolve2D,
+                deconvolve3D,
+            )
 
             self._check_abort()
 
             end_time = time.time()
-            print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time - start_time) / 60:0.2f}) min')
+            print(
+                f"Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time - start_time) / 60:0.2f}) min"
+            )
 
             existing_meta = self.manager.writer.store.attrs.asdict().copy()
-            existing_meta['Config'] = self.manager.config.yaml_dict
+            existing_meta["Config"] = self.manager.config.yaml_dict
             self.manager.writer.store.attrs.put(existing_meta)
 
             self._check_abort()

@@ -1,0 +1,4 @@
+# .git-blame-ignore-revs
+# created as described in: https://docs.github.com/en/repositories/working-with-files/using-files/viewing-a-file#ignore-commits-in-the-blame-view
+# black-format all `.py` files except recorder_ui.py
+958af2070cfb32397e7b7e8bfa7d022ec10b67af

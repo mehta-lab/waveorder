@@ -71,10 +71,15 @@ def measure_fov(mmc: Core):
     """
     pixel_size = float(mmc.getPixelSizeUm())
     if pixel_size == 0:
-        float(input("Pixel size is not calibrated. Please provide an estimate (in microns):"))
+        float(
+            input(
+                "Pixel size is not calibrated. Please provide an estimate (in microns):"
+            )
+        )
     fov_x = pixel_size * float(mmc.getImageWidth())
     fov_y = pixel_size * float(mmc.getImageHeight())
     return fov_x, fov_y
+
 
 def rand_shift(length: float):
     """Randomly signed shift of a certain length.
@@ -92,12 +97,13 @@ def rand_shift(length: float):
     sign = random.randint(0, 1) * 2 - 1
     return sign * length
 
+
 def main():
     viewer = napari.Viewer()
     app = MainWidget(viewer)
     viewer.window.add_dock_widget(app)
     app.ui.qbutton_gui_mode.click()
-    app.calib_scheme = '5-State'
+    app.calib_scheme = "5-State"
     app.directory = SAVE_DIR
     app.save_directory = SAVE_DIR
 
@@ -112,7 +118,7 @@ def main():
         with stage_detour(app, dx, dy) as app:
             print(f"Calibration repeat # {cal_repeat}")
             app.swing = SWING
-        
+
             print(f"Calibrating with swing = {SWING}")
             app.run_calibration()
             time.sleep(90)
@@ -124,12 +130,15 @@ def main():
                 app.last_calib_meta_file = app.calib.meta_file
                 app.capture_bg()
                 time.sleep(20)
-            app.ui.cb_bg_method.setCurrentIndex(1) # Set to "Measured" bg correction
+            app.ui.cb_bg_method.setCurrentIndex(
+                1
+            )  # Set to "Measured" bg correction
             app.enter_bg_correction()
             app.save_name = f"cal-{cal_repeat}-bkg-{bkg_repeat}"
             app.enter_acq_bg_path()
             app.acq_birefringence()
             time.sleep(15)
+
 
 if __name__ == "__main__":
     main()

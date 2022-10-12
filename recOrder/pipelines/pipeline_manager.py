@@ -18,18 +18,25 @@ class PipelineManager:
 
     """
 
-    def __init__(self, config: ConfigReader, overwrite: bool = False, emitter=MockEmitter()):
+    def __init__(
+        self,
+        config: ConfigReader,
+        overwrite: bool = False,
+        emitter=MockEmitter(),
+    ):
         self._check_ram()
-        
+
         start = time.time()
-        print('Reading Data...')
+        print("Reading Data...")
         data = WaveorderReader(config.data_dir, extract_data=True)
         end = time.time()
-        print(f'Finished Reading Data ({(end - start) / 60 :0.1f} min)')
+        print(f"Finished Reading Data ({(end - start) / 60 :0.1f} min)")
 
         self.config = config
         self.data = data
-        self.use_hcs = True if isinstance(self.data.reader, ZarrReader) else False
+        self.use_hcs = (
+            True if isinstance(self.data.reader, ZarrReader) else False
+        )
 
         self._gen_coord_set()
 
@@ -45,25 +52,47 @@ class PipelineManager:
         # Delete previous data if overwrite is true, helpful for making quick config changes since the writer
         # doesn't by default allow you to overwrite data
         if overwrite:
-            path = os.path.join(self.config.save_dir, self.config.data_save_name)
-            path = path+'.zarr' if not path.endswith('.zarr') else path
+            path = os.path.join(
+                self.config.save_dir, self.config.data_save_name
+            )
+            path = path + ".zarr" if not path.endswith(".zarr") else path
             if os.path.exists(path):
                 shutil.rmtree(path)
 
         # Writer Parameters
-        self.writer = WaveorderWriter(self.config.save_dir, hcs=self.use_hcs, hcs_meta=self.hcs_meta, verbose=False)
+        self.writer = WaveorderWriter(
+            self.config.save_dir,
+            hcs=self.use_hcs,
+            hcs_meta=self.hcs_meta,
+            verbose=False,
+        )
         self.writer.create_zarr_root(self.config.data_save_name)
 
         # Pipeline Initiation
-        if self.config.method == 'QLIPP':
-            self.pipeline = QLIPP(self.config, self.data, self.writer, self.config.mode, self.num_t, emitter=emitter)
+        if self.config.method == "QLIPP":
+            self.pipeline = QLIPP(
+                self.config,
+                self.data,
+                self.writer,
+                self.config.mode,
+                self.num_t,
+                emitter=emitter,
+            )
 
-        elif self.config.method == 'PhaseFromBF':
-            self.pipeline = PhaseFromBF(self.config, self.data, self.writer, self.num_t, emitter=emitter)
+        elif self.config.method == "PhaseFromBF":
+            self.pipeline = PhaseFromBF(
+                self.config,
+                self.data,
+                self.writer,
+                self.num_t,
+                emitter=emitter,
+            )
 
         else:
-            raise NotImplementedError(f'Method {self.config.method} is not currently implemented '
-                                      'please specify one of the following: QLIPP or PhaseFromBF')
+            raise NotImplementedError(
+                f"Method {self.config.method} is not currently implemented "
+                "please specify one of the following: QLIPP or PhaseFromBF"
+            )
 
     def _check_ram(self):
         """
@@ -99,10 +128,10 @@ class PipelineManager:
         for idx, p in enumerate(self.p_indices):
 
             # for every position, grab it from the original HCS metadata and place it into new list
-            well_meta = meta_new['well']
+            well_meta = meta_new["well"]
             well_meta_new[idx] = well_meta[p]
 
-            wells = meta_new['plate']['wells']
+            wells = meta_new["plate"]["wells"]
             wells_new[idx] = wells[p]
 
         # Filter out any blank entries
@@ -113,18 +142,18 @@ class PipelineManager:
         rows_new = []
         cols_new = []
         for well in wells_new:
-            split = well['path'].split('/')
-            if not {'name': split[0]} in rows_new:
-                rows_new.append({'name': split[0]})
+            split = well["path"].split("/")
+            if not {"name": split[0]} in rows_new:
+                rows_new.append({"name": split[0]})
 
-            if not {'name': split[1]} in cols_new:
-                cols_new.append({'name': split[1]})
+            if not {"name": split[1]} in cols_new:
+                cols_new.append({"name": split[1]})
 
         # Group all of the metadata together in one dictionary
-        meta_new['plate']['rows'] = rows_new
-        meta_new['plate']['columns'] = cols_new
-        meta_new['plate']['wells'] = wells_new
-        meta_new['well'] = well_meta_new
+        meta_new["plate"]["rows"] = rows_new
+        meta_new["plate"]["columns"] = cols_new
+        meta_new["plate"]["wells"] = wells_new
+        meta_new["well"] = well_meta_new
 
         return meta_new
 
@@ -146,7 +175,7 @@ class PipelineManager:
         # run through the different possible config specifications (ranges, single entries, 'all', etc.)
         cnt = 0
         for p_entry in self.config.positions:
-            if p_entry == 'all':
+            if p_entry == "all":
                 for p in range(self.data.get_num_positions()):
                     p_indices.add(p)
                     self.indices_map[p] = cnt
@@ -167,11 +196,13 @@ class PipelineManager:
                     self.indices_map[p] = cnt
                     cnt += 1
             else:
-                raise ValueError(f'Did not understand entry {p_entry} in config specified positions')
+                raise ValueError(
+                    f"Did not understand entry {p_entry} in config specified positions"
+                )
 
         # run through the different possible config specifications (ranges, single entries, 'all', etc.)
         for t_entry in self.config.timepoints:
-            if t_entry == 'all':
+            if t_entry == "all":
                 for t in range(self.data.frames):
                     t_indices.add(t)
                 break
@@ -181,10 +212,12 @@ class PipelineManager:
                 for t in t_entry:
                     t_indices.add(t)
             elif isinstance(t_entry, tuple):
-                for t in range(t_entry[0],t_entry[1]):
+                for t in range(t_entry[0], t_entry[1]):
                     t_indices.add(t)
             else:
-                raise ValueError(f'Did not understand entry {t_entry} in config specified positions')
+                raise ValueError(
+                    f"Did not understand entry {t_entry} in config specified positions"
+                )
 
         self.num_t = len(t_indices)
         self.num_p = len(p_indices)
@@ -201,48 +234,63 @@ class PipelineManager:
             # If not doing the full position, we still want semantic information on which positions
             # were reconstructed, so append the filename to the position (which would have otherwise been arbitrary)
             if not self.hcs_meta:
-                name = f'Pos_{pt[0]:03d}'
+                name = f"Pos_{pt[0]:03d}"
             else:
                 name = None
 
-            self.pipeline.writer.init_array(self.indices_map[pt[0]],
-                                            self.pipeline.data_shape,
-                                            self.pipeline.chunk_size,
-                                            self.pipeline.output_channels,
-                                            position_name=name)
+            self.pipeline.writer.init_array(
+                self.indices_map[pt[0]],
+                self.pipeline.data_shape,
+                self.pipeline.chunk_size,
+                self.pipeline.output_channels,
+                position_name=name,
+            )
 
         # assumes array exists already if there is an error thrown
         except:
             pass
 
-    #TODO: use arbol print statements
-    #TODO: Refactor Birefringence to Anisotropy
+    # TODO: use arbol print statements
+    # TODO: Refactor Birefringence to Anisotropy
     def run(self):
 
-        print(f'Beginning Reconstruction...')
+        print(f"Beginning Reconstruction...")
 
         for pt in sorted(self.pt_set):
             start_time = time.time()
 
             self.try_init_array(pt)
 
-            pt_data = self.data.get_zarr(pt[0])[pt[1]] # (C, Z, Y, X) virtual
+            pt_data = self.data.get_zarr(pt[0])[pt[1]]  # (C, Z, Y, X) virtual
 
             # will return pt_data if the pipeline does not compute stokes
             stokes = self.pipeline.reconstruct_stokes_volume(pt_data)
 
             # will return None if the pipeline doesn't support birefringence reconstruction
-            birefringence = self.pipeline.reconstruct_birefringence_volume(stokes)
+            birefringence = self.pipeline.reconstruct_birefringence_volume(
+                stokes
+            )
 
             # will return phase volumes
-            deconvolve2D, deconvolve3D = self.pipeline.deconvolve_volume(stokes)
+            deconvolve2D, deconvolve3D = self.pipeline.deconvolve_volume(
+                stokes
+            )
 
-            self.pipeline.write_data(self.indices_map[pt[0]], pt[1], pt_data, stokes,
-                                     birefringence, deconvolve2D, deconvolve3D)
+            self.pipeline.write_data(
+                self.indices_map[pt[0]],
+                pt[1],
+                pt_data,
+                stokes,
+                birefringence,
+                deconvolve2D,
+                deconvolve3D,
+            )
 
             end_time = time.time()
-            print(f'Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f}) min')
+            print(
+                f"Finishing Reconstructing P = {pt[0]}, T = {pt[1]} ({(end_time-start_time)/60:0.2f}) min"
+            )
 
             existing_meta = self.writer.store.attrs.asdict().copy()
-            existing_meta['Config'] = self.config.yaml_dict
+            existing_meta["Config"] = self.config.yaml_dict
             self.writer.store.attrs.put(existing_meta)
