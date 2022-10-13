@@ -58,12 +58,6 @@ class MainWidget(QWidget):
         self._promote_slider_init()
 
         # Setup Connections between elements
-        # Connect to MicroManager
-        # I'm disconnecting and hiding this button for 0.2.0, TODO: reinstate for 1.0.0
-        # In 1.0.0 we'll only have a single "Switch to Online/Offline" button in the "Calibration tab"
-
-        # self.ui.qbutton_mm_connect.clicked[bool].connect(self.connect_to_mm)
-        self.ui.qbutton_mm_connect.hide()
 
         # Calibration Tab
 
@@ -135,9 +129,6 @@ class MainWidget(QWidget):
         self.ui.le_save_dir.editingFinished.connect(self.enter_save_path)
         self.ui.le_save_dir.setText(str(Path.cwd()))
         self.ui.le_data_save_name.editingFinished.connect(self.enter_save_name)
-        self.ui.qbutton_listen.clicked[bool].connect(
-            self.listen_and_reconstruct
-        )
 
         self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
         self.ui.le_zstart.setText("-1")
@@ -179,9 +170,6 @@ class MainWidget(QWidget):
         self.enter_n_media()
 
         self.ui.le_pad_z.editingFinished.connect(self.enter_pad_z)
-        self.ui.chb_pause_updates.stateChanged[int].connect(
-            self.enter_pause_updates
-        )
         self.ui.cb_birefringence.currentIndexChanged[int].connect(
             self.enter_birefringence_dim
         )
@@ -256,23 +244,6 @@ class MainWidget(QWidget):
         self.ui.le_val_min.editingFinished.connect(self.enter_val_min)
 
         # Reconstruction
-        self.ui.qbutton_browse_data_dir.clicked[bool].connect(
-            self.browse_data_dir
-        )
-        self.ui.qbutton_browse_calib_meta.clicked[bool].connect(
-            self.browse_calib_meta
-        )
-        self.ui.qbutton_load_config.clicked[bool].connect(self.load_config)
-        self.ui.qbutton_save_config.clicked[bool].connect(self.save_config)
-        self.ui.qbutton_load_default_config.clicked[bool].connect(
-            self.load_default_config
-        )
-        self.ui.cb_method.currentIndexChanged[int].connect(self.enter_method)
-        self.ui.cb_mode.currentIndexChanged[int].connect(self.enter_mode)
-        self.ui.le_calibration_metadata.editingFinished.connect(
-            self.enter_calib_meta
-        )
-        self.ui.qbutton_reconstruct.clicked[bool].connect(self.reconstruct)
         self.ui.cb_phase_denoiser.currentIndexChanged[int].connect(
             self.enter_phase_denoiser
         )
@@ -282,9 +253,6 @@ class MainWidget(QWidget):
         log_box.setFormatter(logging.Formatter("%(levelname)s - %(message)s"))
         logging.getLogger().addHandler(log_box)
         logging.getLogger().setLevel(logging.INFO)
-
-        # Signal Emitters
-        self.mm_status_changed.connect(self.handle_mm_status_update)
 
         # Instantiate Attributes:
         self.gui_mode = "offline"
@@ -383,7 +351,6 @@ class MainWidget(QWidget):
         self.ui.label_lcb.hide()
         self.ui.cb_lca.hide()
         self.ui.cb_lcb.hide()
-        self._hide_acquisition_ui(True)
         self.ui.label_bg_path.setHidden(True)
         self.ui.le_bg_path.setHidden(True)
         self.ui.qbutton_browse_bg_path.setHidden(True)
@@ -391,14 +358,6 @@ class MainWidget(QWidget):
         self.ui.label_phase_rho.setHidden(True)
         self.ui.le_itr.setHidden(True)
         self.ui.label_itr.setHidden(True)
-        self.ui.le_bf_chan.setHidden(True)
-        self.ui.label_bf_chan.setHidden(True)
-        self.ui.label_focus_zidx.setHidden(True)
-        self.ui.le_focus_zidx.setHidden(True)
-
-        # Hide temporarily unsupported "Listen" functions
-        self.ui.qbutton_listen.setHidden(True)
-        self.ui.chb_pause_updates.setHidden(True)
 
         # Hide temporarily unsupported "Overlay" functions
         self.ui.tabWidget.setTabText(
@@ -415,27 +374,18 @@ class MainWidget(QWidget):
             "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
         )
         self.ui.te_log.setStyleSheet("background-color: rgb(32,34,40);")
-        self.ui.le_mm_status.setText("Not Connected")
-        self.ui.le_mm_status.setStyleSheet("border: 1px solid yellow;")
         self.ui.le_sat_min.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.ui.le_sat_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.ui.le_val_min.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.ui.le_val_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.setStyleSheet("QTabWidget::tab-bar {alignment: center;}")
         self.red_text = QColor(200, 0, 0, 255)
-        self.original_tab_text = self.ui.tabWidget_3.tabBar().tabTextColor(0)
         self.ui.tabWidget.parent().setObjectName(
             "recOrder"
         )  # make sure the top says recOrder and not 'Form'
         self.ui.tabWidget_2.setCurrentIndex(
             0
         )  # set focus to "Plot" tab by default
-        self.ui.tabWidget_3.setCurrentIndex(
-            0
-        )  # set focus to "General" tab by default
-
-        # No "Optional" text on offline mode's calibration metadata box
-        self.ui.le_calibration_metadata.setPlaceholderText("")
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
@@ -602,65 +552,6 @@ class MainWidget(QWidget):
             value_slider_position[3],
         )
         self.ui.slider_value.setRange(0, 100)
-
-    def _hide_acquisition_ui(self, val: bool):
-        """
-        hides or shows the acquisition (online) UI elements.  Used when switching between online/offline mode
-
-        Parameters
-        ----------
-        val:        (bool) True/False whether to hide (True) or show (False)
-
-        Returns
-        -------
-
-        """
-        self.ui.acq_settings.setHidden(val)
-        self.ui.acquire.setHidden(val)
-
-        # Calibration Tab
-        self.ui.tabWidget.setTabEnabled(0, not val)
-        if val:
-            self.ui.tabWidget.setStyleSheet(
-                "QTabBar::tab::disabled {width: 0; height: 0; margin: 0; padding: 0; border: none;} "
-            )
-        else:
-            self.ui.tabWidget.setStyleSheet("")
-            self.ui.le_mm_status.setText("Not Connected")
-            self.ui.le_mm_status.setStyleSheet("border: 1px solid yellow;")
-            self.mmc = None
-            self.mm = None
-            # self.ui.cb_config_group.clear() # this might be the culprit because it clear the config
-            self.ui.tabWidget.setCurrentIndex(0)
-
-    def _hide_offline_ui(self, val: bool):
-        """
-        hides or shows the offline UI elements.  Used when switching between online/offline mode
-
-        Parameters
-        ----------
-        val:        (bool) True/False whether to hide (True) or show (False)
-
-        Returns
-        -------
-
-        """
-
-        # General Settings
-        self.ui.le_data_dir.setHidden(val)
-        self.ui.label_data_dir.setHidden(val)
-        self.ui.qbutton_browse_data_dir.setHidden(val)
-        self.ui.le_calibration_metadata.setHidden(val)
-        self.ui.label_calib_meta.setHidden(val)
-        self.ui.qbutton_browse_calib_meta.setHidden(val)
-        self.ui.qbutton_load_config.setHidden(val)
-        self.ui.qbutton_save_config.setHidden(val)
-        self.ui.qbutton_load_default_config.setHidden(val)
-        self.ui.qbutton_reconstruct.setHidden(val)
-        self.ui.qbutton_stop_reconstruct.setHidden(val)
-
-        # Processing Settings
-        self.ui.groupBox_2.setHidden(val)
 
     def _enable_buttons(self):
         """
@@ -1634,8 +1525,6 @@ class MainWidget(QWidget):
             self.ui.le_gui_mode.setStyleSheet(
                 "border: 1px solid green; color: green;"
             )
-            self._hide_offline_ui(True)
-            self._hide_acquisition_ui(False)
             self.gui_mode = "online"
             self.connect_to_mm()
 
@@ -1645,13 +1534,8 @@ class MainWidget(QWidget):
             self.ui.le_gui_mode.setStyleSheet(
                 "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
             )
-            self._hide_offline_ui(False)
-            self._hide_acquisition_ui(True)
             self.gui_mode = "offline"
             self.ui.cb_config_group.clear()
-
-            # Make sure button is still visible
-            self.ui.qbutton_mm_connect.setEnabled(True)
 
     @Slot(bool)
     def connect_to_mm(self):
@@ -1768,21 +1652,6 @@ class MainWidget(QWidget):
 
         except:
             self.mm_status_changed.emit(False)
-
-    @Slot(bool)
-    def handle_mm_status_update(self, value):
-        if value:
-            self.ui.le_mm_status.setText("Success!")
-            self.ui.le_mm_status.setStyleSheet("background-color: green;")
-            # Disabling the button
-            self.ui.qbutton_mm_connect.setEnabled(False)
-        else:
-            # Make sure button is still visible if it fails
-            self.ui.qbutton_mm_connect.setEnabled(True)
-            self.ui.le_mm_status.setText("Failed.")
-            self.ui.le_mm_status.setStyleSheet(
-                "background-color: rgb(200,0,0);"
-            )
 
     @Slot(tuple)
     def handle_progress_update(self, value):
@@ -2931,73 +2800,6 @@ class MainWidget(QWidget):
         self.ui.qbutton_stop_acq.clicked.connect(self.worker.quit)
 
         # Start Thread
-        self.worker.start()
-
-    @Slot(bool)
-    def listen_and_reconstruct(self):
-        """
-        Wrapper function for on the fly data listening and reconstructing.  Only works if the user is acquiring
-        polarization only data (cannot have any extra channels in the acquisition)
-
-        Returns
-        -------
-
-        """
-
-        # Init reconstructor
-        if self.bg_option != "None":
-            metadata_file = get_last_metadata_file(self.current_bg_path)
-            metadata = MetadataReader(metadata_file)
-            roi = metadata.ROI
-            height, width = roi[2], roi[3]
-            bg_data = load_bg(
-                self.current_bg_path, height, width, roi
-            )  # TODO: remove ROI for 1.0.0
-        else:
-            bg_data = None
-
-        # Init worker
-        self.worker = ListeningWorker(self, bg_data)
-
-        # connect handlers
-        self.worker.store_emitter.connect(self.add_listener_data)
-        self.worker.dim_emitter.connect(self.update_dims)
-        self.worker.started.connect(self._disable_buttons)
-        self.worker.finished.connect(self._enable_buttons)
-        self.worker.finished.connect(self._reset_listening)
-        self.worker.errored.connect(self._handle_acq_error)
-        self.ui.qbutton_stop_acq.clicked.connect(self.worker.quit)
-
-        # Start Thread
-        self.worker.start()
-
-    @Slot(bool)
-    def reconstruct(self):
-        """
-        Wrapper function for offline reconstruction.
-        """
-
-        success = self._check_requirements_for_reconstruction()
-        if not success:
-            raise ValueError(
-                "Please make sure all necessary parameters are set before reconstruction"
-            )
-
-        self._populate_config_from_app()
-        self.worker = ReconstructionWorker(self, self.config_reader)
-
-        # connect handlers
-        self.worker.dimension_emitter.connect(
-            self.handle_reconstruction_dim_update
-        )
-        self.worker.store_emitter.connect(
-            self.handle_reconstruction_store_update
-        )
-        self.worker.started.connect(self._disable_buttons)
-        self.worker.finished.connect(self._enable_buttons)
-        self.worker.errored.connect(self._handle_acq_error)
-        self.ui.qbutton_stop_acq.clicked.connect(self.worker.quit)
-
         self.worker.start()
 
     @Slot(bool)
