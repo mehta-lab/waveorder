@@ -201,15 +201,3 @@ Examples of Acquiring 2D birefringence data (Kidney Tissue) with this snap metho
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/acq_finished.png)
 
 ________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________
-
-
-# recOrder Offline Reconstruction.
-
-To use recOrder's offline reconstruction module you will need to switch to the offline mode by clicking the "Switch to Offline" button at the very top.  If you have just opened the plugin then it will start out in the offline mode.  The offline mode is pictured below:
-
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/recOrder_offline.png)
-
-This plugin mimics the command line interface reconstruct functionality, but allows the user to enter in the configuration parameters in the GUI itself.  The user is also able to save these parameters to a new config file or load parameters into the app from an existing config file.  
-
-As the data is being reconstructed, it will output the positions as different layers into napari.  This allows the user to see that data as it is being reconstructed and allows for quick interpretation of results.  Please see the workflow tutorial video in the tutorials section
-
