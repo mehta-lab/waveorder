@@ -645,16 +645,6 @@
                 <property name="focusPolicy">
                  <enum>Qt::StrongFocus</enum>
                 </property>
-                <item>
-                 <property name="text">
-                  <string>Retardance</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>Voltage</string>
-                 </property>
-                </item>
                </widget>
               </item>
               <item row="0" column="2">

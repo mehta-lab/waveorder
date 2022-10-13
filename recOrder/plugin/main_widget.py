@@ -5,16 +5,16 @@ from qtpy.QtWidgets import QWidget, QFileDialog, QSizePolicy, QSlider
 from qtpy.QtGui import QPixmap, QColor
 from superqt import QDoubleRangeSlider, QRangeSlider
 from recOrder.calib import Calibration
-from recOrder.plugin.workers.calibration_workers import (
+from recOrder.calib.calibration_workers import (
     CalibrationWorker,
     BackgroundCaptureWorker,
     load_calibration,
 )
-from recOrder.plugin.workers.acquisition_workers import (
+from recOrder.acq.acquisition_workers import (
     PolarizationAcquisitionWorker,
     BFAcquisitionWorker,
 )
-from recOrder.plugin.qtdesigner import recOrder_ui
+from recOrder.plugin import gui
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.metadata_reader import MetadataReader
 from recOrder.io.utils import ret_ori_overlay, generic_hsv_overlay
@@ -36,7 +36,7 @@ import textwrap
 class MainWidget(QWidget):
     """
     This is the main recOrder widget that houses all of the GUI components of recOrder.
-    The GUI is designed in QT Designer in /recOrder/plugin/widget/qt_designer and converted to a python file
+    The GUI is designed in QT Designer in /recOrder/plugin/gui.ui and converted to a python file
     with the pyuic5 command.
     """
 
@@ -48,17 +48,13 @@ class MainWidget(QWidget):
         self.viewer = napari_viewer
 
         # Setup GUI Elements
-        self.ui = recOrder_ui.Ui_Form()
+        self.ui = gui.Ui_Form()
         self.ui.setupUi(self)
         self._promote_slider_init()
 
         # Setup Connections between elements
 
         # Calibration Tab
-
-        # Remove QT creator calibration mode items
-        self.ui.cb_calib_mode.removeItem(0)
-        self.ui.cb_calib_mode.removeItem(0)
 
         # Populate calibration modes from docstring
         cal_docs = NumpyDocString(
@@ -319,9 +315,7 @@ class MainWidget(QWidget):
         self.worker = None
 
         # Display/Initialiaze GUI Images (plotting legends, recOrder logo)
-        recorder_dir = dirname(
-            dirname(dirname(dirname(os.path.abspath(__file__))))
-        )
+        recorder_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
         jch_legend_path = os.path.join(
             recorder_dir, "docs/images/JCh_legend.png"
         )
@@ -413,8 +407,10 @@ class MainWidget(QWidget):
                 )
                 self.connected_to_mm = True
             except:
-                print("recOrder is unable to connect to MM.")
-                raise EnvironmentError
+                self.ui.le_mm_status.setText("Failed")
+                self.ui.le_mm_status.setStyleSheet(
+                    "border: 1px solid yellow; color: yellow;"
+                )
 
     @Slot(bool)
     def connect_to_mm(self):

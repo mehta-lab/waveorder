@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'recOrder_ui.ui'
+# Form implementation generated from reading ui file 'gui.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.7
 #
@@ -347,8 +347,6 @@ class Ui_Form(object):
         self.cb_calib_mode.setFont(font)
         self.cb_calib_mode.setFocusPolicy(QtCore.Qt.StrongFocus)
         self.cb_calib_mode.setObjectName("cb_calib_mode")
-        self.cb_calib_mode.addItem("")
-        self.cb_calib_mode.addItem("")
         self.gridLayout_2.addWidget(self.cb_calib_mode, 5, 1, 1, 1)
         self.qbutton_browse = QtWidgets.QPushButton(self.calib_params)
         font = QtGui.QFont()
@@ -1229,8 +1227,6 @@ class Ui_Form(object):
         self.label_calib_mode.setText(_translate("Form", "Calibration Mode"))
         self.label_cfg_group.setText(_translate("Form", "Config Group"))
         self.label_scheme.setText(_translate("Form", "Illumination Scheme"))
-        self.cb_calib_mode.setItemText(0, _translate("Form", "Retardance"))
-        self.cb_calib_mode.setItemText(1, _translate("Form", "Voltage"))
         self.qbutton_browse.setText(_translate("Form", "Browse"))
         self.label_inten_plot.setText(_translate("Form", "Intensity Plot"))
         self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_plot), _translate("Form", "Plot"))

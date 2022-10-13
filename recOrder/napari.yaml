@@ -4,7 +4,7 @@ contributions:
   commands:
   - id: recOrder-napari.MainWidget
     title: Create Main Widget
-    python_name: recOrder.plugin.widget.napari_plugin_entry_point:MainWidget
+    python_name: recOrder.plugin.main_widget:MainWidget
   - id: recOrder-napari.get_reader
     title: Read ome-zarr and ome-tif files
     python_name: recOrder.io._reader:napari_get_reader
