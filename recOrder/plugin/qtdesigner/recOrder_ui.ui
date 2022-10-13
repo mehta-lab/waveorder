@@ -41,52 +41,14 @@
       </font>
      </property>
      <property name="title">
-      <string>recOrder Status</string>
+      <string>MM Connection Status</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_22">
       <property name="topMargin">
        <number>25</number>
       </property>
-      <item row="1" column="2">
-       <widget class="QPushButton" name="qbutton_gui_mode">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="font">
-         <font>
-          <italic>false</italic>
-          <bold>false</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Switch to Online</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="0">
-       <widget class="QLabel" name="label_gui_mode">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="font">
-         <font>
-          <italic>false</italic>
-          <bold>false</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Mode</string>
-        </property>
-       </widget>
-      </item>
-      <item row="1" column="1">
-       <widget class="QLineEdit" name="le_gui_mode">
+      <item row="0" column="1">
+       <widget class="QLineEdit" name="le_mm_status">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
           <horstretch>0</horstretch>
@@ -100,10 +62,32 @@
          </font>
         </property>
         <property name="text">
-         <string>Offline</string>
+         <string>Disconnected</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
         </property>
         <property name="readOnly">
          <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="0">
+       <widget class="QPushButton" name="qbutton_connect_to_mm">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="font">
+         <font>
+          <italic>false</italic>
+          <bold>false</bold>
+         </font>
+        </property>
+        <property name="text">
+         <string>Connect to MM</string>
         </property>
        </widget>
       </item>
@@ -203,7 +187,7 @@
             <x>0</x>
             <y>0</y>
             <width>590</width>
-            <height>1051</height>
+            <height>1032</height>
            </rect>
           </property>
           <property name="sizePolicy">
@@ -425,8 +409,34 @@
               <property name="verticalSpacing">
                <number>6</number>
               </property>
-              <item row="5" column="4">
-               <widget class="QComboBox" name="cb_lcb">
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_wavelength">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Wavelength</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="0">
+               <widget class="QLabel" name="label_dir">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Directory</string>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="2">
+               <widget class="QComboBox" name="cb_lca">
                 <property name="font">
                  <font>
                   <italic>false</italic>
@@ -443,23 +453,7 @@
                 </item>
                </widget>
               </item>
-              <item row="0" column="2">
-               <widget class="QLineEdit" name="le_directory">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="placeholderText">
-                 <string>/path/to/directory</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="2">
+              <item row="4" column="1">
                <widget class="QComboBox" name="cb_calib_scheme">
                 <property name="font">
                  <font>
@@ -482,137 +476,8 @@
                 </item>
                </widget>
               </item>
-              <item row="0" column="0">
-               <widget class="QLabel" name="label_dir">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Directory</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_wavelength">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Wavelength</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="2">
-               <widget class="QLineEdit" name="le_wavelength">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>532</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="2">
-               <widget class="QLineEdit" name="le_swing">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>0.1</string>
-                </property>
-               </widget>
-              </item>
-              <item row="0" column="3">
-               <widget class="QPushButton" name="qbutton_browse">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="autoFillBackground">
-                 <bool>false</bool>
-                </property>
-                <property name="text">
-                 <string>Browse</string>
-                </property>
-                <property name="checkable">
-                 <bool>false</bool>
-                </property>
-                <property name="default">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_scheme">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Illumination Scheme</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="0">
-               <widget class="QLabel" name="label_swing">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Swing</string>
-                </property>
-               </widget>
-              </item>
-              <item row="7" column="0" colspan="3">
-               <widget class="QCheckBox" name="chb_use_roi">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Use Cropped ROI</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="3">
-               <widget class="QLabel" name="label_lca">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>LC-A</string>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-               </widget>
-              </item>
               <item row="5" column="3">
-               <widget class="QComboBox" name="cb_lca">
+               <widget class="QComboBox" name="cb_lcb">
                 <property name="font">
                  <font>
                   <italic>false</italic>
@@ -629,7 +494,65 @@
                 </item>
                </widget>
               </item>
-              <item row="4" column="4">
+              <item row="4" column="2">
+               <widget class="QLabel" name="label_lca">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>LC-A</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="le_swing">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>0.1</string>
+                </property>
+               </widget>
+              </item>
+              <item row="0" column="1">
+               <widget class="QLineEdit" name="le_directory">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string/>
+                </property>
+                <property name="placeholderText">
+                 <string>/path/to/directory</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QLineEdit" name="le_wavelength">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>532</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="3">
                <widget class="QLabel" name="label_lcb">
                 <property name="font">
                  <font>
@@ -642,6 +565,19 @@
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="0">
+               <widget class="QLabel" name="label_swing">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Swing</string>
                 </property>
                </widget>
               </item>
@@ -658,7 +594,46 @@
                 </property>
                </widget>
               </item>
-              <item row="5" column="2">
+              <item row="6" column="0">
+               <widget class="QLabel" name="label_cfg_group">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Config Group</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="label_scheme">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Illumination Scheme</string>
+                </property>
+               </widget>
+              </item>
+              <item row="6" column="1">
+               <widget class="QComboBox" name="cb_config_group">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+               </widget>
+              </item>
+              <item row="5" column="1">
                <widget class="QComboBox" name="cb_calib_mode">
                 <property name="font">
                  <font>
@@ -682,29 +657,25 @@
                 </item>
                </widget>
               </item>
-              <item row="6" column="0">
-               <widget class="QLabel" name="label_cfg_group">
+              <item row="0" column="2">
+               <widget class="QPushButton" name="qbutton_browse">
                 <property name="font">
                  <font>
                   <italic>false</italic>
                   <bold>false</bold>
                  </font>
+                </property>
+                <property name="autoFillBackground">
+                 <bool>false</bool>
                 </property>
                 <property name="text">
-                 <string>Config Group</string>
+                 <string>Browse</string>
                 </property>
-               </widget>
-              </item>
-              <item row="6" column="2">
-               <widget class="QComboBox" name="cb_config_group">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
+                <property name="checkable">
+                 <bool>false</bool>
                 </property>
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
+                <property name="default">
+                 <bool>false</bool>
                 </property>
                </widget>
               </item>
@@ -1646,6 +1617,12 @@
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
+             <property name="font">
+              <font>
+               <italic>false</italic>
+               <bold>true</bold>
+              </font>
+             </property>
              <property name="title">
               <string>Phase Reconstruction Settings</string>
              </property>
@@ -2154,8 +2131,7 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>le_gui_mode</tabstop>
-  <tabstop>qbutton_gui_mode</tabstop>
+  <tabstop>le_mm_status</tabstop>
   <tabstop>tabWidget</tabstop>
   <tabstop>scrollArea</tabstop>
   <tabstop>le_directory</tabstop>
@@ -2167,7 +2143,6 @@
   <tabstop>cb_lca</tabstop>
   <tabstop>cb_lcb</tabstop>
   <tabstop>cb_config_group</tabstop>
-  <tabstop>chb_use_roi</tabstop>
   <tabstop>qbutton_calibrate</tabstop>
   <tabstop>qbutton_load_calib</tabstop>
   <tabstop>qbutton_calc_extinction</tabstop>

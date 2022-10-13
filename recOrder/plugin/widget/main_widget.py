@@ -12,13 +12,12 @@ from recOrder.plugin.workers.calibration_workers import (
 )
 from recOrder.plugin.workers.acquisition_workers import (
     PolarizationAcquisitionWorker,
-    ListeningWorker,
     BFAcquisitionWorker,
 )
 from recOrder.plugin.qtdesigner import recOrder_ui
 from recOrder.io.core_functions import set_lc_state, snap_and_average
-from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
-from recOrder.io.utils import load_bg, ret_ori_overlay, generic_hsv_overlay
+from recOrder.io.metadata_reader import MetadataReader
+from recOrder.io.utils import ret_ori_overlay, generic_hsv_overlay
 from recOrder.io.config_reader import ConfigReader, PROCESSING
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
@@ -42,8 +41,6 @@ class MainWidget(QWidget):
     """
 
     # Initialize Custom Signals
-    mm_status_changed = Signal(bool)
-    intensity_changed = Signal(float)
     log_changed = Signal(str)
 
     def __init__(self, napari_viewer: Viewer):
@@ -76,6 +73,11 @@ class MainWidget(QWidget):
                 i, wrapped_tooltip, Qt.ToolTipRole
             )
 
+        # Connect GUI elements to functions
+        self.ui.qbutton_connect_to_mm.clicked[bool].connect(
+            self.toggle_mm_connection
+        )
+
         self.ui.qbutton_browse.clicked[bool].connect(self.browse_dir_path)
         self.ui.le_directory.editingFinished.connect(self.enter_dir_path)
         self.ui.le_directory.setText(str(Path.cwd()))
@@ -96,9 +98,6 @@ class MainWidget(QWidget):
         )
         self.ui.cb_lca.currentIndexChanged[int].connect(self.enter_dac_lca)
         self.ui.cb_lcb.currentIndexChanged[int].connect(self.enter_dac_lcb)
-        self.ui.chb_use_roi.stateChanged[int].connect(
-            self.enter_use_cropped_roi
-        )
         self.ui.qbutton_calibrate.clicked[bool].connect(self.run_calibration)
         self.ui.qbutton_load_calib.clicked[bool].connect(self.load_calibration)
         self.ui.qbutton_calc_extinction.clicked[bool].connect(
@@ -120,7 +119,6 @@ class MainWidget(QWidget):
         self.ui.qbutton_push_note.clicked[bool].connect(self.push_note)
 
         # Acquisition Tab
-        self.ui.qbutton_gui_mode.clicked[bool].connect(self.change_gui_mode)
         self.ui.qbutton_browse_save_dir.clicked[bool].connect(
             self.browse_save_path
         )
@@ -253,7 +251,7 @@ class MainWidget(QWidget):
         logging.getLogger().setLevel(logging.INFO)
 
         # Instantiate Attributes:
-        self.gui_mode = "offline"
+        self.connected_to_mm = False
         self.bridge = None
         self.mm = None
         self.mmc = None
@@ -364,11 +362,8 @@ class MainWidget(QWidget):
         self.ui.label_orientation_legend.setHidden(True)
         self.ui.DisplayOptions.setHidden(True)
 
-        # Hide "Use Cropped ROI"
-        self.ui.chb_use_roi.setHidden(True)
-
         # Set initial UI Properties
-        self.ui.le_gui_mode.setStyleSheet(
+        self.ui.le_mm_status.setStyleSheet(
             "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
         )
         self.ui.te_log.setStyleSheet("background-color: rgb(32,34,40);")
@@ -393,6 +388,139 @@ class MainWidget(QWidget):
 
         # Display GUI using maximum resolution
         self.showMaximized()
+
+    @Slot(bool)
+    def toggle_mm_connection(self):
+        """
+        Toggles MM connection and updates the corresponding GUI elements.
+        """
+        if self.connected_to_mm:
+            self.ui.qbutton_connect_to_mm.setText("Connect to MM")
+            self.ui.le_mm_status.setText("Offline")
+            self.ui.le_mm_status.setStyleSheet(
+                "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
+            )
+            self.connected_to_mm = False
+            self.ui.cb_config_group.clear()
+
+        else:
+            try:
+                self.connect_to_mm()
+                self.ui.qbutton_connect_to_mm.setText("Disconnect from MM")
+                self.ui.le_mm_status.setText("Connected")
+                self.ui.le_mm_status.setStyleSheet(
+                    "border: 1px solid green; color: green;"
+                )
+                self.connected_to_mm = True
+            except:
+                print("recOrder is unable to connect to MM.")
+                raise EnvironmentError
+
+    @Slot(bool)
+    def connect_to_mm(self):
+        """
+        Establishes the python/java bridge to Micromanager.  Micromanager must be open with a config loaded
+        in order for the connection to be successful.  On connection, it will populate all of the available config
+        groups.  Config group choice is used to establish which config group the Polarization states live in.
+
+        Returns
+        -------
+
+        """
+        RECOMMENDED_MM = "20220920"
+        ZMQ_TARGET_VERSION = "4.2.0"
+        try:
+            self.bridge = Bridge(convert_camel_case=False)
+            self.mmc = self.bridge.get_core()
+            self.mm = self.bridge.get_studio()
+        except:
+            print(
+                (
+                    "Could not establish pycromanager bridge.\n"
+                    "Is micromanager open?\n"
+                    "Is Tools > Options > Run server on port 4827 checked?\n"
+                    f"Are you using nightly build {RECOMMENDED_MM}?"
+                )
+            )
+            raise EnvironmentError
+
+        # Warn the user if there is a MicroManager/ZMQ version mismatch
+        self.bridge._main_socket.send({"command": "connect", "debug": False})
+        reply_json = self.bridge._main_socket.receive(timeout=500)
+        zmq_mm_version = reply_json["version"]
+        if zmq_mm_version != ZMQ_TARGET_VERSION:
+            upgrade_str = (
+                "upgrade"
+                if version.parse(zmq_mm_version)
+                < version.parse(ZMQ_TARGET_VERSION)
+                else "downgrade"
+            )
+            print(
+                (
+                    "WARNING: This version of Micromanager has not been tested with recOrder.\n"
+                    f"Please {upgrade_str} to MicroManager nightly build {RECOMMENDED_MM}."
+                )
+            )
+
+        # Find config group containing calibration channels
+        # calib_channels is typically ['State0', 'State1', 'State2', ...]
+        # config_list may be something line ['GFP', 'RFP', 'State0', 'State1', 'State2', ...]
+        # config_list may also be of the form ['GFP', 'RFP', 'LF-State0', 'LF-State1', 'LF-State2', ...]
+        # in this version of the code we correctly parse 'LF-State0', but these channels cannot be used
+        # by the Calibration class.
+        # A valid config group contains all channels in calib_channels
+        # self.ui.cb_config_group.clear()    # This triggers the enter config we will clear when switching off
+        groups = self.mmc.getAvailableConfigGroups()
+        config_group_found = False
+        for i in range(groups.size()):
+            group = groups.get(i)
+            configs = self.mmc.getAvailableConfigs(group)
+            config_list = []
+            for j in range(configs.size()):
+                config_list.append(configs.get(j))
+            if np.all(
+                [
+                    np.any([ch in config for config in config_list])
+                    for ch in self.calib_channels
+                ]
+            ):
+                if not config_group_found:
+                    self.config_group = (
+                        group  # set to first config group found
+                    )
+                    config_group_found = True
+                self.ui.cb_config_group.addItem(group)
+            # not entirely sure what this part does, but I left it in
+            # I think it tried to find a channel such as 'BF'
+            for ch in config_list:
+                if ch not in self.calib_channels:
+                    self.ui.cb_acq_channel.addItem(ch)
+        if not config_group_found:
+            msg = (
+                f"No config group contains channels {self.calib_channels}. "
+                "Please refer to the recOrder wiki on how to set up the config properly."
+            )
+            self.ui.cb_config_group.setStyleSheet(
+                "border: 1px solid rgb(200,0,0);"
+            )
+            raise KeyError(msg)
+
+        # set startup LC control mode
+        _devices = self.mmc.getLoadedDevices()
+        loaded_devices = [_devices.get(i) for i in range(_devices.size())]
+        if LC_DEVICE_NAME in loaded_devices:
+            config_desc = self.mmc.getConfigData(
+                "Channel", "State0"
+            ).getVerbose()
+            if "String send to" in config_desc:
+                self.calib_mode = "MM-Retardance"
+                self.ui.cb_calib_mode.setCurrentIndex(0)
+            if "Voltage (V)" in config_desc:
+                self.calib_mode = "MM-Voltage"
+                self.ui.cb_calib_mode.setCurrentIndex(1)
+        else:
+            self.calib_mode = "DAC"
+            self.ui.cb_calib_mode.setCurrentIndex(2)
 
     def _demote_slider_offline(self, ui_slider, range_):
         """
@@ -846,149 +974,6 @@ class MainWidget(QWidget):
                 "Please enter in all of the parameters necessary for the acquisition"
             )
 
-    @Slot(bool)
-    def change_gui_mode(self):
-        """
-        Switches between offline/online mode and updates the corresponding GUI elements
-
-        Returns
-        -------
-
-        """
-        if self.gui_mode == "offline":
-            self.ui.qbutton_gui_mode.setText("Switch to Offline")
-            self.ui.le_gui_mode.setText("Online")
-            self.ui.le_gui_mode.setStyleSheet(
-                "border: 1px solid green; color: green;"
-            )
-            self.gui_mode = "online"
-            self.connect_to_mm()
-
-        else:
-            self.ui.qbutton_gui_mode.setText("Switch to Online")
-            self.ui.le_gui_mode.setText("Offline")
-            self.ui.le_gui_mode.setStyleSheet(
-                "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
-            )
-            self.gui_mode = "offline"
-            self.ui.cb_config_group.clear()
-
-    @Slot(bool)
-    def connect_to_mm(self):
-        """
-        Function to establish the python/java bridge to MicroManager.  Micromanager must be open with a config loaded
-        in order for the connection to be successful.  On connection, it will populate all of the available config
-        groups.  Config group choice is used to establish which config group the Polarization states live in.
-
-        Returns
-        -------
-
-        """
-        RECOMMENDED_MM = "20220920"
-        ZMQ_TARGET_VERSION = "4.2.0"
-        try:
-            # Try to open Bridge. Requires micromanager to be open with server running.
-            # This does not fail gracefully, so I'm wrapping it in its own try-except block.
-            try:
-                self.bridge = Bridge(convert_camel_case=False)
-                self.mmc = self.bridge.get_core()
-                self.mm = self.bridge.get_studio()
-            except:
-                print(
-                    (
-                        "Could not establish pycromanager bridge.\n"
-                        "Is micromanager open?\n"
-                        "Is Tools > Options > Run server on port 4827 checked?\n"
-                        f"Are you using nightly build {RECOMMENDED_MM}?"
-                    )
-                )
-                raise EnvironmentError
-
-            # Warn the user if there is a MicroManager/ZMQ version mismatch
-            self.bridge._main_socket.send(
-                {"command": "connect", "debug": False}
-            )
-            reply_json = self.bridge._main_socket.receive(timeout=500)
-            zmq_mm_version = reply_json["version"]
-            if zmq_mm_version != ZMQ_TARGET_VERSION:
-                upgrade_str = (
-                    "upgrade"
-                    if version.parse(zmq_mm_version)
-                    < version.parse(ZMQ_TARGET_VERSION)
-                    else "downgrade"
-                )
-                print(
-                    (
-                        "WARNING: This version of Micromanager has not been tested with recOrder.\n"
-                        f"Please {upgrade_str} to MicroManager nightly build {RECOMMENDED_MM}."
-                    )
-                )
-
-            # Find config group containing calibration channels
-            # calib_channels is typically ['State0', 'State1', 'State2', ...]
-            # config_list may be something line ['GFP', 'RFP', 'State0', 'State1', 'State2', ...]
-            # config_list may also be of the form ['GFP', 'RFP', 'LF-State0', 'LF-State1', 'LF-State2', ...]
-            # in this version of the code we correctly parse 'LF-State0', but these channels cannot be used
-            # by the Calibration class.
-            # A valid config group contains all channels in calib_channels
-            # self.ui.cb_config_group.clear()    # This triggers the enter config we will clear when switching off
-            groups = self.mmc.getAvailableConfigGroups()
-            config_group_found = False
-            for i in range(groups.size()):
-                group = groups.get(i)
-                configs = self.mmc.getAvailableConfigs(group)
-                config_list = []
-                for j in range(configs.size()):
-                    config_list.append(configs.get(j))
-                if np.all(
-                    [
-                        np.any([ch in config for config in config_list])
-                        for ch in self.calib_channels
-                    ]
-                ):
-                    if not config_group_found:
-                        self.config_group = (
-                            group  # set to first config group found
-                        )
-                        config_group_found = True
-                    self.ui.cb_config_group.addItem(group)
-                # not entirely sure what this part does, but I left it in
-                # I think it tried to find a channel such as 'BF'
-                for ch in config_list:
-                    if ch not in self.calib_channels:
-                        self.ui.cb_acq_channel.addItem(ch)
-            if not config_group_found:
-                msg = (
-                    f"No config group contains channels {self.calib_channels}. "
-                    "Please refer to the recOrder wiki on how to set up the config properly."
-                )
-                self.ui.cb_config_group.setStyleSheet(
-                    "border: 1px solid rgb(200,0,0);"
-                )
-                raise KeyError(msg)
-
-            # set startup LC control mode
-            _devices = self.mmc.getLoadedDevices()
-            loaded_devices = [_devices.get(i) for i in range(_devices.size())]
-            if LC_DEVICE_NAME in loaded_devices:
-                config_desc = self.mmc.getConfigData(
-                    "Channel", "State0"
-                ).getVerbose()
-                if "String send to" in config_desc:
-                    self.calib_mode = "MM-Retardance"
-                    self.ui.cb_calib_mode.setCurrentIndex(0)
-                if "Voltage (V)" in config_desc:
-                    self.calib_mode = "MM-Voltage"
-                    self.ui.cb_calib_mode.setCurrentIndex(1)
-            else:
-                self.calib_mode = "DAC"
-                self.ui.cb_calib_mode.setCurrentIndex(2)
-
-            self.mm_status_changed.emit(True)
-
-        except:
-            self.mm_status_changed.emit(False)
-
     @Slot(tuple)
     def handle_progress_update(self, value):
         self.ui.progress_bar.setValue(value[0])
@@ -1188,28 +1173,6 @@ class MainWidget(QWidget):
     def handle_qlipp_reconstructor_update(self, value):
         # Saves phase reconstructor to be re-used if possible
         self.phase_reconstructor = value
-
-    @Slot(dict)
-    def handle_meta_update(self, meta):
-        # Don't update microscope parameters saved in calibration metadata file
-
-        # if self.last_calib_meta_file is None:
-        #     print("\nWARNING: No calibration file has been loaded\n")
-        #     return
-        #
-        # with open(self.last_calib_meta_file, 'r') as file:
-        #     current_json = json.load(file)
-        #
-        # for key, value in current_json['Microscope Parameters'].items():
-        #     if key in meta:
-        #         current_json['Microscope Parameters'][key] = meta[key]
-        #     else:
-        #         current_json['Microscope Parameters'][key] = None
-        #
-        # with open(self.last_calib_meta_file, 'w') as file:
-        #     json.dump(current_json, file, indent=1)
-
-        pass
 
     @Slot(str)
     def handle_calib_file_update(self, value):
@@ -1419,14 +1382,6 @@ class MainWidget(QWidget):
                 raise KeyError(msg)
             else:
                 self.ui.cb_config_group.setStyleSheet("")
-
-    @Slot()
-    def enter_use_cropped_roi(self):
-        state = self.ui.chb_use_roi.checkState()
-        if state == 2:
-            self.use_cropped_roi = True
-        elif state == 0:
-            self.use_cropped_roi = False
 
     @Slot()
     def enter_bg_folder_name(self):
@@ -2074,7 +2029,6 @@ class MainWidget(QWidget):
 
         # Connect Handlers
         self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
-        self.worker.meta_emitter.connect(self.handle_meta_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_acq_error)
@@ -2103,7 +2057,6 @@ class MainWidget(QWidget):
         self.worker.phase_reconstructor_emitter.connect(
             self.handle_qlipp_reconstructor_update
         )
-        self.worker.meta_emitter.connect(self.handle_meta_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_acq_error)
@@ -2119,7 +2072,6 @@ class MainWidget(QWidget):
 
         self._check_requirements_for_acq("phase")
 
-        # Init worker
         # Init worker and thread
         self.worker = PolarizationAcquisitionWorker(self, self.calib, "all")
 
@@ -2129,7 +2081,6 @@ class MainWidget(QWidget):
             self.handle_qlipp_reconstructor_update
         )
         self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
-        self.worker.meta_emitter.connect(self.handle_meta_update)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
         self.worker.errored.connect(self._handle_acq_error)
