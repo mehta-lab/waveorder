@@ -50,6 +50,10 @@ class MainWidget(QWidget):
         # Setup GUI Elements
         self.ui = gui.Ui_Form()
         self.ui.setupUi(self)
+        self._set_buttons_enabled(
+            False
+        )  # Disable buttons until connected to MM
+
         self._promote_slider_init()
 
         # Setup Connections between elements
@@ -395,6 +399,7 @@ class MainWidget(QWidget):
                 "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
             )
             self.connected_to_mm = False
+            self._set_buttons_enabled(False)
             self.ui.cb_config_group.clear()
 
         else:
@@ -406,6 +411,7 @@ class MainWidget(QWidget):
                     "border: 1px solid green; color: green;"
                 )
                 self.connected_to_mm = True
+                self._set_buttons_enabled(True)
             except:
                 self.ui.le_mm_status.setText("Failed")
                 self.ui.le_mm_status.setStyleSheet(
@@ -675,50 +681,25 @@ class MainWidget(QWidget):
         )
         self.ui.slider_value.setRange(0, 100)
 
+    def _set_buttons_enabled(self, val):
+        """
+        enables/disables buttons that require a connection to MM
+        """
+
+        self.ui.qbutton_calibrate.setEnabled(val)
+        self.ui.qbutton_capture_bg.setEnabled(val)
+        self.ui.qbutton_calc_extinction.setEnabled(val)
+        self.ui.qbutton_acq_birefringence.setEnabled(val)
+        self.ui.qbutton_acq_phase.setEnabled(val)
+        self.ui.qbutton_acq_birefringence_phase.setEnabled(val)
+        self.ui.qbutton_load_calib.setEnabled(val)
+        self.ui.qbutton_create_overlay.setEnabled(val)
+
     def _enable_buttons(self):
-        """
-        enables the buttons that were disabled during acquisition, calibration, or reconstruction
-
-        Returns
-        -------
-
-        """
-
-        self.ui.qbutton_calibrate.setEnabled(True)
-        self.ui.qbutton_capture_bg.setEnabled(True)
-        self.ui.qbutton_calc_extinction.setEnabled(True)
-        self.ui.qbutton_acq_birefringence.setEnabled(True)
-        self.ui.qbutton_acq_phase.setEnabled(True)
-        self.ui.qbutton_acq_birefringence_phase.setEnabled(True)
-        self.ui.qbutton_load_calib.setEnabled(True)
-        self.ui.qbutton_listen.setEnabled(True)
-        self.ui.qbutton_create_overlay.setEnabled(True)
-        self.ui.qbutton_reconstruct.setEnabled(True)
-        self.ui.qbutton_load_config.setEnabled(True)
-        self.ui.qbutton_load_default_config.setEnabled(True)
+        self._set_buttons_enabled(True)
 
     def _disable_buttons(self):
-        """
-        disables the buttons during acquisition, calibration, or reconstruction.  This prevents the user from
-        trying to do multiple actions at once (i.e. trying to use the acquisition features while calibration is running)
-
-        Returns
-        -------
-
-        """
-
-        self.ui.qbutton_calibrate.setEnabled(False)
-        self.ui.qbutton_capture_bg.setEnabled(False)
-        self.ui.qbutton_calc_extinction.setEnabled(False)
-        self.ui.qbutton_acq_birefringence.setEnabled(False)
-        self.ui.qbutton_acq_phase.setEnabled(False)
-        self.ui.qbutton_acq_birefringence_phase.setEnabled(False)
-        self.ui.qbutton_load_calib.setEnabled(False)
-        self.ui.qbutton_listen.setEnabled(False)
-        self.ui.qbutton_create_overlay.setEnabled(False)
-        self.ui.qbutton_reconstruct.setEnabled(False)
-        self.ui.qbutton_load_config.setEnabled(False)
-        self.ui.qbutton_load_default_config.setEnabled(False)
+        self._set_buttons_enabled(False)
 
     def _handle_error(self, exc):
         """
@@ -831,35 +812,9 @@ class MainWidget(QWidget):
             if val.value.name in self.ui.cb_value.itemText(i):
                 self.ui.cb_value.removeItem(i)
 
-    def _set_tab_red(self, name, state):
-        """
-        Convenience function to set a GUI tab red when there is a parameter missing for acquisiton or reconstruction
-
-        Parameters
-        ----------
-        name:           (str) Name of the tab
-        state:          (bool) True/False whether to set red (True) or not red (False)
-
-        Returns
-        -------
-
-        """
-
-        # this map corresponds to the tab index in the TabWidget GUI element
-        name_map = {"General": 0, "Processing": 1}
-
-        index = name_map[name]
-
-        if state:
-            self.ui.tabWidget_3.tabBar().setTabTextColor(index, self.red_text)
-        else:
-            self.ui.tabWidget_3.tabBar().setTabTextColor(
-                index, self.original_tab_text
-            )
-
     def _check_line_edit(self, name):
         """
-        Convencience function used in checking whether a line edit is present or missing.  Will place a red border
+        Convenience function used in checking whether a line edit is present or missing.  Will place a red border
         around the line edit if it is empty, otherwise it will remove the red border.
 
         Parameters
@@ -895,10 +850,6 @@ class MainWidget(QWidget):
 
         """
 
-        # Initialize all tabs in their default style (not red)
-        self._set_tab_red("General", False)
-        self._set_tab_red("Processing", False)
-
         # initialize the variable to keep track of the success of the requirement check
         raise_error = False
 
@@ -924,14 +875,12 @@ class MainWidget(QWidget):
             success = self._check_line_edit("save_dir")
             if not success:
                 raise_error = True
-                self._set_tab_red("General", True)
 
             # check background path if 'Measured' or 'Measured + Estimated' is selected
             if self.bg_option == "local_fit+" or self.bg_option == "global":
                 success = self._check_line_edit("bg_path")
                 if not success:
                     raise_error = True
-                    self._set_tab_red("General", True)
 
         # Check phase specific fields
         if mode == "phase":
@@ -947,7 +896,6 @@ class MainWidget(QWidget):
                 )
                 if not cont:
                     raise_error = True
-                    self._set_tab_red(tab, True)
 
             for field in phase_required:
                 cont = self._check_line_edit(field)
@@ -959,8 +907,6 @@ class MainWidget(QWidget):
                 )
                 if not cont:
                     raise_error = True
-                    if field != "zstep":
-                        self._set_tab_red(tab, True)
                 else:
                     continue
 
