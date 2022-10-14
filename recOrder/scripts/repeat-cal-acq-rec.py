@@ -4,7 +4,7 @@ import napari
 import time, random
 from contextlib import contextmanager
 from pycromanager import Core
-from recOrder.plugin.widget.main_widget import MainWidget
+from recOrder.plugin.main_widget import MainWidget
 
 SAVE_DIR = "."
 SWING = 0.05

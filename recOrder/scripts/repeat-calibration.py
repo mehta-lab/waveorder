@@ -2,7 +2,7 @@
 
 import napari
 import time
-from recOrder.plugin.widget.main_widget import MainWidget
+from recOrder.plugin.main_widget import MainWidget
 
 SAVE_DIR = "./"
 SWINGS = [0.1, 0.03, 0.01, 0.005]
@@ -13,7 +13,7 @@ def main():
     viewer = napari.Viewer()
     recorder = MainWidget(viewer)
     viewer.window.add_dock_widget(recorder)
-    recorder.ui.qbutton_gui_mode.click()
+    recorder.ui.qbutton_connect_to_mm.click()
     recorder.calib_scheme = "5-State"
 
     for repeat in range(REPEATS):
