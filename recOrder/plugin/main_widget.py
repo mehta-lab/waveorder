@@ -2141,15 +2141,6 @@ class MainWidget(QWidget):
         # add overlay image to napari
         self.viewer.add_image(hsv_image, name=f"HSV_Overlay_{idx}", rgb=True)
 
-    @Slot(object)
-    def add_listener_data(self, store):
-
-        self.viewer.add_image(store["Birefringence"], name=self.worker.prefix)
-        self.viewer.dims.set_axis_label(0, "P")
-        self.viewer.dims.set_axis_label(1, "T")
-        self.viewer.dims.set_axis_label(2, "C")
-        self.viewer.dims.set_axis_label(3, "Z")
-
     @Slot(tuple)
     def update_dims(self, dims):
 
@@ -2159,10 +2150,6 @@ class MainWidget(QWidget):
             self.viewer.dims.set_current_step(3, dims[2])
         else:
             pass
-
-    def _reset_listening(self):
-        self.listening_reconstructor = None
-        self.listening_store = None
 
     def _open_file_dialog(self, default_path, type):
 
