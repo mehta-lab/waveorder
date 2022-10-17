@@ -1,7 +1,6 @@
 import numpy as np
 import json
 import os
-from recOrder.io.core_functions import set_lc_state, snap_and_get_image
 from waveorder.io.reader import WaveorderReader
 import time
 import glob
