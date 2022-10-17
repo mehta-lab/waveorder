@@ -125,10 +125,9 @@ class MainWidget(QWidget):
         self.ui.chb_use_gpu.stateChanged[int].connect(self.enter_use_gpu)
         self.ui.le_gpu_id.editingFinished.connect(self.enter_gpu_id)
 
-        self.ui.le_recon_wavelength.setText(
-            "532"
-        )  # This parameter seems to be wired differently than others...investigate later
-
+        # This parameter seems to be wired differently than others...investigate later
+        self.ui.le_recon_wavelength.setText("532")
+        
         self.ui.le_obj_na.editingFinished.connect(self.enter_obj_na)
         self.ui.le_obj_na.setText("1.3")
         self.enter_obj_na()
@@ -275,6 +274,7 @@ class MainWidget(QWidget):
         self.default_offline_config = os.path.join(
             recorder_dir, "recOrder/plugin/config_offline_default.yml"
         )
+        self.worker = None
 
         ## Initialize calibration plot
         self.plot_item = self.ui.plot_widget.getPlotItem()
@@ -282,9 +282,6 @@ class MainWidget(QWidget):
         self.plot_item.setLabel("left", "Intensity")
         self.ui.plot_widget.setBackground((32, 34, 40))
         self.plot_sequence = "Coarse"
-
-        # Initialize thread worker
-        self.worker = None
 
         ## Initialize visuals
         # Initialiaze GUI Images (plotting legends, recOrder logo)
@@ -303,14 +300,19 @@ class MainWidget(QWidget):
         logo_pixmap = QPixmap(logo_path)
         self.ui.label_logo.setPixmap(logo_pixmap)
 
-        # Hide initial UI elements for later implementation or popups
+        # Hide UI elements for popups
+        # DAC mode popups
         self.ui.label_lca.hide()
         self.ui.label_lcb.hide()
         self.ui.cb_lca.hide()
         self.ui.cb_lcb.hide()
+
+        # Background correction popups
         self.ui.label_bg_path.setHidden(True)
         self.ui.le_bg_path.setHidden(True)
         self.ui.qbutton_browse_bg_path.setHidden(True)
+
+        # Reconstruction parameter popups
         self.ui.le_rho.setHidden(True)
         self.ui.label_phase_rho.setHidden(True)
         self.ui.le_itr.setHidden(True)
@@ -605,7 +607,7 @@ class MainWidget(QWidget):
         )
         ui_slider.setRange(range_[0], range_[1])
 
-    def _promote_slider_init(self):
+def _promote_slider_init(self):
 
         """
         Used to promote the Display Tab sliders from QSlider to QDoubeRangeSlider with superqt
