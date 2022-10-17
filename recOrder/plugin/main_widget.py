@@ -2024,28 +2024,6 @@ class MainWidget(QWidget):
 
         self.config_reader.save_yaml(dir_=dir_, name=name)
 
-    @Slot(bool)
-    def load_config(self):
-        """
-        Populates the GUI elements with values from a pre-defined config file.
-
-        Returns
-        -------
-
-        """
-        path = self._open_file_dialog(self.save_config_path, "file")
-        if path == "":
-            pass
-        else:
-            self.config_path = path
-            self.config_reader = ConfigReader(self.config_path)
-            self._populate_from_config()
-
-    @Slot(bool)
-    def load_default_config(self):
-        self.config_reader = ConfigReader(self.default_offline_config)
-        self._populate_from_config()
-
     @Slot(int)
     def update_sat_scale(self):
         idx = self.ui.cb_saturation.currentIndex()
