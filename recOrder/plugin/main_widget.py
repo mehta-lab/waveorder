@@ -47,37 +47,22 @@ class MainWidget(QWidget):
         super().__init__()
         self.viewer = napari_viewer
 
-        # Setup GUI Elements
+        # Setup GUI elements
         self.ui = gui.Ui_Form()
         self.ui.setupUi(self)
-        self._set_buttons_enabled(
-            False
-        )  # Disable buttons until connected to MM
+
+        # Disable buttons until connected to MM
+        self._set_buttons_enabled(False)
 
         self._promote_slider_init()
 
-        # Setup Connections between elements
-
-        # Calibration Tab
-
-        # Populate calibration modes from docstring
-        cal_docs = NumpyDocString(
-            Calibration.QLIPP_Calibration.__init__.__doc__
-        )
-        mode_docs = " ".join(cal_docs["Parameters"][3].desc).split("* ")[1:]
-        for i, mode_doc in enumerate(mode_docs):
-            mode_name, mode_tooltip = mode_doc.split(": ")
-            wrapped_tooltip = "\n".join(textwrap.wrap(mode_tooltip, width=70))
-            self.ui.cb_calib_mode.addItem(mode_name)
-            self.ui.cb_calib_mode.setItemData(
-                i, wrapped_tooltip, Qt.ToolTipRole
-            )
-
-        # Connect GUI elements to functions
+        ## Connect GUI elements to functions
+        # Top bar
         self.ui.qbutton_connect_to_mm.clicked[bool].connect(
             self.toggle_mm_connection
         )
 
+        # Calibration tab
         self.ui.qbutton_browse.clicked[bool].connect(self.browse_dir_path)
         self.ui.le_directory.editingFinished.connect(self.enter_dir_path)
         self.ui.le_directory.setText(str(Path.cwd()))
@@ -107,18 +92,17 @@ class MainWidget(QWidget):
             self.enter_config_group
         )
 
-        # Capture Background
         self.ui.le_bg_folder.editingFinished.connect(self.enter_bg_folder_name)
         self.ui.le_n_avg.editingFinished.connect(self.enter_n_avg)
         self.ui.qbutton_capture_bg.clicked[bool].connect(self.capture_bg)
 
-        # Advanced
+        # Advanced tab
         self.ui.cb_loglevel.currentIndexChanged[int].connect(
             self.enter_log_level
         )
         self.ui.qbutton_push_note.clicked[bool].connect(self.push_note)
 
-        # Acquisition Tab
+        # Acquisition tab
         self.ui.qbutton_browse_save_dir.clicked[bool].connect(
             self.browse_save_path
         )
@@ -171,22 +155,6 @@ class MainWidget(QWidget):
         )
         self.ui.cb_phase.currentIndexChanged[int].connect(self.enter_phase_dim)
 
-        # Populate background correction GUI element
-        for i in range(3):
-            self.ui.cb_bg_method.removeItem(0)
-        bg_options = ["None", "Measured", "Estimated", "Measured + Estimated"]
-        tooltips = [
-            "No background correction.",
-            'Correct sample images with a background image acquired at an empty field of view, loaded from "Background Path".',
-            "Estimate sample background by fitting a 2D surface to the sample images. Works well when structures are spatially distributed across the field of view and a clear background is unavailable.",
-            'Apply "Measured" background correction and then "Estimated" background correction. Use to remove residual background after the sample retardance is corrected with measured background.',
-        ]
-        for i, bg_option in enumerate(bg_options):
-            wrapped_tooltip = "\n".join(textwrap.wrap(tooltips[i], width=70))
-            self.ui.cb_bg_method.addItem(bg_option)
-            self.ui.cb_bg_method.setItemData(
-                i, wrapped_tooltip, Qt.ToolTipRole
-            )
         self.ui.cb_bg_method.currentIndexChanged[int].connect(
             self.enter_bg_correction
         )
@@ -239,18 +207,18 @@ class MainWidget(QWidget):
         self.ui.le_val_max.editingFinished.connect(self.enter_val_max)
         self.ui.le_val_min.editingFinished.connect(self.enter_val_min)
 
-        # Reconstruction
+        # Reconstruction tab
         self.ui.cb_phase_denoiser.currentIndexChanged[int].connect(
             self.enter_phase_denoiser
         )
 
-        # Logging
+        ## Initialize logging
         log_box = QtLogger(self.ui.te_log)
         log_box.setFormatter(logging.Formatter("%(levelname)s - %(message)s"))
         logging.getLogger().addHandler(log_box)
         logging.getLogger().setLevel(logging.INFO)
 
-        # Instantiate Attributes:
+        ## Initialize attributes
         self.connected_to_mm = False
         self.bridge = None
         self.mm = None
@@ -260,8 +228,6 @@ class MainWidget(QWidget):
         self.current_save_path = str(Path.cwd())
         self.current_bg_path = str(Path.cwd())
         self.directory = str(Path.cwd())
-
-        # Reconstruction / Calibration Parameter Defaults
         self.calib_scheme = "4-State"
         self.calib_mode = "MM-Retardance"
         self.interp_method = "schnoor_fit"
@@ -304,22 +270,24 @@ class MainWidget(QWidget):
         self.last_p = 0
         self.reconstruction_data_path = None
         self.reconstruction_data = None
-
-        # Assessment attributes
         self.calib_assessment_level = None
+        recorder_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+        self.default_offline_config = os.path.join(
+            recorder_dir, "recOrder/plugin/config_offline_default.yml"
+        )
 
-        # Init Plot
+        ## Initialize calibration plot
         self.plot_item = self.ui.plot_widget.getPlotItem()
         self.plot_item.enableAutoRange()
         self.plot_item.setLabel("left", "Intensity")
         self.ui.plot_widget.setBackground((32, 34, 40))
         self.plot_sequence = "Coarse"
 
-        # Init thread worker
+        # Initialize thread worker
         self.worker = None
 
-        # Display/Initialiaze GUI Images (plotting legends, recOrder logo)
-        recorder_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+        ## Initialize visuals
+        # Initialiaze GUI Images (plotting legends, recOrder logo)
         jch_legend_path = os.path.join(
             recorder_dir, "docs/images/JCh_legend.png"
         )
@@ -335,12 +303,7 @@ class MainWidget(QWidget):
         logo_pixmap = QPixmap(logo_path)
         self.ui.label_logo.setPixmap(logo_pixmap)
 
-        # Get default config file
-        self.default_offline_config = os.path.join(
-            recorder_dir, "recOrder/plugin/config_offline_default.yml"
-        )
-
-        # Hide initial UI elements for later implementation or for later pop-up purposes
+        # Hide initial UI elements for later implementation or popups
         self.ui.label_lca.hide()
         self.ui.label_lcb.hide()
         self.ui.cb_lca.hide()
@@ -371,12 +334,43 @@ class MainWidget(QWidget):
         self.ui.le_val_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.setStyleSheet("QTabWidget::tab-bar {alignment: center;}")
         self.red_text = QColor(200, 0, 0, 255)
-        self.ui.tabWidget.parent().setObjectName(
-            "recOrder"
-        )  # make sure the top says recOrder and not 'Form'
-        self.ui.tabWidget_2.setCurrentIndex(
-            0
-        )  # set focus to "Plot" tab by default
+
+        # Populate background correction GUI element
+        for i in range(3):
+            self.ui.cb_bg_method.removeItem(0)
+        bg_options = ["None", "Measured", "Estimated", "Measured + Estimated"]
+        tooltips = [
+            "No background correction.",
+            'Correct sample images with a background image acquired at an empty field of view, loaded from "Background Path".',
+            "Estimate sample background by fitting a 2D surface to the sample images. Works well when structures are spatially distributed across the field of view and a clear background is unavailable.",
+            'Apply "Measured" background correction and then "Estimated" background correction. Use to remove residual background after the sample retardance is corrected with measured background.',
+        ]
+        for i, bg_option in enumerate(bg_options):
+            wrapped_tooltip = "\n".join(textwrap.wrap(tooltips[i], width=70))
+            self.ui.cb_bg_method.addItem(bg_option)
+            self.ui.cb_bg_method.setItemData(
+                i, wrapped_tooltip, Qt.ToolTipRole
+            )
+
+        # Populate calibration modes from docstring
+        cal_docs = NumpyDocString(
+            Calibration.QLIPP_Calibration.__init__.__doc__
+        )
+        mode_docs = " ".join(cal_docs["Parameters"][3].desc).split("* ")[1:]
+        for i, mode_doc in enumerate(mode_docs):
+            mode_name, mode_tooltip = mode_doc.split(": ")
+            wrapped_tooltip = "\n".join(textwrap.wrap(mode_tooltip, width=70))
+            self.ui.cb_calib_mode.addItem(mode_name)
+            self.ui.cb_calib_mode.setItemData(
+                i, wrapped_tooltip, Qt.ToolTipRole
+            )
+
+        # make sure the top says recOrder and not 'Form'
+        self.ui.tabWidget.parent().setObjectName("recOrder")
+
+        ## Set GUI behaviors
+        # set focus to "Plot" tab by default
+        self.ui.tabWidget_2.setCurrentIndex(0)
 
         # disable wheel events for combo boxes
         for attr_name in dir(self.ui):
