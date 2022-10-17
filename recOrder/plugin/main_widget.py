@@ -383,143 +383,6 @@ class MainWidget(QWidget):
         # Display GUI using maximum resolution
         self.showMaximized()
 
-    @Slot(bool)
-    def toggle_mm_connection(self):
-        """
-        Toggles MM connection and updates the corresponding GUI elements.
-        """
-        if self.connected_to_mm:
-            self.ui.qbutton_connect_to_mm.setText("Connect to MM")
-            self.ui.le_mm_status.setText("Offline")
-            self.ui.le_mm_status.setStyleSheet(
-                "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
-            )
-            self.connected_to_mm = False
-            self._set_buttons_enabled(False)
-            self.ui.cb_config_group.clear()
-
-        else:
-            try:
-                self.connect_to_mm()
-                self.ui.qbutton_connect_to_mm.setText("Disconnect from MM")
-                self.ui.le_mm_status.setText("Connected")
-                self.ui.le_mm_status.setStyleSheet(
-                    "border: 1px solid green; color: green;"
-                )
-                self.connected_to_mm = True
-                self._set_buttons_enabled(True)
-            except:
-                self.ui.le_mm_status.setText("Failed")
-                self.ui.le_mm_status.setStyleSheet(
-                    "border: 1px solid yellow; color: yellow;"
-                )
-
-    @Slot(bool)
-    def connect_to_mm(self):
-        """
-        Establishes the python/java bridge to Micromanager.  Micromanager must be open with a config loaded
-        in order for the connection to be successful.  On connection, it will populate all of the available config
-        groups.  Config group choice is used to establish which config group the Polarization states live in.
-
-        Returns
-        -------
-
-        """
-        RECOMMENDED_MM = "20220920"
-        ZMQ_TARGET_VERSION = "4.2.0"
-        try:
-            self.bridge = Bridge(convert_camel_case=False)
-            self.mmc = self.bridge.get_core()
-            self.mm = self.bridge.get_studio()
-        except:
-            print(
-                (
-                    "Could not establish pycromanager bridge.\n"
-                    "Is micromanager open?\n"
-                    "Is Tools > Options > Run server on port 4827 checked?\n"
-                    f"Are you using nightly build {RECOMMENDED_MM}?"
-                )
-            )
-            raise EnvironmentError
-
-        # Warn the user if there is a MicroManager/ZMQ version mismatch
-        self.bridge._main_socket.send({"command": "connect", "debug": False})
-        reply_json = self.bridge._main_socket.receive(timeout=500)
-        zmq_mm_version = reply_json["version"]
-        if zmq_mm_version != ZMQ_TARGET_VERSION:
-            upgrade_str = (
-                "upgrade"
-                if version.parse(zmq_mm_version)
-                < version.parse(ZMQ_TARGET_VERSION)
-                else "downgrade"
-            )
-            print(
-                (
-                    "WARNING: This version of Micromanager has not been tested with recOrder.\n"
-                    f"Please {upgrade_str} to MicroManager nightly build {RECOMMENDED_MM}."
-                )
-            )
-
-        # Find config group containing calibration channels
-        # calib_channels is typically ['State0', 'State1', 'State2', ...]
-        # config_list may be something line ['GFP', 'RFP', 'State0', 'State1', 'State2', ...]
-        # config_list may also be of the form ['GFP', 'RFP', 'LF-State0', 'LF-State1', 'LF-State2', ...]
-        # in this version of the code we correctly parse 'LF-State0', but these channels cannot be used
-        # by the Calibration class.
-        # A valid config group contains all channels in calib_channels
-        # self.ui.cb_config_group.clear()    # This triggers the enter config we will clear when switching off
-        groups = self.mmc.getAvailableConfigGroups()
-        config_group_found = False
-        for i in range(groups.size()):
-            group = groups.get(i)
-            configs = self.mmc.getAvailableConfigs(group)
-            config_list = []
-            for j in range(configs.size()):
-                config_list.append(configs.get(j))
-            if np.all(
-                [
-                    np.any([ch in config for config in config_list])
-                    for ch in self.calib_channels
-                ]
-            ):
-                if not config_group_found:
-                    self.config_group = (
-                        group  # set to first config group found
-                    )
-                    config_group_found = True
-                self.ui.cb_config_group.addItem(group)
-            # not entirely sure what this part does, but I left it in
-            # I think it tried to find a channel such as 'BF'
-            for ch in config_list:
-                if ch not in self.calib_channels:
-                    self.ui.cb_acq_channel.addItem(ch)
-        if not config_group_found:
-            msg = (
-                f"No config group contains channels {self.calib_channels}. "
-                "Please refer to the recOrder wiki on how to set up the config properly."
-            )
-            self.ui.cb_config_group.setStyleSheet(
-                "border: 1px solid rgb(200,0,0);"
-            )
-            raise KeyError(msg)
-
-        # set startup LC control mode
-        _devices = self.mmc.getLoadedDevices()
-        loaded_devices = [_devices.get(i) for i in range(_devices.size())]
-        if LC_DEVICE_NAME in loaded_devices:
-            config_desc = self.mmc.getConfigData(
-                "Channel", "State0"
-            ).getVerbose()
-            if "String send to" in config_desc:
-                self.calib_mode = "MM-Retardance"
-                self.ui.cb_calib_mode.setCurrentIndex(0)
-            if "Voltage (V)" in config_desc:
-                self.calib_mode = "MM-Voltage"
-                self.ui.cb_calib_mode.setCurrentIndex(1)
-        else:
-            self.calib_mode = "DAC"
-            self.ui.cb_calib_mode.setCurrentIndex(2)
-
     def _demote_slider_offline(self, ui_slider, range_):
         """
         This function converts a promoted superqt.QRangeSlider to a QSlider element
@@ -911,6 +774,143 @@ class MainWidget(QWidget):
             raise ValueError(
                 "Please enter in all of the parameters necessary for the acquisition"
             )
+
+    @Slot(bool)
+    def toggle_mm_connection(self):
+        """
+        Toggles MM connection and updates the corresponding GUI elements.
+        """
+        if self.connected_to_mm:
+            self.ui.qbutton_connect_to_mm.setText("Connect to MM")
+            self.ui.le_mm_status.setText("Offline")
+            self.ui.le_mm_status.setStyleSheet(
+                "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
+            )
+            self.connected_to_mm = False
+            self._set_buttons_enabled(False)
+            self.ui.cb_config_group.clear()
+
+        else:
+            try:
+                self.connect_to_mm()
+                self.ui.qbutton_connect_to_mm.setText("Disconnect from MM")
+                self.ui.le_mm_status.setText("Connected")
+                self.ui.le_mm_status.setStyleSheet(
+                    "border: 1px solid green; color: green;"
+                )
+                self.connected_to_mm = True
+                self._set_buttons_enabled(True)
+            except:
+                self.ui.le_mm_status.setText("Failed")
+                self.ui.le_mm_status.setStyleSheet(
+                    "border: 1px solid yellow; color: yellow;"
+                )
+
+    @Slot(bool)
+    def connect_to_mm(self):
+        """
+        Establishes the python/java bridge to Micromanager.  Micromanager must be open with a config loaded
+        in order for the connection to be successful.  On connection, it will populate all of the available config
+        groups.  Config group choice is used to establish which config group the Polarization states live in.
+
+        Returns
+        -------
+
+        """
+        RECOMMENDED_MM = "20220920"
+        ZMQ_TARGET_VERSION = "4.2.0"
+        try:
+            self.bridge = Bridge(convert_camel_case=False)
+            self.mmc = self.bridge.get_core()
+            self.mm = self.bridge.get_studio()
+        except:
+            print(
+                (
+                    "Could not establish pycromanager bridge.\n"
+                    "Is micromanager open?\n"
+                    "Is Tools > Options > Run server on port 4827 checked?\n"
+                    f"Are you using nightly build {RECOMMENDED_MM}?"
+                )
+            )
+            raise EnvironmentError
+
+        # Warn the user if there is a MicroManager/ZMQ version mismatch
+        self.bridge._main_socket.send({"command": "connect", "debug": False})
+        reply_json = self.bridge._main_socket.receive(timeout=500)
+        zmq_mm_version = reply_json["version"]
+        if zmq_mm_version != ZMQ_TARGET_VERSION:
+            upgrade_str = (
+                "upgrade"
+                if version.parse(zmq_mm_version)
+                < version.parse(ZMQ_TARGET_VERSION)
+                else "downgrade"
+            )
+            print(
+                (
+                    "WARNING: This version of Micromanager has not been tested with recOrder.\n"
+                    f"Please {upgrade_str} to MicroManager nightly build {RECOMMENDED_MM}."
+                )
+            )
+
+        # Find config group containing calibration channels
+        # calib_channels is typically ['State0', 'State1', 'State2', ...]
+        # config_list may be something line ['GFP', 'RFP', 'State0', 'State1', 'State2', ...]
+        # config_list may also be of the form ['GFP', 'RFP', 'LF-State0', 'LF-State1', 'LF-State2', ...]
+        # in this version of the code we correctly parse 'LF-State0', but these channels cannot be used
+        # by the Calibration class.
+        # A valid config group contains all channels in calib_channels
+        # self.ui.cb_config_group.clear()    # This triggers the enter config we will clear when switching off
+        groups = self.mmc.getAvailableConfigGroups()
+        config_group_found = False
+        for i in range(groups.size()):
+            group = groups.get(i)
+            configs = self.mmc.getAvailableConfigs(group)
+            config_list = []
+            for j in range(configs.size()):
+                config_list.append(configs.get(j))
+            if np.all(
+                [
+                    np.any([ch in config for config in config_list])
+                    for ch in self.calib_channels
+                ]
+            ):
+                if not config_group_found:
+                    self.config_group = (
+                        group  # set to first config group found
+                    )
+                    config_group_found = True
+                self.ui.cb_config_group.addItem(group)
+            # not entirely sure what this part does, but I left it in
+            # I think it tried to find a channel such as 'BF'
+            for ch in config_list:
+                if ch not in self.calib_channels:
+                    self.ui.cb_acq_channel.addItem(ch)
+        if not config_group_found:
+            msg = (
+                f"No config group contains channels {self.calib_channels}. "
+                "Please refer to the recOrder wiki on how to set up the config properly."
+            )
+            self.ui.cb_config_group.setStyleSheet(
+                "border: 1px solid rgb(200,0,0);"
+            )
+            raise KeyError(msg)
+
+        # set startup LC control mode
+        _devices = self.mmc.getLoadedDevices()
+        loaded_devices = [_devices.get(i) for i in range(_devices.size())]
+        if LC_DEVICE_NAME in loaded_devices:
+            config_desc = self.mmc.getConfigData(
+                "Channel", "State0"
+            ).getVerbose()
+            if "String send to" in config_desc:
+                self.calib_mode = "MM-Retardance"
+                self.ui.cb_calib_mode.setCurrentIndex(0)
+            if "Voltage (V)" in config_desc:
+                self.calib_mode = "MM-Voltage"
+                self.ui.cb_calib_mode.setCurrentIndex(1)
+        else:
+            self.calib_mode = "DAC"
+            self.ui.cb_calib_mode.setCurrentIndex(2)
 
     @Slot(tuple)
     def handle_progress_update(self, value):
