@@ -1,7 +1,6 @@
 import pytest
 import shutil
 import os
-from recOrder.io.config_reader import ConfigReader
 from wget import download
 
 
