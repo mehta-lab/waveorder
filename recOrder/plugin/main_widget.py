@@ -1712,28 +1712,6 @@ class MainWidget(QWidget):
         )
         self.ui.le_extinction.setText(str(extinction))
 
-    @property
-    def _microscope_params(self):
-        """
-        A dictionary containing microscope parameters from the current GUI
-        Unused in 0.2.0 --- candidate for deletion
-        """
-
-        def _param_value(param_name: str, ui=self.ui):
-            # refer to main widget class ui attribute names
-            ui_attr_name = "le_" + param_name
-            param_text = ui.__getattribute__(ui_attr_name).text()
-            # handle blank string
-            return float(param_text) if param_text != "" else None
-
-        return {
-            "n_objective_media": _param_value("n_media"),
-            "objective_NA": _param_value("obj_na"),
-            "condenser_NA": _param_value("cond_na"),
-            "magnification": _param_value("mag"),
-            "pixel_size": _param_value("ps"),
-        }
-
     @Slot(bool)
     def load_calibration(self):
         """
