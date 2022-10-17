@@ -127,7 +127,7 @@ class MainWidget(QWidget):
 
         # This parameter seems to be wired differently than others...investigate later
         self.ui.le_recon_wavelength.setText("532")
-        
+
         self.ui.le_obj_na.editingFinished.connect(self.enter_obj_na)
         self.ui.le_obj_na.setText("1.3")
         self.enter_obj_na()
@@ -607,7 +607,7 @@ class MainWidget(QWidget):
         )
         ui_slider.setRange(range_[0], range_[1])
 
-def _promote_slider_init(self):
+    def _promote_slider_init(self):
 
         """
         Used to promote the Display Tab sliders from QSlider to QDoubeRangeSlider with superqt
