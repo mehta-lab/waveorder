@@ -781,7 +781,7 @@ class MainWidget(QWidget):
         """
         if self.connected_to_mm:
             self.ui.qbutton_connect_to_mm.setText("Connect to MM")
-            self.ui.le_mm_status.setText("Offline")
+            self.ui.le_mm_status.setText("Disconnected")
             self.ui.le_mm_status.setStyleSheet(
                 "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
             )
