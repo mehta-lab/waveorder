@@ -111,15 +111,15 @@ class MainWidget(QWidget):
         self.ui.le_data_save_name.editingFinished.connect(self.enter_save_name)
 
         self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
-        self.ui.le_zstart.setText("-1")
+        self.ui.le_zstart.setText("-10")
         self.enter_zstart()
 
         self.ui.le_zend.editingFinished.connect(self.enter_zend)
-        self.ui.le_zend.setText("1")
+        self.ui.le_zend.setText("10")
         self.enter_zend()
 
         self.ui.le_zstep.editingFinished.connect(self.enter_zstep)
-        self.ui.le_zstep.setText("0.25")
+        self.ui.le_zstep.setText("1")
         self.enter_zstep()
 
         self.ui.chb_use_gpu.stateChanged[int].connect(self.enter_use_gpu)
