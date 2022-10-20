@@ -184,26 +184,26 @@ class MainWidget(QWidget):
             self.handle_sat_slider_move
         )
 
-        # Display Tab
-        self.viewer.layers.events.inserted.connect(
-            self._add_layer_to_display_boxes
-        )
-        self.viewer.layers.events.removed.connect(
-            self._remove_layer_from_display_boxes
-        )
-        self.ui.qbutton_create_overlay.clicked[bool].connect(
-            self.create_overlay
-        )
-        self.ui.cb_saturation.currentIndexChanged[int].connect(
-            self.update_sat_scale
-        )
-        self.ui.cb_value.currentIndexChanged[int].connect(
-            self.update_value_scale
-        )
-        self.ui.le_sat_max.editingFinished.connect(self.enter_sat_max)
-        self.ui.le_sat_min.editingFinished.connect(self.enter_sat_min)
-        self.ui.le_val_max.editingFinished.connect(self.enter_val_max)
-        self.ui.le_val_min.editingFinished.connect(self.enter_val_min)
+        # Display Tab (Commenting to suppress warnings. Consider debugging or deleting for 1.0.0.)
+        #self.viewer.layers.events.inserted.connect(
+        #    self._add_layer_to_display_boxes
+        #)
+        #self.viewer.layers.events.removed.connect(
+        #    self._remove_layer_from_display_boxes
+        #)
+        #self.ui.qbutton_create_overlay.clicked[bool].connect(
+        #    self.create_overlay
+        #)
+        #self.ui.cb_saturation.currentIndexChanged[int].connect(
+        #    self.update_sat_scale
+        #)
+        #self.ui.cb_value.currentIndexChanged[int].connect(
+        #    self.update_value_scale
+        #)
+        #self.ui.le_sat_max.editingFinished.connect(self.enter_sat_max)
+        #self.ui.le_sat_min.editingFinished.connect(self.enter_sat_min)
+        #self.ui.le_val_max.editingFinished.connect(self.enter_val_max)
+        #self.ui.le_val_min.editingFinished.connect(self.enter_val_min)
 
         # Reconstruction tab
         self.ui.cb_phase_denoiser.currentIndexChanged[int].connect(
