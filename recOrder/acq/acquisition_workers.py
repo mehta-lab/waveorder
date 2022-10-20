@@ -11,7 +11,7 @@ from recOrder.acq.acq_functions import (
     acquire_from_settings,
 )
 from recOrder.io.utils import load_bg, extract_reconstruction_parameters
-from recOrder.compute import QLIPPBirefringenceCompute
+from recOrder.compute.qlipp_compute import QLIPPBirefringenceCompute
 from recOrder.io.zarr_converter import ZarrConverter
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
 from recOrder.io.utils import ram_message, rec_bkg_to_wo_bkg

@@ -1,2 +1,0 @@
-# acquisition
-name = "acq"
