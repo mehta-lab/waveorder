@@ -119,18 +119,7 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
         self.plot_sequence_emit.emit("Coarse")
         self.calib.intensity_emitter = self.intensity_update
         self.calib.plot_sequence_emitter = self.plot_sequence_emit
-        self.calib.get_full_roi()
         self.progress_update.emit((1, "Calculating Blacklevel..."))
-        self._check_abort()
-
-        # Check if change of ROI is needed
-        if self.calib_window.use_cropped_roi:
-            rect = self.calib.check_and_get_roi()
-            self.calib_window.mmc.setROI(
-                rect.x, rect.y, rect.width, rect.height
-            )
-            self.calib.ROI = (rect.x, rect.y, rect.width, rect.height)
-
         self._check_abort()
 
         logging.info("Calculating Black Level ...")
@@ -161,12 +150,6 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
 
         # Reset shutter autoshutter
         self.calib.reset_shutter()
-
-        # Return ROI to full FOV
-        if self.calib_window.use_cropped_roi:
-            self.calib_window.mmc.clearROI()
-
-        self._check_abort()
 
         # Calculate Extinction
         extinction_ratio = self.calib.calculate_extinction(
