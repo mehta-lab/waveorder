@@ -560,7 +560,7 @@ class MainWidget(QWidget):
                 action_button.setToolTip("")
                 action_button.setStyleSheet("border: 1px solid rgb(32,34,40);")
             else:
-                action_button.setToolTip("Please connect to MM.")
+                action_button.setToolTip("Action temporarily disabled. Connect to MM or wait for acquisition to finish.")
                 action_button.setStyleSheet("border: 1px solid rgb(65,72,81);")
 
     def _enable_buttons(self):
