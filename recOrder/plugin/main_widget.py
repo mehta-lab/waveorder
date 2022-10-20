@@ -18,7 +18,6 @@ from recOrder.plugin import gui
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.metadata_reader import MetadataReader
 from recOrder.io.utils import ret_ori_overlay, generic_hsv_overlay
-from recOrder.io.config_reader import ConfigReader, PROCESSING
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
