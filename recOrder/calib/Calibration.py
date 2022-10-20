@@ -140,7 +140,6 @@ class QLIPP_Calibration:
         self.wavelength = None
         self.lc_bound = None
         self.I_Black = None
-        self.ROI = None
         self.ratio = 1.793
         self.print_details = print_details
         self.calib_scheme = "4-State"
@@ -885,8 +884,7 @@ class QLIPP_Calibration:
                 "Retardance to voltage interpolation method": self.calib.interp_method,
                 "LC control mode": self.mode,
                 "Black level": np.round(self.I_Black, 2),
-                "Extinction ratio": self.extinction_ratio,
-                "ROI (x, y, width, height)": self.ROI,
+                "Extinction ratio": self.extinction_ratio
             },
             "Notes": notes,
         }

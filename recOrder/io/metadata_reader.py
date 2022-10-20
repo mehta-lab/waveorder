@@ -48,7 +48,6 @@ class MetadataReader:
         self.Wavelength = self.get_summary_calibration_attr("Wavelength (nm)")
         self.Black_level = self.get_black_level()
         self.Extinction_ratio = self.get_extinction_ratio()
-        self.ROI = tuple(self.get_roi())  # JSON does not preserve tuples
         self.Channel_names = self.get_channel_names()
         self.LCA_retardance = self.get_lc_retardance("LCA")
         self.LCB_retardance = self.get_lc_retardance("LCB")
@@ -181,17 +180,6 @@ class MetadataReader:
             val = self.json_metadata["Calibration"]["Extinction ratio"]
         except KeyError:
             val = self.json_metadata["Summary"]["Extinction Ratio"]
-        return val
-
-    def get_roi(self):
-        try:
-            val = self.json_metadata["Calibration"][
-                "ROI (x, y, width, height)"
-            ]
-        except KeyError:
-            val = self.json_metadata["Summary"][
-                "ROI Used (x, y, width, height)"
-            ]
         return val
 
     def get_channel_names(self):
