@@ -543,15 +543,25 @@ class MainWidget(QWidget):
         """
         enables/disables buttons that require a connection to MM
         """
+        action_buttons = [
+            self.ui.qbutton_calibrate,
+            self.ui.qbutton_capture_bg,
+            self.ui.qbutton_calc_extinction,
+            self.ui.qbutton_acq_birefringence,
+            self.ui.qbutton_acq_phase,
+            self.ui.qbutton_acq_birefringence_phase,
+            self.ui.qbutton_load_calib,
+            self.ui.qbutton_create_overlay,
+        ]
 
-        self.ui.qbutton_calibrate.setEnabled(val)
-        self.ui.qbutton_capture_bg.setEnabled(val)
-        self.ui.qbutton_calc_extinction.setEnabled(val)
-        self.ui.qbutton_acq_birefringence.setEnabled(val)
-        self.ui.qbutton_acq_phase.setEnabled(val)
-        self.ui.qbutton_acq_birefringence_phase.setEnabled(val)
-        self.ui.qbutton_load_calib.setEnabled(val)
-        self.ui.qbutton_create_overlay.setEnabled(val)
+        for action_button in action_buttons:
+            action_button.setEnabled(val)
+            if val:
+                action_button.setToolTip("")
+                action_button.setStyleSheet("border: 1px solid rgb(32,34,40);")
+            else:
+                action_button.setToolTip("Please connect to MM.")
+                action_button.setStyleSheet("border: 1px solid rgb(65,72,81);")
 
     def _enable_buttons(self):
         self._set_buttons_enabled(True)
