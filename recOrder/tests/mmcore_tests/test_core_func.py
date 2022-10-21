@@ -109,16 +109,6 @@ def _get_examples(low: float, high: float):
     return valid_values, invalid_values
 
 
-def test_snap_image():
-    """Test `recOrder.io.core_functions.snap_image`."""
-    mmc = _get_mmcore_mock()
-    image = snap_image(mmc)
-    mmc.snapImage.assert_called_once()
-    mmc.getImage.assert_called_once()
-    assert _is_int(image), image.dtype
-    assert image.shape == (PIXEL_COUNT,), image.shape
-
-
 def test_suspend_live_sm():
     """Test `recOrder.io.core_functions.suspend_live_sm`."""
     snap_manager = _get_snap_manager_mock()
