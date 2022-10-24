@@ -272,9 +272,6 @@ class MainWidget(QWidget):
         self.reconstruction_data = None
         self.calib_assessment_level = None
         recorder_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
-        self.default_offline_config = os.path.join(
-            recorder_dir, "recOrder/plugin/config_offline_default.yml"
-        )
         self.worker = None
 
         ## Initialize calibration plot
