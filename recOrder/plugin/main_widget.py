@@ -17,7 +17,7 @@ from recOrder.acq.acquisition_workers import (
 from recOrder.plugin import gui
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.metadata_reader import MetadataReader
-from recOrder.io.utils import ret_ori_overlay, generic_hsv_overlay
+from recOrder.io.utils import ret_ori_overlay
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
@@ -187,25 +187,25 @@ class MainWidget(QWidget):
         # )
 
         # Display Tab (Commenting to suppress warnings. Consider debugging or deleting for 1.0.0.)
-        #self.viewer.layers.events.inserted.connect(
+        # self.viewer.layers.events.inserted.connect(
         #    self._add_layer_to_display_boxes
-        #)
-        #self.viewer.layers.events.removed.connect(
+        # )
+        # self.viewer.layers.events.removed.connect(
         #    self._remove_layer_from_display_boxes
-        #)
-        #self.ui.qbutton_create_overlay.clicked[bool].connect(
+        # )
+        # self.ui.qbutton_create_overlay.clicked[bool].connect(
         #    self.create_overlay
-        #)
-        #self.ui.cb_saturation.currentIndexChanged[int].connect(
+        # )
+        # self.ui.cb_saturation.currentIndexChanged[int].connect(
         #    self.update_sat_scale
-        #)
-        #self.ui.cb_value.currentIndexChanged[int].connect(
+        # )
+        # self.ui.cb_value.currentIndexChanged[int].connect(
         #    self.update_value_scale
-        #)
-        #self.ui.le_sat_max.editingFinished.connect(self.enter_sat_max)
-        #self.ui.le_sat_min.editingFinished.connect(self.enter_sat_min)
-        #self.ui.le_val_max.editingFinished.connect(self.enter_val_max)
-        #self.ui.le_val_min.editingFinished.connect(self.enter_val_min)
+        # )
+        # self.ui.le_sat_max.editingFinished.connect(self.enter_sat_max)
+        # self.ui.le_sat_min.editingFinished.connect(self.enter_sat_min)
+        # self.ui.le_val_max.editingFinished.connect(self.enter_val_max)
+        # self.ui.le_val_min.editingFinished.connect(self.enter_val_min)
 
         # Reconstruction tab
         self.ui.cb_phase_denoiser.currentIndexChanged[int].connect(
@@ -562,7 +562,9 @@ class MainWidget(QWidget):
                 action_button.setToolTip("")
                 action_button.setStyleSheet("border: 1px solid rgb(32,34,40);")
             else:
-                action_button.setToolTip("Action temporarily disabled. Connect to MM or wait for acquisition to finish.")
+                action_button.setToolTip(
+                    "Action temporarily disabled. Connect to MM or wait for acquisition to finish."
+                )
                 action_button.setStyleSheet("border: 1px solid rgb(65,72,81);")
 
     def _enable_buttons(self):
@@ -627,7 +629,7 @@ class MainWidget(QWidget):
     def _update_calib(self, val):
         self.calib = val
 
-    # Commenting for 0.3.0. Consider debuging or removing for 1.0.0. 
+    # Commenting for 0.3.0. Consider debuging or removing for 1.0.0.
     # def _add_layer_to_display_boxes(self, val):
     #     """
     #     When a new napari layer is added to recOrder, update the Display Tab combo boxes with these layers.
@@ -1585,7 +1587,7 @@ class MainWidget(QWidget):
             self.ui.le_calibration_metadata.setStyleSheet("")
             self.calib_path = entry
 
-    # Comment for 0.3.0. Consider debugging or deleting for 1.0.0. 
+    # Comment for 0.3.0. Consider debugging or deleting for 1.0.0.
     # @Slot()
     # def enter_colormap(self):
     #     """
