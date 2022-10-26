@@ -3,28 +3,6 @@ import numpy as np
 from contextlib import contextmanager
 
 
-def snap_image(mmc):
-    """
-    Snap and return an image through pycromanager ZMQ
-
-    Parameters
-    ----------
-    mmc:        (object) MM core object
-
-    Returns
-    -------
-    image:      (array) 1D-Array of length Y * X
-
-    """
-
-    mmc.snapImage()
-    time.sleep(
-        0.3
-    )  # sleep after snap to make sure the image we grab is the correct one
-
-    return mmc.getImage()
-
-
 @contextmanager
 def suspend_live_sm(snap_manager):
     """Context manager that suspends/unsuspends MM live mode for `SnapLiveManager`.

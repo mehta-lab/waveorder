@@ -4,7 +4,7 @@
 [![Python package index](https://img.shields.io/pypi/v/recOrder-napari.svg)](https://pypi.org/project/recOrder-napari)
 [![Development Status](https://img.shields.io/pypi/status/napari.svg)](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha)
 
-This package provides a napari plugin and a command line interface for quantitative label-free microscopy.
+This package provides a napari plugin for quantitative label-free microscopy.
 
 In this repository you will find python tools and a napari plugin that allow the user to calibrate microscope hardware, acquire multi-modal data, reconstruct density and anisotropy, and visualize the results.
 

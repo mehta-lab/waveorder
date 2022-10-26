@@ -11,7 +11,7 @@ from recOrder.acq.acq_functions import (
     acquire_from_settings,
 )
 from recOrder.io.utils import load_bg, extract_reconstruction_parameters
-from recOrder.compute import QLIPPBirefringenceCompute
+from recOrder.compute.qlipp_compute import QLIPPBirefringenceCompute
 from recOrder.io.zarr_converter import ZarrConverter
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
 from recOrder.io.utils import ram_message, rec_bkg_to_wo_bkg
@@ -36,7 +36,6 @@ class PolarizationAcquisitionSignals(WorkerBaseSignals):
     phase_image_emitter = Signal(object)
     bire_image_emitter = Signal(object)
     phase_reconstructor_emitter = Signal(object)
-    meta_emitter = Signal(dict)
     aborted = Signal()
 
 
@@ -47,7 +46,6 @@ class BFAcquisitionSignals(WorkerBaseSignals):
 
     phase_image_emitter = Signal(object)
     phase_reconstructor_emitter = Signal(object)
-    meta_emitter = Signal(dict)
     aborted = Signal()
 
 
@@ -194,7 +192,6 @@ class BFAcquisitionWorker(WorkerBase):
 
         # Emit the images and let thread know function is finished
         self.phase_image_emitter.emit(phase)
-        self.meta_emitter.emit(meta)
 
     def _reconstruct(self, stack):
         """
@@ -666,7 +663,6 @@ class PolarizationAcquisitionWorker(WorkerBase):
         # Emit the images and let thread know function is finished
         self.bire_image_emitter.emit(birefringence)
         self.phase_image_emitter.emit(phase)
-        self.meta_emitter.emit(meta)
 
     def _check_exposure(self) -> None:
         """
