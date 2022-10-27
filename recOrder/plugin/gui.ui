@@ -1139,6 +1139,13 @@
               <property name="verticalSpacing">
                <number>6</number>
               </property>
+              <item row="4" column="1">
+               <widget class="QComboBox" name="cb_acq_channel">
+                <property name="currentText">
+                 <string/>
+                </property>
+               </widget>
+              </item>
               <item row="1" column="0">
                <widget class="QLabel" name="label_zstart">
                 <property name="font">
@@ -1149,6 +1156,52 @@
                 </property>
                 <property name="text">
                  <string>Z Start (um)</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_acq_mode">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Acquisition Mode</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QLineEdit" name="le_zstep"/>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="labe_acq_channel">
+                <property name="text">
+                 <string>BF Channel</string>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="2">
+               <widget class="QCheckBox" name="chb_phase_from_bf">
+                <property name="text">
+                 <string>Phase From BF</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QLineEdit" name="le_zend"/>
+              </item>
+              <item row="1" column="2">
+               <widget class="QLabel" name="label_zstep">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Z Step (um)</string>
                 </property>
                </widget>
               </item>
@@ -1165,90 +1218,11 @@
                 </property>
                </widget>
               </item>
-              <item row="1" column="2">
-               <widget class="QLabel" name="label_zstep">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Z Step (um)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0">
-               <widget class="QLabel" name="label_birefringence">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Birefringence</string>
-                </property>
-               </widget>
-              </item>
               <item row="2" column="0">
                <widget class="QLineEdit" name="le_zstart"/>
               </item>
-              <item row="4" column="1">
-               <widget class="QComboBox" name="cb_phase">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>2D</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>3D</string>
-                 </property>
-                </item>
-               </widget>
-              </item>
-              <item row="2" column="2">
-               <widget class="QLineEdit" name="le_zstep"/>
-              </item>
-              <item row="4" column="2">
-               <widget class="QCheckBox" name="chb_phase_from_bf">
-                <property name="text">
-                 <string>Phase From BF</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="label_phase">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Phase</string>
-                </property>
-               </widget>
-              </item>
-              <item row="5" column="1">
-               <widget class="QComboBox" name="cb_acq_channel">
-                <property name="currentText">
-                 <string/>
-                </property>
-               </widget>
-              </item>
               <item row="3" column="1">
-               <widget class="QComboBox" name="cb_birefringence">
+               <widget class="QComboBox" name="cb_acq_mode">
                 <property name="font">
                  <font>
                   <italic>false</italic>
@@ -1269,16 +1243,6 @@
                  </property>
                 </item>
                </widget>
-              </item>
-              <item row="5" column="0">
-               <widget class="QLabel" name="labe_acq_channel">
-                <property name="text">
-                 <string>Acq Channel (BF Only)</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QLineEdit" name="le_zend"/>
               </item>
              </layout>
             </widget>
@@ -2121,8 +2085,8 @@
   </customwidget>
  </customwidgets>
  <tabstops>
+  <tabstop>qbutton_connect_to_mm</tabstop>
   <tabstop>le_mm_status</tabstop>
-  <tabstop>tabWidget</tabstop>
   <tabstop>scrollArea</tabstop>
   <tabstop>le_directory</tabstop>
   <tabstop>qbutton_browse</tabstop>
@@ -2146,6 +2110,8 @@
   <tabstop>scrollArea_2</tabstop>
   <tabstop>cb_loglevel</tabstop>
   <tabstop>te_log</tabstop>
+  <tabstop>le_notes_field</tabstop>
+  <tabstop>qbutton_push_note</tabstop>
   <tabstop>scrollArea_4</tabstop>
   <tabstop>qbutton_acq_birefringence</tabstop>
   <tabstop>qbutton_acq_phase</tabstop>
@@ -2155,30 +2121,43 @@
   <tabstop>le_zstart</tabstop>
   <tabstop>le_zend</tabstop>
   <tabstop>le_zstep</tabstop>
-  <tabstop>cb_birefringence</tabstop>
-  <tabstop>cb_phase</tabstop>
-  <tabstop>chb_phase_from_bf</tabstop>
+  <tabstop>cb_acq_mode</tabstop>
   <tabstop>cb_acq_channel</tabstop>
-  <tabstop>le_overlay_slice</tabstop>
-  <tabstop>le_notes_field</tabstop>
+  <tabstop>chb_phase_from_bf</tabstop>
+  <tabstop>le_save_dir</tabstop>
+  <tabstop>qbutton_browse_save_dir</tabstop>
+  <tabstop>le_data_save_name</tabstop>
+  <tabstop>cb_bg_method</tabstop>
+  <tabstop>le_bg_path</tabstop>
+  <tabstop>qbutton_browse_bg_path</tabstop>
+  <tabstop>le_gpu_id</tabstop>
+  <tabstop>chb_use_gpu</tabstop>
+  <tabstop>le_recon_wavelength</tabstop>
+  <tabstop>le_obj_na</tabstop>
+  <tabstop>le_cond_na</tabstop>
+  <tabstop>le_ps</tabstop>
+  <tabstop>le_n_media</tabstop>
+  <tabstop>le_mag</tabstop>
+  <tabstop>le_pad_z</tabstop>
   <tabstop>cb_phase_denoiser</tabstop>
   <tabstop>le_phase_strength</tabstop>
   <tabstop>le_rho</tabstop>
   <tabstop>le_itr</tabstop>
+  <tabstop>cb_colormap</tabstop>
+  <tabstop>cb_hue</tabstop>
   <tabstop>le_sat_min</tabstop>
   <tabstop>le_sat_max</tabstop>
-  <tabstop>qbutton_push_note</tabstop>
-  <tabstop>cb_hue</tabstop>
-  <tabstop>le_val_min</tabstop>
-  <tabstop>scrollArea_5</tabstop>
   <tabstop>cb_saturation</tabstop>
+  <tabstop>slider_saturation</tabstop>
+  <tabstop>le_val_min</tabstop>
   <tabstop>le_val_max</tabstop>
   <tabstop>cb_value</tabstop>
-  <tabstop>cb_colormap</tabstop>
-  <tabstop>chb_display_volume</tabstop>
-  <tabstop>slider_saturation</tabstop>
   <tabstop>slider_value</tabstop>
+  <tabstop>le_overlay_slice</tabstop>
+  <tabstop>chb_display_volume</tabstop>
   <tabstop>qbutton_create_overlay</tabstop>
+  <tabstop>tabWidget</tabstop>
+  <tabstop>scrollArea_5</tabstop>
  </tabstops>
  <resources/>
  <connections/>
