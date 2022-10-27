@@ -149,10 +149,9 @@ class MainWidget(QWidget):
         self.enter_n_media()
 
         self.ui.le_pad_z.editingFinished.connect(self.enter_pad_z)
-        self.ui.cb_birefringence.currentIndexChanged[int].connect(
-            self.enter_birefringence_dim
+        self.ui.cb_acq_mode.currentIndexChanged[int].connect(
+            self.enter_acq_mode
         )
-        self.ui.cb_phase.currentIndexChanged[int].connect(self.enter_phase_dim)
 
         self.ui.cb_bg_method.currentIndexChanged[int].connect(
             self.enter_bg_correction
@@ -247,8 +246,7 @@ class MainWidget(QWidget):
         self.save_directory = str(Path.cwd())
         self.save_name = None
         self.bg_option = "None"
-        self.birefringence_dim = "2D"
-        self.phase_dim = "2D"
+        self.acq_mode = "2D"
         self.gpu_id = 0
         self.use_gpu = False
         self.pad_z = 0
@@ -1064,7 +1062,7 @@ class MainWidget(QWidget):
         }
 
         # Compute Overlay if birefringence acquisition is 2D
-        if self.birefringence_dim == "2D":
+        if self.acq_mode == "2D":
             channel_names["BirefringenceOverlay"] = None
             overlay = ret_ori_overlay(
                 retardance=value[0],
@@ -1075,31 +1073,27 @@ class MainWidget(QWidget):
 
         for key, chan in channel_names.items():
             if key == "BirefringenceOverlay":
-                if key + self.birefringence_dim in self.viewer.layers:
-                    self.viewer.layers[
-                        key + self.birefringence_dim
-                    ].data = overlay
+                if key + self.acq_mode in self.viewer.layers:
+                    self.viewer.layers[key + self.acq_mode].data = overlay
                 else:
                     self.viewer.add_image(
-                        overlay, name=key + self.birefringence_dim, rgb=True
+                        overlay, name=key + self.acq_mode, rgb=True
                     )
             else:
-                if key + self.birefringence_dim in self.viewer.layers:
-                    self.viewer.layers[
-                        key + self.birefringence_dim
-                    ].data = value[chan]
+                if key + self.acq_mode in self.viewer.layers:
+                    self.viewer.layers[key + self.acq_mode].data = value[chan]
                 else:
                     cmap = "gray" if key != "Orientation" else "hsv"
                     self.viewer.add_image(
                         value[chan],
-                        name=key + self.birefringence_dim,
+                        name=key + self.acq_mode,
                         colormap=cmap,
                     )
 
     @Slot(object)
     def handle_phase_image_update(self, value):
 
-        name = "Phase2D" if self.phase_dim == "2D" else "Phase3D"
+        name = "Phase2D" if self.acq_mode == "2D" else "Phase3D"
 
         # Add new layer if none exists, otherwise update layer data
         if name in self.viewer.layers:
@@ -1375,20 +1369,12 @@ class MainWidget(QWidget):
         self.z_step = float(self.ui.le_zstep.text())
 
     @Slot()
-    def enter_birefringence_dim(self):
-        state = self.ui.cb_birefringence.currentIndex()
+    def enter_acq_mode(self):
+        state = self.ui.cb_acq_mode.currentIndex()
         if state == 0:
-            self.birefringence_dim = "2D"
+            self.acq_mode = "2D"
         elif state == 1:
-            self.birefringence_dim = "3D"
-
-    @Slot()
-    def enter_phase_dim(self):
-        state = self.ui.cb_phase.currentIndex()
-        if state == 0:
-            self.phase_dim = "2D"
-        elif state == 1:
-            self.phase_dim = "3D"
+            self.acq_mode = "3D"
 
     @Slot()
     def enter_phase_denoiser(self):
