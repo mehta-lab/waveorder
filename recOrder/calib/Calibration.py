@@ -1071,9 +1071,10 @@ class QLIPP_Calibration:
         logging.info("Capturing Background")
         self._auto_shutter_state = self.mmc.getAutoShutter()
         self._shutter_state = self.mmc.getShutterOpen()
+        self.mmc.setAutoShutter(False)
         self.open_shutter()
-        logging.debug("Capturing Background State0")
 
+        logging.debug("Capturing Background State0")
         state0 = self._capture_state("State0", n_avg)
         logging.debug("Saving Background State0")
         tiff.imsave(os.path.join(directory, "State0.tif"), state0)
