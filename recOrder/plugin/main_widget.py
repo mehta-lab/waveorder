@@ -363,6 +363,15 @@ class MainWidget(QWidget):
                 i, wrapped_tooltip, Qt.ToolTipRole
             )
 
+        # Populate acquisition mode tooltips
+        acq_tooltips = [
+            "Acquires data to estimate parameters in a 2D plane. For birefringence acquisitions, this mode will acquire 2D data. For phase acquisitions, this mode will acquire 3D data.",
+            "Acquires 3D data to estimate parameters in a 3D volume."
+        ]
+        for i, tooltip in enumerate(acq_tooltips):
+            wrapped_tooltip = "\n".join(textwrap.wrap(tooltip, width=70))
+            self.ui.cb_acq_mode.setItemData(i, wrapped_tooltip, Qt.ToolTipRole)
+            
         # make sure the top says recOrder and not 'Form'
         self.ui.tabWidget.parent().setObjectName("recOrder")
 
