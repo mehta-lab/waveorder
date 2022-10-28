@@ -75,7 +75,7 @@ class BFAcquisitionWorker(WorkerBase):
         self.prefix = "recOrderPluginSnap"
         self.dm = self.calib_window.mm.displays()
         self.dim = (
-            "2D" if self.calib_window.ui.cb_phase.currentIndex() == 0 else "3D"
+            "2D" if self.calib_window.ui.cb_acq_mode.currentIndex() == 0 else "3D"
         )
         self.img_dim = None
 
@@ -230,7 +230,7 @@ class BFAcquisitionWorker(WorkerBase):
                 pad_z=self.calib_window.pad_z,
                 pixel_size_um=self.calib_window.ps,
                 n_obj_media=self.calib_window.n_media,
-                mode=self.calib_window.phase_dim,
+                mode=self.calib_window.acq_mode,
                 use_gpu=self.calib_window.use_gpu,
                 gpu_id=self.calib_window.gpu_id,
             )
@@ -262,7 +262,7 @@ class BFAcquisitionWorker(WorkerBase):
                     pad_z=self.calib_window.pad_z,
                     pixel_size_um=self.calib_window.ps,
                     n_obj_media=self.calib_window.n_media,
-                    mode=self.calib_window.phase_dim,
+                    mode=self.calib_window.acq_mode,
                     use_gpu=self.calib_window.use_gpu,
                     gpu_id=self.calib_window.gpu_id,
                 )
@@ -388,7 +388,7 @@ class BFAcquisitionWorker(WorkerBase):
 
         # Attributes that are directly equivalent to worker attributes
         attr_list = {
-            "phase_dim": "phase_deconv",
+            "acq_mode": "phase_deconv",
             "pad_z": "pad_z",
             "n_media": "n_media",
             "use_gpu": "use_gpu",
@@ -531,10 +531,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         self.channel_group = self.calib_window.config_group
 
         # Determine whether 2D or 3D acquisition is needed
-        if (
-            self.mode == "birefringence"
-            and self.calib_window.birefringence_dim == "2D"
-        ):
+        if self.mode == "birefringence" and self.calib_window.acq_mode == "2D":
             self.dim = "2D"
         else:
             self.dim = "3D"
@@ -754,7 +751,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
                     pixel_size_um=self.calib_window.ps,
                     bg_correction=wo_background_correction,
                     n_obj_media=self.calib_window.n_media,
-                    mode=self.calib_window.phase_dim,
+                    mode=self.calib_window.acq_mode,
                     use_gpu=self.calib_window.use_gpu,
                     gpu_id=self.calib_window.gpu_id,
                 )
@@ -787,7 +784,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
                         pixel_size_um=self.calib_window.ps,
                         bg_correction=wo_background_correction,
                         n_obj_media=self.calib_window.n_media,
-                        mode=self.calib_window.phase_dim,
+                        mode=self.calib_window.acq_mode,
                         use_gpu=self.calib_window.use_gpu,
                         gpu_id=self.calib_window.gpu_id,
                     )
@@ -857,7 +854,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
         # reconstruct both phase and birefringence
         if self.mode == "all":
-            if self.calib_window.birefringence_dim == "2D":
+            if self.calib_window.acq_mode == "2D":
                 birefringence = reconstruct_qlipp_birefringence(
                     stokes[:, stokes.shape[1] // 2, :, :], recon
                 )
@@ -868,7 +865,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
             )
             self._check_abort()
 
-            if self.calib_window.phase_dim == "2D":
+            if self.calib_window.acq_mode == "2D":
                 phase = reconstruct_phase2D(
                     stokes[0],
                     recon,
@@ -891,7 +888,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
         # reconstruct phase only
         elif self.mode == "phase":
-            if self.calib_window.phase_dim == "2D":
+            if self.calib_window.acq_mode == "2D":
                 phase = reconstruct_phase2D(
                     stokes[0],
                     recon,
@@ -1093,7 +1090,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
         # Attributes that are directly equivalent to worker attributes
         attr_list = {
-            "phase_dim": "phase_deconv",
+            "acq_mode": "phase_deconv",
             "pad_z": "pad_z",
             "n_media": "n_media",
             "bg_option": "bg_option",
