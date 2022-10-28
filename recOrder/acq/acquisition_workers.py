@@ -75,7 +75,7 @@ class BFAcquisitionWorker(WorkerBase):
         self.prefix = "recOrderPluginSnap"
         self.dm = self.calib_window.mm.displays()
         self.dim = (
-            "2D" if self.calib_window.ui.cb_phase.currentIndex() == 0 else "3D"
+            "2D" if self.calib_window.ui.cb_acq_mode.currentIndex() == 0 else "3D"
         )
         self.img_dim = None
 
