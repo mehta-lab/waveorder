@@ -12,15 +12,9 @@ napari -w recOrder-napari
 ```
 
 ## Calibration tab
-The first step in the QLIPP process is to calibrate the liquid crystals. The goal is to illumination to  the contrast and
-
-This process involves generating the polarization states and acquiring a background **on an empty FOV**, so begin by placing your sample on the stage and focus on the surface of the coverslip or well. 
+The first step in the QLIPP process is to calibrate the liquid crystals. This process involves generating the polarization states and acquiring a background **on an empty FOV**, so begin by placing your sample on the stage and focussing on the surface of the coverslip or well. 
 
 The light path must also be in Kohler Illumination** to ensure uniform illumination of the sample. [Please follow these steps to setup Kohler illumination.](https://www.microscopyu.com/tutorials/kohler)
-
-Turn on online mode by clicking "Switch To Online" button.
-
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/switch_online.png)
 
 After pressing “Connect to MM” and choosing a directory (where the calibration metadata / background images will be stored), the first step in calibration is to input the illumination wavelength and decide on the swing to use. 
 
@@ -38,7 +32,7 @@ We recommend starting with a swing of **0.1** for tissue samples and **0.05** fo
 The illumination scheme decides which polarization states to calibrate and use. We recommend sticking with the *4-State (Ext, 0, 60, 120)* scheme as it requires one less illumination state than the *5-State* scheme.
 
 ### Run the calibration
-Once the above parameters are set, the user is ready to run the calibration and the button can be pressed.
+Once the above parameters are set, the user is ready for "Run Calibration"
 
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/run_calib.png)
 
@@ -110,8 +104,6 @@ User can then choose whether they want to acquire a 2D or 3D Birefringence/Phase
 ### Reconstruction Settings 
 These settings are solely for reconstructing the acquired image / image volume. The *Phase Only* parameters are only needed for reconstructing phase. The user is also able to specify the use of a GPU for reconstruction (requires CuPy / CudaToolKit) if present, otherwise leave blank.
 
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/reconstruct_acq2.png)
-
 Explanation of background correction methods:
    bg_options = ["None", "Measured", "Estimated", "Measured + Estimated"]
         tooltips = [
@@ -133,11 +125,11 @@ An explanation of phase reconstruction parameters:
 * Condenser NA: Numerical Aperture of Condenser
 * Magnification: Magnfication of the objective
 * Camera Pixel Size: Pixel size of the camera in microns (ex. 6.5)
-* RI of Obj, Media: Refractive Index of the objective media. Defaults to air (1.003). Typical values also include 1.512 (oil) or 1.473 (glycerol).
+* RI of Obj Media: Refractive index of the objective media. Defaults to air (1.003). Typical values also include 1.512 (oil) or 1.473 (glycerol).
 * Z Padding: The number of slices to pad on either end of the stack in order to correct for edge reflection artifacts. Necessary if the sample is not fully out of focus on either end of the stack.
 
 The acquired data will then be displayed in the `napari` window. Note that phase reconstruction is more computationally expensive and may take several minutes depending on your system.
 
-Examples of acquiring 2D birefringence data (kidney kissue) with this snap method are below:
+Examples of acquiring 2D birefringence data (kidney tissue) with this snap method are below:
 
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/acq_finished.png)
