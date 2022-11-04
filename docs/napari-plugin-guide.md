@@ -14,7 +14,7 @@ napari -w recOrder-napari
 ## Calibration tab
 The first step in the QLIPP process is to calibrate the liquid crystals. This process involves generating the polarization states and acquiring a background **on an empty FOV**, so begin by placing your sample on the stage and focussing on the surface of the coverslip or well. 
 
-The light path must also be in Kohler Illumination** to ensure uniform illumination of the sample. [Please follow these steps to setup Kohler illumination.](https://www.microscopyu.com/tutorials/kohler)
+The light path must also be in **Kohler Illumination** to ensure uniform illumination of the sample. [Please follow these steps to setup Kohler illumination.](https://www.microscopyu.com/tutorials/kohler)
 
 After pressing “Connect to MM” and choosing a directory (where the calibration metadata / background images will be stored), the first step in calibration is to input the illumination wavelength and decide on the swing to use. 
 
