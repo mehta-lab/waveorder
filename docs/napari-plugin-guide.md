@@ -93,8 +93,8 @@ User specifies the directory in which the images will be saved.
 
 Ex. for a 20 um thick cell, the user would first focus in the middle of the cell and then set the following parameters: 
 
-​* `Z Start = -12`
-​* `Z End: 12`
+* `Z Start = -12`
+* `Z End: 12`
 * `Z Step: 0.25` 
 
 For phase reconstruction, the stack should have sufficient defocus along the top and bottom of the stack. The reconstruction algorithm uses the defocus information to more accurately reconstruct phase.
