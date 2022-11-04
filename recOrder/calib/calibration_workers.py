@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING
 # avoid runtime import error
 if TYPE_CHECKING:
     from _typeshed import StrOrBytesPath
-    from recOrder.plugin.widget.main_widget import MainWidget
+    from recOrder.plugin.main_widget import MainWidget
     from recOrder.calib.Calibration import QLIPP_Calibration
 
 

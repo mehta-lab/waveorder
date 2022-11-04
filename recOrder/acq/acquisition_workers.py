@@ -1,3 +1,6 @@
+# TODO: remove in Python 3.11
+from __future__ import annotations
+
 from qtpy.QtCore import Signal
 from recOrder.compute.qlipp_compute import (
     initialize_reconstructor,
@@ -26,6 +29,14 @@ import zarr
 import shutil
 import time
 import glob
+
+# type hint/check
+from typing import TYPE_CHECKING
+
+# avoid runtime import error
+if TYPE_CHECKING:
+    from recOrder.plugin.main_widget import MainWidget
+    from recOrder.calib.Calibration import QLIPP_Calibration
 
 
 class PolarizationAcquisitionSignals(WorkerBaseSignals):
@@ -65,7 +76,7 @@ class BFAcquisitionWorker(WorkerBase):
     step of reconstructing those images.
     """
 
-    def __init__(self, calib_window):
+    def __init__(self, calib_window: MainWidget):
         super().__init__(SignalsClass=BFAcquisitionSignals)
 
         # Save current state of GUI window
@@ -516,7 +527,9 @@ class PolarizationAcquisitionWorker(WorkerBase):
     step of reconstructing those images.
     """
 
-    def __init__(self, calib_window, calib, mode):
+    def __init__(
+        self, calib_window: MainWidget, calib: QLIPP_Calibration, mode: str
+    ):
         super().__init__(SignalsClass=PolarizationAcquisitionSignals)
 
         # Save current state of GUI window
@@ -648,6 +661,9 @@ class PolarizationAcquisitionWorker(WorkerBase):
         birefringence, phase, meta = self._reconstruct(stack[0])
         self._check_abort()
 
+        if self.calib_window.orientation_offset:
+            birefringence = self._orientation_offset(birefringence)
+
         # Save images
         logging.debug("Saving Images")
         self._save_imgs(birefringence, phase, meta)
@@ -660,6 +676,28 @@ class PolarizationAcquisitionWorker(WorkerBase):
         # Emit the images and let thread know function is finished
         self.bire_image_emitter.emit(birefringence)
         self.phase_image_emitter.emit(phase)
+
+    def _orientation_offset(self, birefringence: np.ndarray):
+        """Apply +90 degree orientation offset
+
+        Parameters
+        ----------
+        birefringence : np.ndarray
+            [2, Y, X] retardance and orientation
+
+        Returns
+        -------
+        ndarray
+            birefringence with offset
+        """
+        show_warning(
+            (
+                "Applying a +90 degree orientation offset to birefringence! "
+                "This will affect both visualization and the saved reconstruction."
+            )
+        )
+        birefringence[1] = np.fmod(birefringence[1] + np.pi / 2, np.pi)
+        return birefringence
 
     def _check_exposure(self) -> None:
         """
