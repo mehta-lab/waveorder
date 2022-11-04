@@ -105,14 +105,7 @@ User can then choose whether they want to acquire a 2D or 3D Birefringence/Phase
 These settings are solely for reconstructing the acquired image / image volume. The *Phase Only* parameters are only needed for reconstructing phase. The user is also able to specify the use of a GPU for reconstruction (requires CuPy / CudaToolKit) if present, otherwise leave blank.
 
 Explanation of background correction methods:
-   bg_options = ["None", "Measured", "Estimated", "Measured + Estimated"]
-        tooltips = [
-            "No background correction.",
-            'Correct sample images with a background image acquired at an empty field of view, loaded from "Background Path".',
-            "Estimate sample background by fitting a 2D surface to the sample images. Works well when structures are spatially distributed across the field of view and a clear background is unavailable.",
-            'Apply "Measured" background correction and then "Estimated" background correction. Use to remove residual background after the sample retardance is corrected with measured background.',
-        ]
-     
+  
 * None: No background correction is performed. 
 * Measured: Corrects sample images with a background image acquired at an empty field of view, loaded from "Background Path". 
 * Estimated: Estimate the sample background by fitting a 2D surface to the sample images. Works well when structures are spatially distributed across the field of view and a clear background is unavailable.
