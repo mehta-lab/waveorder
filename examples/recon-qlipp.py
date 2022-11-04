@@ -8,6 +8,8 @@ from recOrder.compute.qlipp_compute import (
     reconstruct_phase3D,
 )
 import numpy as np
+import napari
+import time
 
 ## Load a dataset
 
@@ -49,9 +51,7 @@ reconstructor_args = {
     "use_gpu": False,
     "gpu_id": 0,
 }
-reconstructor = initialize_reconstructor(
-    pipeline="QLIPP", **reconstructor_args
-)
+reconstructor = initialize_reconstructor(pipeline="QLIPP", **reconstructor_args)
 
 # Reconstruct background Stokes
 bg_stokes = reconstruct_qlipp_stokes(bg_data, reconstructor)
@@ -65,23 +65,19 @@ print(f"Shape of background corrected data Stokes: {np.shape(stokes)}")
 # Shape of the output birefringence will be (C, Z, Y, X) where
 # Channel order = Retardance [nm], Orientation [rad], Brightfield (S0), Degree of Polarization
 birefringence = reconstruct_qlipp_birefringence(stokes, reconstructor)
-birefringence[0] = (
-    birefringence[0] / (2 * np.pi) * reconstructor_args["wavelength_nm"]
-)
+birefringence[0] = birefringence[0] / (2 * np.pi) * reconstructor_args["wavelength_nm"]
 print(f"Shape of birefringence data: {np.shape(birefringence)}")
 
 # Reconstruct Phase3D from S0
 S0 = birefringence[3]
 
-phase3D = reconstruct_phase3D(
-    S0, reconstructor, method="Tikhonov", reg_re=1e-2
-)
+phase3D = reconstruct_phase3D(S0, reconstructor, method="Tikhonov", reg_re=1e-2)
 print(f"Shape of 3D phase data: {np.shape(phase3D)}")
 
 ## Save to zarr
 # Save birefringence
 writer = WaveorderWriter("./output")
-writer.create_zarr_root("birefringence")
+writer.create_zarr_root("birefringence" + str(time.time()))
 writer.init_array(
     position=0,
     data_shape=(1, 4, Z, Y, X),
@@ -91,7 +87,7 @@ writer.init_array(
 writer.write(birefringence, p=0, t=0, c=slice(0, 4), z=slice(0, Z))
 
 ## Save phase
-writer.create_zarr_root("phase")
+writer.create_zarr_root("phase" + str(time.time()))
 writer.init_array(
     position=0,
     data_shape=(1, 1, Z, Y, X),
@@ -101,3 +97,7 @@ writer.init_array(
 writer.write(phase3D, p=0, t=0, c=0, z=slice(0, Z))
 
 # To open, drag and drop the zarr store into napari and use the recOrder-napari reader.
+v = napari.Viewer()
+v.add_image(birefringence)
+v.add_image(phase3D)
+napari.run()
