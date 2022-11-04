@@ -4,7 +4,11 @@ from recOrder.compute.qlipp_compute import (
     initialize_reconstructor,
     reconstruct_phase3D,
 )
+from datetime import datetime
 import numpy as np
+import napari
+
+timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
 
 ## Load a dataset
 
@@ -55,7 +59,7 @@ print(f"Shape of 3D phase data: {np.shape(phase3D)}")
 
 ## Save to zarr
 writer = WaveorderWriter("./output-phase")
-writer.create_zarr_root("phase")
+writer.create_zarr_root("phase_" + timestamp)
 writer.init_array(
     position=0,
     data_shape=(1, 1, Z, Y, X),
@@ -64,4 +68,8 @@ writer.init_array(
 )
 writer.write(phase3D, p=0, t=0, c=0, z=slice(0, Z))
 
-# To open, drag and drop the zarr store into napari and use the recOrder-napari reader.
+# These lines opens the reconstructed images
+# Alternatively, drag and drop the zarr store into napari and use the recOrder-napari reader.
+v = napari.Viewer()
+v.add_image(phase3D)
+napari.run()
