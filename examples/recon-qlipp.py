@@ -11,7 +11,7 @@ from datetime import datetime
 import numpy as np
 import napari
 
-timestamp = datetime.now().strftime("%Y%m%d%H%M%S%f")
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 ## Load a dataset
 
