@@ -86,7 +86,6 @@ This acquisition module is designed to take single image volumes for both phase 
 User specifies the directory in which the images will be saved.
 
 ### Acquisition Settings
-
 *Z Start, Z End, Z Step* specify the relative z-parameters to use for acquiring an image volume. Values are in the default units of the stage, typically in microns. The center slice will be the current position of the z-stage
 
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/acquisition.png)
