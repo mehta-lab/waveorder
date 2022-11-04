@@ -21,7 +21,7 @@ After pressing “Connect to MM” and choosing a directory (where the calibrati
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/connect_to_mm.png)
 
 ### Choose a swing value
-The swing value is the deviation away from circular illumination states. The larger the swing, the more elliptical the polarized states becomes, until finally reaching a linear states at `swing = 0.25`. Picking a swing is dependent on the anisotropy of the sample. We recommend
+The swing value is the deviation away from circular illumination states. The larger the swing, the more elliptical the polarized states becomes, until finally reaching a linear state at `swing = 0.25`. Picking a swing is dependent on the anisotropy of the sample. We recommend
 
 * ​Tissue Imaging: `swing = 0.1 - 0.05`
 * Live or fixed Cells: `swing = 0.05 – 0.03`
