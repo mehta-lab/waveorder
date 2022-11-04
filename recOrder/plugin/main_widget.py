@@ -125,6 +125,10 @@ class MainWidget(QWidget):
         self.ui.chb_use_gpu.stateChanged[int].connect(self.enter_use_gpu)
         self.ui.le_gpu_id.editingFinished.connect(self.enter_gpu_id)
 
+        self.ui.cb_orientation_offset.stateChanged[int].connect(
+            self.enter_orientation_offset
+        )
+
         # This parameter seems to be wired differently than others...investigate later
         self.ui.le_recon_wavelength.setText("532")
 
@@ -249,6 +253,7 @@ class MainWidget(QWidget):
         self.acq_mode = "2D"
         self.gpu_id = 0
         self.use_gpu = False
+        self.orientation_offset = False
         self.pad_z = 0
         self.phase_reconstructor = None
         self.acq_bg_directory = None
@@ -1474,6 +1479,14 @@ class MainWidget(QWidget):
             self.use_gpu = True
         elif state == 0:
             self.use_gpu = False
+
+    @Slot()
+    def enter_orientation_offset(self):
+        state = self.ui.cb_orientation_offset.checkState()
+        if state == 2:
+            self.orientation_offset = True
+        elif state == 0:
+            self.orientation_offset = False
 
     @Slot()
     def enter_obj_na(self):
