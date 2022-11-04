@@ -109,7 +109,7 @@ On macOS, you can modify the file in place with:
 sed -i '' 's/from PyQt5/from qtpy/g' gui.py
 ```
 
-> This is specific for BSD `sed`, ommit `''` with GNU.
+> This is specific for BSD `sed`, omit `''` with GNU.
 
 Note: although much of the GUI is specified in the generated `recOrder_ui.py` file, the `main_widget.py` file makes extensive modifications to the GUI.
 
