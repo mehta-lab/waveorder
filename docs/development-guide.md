@@ -78,11 +78,16 @@ We use `QT Creator` for large parts of `recOrder`'s GUI. To modify the GUI, inst
 
 Open `/recOrder/recOrder/plugin/gui.ui` in `QT Creator` and make your changes. 
 
-Finally, convert the `.ui` to a `.py` file with 
+Next, convert the `.ui` to a `.py` file with 
 ```sh
 pyuic5 -x gui.ui -o gui.py
 ```
 Note: `pyuic5` is installed alongside `PyQt5`, so you can expect to find it installed in your `recOrder` conda environement. 
+
+Finally, change the `gui.py` file's to import `qtpy` instead of `PyQt5` to adhere to [napari plugin best practices](https://napari.org/stable/plugins/best_practices.html#don-t-include-pyside2-or-pyqt5-in-your-plugin-s-dependencies). On macOS, you can modify the file in place with
+```sh
+sed -i '' 's/from PyQt5/from qtpy/g' gui.py
+```
 
 Note: although much of the GUI is specified in the generated `recOrder_ui.py` file, the `main_widget.py` file makes extensive modifications to the GUI.
 
