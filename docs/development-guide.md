@@ -32,6 +32,22 @@
     pip install -e ".[dev]"
     ```
 
+4. Optionally, for the co-development of [`waveorder`](https://github.com/mehta-lab/waveorder) and `recOrder`:
+
+    > Note that `pip` will raise an 'error' complaining that the dependency of `recOrder-napari` has been broken if you do the following.
+    > This does not affect the installation, but can be suppressed by removing [this line](https://github.com/mehta-lab/recOrder/blob/5bc9314a9bacf6f4e235eaffb06c297cf20e4b65/setup.cfg#L40) before installing `waveorder`.
+    > (Just remember to revert the change afterwards!)
+    > We expect a nicer behavior to be possible once we release a stable version of `waveorder`.
+
+    ```sh
+    cd # where you want to clone the repo
+    git clone https://github.com/mehta-lab/waveorder.git
+    pip install ./waveorder -e ".[dev]"
+    ```
+
+    > Importing from a local and/or editable package can cause issues with static code analyzers such due to the absence of the source code from the paths they expect.
+    > VS Code users can refer to [this guide](https://github.com/microsoft/pylance-release/blob/main/TROUBLESHOOTING.md#common-questions-and-issues) to resolve typing warnings.
+
 ## Set up a development environment
 
 ### Code linting
@@ -78,11 +94,13 @@ We use `QT Creator` for large parts of `recOrder`'s GUI. To modify the GUI, inst
 
 Open `/recOrder/recOrder/plugin/gui.ui` in `QT Creator` and make your changes. 
 
-Finally, convert the `.ui` to a `.py` file with 
+Finally, convert the `.ui` to a `.py` file with:
+
 ```sh
 pyuic5 -x gui.ui -o gui.py
 ```
-Note: `pyuic5` is installed alongside `PyQt5`, so you can expect to find it installed in your `recOrder` conda environement. 
+
+Note: `pyuic5` is installed alongside `PyQt5`, so you can expect to find it installed in your `recOrder` conda environement.
 
 Note: although much of the GUI is specified in the generated `recOrder_ui.py` file, the `main_widget.py` file makes extensive modifications to the GUI.
 
