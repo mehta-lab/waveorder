@@ -50,6 +50,9 @@ class MainWidget(QWidget):
         self.ui = gui.Ui_Form()
         self.ui.setupUi(self)
 
+        # Override inital tab focus
+        self.ui.tabWidget.setCurrentIndex(0)
+        
         # Disable buttons until connected to MM
         self._set_buttons_enabled(False)
 
