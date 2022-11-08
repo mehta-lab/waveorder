@@ -16,7 +16,7 @@ def initialize_reconstructor(
     z_step_um=None,
     pad_z=0,
     pixel_size_um=None,
-    bg_correction="local_fit",
+    bg_correction="None",
     n_obj_media=1.0,
     mode="3D",
     use_gpu=False,
