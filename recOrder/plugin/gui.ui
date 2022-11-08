@@ -1016,7 +1016,7 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>590</width>
+            <width>614</width>
             <height>990</height>
            </rect>
           </property>
@@ -1030,85 +1030,6 @@
            <property name="verticalSpacing">
             <number>20</number>
            </property>
-           <item row="0" column="0" colspan="2">
-            <widget class="QGroupBox" name="acquire">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="font">
-              <font>
-               <italic>false</italic>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="title">
-              <string>Acquire</string>
-             </property>
-             <layout class="QGridLayout" name="gridLayout_13">
-              <property name="topMargin">
-               <number>12</number>
-              </property>
-              <property name="verticalSpacing">
-               <number>6</number>
-              </property>
-              <item row="2" column="0">
-               <widget class="QPushButton" name="qbutton_acq_birefringence">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Acquire Birefringence</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="1">
-               <widget class="QPushButton" name="qbutton_acq_phase">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Acquire Phase</string>
-                </property>
-               </widget>
-              </item>
-              <item row="2" column="2">
-               <widget class="QPushButton" name="qbutton_acq_birefringence_phase">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Acquire Birefringence + Phase</string>
-                </property>
-               </widget>
-              </item>
-              <item row="3" column="0" colspan="3">
-               <widget class="QPushButton" name="qbutton_stop_acq">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>STOP</string>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </widget>
-           </item>
            <item row="1" column="0">
             <widget class="QGroupBox" name="acq_settings">
              <property name="sizePolicy">
@@ -1139,11 +1060,27 @@
               <property name="verticalSpacing">
                <number>6</number>
               </property>
-              <item row="4" column="1">
-               <widget class="QComboBox" name="cb_acq_channel">
-                <property name="currentText">
-                 <string/>
+              <item row="3" column="1">
+               <widget class="QComboBox" name="cb_acq_mode">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
                 </property>
+                <property name="focusPolicy">
+                 <enum>Qt::StrongFocus</enum>
+                </property>
+                <item>
+                 <property name="text">
+                  <string>2D</string>
+                 </property>
+                </item>
+                <item>
+                 <property name="text">
+                  <string>3D</string>
+                 </property>
+                </item>
                </widget>
               </item>
               <item row="1" column="0">
@@ -1175,20 +1112,6 @@
               <item row="2" column="2">
                <widget class="QLineEdit" name="le_zstep"/>
               </item>
-              <item row="4" column="0">
-               <widget class="QLabel" name="labe_acq_channel">
-                <property name="text">
-                 <string>BF Channel</string>
-                </property>
-               </widget>
-              </item>
-              <item row="4" column="2">
-               <widget class="QCheckBox" name="chb_phase_from_bf">
-                <property name="text">
-                 <string>Phase From BF</string>
-                </property>
-               </widget>
-              </item>
               <item row="2" column="1">
                <widget class="QLineEdit" name="le_zend"/>
               </item>
@@ -1218,31 +1141,22 @@
                 </property>
                </widget>
               </item>
+              <item row="4" column="1">
+               <widget class="QComboBox" name="cb_acq_channel">
+                <property name="currentText">
+                 <string/>
+                </property>
+               </widget>
+              </item>
+              <item row="4" column="0">
+               <widget class="QLabel" name="labe_acq_channel">
+                <property name="text">
+                 <string>BF Channel</string>
+                </property>
+               </widget>
+              </item>
               <item row="2" column="0">
                <widget class="QLineEdit" name="le_zstart"/>
-              </item>
-              <item row="3" column="1">
-               <widget class="QComboBox" name="cb_acq_mode">
-                <property name="font">
-                 <font>
-                  <italic>false</italic>
-                  <bold>false</bold>
-                 </font>
-                </property>
-                <property name="focusPolicy">
-                 <enum>Qt::StrongFocus</enum>
-                </property>
-                <item>
-                 <property name="text">
-                  <string>2D</string>
-                 </property>
-                </item>
-                <item>
-                 <property name="text">
-                  <string>3D</string>
-                 </property>
-                </item>
-               </widget>
               </item>
              </layout>
             </widget>
@@ -1699,6 +1613,85 @@
              </layout>
             </widget>
            </item>
+           <item row="0" column="0" colspan="2">
+            <widget class="QGroupBox" name="acquire">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="font">
+              <font>
+               <italic>false</italic>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="title">
+              <string>Acquire</string>
+             </property>
+             <layout class="QGridLayout" name="gridLayout_13">
+              <property name="topMargin">
+               <number>12</number>
+              </property>
+              <property name="verticalSpacing">
+               <number>6</number>
+              </property>
+              <item row="2" column="0">
+               <widget class="QPushButton" name="qbutton_acq_ret_ori">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Retardance + Orientation</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="1">
+               <widget class="QPushButton" name="qbutton_acq_phase_from_bf">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Phase From BF</string>
+                </property>
+               </widget>
+              </item>
+              <item row="2" column="2">
+               <widget class="QPushButton" name="qbutton_acq_ret_ori_phase">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Retardance + Orientation + Phase</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0" colspan="3">
+               <widget class="QPushButton" name="qbutton_stop_acq">
+                <property name="font">
+                 <font>
+                  <italic>false</italic>
+                  <bold>false</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>STOP</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
           </layout>
          </widget>
         </widget>
@@ -2127,9 +2120,7 @@
   <tabstop>le_notes_field</tabstop>
   <tabstop>qbutton_push_note</tabstop>
   <tabstop>scrollArea_4</tabstop>
-  <tabstop>qbutton_acq_birefringence</tabstop>
-  <tabstop>qbutton_acq_phase</tabstop>
-  <tabstop>qbutton_acq_birefringence_phase</tabstop>
+  <tabstop>qbutton_acq_ret_ori</tabstop>
   <tabstop>qbutton_stop_acq</tabstop>
   <tabstop>acq_settings</tabstop>
   <tabstop>le_zstart</tabstop>
@@ -2137,7 +2128,6 @@
   <tabstop>le_zstep</tabstop>
   <tabstop>cb_acq_mode</tabstop>
   <tabstop>cb_acq_channel</tabstop>
-  <tabstop>chb_phase_from_bf</tabstop>
   <tabstop>le_save_dir</tabstop>
   <tabstop>qbutton_browse_save_dir</tabstop>
   <tabstop>le_data_save_name</tabstop>

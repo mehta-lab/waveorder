@@ -168,12 +168,10 @@ class MainWidget(QWidget):
         self.ui.qbutton_browse_bg_path.clicked[bool].connect(
             self.browse_acq_bg_path
         )
-        self.ui.qbutton_acq_birefringence.clicked[bool].connect(
-            self.acq_birefringence
-        )
-        self.ui.qbutton_acq_phase.clicked[bool].connect(self.acq_phase)
-        self.ui.qbutton_acq_birefringence_phase.clicked[bool].connect(
-            self.acq_birefringence_phase
+        self.ui.qbutton_acq_ret_ori.clicked[bool].connect(self.acq_ret_ori)
+        self.ui.qbutton_acq_phase_from_bf.clicked[bool].connect(self.acq_phase_from_bf)
+        self.ui.qbutton_acq_ret_ori_phase.clicked[bool].connect(
+            self.acq_ret_ori_phase
         )
         # Commenting for 0.3.0. Consider debugging or deleting for 1.0.0.
         # self.ui.cb_colormap.currentIndexChanged[int].connect(
@@ -374,12 +372,12 @@ class MainWidget(QWidget):
         # Populate acquisition mode tooltips
         acq_tooltips = [
             "Acquires data to estimate parameters in a 2D plane. For birefringence acquisitions, this mode will acquire 2D data. For phase acquisitions, this mode will acquire 3D data.",
-            "Acquires 3D data to estimate parameters in a 3D volume."
+            "Acquires 3D data to estimate parameters in a 3D volume.",
         ]
         for i, tooltip in enumerate(acq_tooltips):
             wrapped_tooltip = "\n".join(textwrap.wrap(tooltip, width=70))
             self.ui.cb_acq_mode.setItemData(i, wrapped_tooltip, Qt.ToolTipRole)
-            
+
         # make sure the top says recOrder and not 'Form'
         self.ui.tabWidget.parent().setObjectName("recOrder")
 
@@ -561,9 +559,9 @@ class MainWidget(QWidget):
             self.ui.qbutton_calibrate,
             self.ui.qbutton_capture_bg,
             self.ui.qbutton_calc_extinction,
-            self.ui.qbutton_acq_birefringence,
-            self.ui.qbutton_acq_phase,
-            self.ui.qbutton_acq_birefringence_phase,
+            self.ui.qbutton_acq_ret_ori,
+            self.ui.qbutton_acq_phase_from_bf,
+            self.ui.qbutton_acq_ret_ori_phase,
             self.ui.qbutton_load_calib,
             self.ui.qbutton_create_overlay,
         ]
@@ -740,6 +738,7 @@ class MainWidget(QWidget):
 
         # define the fields required for the specific acquisition modes.  Matches LineEdit object names
         phase_required = {
+            "recon_wavelength",
             "wavelength",
             "mag",
             "cond_na",
@@ -769,27 +768,8 @@ class MainWidget(QWidget):
 
         # Check phase specific fields
         if mode == "phase":
-
-            # add in extra requirement is user is acquiring PhaseFromBF
-            if self.ui.chb_phase_from_bf.isChecked():
-                cont = self._check_line_edit("recon_wavelength")
-                tab = (
-                    getattr(self.ui, f"le_recon_wavelength")
-                    .parent()
-                    .parent()
-                    .objectName()
-                )
-                if not cont:
-                    raise_error = True
-
             for field in phase_required:
                 cont = self._check_line_edit(field)
-                tab = (
-                    getattr(self.ui, f"le_{field}")
-                    .parent()
-                    .parent()
-                    .objectName()
-                )
                 if not cont:
                     raise_error = True
                 else:
@@ -1951,7 +1931,7 @@ class MainWidget(QWidget):
         self.worker.start()
 
     @Slot(bool)
-    def acq_birefringence(self):
+    def acq_ret_ori(self):
         """
         Wrapper function to acquire birefringence stack/image and plot in napari
         Returns
@@ -1976,7 +1956,7 @@ class MainWidget(QWidget):
         self.worker.start()
 
     @Slot(bool)
-    def acq_phase(self):
+    def acq_phase_from_bf(self):
         """
         Wrapper function to acquire phase stack and plot in napari
         """
@@ -1984,12 +1964,7 @@ class MainWidget(QWidget):
         self._check_requirements_for_acq("phase")
 
         # Init worker and thread
-        if self.ui.chb_phase_from_bf.isChecked():
-            self.worker = BFAcquisitionWorker(self)
-        else:
-            self.worker = PolarizationAcquisitionWorker(
-                self, self.calib, "phase"
-            )
+        self.worker = BFAcquisitionWorker(self)
 
         # Connect Handlers
         self.worker.phase_image_emitter.connect(self.handle_phase_image_update)
@@ -2004,7 +1979,7 @@ class MainWidget(QWidget):
         self.worker.start()
 
     @Slot(bool)
-    def acq_birefringence_phase(self):
+    def acq_ret_ori_phase(self):
         """
         Wrapper function to acquire both birefringence and phase stack and plot in napari
         """

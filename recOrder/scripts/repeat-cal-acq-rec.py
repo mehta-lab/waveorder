@@ -136,7 +136,7 @@ def main():
             app.enter_bg_correction()
             app.save_name = f"cal-{cal_repeat}-bkg-{bkg_repeat}"
             app.enter_acq_bg_path()
-            app.acq_birefringence()
+            app.acq_ret_ori()
             time.sleep(15)
 
 
