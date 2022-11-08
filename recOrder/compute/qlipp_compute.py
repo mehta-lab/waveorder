@@ -16,7 +16,7 @@ def initialize_reconstructor(
     z_step_um=None,
     pad_z=0,
     pixel_size_um=None,
-    bg_correction="local_fit",
+    bg_correction="None",
     n_obj_media=1.0,
     mode="3D",
     use_gpu=False,
@@ -193,7 +193,6 @@ def initialize_reconstructor(
 
     print("Initializing Reconstructor...")
     start_time = time.time()
-    print(bg_correction)
     recon = waveorder_microscopy(
         img_dim=image_dim,
         lambda_illu=lambda_illu,
