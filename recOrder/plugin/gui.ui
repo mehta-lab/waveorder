@@ -713,8 +713,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>550</width>
-                    <height>302</height>
+                    <width>102</width>
+                    <height>298</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -774,8 +774,8 @@
                    <rect>
                     <x>0</x>
                     <y>0</y>
-                    <width>550</width>
-                    <height>302</height>
+                    <width>111</width>
+                    <height>258</height>
                    </rect>
                   </property>
                   <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -1477,7 +1477,7 @@
               <item row="11" column="0">
                <widget class="QLabel" name="label_orientation_offset">
                 <property name="text">
-                 <string>90 Degree Offset  </string>
+                 <string>Orientation Offset (90 deg)</string>
                 </property>
                </widget>
               </item>
