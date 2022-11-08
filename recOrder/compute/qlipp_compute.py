@@ -193,7 +193,6 @@ def initialize_reconstructor(
 
     print("Initializing Reconstructor...")
     start_time = time.time()
-    print(bg_correction)
     recon = waveorder_microscopy(
         img_dim=image_dim,
         lambda_illu=lambda_illu,
