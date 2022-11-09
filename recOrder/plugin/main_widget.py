@@ -22,6 +22,7 @@ from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
 from napari.utils.notifications import show_warning
+from napari.qt.threading import create_worker
 from numpydoc.docscrape import NumpyDocString
 from packaging import version
 import numpy as np
@@ -1064,23 +1065,28 @@ class MainWidget(QWidget):
         self._add_or_update_image_layer(value[0], "Background Retardance")
         self._add_or_update_image_layer(value[1], "Background Orientation")
 
+    def _draw_bire_overlay(self, overlay):
+        self._add_or_update_image_layer(
+            overlay, "BirefringenceOverlay" + self.acq_mode, cmap="rgb"
+        )
+
     @Slot(object)
     def handle_bire_image_update(self, value: NDArray):
-        for i, channel in enumerate(("Retardance", "Orientation")):
-            name = channel + self.acq_mode
-            cmap = "gray" if channel != "Orientation" else "hsv"
-            self._add_or_update_image_layer(value[i], name, cmap=cmap)
-        # draw overlay
-        overlay = ret_ori_overlay(
+        # generate overlay in a separate thread
+        overlay_worker = create_worker(
+            ret_ori_overlay,
             retardance=value[0],
             orientation=value[1],
             ret_max=np.percentile(value[0], 99.99),
             mode=self.acq_mode,
             cmap=self.colormap,
         )
-        self._add_or_update_image_layer(
-            overlay, "BirefringenceOverlay", cmap="rgb"
-        )
+        overlay_worker.returned.connect(self._draw_bire_overlay)
+        overlay_worker.start()
+        for i, channel in enumerate(("Retardance", "Orientation")):
+            name = channel + self.acq_mode
+            cmap = "gray" if channel != "Orientation" else "hsv"
+            self._add_or_update_image_layer(value[i], name, cmap=cmap)
 
     @Slot(object)
     def handle_phase_image_update(self, value):
