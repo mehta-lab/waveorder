@@ -25,6 +25,7 @@ from napari.utils.notifications import show_warning
 from numpydoc.docscrape import NumpyDocString
 from packaging import version
 import numpy as np
+from numpy.typing import NDArray
 import os
 from os.path import dirname
 import json
@@ -52,7 +53,7 @@ class MainWidget(QWidget):
 
         # Override inital tab focus
         self.ui.tabWidget.setCurrentIndex(0)
-        
+
         # Disable buttons until connected to MM
         self._set_buttons_enabled(False)
 
@@ -169,7 +170,9 @@ class MainWidget(QWidget):
             self.browse_acq_bg_path
         )
         self.ui.qbutton_acq_ret_ori.clicked[bool].connect(self.acq_ret_ori)
-        self.ui.qbutton_acq_phase_from_bf.clicked[bool].connect(self.acq_phase_from_bf)
+        self.ui.qbutton_acq_phase_from_bf.clicked[bool].connect(
+            self.acq_phase_from_bf
+        )
         self.ui.qbutton_acq_ret_ori_phase.clicked[bool].connect(
             self.acq_ret_ori_phase
         )
@@ -1021,43 +1024,52 @@ class MainWidget(QWidget):
                     textcoords="offset points",
                 )
 
+    def _add_or_update_image_layer(
+        self,
+        image: NDArray,
+        name: str,
+        cmap: str = "gray",
+        move_to_top: bool = True,
+    ):
+        """Add image layer of the given name if it does not exist, update existing layer otherwise.
+
+        Parameters
+        ----------
+        image : NDArray
+            image intensity values
+        name : str
+            layer key name in napari layers list
+        cmap : str, optional
+            colormap to render in, by default "gray", use "rgb" for RGB images
+        move_to_top : bool, optional
+            whether to move the updated layer to the top of layers list, by default True
+        """
+        if name in self.viewer.layers:
+            self.viewer.layers[name].data = image
+            if move_to_top:
+                src_index = self.viewer.layers.index(name)
+                self.viewer.layers.move(src_index, dest_index=-1)
+        else:
+            if cmap == "rgb":
+                self.viewer.add_image(image, name=name, rgb=True)
+            else:
+                self.viewer.add_image(image, name=name, colormap=cmap)
+
     @Slot(object)
     def handle_bg_image_update(self, value):
-
-        if "Background Images" in self.viewer.layers:
-            self.viewer.layers["Background Images"].data = value
-        else:
-            self.viewer.add_image(
-                value, name="Background Images", colormap="gray"
-            )
+        self._add_or_update_image_layer(value, "Background Images")
 
     @Slot(object)
     def handle_bg_bire_image_update(self, value):
-
-        # Separate Background Retardance and Background Orientation
-        # Add new layer if none exists, otherwise update layer data
-        if "Background Retardance" in self.viewer.layers:
-            self.viewer.layers["Background Retardance"].data = value[0]
-        else:
-            self.viewer.add_image(
-                value[0], name="Background Retardance", colormap="gray"
-            )
-
-        if "Background Orientation" in self.viewer.layers:
-            self.viewer.layers["Background Orientation"].data = value[1]
-        else:
-            self.viewer.add_image(
-                value[1], name="Background Orientation", colormap="gray"
-            )
+        self._add_or_update_image_layer(value[0], "Background Retardance")
+        self._add_or_update_image_layer(value[1], "Background Orientation")
 
     @Slot(object)
     def handle_bire_image_update(self, value):
-
         channel_names = {
             "Orientation": 1,
             "Retardance": 0,
         }
-
         # Compute Overlay if birefringence acquisition is 2D
         if self.acq_mode == "2D":
             channel_names["BirefringenceOverlay"] = None
@@ -1067,25 +1079,13 @@ class MainWidget(QWidget):
                 ret_max=np.percentile(value[0], 99.99),
                 cmap=self.colormap,
             )
-
         for key, chan in channel_names.items():
+            name = key + self.acq_mode
             if key == "BirefringenceOverlay":
-                if key + self.acq_mode in self.viewer.layers:
-                    self.viewer.layers[key + self.acq_mode].data = overlay
-                else:
-                    self.viewer.add_image(
-                        overlay, name=key + self.acq_mode, rgb=True
-                    )
+                self._add_or_update_image_layer(overlay, name, cmap="rgb")
             else:
-                if key + self.acq_mode in self.viewer.layers:
-                    self.viewer.layers[key + self.acq_mode].data = value[chan]
-                else:
-                    cmap = "gray" if key != "Orientation" else "hsv"
-                    self.viewer.add_image(
-                        value[chan],
-                        name=key + self.acq_mode,
-                        colormap=cmap,
-                    )
+                cmap = "gray" if key != "Orientation" else "hsv"
+                self._add_or_update_image_layer(value[chan], name, cmap=cmap)
 
     @Slot(object)
     def handle_phase_image_update(self, value):
@@ -1093,10 +1093,7 @@ class MainWidget(QWidget):
         name = "Phase2D" if self.acq_mode == "2D" else "Phase3D"
 
         # Add new layer if none exists, otherwise update layer data
-        if name in self.viewer.layers:
-            self.viewer.layers[name].data = value
-        else:
-            self.viewer.add_image(value, name=name, colormap="gray")
+        self._add_or_update_image_layer(value, name)
 
         if "Phase" not in [
             self.ui.cb_saturation.itemText(i)
