@@ -1065,27 +1065,22 @@ class MainWidget(QWidget):
         self._add_or_update_image_layer(value[1], "Background Orientation")
 
     @Slot(object)
-    def handle_bire_image_update(self, value):
-        channel_names = {
-            "Orientation": 1,
-            "Retardance": 0,
-        }
-        # Compute Overlay if birefringence acquisition is 2D
-        if self.acq_mode == "2D":
-            channel_names["BirefringenceOverlay"] = None
-            overlay = ret_ori_overlay(
-                retardance=value[0],
-                orientation=value[1],
-                ret_max=np.percentile(value[0], 99.99),
-                cmap=self.colormap,
-            )
-        for key, chan in channel_names.items():
-            name = key + self.acq_mode
-            if key == "BirefringenceOverlay":
-                self._add_or_update_image_layer(overlay, name, cmap="rgb")
-            else:
-                cmap = "gray" if key != "Orientation" else "hsv"
-                self._add_or_update_image_layer(value[chan], name, cmap=cmap)
+    def handle_bire_image_update(self, value: NDArray):
+        for i, channel in enumerate(("Retardance", "Orientation")):
+            name = channel + self.acq_mode
+            cmap = "gray" if channel != "Orientation" else "hsv"
+            self._add_or_update_image_layer(value[i], name, cmap=cmap)
+        # draw overlay
+        overlay = ret_ori_overlay(
+            retardance=value[0],
+            orientation=value[1],
+            ret_max=np.percentile(value[0], 99.99),
+            mode=self.acq_mode,
+            cmap=self.colormap,
+        )
+        self._add_or_update_image_layer(
+            overlay, "BirefringenceOverlay", cmap="rgb"
+        )
 
     @Slot(object)
     def handle_phase_image_update(self, value):
