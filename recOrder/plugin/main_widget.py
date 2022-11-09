@@ -1062,7 +1062,9 @@ class MainWidget(QWidget):
     @Slot(object)
     def handle_bg_bire_image_update(self, value):
         self._add_or_update_image_layer(value[0], "Background Retardance")
-        self._add_or_update_image_layer(value[1], "Background Orientation")
+        self._add_or_update_image_layer(
+            value[1], "Background Orientation", cmap="hsv"
+        )
 
     @Slot(object)
     def handle_bire_image_update(self, value):
