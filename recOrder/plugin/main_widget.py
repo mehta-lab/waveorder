@@ -21,7 +21,7 @@ from recOrder.io.utils import ret_ori_overlay
 from waveorder.io.reader import WaveorderReader
 from pathlib import Path, PurePath
 from napari import Viewer
-from napari.utils.notifications import show_warning
+from napari.utils.notifications import show_warning, show_info
 from napari.qt.threading import create_worker
 from numpydoc.docscrape import NumpyDocString
 from packaging import version
@@ -1087,6 +1087,8 @@ class MainWidget(QWidget):
             name = channel + self.acq_mode
             cmap = "gray" if channel != "Orientation" else "hsv"
             self._add_or_update_image_layer(value[i], name, cmap=cmap)
+        if self.acq_mode == "3D":
+            show_info("Generating 3D overlay. This might take a moment...")
 
     @Slot(object)
     def handle_phase_image_update(self, value):
