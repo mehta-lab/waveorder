@@ -19,6 +19,7 @@ from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.metadata_reader import MetadataReader
 from recOrder.io.utils import ret_ori_overlay
 from waveorder.io.reader import WaveorderReader
+from waveorder.waveorder_reconstructor import waveorder_microscopy
 from pathlib import Path, PurePath
 from napari import Viewer
 from napari.utils.notifications import show_warning, show_info
@@ -1117,7 +1118,7 @@ class MainWidget(QWidget):
             self.ui.cb_value.addItem("Retardance")
 
     @Slot(object)
-    def handle_qlipp_reconstructor_update(self, value):
+    def handle_qlipp_reconstructor_update(self, value: waveorder_microscopy):
         # Saves phase reconstructor to be re-used if possible
         self.phase_reconstructor = value
 
