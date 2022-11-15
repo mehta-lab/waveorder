@@ -32,6 +32,7 @@ from os.path import dirname
 import json
 import logging
 import textwrap
+import yaml
 
 
 class MainWidget(QWidget):
@@ -2013,6 +2014,45 @@ class MainWidget(QWidget):
 
         # Start Thread
         self.worker.start()
+
+    @Slot()
+    def _dump_gui_state(self, save_dir):
+        gui_state = {
+            "Run Calibration": {
+                "Swing": self.swing,
+                "Wavelength": self.wavelength,
+                "Illumination Scheme": self.calib_scheme,
+                "Calibration Mode": self.calib_mode,
+                "Config Group": self.config_group,
+            },
+            "Capture Background": {
+                "Background Folder Name": self.bg_folder_name,
+                "Number of Images to Average": self.n_avg,
+            },
+            "Acquisition Settings": {
+                "Z Start": self.z_start,
+                "Z End": self.z_end,
+                "Z Step": self.z_step,
+                "Acquisition Mode": self.acq_mode,
+                "BF Channel": self.ui.cb_acq_channel.itemText(
+                    self.ui.cb_acq_channel.currentIndex()
+                ),
+            },
+            "General Reconstruction Settings": {
+                "Background Correction": self.bg_option,
+                "Background Path": self.current_bg_path,
+                "Wavelength": self.ui.le_recon_wavelength.text(),
+                "Objective NA": self.obj_na,
+                "Condenser NA": self.cond_na,
+                "Camera Pixel Size": self.ps,
+                "RI of Objective Media": self.n_media,
+                "Magnification": self.mag,
+                "Orientation Offset": self.orientation_offset
+            },
+        }
+        save_path = os.path.join(save_dir, 'gui_state.yml')
+        with open(save_path, 'w') as f:
+            yaml.dump(gui_state, f, default_flow_style=False)
 
     @Slot(bool)
     def save_config(self):
