@@ -894,7 +894,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         if self.mode == "all":
             if self.calib_window.acq_mode == "2D":
                 birefringence = reconstruct_qlipp_birefringence(
-                    stokes[:, stokes.shape[1] // 2, :, :], recon
+                    np.mean(stokes, axis=1), recon
                 )
             else:
                 birefringence = reconstruct_qlipp_birefringence(stokes, recon)
