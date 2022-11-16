@@ -34,6 +34,11 @@ import logging
 import textwrap
 import yaml
 
+# type hint/check
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from _typeshed import StrOrBytesPath
+
 
 class MainWidget(QWidget):
     """
@@ -136,7 +141,9 @@ class MainWidget(QWidget):
         )
 
         # This parameter seems to be wired differently than others...investigate later
-        self.ui.le_recon_wavelength.editingFinished.connect(self.enter_recon_wavelength)
+        self.ui.le_recon_wavelength.editingFinished.connect(
+            self.enter_recon_wavelength
+        )
         self.ui.le_recon_wavelength.setText("532")
         self.enter_recon_wavelength()
 
@@ -2015,8 +2022,14 @@ class MainWidget(QWidget):
         # Start Thread
         self.worker.start()
 
-    @Slot()
-    def _dump_gui_state(self, save_dir):
+    def _dump_gui_state(self, save_dir: StrOrBytesPath):
+        """Collect and save the current GUI settings to a YAML file.
+
+        Parameters
+        ----------
+        save_dir : str | bytes | PathLike[str] | PathLike[bytes]
+            directory to save
+        """
         gui_state = {
             "Run Calibration": {
                 "Swing": self.swing,
@@ -2047,11 +2060,11 @@ class MainWidget(QWidget):
                 "Camera Pixel Size": self.ps,
                 "RI of Objective Media": self.n_media,
                 "Magnification": self.mag,
-                "Orientation Offset": self.orientation_offset
+                "Orientation Offset": self.orientation_offset,
             },
         }
-        save_path = os.path.join(save_dir, 'gui_state.yml')
-        with open(save_path, 'w') as f:
+        save_path = os.path.join(save_dir, "gui_state.yml")
+        with open(save_path, "w") as f:
             yaml.dump(gui_state, f, default_flow_style=False)
 
     @Slot(bool)
