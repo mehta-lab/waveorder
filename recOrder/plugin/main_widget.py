@@ -1,3 +1,6 @@
+# TODO: remove in Python 3.11
+from __future__ import annotations
+
 from recOrder.calib.Calibration import QLIPP_Calibration, LC_DEVICE_NAME
 from pycromanager import Bridge
 from qtpy.QtCore import Slot, Signal, Qt
@@ -2054,7 +2057,7 @@ class MainWidget(QWidget):
             "General Reconstruction Settings": {
                 "Background Correction": self.bg_option,
                 "Background Path": self.current_bg_path,
-                "Wavelength": self.ui.le_recon_wavelength.text(),
+                "Wavelength": self.recon_wavelength,
                 "Objective NA": self.obj_na,
                 "Condenser NA": self.cond_na,
                 "Camera Pixel Size": self.ps,

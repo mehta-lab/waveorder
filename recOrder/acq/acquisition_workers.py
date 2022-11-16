@@ -144,6 +144,7 @@ class BFAcquisitionWorker(WorkerBase):
         self._check_ram()
         logging.info("Running Acquisition...")
         self._check_abort()
+        self.calib_window._dump_gui_state(self.snap_dir)
 
         channel_idx = self.calib_window.ui.cb_acq_channel.currentIndex()
         channel = self.calib_window.ui.cb_acq_channel.itemText(channel_idx)
@@ -598,6 +599,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         """
         self._check_ram()
         logging.info("Running Acquisition...")
+        self.calib_window._dump_gui_state(self.snap_dir)
 
         # List the Channels to acquire, if 5-state then append 5th channel
         channels = ["State0", "State1", "State2", "State3"]
