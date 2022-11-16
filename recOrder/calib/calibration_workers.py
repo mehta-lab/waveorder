@@ -340,9 +340,9 @@ class BackgroundCaptureWorker(
         recon = initialize_reconstructor(
             "birefringence",
             image_dim=img_dim,
-            calibration_scheme=self.calib_window.calib_scheme,
-            wavelength_nm=self.calib_window.wavelength,
-            swing=self.calib_window.swing,
+            calibration_scheme=self.calib.calib_scheme,
+            wavelength_nm=self.calib.wavelength,
+            swing=self.calib.swing,
             bg_correction="None",
         )
 
@@ -359,7 +359,7 @@ class BackgroundCaptureWorker(
 
         # Convert retardance to nm
         self.retardance = (
-            self.birefringence[0] / (2 * np.pi) * self.calib_window.wavelength
+            self.birefringence[0] / (2 * np.pi) * self.calib.wavelength
         )
 
         # Save metadata file and emit imgs
