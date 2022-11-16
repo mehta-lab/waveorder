@@ -39,6 +39,8 @@ import yaml
 
 # type hint/check
 from typing import TYPE_CHECKING
+
+# avoid runtime import error
 if TYPE_CHECKING:
     from _typeshed import StrOrBytesPath
 
