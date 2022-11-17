@@ -14,6 +14,7 @@ def initialize_reconstructor(
     mag=None,
     n_slices=None,
     z_step_um=None,
+    in_focus_slice=None,
     pad_z=0,
     pixel_size_um=None,
     bg_correction="None",
@@ -58,6 +59,10 @@ def initialize_reconstructor(
 
         z_step_um          : float
                             z step size of the image space
+
+        in_focus_slice     : int or None
+                            index of the in-focus z slice used for 2D-from-3D reconstructions
+                            if None, the middle z slice is used as the in focus slice
 
         pad_z             : float
                             how many padding slices to add for phase computation
@@ -148,8 +153,12 @@ def initialize_reconstructor(
     lambda_illu = wavelength_nm / 1000 if wavelength_nm else None
     n_defocus = n_slices if n_slices else 0
     z_step_um = 0 if not z_step_um else z_step_um
+
+    if in_focus_slice is None:
+        in_focus_slice = n_defocus // 2
+
     z_defocus = (
-        -(np.r_[:n_defocus] - n_defocus // 2) * z_step_um
+        -(np.r_[:n_defocus] - in_focus_slice) * z_step_um
     )  # assumes stack starts from the bottom
     ps = pixel_size_um / mag if pixel_size_um else None
     cali = True
