@@ -289,11 +289,7 @@ class BFAcquisitionWorker(WorkerBase):
         logging.debug("Reconstructing...")
         self._check_abort()
 
-        regularizer = (
-            "Tikhonov"
-            if self.calib_window.ui.cb_phase_denoiser.currentIndex() == 0
-            else "TV"
-        )
+        regularizer = self.calib_window.phase_regularizer
         reg = float(self.calib_window.ui.le_phase_strength.text())
 
         # Perform deconvolution
@@ -883,11 +879,8 @@ class PolarizationAcquisitionWorker(WorkerBase):
         birefringence = None
         phase = None
 
-        regularizer = (
-            "Tikhonov"
-            if self.calib_window.ui.cb_phase_denoiser.currentIndex() == 0
-            else "TV"
-        )
+        regularizer = self.calib_window.phase_regularizer
+
         reg = float(self.calib_window.ui.le_phase_strength.text())
 
         # reconstruct both phase and birefringence

@@ -1397,12 +1397,14 @@ class MainWidget(QWidget):
     def enter_phase_denoiser(self):
         state = self.ui.cb_phase_denoiser.currentIndex()
         if state == 0:
+            self.phase_regularizer = "Tikhonov"
             self.ui.label_itr.setHidden(True)
             self.ui.label_phase_rho.setHidden(True)
             self.ui.le_rho.setHidden(True)
             self.ui.le_itr.setHidden(True)
 
         elif state == 1:
+            self.phase_regularizer = "TV"
             self.ui.label_itr.setHidden(False)
             self.ui.label_phase_rho.setHidden(False)
             self.ui.le_rho.setHidden(False)
@@ -2067,10 +2069,20 @@ class MainWidget(QWidget):
                 "Magnification": self.mag,
                 "Orientation Offset": self.orientation_offset,
             },
+            "Phase Reconstruction Settings": {
+                "Z Padding": self.pad_z,
+                "Regularizer": self.phase_regularizer,
+                "Strength": float(self.ui.le_phase_strength.text()),
+            },
         }
+        # TV-specific parameters
+        if self.phase_regularizer == "TV":
+            gui_state["Phase Reconstruction Settings"]["Rho"] = float(self.ui.le_rho.text())
+            gui_state["Phase Reconstruction Settings"]["Iterations"] = int(self.ui.le_itr.text())
+        # save in YAML
         save_path = os.path.join(save_dir, "gui_state.yml")
         with open(save_path, "w") as f:
-            yaml.dump(gui_state, f, default_flow_style=False)
+            yaml.dump(gui_state, f, default_flow_style=False, sort_keys=False)
 
     @Slot(bool)
     def save_config(self):
