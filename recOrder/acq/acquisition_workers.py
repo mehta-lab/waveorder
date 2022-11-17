@@ -254,7 +254,7 @@ class BFAcquisitionWorker(WorkerBase):
             self._check_abort()
 
             # compute new reconstructor if the old reconstructor properties have been modified
-            if self._reconstructor_changed():
+            if self._reconstructor_changed(stack.shape):
                 logging.debug(
                     "Reconstruction settings changed, updating reconstructor"
                 )
@@ -383,18 +383,20 @@ class BFAcquisitionWorker(WorkerBase):
         current_meta["recOrder"] = meta
         writer.store.attrs.put(current_meta)
 
-    def _reconstructor_changed(self):
-        """
-        Function to check if the reconstructor has changed from the previous one in memory.
+    def _reconstructor_changed(self, stack_shape: tuple):
+        """Function to check if the reconstructor has changed from the previous one in memory.
         Serves to check if the worker attributes and reconstructor attributes have diverged.
+
+        Parameters
+        ----------
+        stack_shape : tuple
+            shape of the stack array to reconstruct
 
         Returns
         -------
-
+        bool
+            whether a new reconstructor should be initialized
         """
-
-        changed = None
-
         # Attributes that are directly equivalent to worker attributes
         attr_list = {
             "acq_mode": "phase_deconv",
@@ -403,7 +405,6 @@ class BFAcquisitionWorker(WorkerBase):
             "use_gpu": "use_gpu",
             "gpu_id": "gpu_id",
         }
-
         # attributes that are modified upon passing them to reconstructor
         attr_modified_list = {
             "obj_na": "NA_obj",
@@ -413,60 +414,40 @@ class BFAcquisitionWorker(WorkerBase):
             "swing": "chi",
             "ps": "ps",
         }
-
         self._check_abort()
+        old_recon = self.calib_window.phase_reconstructor
+        # check if X/Y shape has changed
+        if (old_recon.N, old_recon.M) != stack_shape[-2:]:
+            return True
         # check if equivalent attributes have diverged
         for key, value in attr_list.items():
-            if getattr(self.calib_window, key) != getattr(
-                self.calib_window.phase_reconstructor, value
-            ):
-                changed = True
-                break
+            if getattr(self.calib_window, key) != getattr(old_recon, value):
+                return True
+        # modify attributes to be equivalent and check for divergence
+        for key, value in attr_modified_list.items():
+            if key == "wavelength":
+                if (
+                    self.calib_window.wavelength
+                    * 1e-3
+                    / self.calib_window.n_media
+                    != old_recon.lambda_illu
+                ):
+                    return True
+            elif key == "n_slices":
+                if getattr(self, key) != getattr(old_recon, value):
+                    return True
+            elif key == "ps":
+                if getattr(self.calib_window, key) / float(
+                    self.calib_window.mag
+                ) != getattr(old_recon, value):
+                    return True
             else:
-                changed = False
-
-        if not changed:
-            # modify attributes to be equivalent and check for divergence
-            for key, value in attr_modified_list.items():
-                if key == "wavelength":
-                    if (
-                        self.calib_window.recon_wavelength
-                        * 1e-3
-                        / self.calib_window.n_media
-                        != self.calib_window.phase_reconstructor.lambda_illu
-                    ):
-                        changed = True
-                        break
-                    else:
-                        changed = False
-                elif key == "n_slices":
-                    if getattr(self, key) != getattr(
-                        self.calib_window.phase_reconstructor, value
-                    ):
-                        changed = True
-                        break
-                    else:
-                        changed = False
-
-                elif key == "ps":
-                    if getattr(self.calib_window, key) / float(
-                        self.calib_window.mag
-                    ) != getattr(self.calib_window.phase_reconstructor, value):
-                        changed = True
-                        break
-                    else:
-                        changed = False
-                else:
-                    if getattr(
-                        self.calib_window, key
-                    ) / self.calib_window.n_media != getattr(
-                        self.calib_window.phase_reconstructor, value
-                    ):
-                        changed = True
-                    else:
-                        changed = False
-
-        return changed
+                if getattr(
+                    self.calib_window, key
+                ) / self.calib_window.n_media != getattr(old_recon, value):
+                    return True
+        # not changed
+        return False
 
     def _cleanup_acq(self):
 
