@@ -234,6 +234,7 @@ class MainWidget(QWidget):
         self.ui.cb_phase_denoiser.currentIndexChanged[int].connect(
             self.enter_phase_denoiser
         )
+        self.enter_phase_denoiser()
 
         ## Initialize logging
         log_box = QtLogger(self.ui.te_log)
