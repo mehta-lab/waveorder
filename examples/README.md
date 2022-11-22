@@ -19,7 +19,7 @@ Finally, modify the script to process your data. Start by loading your data (our
 
 We recommend prototyping a reconstruction with a single position and time point. You may need to test several regularization parameters to find a value that yields results that aren't too noisy or too smooth. 
 
-After prototyping, the script can be applied to multiple datasets with a python `for` loop (slowest), `multiprocessing` (faster), or `slurm` (fastest). 
+After prototyping, the script can be applied to multiple datasets with a python `for` loop (slowest), `multiprocessing` (faster), or batch processing with an HPC scheduler e.g. `slurm` (fastest). 
 
 ## FAQ
 Q: Which script should I use?
