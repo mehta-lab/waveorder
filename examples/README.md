@@ -26,8 +26,8 @@ Q: Which script should I use?
 
 A: If you are reconstructed data acquired with calibrated liquid-crystal polarizers, use `recon-qlipp.py`. Otherwise, you will need to decide between a 3D or 2D phase reconstruction. 
 
-If your downstream processing requires 3D information or if you're unsure, then you should use `3D-bf-to-3D-phase.py`. If your sample is very thin compared to the depth of field of the microscope, if you're in a noise-limited regime, or if your downstream processing requires 2D phase information, then you should use `3D-bf-to-2D-phase.py`. Empirically, we have found that `3D-bf-to-2D-phase.py` reduces the noise in our reconstructions because it uses 3D information to formulate a single phase estimate for each pixel. 
+If your downstream processing requires 3D information or if you're unsure, then you should use `3D-bf-to-3D-phase.py`. If your sample is very thin compared to the depth of field of the microscope, if you're in a noise-limited regime, or if your downstream processing requires 2D phase information, then you should use `3D-bf-to-2D-phase.py`. Empirically, we have found that `3D-bf-to-2D-phase.py` reduces the noise in our reconstructions because it uses 3D information to make a single phase estimate for each pixel. 
 
 Q: What regularization parameter should I use?
 
-We recommend testing over a few orders of magnitude and choosing a result that isn't too noisy or too smooth.
+We recommend starting with the defaults then testing over a few orders of magnitude and choosing a result that isn't too noisy or too smooth.
