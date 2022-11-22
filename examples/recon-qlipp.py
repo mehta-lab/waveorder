@@ -20,19 +20,12 @@ data = np.random.random((4, 16, 256, 256))  # (C, Z, Y, X)
 C, Z, Y, X = data.shape
 bg_data = np.random.random((4, 256, 256))  # (C, Y, X)
 
-# Option 2: use test data or previously acquired data.
-# For test data, use this link to download from Zenodo,
-# https://zenodo.org/record/6983916/files/recOrder_test_data.zip?download=1
-# unzip the folder, and modify test_data_root to point to the unzipped folder.
-# Uncomment the next 8 lines then run this script.
-# test_data_root = "/Users/talon.chandler/Downloads/recOrder_test_data/"
-# dataset = "2022_08_04_recOrder_pytest_20x_04NA/"
-# reader = WaveorderReader(
-#    test_data_root + dataset + "2T_3P_16Z_128Y_256X_Kazansky_1"
-# )
-# data = reader.get_array(0)[0, ...]
+# Option 2: load from file
+# reader = WaveorderReader('/path/to/ome-tiffs/or/zarr/store/')
+# position, time = 0, 0
+# data = reader.get_array(position)[time, ...]
 # C, Z, Y, X = data.shape
-# bg_data = load_bg(test_data_root + dataset + "BG/", height=Y, width=X)
+# bg_data = load_bg("/path/to/recorder/BG", height=Y, width=X)
 
 ## Set up a reconstructor.
 reconstructor_args = {
@@ -47,7 +40,7 @@ reconstructor_args = {
     "NA_obj": 0.4,  # numerical aperture of objective
     "NA_illu": 0.2,  # numerical aperture of condenser
     "n_obj_media": 1.0,  # refractive index of objective immersion media
-    "pad_z": 0,  # slices to pad for phase reconstruction boundary artifacts
+    "pad_z": 5,  # slices to pad for phase reconstruction boundary artifacts
     "bg_correction": "local_fit",  # BG correction method: "None", "local_fit", "global"
     "mode": "3D",  # phase reconstruction mode, "2D" or "3D"
     "use_gpu": False,
@@ -107,6 +100,7 @@ writer.write(phase3D, p=0, t=0, c=0, z=slice(0, Z))
 # These lines opens the reconstructed images
 # Alternatively, drag and drop the zarr store into napari and use the recOrder-napari reader.
 v = napari.Viewer()
+v.add_image(data)
 v.add_image(birefringence)
 v.add_image(phase3D)
 napari.run()
