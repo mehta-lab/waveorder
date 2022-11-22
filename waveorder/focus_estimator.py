@@ -7,7 +7,7 @@ def estimate_brightfield_focus(array3D, pixel_size, lambda_ill, NA_det):
 
     Parameters
     ----------
-    array3D : np.arrayf
+    array3D : np.array
         Brightfield stack in (Z, Y, X) order.
         Requires len(3d_array.shape) == 3
     pixel_size : float
