@@ -48,7 +48,7 @@ def estimate_brightfield_focus(array3D, pixel_size, lambda_ill, NA_det):
 
     # Calculate midband mask
     cutoff = 2 * NA_det / lambda_ill
-    midband_mask = np.logical_and(frr > cutoff / 8, frr < cutoff / 3)
+    midband_mask = np.logical_and(frr > cutoff / 8, frr < cutoff / 4)
 
     # Return slice with most power in midband
     midband_sum = np.sum(xy_abs_fft[:, midband_mask], axis=1)
