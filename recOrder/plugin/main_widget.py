@@ -896,11 +896,13 @@ class MainWidget(QWidget):
                     )
                     config_group_found = True
                 self.ui.cb_config_group.addItem(group)
-            # not entirely sure what this part does, but I left it in
-            # I think it tried to find a channel such as 'BF'
+
+            # Populate the BF channel list with presets that contain any of these keywords
+            bf_keywords = ["BF", "bf", "Bf", "Brightfield", "brightfield"]
             for ch in config_list:
-                if ch not in self.calib_channels:
+                if any([keyword in ch for keyword in bf_keywords]):
                     self.ui.cb_acq_channel.addItem(ch)
+
         if not config_group_found:
             msg = (
                 f"No config group contains channels {self.calib_channels}. "
