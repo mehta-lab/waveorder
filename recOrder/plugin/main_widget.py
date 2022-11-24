@@ -897,9 +897,8 @@ class MainWidget(QWidget):
                     config_group_found = True
                 self.ui.cb_config_group.addItem(group)
 
-            # Populate the BF channel list with presets that contain any of these keywords
             # Populate the acquisition "BF channel" list with presets that contain any of these keywords
-            bf_keywords = ["bf", "brightfield", "bright", "labelfree", "label-free", "lf", "label", ]
+            bf_keywords = ["bf", "brightfield", "bright", "labelfree", "label-free", "lf", "label"]
             for ch in config_list:
                 if any([keyword.lower() in ch.lower() for keyword in bf_keywords]):
                     self.ui.cb_acq_channel.addItem(ch)
