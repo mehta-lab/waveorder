@@ -98,6 +98,11 @@ def initialize_reconstructor(
 
     anisotropy_only = False
 
+    if NA_obj > n_obj_media:
+        raise ValueError("Parameters are non-physical: NA_obj > n_obj_media")
+    if NA_illu > n_obj_media:
+        raise ValueError("Parameters are non-physical: NA_illu > n_obj_media")
+
     if pipeline == "QLIPP" or pipeline == "PhaseFromBF":
 
         if not NA_obj:
