@@ -54,9 +54,17 @@ Add 5 presets to this group named `State0`, `State1`, `State2`, `State3`, and `S
 
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/create_preset.png)
 
+### (Optional) Enable "Phase From BF" acquisition
+
+If you would like to reconstruct phase from brightfield, add a `Micromanager` preset with brightfield properties (e.g. moving the polarization analyzer out the light path) and give the preset a name that contains one of the following case-insensitive keywords:
+
+`["bf", "brightfield", "bright", "labelfree", "label-free", "lf", "label", "phase, "ph"]`
+
+In `recOrder` you can select this preset using the `Acquisition Settings > BF Channel` dropdown menu. 
+
 ### Enable port access
 
-Finally, enable port access so that micromanager can communicate with recOrder through the `pycromanager` bridge. To do so open MM and navigate to `Tools > Options` and check the box that says `Run server on port 4827`
+Finally, enable port access so that `Micromanager` can communicate with recOrder through the `pycromanager` bridge. To do so open `Micromanager` and navigate to `Tools > Options` and check the box that says `Run server on port 4827`
 
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/run_port.png)
 
