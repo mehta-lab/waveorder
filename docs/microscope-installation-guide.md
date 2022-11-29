@@ -58,7 +58,7 @@ Add 5 presets to this group named `State0`, `State1`, `State2`, `State3`, and `S
 
 If you would like to reconstruct phase from brightfield, add a `Micromanager` preset with brightfield properties (e.g. moving the polarization analyzer out the light path) and give the preset a name that contains one of the following case-insensitive keywords:
 
-`["bf", "brightfield", "bright", "labelfree", "label-free", "lf", "label"]`
+`["bf", "brightfield", "bright", "labelfree", "label-free", "lf", "label", "phase, "ph"]`
 
 In `recOrder` you can select this preset using the `Acquisition Settings > BF Channel` dropdown menu. 
 
