@@ -6,6 +6,7 @@ from recOrder.compute.qlipp_compute import (
     reconstruct_qlipp_stokes,
     reconstruct_qlipp_birefringence,
     reconstruct_phase3D,
+    pol_3D_from_phantom,
 )
 from datetime import datetime
 import numpy as np
@@ -16,9 +17,8 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 ## Load a dataset
 
 # Option 1: use random data and run this script as is.
-data = np.random.random((4, 16, 256, 256))  # (C, Z, Y, X)
+data, bg_data = pol_3D_from_phantom()  # (C, Z, Y, X) and (C, Y, X)
 C, Z, Y, X = data.shape
-bg_data = np.random.random((4, 256, 256))  # (C, Y, X)
 
 # Option 2: load from file
 # reader = WaveorderReader('/path/to/ome-tiffs/or/zarr/store/')
@@ -36,7 +36,7 @@ reconstructor_args = {
     "z_step_um": 2,  # z-step size in um
     "wavelength_nm": 532,
     "swing": 0.1,
-    "calibration_scheme": "4-State",  # "4-State" or "5-State"
+    "calibration_scheme": "5-State",  # "4-State" or "5-State"
     "NA_obj": 0.4,  # numerical aperture of objective
     "NA_illu": 0.2,  # numerical aperture of condenser
     "n_obj_media": 1.0,  # refractive index of objective immersion media
@@ -101,6 +101,7 @@ writer.write(phase3D, p=0, t=0, c=0, z=slice(0, Z))
 # Alternatively, drag and drop the zarr store into napari and use the recOrder-napari reader.
 v = napari.Viewer()
 v.add_image(data)
-v.add_image(birefringence)
 v.add_image(phase3D)
+v.add_image(birefringence, contrast_limits=(0, 25))
+v.dims.current_step = (0, 5, 256, 256)
 napari.run()

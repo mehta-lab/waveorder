@@ -3,6 +3,7 @@ from waveorder.io.writer import WaveorderWriter
 from recOrder.compute.qlipp_compute import (
     initialize_reconstructor,
     reconstruct_phase3D,
+    bf_3D_from_phantom,
 )
 from datetime import datetime
 import numpy as np
@@ -12,8 +13,8 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 ## Load a dataset
 
-# Option 1: use random data and run this script as is.
-data = np.random.random((11, 256, 256))  # (Z, Y, X)
+# Option 1: use data simulated from a phantom and run this script as is.
+data = bf_3D_from_phantom()  # (Z, Y, X)
 
 # Option 2: load from file
 # reader = WaveorderReader('/path/to/ome-tiffs/or/zarr/store/')
