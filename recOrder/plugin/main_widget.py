@@ -1,3 +1,6 @@
+# TODO: remove in Python 3.11
+from __future__ import annotations
+
 from recOrder.calib.Calibration import QLIPP_Calibration, LC_DEVICE_NAME
 from pycromanager import Bridge
 from qtpy.QtCore import Slot, Signal, Qt
@@ -33,6 +36,14 @@ from os.path import dirname
 import json
 import logging
 import textwrap
+import yaml
+
+# type hint/check
+from typing import TYPE_CHECKING
+
+# avoid runtime import error
+if TYPE_CHECKING:
+    from _typeshed import StrOrBytesPath
 
 
 class MainWidget(QWidget):
@@ -224,6 +235,7 @@ class MainWidget(QWidget):
         self.ui.cb_phase_denoiser.currentIndexChanged[int].connect(
             self.enter_phase_denoiser
         )
+        self.enter_phase_denoiser()
 
         ## Initialize logging
         log_box = QtLogger(self.ui.te_log)
@@ -1401,12 +1413,14 @@ class MainWidget(QWidget):
     def enter_phase_denoiser(self):
         state = self.ui.cb_phase_denoiser.currentIndex()
         if state == 0:
+            self.phase_regularizer = "Tikhonov"
             self.ui.label_itr.setHidden(True)
             self.ui.label_phase_rho.setHidden(True)
             self.ui.le_rho.setHidden(True)
             self.ui.le_itr.setHidden(True)
 
         elif state == 1:
+            self.phase_regularizer = "TV"
             self.ui.label_itr.setHidden(False)
             self.ui.label_phase_rho.setHidden(False)
             self.ui.le_rho.setHidden(False)
@@ -2030,6 +2044,61 @@ class MainWidget(QWidget):
 
         # Start Thread
         self.worker.start()
+
+    def _dump_gui_state(self, save_dir: StrOrBytesPath):
+        """Collect and save the current GUI settings to a YAML file.
+
+        Parameters
+        ----------
+        save_dir : str | bytes | PathLike[str] | PathLike[bytes]
+            directory to save
+        """
+        gui_state = {
+            "Run Calibration": {
+                "Swing": self.swing,
+                "Wavelength": self.wavelength,
+                "Illumination Scheme": self.calib_scheme,
+                "Calibration Mode": self.calib_mode,
+                "Config Group": self.config_group,
+            },
+            "Capture Background": {
+                "Background Folder Name": self.bg_folder_name,
+                "Number of Images to Average": self.n_avg,
+            },
+            "Acquisition Settings": {
+                "Z Start": self.z_start,
+                "Z End": self.z_end,
+                "Z Step": self.z_step,
+                "Acquisition Mode": self.acq_mode,
+                "BF Channel": self.ui.cb_acq_channel.itemText(
+                    self.ui.cb_acq_channel.currentIndex()
+                ),
+            },
+            "General Reconstruction Settings": {
+                "Background Correction": self.bg_option,
+                "Background Path": self.current_bg_path,
+                "Wavelength": self.recon_wavelength,
+                "Objective NA": self.obj_na,
+                "Condenser NA": self.cond_na,
+                "Camera Pixel Size": self.ps,
+                "RI of Objective Media": self.n_media,
+                "Magnification": self.mag,
+                "Orientation Offset": self.orientation_offset,
+            },
+            "Phase Reconstruction Settings": {
+                "Z Padding": self.pad_z,
+                "Regularizer": self.phase_regularizer,
+                "Strength": float(self.ui.le_phase_strength.text()),
+            },
+        }
+        # TV-specific parameters
+        if self.phase_regularizer == "TV":
+            gui_state["Phase Reconstruction Settings"]["Rho"] = float(self.ui.le_rho.text())
+            gui_state["Phase Reconstruction Settings"]["Iterations"] = int(self.ui.le_itr.text())
+        # save in YAML
+        save_path = os.path.join(save_dir, "gui_state.yml")
+        with open(save_path, "w") as f:
+            yaml.dump(gui_state, f, default_flow_style=False, sort_keys=False)
 
     @Slot(bool)
     def save_config(self):

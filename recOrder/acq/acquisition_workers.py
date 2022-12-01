@@ -144,6 +144,7 @@ class BFAcquisitionWorker(WorkerBase):
         self._check_ram()
         logging.info("Running Acquisition...")
         self._check_abort()
+        self.calib_window._dump_gui_state(self.snap_dir)
 
         channel_idx = self.calib_window.ui.cb_acq_channel.currentIndex()
         channel = self.calib_window.ui.cb_acq_channel.itemText(channel_idx)
@@ -288,11 +289,7 @@ class BFAcquisitionWorker(WorkerBase):
         logging.debug("Reconstructing...")
         self._check_abort()
 
-        regularizer = (
-            "Tikhonov"
-            if self.calib_window.ui.cb_phase_denoiser.currentIndex() == 0
-            else "TV"
-        )
+        regularizer = self.calib_window.phase_regularizer
         reg = float(self.calib_window.ui.le_phase_strength.text())
 
         # Perform deconvolution
@@ -579,6 +576,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         """
         self._check_ram()
         logging.info("Running Acquisition...")
+        self.calib_window._dump_gui_state(self.snap_dir)
 
         # List the Channels to acquire, if 5-state then append 5th channel
         channels = ["State0", "State1", "State2", "State3"]
@@ -862,11 +860,8 @@ class PolarizationAcquisitionWorker(WorkerBase):
         birefringence = None
         phase = None
 
-        regularizer = (
-            "Tikhonov"
-            if self.calib_window.ui.cb_phase_denoiser.currentIndex() == 0
-            else "TV"
-        )
+        regularizer = self.calib_window.phase_regularizer
+
         reg = float(self.calib_window.ui.le_phase_strength.text())
 
         # reconstruct both phase and birefringence

@@ -336,6 +336,8 @@ class BackgroundCaptureWorker(
         imgs = self.calib.capture_bg(self.calib_window.n_avg, bg_path)
         img_dim = (imgs.shape[-2], imgs.shape[-1])
 
+        self.calib_window._dump_gui_state(bg_path)
+
         # initialize reconstructor
         recon = initialize_reconstructor(
             "birefringence",
