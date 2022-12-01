@@ -432,7 +432,7 @@ def reconstruct_density_from_fluorescence(data3D, recon, bg_level=0, reg=1e-2):
     data3D = np.transpose(data3D, (1, 2, 0))
     density = recon.deconvolve_fluor_3D(
         np.copy(data3D).astype("float"),
-        bg_level=[0],
+        bg_level=[bg_level],
         reg=[reg],
     )
 

@@ -58,7 +58,7 @@ writer.init_array(
 )
 writer.write(phase2D, p=0, t=0, c=0, z=0)
 
-# These lines opens the reconstructed images
+# These lines open the reconstructed images
 # Alternatively, drag and drop the zarr store into napari and use the recOrder-napari reader.
 v = napari.Viewer()
 v.add_image(data)

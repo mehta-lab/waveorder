@@ -27,15 +27,15 @@ We recommend prototyping a reconstruction with a single position and time point 
 
 ### 4. Sweep your reconstruction parameters
 
-You may need to test several parameters to find a value that yields the best results for your application. For example, choosing a regularization parameter is commonly semi-empirical: we recommend choosing a regularization parameters that gives results that aren't too noisy or too smooth. 
+You may need to test several parameters to find a value that yields the best results for your application. For example, choosing a regularization parameter is commonly semi-empirical: we recommend choosing a regularization parameter that gives results that aren't too noisy or too smooth. 
 
 The `sweep-regularization.py` script demonstrates a `3D-bf-to-2D-phase` reconstruction with multiple regularization parameters. We recommend running and understanding this script before modifying your reconstruction script to sweep over regularization or other uncertain parameters to help you settle on a set of reconstruction parameters. 
 
 ### 5. Reconstruct a multi-modal dataset in a single script
 
-Typically we'd like to perform several reconstructions on a multi-modal dataset. For example, we'd like to perform a `3D-fluor-to-3D-density` reconstruction on our fluorescence channels and a `3D-bf-2D-phase` reconstruction on our brightfield channel. 
+You may need to perform several reconstructions on a multi-modal dataset. For example, you would like to perform a `3D-fluor-to-3D-density` reconstruction on the fluorescence channels and a `3D-bf-2D-phase` reconstruction on the brightfield channel. 
 
-The `multi-modal-recon.py` script demonstrates this example. We recommend running and understanding this script before modifying your script to run a multi-modal reconstruction. 
+The `multi-modal-recon.py` script demonstrates this type of reconstruction. We recommend running and understanding this script before modifying single-modality reconstructions to run a multi-modal reconstruction. 
 
 ### 6. Parallelize over positions or time points
 
@@ -47,7 +47,9 @@ Once you've settled on a script that performs a reconstruction, the script can b
 If you are acquiring:
 
 **3D data with calibrated liquid-crystal polarizers via `recOrder`** use `3D-pol-to-birefringence.py`.
+
 **3D fluorescence data** use `3D-fluor-to-3D-density.py`.
+
 **3D brightfield data** use `3D-bf-to-3D-phase.py` or `3D-bf-to-2D-phase.py`, and decide if you need a 3D or 2D phase reconstruction. 
 
 If your downstream processing requires 3D information or if you're unsure, then you should use `3D-bf-to-3D-phase.py`. If your sample is very thin compared to the depth of field of the microscope, if you're in a noise-limited regime, or if your downstream processing requires 2D phase information, then you should use `3D-bf-to-2D-phase.py`. Empirically, we have found that `3D-bf-to-2D-phase.py` reduces the noise in our reconstructions because it uses 3D information to make a single phase estimate for each pixel. 
