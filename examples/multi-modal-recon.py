@@ -10,7 +10,6 @@ from recOrder.compute.phantoms import (
     fluorescence_from_phantom,
 )
 from datetime import datetime
-import numpy as np
 import napari
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
