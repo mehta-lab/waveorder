@@ -42,20 +42,20 @@ The `multi-modal-recon.py` script demonstrates this type of reconstruction. We r
 Once you've settled on a script that performs a reconstruction, the script can be applied to multiple datasets with a python `for` loop (slowest), `multiprocessing` (faster), or batch processing with an HPC scheduler e.g. `slurm` (fastest). 
 
 ## FAQ
-**Q: Which script should I use?**
+1. **Q: Which script should I use?**
 
-If you are acquiring:
+    If you are acquiring:
 
-**3D data with calibrated liquid-crystal polarizers via `recOrder`** use `3D-pol-to-birefringence.py`.
+    **3D data with calibrated liquid-crystal polarizers via `recOrder`** use `3D-pol-to-birefringence.py`.
 
-**3D fluorescence data** use `3D-fluor-to-3D-density.py`.
+    **3D fluorescence data** use `3D-fluor-to-3D-density.py`.
 
-**3D brightfield data** use `3D-bf-to-3D-phase.py` or `3D-bf-to-2D-phase.py`, and decide if you need a 3D or 2D phase reconstruction. 
+    **3D brightfield data** use `3D-bf-to-3D-phase.py` or `3D-bf-to-2D-phase.py`, and decide if you need a 3D or 2D phase reconstruction. 
 
-If your downstream processing requires 3D information or if you're unsure, then you should use `3D-bf-to-3D-phase.py`. If your sample is very thin compared to the depth of field of the microscope, if you're in a noise-limited regime, or if your downstream processing requires 2D phase information, then you should use `3D-bf-to-2D-phase.py`. Empirically, we have found that `3D-bf-to-2D-phase.py` reduces the noise in our reconstructions because it uses 3D information to make a single phase estimate for each pixel. 
+    If your downstream processing requires 3D information or if you're unsure, then you should use `3D-bf-to-3D-phase.py`. If your sample is very thin compared to the depth of field of the microscope, if you're in a noise-limited regime, or if your downstream processing requires 2D phase information, then you should use `3D-bf-to-2D-phase.py`. Empirically, we have found that `3D-bf-to-2D-phase.py` reduces the noise in our reconstructions because it uses 3D information to make a single phase estimate for each pixel. 
 
-**Multi-modal data**, start by reconstructing the individual modaliities, then combine the reconstructions using `multi-modal-recon.py` as a guide.  
+    **Multi-modal data**, start by reconstructing the individual modaliities, then combine the reconstructions using `multi-modal-recon.py` as a guide.  
 
-**Q: What regularization parameter should I use?**
+2. **Q: What regularization parameter should I use?**
 
-We recommend starting with the defaults then testing over a few orders of magnitude and choosing a result that isn't too noisy or too smooth.
+    We recommend starting with the defaults then testing over a few orders of magnitude and choosing a result that isn't too noisy or too smooth.
