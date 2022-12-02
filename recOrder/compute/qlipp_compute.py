@@ -515,7 +515,7 @@ def pol_3D_from_phantom():
     n_media = 1  # refractive index in the media
     NA_obj = 0.4  # objective NA
     NA_illu = 0.2  # illumination NA (condenser)
-    N_defocus = 10
+    N_defocus = 11
     z_defocus = (
         np.r_[:N_defocus] - N_defocus // 2
     ) * 2  # a set of defocus planes
@@ -584,7 +584,7 @@ def bf_3D_from_phantom():
     n_media = 1  # refractive index in the media
     NA_obj = 0.4  # objective NA
     NA_illu = 0.2  # illumination NA (condenser)
-    N_defocus = 10
+    N_defocus = 11
     psz = 2
     z_defocus = (
         np.r_[:N_defocus] - N_defocus // 2
