@@ -93,5 +93,6 @@ v.add_image(bf_data)
 v.add_image(fluor_data)
 v.add_image(phase)
 v.add_image(density)
+v.dims.current_step = (15, 256, 256)
 
 napari.run()
