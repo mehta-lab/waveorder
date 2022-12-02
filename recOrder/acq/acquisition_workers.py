@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from qtpy.QtCore import Signal
-from recOrder.compute.qlipp_compute import (
+from recOrder.compute.reconstructions import (
     initialize_reconstructor,
     reconstruct_qlipp_birefringence,
     reconstruct_qlipp_stokes,
@@ -14,7 +14,7 @@ from recOrder.acq.acq_functions import (
     acquire_from_settings,
 )
 from recOrder.io.utils import load_bg, extract_reconstruction_parameters
-from recOrder.compute.qlipp_compute import QLIPPBirefringenceCompute
+from recOrder.compute.reconstructions import QLIPPBirefringenceCompute
 from recOrder.io.zarr_converter import ZarrConverter
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
 from recOrder.io.utils import ram_message, rec_bkg_to_wo_bkg
