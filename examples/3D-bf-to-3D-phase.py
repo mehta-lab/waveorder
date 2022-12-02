@@ -1,10 +1,10 @@
 from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
-from recOrder.compute.qlipp_compute import (
+from recOrder.compute.reconstructions import (
     initialize_reconstructor,
     reconstruct_phase3D,
-    bf_3D_from_phantom,
 )
+from recOrder.compute.phantoms import bf_3D_from_phantom
 from datetime import datetime
 import numpy as np
 import napari

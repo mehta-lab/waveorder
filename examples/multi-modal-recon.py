@@ -1,11 +1,13 @@
 from waveorder.io.reader import WaveorderReader
 from waveorder.io.writer import WaveorderWriter
-from recOrder.compute.qlipp_compute import (
+from recOrder.compute.reconstructions import (
     initialize_reconstructor,
     reconstruct_phase3D,
+    reconstruct_density_from_fluorescence,
+)
+from recOrder.compute.phantoms import (
     bf_3D_from_phantom,
     fluorescence_from_phantom,
-    reconstruct_density_from_fluorescence,
 )
 from datetime import datetime
 import numpy as np
