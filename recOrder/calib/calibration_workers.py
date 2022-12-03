@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from qtpy.QtCore import Signal
 from napari.qt.threading import WorkerBaseSignals, WorkerBase, thread_worker
-from recOrder.compute.qlipp_compute import (
+from recOrder.compute.reconstructions import (
     initialize_reconstructor,
     reconstruct_qlipp_birefringence,
     reconstruct_qlipp_stokes,
