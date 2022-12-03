@@ -42,25 +42,32 @@ reconstructor = initialize_reconstructor(
     pipeline="PhaseFromBF", **reconstructor_args
 )
 
-phase3D = reconstruct_phase3D(
-    data, reconstructor, method="Tikhonov", reg_re=1e-2
-)
-print(f"Shape of 3D phase data: {np.shape(phase3D)}")
-
-## Save to zarr
+# Setup a single writer and viewer
 writer = WaveorderWriter("./output-phase")
 writer.create_zarr_root("phase_" + timestamp)
-writer.init_array(
-    position=0,
-    data_shape=(1, 1, Z, Y, X),
-    chunk_size=(1, 1, 1, Y, X),
-    chan_names=["Phase"],
-)
-writer.write(phase3D, p=0, t=0, c=0, z=slice(0, Z))
-
-# These lines open the reconstructed images
-# Alternatively, drag and drop the zarr store into napari and use the recOrder-napari reader.
 v = napari.Viewer()
 v.add_image(data)
-v.add_image(phase3D)
+
+# Loop through regularizations
+reg_powers = np.arange(-3, 3)
+for i, reg_power in enumerate(reg_powers):
+    reg = 10.0**reg_power
+    print(f"Reconstructing with 3D phase with reg = {reg:.1e}")
+
+    phase3D = reconstruct_phase3D(
+        data, reconstructor, method="Tikhonov", reg_re=reg
+    )
+
+    # Save each regularization into a "position" of the output zarr
+    writer.init_array(
+        position=i,
+        data_shape=(1, 1, Z, Y, X),
+        chunk_size=(1, 1, 1, Y, X),
+        chan_names=["Phase"],
+    )
+    writer.write(phase3D, p=i, t=0, c=0, z=slice(0, Z))
+
+    # Add the reconstructions to the viewer
+    v.add_image(phase3D, name=f"reg = {reg:.1e}")
+
 napari.run()
