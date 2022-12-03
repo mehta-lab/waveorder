@@ -21,7 +21,7 @@ def initialize_reconstructor(
     pad_z=0,
     pixel_size_um=None,
     bg_correction="None",
-    n_obj_media=1.0,
+    n_obj_media=1.3,
     mode="3D",
     use_gpu=False,
     gpu_id=0,
