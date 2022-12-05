@@ -175,6 +175,7 @@ class BFAcquisitionWorker(WorkerBase):
             zstep=self.calib_window.z_step,
             save_dir=self.snap_dir,
             prefix=self.prefix,
+            keep_shutter_open_slices=True,
         )
 
         self._check_abort()
