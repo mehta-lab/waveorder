@@ -78,9 +78,9 @@ def focus_from_transverse_band(
         raise ValueError("midband_fractions[0] must be between 0 and 1")
     if not (0 <= midband_fractions[1] <= 1):
         raise ValueError("midband_fractions[1] must be between 0 and 1")
-    if mode is "min":
+    if mode == "min":
         minmaxfunc = np.argmin
-    elif mode is "max":
+    elif mode == "max":
         minmaxfunc = np.argmax
     else:
         raise ValueError("mode must be either `min` or `max`")
