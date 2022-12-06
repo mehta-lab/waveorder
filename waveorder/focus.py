@@ -28,7 +28,7 @@ def focus_from_transverse_band(
         Units are arbitrary, but must match [lambda_ill]
     midband_fractions: Tuple[float, float], optional
         The minimum and maximum fraction of the cutoff frequency that define the midband.
-        Requires: 0 < midband_fractions[0] < midband_fractions[1] < 1.
+        Requires: 0 <= midband_fractions[0] < midband_fractions[1] <= 1.
     mode: {'max', 'min'}, optional
         Option to choose the in-focus slice my minimizing or maximizing the midband frequency.
 
@@ -70,7 +70,7 @@ def focus_from_transverse_band(
             f"Did you use the same units?"
             f"Did you enter the pixel size in (demagnified) object-space units?"
         )
-    if midband_fractions[0] >= midband_fractions[1]:
+    if not midband_fractions[0] < midband_fractions[1]:
         raise ValueError(
             "midband_fractions[0] must be less than midband_fractions[1]"
         )
