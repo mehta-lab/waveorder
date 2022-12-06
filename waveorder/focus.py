@@ -68,7 +68,7 @@ def focus_from_transverse_band(
         print(
             f"WARNING: lambda_ill/pixel_size = {lambda_ill/pixel_size}."
             f"Did you use the same units?"
-            f"Did you enter the pixel size in (demangified) object-space units?"
+            f"Did you enter the pixel size in (demagnified) object-space units?"
         )
     if midband_fractions[0] >= midband_fractions[1]:
         raise ValueError(
