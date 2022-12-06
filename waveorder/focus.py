@@ -1,3 +1,4 @@
+from typing import Literal
 from waveorder import util
 import numpy as np
 
@@ -8,7 +9,7 @@ def focus_from_transverse_band(
     lambda_ill,
     pixel_size,
     midband_fractions=(0.125, 0.25),
-    mode="max",
+    mode: Literal["min" "max"] = "max",
 ):
     """Estimates the in-focus slice from a 3D stack by optimizing a transverse spatial frequency band.
 
