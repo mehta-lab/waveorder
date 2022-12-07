@@ -1,4 +1,9 @@
 # waveorder
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/waveorder)
+[![Downloads](https://pepy.tech/badge/waveorder)](https://pepy.tech/project/waveorder)
+[![Python package index](https://img.shields.io/pypi/v/waveorder.svg)](https://pypi.org/project/waveorder)
+[![Development Status](https://img.shields.io/pypi/status/napari.svg)](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha)
+
 This package enables wave-optical simulation and reconstruction of optical properties that report microscopic architectural order. 
 
 `waveorder` supported the development of a new label-free imaging method, __uniaxial permittivity tensor imaging (uPTI)__, that reconstructs density (phase) and 3D anisotropy (principal retardance, 3D orientation of the optic axis, and optic sign) of specimens from polarization-resolved images acquired under a sequence of oblique illuminations.
