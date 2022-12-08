@@ -4,6 +4,7 @@ import os
 from waveorder.io.reader import WaveorderReader
 import time
 import glob
+from pycromanager import Studio
 
 
 def generate_acq_settings(
@@ -116,22 +117,30 @@ def generate_acq_settings(
     return original_json
 
 
-def acquire_from_settings(mm, settings, grab_images=True):
-    """
-    Function to acquire an MDA acquisition with the native MM MDA Engine.
+def acquire_from_settings(
+    mm: Studio,
+    settings: dict,
+    grab_images: bool = True,
+    restore_settings: bool = True,
+):
+    """Function to acquire an MDA acquisition with the native MM MDA Engine.
     Assumes single position acquisition.
 
     Parameters
     ----------
-    mm:             (object) MM Studio API object
-    settings:       (json) JSON dictionary conforming to MM SequenceSettings
-    grab_images:    (bool) True/False if you want to return the acquired array
+    mm : Studio
+    settings : dict
+        JSON dictionary conforming to MM SequenceSettings
+    grab_images : bool, optional
+        return the acquired array, by default True
+    restore_settings : bool, optional
+        restore MDA settings before acquisition, by default True
 
     Returns
     -------
-
+    NDArray
+        acquired images
     """
-
     am = mm.getAcquisitionManager()
     ss = am.getAcquisitionSettings()
 
@@ -139,6 +148,9 @@ def acquire_from_settings(mm, settings, grab_images=True):
     am.runAcquisitionWithSettings(ss_new, True)
 
     time.sleep(3)
+
+    if restore_settings:
+        am.setAcquisitionSettings(ss)
 
     # TODO: speed improvements in reading the data with pycromanager acquisition?
     if grab_images:
