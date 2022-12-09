@@ -190,6 +190,7 @@ class MainWidget(QWidget):
         self.ui.qbutton_acq_phase_from_bf.clicked[bool].connect(
             self.acq_phase_from_bf
         )
+        self.bf_channel_found = False
         self.ui.qbutton_acq_ret_ori_phase.clicked[bool].connect(
             self.acq_ret_ori_phase
         )
@@ -928,7 +929,8 @@ class MainWidget(QWidget):
                     [keyword.lower() in ch.lower() for keyword in bf_keywords]
                 ):
                     self.ui.cb_acq_channel.addItem(ch)
-
+                    bf_channel_found = True
+                    
         if not config_group_found:
             msg = (
                 f"No config group contains channels {self.calib_channels}. "
@@ -938,6 +940,18 @@ class MainWidget(QWidget):
                 "border: 1px solid rgb(200,0,0);"
             )
             raise KeyError(msg)
+
+        if not bf_channel_found:
+            msg = (
+                f"No brightfield channel found. If you would like to acquire phase from brightfield,"
+                " please restart recOrder after adding a new channel to MicroManager with one of the,"
+                " following case-insensitive keywords: "
+            ) + ", ".join(bf_keywords)
+            wrapped_msg = "\n".join(textwrap.wrap(msg, width=70))
+            self.ui.qbutton_acq_phase_from_bf.disconnect()
+            self.ui.qbutton_acq_phase_from_bf.setStyleSheet("border: 1px solid rgb(65,72,81);")
+            self.ui.qbutton_acq_phase_from_bf.setToolTip(wrapped_msg)
+            self.ui.cb_acq_channel.setToolTip(wrapped_msg)
 
         # set startup LC control mode
         _devices = self.mmc.getLoadedDevices()
