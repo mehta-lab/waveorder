@@ -64,8 +64,12 @@ class MainWidget(QWidget):
         self.ui = gui.Ui_Form()
         self.ui.setupUi(self)
 
-        # Override inital tab focus
+        # Override initial tab focus
         self.ui.tabWidget.setCurrentIndex(0)
+
+        # Set attributes need for enabling/disabling buttons
+        self.bf_channel_found = False
+        self.no_bf_msg = ""
 
         # Disable buttons until connected to MM
         self._set_buttons_enabled(False)
@@ -190,7 +194,24 @@ class MainWidget(QWidget):
         self.ui.qbutton_acq_phase_from_bf.clicked[bool].connect(
             self.acq_phase_from_bf
         )
-        self.bf_channel_found = False
+        self.bf_keywords = [
+            "bf",
+            "brightfield",
+            "bright",
+            "labelfree",
+            "label-free",
+            "lf",
+            "label",
+            "phase",
+            "ph",
+        ]
+        msg = (
+            f"No brightfield channel found. If you would like to acquire phase from brightfield,"
+            " please restart recOrder after adding a new channel to MicroManager with one of the,"
+            " following case-insensitive keywords: "
+        ) + ", ".join(self.bf_keywords)
+        self.no_bf_msg = "\n".join(textwrap.wrap(msg, width=70))
+
         self.ui.qbutton_acq_ret_ori_phase.clicked[bool].connect(
             self.acq_ret_ori_phase
         )
@@ -599,6 +620,13 @@ class MainWidget(QWidget):
                 )
                 action_button.setStyleSheet("border: 1px solid rgb(65,72,81);")
 
+        if not self.bf_channel_found:
+            self.ui.qbutton_acq_phase_from_bf.setEnabled(False)
+            self.ui.qbutton_acq_phase_from_bf.setStyleSheet(
+                "border: 1px solid rgb(65,72,81);"
+            )
+            self.ui.qbutton_acq_phase_from_bf.setToolTip(self.no_bf_msg)
+
     def _enable_buttons(self):
         self._set_buttons_enabled(True)
 
@@ -913,24 +941,16 @@ class MainWidget(QWidget):
                 self.ui.cb_config_group.addItem(group)
 
             # Populate the acquisition "BF channel" list with presets that contain any of these keywords
-            bf_keywords = [
-                "bf",
-                "brightfield",
-                "bright",
-                "labelfree",
-                "label-free",
-                "lf",
-                "label",
-                "phase",
-                "ph",
-            ]
             for ch in config_list:
                 if any(
-                    [keyword.lower() in ch.lower() for keyword in bf_keywords]
+                    [
+                        keyword.lower() in ch.lower()
+                        for keyword in self.bf_keywords
+                    ]
                 ):
                     self.ui.cb_acq_channel.addItem(ch)
-                    bf_channel_found = True
-                    
+                    self.bf_channel_found = True
+
         if not config_group_found:
             msg = (
                 f"No config group contains channels {self.calib_channels}. "
@@ -941,17 +961,13 @@ class MainWidget(QWidget):
             )
             raise KeyError(msg)
 
-        if not bf_channel_found:
-            msg = (
-                f"No brightfield channel found. If you would like to acquire phase from brightfield,"
-                " please restart recOrder after adding a new channel to MicroManager with one of the,"
-                " following case-insensitive keywords: "
-            ) + ", ".join(bf_keywords)
-            wrapped_msg = "\n".join(textwrap.wrap(msg, width=70))
+        if not self.bf_channel_found:
             self.ui.qbutton_acq_phase_from_bf.disconnect()
-            self.ui.qbutton_acq_phase_from_bf.setStyleSheet("border: 1px solid rgb(65,72,81);")
-            self.ui.qbutton_acq_phase_from_bf.setToolTip(wrapped_msg)
-            self.ui.cb_acq_channel.setToolTip(wrapped_msg)
+            self.ui.qbutton_acq_phase_from_bf.setStyleSheet(
+                "border: 1px solid rgb(65,72,81);"
+            )
+            self.ui.qbutton_acq_phase_from_bf.setToolTip(self.no_bf_msg)
+            self.ui.cb_acq_channel.setToolTip(self.no_bf_msg)
 
         # set startup LC control mode
         _devices = self.mmc.getLoadedDevices()
