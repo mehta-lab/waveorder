@@ -207,7 +207,7 @@ class MainWidget(QWidget):
         ]
         msg = (
             f"No brightfield channel found. If you would like to acquire phase from brightfield,"
-            " please restart recOrder after adding a new channel to MicroManager with one of the,"
+            " please restart recOrder after adding a new channel to MicroManager with one of the"
             " following case-insensitive keywords: "
         ) + ", ".join(self.bf_keywords)
         self.no_bf_msg = "\n".join(textwrap.wrap(msg, width=70))
@@ -2123,8 +2123,12 @@ class MainWidget(QWidget):
         }
         # TV-specific parameters
         if self.phase_regularizer == "TV":
-            gui_state["Phase Reconstruction Settings"]["Rho"] = float(self.ui.le_rho.text())
-            gui_state["Phase Reconstruction Settings"]["Iterations"] = int(self.ui.le_itr.text())
+            gui_state["Phase Reconstruction Settings"]["Rho"] = float(
+                self.ui.le_rho.text()
+            )
+            gui_state["Phase Reconstruction Settings"]["Iterations"] = int(
+                self.ui.le_itr.text()
+            )
         # save in YAML
         save_path = os.path.join(save_dir, "gui_state.yml")
         with open(save_path, "w") as f:
