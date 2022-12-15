@@ -1,10 +1,7 @@
 import click
-import napari
-v = napari.Viewer()
 import sys
 import os
 from recOrder.io.zarr_converter import ZarrConverter
-from waveorder.io import WaveorderReader
 
 # From https://stackoverflow.com/questions/50975203/display-help-if-incorrect-or-mission-option-in-click
 class ShowUsageOnMissingError(click.Command):
@@ -21,37 +18,6 @@ class ShowUsageOnMissingError(click.Command):
                 super(ShowUsageOnMissingError, self).__call__(["--help"])
             except SystemExit:
                 sys.exit(exc.exit_code)
-
-@click.group()
-def cli():
-    print("\033[92mrecOrder: Computational Toolkit for Label-Free Imaging\033[0m\n")
-
-@cli.command()
-@click.argument('filename')
-def info(filename):
-    print(f"Reading file:\t {filename}")
-    reader = WaveorderReader(filename)
-    print(f"Positions:\t {reader.get_num_positions()}") 
-    print(f"Time points:\t {reader.shape[0]}") 
-    print(f"Channels:\t {reader.shape[1]}") 
-    print(f"(Z, Y, X):\t {reader.shape[2:]}") 
-    print(f"Channel names:\t {reader.channel_names}") 
-    print(f"Z step size:\t {reader.z_step_size}")
-    print("")
-    
-cli.add_command(info)
-
-@cli.command()
-@click.argument('filename')
-@click.option('--position','-p', default=None, multiple=True)
-def view(filename, position=None):
-    print(f"Reading file:\t {filename}")
-    reader = WaveorderReader(filename)
-    for i in range(reader.get_num_positions()):
-        v.add_image(reader.get_zarr(i))
-    napari.run()
-    
-cli.add_command(view)
 
 
 @click.command()
