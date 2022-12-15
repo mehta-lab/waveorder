@@ -1,106 +1,81 @@
 import click
 import napari
-import numpy as np
-import sys
-
-# Workaround waveorder #97
-# Create napari Viewer before other imports
 v = napari.Viewer()
 v.close()
+import sys
+import os
 from recOrder.io.zarr_converter import ZarrConverter
 from waveorder.io import WaveorderReader
 
+# From https://stackoverflow.com/questions/50975203/display-help-if-incorrect-or-mission-option-in-click
+class ShowUsageOnMissingError(click.Command):
+    def __call__(self, *args, **kwargs):
+        try:
+            return super(ShowUsageOnMissingError, self).__call__(
+                *args, standalone_mode=False, **kwargs
+            )
+        except click.MissingParameter as exc:
+            exc.ctx = None
+            exc.show(file=sys.stdout)
+            click.echo()
+            try:
+                super(ShowUsageOnMissingError, self).__call__(["--help"])
+            except SystemExit:
+                sys.exit(exc.exit_code)
 
 @click.group()
 def cli():
-    print(
-        "\033[92mrecOrder: Computational Toolkit for Label-Free Imaging\033[0m\n"
-    )
+    print("\033[92mrecOrder: Computational Toolkit for Label-Free Imaging\033[0m\n")
 
-
-@click.command()
-@click.help_option("-h", "--help")
-@click.argument("filename")
+@cli.command()
+@click.argument('filename')
 def info(filename):
-    """View a dataset's basic metadata"""
     print(f"Reading file:\t {filename}")
     reader = WaveorderReader(filename)
-    print_reader_info(reader)
-
-
-cli.add_command(info)
-
-
-def print_reader_info(reader):
-    print(f"Positions:\t {reader.get_num_positions()}")
-    print(f"Time points:\t {reader.shape[0]}")
-    print(f"Channels:\t {reader.shape[1]}")
-    print(f"(Z, Y, X):\t {reader.shape[2:]}")
-    print(f"Channel names:\t {reader.channel_names}")
+    print(f"Positions:\t {reader.get_num_positions()}") 
+    print(f"Time points:\t {reader.shape[0]}") 
+    print(f"Channels:\t {reader.shape[1]}") 
+    print(f"(Z, Y, X):\t {reader.shape[2:]}") 
+    print(f"Channel names:\t {reader.channel_names}") 
     print(f"Z step size:\t {reader.z_step_size}")
     print("")
+    
+cli.add_command(info)
 
-
-@click.command()
-@click.help_option("-h", "--help")
-@click.argument("filename")
-@click.option(
-    "--position",
-    "-p",
-    default=None,
-    multiple=True,
-    help="Integer positions to open. Accepts multiple positions: -p 0 -p 1 -p 10.",
-)
-@click.option(
-    "--layers",
-    "-l",
-    default="position",
-    type=click.Choice(["position", "channel", "p", "c"]),
-    help="Layers as 'position' ('p') or 'channel' ('c')",
-)
-def view(filename, position=None, layers=None):
-    """View a dataset in napari"""
+@cli.command()
+@click.argument('filename')
+@click.option('--position','-p', default=None, multiple=True)
+def view(filename, position=None):
     print(f"Reading file:\t {filename}")
     reader = WaveorderReader(filename)
-    print_reader_info(reader)
 
-    if position == ():  # If empty, open all positions
+    if position == ():
         position = range(reader.get_num_positions())
-    position = [int(x) for x in position]
 
     v = napari.Viewer()
-    if layers == "position" or layers == "p":
-        for i in position:
-            try:
-                name = reader.stage_positions[i]["Label"]
-            except:
-                name = "Pos" + str(i)
-            v.add_image(reader.get_zarr(i), name=name)
-            v.layers[-1].reset_contrast_limits()
-        v.dims.axis_labels = ("T", "C", "Z", "Y", "X")
-
-    elif layers == "channel" or layers == "c":
-        print(
-            "WARNING: sending channels to layers is more expensive than sending positions to layers. "
-            "Try loading a small number of positions."
-        )
-
-        ptzyx = (len(position),) + (reader.shape[0],) + reader.shape[2:]
-        for j in range(int(reader.channels)):
-            temp_data = np.zeros(ptzyx)
-            for k, pos in enumerate(position):
-                temp_data[k] = reader.get_array(pos)[:, j, ...]
-            v.add_image(temp_data, name=reader.channel_names[j])
-            v.layers[-1].reset_contrast_limits()
-        v.dims.axis_labels = ("P", "T", "Z", "Y", "X")
-
+    for i in position:
+        v.add_image(reader.get_zarr(int(i)), name=reader.stage_positions[int(i)]['Label'])
+    
     napari.run()
-
-
+    
 cli.add_command(view)
 
 
 @click.command()
+@click.help_option("-h", "--help")
+def help():
+    """\033[92mrecOrder: Computational Toolkit for Label-Free Imaging\033[0m
+
+    To use recOrder\'s napari plugin, use \033[96mnapari -w recOrder-napari\033[0m
+
+    To convert MicroManager .tif files to ome-zarr data format use \033[96mrecOrder.convert\033[0m
+
+    Thank you for using recOrder.
+    """
+    print(help.__doc__)
+
+
+@click.command(cls=ShowUsageOnMissingError)
 @click.help_option("-h", "--help")
 @click.option(
     "--input",
@@ -133,11 +108,7 @@ cli.add_command(view)
     help='whether or not to format the data as an HCS "well-plate"',
 )
 def convert(input, output, data_type, replace_pos_name, format_hcs):
-    """Convert MicroManager ome-tiff to ome-zarr"""
     converter = ZarrConverter(
         input, output, data_type, replace_pos_name, format_hcs
     )
     converter.run_conversion()
-
-
-cli.add_command(convert)
