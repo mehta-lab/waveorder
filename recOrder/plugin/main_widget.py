@@ -56,6 +56,26 @@ class MainWidget(QWidget):
     # Initialize Custom Signals
     log_changed = Signal(str)
 
+    # Initialize class attributes
+    disabled_button_style = "border: 1px solid rgb(65,72,81);"
+    bf_keywords = [
+        "bf",
+        "brightfield",
+        "bright",
+        "labelfree",
+        "label-free",
+        "lf",
+        "label",
+        "phase",
+        "ph",
+    ]
+    msg = (
+        f"No brightfield channel found. If you would like to acquire phase from brightfield,"
+        " please restart recOrder after adding a new channel to MicroManager with one of the"
+        " following case-insensitive keywords: "
+    ) + ", ".join(bf_keywords)
+    no_bf_msg = "\n".join(textwrap.wrap(msg, width=70))
+
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
         self.viewer = napari_viewer
@@ -69,7 +89,6 @@ class MainWidget(QWidget):
 
         # Set attributes need for enabling/disabling buttons
         self.bf_channel_found = False
-        self.no_bf_msg = ""
 
         # Disable buttons until connected to MM
         self._set_buttons_enabled(False)
@@ -194,23 +213,6 @@ class MainWidget(QWidget):
         self.ui.qbutton_acq_phase_from_bf.clicked[bool].connect(
             self.acq_phase_from_bf
         )
-        self.bf_keywords = [
-            "bf",
-            "brightfield",
-            "bright",
-            "labelfree",
-            "label-free",
-            "lf",
-            "label",
-            "phase",
-            "ph",
-        ]
-        msg = (
-            f"No brightfield channel found. If you would like to acquire phase from brightfield,"
-            " please restart recOrder after adding a new channel to MicroManager with one of the"
-            " following case-insensitive keywords: "
-        ) + ", ".join(self.bf_keywords)
-        self.no_bf_msg = "\n".join(textwrap.wrap(msg, width=70))
 
         self.ui.qbutton_acq_ret_ori_phase.clicked[bool].connect(
             self.acq_ret_ori_phase
@@ -613,17 +615,17 @@ class MainWidget(QWidget):
             action_button.setEnabled(val)
             if val:
                 action_button.setToolTip("")
-                action_button.setStyleSheet("border: 1px solid rgb(32,34,40);")
+                action_button.setStyleSheet(self.disabled_button_style)
             else:
                 action_button.setToolTip(
                     "Action temporarily disabled. Connect to MM or wait for acquisition to finish."
                 )
-                action_button.setStyleSheet("border: 1px solid rgb(65,72,81);")
+                action_button.setStyleSheet(self.disabled_button_style)
 
         if not self.bf_channel_found:
             self.ui.qbutton_acq_phase_from_bf.setEnabled(False)
             self.ui.qbutton_acq_phase_from_bf.setStyleSheet(
-                "border: 1px solid rgb(65,72,81);"
+                self.disabled_button_style
             )
             self.ui.qbutton_acq_phase_from_bf.setToolTip(self.no_bf_msg)
 
@@ -964,7 +966,7 @@ class MainWidget(QWidget):
         if not self.bf_channel_found:
             self.ui.qbutton_acq_phase_from_bf.disconnect()
             self.ui.qbutton_acq_phase_from_bf.setStyleSheet(
-                "border: 1px solid rgb(65,72,81);"
+                self.disabled_button_style
             )
             self.ui.qbutton_acq_phase_from_bf.setToolTip(self.no_bf_msg)
             self.ui.cb_acq_channel.setToolTip(self.no_bf_msg)
