@@ -37,7 +37,7 @@ def print_reader_info(reader):
     print(f"Channels:\t {reader.shape[1]}")
     print(f"(Z, Y, X):\t {reader.shape[2:]}")
     print(f"Channel names:\t {reader.channel_names}")
-    print(f"Z step size:\t {reader.z_step_size}")
+    print(f"Z step (um):\t {reader.z_step_size}")
     print("")
 
 
