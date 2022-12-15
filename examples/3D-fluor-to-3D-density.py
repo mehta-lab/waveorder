@@ -45,8 +45,8 @@ density = reconstruct_density_from_fluorescence(data, reconstructor, reg=1e-2)
 print(f"Shape of 3D density data: {np.shape(density)}")
 
 ## Save to zarr
-writer = WaveorderWriter("./output-density")
-writer.create_zarr_root("density_" + timestamp)
+writer = WaveorderWriter("./output")
+writer.create_zarr_root("reconstructions_" + timestamp)
 writer.init_array(
     position=0,
     data_shape=(1, 1, Z, Y, X),

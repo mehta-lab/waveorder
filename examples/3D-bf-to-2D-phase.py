@@ -48,8 +48,8 @@ phase2D = reconstruct_phase2D(
 print(f"Shape of 2D phase data: {np.shape(phase2D)}")
 
 ## Save to zarr
-writer = WaveorderWriter("./output-phase")
-writer.create_zarr_root("phase_" + timestamp)
+writer = WaveorderWriter("./output")
+writer.create_zarr_root("reconstructions_" + timestamp)
 writer.init_array(
     position=0,
     data_shape=(1, 1, 1, Y, X),

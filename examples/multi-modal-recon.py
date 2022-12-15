@@ -74,8 +74,8 @@ density = reconstruct_density_from_fluorescence(
 )
 
 # Save to zarr
-writer = WaveorderWriter("./output-multi-modal")
-writer.create_zarr_root("phase-density" + timestamp)
+writer = WaveorderWriter("./output")
+writer.create_zarr_root("reconstructions_" + timestamp)
 writer.init_array(
     position=0,
     data_shape=(1, 2) + fluor_data.shape,
