@@ -1,7 +1,6 @@
 import click
 import napari
 v = napari.Viewer()
-v.close()
 import sys
 import os
 from recOrder.io.zarr_converter import ZarrConverter
@@ -48,14 +47,8 @@ cli.add_command(info)
 def view(filename, position=None):
     print(f"Reading file:\t {filename}")
     reader = WaveorderReader(filename)
-
-    if position == ():
-        position = range(reader.get_num_positions())
-
-    v = napari.Viewer()
-    for i in position:
-        v.add_image(reader.get_zarr(int(i)), name=reader.stage_positions[int(i)]['Label'])
-    
+    for i in range(reader.get_num_positions()):
+        v.add_image(reader.get_zarr(i))
     napari.run()
     
 cli.add_command(view)
