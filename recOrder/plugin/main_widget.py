@@ -73,7 +73,7 @@ class MainWidget(QWidget):
         textwrap.wrap(
             f"No brightfield channel found. If you would like to acquire phase from brightfield,"
             " please restart recOrder after adding a new channel to MicroManager with one of the"
-            " following case-insensitive keywords: ",
+            " following case-insensitive keywords: " + ", ".join(bf_keywords),
             width=70,
         )
     )
