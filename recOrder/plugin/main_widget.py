@@ -69,12 +69,14 @@ class MainWidget(QWidget):
         "phase",
         "ph",
     ]
-    msg = (
-        f"No brightfield channel found. If you would like to acquire phase from brightfield,"
-        " please restart recOrder after adding a new channel to MicroManager with one of the"
-        " following case-insensitive keywords: "
-    ) + ", ".join(bf_keywords)
-    no_bf_msg = "\n".join(textwrap.wrap(msg, width=70))
+    no_bf_msg = "\n".join(
+        textwrap.wrap(
+            f"No brightfield channel found. If you would like to acquire phase from brightfield,"
+            " please restart recOrder after adding a new channel to MicroManager with one of the"
+            " following case-insensitive keywords: ",
+            width=70,
+        )
+    )
 
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
