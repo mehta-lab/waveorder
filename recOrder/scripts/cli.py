@@ -4,8 +4,8 @@ import numpy as np
 
 # Workaround waveorder #97
 # Create napari Viewer before other imports
-v = napari.Viewer()
-v.close()
+# v = napari.Viewer()
+# v.close()
 from recOrder.io.zarr_converter import ZarrConverter
 from waveorder.io import WaveorderReader
 
@@ -17,7 +17,7 @@ def cli():
     )
 
 
-@click.command()
+@cli.command()
 @click.help_option("-h", "--help")
 @click.argument("filename")
 def info(filename):
@@ -25,9 +25,6 @@ def info(filename):
     print(f"Reading file:\t {filename}")
     reader = WaveorderReader(filename)
     print_reader_info(reader)
-
-
-cli.add_command(info)
 
 
 def print_reader_info(reader):
@@ -40,7 +37,7 @@ def print_reader_info(reader):
     print("")
 
 
-@click.command()
+@cli.command()
 @click.help_option("-h", "--help")
 @click.argument("filename")
 @click.option(
@@ -96,10 +93,7 @@ def view(filename, position=None, layers=None):
     napari.run()
 
 
-cli.add_command(view)
-
-
-@click.command()
+@cli.command()
 @click.help_option("-h", "--help")
 @click.option(
     "--input",
@@ -137,6 +131,3 @@ def convert(input, output, data_type, replace_pos_name, format_hcs):
         input, output, data_type, replace_pos_name, format_hcs
     )
     converter.run_conversion()
-
-
-cli.add_command(convert)
