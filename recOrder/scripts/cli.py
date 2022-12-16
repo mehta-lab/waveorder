@@ -1,7 +1,6 @@
 import click
 import napari
 import numpy as np
-import sys
 
 # Workaround waveorder #97
 # Create napari Viewer before other imports
