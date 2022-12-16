@@ -4,8 +4,8 @@ import numpy as np
 
 # Workaround waveorder #97
 # Create napari Viewer before other imports
-# v = napari.Viewer()
-# v.close()
+v = napari.Viewer()
+v.close()
 from recOrder.io.zarr_converter import ZarrConverter
 from waveorder.io import WaveorderReader
 
