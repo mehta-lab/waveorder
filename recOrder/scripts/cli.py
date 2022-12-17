@@ -65,6 +65,7 @@ def view(filename, position=None, layers=None):
     position = [int(x) for x in position]
 
     v = napari.Viewer()
+    v.text_overlay.visible = True
     if layers == "position" or layers == "p":
         for i in position:
             try:
@@ -74,6 +75,14 @@ def view(filename, position=None, layers=None):
             v.add_image(reader.get_zarr(i), name=name)
             v.layers[-1].reset_contrast_limits()
         v.dims.axis_labels = ("T", "C", "Z", "Y", "X")
+
+        def text_overlay():
+            v.text_overlay.text = (
+                f"Channel: {reader.channel_names[v.dims.current_step[1]]}"
+            )
+
+        v.dims.events.current_step.connect(text_overlay)
+        text_overlay()
 
     elif layers == "channel" or layers == "c":
         print(
