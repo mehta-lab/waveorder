@@ -66,6 +66,7 @@ def view(filename, position=None, layers=None):
 
     v = napari.Viewer()
     v.text_overlay.visible = True
+    v.text_overlay.color = "green"
     if layers == "position" or layers == "p":
         for i in position:
             try:
