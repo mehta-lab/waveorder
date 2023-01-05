@@ -32,7 +32,7 @@
 4. View command-line help by running
 
     ```sh
-    recOrder.help
+    recOrder
     ```
 
 5. To acquire data via `Micromanager`, follow the [microscope installation guide](./microscope-installation-guide.md).
