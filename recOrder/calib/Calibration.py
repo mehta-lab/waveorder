@@ -821,8 +821,9 @@ class QLIPP_Calibration:
     ):
         return np.round(
             (1 / np.sin(np.pi * swing) ** 2)
-            * (intensity_elliptical - black_level)
-            / (intensity_extinction - black_level),
+            * (intensity_elliptical - intensity_extinction)
+            / (intensity_extinction - black_level)
+            + 1,
             2,
         )
 
@@ -884,7 +885,7 @@ class QLIPP_Calibration:
                 "Retardance to voltage interpolation method": self.calib.interp_method,
                 "LC control mode": self.mode,
                 "Black level": np.round(self.I_Black, 2),
-                "Extinction ratio": self.extinction_ratio
+                "Extinction ratio": self.extinction_ratio,
             },
             "Notes": notes,
         }
