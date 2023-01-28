@@ -20,9 +20,9 @@ After finding the circular extinction state, the calibration routine finds the r
 
 ![](./images/poincare_swing.svg)
 
-On the Poincare sphere, the extinction state corresponds to the north pole, and the swing value corresponds to the targeted line of [colatitude](https://en.m.wikipedia.org/wiki/File:Spherical_Coordinates_%28Colatitude,_Longitude%29.svg) for the remaining states. For example, a swing value of 0.25 (above left) sets the targeted polarization states to the states on the equator: a set of linear polarization states. Similarly, a swing value of 0.125 (above right) sets the targeted polarization states to the states on the line of colatitude 45 degrees ($\pi$/4 radians) away from the north pole: a set of elliptical polarization states. 
+On the Poincare sphere, the extinction state corresponds to the north pole, and the swing value corresponds to the targeted line of [colatitude](https://en.m.wikipedia.org/wiki/File:Spherical_Coordinates_%28Colatitude,_Longitude%29.svg) for the remaining states. For example, a swing value of 0.25 (above left) sets the targeted polarization states to the states on the equator: a set of linear polarization states. Similarly, a swing value of 0.125 (above right) sets the targeted polarization states to the states on the line of colatitude 45 degrees ( $\pi$/4 radians) away from the north pole: a set of elliptical polarization states. 
 
-The Poincare sphere is also useful for calculating the ratio of intensities measured before and after an analyzer illuminated with a polarized beam. First, find the point on the Poincare sphere that corresponds to the analyzer; in our case we have a right-circular analyzer corresponding to the south pole. Next, find the point that corresponds to the polarization state of the light incident on the analyzer; this could be any arbitrary point on the Poincare sphere. To find the ratio of intensities before and after the analyzer $I/I_0$, find the great-circle angle between the two points on the Poincare sphere, $\alpha$, and calculate $I/I_0 = \cos^2(\alpha/2)$. As expected, points that are close together transmit perfectly ($\alpha = 0$ implies $I/I_0 = 1$), while antipodal points lead to extinction ($\alpha = \pi$ implies $I/I_0 = 0$). 
+The Poincare sphere is also useful for calculating the ratio of intensities measured before and after an analyzer illuminated with a polarized beam. First, find the point on the Poincare sphere that corresponds to the analyzer; in our case we have a right-circular analyzer corresponding to the south pole. Next, find the point that corresponds to the polarization state of the light incident on the analyzer; this could be any arbitrary point on the Poincare sphere. To find the ratio of intensities before and after the analyzer $I/I_0$, find the great-circle angle between the two points on the Poincare sphere, $\alpha$, and calculate $I/I_0 = \cos^2(\alpha/2)$. As expected, points that are close together transmit perfectly ( $\alpha = 0$ implies $I/I_0 = 1$), while antipodal points lead to extinction ( $\alpha = \pi$ implies $I/I_0 = 0$). 
 
 This geometric construction shows that we can expect all of our targeted non-extinction states to transmit the same intensity because all of the states that live on the same line of colatitude have the same great-circle angle to the south pole (the analyzer). We use this fact to help us find our non-extinction states. 
 
@@ -40,21 +40,21 @@ Instead, we estimate the extinction ratio from the intensities we measure during
 
 We can decompose $I_{\text{ellip}}(S)$ into a constant term $I_{\text{ellip}}(0) = I_{\text{ext}}$, and a modulation term given by 
 
-$$\begin{equation}I_{\text{ellip}}(S) = I_{\text{mod}}\sin^2(\pi\chi) + I_{\text{ext}},\end{equation}$$
-where $I_{\text{mod}}$ is the modulation depth, and the $\sin^2(\pi S)$ term can be understood using the Poincare sphere (the intensity behind the circular analyzer is proportional to $\cos^2(\alpha/2)$ and for a given swing we have $\alpha = \pi - 2\pi S$ so $\cos^2(\frac{\pi - 2\pi S}{2}) = \sin^2(\pi S)$).
+$$I_{\text{ellip}}(S) = I_{\text{mod}}\sin^2(\pi\chi) + I_{\text{ext}},\qquad\qquad (1)$$
+where $I_{\text{mod}}$ is the modulation depth, and the $\sin^2(\pi S)$ term can be understood using the Poincare sphere (the intensity behind the circular analyzer is proportional to $\cos^2(\alpha/2)$ and for a given swing we have $\alpha = \pi - 2\pi S$ so $\cos^2(\frac{\pi - 2\pi S}{2}) = \sin^2(\pi S)$ ).
 
 Next, we decompose $I_{\text{ext}}$ into the sum of two terms, the black level intensity and a leakage intensity $I_{\text{leak}}$
-$$I_{\text{ext}} = I_{\text{bl}} + I_{\text{leak}}.$$
+$$I_{\text{ext}} = I_{\text{bl}} + I_{\text{leak}}.\qquad\qquad (2)$$
 
 The following diagram clarifies our definitions and shows how the measured $I_{\text{ellip}}(S)$ depends on the swing (green line).
 
 ![](./images/modulation.png)
 
 The extinction ratio is the ratio of the largest and smallest intensities that the imaging system can transmit above background, which is most easily expressed in terms of $I_{\text{mod}}$ and $I_{\text{leak}}$
-$$\text{Extinction Ratio} = \frac{I_{\text{mod}} + I_{\text{leak}}}{I_{\text{leak}}}.$$
+$$\text{Extinction Ratio} = \frac{I_{\text{mod}} + I_{\text{leak}}}{I_{\text{leak}}}.\qquad\qquad (3)$$
 
 Substituting Eqs. (1) and (2) into Eq. (3) gives the extinction ratio in terms of the measured intensities
-$$\text{Extinction Ratio} = \frac{1}{\sin^2(\pi S)}\frac{I_{\text{ellip}}(S) - I_{\text{ext}}}{I_{\text{ext}} - I_{\text{bl}}} + 1$$
+$$\text{Extinction Ratio} = \frac{1}{\sin^2(\pi S)}\frac{I_{\text{ellip}}(S) - I_{\text{ext}}}{I_{\text{ext}} - I_{\text{bl}}} + 1\qquad\qquad (4)$$
 
 ## Summary: `recOrder`'s step-by-step calibration procedure
 1. Close the shutter, measure the black level, then reopen the shutter. 
