@@ -819,6 +819,10 @@ class QLIPP_Calibration:
     def calculate_extinction(
         self, swing, black_level, intensity_extinction, intensity_elliptical
     ):
+        """
+        Returns the extinction ratio, the ratio of the largest and smallest intensities that the imaging system can transmit above background.
+        See `/docs/calibration-guide.md` for a derivation of this expressions.
+        """
         return np.round(
             (1 / np.sin(np.pi * swing) ** 2)
             * (intensity_elliptical - intensity_extinction)
