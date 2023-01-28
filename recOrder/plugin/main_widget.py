@@ -375,6 +375,7 @@ class MainWidget(QWidget):
         self.ui.DisplayOptions.setHidden(True)
 
         # Set initial UI Properties
+        self.ui.label_extinction.setText("Extinction Ratio")
         self.ui.le_mm_status.setStyleSheet(
             "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
         )
