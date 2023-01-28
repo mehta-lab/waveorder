@@ -40,7 +40,7 @@ Instead, we estimate the extinction ratio from the intensities we measure during
 
 We can decompose $I_{\text{ellip}}(S)$ into a constant term $I_{\text{ellip}}(0) = I_{\text{ext}}$, and a modulation term given by 
 
-$$I_{\text{ellip}}(S) = I_{\text{mod}}\sin^2(\pi\chi) + I_{\text{ext}},\qquad\qquad (1)$$
+$$I_{\text{ellip}}(S) = I_{\text{mod}}\sin^2(\pi S) + I_{\text{ext}},\qquad\qquad (1)$$
 where $I_{\text{mod}}$ is the modulation depth, and the $\sin^2(\pi S)$ term can be understood using the Poincare sphere (the intensity behind the circular analyzer is proportional to $\cos^2(\alpha/2)$ and for a given swing we have $\alpha = \pi - 2\pi S$ so $\cos^2(\frac{\pi - 2\pi S}{2}) = \sin^2(\pi S)$ ).
 
 Next, we decompose $I_{\text{ext}}$ into the sum of two terms, the black level intensity and a leakage intensity $I_{\text{leak}}$
@@ -54,7 +54,7 @@ The extinction ratio is the ratio of the largest and smallest intensities that t
 $$\text{Extinction Ratio} = \frac{I_{\text{mod}} + I_{\text{leak}}}{I_{\text{leak}}}.\qquad\qquad (3)$$
 
 Substituting Eqs. (1) and (2) into Eq. (3) gives the extinction ratio in terms of the measured intensities
-$$\text{Extinction Ratio} = \frac{1}{\sin^2(\pi S)}\frac{I_{\text{ellip}}(S) - I_{\text{ext}}}{I_{\text{ext}} - I_{\text{bl}}} + 1\qquad\qquad (4)$$
+$$\text{Extinction Ratio} = \frac{1}{\sin^2(\pi S)}\frac{I_{\text{ellip}}(S) - I_{\text{ext}}}{I_{\text{ext}} - I_{\text{bl}}} + 1.$$
 
 ## Summary: `recOrder`'s step-by-step calibration procedure
 1. Close the shutter, measure the black level, then reopen the shutter. 
