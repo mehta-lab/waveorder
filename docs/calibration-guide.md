@@ -18,7 +18,7 @@ Every calibration starts with a routine that finds the **extinction state**: the
 
 After finding the circular extinction state, the calibration routine finds the remaining states. The **swing** parameter sets the target for the remaining states and is best understood using [the Poincare sphere](https://en.wikipedia.org/wiki/Unpolarized_light#Poincar%C3%A9_sphere), a diagram that organizes all pure polarization states onto the surface of a sphere.
 
-<img src="./images/poincare_swing.svg" height="350">
+<img src="./images/poincare_swing.svg" height="350" align="center">
 
 On the Poincare sphere, the extinction state corresponds to the north pole, and the swing value corresponds to the targeted line of [colatitude](https://en.m.wikipedia.org/wiki/File:Spherical_Coordinates_%28Colatitude,_Longitude%29.svg) for the remaining states. For example, a swing value of 0.25 (above left) sets the targeted polarization states to the states on the equator: a set of linear polarization states. Similarly, a swing value of 0.125 (above right) sets the targeted polarization states to the states on the line of colatitude 45 degrees ( $\pi$/4 radians) away from the north pole: a set of elliptical polarization states. 
 
@@ -48,7 +48,7 @@ $$I_{\text{ext}} = I_{\text{bl}} + I_{\text{leak}}.\qquad\qquad (2)$$
 
 The following diagram clarifies our definitions and shows how the measured $I_{\text{ellip}}(S)$ depends on the swing (green line).
 
-<img src="./images/modulation.png" height="350">
+<img src="./images/modulation.png" height="350" align="center">
 
 The extinction ratio is the ratio of the largest and smallest intensities that the imaging system can transmit above background, which is most easily expressed in terms of $I_{\text{mod}}$ and $I_{\text{leak}}$
 $$\text{Extinction Ratio} = \frac{I_{\text{mod}} + I_{\text{leak}}}{I_{\text{leak}}}.\qquad\qquad (3)$$
