@@ -60,7 +60,7 @@ If a user wants to use a previous calibration to acquire new data, then the "Loa
 This is quite useful if micromanager and/or recOrder crashes. If the sample and imaging setup haven't changed, it is safe to use a past calibration. Otherwise, if a new sample is used or some microscope components are changed, we recommend performing a new calibration.
 
 ### Optional: Calculate Extinction
-This is a useful feature to see if the extinction level varies as you move around the sample.  Sometimes there can be local variations present in the sample which can cause slightly different perturbations to the polarization state. If the extinction level varies dramatically across the sample, it is worthwhile to calibrate and acquire background images as close to the area in which you will be imaging as possible.
+This is a useful feature to see if the extinction level varies as you move around the sample. Sometimes there can be local variations present in the sample which can cause slightly different perturbations to the polarization state. If the extinction level varies dramatically across the sample, it is worthwhile to calibrate and acquire background images as close to the area in which you will be imaging as possible.
 
 ### Capture Background
 The next important step in the calibration process. This will later serve in reconstruction to correct for any local and global background anisotropy. 
