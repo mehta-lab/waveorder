@@ -16,7 +16,7 @@ Every calibration starts with a routine that finds the **extinction state**: the
 
 ## Setting a goal for the remaining states: swing 
 
-After finding the circular extinction state, the calibration routine finds the remaining states. The **swing** parameter sets the target for the remaining states and is best understood using [the Poincare sphere](https://en.wikipedia.org/wiki/Unpolarized_light#Poincar%C3%A9_sphere), a diagram that organizes all pure polarization states onto the surface of a sphere.
+After finding the circular extinction state, the calibration routine finds the remaining states. The **swing** parameter sets the target ellipticity of the remaining states and is best understood using [the Poincare sphere](https://en.wikipedia.org/wiki/Unpolarized_light#Poincar%C3%A9_sphere), a diagram that organizes all pure polarization states onto the surface of a sphere.
 
 <img src="./images/poincare_swing.svg" height="350" align="center">
 
@@ -24,7 +24,7 @@ On the Poincare sphere, the extinction state corresponds to the north pole, and 
 
 The Poincare sphere is also useful for calculating the ratio of intensities measured before and after an analyzer illuminated with a polarized beam. First, find the point on the Poincare sphere that corresponds to the analyzer; in our case we have a right-circular analyzer corresponding to the south pole. Next, find the point that corresponds to the polarization state of the light incident on the analyzer; this could be any arbitrary point on the Poincare sphere. To find the ratio of intensities before and after the analyzer $I/I_0$, find the great-circle angle between the two points on the Poincare sphere, $\alpha$, and calculate $I/I_0 = \cos^2(\alpha/2)$. As expected, points that are close together transmit perfectly ( $\alpha = 0$ implies $I/I_0 = 1$), while antipodal points lead to extinction ( $\alpha = \pi$ implies $I/I_0 = 0$). 
 
-This geometric construction shows that we can expect all of our targeted non-extinction states to transmit the same intensity because all of the states that live on the same line of colatitude have the same great-circle angle to the south pole (the analyzer). We use this fact to help us find our non-extinction states. 
+This geometric construction illustrates that all non-extinction polarization states have the same intensity after the analyzer because they live on the same line of colatitude and have the same great-circle angle to the south pole (the analyzer). We use this fact to help us find our non-extinction states. 
 
 Practically, we find our first non-extinction state immediately using the liquid crystal manufacturer's measurements from the factory. In other words, we apply a fixed voltage offset to the extinction-state voltages to find the first non-extinction state, and this requires no iteration or optimization. To find the remaining non-extinction states, we keep the polarization orientation fixed and search through neighboring states with different ellipticity to find states that transmit the same intensity as the first non-extinction state. 
 
