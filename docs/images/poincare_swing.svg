@@ -8,7 +8,7 @@
    version="1.1"
    id="svg5"
    xml:space="preserve"
-   sodipodi:docname="poincare-swing.svg"
+   sodipodi:docname="poincare_swing.svg"
    inkscape:version="1.2.1 (9c6d41e, 2022-07-14)"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -26,12 +26,12 @@
      inkscape:document-units="mm"
      showgrid="false"
      inkscape:zoom="0.83180045"
-     inkscape:cx="130.43994"
-     inkscape:cy="141.86095"
-     inkscape:window-width="1309"
-     inkscape:window-height="456"
+     inkscape:cx="329.40593"
+     inkscape:cy="103.99129"
+     inkscape:window-width="1352"
+     inkscape:window-height="815"
      inkscape:window-x="0"
-     inkscape:window-y="25"
+     inkscape:window-y="35"
      inkscape:window-maximized="0"
      inkscape:current-layer="layer1" /><defs
      id="defs2"><rect
@@ -220,7 +220,13 @@
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
      id="layer1"
-     transform="translate(-38.235631,-199.23864)"><path
+     transform="translate(-38.235631,-199.23864)"><rect
+       style="fill:#ffffff;stroke-width:0.328321"
+       id="rect18973"
+       width="143.77448"
+       height="75.704247"
+       x="38.235634"
+       y="198.92055" /><path
        style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
        d="M 151.67333,243.96507 V 213.56842"
        id="path2149"
@@ -513,14 +519,17 @@
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,9.2227542,3.2447246)"
        id="text5621"
-       style="font-size:16px;line-height:1.25;font-family:cmr10;-inkscape-font-specification:'cmr10, Normal';white-space:pre;shape-inside:url(#rect5623)"><tspan
+       style="font-size:16px;line-height:1.25;font-family:cmr10;-inkscape-font-specification:'cmr10, Normal';white-space:pre;shape-inside:url(#rect5623);display:inline"><tspan
          x="172.875"
          y="752.04563"
-         id="tspan8309">SWING = 0.25</tspan></text><text
+         id="tspan19257">SWING = 0.25</tspan></text><text
        xml:space="preserve"
        transform="matrix(0.26458333,0,0,0.26458333,89.258224,3.2447246)"
        id="text5621-4"
-       style="font-size:16px;line-height:1.25;font-family:cmr10;-inkscape-font-specification:'cmr10, Normal';white-space:pre;shape-inside:url(#rect5623-2)"><tspan
+       style="font-size:16px;line-height:1.25;font-family:cmr10;-inkscape-font-specification:'cmr10, Normal';white-space:pre;shape-inside:url(#rect5623-2);display:inline"
+       inkscape:export-filename="../../../Downloads/poincare-swing.png"
+       inkscape:export-xdpi="500"
+       inkscape:export-ydpi="500"><tspan
          x="172.875"
          y="752.04563"
-         id="tspan8311">SWING = 0.125</tspan></text></g></svg>
+         id="tspan19259">SWING = 0.125</tspan></text></g></svg>
