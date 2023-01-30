@@ -183,7 +183,10 @@ class BFAcquisitionWorker(WorkerBase):
         # Acquire from MDA settings uses MM MDA GUI
         # Returns (1, 4/5, Z, Y, X) array
         stack = acquire_from_settings(
-            self.calib_window.mm, settings, grab_images=True
+            self.calib_window.mm,
+            settings,
+            grab_images=True,
+            restore_settings=True,
         )
         self._check_abort()
 
@@ -681,12 +684,11 @@ class PolarizationAcquisitionWorker(WorkerBase):
         """
         Check that all LF channels have the same exposure settings. If not, abort Acquisition.
         """
-        logging.debug("Verifying exposure times...")
         # parse exposure times
         channel_exposures = []
         for channel in self.settings["channels"]:
             channel_exposures.append(channel["exposure"])
-
+        logging.debug(f"Verifying exposure times: {channel_exposures}")
         channel_exposures = np.array(channel_exposures)
         # check if exposure times are equal
         if not np.all(channel_exposures == channel_exposures[0]):
@@ -713,7 +715,10 @@ class PolarizationAcquisitionWorker(WorkerBase):
         # Acquire from MDA settings uses MM MDA GUI
         # Returns (1, 4/5, Z, Y, X) array
         stack = acquire_from_settings(
-            self.calib_window.mm, self.settings, grab_images=True
+            self.calib_window.mm,
+            self.settings,
+            grab_images=True,
+            restore_settings=True,
         )
         self._check_abort()
 

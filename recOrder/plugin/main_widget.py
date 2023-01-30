@@ -56,6 +56,28 @@ class MainWidget(QWidget):
     # Initialize Custom Signals
     log_changed = Signal(str)
 
+    # Initialize class attributes
+    disabled_button_style = "border: 1px solid rgb(65,72,81);"
+    bf_keywords = [
+        "bf",
+        "brightfield",
+        "bright",
+        "labelfree",
+        "label-free",
+        "lf",
+        "label",
+        "phase",
+        "ph",
+    ]
+    no_bf_msg = "\n".join(
+        textwrap.wrap(
+            f"No brightfield channel found. If you would like to acquire phase from brightfield,"
+            " please restart recOrder after adding a new channel to MicroManager with one of the"
+            " following case-insensitive keywords: " + ", ".join(bf_keywords),
+            width=70,
+        )
+    )
+
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
         self.viewer = napari_viewer
@@ -64,8 +86,11 @@ class MainWidget(QWidget):
         self.ui = gui.Ui_Form()
         self.ui.setupUi(self)
 
-        # Override inital tab focus
+        # Override initial tab focus
         self.ui.tabWidget.setCurrentIndex(0)
+
+        # Set attributes need for enabling/disabling buttons
+        self.bf_channel_found = False
 
         # Disable buttons until connected to MM
         self._set_buttons_enabled(False)
@@ -190,6 +215,7 @@ class MainWidget(QWidget):
         self.ui.qbutton_acq_phase_from_bf.clicked[bool].connect(
             self.acq_phase_from_bf
         )
+
         self.ui.qbutton_acq_ret_ori_phase.clicked[bool].connect(
             self.acq_ret_ori_phase
         )
@@ -349,6 +375,7 @@ class MainWidget(QWidget):
         self.ui.DisplayOptions.setHidden(True)
 
         # Set initial UI Properties
+        self.ui.label_extinction.setText("Extinction Ratio")
         self.ui.le_mm_status.setStyleSheet(
             "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
         )
@@ -591,12 +618,19 @@ class MainWidget(QWidget):
             action_button.setEnabled(val)
             if val:
                 action_button.setToolTip("")
-                action_button.setStyleSheet("border: 1px solid rgb(32,34,40);")
+                action_button.setStyleSheet(self.disabled_button_style)
             else:
                 action_button.setToolTip(
                     "Action temporarily disabled. Connect to MM or wait for acquisition to finish."
                 )
-                action_button.setStyleSheet("border: 1px solid rgb(65,72,81);")
+                action_button.setStyleSheet(self.disabled_button_style)
+
+        if not self.bf_channel_found:
+            self.ui.qbutton_acq_phase_from_bf.setEnabled(False)
+            self.ui.qbutton_acq_phase_from_bf.setStyleSheet(
+                self.disabled_button_style
+            )
+            self.ui.qbutton_acq_phase_from_bf.setToolTip(self.no_bf_msg)
 
     def _enable_buttons(self):
         self._set_buttons_enabled(True)
@@ -912,22 +946,15 @@ class MainWidget(QWidget):
                 self.ui.cb_config_group.addItem(group)
 
             # Populate the acquisition "BF channel" list with presets that contain any of these keywords
-            bf_keywords = [
-                "bf",
-                "brightfield",
-                "bright",
-                "labelfree",
-                "label-free",
-                "lf",
-                "label",
-                "phase",
-                "ph",
-            ]
             for ch in config_list:
                 if any(
-                    [keyword.lower() in ch.lower() for keyword in bf_keywords]
+                    [
+                        keyword.lower() in ch.lower()
+                        for keyword in self.bf_keywords
+                    ]
                 ):
                     self.ui.cb_acq_channel.addItem(ch)
+                    self.bf_channel_found = True
 
         if not config_group_found:
             msg = (
@@ -938,6 +965,14 @@ class MainWidget(QWidget):
                 "border: 1px solid rgb(200,0,0);"
             )
             raise KeyError(msg)
+
+        if not self.bf_channel_found:
+            self.ui.qbutton_acq_phase_from_bf.disconnect()
+            self.ui.qbutton_acq_phase_from_bf.setStyleSheet(
+                self.disabled_button_style
+            )
+            self.ui.qbutton_acq_phase_from_bf.setToolTip(self.no_bf_msg)
+            self.ui.cb_acq_channel.setToolTip(self.no_bf_msg)
 
         # set startup LC control mode
         _devices = self.mmc.getLoadedDevices()
@@ -2093,8 +2128,12 @@ class MainWidget(QWidget):
         }
         # TV-specific parameters
         if self.phase_regularizer == "TV":
-            gui_state["Phase Reconstruction Settings"]["Rho"] = float(self.ui.le_rho.text())
-            gui_state["Phase Reconstruction Settings"]["Iterations"] = int(self.ui.le_itr.text())
+            gui_state["Phase Reconstruction Settings"]["Rho"] = float(
+                self.ui.le_rho.text()
+            )
+            gui_state["Phase Reconstruction Settings"]["Iterations"] = int(
+                self.ui.le_itr.text()
+            )
         # save in YAML
         save_path = os.path.join(save_dir, "gui_state.yml")
         with open(save_path, "w") as f:

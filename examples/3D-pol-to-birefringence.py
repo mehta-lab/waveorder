@@ -68,7 +68,7 @@ birefringence[0] = (
 print(f"Shape of birefringence data: {np.shape(birefringence)}")
 
 # Reconstruct Phase3D from S0
-S0 = birefringence[3]
+S0 = birefringence[2]
 
 phase3D = reconstruct_phase3D(
     S0, reconstructor, method="Tikhonov", reg_re=1e-2
