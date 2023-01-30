@@ -83,7 +83,7 @@ writer.init_array(
     position=0,
     data_shape=(1, 5, Z, Y, X),
     chunk_size=(1, 1, 1, Y, X),
-    chan_names=["Retardance", "Orientation", "S0", "DoP", "Phase"],
+    chan_names=["Retardance", "Orientation", "BF - computed", "DoP", "Phase"],
 )
 writer.write(birefringence, p=0, t=0, c=slice(0, 4), z=slice(0, Z))
 writer.write(phase3D, p=0, t=0, c=4, z=slice(0, Z))
