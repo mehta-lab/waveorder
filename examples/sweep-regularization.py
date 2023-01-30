@@ -43,8 +43,8 @@ reconstructor = initialize_reconstructor(
 )
 
 # Setup a single writer and viewer
-writer = WaveorderWriter("./output-phase")
-writer.create_zarr_root("phase_" + timestamp)
+writer = WaveorderWriter("./output")
+writer.create_zarr_root("reconstructions_" + timestamp)
 v = napari.Viewer()
 v.add_image(data)
 

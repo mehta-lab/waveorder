@@ -78,24 +78,15 @@ print(f"Shape of 3D phase data: {np.shape(phase3D)}")
 ## Save to zarr
 # Save birefringence
 writer = WaveorderWriter("./output")
-writer.create_zarr_root("birefringence_" + timestamp)
+writer.create_zarr_root("reconstructions_" + timestamp)
 writer.init_array(
     position=0,
-    data_shape=(1, 4, Z, Y, X),
+    data_shape=(1, 5, Z, Y, X),
     chunk_size=(1, 1, 1, Y, X),
-    chan_names=["Retardance", "Orientation", "BF", "Pol"],
+    chan_names=["Retardance", "Orientation", "BF - computed", "DoP", "Phase"],
 )
 writer.write(birefringence, p=0, t=0, c=slice(0, 4), z=slice(0, Z))
-
-## Save phase
-writer.create_zarr_root("phase_" + timestamp)
-writer.init_array(
-    position=0,
-    data_shape=(1, 1, Z, Y, X),
-    chunk_size=(1, 1, 1, Y, X),
-    chan_names=["Phase"],
-)
-writer.write(phase3D, p=0, t=0, c=0, z=slice(0, Z))
+writer.write(phase3D, p=0, t=0, c=4, z=slice(0, Z))
 
 # These lines open the reconstructed images
 # Alternatively, drag and drop the zarr store into napari and use the recOrder-napari reader.
