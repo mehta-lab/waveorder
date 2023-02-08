@@ -2,14 +2,6 @@ import click
 import napari
 import numpy as np
 
-# Workaround waveorder #97
-# Create napari Viewer before other imports
-v = napari.Viewer()
-v.close()
-from recOrder.io.zarr_converter import ZarrConverter
-from waveorder.io import WaveorderReader
-
-
 @click.group()
 def cli():
     print(
@@ -23,6 +15,9 @@ def cli():
 def info(filename):
     """View a dataset's basic metadata"""
     print(f"Reading file:\t {filename}")
+    
+    from waveorder.io import WaveorderReader
+    
     reader = WaveorderReader(filename)
     print_reader_info(reader)
 
@@ -57,6 +52,13 @@ def print_reader_info(reader):
 def view(filename, position=None, layers=None):
     """View a dataset in napari"""
     print(f"Reading file:\t {filename}")
+
+    # Workaround waveorder #97
+    # Create napari Viewer before other imports
+    v = napari.Viewer()
+    v.close()
+    from waveorder.io import WaveorderReader
+    
     reader = WaveorderReader(filename)
     print_reader_info(reader)
 
@@ -137,6 +139,7 @@ def view(filename, position=None, layers=None):
 )
 def convert(input, output, data_type, replace_pos_name, format_hcs):
     """Convert MicroManager ome-tiff to ome-zarr"""
+    from recOrder.io.zarr_converter import ZarrConverter
     converter = ZarrConverter(
         input, output, data_type, replace_pos_name, format_hcs
     )
