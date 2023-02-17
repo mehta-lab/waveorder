@@ -3,6 +3,8 @@ import shutil
 import os
 import random
 from wget import download
+import numpy as np
+import waveorder as wo
 
 MM2GAMMA_OMETIFF_SUBFOLDERS = \
     {
@@ -174,3 +176,8 @@ def setup_pycromanager_test_data():
     first_dir, rand_dir, ptcz_dir = (dataset_dirs[0], random.choice(dataset_dirs), dataset_dirs[3])
 
     yield first_dir, rand_dir, ptcz_dir
+
+@pytest.fixture(scope="function")
+def setup_single_voxel_recon():
+    recon = wo.waveorder_microscopy(img_dim=(1,1), lambda_illu=500, ps=1, NA_obj=0, NA_illu=0, z_defocus=[0], chi=2*np.pi*0.1, cali=True)
+    yield recon
