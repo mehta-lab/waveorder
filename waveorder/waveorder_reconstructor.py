@@ -1091,6 +1091,7 @@ class waveorder_microscopy:
         # A_matrix_inv is shape (N_Stokes, N_channel) or (N, M, N_Stokes, N_channel)
         # img_data is shape (N, M, N_channel, ...)
         # S_image_recon is shape (N, M, N_stokes, ...)
+        # If A_matrix_inv is 2D (stokes x intensity dimensions), matmul broadcasts it to spatial dimensions.
         if self.use_gpu:
             if self._A_matrix_inv_gpu_array is None:
                 self._A_matrix_inv_gpu_array = cp.array(self.A_matrix_inv)
@@ -1143,12 +1144,12 @@ class waveorder_microscopy:
         
         S_transformed[0] = S_image_recon[0]
         
-        if self.N_Stokes == 4:
+        if self.N_Stokes == 4: # full Stokes polarimeter
             S_transformed[1] = S_image_recon[1] / S_image_recon[3]
             S_transformed[2] = S_image_recon[2] / S_image_recon[3]
             S_transformed[3] = S_image_recon[3]
             S_transformed[4] = (S_image_recon[1]**2 + S_image_recon[2]**2 + S_image_recon[3]**2)**(1/2) / S_image_recon[0] # DoP
-        elif self.N_Stokes == 3:
+        elif self.N_Stokes == 3: # linear Stokes polarimeter
             S_transformed[1] = S_image_recon[1] / S_image_recon[0]
             S_transformed[2] = S_image_recon[2] / S_image_recon[0]
             
@@ -1288,10 +1289,10 @@ class waveorder_microscopy:
 
         if self.use_gpu:
             
-            if self.N_Stokes == 4:
+            if self.N_Stokes == 4: # full Stokes polarimeter
                 ret_wrapped = cp.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
                                          S_image_recon[3], S_image_recon[3])  # retardance
-            elif self.N_Stokes == 3:
+            elif self.N_Stokes == 3: # linear Stokes polarimeters
                 ret_wrapped = cp.arcsin(cp.minimum((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5),1))
 
             
@@ -1302,10 +1303,10 @@ class waveorder_microscopy:
         
         else:
             
-            if self.N_Stokes == 4:
+            if self.N_Stokes == 4: # full Stokes polarimeter
                 ret_wrapped = np.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
                                            S_image_recon[3], S_image_recon[3])  # retardance
-            elif self.N_Stokes == 3:
+            elif self.N_Stokes == 3: # linear Stokes polarimeters
                 ret_wrapped = np.arcsin(np.minimum((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5),1))
             
             
