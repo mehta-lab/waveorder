@@ -1144,8 +1144,8 @@ class waveorder_microscopy:
         S_transformed[0] = S_image_recon[0]
         
         if self.N_Stokes == 4:
-            S_transformed[1] = S_image_recon[1] / S_image_recon[3]
-            S_transformed[2] = S_image_recon[2] / S_image_recon[3]
+            S_transformed[1] = S_image_recon[1] / S_image_recon[0]
+            S_transformed[2] = S_image_recon[2] / S_image_recon[0]
             S_transformed[3] = S_image_recon[3]
             S_transformed[4] = (S_image_recon[1]**2 + S_image_recon[2]**2 + S_image_recon[3]**2)**(1/2) / S_image_recon[0] # DoP
         elif self.N_Stokes == 3:
@@ -1287,13 +1287,7 @@ class waveorder_microscopy:
             Recon_para = np.zeros((self.N_Stokes,)+S_image_recon.shape[1:])
 
         if self.use_gpu:
-            
-            if self.N_Stokes == 4:
-                ret_wrapped = cp.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
-                                         S_image_recon[3], S_image_recon[3])  # retardance
-            elif self.N_Stokes == 3:
-                ret_wrapped = cp.arcsin(cp.minimum((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5),1))
-
+            ret_wrapped = cp.arcsin(cp.minimum((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5),1))
             
             if self.cali == True:
                 sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], -S_image_recon[2]) % np.pi # slow-axis
@@ -1301,14 +1295,7 @@ class waveorder_microscopy:
                 sa_wrapped = 0.5*cp.arctan2(-S_image_recon[1], S_image_recon[2]) % np.pi # slow-axis
         
         else:
-            
-            if self.N_Stokes == 4:
-                ret_wrapped = np.arctan2((S_image_recon[1]**2 + S_image_recon[2]**2)**(1/2) * \
-                                           S_image_recon[3], S_image_recon[3])  # retardance
-            elif self.N_Stokes == 3:
-                ret_wrapped = np.arcsin(np.minimum((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5),1))
-            
-            
+            ret_wrapped = np.arcsin(np.minimum((S_image_recon[1]**2 + S_image_recon[2]**2)**(0.5),1))
             
             if self.cali == True:
                 sa_wrapped = 0.5*np.arctan2(-S_image_recon[1], -S_image_recon[2]) % np.pi # slow-axis
