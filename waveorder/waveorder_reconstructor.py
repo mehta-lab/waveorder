@@ -879,7 +879,7 @@ class waveorder_microscopy:
                 self.H_dyadic_2D_OTF[2,6,:,:,idx] = ExEz_Gyz_re + EyEz_Gxz_re
 
                 # transfer functions for S3
-                if self.N_Stokes == 4:
+                if self.N_Stokes == 4: # full Stokes polarimeter
 
                     self.H_dyadic_2D_OTF[3,0,:,:,idx] = -ExEx_Gxy_im - ExEy_Gyy_im - ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
                     self.H_dyadic_2D_OTF[3,1,:,:,idx] =  ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re - EyEx_Gxx_re - EyEy_Gyx_re - EyEz_Gxz_re
@@ -888,7 +888,7 @@ class waveorder_microscopy:
                     self.H_dyadic_2D_OTF[3,4,:,:,idx] = -ExEx_Gyz_im - ExEz_Gxy_im + EyEx_Gxz_im + EyEz_Gxx_im
                     self.H_dyadic_2D_OTF[3,5,:,:,idx] = -ExEy_Gyz_im - ExEz_Gyy_im + EyEy_Gxz_im + EyEz_Gyx_im
                     self.H_dyadic_2D_OTF[3,6,:,:,idx] = -ExEz_Gyz_im + EyEz_Gxz_im
-            else:
+            else: # linear Stokes polarimeter
                 
                 self.H_dyadic_2D_OTF_in_plane[0,0,:,:,idx] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
                 self.H_dyadic_2D_OTF_in_plane[0,1,:,:,idx] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
@@ -1026,7 +1026,7 @@ class waveorder_microscopy:
                 self.H_dyadic_OTF[2,6,i] = ExEz_Gyz_re + EyEz_Gxz_re
 
                 # transfer functions for S3
-                if self.N_Stokes == 4:
+                if self.N_Stokes == 4: # full Stokes polarimeter
 
                     self.H_dyadic_OTF[3,0,i] = -ExEx_Gxy_im - ExEy_Gyy_im - ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
                     self.H_dyadic_OTF[3,1,i] =  ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re - EyEx_Gxx_re - EyEy_Gyx_re - EyEz_Gxz_re
@@ -1035,7 +1035,7 @@ class waveorder_microscopy:
                     self.H_dyadic_OTF[3,4,i] = -ExEx_Gyz_im - ExEz_Gxy_im + EyEx_Gxz_im + EyEz_Gxx_im
                     self.H_dyadic_OTF[3,5,i] = -ExEy_Gyz_im - ExEz_Gyy_im + EyEy_Gxz_im + EyEz_Gyx_im
                     self.H_dyadic_OTF[3,6,i] = -ExEz_Gyz_im + EyEz_Gxz_im
-            else:
+            else: # linear Stokes polarimeter
                 
                 self.H_dyadic_OTF_in_plane[0,0,i] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
                 self.H_dyadic_OTF_in_plane[0,1,i] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
@@ -1132,9 +1132,9 @@ class waveorder_microscopy:
         
         if self.use_gpu:
             S_image_recon = cp.array(S_image_recon)
-            if self.N_Stokes == 4:
+            if self.N_Stokes == 4: # full Stokes polarimeter
                 S_transformed = cp.zeros((5,)+S_image_recon.shape[1:])
-            elif self.N_Stokes == 3:
+            elif self.N_Stokes == 3: # linear Stokes polarimeter
                 S_transformed = cp.zeros((3,)+S_image_recon.shape[1:])
         else:
             if self.N_Stokes == 4:
@@ -1197,7 +1197,7 @@ class waveorder_microscopy:
             S_image_tm[0] /= S_bg_tm[0]
             S_image_tm[1] -= S_bg_tm[1]
             S_image_tm[2] -= S_bg_tm[2]
-            if self.N_Stokes == 4:
+            if self.N_Stokes == 4: # full Stokes polarimeter
                 S_image_tm[4] /= S_bg_tm[4]
         else:
             S_image_tm[0] /= S_bg_tm[0,:,:,np.newaxis]
@@ -1322,7 +1322,7 @@ class waveorder_microscopy:
         Recon_para[1] = sa_wrapped%np.pi
         Recon_para[2] = S_image_recon[0] # transmittance
         
-        if self.N_Stokes == 4:
+        if self.N_Stokes == 4: # full Stokes polarimeter
             Recon_para[3] = S_image_recon[4] # DoP
         
         
