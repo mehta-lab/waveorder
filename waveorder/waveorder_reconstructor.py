@@ -245,7 +245,7 @@ class waveorder_microscopy:
        3) PTI transfer functions (inc_recon: None, '2D-vec-WOTF' or '3D'):
           enable deconvolution supported by scattering_potential_tensor_recon_2D_vec,
           scattering_potential_tensor_to_3D_orientation and scattering_potential_tensor_recon_3D_vec.
-          Curretnly, the model assumes uniaxial symmetry of the permittivity tensor.
+          Currently, the model assumes uniaxial symmetry of the permittivity tensor.
 
        Parameters
        ----------
