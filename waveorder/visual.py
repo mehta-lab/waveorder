@@ -2,7 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
 import os
-import cv2
+import io
+from PIL import Image as PImage
 from ipywidgets import (
     Image,
     Layout,
@@ -17,6 +18,8 @@ from matplotlib.colors import hsv_to_rgb
 from matplotlib.colors import Normalize
 from scipy.ndimage import uniform_filter
 from scipy.stats import binned_statistic_2d
+
+from numpy.typing import NDArray
 
 
 def im_bit_convert(im, bit=16, norm=False, limit=[]):
@@ -50,11 +53,13 @@ def im_adjust(img, tol=1, bit=8):
     return im_adjusted
 
 
-def array2jpg_bytes(img):
-    """encode numpy array in 8-bit jpg bytes"""
-    is_success, png = cv2.imencode(".png", img)
-    png = png.tobytes()
-    return png
+def array2png_bytes(img: NDArray):
+    """encode numpy array in 8-bit png bytes"""
+    image = PImage.fromarray(img)
+    png = io.BytesIO()
+    image.save(png, format="png")
+    png.seek(0)
+    return png.read()
 
 
 def image_stack_viewer(
@@ -167,9 +172,9 @@ def image_stack_viewer_fast(
     im_dict = {}
     for idx, img in enumerate(imgs):
         if origin == "upper":
-            im_dict[idx] = array2jpg_bytes(img)
+            im_dict[idx] = array2png_bytes(img)
         elif origin == "lower":
-            im_dict[idx] = array2jpg_bytes(np.flipud(img))
+            im_dict[idx] = array2png_bytes(np.flipud(img))
         else:
             raise ValueError('origin can only be either "upper" or "lower"')
 
@@ -325,7 +330,7 @@ def rgb_stack_viewer_fast(image_stack, size=(256, 256), origin="upper"):
         a interactive widget shown in the output cell of the jupyter notebook (or jupyter lab)
 
     """
-    imgs = np.zeros_like(image_stack)
+    imgs = np.zeros_like(image_stack, dtype=np.uint8)
     imgs[:, :, :, 0] = np.uint8(image_stack[:, :, :, 2] * 255)
     imgs[:, :, :, 1] = np.uint8(image_stack[:, :, :, 1] * 255)
     imgs[:, :, :, 2] = np.uint8(image_stack[:, :, :, 0] * 255)
@@ -333,9 +338,9 @@ def rgb_stack_viewer_fast(image_stack, size=(256, 256), origin="upper"):
     im_dict = {}
     for idx, img in enumerate(imgs):
         if origin == "upper":
-            im_dict[idx] = array2jpg_bytes(img)
+            im_dict[idx] = array2png_bytes(img)
         elif origin == "lower":
-            im_dict[idx] = array2jpg_bytes(np.flipud(img))
+            im_dict[idx] = array2png_bytes(np.flipud(img))
         else:
             raise ValueError('origin can only be either "upper" or "lower"')
 
@@ -555,9 +560,9 @@ def parallel_4D_viewer_fast(
         list_of_img_binaries.append({})
         for idx, img in enumerate(imgs):
             if origin == "upper":
-                list_of_img_binaries[i][idx] = array2jpg_bytes(img)
+                list_of_img_binaries[i][idx] = array2png_bytes(img)
             elif origin == "lower":
-                list_of_img_binaries[i][idx] = array2jpg_bytes(np.flipud(img))
+                list_of_img_binaries[i][idx] = array2png_bytes(np.flipud(img))
             else:
                 raise ValueError(
                     'origin can only be either "upper" or "lower"'
@@ -739,9 +744,9 @@ def parallel_5D_viewer_fast(
             list_of_img_binaries.append({})
             for idx, img in enumerate(imgs):
                 if origin == "upper":
-                    list_of_img_binaries[i][idx] = array2jpg_bytes(img)
+                    list_of_img_binaries[i][idx] = array2png_bytes(img)
                 elif origin == "lower":
-                    list_of_img_binaries[i][idx] = array2jpg_bytes(
+                    list_of_img_binaries[i][idx] = array2png_bytes(
                         np.flipud(img)
                     )
                 else:
