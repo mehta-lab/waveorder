@@ -5,9 +5,9 @@
 [![Python package index](https://img.shields.io/pypi/v/waveorder.svg)](https://pypi.org/project/waveorder)
 [![Development Status](https://img.shields.io/pypi/status/napari.svg)](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha)
 
-This package enables wave-optical simulation and reconstruction of optical properties that report microscopic architectural order. 
+This package enables wave-optical simulation and reconstruction of optical properties that report microscopic architectural order.
 
-This vectorial wave simulator and reconstructor enabled the development of a new label-free imaging method, __permittivity tensor imaging (PTI)__, that reconstructs density (phase) and 3D anisotropy (principal retardance, 3D orientation of the optic axis, and optic sign) of specimens from polarization-resolved images acquired under a sequence of oblique illuminations.
+This vectorial wave simulator and reconstructor enabled the development of a new label-free imaging method, __permittivity tensor imaging (PTI)__, that measures density and  3D orientation of biomolecules with diffraction-limited resolution. These measurements are reconstructed from polarization-resolved images acquired with a sequence of oblique illuminations.
 
 The acquisition, calibration, background correction, reconstruction, and applications of PTI are described in the following [preprint](https://doi.org/10.1101/2020.12.15.422951):
 
@@ -17,7 +17,7 @@ The acquisition, calibration, background correction, reconstruction, and applica
 
 Please cite this repository, along with the relevant preprint or paper, if you use or adapt this code.
 
-PTI provides volumetric reconstructions of phase, principal retardance, 3D orientation, and optic sign from a polarization- and illumination-diverse acquisition. The following figure summarizes PTI acquisitions and reconstructions with simulated phantoms: 
+PTI provides volumetric reconstructions of mean permittivity ($\propto$ material density), differential permittivity ($\propto$ material anisotropy), 3D orientation, and optic sign. The following figure summarizes PTI acquisition and reconstruction with a small optical section of the mouse brain tissue:
 
 ![Data_flow](Fig_Readme.png)
 
@@ -29,7 +29,7 @@ In addition to PTI, `waveorder` also enables simulations and reconstructions of 
 
 3. Reconstruction of 2D or 3D phase from an illumination-diverse volumetric acquisition ([2D](https://www.osapublishing.org/oe/fulltext.cfm?uri=oe-23-9-11394&id=315599)/[3D](https://www.osapublishing.org/boe/fulltext.cfm?uri=boe-7-10-3940&id=349951) differential phase contrast)
 
-The [example notebooks](examples/) contain simulations for 2D QLIPP, 3D PODT, and 2D/3D PTI. 
+The [example notebooks](examples/) contain simulations for 2D QLIPP, 3D PODT, and 2D/3D PTI.
 
 If you are interested in using QLIPP or PODT for label-free imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
 
