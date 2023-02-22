@@ -2,7 +2,7 @@
 # Visit https://bit.ly/cffinit to generate yours today!
 
 cff-version: 1.2.0
-title: waveOrder
+title: waveorder
 message: >-
   A generalist library of wave optical models and inverse
   algorithms for label-free imaging of density &
