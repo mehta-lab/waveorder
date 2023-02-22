@@ -27,7 +27,7 @@ In addition to PTI, `waveorder` enables simulations and reconstructions of subse
 
 PTI provides volumetric reconstructions of mean permittivity ($\propto$ material density), differential permittivity ($\propto$ material anisotropy), 3D orientation, and optic sign. The following figure summarizes PTI acquisition and reconstruction with a small optical section of the mouse brain tissue:
 
-![Data_flow](Fig_Readme.png)
+![Data_flow](https://github.com/mehta-lab/waveorder/blob/main/Fig_Readme.png?raw=true)
 
 The [example notebooks](examples/) illustrate simulations and reconstruction for 2D QLIPP, 3D PODT, and 2D/3D PTI methods.
 
@@ -43,7 +43,7 @@ We provide an [example notebook](examples/fluorescence_deconvolution/) for widef
 
 ## Citation
 
-Please cite this repository, along with the relevant preprint or paper, if you use or adapt this code. The citation information can be found by clicking "Cite this repository" button in the About section in the left sidebar.
+Please cite this repository, along with the relevant preprint or paper, if you use or adapt this code. The citation information can be found by clicking "Cite this repository" button in the About section in the right sidebar.
 
 ## Installation
 
