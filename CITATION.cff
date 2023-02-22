@@ -1,0 +1,72 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+
+cff-version: 1.2.0
+title: waveorder
+message: >-
+  A generalist library of wave optical models and inverse
+  algorithms for label-free imaging of density &
+  orientation.
+type: software
+authors:
+  - given-names: Li-Hao
+    family-names: Yeh
+    affiliation: CZ Biohub
+    orcid: 'https://orcid.org/0000-0003-2803-5996'
+  - given-names: Talon
+    family-names: Chandler
+    affiliation: CZ Biohub
+    orcid: 'https://orcid.org/0000-0002-3033-674X'
+  - given-names: Ivan
+    family-names: Ivanov
+    affiliation: CZ Biohub
+    orcid: 'https://orcid.org/0000-0002-4675-5287'
+  - given-names: Cameron
+    family-names: Foltz
+    affiliation: CZ Biohub
+    orcid: 'https://orcid.org/0000-0001-8933-2172'
+  - given-names: Shalin
+    family-names: Mehta
+    affiliation: CZ Biohub
+    orcid: 'https://orcid.org/0000-0002-2542-3582'
+identifiers:
+  - type: doi
+    value: 10.1101/2020.12.15.422951
+    description: Preprint on permittivity tensor imaging
+  - type: doi
+    value: 10.7554/eLife.55502
+    description: >-
+      Publication: Quantitative label-free imaging with
+      phase & polarization
+  - type: url
+    value: 'https://www.napari-hub.org/plugins/recOrder-napari'
+    description: >-
+      recOrder-napari plugin for label-free imaging that
+      depends on waveOrder library
+  - type: doi
+    value: 10.1364/BOE.455770
+    description: >-
+      Publication: Correlative imaging of spatio-angular
+      dynamics
+repository-code: 'https://github.com/mehta-lab/waveorder'
+url: 'https://www.czbiohub.org/comp-micro/'
+abstract: >-
+  This package enables wave-optical simulation and
+  reconstruction of optical properties that report
+  microscopic architectural order. This software is of
+  potential interest to computational imaging, physical
+  biology, and high-content screening communities.
+keywords:
+  - optics
+  - phase
+  - polarization
+  - permittivity
+  - scattering
+  - label-free imaging
+  - permittivity-tensor-imaging
+  - qlipp
+  - mipolscope
+  - simulation
+license: BSD-3-Clause
+version: 1.0.0rc1
+date-released: '2023-02-22'
