@@ -43,7 +43,7 @@ We provide an [example notebook](examples/fluorescence_deconvolution/) for widef
 
 ## Citation
 
-Please cite this repository, along with the relevant preprint or paper, if you use or adapt this code. The citation information can be found by clicking "Cite this repository" button in the About section in the left sidebar.
+Please cite this repository, along with the relevant preprint or paper, if you use or adapt this code. The citation information can be found by clicking "Cite this repository" button in the About section in the right sidebar.
 
 ## Installation
 
