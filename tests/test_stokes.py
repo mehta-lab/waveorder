@@ -1,5 +1,17 @@
 import numpy as np
 from waveorder import stokes
+import pytest
+
+
+def test_A_matrix():
+    A5 = stokes.A_matrix(0.1)
+    assert A5.shape == (5, 4)
+
+    A4 = stokes.A_matrix(0.1, scheme="4-State")
+    assert A4.shape == (4, 4)
+
+    with pytest.raises(KeyError):
+        Ax = stokes.A_matrix(0.1, scheme="3-State")
 
 
 def test_s12_to_ori():
@@ -30,3 +42,17 @@ def test_stokes_recon():
 
                     for i in range(4):
                         assert ADR[i] - ADR1[i] < 1e-8
+
+
+def test_AR_mueller_from_CPL_projection():
+    # Check thank inv(M) == M.T, (only true when
+
+    M = stokes.AR_mueller_from_CPL_projection(
+        1, 1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)
+    )
+    assert np.max(np.linalg.inv(M) - M.T) < 1e-8
+
+    M2 = stokes.AR_mueller_from_CPL_projection(
+        1, 1 / np.sqrt(2), 1 / np.sqrt(2), 0
+    )
+    assert np.max(np.linalg.inv(M2) - M2.T) < 1e-8
