@@ -79,15 +79,14 @@ def inverse_s012_CPL_after_AR(s0, s1, s2):
 
 
 def AR_mueller_from_CPL_projection(s0, s1, s2, s3):
-    M = np.zeros((4, 4))
-    num = s0  # (s1**2 + s2**2 + s3**2) ** 0.5 for ADR
+    M = np.zeros((4, 4) + np.array(s0).shape)
     denom = s1**2 + s2**2
     M[0, 0] = s0
-    M[1, 1] = (s1**2 * s3 + s2**2) * num / denom
-    M[1, 2] = s1 * s2 * (s3 - 1) * num / denom
+    M[1, 1] = (s0 * s2**2 + s1**2 * s3) / denom
+    M[1, 2] = s1 * s2 * (s3 - s0) / denom
     M[1, 3] = s1
     M[2, 1] = M[1, 2]
-    M[2, 2] = (s1**2 + s2**2 * s3) * num / denom
+    M[2, 2] = (s0 * s1**2 + s2**2 * s3) / denom
     M[2, 3] = s2
     M[3, 1] = -M[1, 3]
     M[3, 2] = -M[2, 3]
