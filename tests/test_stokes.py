@@ -10,6 +10,8 @@ def test_A_matrix():
     A4 = stokes.A_matrix(0.1, scheme="4-State")
     assert A4.shape == (4, 4)
 
+    assert np.max(stokes.A_matrix(0) - stokes.A_matrix(1)) < 1e-8
+
     with pytest.raises(KeyError):
         Ax = stokes.A_matrix(0.1, scheme="3-State")
 
@@ -42,6 +44,21 @@ def test_stokes_recon():
 
                     for i in range(4):
                         assert ADR[i] - ADR1[i] < 1e-8
+
+
+def test_s0123_CPL_after_ADR_usage():
+    x = stokes.s0123_CPL_after_ADR(1, 1, 1, 1)
+
+    ret = np.ones((2, 3, 4, 5))
+    ori = np.ones((2, 3, 4, 5))
+    tra = np.ones((2, 3, 4, 5))
+    dop = np.ones((2, 3, 4, 5))
+    x2 = stokes.s0123_CPL_after_ADR(ret, ori, tra, dop)
+
+    ADR_params = np.ones(
+        (4, 2, 3, 4, 5)
+    )  # first axis contains the Stokes indices
+    stokes.s0123_CPL_after_ADR(*ADR_params)  # * expands along the first axis
 
 
 def test_AR_mueller_from_CPL_projection():
