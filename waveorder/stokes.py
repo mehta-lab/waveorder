@@ -100,7 +100,10 @@ def AR_mueller_from_CPL_projection(s0, s1, s2, s3):
 
 def inv_AR_mueller_from_CPL_projection(s0, s1, s2, s3):
     M = AR_mueller_from_CPL_projection(s0, s1, s2, s3)
-    M_inv = np.linalg.inv(M.transpose((2, 3, 0, 1))).transpose((2, 3, 0, 1))
+    M_flip = np.moveaxis(M, (0, 1), (-2, -1))
+    M_inv_flip = np.linalg.inv(M_flip)  # applied over the last two axes
+    M_inv = np.moveaxis(M_inv_flip, (-2, -1), (0, 1))
+    # M_inv = np.linalg.inv(M.transpose((2, 3, 0, 1))).transpose((2, 3, 0, 1))
     return M_inv
 
 
