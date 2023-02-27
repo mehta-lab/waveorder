@@ -93,3 +93,16 @@ def AR_mueller_from_CPL_projection(s0, s1, s2, s3):
     M[3, 3] = s3
 
     return M
+
+
+# Convenience function group
+
+
+def inv_AR_mueller_from_CPL_projection(s0, s1, s2, s3):
+    M = AR_mueller_from_CPL_projection(s0, s1, s2, s3)
+    M_inv = np.linalg.inv(M.transpose((2, 3, 0, 1))).transpose((2, 3, 0, 1))
+    return M_inv
+
+
+def matmul(A, x):
+    return np.einsum("ij...,j...->i...", A, x)
