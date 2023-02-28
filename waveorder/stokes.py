@@ -1,6 +1,7 @@
-import numpy as np
-
 """
+Overview
+--------
+
 This module collects Stokes- and Mueller-related calculations. 
 
 The functions are organized into three groups:
@@ -13,18 +14,17 @@ s0, s1, s2 = s012_CPL_after_AR(ret, ori, dop)
 
 2) An inverse function group:
 
-inverse_s0123_CPL_after_ADR(s0, s1, s2, s3)
-inverse s012_CPL_after_AR(s0, s1, s2)
-AR_mueller_from_CPL_projection(s0, s1, s2, s3)
+ret, ori, tra, dop = inverse_s0123_CPL_after_ADR(s0, s1, s2, s3)
+ret, ori, tra = inverse_s012_CPL_after_AR(s0, s1, s2)
+M = AR_mueller_from_CPL_projection(s0, s1, s2, s3)
 
 3) A convenience function group:
 
 M = inv_AR_mueller_from_CPL_projection(s0, s1, s2, s3)
 y = matmul(A, x)
 
-----------
-
-Usage: 
+Usage
+-----
 
 All functions (except A_matrix) are intended to be used with ND-arrays with
 Stokes- or Mueller-indices as the first axes. 
@@ -43,6 +43,7 @@ For example, the following usage modes of s0123_CPL_after_ADR are valid:
 >>> s0123_CPL_after_ADR(*ADR_params) # * expands along the first axis
 
 """
+import numpy as np
 
 
 # Forward function group
