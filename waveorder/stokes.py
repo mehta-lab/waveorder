@@ -270,7 +270,7 @@ def AR_mueller_from_CPL_projection(s0, s1, s2, s3):
 
     Returns
     -------
-    NDArray, float, M.shape = (4, 4,) + s0.shape
+    NDArray, M.shape = (4, 4,) + s0.shape
         Mueller matrix
     """
     M = np.zeros((4, 4) + np.array(s0).shape)
