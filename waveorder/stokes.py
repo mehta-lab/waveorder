@@ -101,7 +101,9 @@ def A_matrix(swing, scheme="5-State"):
             ]
         )
     else:
-        raise KeyError(f"{scheme} is not implemented, use 4-State or 5-State")
+        raise ValueError(
+            f"{scheme} is not implemented, use 4-State or 5-State"
+        )
     return A
 
 

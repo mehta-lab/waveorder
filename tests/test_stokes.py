@@ -12,7 +12,7 @@ def test_A_matrix():
 
     assert np.max(stokes.A_matrix(0) - stokes.A_matrix(1)) < 1e-8
 
-    with pytest.raises(KeyError):
+    with pytest.raises(ValueError):
         Ax = stokes.A_matrix(0.1, scheme="3-State")
 
 
