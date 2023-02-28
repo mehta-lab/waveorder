@@ -334,16 +334,11 @@ def mmul(matrix, vector):
     matrix : NDArray, shape = (N, M, ...)
     vector : NDArray, shape = (M, ...)
 
-    where (...) shapes must be identical.
-
     Returns
     -------
     NDArray, shape = (N, ...)
     """
     if matrix.shape[1] != vector.shape[0]:
         ValueError("matrix.shape[1] is not equal to vector.shape[0]")
-
-    if np.not_equal(matrix.shape[2:], vector.shape[1:]):
-        ValueError("matrix.shape[2:] is not equal to vector.shape[1:]")
 
     return np.einsum("NM...,M...->N...", matrix, vector)

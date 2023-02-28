@@ -85,7 +85,3 @@ def test_mmul():
     with pytest.raises(ValueError):
         M2 = np.ones((3, 4, 1))
         y2 = stokes.mmul(M2, x)
-
-    with pytest.raises(ValueError):
-        M3 = np.ones((3, 2, 1, 2))
-        y3 = stokes.mmul(M3, x)
