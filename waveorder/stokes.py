@@ -21,7 +21,7 @@ M = AR_mueller_from_CPL_projection(s0, s1, s2, s3)
 3) A convenience function group:
 
 M = inv_AR_mueller_from_CPL_projection(s0, s1, s2, s3)
-y = matmul(A, x)
+y = mmul(A, x)
 
 Usage
 -----
@@ -57,13 +57,13 @@ def A_matrix(swing, scheme="5-State"):
     ----------
     swing : float
         Result is periodic on the integers, e.g. A_matrix(0.1) = A_matrix(1.1)
-    scheme : str, "4-State" or "5-State"
+    scheme : "4-State" or "5-State"
         Corresponds to the calibration scheme used to acquire data,
         by default "5-State"
 
     Returns
     -------
-    ArrayLike
+    NDArray
         Returns different shapes depending on the scheme
 
         A.shape = (5, 4) for scheme = "5-State"
@@ -123,7 +123,7 @@ def s0123_CPL_after_ADR(ret, ori, tra, dop):
 
     Parameters
     ----------
-    ret, ori, tra, dop : ArrayLike, float
+    ret, ori, tra, dop : NDArray, identical shapes
         ret: retardance of ADR, 2*pi periodic
         ori: slow-axis orientation of ADR, 2*pi periodic
         tra: transmittance of ADR, 0 <= tra <= 1
@@ -131,7 +131,7 @@ def s0123_CPL_after_ADR(ret, ori, tra, dop):
 
     Returns
     -------
-    s0, s1, s2, s3: ArrayLike, float
+    s0, s1, s2, s3: NDArray, identical shapes
         Stokes parameters
 
     """
@@ -145,7 +145,7 @@ def s0123_CPL_after_ADR(ret, ori, tra, dop):
 def s012_CPL_after_AR(ret, ori, tra):
     """
     Returns the first three Stokes parameters of circularly polarized light
-    (CPL) that has passed through an attenuating retarder [AR] parametrized by
+    (CPL) that has passed through an attenuating retarder (AR) parametrized by
     its retardance (ret), slow-axis orientation (ori), and transmittance (tra).
 
     This model is used to model non-depolarizing samples, or situations where
@@ -154,14 +154,14 @@ def s012_CPL_after_AR(ret, ori, tra):
 
     Parameters
     ----------
-    ret, ori, tra: ArrayLike, float
+    ret, ori, tra: NDArray, identical shapes
         ret: retardance of ADR, 2*pi periodic
         ori: slow-axis orientation of ADR, 2*pi periodic
         tra: transmittance of ADR, 0 <= tra <= 1
 
     Returns
     -------
-    s0, s1, s2: ArrayLike, float
+    s0, s1, s2: NDArray
         First three Stokes parameters
 
     """
@@ -184,12 +184,12 @@ def _s12_to_ori(s1, s2):
 
     Parameters
     ----------
-    s1, s2: ArrayLike, float
+    s1, s2: NDArray, identical shapes
         Stokes parameters
 
     Returns
     -------
-    ArrayLike, float
+    NDArray
         Slow-axis orientation with 0 <= ori < pi.
     """
     return (np.arctan2(s1, -s2) % (2 * np.pi)) / 2
@@ -211,12 +211,12 @@ def inverse_s0123_CPL_after_ADR(s0, s1, s2, s3):
 
     Parameters
     ----------
-    s0, s1, s2, s3: ArrayLike, float
+    s0, s1, s2, s3: NDArray, identical shapes
         Stokes parameters
 
     Returns
     ----------
-    ret, ori, tra, dop: ArrayLike, float
+    ret, ori, tra, dop: NDArray
         ret: retardance of ADR, 2*pi periodic
         ori: slow-axis orientation of ADR, 2*pi periodic
         tra: transmittance of ADR, 0 <= tra <= 1
@@ -241,12 +241,12 @@ def inverse_s012_CPL_after_AR(s0, s1, s2):
 
     Parameters
     ----------
-    s0, s1, s2: ArrayLike, float
+    s0, s1, s2: NDArray, identical shapes
         First three Stokes parameters
 
     Returns
     ----------
-    ret, ori, tra: ArrayLike, float
+    ret, ori, tra: NDArray, identical shapes
         ret: retardance of ADR, 2*pi periodic
         ori: slow-axis orientation of ADR, 2*pi periodic
         tra: transmittance of ADR, 0 <= tra <= 1
@@ -265,12 +265,12 @@ def AR_mueller_from_CPL_projection(s0, s1, s2, s3):
 
     Parameters
     ----------
-    s0, s1, s2, s3 : ArrayLike, float, identical shapes
+    s0, s1, s2, s3 : NDArray, identical shapes
         Stokes parameters
 
     Returns
     -------
-    ArrayLike, float, M.shape = (4, 4,) + s0.shape
+    NDArray, float, M.shape = (4, 4,) + s0.shape
         Mueller matrix
     """
     M = np.zeros((4, 4) + np.array(s0).shape)
@@ -300,12 +300,12 @@ def inv_AR_mueller_from_CPL_projection(s0, s1, s2, s3):
 
     Parameters
     ----------
-    s0, s1, s2, s3 : ArrayLike, float, identical shapes
+    s0, s1, s2, s3 : NDArray, identical shapes
         Stokes parameters
 
     Returns
     -------
-    ArrayLike, float, M.shape = (4, 4,) + s0.shape
+    NDArray with shape = (4, 4,) + s0.shape
         inverse Mueller matrix
 
     NOTE: this implementation calculates the full matrix then inverts it.
@@ -324,18 +324,26 @@ def inv_AR_mueller_from_CPL_projection(s0, s1, s2, s3):
     return M_inv
 
 
-def mmul(mueller, stokes):
-    """Mueller-multiply --- apply Mueller matrices to Stokes vectors.
+def mmul(matrix, vector):
+    """Convenient matrix-multiply used for
+        - applying Mueller matrices to Stokes vectors
+        - applying A_inv to intensities
 
     Parameters
     ----------
-    mueller : ArrayLike, shape = (4, 4, ...)
-    stokes : ArrayLike, shape = (4, ...)
+    matrix : NDArray, shape = (N, M, ...)
+    vector : NDArray, shape = (M, ...)
 
     where (...) shapes must be identical.
 
     Returns
     -------
-    ArrayLike, shape = (4, ...)
+    NDArray, shape = (N, ...)
     """
-    return np.einsum("ij...,j...->i...", mueller, stokes)
+    if matrix.shape[1] != vector.shape[0]:
+        ValueError("matrix.shape[1] is not equal to vector.shape[0]")
+
+    if np.not_equal(matrix.shape[2:], vector.shape[1:]):
+        ValueError("matrix.shape[2:] is not equal to vector.shape[1:]")
+
+    return np.einsum("NM...,M...->N...", matrix, vector)

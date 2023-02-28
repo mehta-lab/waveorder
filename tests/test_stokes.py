@@ -73,3 +73,19 @@ def test_AR_mueller_from_CPL_projection():
         1, 1 / np.sqrt(2), 1 / np.sqrt(2), 0
     )
     assert np.max(np.linalg.inv(M2) - M2.T) < 1e-8
+
+
+def test_mmul():
+
+    M = np.ones((3, 2, 1))
+    x = np.ones((2, 1))
+
+    y = stokes.mmul(M, x)  # should pass
+
+    with pytest.raises(ValueError):
+        M2 = np.ones((3, 4, 1))
+        y2 = stokes.mmul(M2, x)
+
+    with pytest.raises(ValueError):
+        M3 = np.ones((3, 2, 1, 2))
+        y3 = stokes.mmul(M3, x)
