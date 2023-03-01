@@ -10,7 +10,7 @@ The functions are organized into three groups:
 
 A = A_matrix(swing, scheme="5-State")
 s0, s1, s3, s3 = s0123_CPL_after_ADR(ret, ori, tra, dop)
-s0, s1, s2 = s012_CPL_after_AR(ret, ori, dop)
+s0, s1, s2 = s012_CPL_after_AR(ret, ori, tra)
 
 2) An inverse function group:
 
@@ -176,7 +176,7 @@ def s012_CPL_after_AR(ret, ori, tra):
 
 def _s12_to_ori(s1, s2):
     """
-    Converts s1 and s1 into a slow-axis orientation.
+    Converts s1 and s2 into a slow-axis orientation.
 
     This functions matches the sign convention used in s0123_CPL_after_ADR and
     s012_CPL_after_AR (see tests for examples), and matches the orientation
