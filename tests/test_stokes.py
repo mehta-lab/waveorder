@@ -1,6 +1,7 @@
 import numpy as np
 from waveorder import stokes
 import pytest
+import numpy.testing as npt
 
 
 def test_A_matrix():
@@ -10,7 +11,7 @@ def test_A_matrix():
     A4 = stokes.A_matrix(0.1, scheme="4-State")
     assert A4.shape == (4, 4)
 
-    assert np.max(stokes.A_matrix(0) - stokes.A_matrix(1)) < 1e-8
+    npt.assert_almost_equal(stokes.A_matrix(0), stokes.A_matrix(1))
 
     with pytest.raises(ValueError):
         Ax = stokes.A_matrix(0.1, scheme="3-State")
