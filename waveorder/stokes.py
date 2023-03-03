@@ -166,7 +166,8 @@ def stokes_after_ADR(ret, ori, tra, dop, input="CPL"):
     if input != "CPL":
         NotImplementedError("input != CPL")
 
-    s0 = tra
+    # without copying tra, downstream changes to s0 will affect tra
+    s0 = tra.copy()
     s1 = tra * dop * np.sin(ret) * np.sin(2 * ori)
     s2 = tra * dop * -np.sin(ret) * np.cos(2 * ori)
     s3 = tra * dop * np.cos(ret)
@@ -203,7 +204,8 @@ def stokes012_after_AR(ret, ori, tra, input="CPL"):
     if input != "CPL":
         NotImplementedError("input != CPL")
 
-    s0 = tra
+    # without copying tra, downstream changes to s0 will affect tra
+    s0 = tra.copy()
     s1 = tra * np.sin(ret) * np.sin(2 * ori)
     s2 = tra * -np.sin(ret) * np.cos(2 * ori)
     return s0, s1, s2
@@ -267,7 +269,8 @@ def estimate_ADR_from_stokes(s0, s1, s2, s3, input="CPL"):
     len_pol = (s1**2 + s2**2 + s3**2) ** 0.5
     ret = np.arcsin(((s1**2 + s2**2) ** 0.5) / len_pol)
     ori = _s12_to_ori(s1, s2)
-    tra = s0
+    # without copying s0, downstream changes to tra will affect s0
+    tra = s0.copy()
     dop = len_pol / s0
     return ret, ori, tra, dop
 
@@ -299,7 +302,8 @@ def estimate_AR_from_stokes012(s0, s1, s2, input="CPL"):
 
     ret = np.arcsin(((s1**2 + s2**2) ** 0.5) / s0)
     ori = _s12_to_ori(s1, s2)
-    tra = s0
+    # without copying s0, downstream changes to tra will affect s0
+    tra = s0.copy()
     return ret, ori, tra
 
 

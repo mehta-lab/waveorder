@@ -92,3 +92,17 @@ def test_mmul():
     with pytest.raises(ValueError):
         M2 = np.ones((3, 4, 1))
         y2 = stokes.mmul(M2, x)
+
+
+def test_copying():
+    a = np.array([1, 1])
+    b = np.array([1, 1])
+    c = np.array([1, 1])
+    d = np.array([1, 1])
+    s0, s1, s2, s3 = stokes.stokes_after_ADR(a, b, c, d)
+    s0[0] = 2  # modify the output
+    assert c[0] == 1  # check that the input hasn't changed
+
+    M = stokes.mueller_from_stokes(a, b, c, d)
+    M[0, 0, 0] = -1  # modify the output
+    assert a[0] == 1
