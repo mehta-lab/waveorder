@@ -40,47 +40,45 @@ def test_stokes_recon():
 
                 # Test attenuating retarder (AR) functions
                 AR = (ret, ori, tra)
-                s012 = stokes.s012_CPL_after_AR(*AR)
-                AR1 = stokes.inverse_s012_CPL_after_AR(*s012)
+                s012 = stokes.stokes012_after_AR(*AR)
+                AR1 = stokes.estimate_AR_from_stokes012(*s012)
                 for i in range(3):
                     assert AR[i] - AR1[i] < 1e-8
 
                 # Test attenuating depolarizing retarder (ADR) functions
                 for dop in np.arange(1e-3, 1, 0.1):
                     ADR = (ret, ori, tra, dop)
-                    s0123 = stokes.s0123_CPL_after_ADR(*ADR)
-                    ADR1 = stokes.inverse_s0123_CPL_after_ADR(*s0123)
+                    s0123 = stokes.stokes_after_ADR(*ADR)
+                    ADR1 = stokes.estimate_ADR_from_stokes(*s0123)
 
                     for i in range(4):
                         assert ADR[i] - ADR1[i] < 1e-8
 
 
-def test_s0123_CPL_after_ADR_usage():
-    x = stokes.s0123_CPL_after_ADR(1, 1, 1, 1)
+def test_stokes_after_ADR_usage():
+    x = stokes.stokes_after_ADR(1, 1, 1, 1)
 
     ret = np.ones((2, 3, 4, 5))
     ori = np.ones((2, 3, 4, 5))
     tra = np.ones((2, 3, 4, 5))
     dop = np.ones((2, 3, 4, 5))
-    x2 = stokes.s0123_CPL_after_ADR(ret, ori, tra, dop)
+    x2 = stokes.stokes_after_ADR(ret, ori, tra, dop)
 
     ADR_params = np.ones(
         (4, 2, 3, 4, 5)
     )  # first axis contains the Stokes indices
-    stokes.s0123_CPL_after_ADR(*ADR_params)  # * expands along the first axis
+    stokes.stokes_after_ADR(*ADR_params)  # * expands along the first axis
 
 
-def test_AR_mueller_from_CPL_projection():
+def test_mueller_from_stokes():
     # Check thank inv(M) == M.T, (only true when
 
-    M = stokes.AR_mueller_from_CPL_projection(
+    M = stokes.mueller_from_stokes(
         1, 1 / np.sqrt(3), 1 / np.sqrt(3), 1 / np.sqrt(3)
     )
     assert np.max(np.linalg.inv(M) - M.T) < 1e-8
 
-    M2 = stokes.AR_mueller_from_CPL_projection(
-        1, 1 / np.sqrt(2), 1 / np.sqrt(2), 0
-    )
+    M2 = stokes.mueller_from_stokes(1, 1 / np.sqrt(2), 1 / np.sqrt(2), 0)
     assert np.max(np.linalg.inv(M2) - M2.T) < 1e-8
 
 
