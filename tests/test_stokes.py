@@ -4,17 +4,25 @@ import pytest
 import numpy.testing as npt
 
 
-def test_A_matrix():
-    A5 = stokes.A_matrix(0.1)
-    assert A5.shape == (5, 4)
+def test_S2I_matrix():
+    S2I5 = stokes.S2I_matrix(0.1)
+    assert S2I5.shape == (5, 4)
 
-    A4 = stokes.A_matrix(0.1, scheme="4-State")
-    assert A4.shape == (4, 4)
+    S2I4 = stokes.S2I_matrix(0.1, scheme="4-State")
+    assert S2I4.shape == (4, 4)
 
-    npt.assert_almost_equal(stokes.A_matrix(0), stokes.A_matrix(1))
+    npt.assert_almost_equal(stokes.S2I_matrix(0), stokes.S2I_matrix(1))
 
     with pytest.raises(ValueError):
-        Ax = stokes.A_matrix(0.1, scheme="3-State")
+        A2Ix = stokes.S2I_matrix(0.1, scheme="3-State")
+
+
+def test_I2S_matrix():
+    I2S5 = stokes.I2S_matrix(0.1)
+    assert I2S5.shape == (4, 5)
+
+    I = np.matmul(stokes.I2S_matrix(0.1), stokes.S2I_matrix(0.1))
+    npt.assert_almost_equal(I, np.eye(I.shape[0]))
 
 
 def test_s12_to_ori():

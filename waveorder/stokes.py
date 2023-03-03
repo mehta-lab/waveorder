@@ -8,12 +8,13 @@ The functions are organized into three groups:
 
 1) A forward function group: 
 
-A = A_matrix(swing, scheme="5-State")
+S2I = S2I_matrix(swing, scheme="5-State")
 s0, s1, s3, s3 = s0123_CPL_after_ADR(ret, ori, tra, dop)
 s0, s1, s2 = s012_CPL_after_AR(ret, ori, tra)
 
 2) An inverse function group:
 
+I2S = I2S_matrix(swing, scheme="5-State")
 ret, ori, tra, dop = inverse_s0123_CPL_after_ADR(s0, s1, s2, s3)
 ret, ori, tra = inverse_s012_CPL_after_AR(s0, s1, s2)
 M = AR_mueller_from_CPL_projection(s0, s1, s2, s3)
@@ -49,14 +50,14 @@ import numpy as np
 # Forward function group
 
 
-def A_matrix(swing, scheme="5-State"):
+def S2I_matrix(swing, scheme="5-State"):
     """
     Calculate the polarimeter system matrix for a swing and calibration scheme.
 
     Parameters
     ----------
     swing : float
-        Result is periodic on the integers, e.g. A_matrix(0.1) = A_matrix(1.1)
+        Result is periodic on the integers, e.g. S2I_matrix(0.1) = S2I_matrix(1.1)
     scheme : "4-State" or "5-State"
         Corresponds to the calibration scheme used to acquire data,
         by default "5-State"
@@ -66,12 +67,12 @@ def A_matrix(swing, scheme="5-State"):
     NDArray
         Returns different shapes depending on the scheme
 
-        A.shape = (5, 4) for scheme = "5-State"
-        A.shape = (4, 4) for scheme = "4-state"
+        S2I.shape = (5, 4) for scheme = "5-State"
+        S2I.shape = (4, 4) for scheme = "4-state"
     """
     chi = 2 * np.pi * swing
     if scheme == "5-State":
-        A = np.array(
+        S2I = np.array(
             [
                 [1, 0, 0, -1],
                 [1, np.sin(chi), 0, -np.cos(chi)],
@@ -82,7 +83,7 @@ def A_matrix(swing, scheme="5-State"):
         )
 
     elif scheme == "4-State":
-        A = np.array(
+        S2I = np.array(
             [
                 [1, 0, 0, -1],
                 [1, np.sin(chi), 0, -np.cos(chi)],
@@ -104,7 +105,7 @@ def A_matrix(swing, scheme="5-State"):
         raise ValueError(
             f"{scheme} is not implemented, use 4-State or 5-State"
         )
-    return A
+    return S2I
 
 
 def s0123_CPL_after_ADR(ret, ori, tra, dop):
@@ -172,6 +173,29 @@ def s012_CPL_after_AR(ret, ori, tra):
 
 
 # Inverse function group
+
+
+def I2S_matrix(swing, scheme="5-State"):
+    """
+    Calculate the inverse polarimeter system matrix for a swing and calibration scheme.
+
+    Parameters
+    ----------
+    swing : float
+        Result is periodic on the integers, e.g. I2S_matrix(0.1) = I2S_matrix(1.1)
+    scheme : "4-State" or "5-State"
+        Corresponds to the calibration scheme used to acquire data,
+        by default "5-State"
+
+    Returns
+    -------
+    NDArray
+        Returns different shapes depending on the scheme
+
+        I2S.shape = (5, 4) for scheme = "5-State"
+        I2S.shape = (4, 4) for scheme = "4-state"
+    """
+    return np.linalg.pinv(S2I_matrix(swing, scheme=scheme))
 
 
 def _s12_to_ori(s1, s2):
