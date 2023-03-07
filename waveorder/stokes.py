@@ -102,9 +102,7 @@ def S2I_matrix(swing, scheme="5-State"):
             ]
         )
     else:
-        raise ValueError(
-            f"{scheme} is not implemented, use 4-State or 5-State"
-        )
+        raise ValueError(f"{scheme} is not implemented, use 4-State or 5-State")
     return S2I
 
 
@@ -314,7 +312,7 @@ def mueller_from_stokes(
     s3,
     input="CPL",
     model="AR",
-    direction="forward",
+    direction="inverse",
 ):
     """
     When light with input polarization state (default = circularly polarized
