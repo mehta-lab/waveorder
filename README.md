@@ -53,10 +53,4 @@ Open `napari` with `recOrder-napari`:
 napari -w recOrder-napari
 ```
 
-View command-line help by running
-
-```sh
-recOrder.help
-```
-
-For more help, see [`recOrder`s documentation](./docs).
+For more help, see [`recOrder`'s documentation](./docs).

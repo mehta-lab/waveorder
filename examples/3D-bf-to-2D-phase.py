@@ -1,5 +1,4 @@
-from waveorder.io.reader import WaveorderReader
-from waveorder.io.writer import WaveorderWriter
+from iohub import read_micromanager, open_ome_zarr
 from recOrder.compute.reconstructions import (
     initialize_reconstructor,
     reconstruct_phase2D,
@@ -17,7 +16,7 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 data = bf_3D_from_phantom()  # (Z, Y, X)
 
 # Option 2: load from file
-# reader = WaveorderReader('/path/to/ome-tiffs/or/zarr/store/')
+# reader = read_micromanager("/path/to/ome-tiffs/or/zarr/store/")
 # position, time, channel = 0, 0, 0
 # data = reader.get_array(position)[time, channel, ...]  # read 3D volume
 
@@ -48,15 +47,14 @@ phase2D = reconstruct_phase2D(
 print(f"Shape of 2D phase data: {np.shape(phase2D)}")
 
 ## Save to zarr
-writer = WaveorderWriter("./output")
-writer.create_zarr_root("reconstructions_" + timestamp)
-writer.init_array(
-    position=0,
-    data_shape=(1, 1, 1, Y, X),
-    chunk_size=(1, 1, 1, Y, X),
-    chan_names=["Phase"],
-)
-writer.write(phase2D, p=0, t=0, c=0, z=0)
+with open_ome_zarr(
+    "./output/reconstructions_" + timestamp + ".zarr",
+    layout="fov",
+    mode="w-",
+    channel_names=["Phase"],
+) as dataset:
+    # Write to position "0", with length-one time, channel, and z dimensions
+    dataset["0"] = phase2D[np.newaxis, np.newaxis, np.newaxis, ...]
 
 # These lines open the reconstructed images
 # Alternatively, drag and drop the zarr store into napari and use the recOrder-napari reader.

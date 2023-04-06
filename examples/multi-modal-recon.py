@@ -1,5 +1,4 @@
-from waveorder.io.reader import WaveorderReader
-from waveorder.io.writer import WaveorderWriter
+from iohub import read_micromanager, open_ome_zarr
 from recOrder.compute.reconstructions import (
     initialize_reconstructor,
     reconstruct_phase3D,
@@ -10,6 +9,7 @@ from recOrder.compute.phantoms import (
     fluorescence_from_phantom,
 )
 from datetime import datetime
+import numpy as np
 import napari
 
 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -18,10 +18,10 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
 ## Option 1: use data simulated from a phantom and run this script as is.
 bf_data = bf_3D_from_phantom()  # (Z, Y, X)
-fluor_data = fluorescence_from_phantom()  # (Z, Y, Z)
+fluor_data = fluorescence_from_phantom()  # (Z, Y, X)
 
 ## Option 2: load from file. Uncomment all lines with a single #.
-# reader = WaveorderReader('/path/to/ome-tiffs/or/zarr/store/')
+# reader = read_micromanager('/path/to/ome-tiffs/or/zarr/store/')
 # position, time = 0, 0
 
 ## Set these by hand or use `reader.channel_names.index('BF')` to read from metadata
@@ -73,17 +73,17 @@ density = reconstruct_density_from_fluorescence(
     fluor_data, fluor_reconstructor, reg=1e-2
 )
 
-# Save to zarr
-writer = WaveorderWriter("./output")
-writer.create_zarr_root("reconstructions_" + timestamp)
-writer.init_array(
-    position=0,
-    data_shape=(1, 2) + fluor_data.shape,
-    chunk_size=(1, 1, 1) + fluor_data.shape[1:],
-    chan_names=["Phase", "Density"],
-)
-writer.write(phase, p=0, t=0, c=0, z=slice(0, phase.shape[0]))
-writer.write(density, p=0, t=0, c=1, z=slice(0, density.shape[0]))
+## Save to zarr
+with open_ome_zarr(
+    "./output/reconstructions_" + timestamp + ".zarr",
+    layout="fov",
+    mode="w-",
+    channel_names=["Phase"],
+) as dataset:
+    # Write to position "0", with length-one time dimension
+    dataset["0"] = phase[np.newaxis, np.newaxis, ...]
+    dataset.append_channel("Density")
+    dataset["0"][0, -1] = density
 
 # These lines open the reconstructed images
 # Alternatively, drag and drop the zarr store into napari and use the recOrder-napari reader.

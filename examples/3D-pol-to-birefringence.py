@@ -1,5 +1,4 @@
-from waveorder.io.reader import WaveorderReader
-from waveorder.io.writer import WaveorderWriter
+from iohub import read_micromanager, open_ome_zarr
 from recOrder.io.utils import load_bg
 from recOrder.compute.reconstructions import (
     initialize_reconstructor,
@@ -21,7 +20,7 @@ data, bg_data = pol_3D_from_phantom()  # (C, Z, Y, X) and (C, Y, X)
 C, Z, Y, X = data.shape
 
 # Option 2: load from file
-# reader = WaveorderReader('/path/to/ome-tiffs/or/zarr/store/')
+# reader = read_micromanager('/path/to/ome-tiffs/or/zarr/store/')
 # position, time = 0, 0
 # data = reader.get_array(position)[time, ...]
 # C, Z, Y, X = data.shape
@@ -76,17 +75,21 @@ phase3D = reconstruct_phase3D(
 print(f"Shape of 3D phase data: {np.shape(phase3D)}")
 
 ## Save to zarr
-# Save birefringence
-writer = WaveorderWriter("./output")
-writer.create_zarr_root("reconstructions_" + timestamp)
-writer.init_array(
-    position=0,
-    data_shape=(1, 5, Z, Y, X),
-    chunk_size=(1, 1, 1, Y, X),
-    chan_names=["Retardance", "Orientation", "BF - computed", "DoP", "Phase"],
-)
-writer.write(birefringence, p=0, t=0, c=slice(0, 4), z=slice(0, Z))
-writer.write(phase3D, p=0, t=0, c=4, z=slice(0, Z))
+with open_ome_zarr(
+    "./output/reconstructions_" + timestamp + ".zarr",
+    layout="fov",
+    mode="w-",
+    channel_names=[
+        "Retardance",
+        "Orientation",
+        "BF - computed",
+        "DoP",
+        "Phase",
+    ],
+) as dataset:
+    img = dataset.create_zeros("0", (1, 5, Z, Y, X), dtype=birefringence.dtype)
+    img[0, 0:4] = birefringence
+    img[0, 4] = phase3D
 
 # These lines open the reconstructed images
 # Alternatively, drag and drop the zarr store into napari and use the recOrder-napari reader.

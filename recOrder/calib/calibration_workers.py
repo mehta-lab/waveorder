@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from qtpy.QtCore import Signal
+from iohub import open_ome_zarr
 from napari.qt.threading import WorkerBaseSignals, WorkerBase, thread_worker
 from recOrder.compute.reconstructions import (
     initialize_reconstructor,
@@ -12,7 +13,6 @@ from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.utils import MockEmitter
 from recOrder.calib.Calibration import LC_DEVICE_NAME
 from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
-from waveorder.io.writer import WaveorderWriter
 import os
 import shutil
 import numpy as np
@@ -405,16 +405,19 @@ class BackgroundCaptureWorker(
         else:
             os.mkdir(bg_recon_path)
         # save raw reconstruction to zarr store
-        writer = WaveorderWriter(save_dir=bg_recon_path)
-        writer.create_zarr_root(name="bg_reconstruction")
-        rows, columns = self.birefringence.shape[-2:]
-        writer.init_array(
-            position=0,
-            data_shape=(1, 2, 1, rows, columns),
-            chunk_size=(1, 1, 1, rows, columns),
-            chan_names=["Retardance", "Orientation"],
-        )
-        writer.write(self.birefringence[:2], p=0, t=0, z=0)
+        with open_ome_zarr(
+            os.path.join(bg_recon_path, "reconstruction"),
+            layout="fov",
+            mode="w-",
+            channel_names=[
+                "Retardance",
+                "Orientation",
+                "BF - computed",
+                "DoP",
+            ],
+        ) as dataset:
+            dataset["0"] = self.birefringence[np.newaxis, :, np.newaxis, ...]
+
         # save intensity trace visualization
         import matplotlib.pyplot as plt
 
