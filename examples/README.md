@@ -39,7 +39,7 @@ The `multi-modal-recon.py` script demonstrates this type of reconstruction. We r
 
 ### 6. Parallelize over positions or time points
 
-Once you've settled on a script that performs a reconstruction, the script can be applied to multiple datasets with a python `for` loop (slowest), `multiprocessing` (faster), or batch processing with an HPC scheduler e.g. `slurm` (fastest). 
+Once you've settled on a script that performs a reconstruction, the script can be applied to multiple datasets with a python `for` loop (slowest), `multiprocessing` (faster, see `parallel-reconstruct.py` for an example), or batch processing with an HPC scheduler e.g. `slurm` (fastest). 
 
 ## FAQ
 1. **Q: Which script should I use?**
