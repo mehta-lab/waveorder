@@ -1842,6 +1842,11 @@ class MainWidget(QWidget):
         def update_extinction(extinction):
             self.calib.extinction_ratio = float(extinction)
 
+        # FIXME: for 1.0.0 we'd like to avoid MM call in the main thread
+        # Make sure Live Mode is off
+        if self.calib.snap_manager.getIsLiveModeOn():
+            self.calib.snap_manager.setLiveModeOn(False)
+
         # initialize worker properties for multi-threading
         self.ui.qbutton_stop_calib.clicked.connect(self.worker.quit)
         self.worker.yielded.connect(self.ui.le_extinction.setText)
@@ -1893,6 +1898,7 @@ class MainWidget(QWidget):
             self.directory, "calibration_metadata.txt"
         )
 
+        # FIXME: for 1.0.0 we'd like to avoid MM call in the main thread
         # Make sure Live Mode is off
         if self.calib.snap_manager.getIsLiveModeOn():
             self.calib.snap_manager.setLiveModeOn(False)
