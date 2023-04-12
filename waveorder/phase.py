@@ -5,8 +5,16 @@ from waveorder import optics, util
 
 # OTF precomputations
 def phase_2D_to_3D_OTF(
-    YX_shape, YX_ps, Z_samples, lambda_illu, n_media, NA_illu, NA_obj
-use_gpu=False, gpu_id=0):
+    YX_shape,
+    YX_ps,
+    Z_samples,
+    lambda_illu,
+    n_media,
+    NA_illu,
+    NA_obj,
+    use_gpu=False,
+    gpu_id=0,
+):
     _, _, fxx, fyy = util.gen_coordinate(YX_shape, YX_ps)
 
     ill_pupil = optics.gen_Pupil(fxx, fyy, NA_illu, lambda_illu)
@@ -15,43 +23,54 @@ use_gpu=False, gpu_id=0):
         fxx, fyy, det_pupil, lambda_illu / n_media, Z_samples
     )
 
-    Hu = np.zeros(YX_shape + (len(Z_samples),))
-    Hp = np.zeros(YX_shape + (len(Z_samples),))
+    ZYX_shape = YX_shape + (len(Z_samples),)
+    Hu = np.zeros(ZYX_shape)
+    Hp = np.zeros(ZYX_shape)
     for z in range(len(Z_samples)):
         Hu[z], Hp[z] = optics.WOTF_2D_compute(
-            ill_pupil, det_pupil * Hz_stack[z], use_gpu=False, gpu_id=0
+            ill_pupil, det_pupil * Hz_stack[z], use_gpu, gpu_id
         )
 
     return Hu, Hp
 
+
 def phase_3D_to_3D_OTF(
-    ZYX_shape, YX_ps, Z_ps, lambda_illu, n_media, NA_illu, NA_obj, use_gpu=False, gpu_id=0):
-    
+    ZYX_shape,
+    YX_ps,
+    Z_ps,
+    Z_pad,
+    lambda_illu,
+    n_media,
+    NA_illu,
+    NA_obj,
+    use_gpu=False,
+    gpu_id=0,
+):
     _, _, fxx, fyy = util.gen_coordinate(ZYX_shape[1:], YX_ps)
-    Z_samples = -np.fft.ifftshift(
-                    (np.r_[0 : ZYX_shape[0]] - ZYX_shape[0] // 2)
-                    * Z_ps
-                )
+    Z_total = ZYX_shape[0] + 2 * Z_pad
+    Z_samples = -np.fft.ifftshift((np.r_[0:Z_total] - Z_total // 2) * Z_ps)
 
     ill_pupil = optics.gen_Pupil(fxx, fyy, NA_illu, lambda_illu)
     det_pupil = optics.gen_Pupil(fxx, fyy, NA_obj, lambda_illu)
     Hz_stack = optics.gen_Hz_stack(
         fxx, fyy, det_pupil, lambda_illu / n_media, Z_samples
     )
-    G_fun_z_3D = optics.gen_Greens_function_z(fxx, fyy, lambda_illu / n_media, Z_samples)
-    
-    Hu, Hp = optics.WOTF_3D_compute(
-                ill_pupil.astype("float32"),
-                ill_pupil.astype("float32"),
-                det_pupil.astype("complex64"),
-                Hz_stack.astype("complex64"),
-                G_fun_z_3D.astype("complex64"),
-                Z_ps,
-                use_gpu=use_gpu,
-                gpu_id=gpu_id,
-            )
+    G_fun_z_3D = optics.gen_Greens_function_z(
+        fxx, fyy, lambda_illu / n_media, Z_samples
+    )
 
-    return Hu, Hp
+    H_re, H_im = optics.WOTF_3D_compute(
+        ill_pupil.astype("float32"),
+        ill_pupil.astype("float32"),
+        det_pupil.astype("complex64"),
+        Hz_stack.astype("complex64"),
+        G_fun_z_3D.astype("complex64"),
+        Z_ps,
+        use_gpu=use_gpu,
+        gpu_id=gpu_id,
+    )
+
+    return H_re, H_im
 
 ## Reconstructions
 def phase_2D_to_3D_recon(
