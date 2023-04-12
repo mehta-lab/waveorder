@@ -772,7 +772,7 @@ def Dual_variable_Tikhonov_deconv_2D(
 
 
 def Dual_variable_ADMM_TV_deconv_2D(
-    AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose, use_gpu=False, gpu_id=0
+    AHA, b_vec, rho=1e-5, lambda_u=1e-3, lambda_p=1e-3, itr=20, verbose=False, use_gpu=False, gpu_id=0
 ):
     """
 
@@ -935,7 +935,7 @@ def Dual_variable_ADMM_TV_deconv_2D(
 def Single_variable_Tikhonov_deconv_3D(
     S0_stack,
     H_eff,
-    reg_re,
+    reg_re=1e-4,
     use_gpu=False,
     gpu_id=0,
     autotune=False,
@@ -1227,11 +1227,11 @@ def Dual_variable_Tikhonov_deconv_3D(
 def Single_variable_ADMM_TV_deconv_3D(
     S0_stack,
     H_eff,
-    rho,
-    reg_re,
-    lambda_re,
-    itr,
-    verbose,
+    rho=1e-5,
+    reg_re=1e-4,
+    lambda_re=1e-3,
+    itr=20,
+    verbose=False,
     use_gpu=False,
     gpu_id=0,
 ):
