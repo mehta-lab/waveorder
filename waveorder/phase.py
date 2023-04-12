@@ -3,23 +3,23 @@ import cupy as cp
 from waveorder import optics, util
 
 
-#
+# OTF precomputations
 def phase_2D_to_3D_OTF(
-    img_shape, ps, z_defocus, lambda_illu, n_media, NA_illu, NA_obj
-):
-    _, _, fxx, fyy = util.gen_coordinate(img_shape, ps)
+    YX_shape, YX_ps, Z_samples, lambda_illu, n_media, NA_illu, NA_obj
+use_gpu=False, gpu_id=0):
+    _, _, fxx, fyy = util.gen_coordinate(YX_shape, YX_ps)
 
     ill_pupil = optics.gen_Pupil(fxx, fyy, NA_illu, lambda_illu)
     det_pupil = optics.gen_Pupil(fxx, fyy, NA_obj, lambda_illu)
     Hz_stack = optics.gen_Hz_stack(
-        fxx, fyy, det_pupil, lambda_illu / n_media, z_defocus
+        fxx, fyy, det_pupil, lambda_illu / n_media, Z_samples
     )
 
-    Hu = np.zeros(img_shape + (len(z_defocus),))
-    Hp = np.zeros(img_shape + (len(z_defocus),))
-    for z in range(len(z_defocus)):
+    Hu = np.zeros(YX_shape + (len(Z_samples),))
+    Hp = np.zeros(YX_shape + (len(Z_samples),))
+    for z in range(len(Z_samples)):
         Hu[z], Hp[z] = optics.WOTF_2D_compute(
-            ill_pupil, det_pupil * Hz_stack[z]
+            ill_pupil, det_pupil * Hz_stack[z], use_gpu=False, gpu_id=0
         )
 
     return Hu, Hp
@@ -77,7 +77,7 @@ def phase_2D_to_3D_recon(
     Parameters
     ----------
         ZYX_data  : numpy.ndarray
-                    defocused set of intensity images with the size of (Z, Y, X)
+                    defocused set of intensity images with size (Z, Y, X)
 
         method    : str
                     denoiser for 2D phase reconstruction
