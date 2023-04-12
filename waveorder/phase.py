@@ -72,6 +72,7 @@ def phase_3D_to_3D_OTF(
 
     return H_re, H_im
 
+
 ## Reconstructions
 def phase_2D_to_3D_recon(
     ZYX_data,
@@ -174,3 +175,93 @@ def phase_2D_to_3D_recon(
     phi_sample -= phi_sample.mean()
 
     return mu_sample, phi_sample
+
+
+def phase_3D_to_3D_recon(
+    ZYX_data,
+    H_re,
+    H_im,
+    psz,
+    lambda_illu,
+    absorption_ratio=0.0,
+    method="Tikhonov",
+    **kwargs
+):
+    """
+
+    conduct 3D phase reconstruction from defocused or asymmetrically-illuminated stack of intensity images (TIE or DPC)
+
+    Parameters
+    ----------
+        ZYX_data          : numpy.ndarray
+                           defocused or asymmetrically-illuminated stack of S0 intensity images with the size of (Z, Y, X)
+
+        H_re
+
+        H_im
+
+        pad_z
+
+        psz
+
+        lamda_illu
+
+        absorption_ratio : float
+                           assumption of correlation between phase and absorption (0 means absorption = phase*0, effective when N_pattern==1)
+
+        method           : str
+                           denoiser for 3D phase reconstruction
+                           'Tikhonov' for Tikhonov denoiser
+                           'TV'       for TV denoiser
+
+        kwargs
+
+
+    Returns
+    -------
+        scaled f_real    : numpy.ndarray
+                           3D reconstruction of phase (in the unit of rad) with the size of (Z, Y, X)
+                           if autotune_re is True, returns 3 reconstructions from different regularization parameters, size (3, Z, Y, X)
+
+
+    """
+
+    pad_z = H_re.shape[0] - ZYX_data.shape[0]
+
+    if pad_z < 0:
+        raise("")
+    elif pad_z == 0:
+        S0_stack = util.inten_normalization_3D(ZYX_data)
+    elif:
+        S0_pad = np.pad(
+            ZYX_data,
+            ((pad_z, pad_z), (0, 0), (0, 0)),
+            mode="constant",
+            constant_values=0,
+        )
+        if pad_z < ZYX_data.shape[0]:
+            S0_pad[:pad_z, :, :] = (S0_stack[:pad_z, :, :])[::-1, :, :]
+            S0_pad[-pad_z:, :] = (S0_stack[-pad_z:, :])[::-1, :, :]
+        else:
+            print(
+                "pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
+            )
+
+        S0_stack = util.inten_normalization_3D(S0_pad)
+
+    H_eff = H_re + absorption_ratio * H_im
+
+    if method == "Tikhonov":
+        f_real = util.Single_variable_Tikhonov_deconv_3D(
+            S0_stack, H_eff, **kwargs
+        )
+
+    elif method == "TV":
+        f_real = util.Single_variable_ADMM_TV_deconv_3D(
+            S0_stack, H_eff, **kwargs
+        )
+
+    if pad_z != 0:
+        f_real = f_real[pad_z:-pad_z, ...]
+
+    return -f_real * psz / 4 / np.pi * lambda_illu
