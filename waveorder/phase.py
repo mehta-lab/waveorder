@@ -55,24 +55,20 @@ def phase_3D_to_3D_OTF(
 
 ## Reconstructions
 def phase_2D_to_3D_recon(
+    ZYX_data,
     Hu,
     Hp,
-    ZYX_data,
     method="Tikhonov",
     reg_u=1e-6,
     reg_p=1e-6,
-    rho=1e-5,
-    lambda_u=1e-3,
-    lambda_p=1e-3,
-    itr=20,
-    verbose=True,
     bg_filter=True,
-    use_gpu=False, 
-    gpu_id=0
+    use_gpu=False,
+    gpu_id=0,
+    **kwargs
 ):
     """
 
-    conduct 2D phase reconstruction from defocused set of intensity images (TIE or DPC)
+    2D phase reconstruction from defocused set of intensity images
 
     Parameters
     ----------
@@ -90,31 +86,22 @@ def phase_2D_to_3D_recon(
         reg_p     : float
                     Tikhonov regularization parameter for 2D phase
 
-        lambda_u  : float
-                    TV regularization parameter for 2D absorption
-
-        lambda_p  : float
-                    TV regularization parameter for 2D absorption
-
-        rho       : float
-                    augmented Lagrange multiplier for 2D ADMM algorithm
-
-        itr       : int
-                    number of iterations for 2D ADMM algorithm
-
-        verbose   : bool
-                    option to display detailed progress of computations or not
-
         bg_filter : bool
                     option for slow-varying 2D background normalization with uniform filter
+
+        use_gpu :   False
+
+        gpu_id :    0
+
+        **kwargs
 
     Returns
     -------
         mu_sample  : numpy.ndarray
-                        2D absorption reconstruction with the size of (N, M)
+                        2D absorption reconstruction with the size of (Y, X)
 
         phi_sample : numpy.ndarray
-                        2D phase reconstruction (in the unit of rad) with the size of (N, M)
+                        2D phase reconstruction (in the unit of rad) with the size of (Y, X)
 
 
     """
@@ -162,7 +149,7 @@ def phase_2D_to_3D_recon(
     # ADMM deconvolution with anisotropic TV regularization
     elif method == "TV":
         mu_sample, phi_sample = util.Dual_variable_ADMM_TV_deconv_2D(
-            AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose, use_gpu=use_gpu, gpu_id=gpu_id
+            AHA, b_vec, use_gpu=use_gpu, gpu_id=gpu_id, **kwargs
         )
 
     phi_sample -= phi_sample.mean()
