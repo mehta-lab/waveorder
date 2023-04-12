@@ -24,7 +24,6 @@ def intensity_mapping(img_stack):
 
 
 def instrument_matrix_and_source_calibration(I_cali_mean, handedness="RCP"):
-
     _, N_cali = I_cali_mean.shape
 
     # Source intensity
@@ -126,7 +125,6 @@ def instrument_matrix_and_source_calibration(I_cali_mean, handedness="RCP"):
 
 
 def instrument_matrix_calibration(I_cali_norm, I_meas):
-
     _, N_cali = I_cali_norm.shape
 
     theta = np.r_[0:N_cali] / N_cali * 2 * np.pi
@@ -365,7 +363,6 @@ class waveorder_microscopy:
         use_gpu=False,
         gpu_id=0,
     ):
-
         """
 
         initialize the system parameters for phase and orders microscopy
@@ -447,7 +444,6 @@ class waveorder_microscopy:
             self.inclination_recon_setup(inc_recon)
 
         else:
-
             # instrument matrix for polarization detection
             self.instrument_matrix_setup(A_matrix)
 
@@ -456,7 +452,6 @@ class waveorder_microscopy:
     def illumination_setup(
         self, illu_mode, NA_illu_in, Source, Source_PolState
     ):
-
         """
 
         setup illumination source function for transfer function computing
@@ -523,7 +518,6 @@ class waveorder_microscopy:
                 self.N_pattern = 1
 
         elif illu_mode == "Arbitrary":
-
             self.Source = Source.copy()
             if Source.ndim == 2:
                 self.N_pattern = 1
@@ -550,7 +544,6 @@ class waveorder_microscopy:
     def Hz_det_setup(
         self, phase_deconv, ph_deconv_layer, bire_in_plane_deconv, inc_recon
     ):
-
         """
 
         setup defocus kernels for deconvolution with the corresponding dimensions
@@ -583,7 +576,6 @@ class waveorder_microscopy:
             or bire_in_plane_deconv == "2D"
             or inc_recon == "2D-vec-WOTF"
         ):
-
             # generate defocus kernel based on Pupil function and z_defocus
             self.Hz_det_2D = gen_Hz_stack(
                 self.fxx,
@@ -594,7 +586,6 @@ class waveorder_microscopy:
             )
 
         if phase_deconv == "semi-3D":
-
             self.ph_deconv_layer = ph_deconv_layer
 
             if self.z_defocus[0] - self.z_defocus[1] > 0:
@@ -630,7 +621,6 @@ class waveorder_microscopy:
             or bire_in_plane_deconv == "3D"
             or inc_recon == "3D"
         ):
-
             # generate defocus kernel and Green's function
             if self.z_defocus[0] - self.z_defocus[1] > 0:
                 z = -ifftshift(
@@ -650,7 +640,6 @@ class waveorder_microscopy:
             )
 
     def phase_deconv_setup(self, phase_deconv):
-
         """
 
         setup transfer functions for phase deconvolution with the corresponding dimensions
@@ -668,21 +657,17 @@ class waveorder_microscopy:
         """
 
         if phase_deconv == "2D":
-
             # compute 2D phase transfer function
             self.gen_WOTF()
 
         elif phase_deconv == "semi-3D":
-
             self.gen_semi_3D_WOTF()
 
         elif phase_deconv == "3D":
-
             # compute 3D phase transfer function
             self.gen_3D_WOTF()
 
     def bire_in_plane_deconv_setup(self, bire_in_plane_deconv):
-
         """
 
         setup transfer functions for 2D birefringence deconvolution with the corresponding dimensions
@@ -698,17 +683,14 @@ class waveorder_microscopy:
         """
 
         if bire_in_plane_deconv == "2D":
-
             # generate 2D vectorial transfer function for 2D birefringence deconvolution in 2D space
             self.gen_2D_vec_WOTF(False)
 
         elif bire_in_plane_deconv == "3D":
-
             # generate 3D vectorial transfer function for 2D birefringence deconvolution in 3D space
             self.gen_3D_vec_WOTF(False)
 
     def inclination_recon_setup(self, inc_recon):
-
         """
 
         setup transfer functions for PTI reconstruction
@@ -729,9 +711,7 @@ class waveorder_microscopy:
         """
 
         if inc_recon is not None and inc_recon != "3D":
-
             if inc_recon == "2D-geometric":
-
                 wave_vec_norm_x = self.lambda_illu * self.fxx
                 wave_vec_norm_y = self.lambda_illu * self.fyy
                 wave_vec_norm_z = (
@@ -754,7 +734,6 @@ class waveorder_microscopy:
                 )
 
             elif inc_recon == "2D-vec-WOTF":
-
                 # generate 2D vectorial transfer function for 2D PTI
                 self.gen_2D_vec_WOTF(True)
 
@@ -770,7 +749,6 @@ class waveorder_microscopy:
                     )
 
         elif inc_recon == "3D":
-
             # generate 3D vectorial transfer function for 3D PTI
             self.gen_3D_vec_WOTF(True)
             self.inc_AHA_3D_vec = np.zeros(
@@ -787,7 +765,6 @@ class waveorder_microscopy:
                 )
 
     def instrument_matrix_setup(self, A_matrix):
-
         """
 
         setup instrument matrix
@@ -837,7 +814,6 @@ class waveorder_microscopy:
     ##############   constructor asisting function group   ##############
 
     def gen_WOTF(self):
-
         """
 
         generate 2D phase transfer functions
@@ -861,7 +837,6 @@ class waveorder_microscopy:
                     gpu_id=self.gpu_id,
                 )
         else:
-
             for i, j in itertools.product(
                 range(self.N_defocus), range(self.N_pattern)
             ):
@@ -874,7 +849,6 @@ class waveorder_microscopy:
                 )
 
     def gen_semi_3D_WOTF(self):
-
         """
 
         generate semi-3D phase transfer functions
@@ -892,7 +866,6 @@ class waveorder_microscopy:
         for i, j in itertools.product(
             range(self.ph_deconv_layer), range(self.N_pattern)
         ):
-
             if self.N_pattern == 1:
                 Source_current = self.Source.copy()
             else:
@@ -914,7 +887,6 @@ class waveorder_microscopy:
             )
 
     def gen_3D_WOTF(self):
-
         """
 
         generate 3D phase transfer functions
@@ -951,7 +923,6 @@ class waveorder_microscopy:
         self.H_im = np.squeeze(self.H_im)
 
     def gen_2D_vec_WOTF(self, inc_option=False):
-
         """
 
         generate 2D vectorial transfer functions for 2D PTI
@@ -1344,7 +1315,6 @@ class waveorder_microscopy:
 
                 # transfer functions for S3
                 if self.N_Stokes == 4:  # full Stokes polarimeter
-
                     self.H_dyadic_2D_OTF[3, 0, :, :, idx] = (
                         -ExEx_Gxy_im
                         - ExEy_Gyy_im
@@ -1377,7 +1347,6 @@ class waveorder_microscopy:
                         -ExEz_Gyz_im + EyEz_Gxz_im
                     )
             else:  # linear Stokes polarimeter
-
                 self.H_dyadic_2D_OTF_in_plane[0, 0, :, :, idx] = (
                     ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
                 )
@@ -1392,7 +1361,6 @@ class waveorder_microscopy:
                 )
 
     def gen_3D_vec_WOTF(self, inc_option):
-
         """
 
         generate 3D vectorial transfer functions for 3D PTI
@@ -1695,7 +1663,6 @@ class waveorder_microscopy:
 
                 # transfer functions for S3
                 if self.N_Stokes == 4:  # full Stokes polarimeter
-
                     self.H_dyadic_OTF[3, 0, i] = (
                         -ExEx_Gxy_im
                         - ExEy_Gyy_im
@@ -1726,7 +1693,6 @@ class waveorder_microscopy:
                     )
                     self.H_dyadic_OTF[3, 6, i] = -ExEz_Gyz_im + EyEz_Gxz_im
             else:  # linear Stokes polarimeter
-
                 self.H_dyadic_OTF_in_plane[0, 0, i] = (
                     ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
                 )
@@ -1743,7 +1709,6 @@ class waveorder_microscopy:
     ##############   polarization computing function group   ##############
 
     def Stokes_recon(self, I_meas):
-
         """
 
         reconstruct Stokes parameters from polarization-sensitive intensity images
@@ -1817,7 +1782,6 @@ class waveorder_microscopy:
             return S_image_recon
 
     def Stokes_transform(self, S_image_recon):
-
         """
 
         transform Stokes parameters into normalized Stokes parameters
@@ -1872,7 +1836,6 @@ class waveorder_microscopy:
     def Polscope_bg_correction(
         self, S_image_tm, S_bg_tm, kernel_size=400, poly_order=2
     ):
-
         """
 
         QLIPP background correction algorithm
@@ -1918,7 +1881,6 @@ class waveorder_microscopy:
                 S_image_tm[4] /= S_bg_tm[4, :, :, np.newaxis]
 
         if self.bg_option == "local":
-
             if dim == 3:
                 S_image_tm[1] -= uniform_filter_2D(
                     S_image_tm[1],
@@ -2000,7 +1962,6 @@ class waveorder_microscopy:
                     S_image_tm[2], order=poly_order, normalize=False
                 )
             else:
-
                 for i in range(self.N_defocus):
                     S_image_tm[1, :, :, i] -= S1_bg
                     S_image_tm[2, :, :, i] -= S2_bg
@@ -2011,7 +1972,6 @@ class waveorder_microscopy:
         return S_image_tm
 
     def Polarization_recon(self, S_image_recon):
-
         """
 
         reconstruction of polarization-related physical properties in QLIPP
@@ -2040,7 +2000,6 @@ class waveorder_microscopy:
             Recon_para = np.zeros((self.N_Stokes,) + S_image_recon.shape[1:])
 
         if self.use_gpu:
-
             if self.N_Stokes == 4:  # full Stokes polarimeter
                 ret_wrapped = cp.arctan2(
                     (S_image_recon[1] ** 2 + S_image_recon[2] ** 2) ** (1 / 2)
@@ -2070,7 +2029,6 @@ class waveorder_microscopy:
                 )  # slow-axis
 
         else:
-
             if self.N_Stokes == 4:  # full Stokes polarimeter
                 ret_wrapped = np.arctan2(
                     (S_image_recon[1] ** 2 + S_image_recon[2] ** 2) ** (1 / 2)
@@ -2114,11 +2072,9 @@ class waveorder_microscopy:
         return Recon_para
 
     def Birefringence_recon(self, S1_stack, S2_stack, reg=1e-3):
-
         # Birefringence deconvolution with slowly varying transmission approximation
 
         if self.use_gpu:
-
             Hu = cp.array(self.Hu, copy=True)
             Hp = cp.array(self.Hp, copy=True)
 
@@ -2146,7 +2102,6 @@ class waveorder_microscopy:
             ]
 
         else:
-
             AHA = [
                 np.sum(np.abs(self.Hu) ** 2 + np.abs(self.Hp) ** 2, axis=2)
                 + reg,
@@ -2201,7 +2156,6 @@ class waveorder_microscopy:
         itr=20,
         verbose=True,
     ):
-
         """
 
         conduct 2D birefringence deconvolution from defocused or asymmetrically-illuminated set of intensity images
@@ -2288,7 +2242,6 @@ class waveorder_microscopy:
             b_vec = cp.array(b_vec)
 
         if method == "Tikhonov":
-
             # Deconvolution with Tikhonov regularization
 
             g_1c, g_1s = Dual_variable_Tikhonov_deconv_2D(
@@ -2296,7 +2249,6 @@ class waveorder_microscopy:
             )
 
         elif method == "TV":
-
             # ADMM deconvolution with anisotropic TV regularization
 
             g_1c, g_1s = Dual_variable_ADMM_TV_deconv_2D(
@@ -2329,7 +2281,6 @@ class waveorder_microscopy:
         itr=20,
         verbose=True,
     ):
-
         """
 
         conduct 3D deconvolution of 2D birefringence from defocused stack of intensity images
@@ -2439,7 +2390,6 @@ class waveorder_microscopy:
             b_vec = cp.array(b_vec)
 
         if method == "Tikhonov":
-
             # Deconvolution with Tikhonov regularization
 
             f_1c, f_1s = Dual_variable_Tikhonov_deconv_3D(
@@ -2447,7 +2397,6 @@ class waveorder_microscopy:
             )
 
         elif method == "TV":
-
             # ADMM deconvolution with anisotropic TV regularization
 
             f_1c, f_1s = Dual_variable_ADMM_TV_deconv_3D(
@@ -2478,7 +2427,6 @@ class waveorder_microscopy:
     def Inclination_recon_geometric(
         self, retardance, orientation, on_axis_idx, reg_ret_pr=1e-2
     ):
-
         """
 
         estimating 2D principal retardance and 3D orientation from off-axis retardance and orientation using geometric model
@@ -2543,7 +2491,6 @@ class waveorder_microscopy:
     def scattering_potential_tensor_recon_2D_vec(
         self, S_image_recon, reg_inc=1e-1 * np.ones((7,)), cupy_det=False
     ):
-
         """
 
         Tikhonov reconstruction of 2D scattering potential tensor components with vectorial model in PTI
@@ -2589,7 +2536,6 @@ class waveorder_microscopy:
         )
 
         if self.use_gpu:
-
             if cupy_det:
                 AHA = cp.transpose(cp.array(AHA), (2, 3, 0, 1))
                 b_vec = cp.transpose(cp.array(b_vec), (1, 2, 0))
@@ -2605,7 +2551,6 @@ class waveorder_microscopy:
                     )
 
             else:
-
                 AHA = cp.array(AHA)
                 b_vec = cp.array(b_vec)
 
@@ -2625,7 +2570,6 @@ class waveorder_microscopy:
             f_tensor = cp.asnumpy(f_tensor)
 
         else:
-
             AHA_pinv = np.linalg.pinv(np.transpose(AHA, (2, 3, 0, 1)))
             f_tensor = np.real(
                 ifft2(
@@ -2654,7 +2598,6 @@ class waveorder_microscopy:
     def scattering_potential_tensor_recon_3D_vec(
         self, S_image_recon, reg_inc=1e-1 * np.ones((7,)), cupy_det=False
     ):
-
         """
 
         Tikhonov reconstruction of 3D scattering potential tensor components with vectorial model in PTI
@@ -2724,7 +2667,6 @@ class waveorder_microscopy:
         )
 
         if self.use_gpu:
-
             if cupy_det:
                 AHA = cp.transpose(cp.array(AHA), (2, 3, 4, 0, 1))
                 b_vec = cp.transpose(cp.array(b_vec), (1, 2, 3, 0))
@@ -2741,7 +2683,6 @@ class waveorder_microscopy:
                         cp.fft.ifftn(cp.linalg.det(AHA_b_vec) / determinant)
                     )
             else:
-
                 AHA = cp.array(AHA)
                 b_vec = cp.array(b_vec)
 
@@ -2763,7 +2704,6 @@ class waveorder_microscopy:
             f_tensor = cp.asnumpy(f_tensor)
 
         else:
-
             AHA_pinv = np.linalg.pinv(np.transpose(AHA, (2, 3, 4, 0, 1)))
             f_tensor = np.real(
                 ifftn(
@@ -2803,7 +2743,6 @@ class waveorder_microscopy:
         verbose=True,
         fast_gpu_mode=False,
     ):
-
         """
 
         estimating principal retardance, 3D orientation, optic sign from scattering potential tensor components
@@ -2897,7 +2836,6 @@ class waveorder_microscopy:
             f_tensor = f_tensor_pad.copy()
 
         if material_type == "positive" or "unknown":
-
             # Positive uniaxial material
 
             (
@@ -2909,11 +2847,9 @@ class waveorder_microscopy:
             )
 
             if material_type == "positive":
-
                 return retardance_pr_p, azimuth_p, theta_p
 
         if material_type == "negative" or "unknown":
-
             # Negative uniaxial material
 
             (
@@ -2925,11 +2861,9 @@ class waveorder_microscopy:
             )
 
             if material_type == "negative":
-
                 return retardance_pr_n, azimuth_n, theta_n
 
         if material_type == "unknown":
-
             if f_tensor.ndim == 4:
                 S_stack_f = fftn(S_image_recon, axes=(-3, -2, -1))
 
@@ -3002,7 +2936,6 @@ class waveorder_microscopy:
                     )
 
             elif f_tensor.ndim == 3:
-
                 f_vec_f = fft2(f_vec, axes=(1, 2))
                 S_est_vec = np.zeros(
                     (
@@ -3037,7 +2970,6 @@ class waveorder_microscopy:
                 f1, ax = plt.subplots(2, 2, figsize=(20, 20))
 
             for i in range(itr):
-
                 if self.use_gpu:
                     x_map = cp.array(x_map)
                     y_map = cp.array(y_map)
@@ -3050,9 +2982,7 @@ class waveorder_microscopy:
                 S_est_vec_update = S_est_vec.copy()
 
                 if self.use_gpu:
-
                     if fast_gpu_mode:
-
                         S_est_vec_update = cp.array(S_est_vec_update)
 
                         if f_tensor.ndim == 4:
@@ -3078,7 +3008,6 @@ class waveorder_microscopy:
                                 )
 
                     else:
-
                         if f_tensor.ndim == 4:
                             f_vec_f = cp.fft.fftn(f_vec, axes=(1, 2, 3))
 
@@ -3102,7 +3031,6 @@ class waveorder_microscopy:
                                 )
 
                 else:
-
                     if f_tensor.ndim == 4:
                         f_vec_f = fftn(f_vec, axes=(1, 2, 3))
 
@@ -3139,11 +3067,9 @@ class waveorder_microscopy:
                     break
 
                 if self.use_gpu:
-
                     AH_S_diff = cp.zeros((5,) + f_tensor.shape[1:], complex)
 
                     if f_tensor.ndim == 4:
-
                         for p, q in itertools.product(
                             range(5), range(self.N_Stokes)
                         ):
@@ -3180,7 +3106,6 @@ class waveorder_microscopy:
                         )
 
                     elif f_tensor.ndim == 3:
-
                         for p, q in itertools.product(
                             range(5), range(self.N_Stokes)
                         ):
@@ -3231,11 +3156,9 @@ class waveorder_microscopy:
                     y_map = cp.asnumpy(y_map)
 
                 else:
-
                     AH_S_diff = np.zeros((5,) + f_tensor.shape[1:], complex)
 
                     if f_tensor.ndim == 4:
-
                         for p, q in itertools.product(
                             range(5), range(self.N_Stokes)
                         ):
@@ -3259,7 +3182,6 @@ class waveorder_microscopy:
                         )
 
                     elif f_tensor.ndim == 3:
-
                         for p, q in itertools.product(
                             range(5), range(self.N_Stokes)
                         ):
@@ -3362,7 +3284,6 @@ class waveorder_microscopy:
         verbose=True,
         bg_filter=True,
     ):
-
         """
 
         conduct 2D phase reconstruction from defocused or asymmetrically-illuminated set of intensity images (TIE or DPC)
@@ -3420,7 +3341,6 @@ class waveorder_microscopy:
         )
 
         if self.use_gpu:
-
             Hu = cp.array(self.Hu)
             Hp = cp.array(self.Hp)
 
@@ -3439,7 +3359,6 @@ class waveorder_microscopy:
             ]
 
         else:
-
             S0_stack_f = fft2(S0_stack, axes=(0, 1))
 
             AHA = [
@@ -3455,7 +3374,6 @@ class waveorder_microscopy:
             ]
 
         if method == "Tikhonov":
-
             # Deconvolution with Tikhonov regularization
 
             mu_sample, phi_sample = Dual_variable_Tikhonov_deconv_2D(
@@ -3463,7 +3381,6 @@ class waveorder_microscopy:
             )
 
         elif method == "TV":
-
             # ADMM deconvolution with anisotropic TV regularization
 
             mu_sample, phi_sample = Dual_variable_ADMM_TV_deconv_2D(
@@ -3494,12 +3411,10 @@ class waveorder_microscopy:
         itr=20,
         verbose=False,
     ):
-
         mu_sample = np.zeros((self.N, self.M, self.N_defocus))
         phi_sample = np.zeros((self.N, self.M, self.N_defocus))
 
         for i in range(self.N_defocus):
-
             if i <= self.ph_deconv_layer // 2:
                 tf_start_idx = self.ph_deconv_layer // 2 - i
             else:
@@ -3576,7 +3491,6 @@ class waveorder_microscopy:
                 ]
 
             if method == "Tikhonov":
-
                 # Deconvolution with Tikhonov regularization
 
                 (
@@ -3587,7 +3501,6 @@ class waveorder_microscopy:
                 )
 
             elif method == "TV":
-
                 # ADMM deconvolution with anisotropic TV regularization
 
                 (
@@ -3624,7 +3537,6 @@ class waveorder_microscopy:
         itr=20,
         verbose=True,
     ):
-
         """
 
         conduct 3D phase reconstruction from defocused or asymmetrically-illuminated stack of intensity images (TIE or DPC)
@@ -3680,7 +3592,6 @@ class waveorder_microscopy:
         """
 
         if self.N_pattern == 1:
-
             if self.pad_z == 0:
                 S0_stack = inten_normalization_3D(S0_stack)
             else:
@@ -3707,7 +3618,6 @@ class waveorder_microscopy:
             H_eff = self.H_re + absorption_ratio * self.H_im
 
             if method == "Tikhonov":
-
                 f_real = Single_variable_Tikhonov_deconv_3D(
                     S0_stack,
                     H_eff,
@@ -3719,7 +3629,6 @@ class waveorder_microscopy:
                 )
 
             elif method == "TV":
-
                 f_real = Single_variable_ADMM_TV_deconv_3D(
                     S0_stack,
                     H_eff,
@@ -3738,7 +3647,6 @@ class waveorder_microscopy:
             return -f_real * self.psz / 4 / np.pi * self.lambda_illu
 
         else:
-
             if self.pad_z == 0:
                 S0_stack = inten_normalization_3D(S0_stack)
             else:
@@ -3763,7 +3671,6 @@ class waveorder_microscopy:
                 S0_stack = inten_normalization_3D(S0_pad)
 
             if self.use_gpu:
-
                 H_re = cp.array(self.H_re)
                 H_im = cp.array(self.H_im)
 
@@ -3784,7 +3691,6 @@ class waveorder_microscopy:
                 ]
 
             else:
-
                 S0_stack_f = fftn(S0_stack, axes=(-3, -2, -1))
 
                 AHA = [
@@ -3800,7 +3706,6 @@ class waveorder_microscopy:
                 ]
 
             if method == "Tikhonov":
-
                 # Deconvolution with Tikhonov regularization
 
                 f_real, f_imag = Dual_variable_Tikhonov_deconv_3D(
@@ -3808,7 +3713,6 @@ class waveorder_microscopy:
                 )
 
             elif method == "TV":
-
                 # ADMM deconvolution with anisotropic TV regularization
 
                 f_real, f_imag = Dual_variable_ADMM_TV_deconv_3D(
@@ -3892,7 +3796,6 @@ class fluorescence_microscopy:
         use_gpu=False,
         gpu_id=0,
     ):
-
         """
 
         initialize the system parameters for phase and orders microscopy
@@ -3933,7 +3836,6 @@ class fluorescence_microscopy:
         self.fluor_deconv_setup(deconv_mode)
 
     def Hz_det_setup(self, deconv_mode):
-
         """
         Initiate the defocus kernel
 
@@ -3953,7 +3855,6 @@ class fluorescence_microscopy:
         self.Pupil_support = self.Pupil_obj.copy()
 
         if deconv_mode == "3D-WF":
-
             self.N_defocus_3D = self.N_defocus + 2 * self.pad_z
             self.z = ifftshift(
                 (np.r_[0 : self.N_defocus_3D] - self.N_defocus_3D // 2)
@@ -3974,7 +3875,6 @@ class fluorescence_microscopy:
                 )
 
     def fluor_deconv_setup(self, deconv_mode):
-
         """
         Set up the PSF and OTF for 3D deconvolution
 
@@ -4037,11 +3937,9 @@ class fluorescence_microscopy:
         I_fluor_deconv = np.zeros_like(I_fluor_process)
 
         for i in range(self.N_wavelength):
-
             I_fluor_minus_bg = np.maximum(0, I_fluor_process[i] - bg_level[i])
 
             if self.use_gpu:
-
                 I_fluor_f = cp.fft.fft2(
                     cp.array(I_fluor_minus_bg.astype("float32")), axes=(-2, -1)
                 )
@@ -4166,7 +4064,6 @@ class fluorescence_microscopy:
             )
 
         for i in range(self.N_wavelength):
-
             I_fluor_minus_bg = np.maximum(0, I_fluor_pad[i] - bg_level[i])
 
             I_fluor_deconv_pad = Single_variable_Tikhonov_deconv_3D(
@@ -4190,7 +4087,6 @@ class fluorescence_microscopy:
         return np.squeeze(I_fluor_deconv)
 
     def Fluor_anisotropy_recon(self, S1_stack, S2_stack):
-
         """
 
         Reconstruct fluorescence anisotropy and ensemble fluorophore orientation from normalized S1 and S2 Stokes

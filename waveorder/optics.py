@@ -6,7 +6,6 @@ from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 
 
 def Jones_sample(Ein, t, sa):
-
     """
     compute output electric field after the interaction between the transparent retardant sample and incident electric field.
 
@@ -39,7 +38,6 @@ def Jones_sample(Ein, t, sa):
 
 
 def Jones_to_Stokes(Ein, use_gpu=False, gpu_id=0):
-
     """
 
     given a coherent electric field, compute the corresponding Stokes vector.
@@ -63,7 +61,6 @@ def Jones_to_Stokes(Ein, use_gpu=False, gpu_id=0):
     """
 
     if use_gpu:
-
         globals()["cp"] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
 
@@ -93,7 +90,6 @@ def Jones_to_Stokes(Ein, use_gpu=False, gpu_id=0):
 
 
 def analyzer_output(Ein, alpha, beta):
-
     """
 
     compute output electric field after passing through an universal analyzer.
@@ -123,7 +119,6 @@ def analyzer_output(Ein, alpha, beta):
 
 
 def gen_Pupil(fxx, fyy, NA, lambda_in):
-
     """
 
     compute pupil function given spatial frequency, NA, wavelength.
@@ -159,7 +154,6 @@ def gen_Pupil(fxx, fyy, NA, lambda_in):
 
 
 def gen_sector_Pupil(fxx, fyy, NA, lambda_in, sector_angle, rotation_angle):
-
     """
 
     compute sector pupil functions given spatial frequency, NA, wavelength, sector angle, and the rotational angles.
@@ -236,7 +230,6 @@ def gen_sector_Pupil(fxx, fyy, NA, lambda_in, sector_angle, rotation_angle):
 
 
 def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA=0.1):
-
     """
 
     compute the sub-sampled source function with the specified sampling spacing in NA coordinate
@@ -277,7 +270,6 @@ def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA=0.1):
     first_idx = True
 
     for i in NA_idx:
-
         if first_idx:
             illu_list.append(i)
             first_idx = False
@@ -298,7 +290,6 @@ def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA=0.1):
 
 
 def gen_Hz_stack(fxx, fyy, Pupil_support, lambda_in, z_stack):
-
     """
 
     generate propagation kernel
@@ -349,7 +340,6 @@ def gen_Hz_stack(fxx, fyy, Pupil_support, lambda_in, z_stack):
 
 
 def gen_Greens_function_z(fxx, fyy, Pupil_support, lambda_in, z_stack):
-
     """
 
     generate Green's function in u_x, u_y, z space
@@ -406,7 +396,6 @@ def gen_Greens_function_z(fxx, fyy, Pupil_support, lambda_in, z_stack):
 
 
 def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
-
     """
 
     generate forward dyadic Green's function in u_x, u_y, z space
@@ -462,7 +451,6 @@ def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
 
 
 def gen_Greens_function_real(img_size, ps, psz, lambda_in):
-
     """
 
     generate Green's function in real space
@@ -526,7 +514,6 @@ def gen_Greens_function_real(img_size, ps, psz, lambda_in):
 
 
 def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
-
     """
 
     generate dyadic Green's function tensor in real space or in Fourier space
@@ -582,11 +569,9 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
                 G_tensor[i, i] += G_real_f
 
     if space == "Fourier":
-
         return G_tensor
 
     elif space == "real":
-
         return (
             fftshift(ifftn(G_tensor, axes=(2, 3, 4)), axes=(2, 3, 4))
             / ps
@@ -596,7 +581,6 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
 
 
 def WOTF_2D_compute(Source, Pupil, use_gpu=False, gpu_id=0):
-
     """
 
     compute 2D weak object transfer function (2D WOTF)
@@ -646,7 +630,6 @@ def WOTF_2D_compute(Source, Pupil, use_gpu=False, gpu_id=0):
         Hp = cp.asnumpy(Hp)
 
     else:
-
         H1 = ifft2(fft2(Source * Pupil).conj() * fft2(Pupil))
         H2 = ifft2(fft2(Source * Pupil) * fft2(Pupil).conj())
         I_norm = np.sum(Source * Pupil * Pupil.conj())
@@ -659,7 +642,6 @@ def WOTF_2D_compute(Source, Pupil, use_gpu=False, gpu_id=0):
 def WOTF_semi_3D_compute(
     Source_support, Source, Pupil, Hz_det, G_fun_z, use_gpu=False, gpu_id=0
 ):
-
     """
 
     compute semi-3D weak object transfer function (semi-3D WOTF)
@@ -723,7 +705,6 @@ def WOTF_semi_3D_compute(
         Hp = cp.asnumpy(Hp)
 
     else:
-
         H1 = ifft2(
             fft2(Source * Pupil * Hz_det).conj() * fft2(Pupil * G_fun_z)
         )
@@ -747,7 +728,6 @@ def WOTF_3D_compute(
     use_gpu=False,
     gpu_id=0,
 ):
-
     """
 
     compute 3D weak object transfer function (2D WOTF)
@@ -834,7 +814,6 @@ def WOTF_3D_compute(
         H_im = cp.asnumpy(H_im)
 
     else:
-
         H1 = ifft2(
             fft2(
                 (Source * Pupil)[:, :, np.newaxis] * Hz_det, axes=(0, 1)
@@ -860,7 +839,6 @@ def WOTF_3D_compute(
 
 
 def gen_geometric_inc_matrix(incident_theta, incident_phi, Source):
-
     """
 
     compute forward and backward matrix mapping from inclination coefficients to retardance with geometric model
@@ -891,7 +869,6 @@ def gen_geometric_inc_matrix(incident_theta, incident_phi, Source):
     geometric_inc_matrix = []
 
     for i in range(N_pattern):
-
         idx_y, idx_x = np.where(Source[i])
 
         geometric_inc_matrix.append(
@@ -930,7 +907,6 @@ def gen_geometric_inc_matrix(incident_theta, incident_phi, Source):
 def SEAGLE_vec_forward(
     E_tot, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0
 ):
-
     """
 
     compute vectorial SEAGLE forward model
@@ -992,7 +968,6 @@ def SEAGLE_vec_forward(
                 E_in_est[p] += E_tot[p]
 
     else:
-
         pad_convolve_G = lambda x, y, z: ifftn(
             fftn(
                 np.pad(
@@ -1023,7 +998,6 @@ def SEAGLE_vec_forward(
 def SEAGLE_vec_backward(
     E_diff, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0
 ):
-
     """
 
     compute the adjoint of vectorial SEAGLE forward model
@@ -1087,7 +1061,6 @@ def SEAGLE_vec_backward(
             grad_E[p] = E_diff[p] + E_interact
 
     else:
-
         pad_convolve_G = lambda x, y, z: ifftn(
             fftn(
                 np.pad(
@@ -1120,7 +1093,6 @@ def SEAGLE_vec_backward(
 def scattering_potential_tensor_to_3D_orientation_PN(
     f_tensor, material_type="positive", reg_ret_pr=1e-1
 ):
-
     """
 
     compute principal retardance and 3D orientation from scattering potential tensor components
@@ -1157,7 +1129,6 @@ def scattering_potential_tensor_to_3D_orientation_PN(
     """
 
     if material_type == "positive":
-
         # Positive uniaxial material
 
         azimuth_p = (np.arctan2(-f_tensor[3], -f_tensor[2]) / 2) % np.pi
@@ -1177,7 +1148,6 @@ def scattering_potential_tensor_to_3D_orientation_PN(
         return retardance_pr_p, azimuth_p, theta_p
 
     elif material_type == "negative":
-
         # Negative uniaxial material
 
         azimuth_n = (np.arctan2(f_tensor[3], f_tensor[2]) / 2) % np.pi
@@ -1198,7 +1168,6 @@ def scattering_potential_tensor_to_3D_orientation_PN(
 
 
 def phase_inc_correction(f_tensor0, retardance_pr, theta):
-
     """
 
     compute the inclination-corrected phase from the principal retardance, inclination, and the 0-th component of the scattering potential tensor
@@ -1227,7 +1196,6 @@ def phase_inc_correction(f_tensor0, retardance_pr, theta):
 
 
 def optic_sign_probability(mat_map, mat_map_thres=0.1):
-
     """
 
     compute the optic sign probability from the reconstructed material tendancy
@@ -1259,7 +1227,6 @@ def optic_sign_probability(mat_map, mat_map_thres=0.1):
 def unit_conversion_from_scattering_potential_to_permittivity(
     SP_array, lambda_0, n_media=1, imaging_mode="3D"
 ):
-
     """
 
     compute the optic sign probability from the reconstructed material tendancy

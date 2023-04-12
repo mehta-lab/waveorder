@@ -65,7 +65,6 @@ def array2png_bytes(img: NDArray):
 def image_stack_viewer(
     image_stack, size=(10, 10), colormap="gray", origin="upper"
 ):
-
     """
 
     visualize 3D and 4D image stack interactively in jupyter notebook (or jupyter lab)
@@ -139,7 +138,6 @@ def image_stack_viewer(
 def image_stack_viewer_fast(
     image_stack, size=(512, 512), origin="upper", vrange=None
 ):
-
     """
 
     faster function to visualize 3D image stack interactively in jupyter notebook (or jupyter lab)
@@ -197,7 +195,6 @@ def image_stack_viewer_fast(
 
 
 def hsv_stack_viewer(image_stack, max_val=1, size=5, origin="upper"):
-
     """
 
     visualize 3D retardance + orientation image stack with hsv colormap (orientation in h, constant in s, retardance in v)
@@ -252,7 +249,6 @@ def hsv_stack_viewer(image_stack, max_val=1, size=5, origin="upper"):
     RGB = hsv_to_rgb(HSV)
 
     def interact_plot_hsv(stack_idx):
-
         f1, ax = plt.subplots(1, 2, figsize=(size + size / 2, size))
         ax[0].imshow(I_rgb[stack_idx], origin=origin)
 
@@ -273,7 +269,6 @@ def hsv_stack_viewer(image_stack, max_val=1, size=5, origin="upper"):
 
 
 def rgb_stack_viewer(image_stack, size=5, origin="upper"):
-
     """
 
     visualize 3D rgb image stack interactively in jupyter notebook (or jupyter lab)
@@ -309,7 +304,6 @@ def rgb_stack_viewer(image_stack, size=5, origin="upper"):
 
 
 def rgb_stack_viewer_fast(image_stack, size=(256, 256), origin="upper"):
-
     """
 
     visualize 3D rgb image stack interactively in jupyter notebook (or jupyter lab)
@@ -372,7 +366,6 @@ def parallel_4D_viewer(
     origin="upper",
     vrange=None,
 ):
-
     """
 
     simultaneous visualize all channels of image stack interactively in jupyter notebook
@@ -512,7 +505,6 @@ def parallel_4D_viewer(
 def parallel_4D_viewer_fast(
     image_stack, num_col=2, size=256, origin="upper", vrange=None
 ):
-
     """
 
     simultaneous visualize all channels of image stack interactively in jupyter notebook
@@ -545,7 +537,6 @@ def parallel_4D_viewer_fast(
     list_of_img_binaries = []
 
     for i in range(N_channel):
-
         if vrange is None:
             imgs = im_adjust(image_stack[:, i], tol=0, bit=16)
         elif vrange[0] < vrange[1]:
@@ -605,7 +596,6 @@ def parallel_5D_viewer(
     colormap="gray",
     origin="upper",
 ):
-
     """
 
     simultaneous visualize all channels of image stack interactively in jupyter notebook with two stepping nobs on N_stack and N_pattern
@@ -648,7 +638,6 @@ def parallel_5D_viewer(
     figsize = (num_col * size, num_row * size)
 
     def interact_plot(stack_idx_1, stack_idx_2):
-
         f1, ax = plt.subplots(num_row, num_col, figsize=figsize)
         if num_row == 1:
             for i in range(N_channel):
@@ -688,7 +677,6 @@ def parallel_5D_viewer(
 def parallel_5D_viewer_fast(
     image_stack, num_col=2, size=256, origin="upper", vrange=None
 ):
-
     """
 
     simultaneous visualize all channels of image stack interactively in jupyter notebook with two stepping nobs on N_stack and N_pattern
@@ -801,7 +789,6 @@ def plot_multicolumn(
     colormap="gray",
     origin="upper",
 ):
-
     """
 
     plot images in multiple columns
@@ -861,7 +848,6 @@ def plot_multicolumn(
 
 
 def plot_hsv(image_stack, max_val=1, size=5, origin="upper"):
-
     """
 
     visualize retardance + orientation image with hsv colormap (orientation in h, constant in s, retardance in v)
@@ -923,7 +909,6 @@ def plot_hsv(image_stack, max_val=1, size=5, origin="upper"):
 def plot_phase_hsv(
     image_stack, max_val_V=1, max_val_S=1, size=5, origin="upper"
 ):
-
     """
 
     visualize retardance + orientation + phase image with hsv colormap (orientation in h, retardance in s, phase in v)
@@ -1142,7 +1127,6 @@ def plotVectorField(
 
 
 def orientation_2D_colorwheel(wheelsize=256, circ_size=50):
-
     """
 
     generate hsv colorwheel for color-encoded 2D orientation
@@ -1189,7 +1173,6 @@ def orientation_3D_colorwheel(
     sat_factor=1,
     discretize=False,
 ):
-
     """
 
     generate colorwheel for color-encoded 3D orientation
@@ -1266,7 +1249,6 @@ def orientation_3D_colorwheel(
 
 
 def orientation_3D_to_rgb(hsv, interp_belt=20 / 180 * np.pi, sat_factor=1):
-
     """
 
     convert [azimuth, theta, retardance] values to rgb according to
@@ -1522,7 +1504,6 @@ def orientation_3D_to_rgb(hsv, interp_belt=20 / 180 * np.pi, sat_factor=1):
 def save_stack_to_folder(
     img_stack, dir_name, file_name, min_val=None, max_val=None, rgb=False
 ):
-
     """
 
     save image stack into separate images
@@ -1558,7 +1539,6 @@ def save_stack_to_folder(
         N_frame, N, M = img_stack.shape
 
     for i in range(N_frame):
-
         file_name_i = file_name + str(i) + ".tif"
         file_path = os.path.join(dir_name, file_name_i)
 
@@ -1593,7 +1573,6 @@ def plot3DVectorField(
     alpha=1,
     subplot_ax=None,
 ):
-
     """
 
     overlays 3D orientation field (azimuth in line orientation, theta in hsv color, retardance in linelength) on the image
@@ -1762,7 +1741,6 @@ def orientation_3D_hist(
     top_hemi=False,
     colorbar=True,
 ):
-
     """
 
     plot histogram of 3D orientation weighted by anisotropy
@@ -1810,20 +1788,17 @@ def orientation_3D_hist(
     """
 
     if top_hemi:
-
         index_remapping = theta > np.pi / 2
         azimuth[index_remapping] = azimuth[index_remapping] + np.pi
         theta[index_remapping] = np.pi - theta[index_remapping]
 
     if azimuth.ndim == 1:
-
         N_hist = 1
         azimuth = azimuth[np.newaxis, :]
         theta = theta[np.newaxis, :]
         retardance = retardance[np.newaxis, :]
 
     elif azimuth.ndim == 2:
-
         N_hist, _ = azimuth.shape
 
     num_row = np.int(np.ceil(N_hist / num_col))
@@ -1843,7 +1818,6 @@ def orientation_3D_hist(
     )
 
     for i in range(N_hist):
-
         az = azimuth[i].copy()
         th = theta[i].copy()
         val = retardance[i].copy()
