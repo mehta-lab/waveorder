@@ -125,32 +125,32 @@ def phase_2D_to_3D_recon(
         Hu = cp.array(Hu)
         Hp = cp.array(Hp)
 
-        S0_stack_f = cp.fft.fft2(S0_stack, axes=(0, 1))
+        S0_stack_f = cp.fft.fft2(S0_stack, axes=(1, 2))
 
         AHA = [
-            cp.sum(cp.abs(Hu) ** 2, axis=2) + reg_u,
-            cp.sum(cp.conj(Hu) * Hp, axis=2),
-            cp.sum(cp.conj(Hp) * Hu, axis=2),
-            cp.sum(cp.abs(Hp) ** 2, axis=2) + reg_p,
+            cp.sum(cp.abs(Hu) ** 2, axis=0) + reg_u,
+            cp.sum(cp.conj(Hu) * Hp, axis=0),
+            cp.sum(cp.conj(Hp) * Hu, axis=0),
+            cp.sum(cp.abs(Hp) ** 2, axis=0) + reg_p,
         ]
 
         b_vec = [
-            cp.sum(cp.conj(Hu) * S0_stack_f, axis=2),
-            cp.sum(cp.conj(Hp) * S0_stack_f, axis=2),
+            cp.sum(cp.conj(Hu) * S0_stack_f, axis=0),
+            cp.sum(cp.conj(Hp) * S0_stack_f, axis=0),
         ]
     else:
-        S0_stack_f = np.fft.fft2(S0_stack, axes=(0, 1))
+        S0_stack_f = np.fft.fft2(S0_stack, axes=(1, 2))
 
         AHA = [
-            np.sum(np.abs(Hu) ** 2, axis=2) + reg_u,
-            np.sum(np.conj(Hu) * Hp, axis=2),
-            np.sum(np.conj(Hp) * Hu, axis=2),
-            np.sum(np.abs(Hp) ** 2, axis=2) + reg_p,
+            np.sum(np.abs(Hu) ** 2, axis=0) + reg_u,
+            np.sum(np.conj(Hu) * Hp, axis=0),
+            np.sum(np.conj(Hp) * Hu, axis=0),
+            np.sum(np.abs(Hp) ** 2, axis=0) + reg_p,
         ]
 
         b_vec = [
-            np.sum(np.conj(Hu) * S0_stack_f, axis=2),
-            np.sum(np.conj(Hp) * S0_stack_f, axis=2),
+            np.sum(np.conj(Hu) * S0_stack_f, axis=0),
+            np.sum(np.conj(Hp) * S0_stack_f, axis=0),
         ]
 
     # Deconvolution with Tikhonov regularization
