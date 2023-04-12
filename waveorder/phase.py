@@ -24,7 +24,36 @@ def phase_2D_to_3D_OTF(
 
     return Hu, Hp
 
+def phase_3D_to_3D_OTF(
+    ZYX_shape, YX_ps, Z_ps, lambda_illu, n_media, NA_illu, NA_obj, use_gpu=False, gpu_id=0):
+    
+    _, _, fxx, fyy = util.gen_coordinate(ZYX_shape[1:], YX_ps)
+    Z_samples = -np.fft.ifftshift(
+                    (np.r_[0 : ZYX_shape[0]] - ZYX_shape[0] // 2)
+                    * Z_ps
+                )
 
+    ill_pupil = optics.gen_Pupil(fxx, fyy, NA_illu, lambda_illu)
+    det_pupil = optics.gen_Pupil(fxx, fyy, NA_obj, lambda_illu)
+    Hz_stack = optics.gen_Hz_stack(
+        fxx, fyy, det_pupil, lambda_illu / n_media, Z_samples
+    )
+    G_fun_z_3D = optics.gen_Greens_function_z(fxx, fyy, lambda_illu / n_media, Z_samples)
+    
+    Hu, Hp = optics.WOTF_3D_compute(
+                ill_pupil.astype("float32"),
+                ill_pupil.astype("float32"),
+                det_pupil.astype("complex64"),
+                Hz_stack.astype("complex64"),
+                G_fun_z_3D.astype("complex64"),
+                Z_ps,
+                use_gpu=use_gpu,
+                gpu_id=gpu_id,
+            )
+
+    return Hu, Hp
+
+## Reconstructions
 def phase_2D_to_3D_recon(
     Hu,
     Hp,
