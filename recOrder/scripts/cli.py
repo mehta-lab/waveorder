@@ -1,6 +1,9 @@
 import click
 import napari
+
+v = napari.Viewer()  # open viewer right away to use on hpc
 import numpy as np
+from recOrder.io.utils import ret_ori_overlay
 from iohub.reader import print_info, _infer_format
 from iohub import read_micromanager, open_ome_zarr
 from iohub.reader_base import ReaderBase
@@ -112,14 +115,34 @@ def _build_name_lists(reader, positions, layers):
     return layer_names, slice_names
 
 
-def _create_napari_viewer(arrays, layers, layer_names, slice_names):
-    # Create and populate napari viewer
-    v = napari.Viewer()
-
+def _create_napari_viewer(arrays, layers, layer_names, slice_names, overlay):
     # Add arrays
     for i, array in enumerate(arrays):
         v.add_image(array, name=layer_names[i])
         v.layers[-1].reset_contrast_limits()
+
+        # Add overlays
+        if overlay:
+            try:
+                ret_ind = slice_names.index("Retardance")
+                ori_ind = slice_names.index("Orientation")
+            except:
+                raise ValueError(
+                    "No channels named 'Retardance' and 'Orientation'. --overlay option is unavailable."
+                )
+            ret = array[:, ret_ind, ...]
+            ori = array[:, ori_ind, ...]
+            overlay = ret_ori_overlay(
+                ret,
+                ori,
+                ret_max=np.percentile(ret, 99.99),
+                cmap="HSV",
+            )
+            v.add_image(
+                np.squeeze(overlay),
+                name=layer_names[i] + "-BirefringenceOverlay",
+                rgb=True,
+            )
 
     # Cosmetic labelling
     v.text_overlay.visible = True
@@ -174,7 +197,18 @@ e.g. \"-p 0\" for the 0th position. Accepts multiple positions e.g. \"-p 0/0/0
     type=click.Choice(["position", "channel", "p", "c"]),
     help="Layers as 'position' ('p') or 'channel' ('c')",
 )
-def view(filename, positions=None, layers=None):
+@click.option(
+    "--overlay",
+    "-o",
+    is_flag=True,
+    default=False,
+    help="""
+    Computes a retardance-orientation HSV overlay layers. Requires channel 
+    names `Retardance` and `Orientation` to be present, and requires `--layers 
+    position`
+    """,
+)
+def view(filename, positions, layers, overlay):
     """View a dataset in napari"""
     click.echo(f"Reading file:\t {filename}")
     print_info(filename)
@@ -187,4 +221,4 @@ def view(filename, positions=None, layers=None):
     arrays = _build_array_list(reader, positions, layers)
     layer_names, slice_names = _build_name_lists(reader, positions, layers)
 
-    _create_napari_viewer(arrays, layers, layer_names, slice_names)
+    _create_napari_viewer(arrays, layers, layer_names, slice_names, overlay)

@@ -529,7 +529,6 @@ class MainWidget(QWidget):
         ui_slider.setRange(range_[0], range_[1])
 
     def _promote_slider_init(self):
-
         """
         Used to promote the Display Tab sliders from QSlider to QDoubeRangeSlider with superqt
         Returns
@@ -1160,7 +1159,6 @@ class MainWidget(QWidget):
             retardance=value[0],
             orientation=value[1],
             ret_max=np.percentile(value[0], 99.99),
-            mode=self.acq_mode,
             cmap=self.colormap,
         )
         overlay_worker.returned.connect(self._draw_bire_overlay)
@@ -1174,7 +1172,6 @@ class MainWidget(QWidget):
 
     @Slot(object)
     def handle_phase_image_update(self, value):
-
         name = "Phase2D" if self.acq_mode == "2D" else "Phase3D"
 
         # Add new layer if none exists, otherwise update layer data
@@ -2290,7 +2287,6 @@ class MainWidget(QWidget):
 
     @Slot(tuple)
     def update_dims(self, dims):
-
         if not self.pause_updates:
             self.viewer.dims.set_current_step(0, dims[0])
             self.viewer.dims.set_current_step(1, dims[1])
@@ -2299,7 +2295,6 @@ class MainWidget(QWidget):
             pass
 
     def _open_file_dialog(self, default_path, type):
-
         return self._open_dialog("select a directory", str(default_path), type)
 
     def _open_dialog(self, title, ref, type):

@@ -282,91 +282,71 @@ def generic_hsv_overlay(
     return overlay_final[0] if mode == "2D" else overlay_final
 
 
-def ret_ori_overlay(
-    retardance, orientation, ret_max=10, mode="2D", cmap="JCh"
-):
+def ret_ori_overlay(retardance, orientation, ret_max=10, cmap="JCh"):
     """
     This function will create an overlay of retardance and orientation with two different colormap options.
     HSV is the standard Hue, Saturation, Value colormap while JCh is a similar colormap but is perceptually uniform.
 
     Parameters
     ----------
-    retardance:             (nd-array) retardance array of shape (N, Y, X) or (Y, X) in nanometers
-    orientation:            (nd-array) orientation array of shape (N, Y, X) or (Y, X) in radian [0, pi]
-    ret_max:                (float) maximum displayed retardance.  Typically use adjusted contrast limits.
-    mode:                   (str) '2D' or '3D'
+    retardance:             (nd-array) retardance array in nanometers (shape must match orientation)
+    orientation:            (nd-array) orientation array in radian [0, pi] (shape must match retardance)
+    ret_max:                (float) maximum displayed retardance. Typically use adjusted contrast limits.
     cmap:                   (str) 'JCh' or 'HSV'
 
     Returns
     -------
-    overlay                 (nd-array) overlaid image of shape (N, Y, X, 3) or (Y, X, 3) RGB image
+    overlay                 (nd-array) RGB image with shape retardance.shape + (3,)
 
     """
-
-    orientation = np.copy(orientation) * 180 / np.pi
-    noise_level = 1
-
     if retardance.shape != orientation.shape:
         raise ValueError(
             f"Retardance and Orientation shapes do not match: {retardance.shape} vs. {orientation.shape}"
         )
 
-    if mode == "3D":
-        overlay_final = np.zeros(
-            (retardance.shape[0], retardance.shape[1], retardance.shape[2], 3)
+    # Prepare input and output arrays
+    ret_ = np.clip(retardance, 0, ret_max)  # clip and copy
+    ori_ = (
+        np.copy(orientation) * 360 / np.pi
+    )  # convert 180 degree range into 360 to match periodicity of hue.
+    overlay_final = np.zeros_like(retardance)
+
+    # FIX ME: this binning code leads to artifacts.
+    # levels = 32
+    # ori_binned = (
+    #     np.round(orientation[i] / 180 * levels + 0.5) / levels - 1 / levels
+    # ) # bin orientation into 32 levels.
+    # ori_ = np.interp(ori_binned, (0, 1), (0, 360))
+
+    if cmap == "JCh":
+        noise_level = 1
+
+        J = ret_
+        C = np.ones_like(J) * 60
+        C[ret_ < noise_level] = 0
+        h = ori_
+
+        JCh = np.stack((J, C, h), axis=-1)
+        JCh_rgb = cspace_convert(JCh, "JCh", "sRGB1")
+
+        JCh_rgb[JCh_rgb < 0] = 0
+        JCh_rgb[JCh_rgb > 1] = 1
+
+        overlay_final = JCh_rgb
+    elif cmap == "HSV":
+        I_hsv = np.moveaxis(
+            np.stack(
+                [
+                    ori_ / 360,
+                    np.ones_like(ori_),
+                    ret_ / np.max(ret_),
+                ]
+            ),
+            source=0,
+            destination=-1,
         )
-        slices = retardance.shape[0]
+        overlay_final = hsv_to_rgb(I_hsv)
     else:
-        overlay_final = np.zeros(
-            (1, retardance.shape[-2], retardance.shape[-1], 3)
-        )
-        orientation = np.expand_dims(orientation, axis=0)
-        retardance = np.expand_dims(retardance, axis=0)
-        slices = 1
+        raise ValueError(f"Colormap {cmap} not understood")
 
-    for i in range(slices):
-        ret_ = np.copy(
-            retardance[i]
-        )  # copy to avoid modifying original array.
-        ret_[ret_ > ret_max] = ret_max  # clip retardance to specified max.
-
-        # FIX ME: this binning code leads to artifacts.
-        # levels = 32
-        # ori_binned = (
-        #     np.round(orientation[i] / 180 * levels + 0.5) / levels - 1 / levels
-        # ) # bin orientation into 32 levels.
-        # ori_ = np.interp(ori_binned, (0, 1), (0, 360))
-
-        ori_ = orientation[i] * (
-            360.0 / 180.0
-        )  # convert 180 degree range into 360 to match periodicity of hue.
-        if cmap == "JCh":
-            J = ret_
-            C = np.ones_like(J) * 60
-            C[retardance[i] < noise_level] = 0
-            h = ori_
-
-            JCh = np.stack((J, C, h), axis=-1)
-            JCh_rgb = cspace_convert(JCh, "JCh", "sRGB1")
-
-            JCh_rgb[JCh_rgb < 0] = 0
-            JCh_rgb[JCh_rgb > 1] = 1
-
-            overlay_final[i] = JCh_rgb
-        elif cmap == "HSV":
-            I_hsv = np.transpose(
-                np.stack(
-                    [
-                        ori_ / 360,
-                        np.ones_like(ori_),
-                        np.minimum(1, ret_ / np.max(ret_)),
-                    ]
-                ),
-                (1, 2, 0),
-            )
-            overlay_final[i] = hsv_to_rgb(I_hsv)
-
-        else:
-            raise ValueError(f"Colormap {cmap} not understood")
-
-    return overlay_final[0] if mode == "2D" else overlay_final
+    return overlay_final
