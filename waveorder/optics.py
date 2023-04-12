@@ -297,24 +297,24 @@ def gen_Hz_stack(fxx, fyy, Pupil_support, lambda_in, z_stack):
     Parameters
     ----------
         fxx           : numpy.ndarray
-                        x component of 2D spatial frequency array with the size of (Ny, Nx)
+                        x component of 2D spatial frequency array with the size of (Y, X)
 
         fyy           : numpy.ndarray
-                        y component of 2D spatial frequency array with the size of (Ny, Nx)
+                        y component of 2D spatial frequency array with the size of (Y, X)
 
         Pupil_support : numpy.ndarray
-                        the array that defines the support of the pupil function with the size of (Ny, Nx)
+                        the array that defines the support of the pupil function with the size of (Y, X)
 
         lambda_in     : float
                         wavelength of the light in the immersion media
 
         z_stack       : numpy.ndarray
-                        1D array of defocused z position with the size of (Nz,)
+                        1D array of defocused z position with the size of (Z)
 
     Returns
     -------
         Hz_stack      : numpy.ndarray
-                        corresponding propagation kernel with size of (Ny, Nx, Nz)
+                        corresponding propagation kernel with size of (Z, Y, X)
 
     """
 
@@ -328,12 +328,12 @@ def gen_Hz_stack(fxx, fyy, Pupil_support, lambda_in, z_stack):
         1 / 2
     ) / lambda_in
 
-    Hz_stack = Pupil_support[:, :, np.newaxis] * np.exp(
+    Hz_stack = Pupil_support[np.newaxis, :, :] * np.exp(
         1j
         * 2
         * np.pi
-        * z_stack[np.newaxis, np.newaxis, :]
-        * oblique_factor[:, :, np.newaxis]
+        * z_stack[:, np.newaxis, np.newaxis]
+        * oblique_factor[np.newaxis, :, :]
     )
 
     return Hz_stack
