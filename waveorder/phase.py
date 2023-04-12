@@ -1,4 +1,5 @@
 import numpy as np
+import cupy as cp
 from waveorder import optics, util
 
 
@@ -37,6 +38,8 @@ def phase_2D_to_3D_recon(
     itr=20,
     verbose=True,
     bg_filter=True,
+    use_gpu=False, 
+    gpu_id=0
 ):
     """
 
@@ -89,29 +92,48 @@ def phase_2D_to_3D_recon(
 
     S0_stack = util.inten_normalization(ZYX_data, bg_filter=bg_filter)
 
-    S0_stack_f = np.fft.fft2(S0_stack, axes=(0, 1))
+    if use_gpu:
+        Hu = cp.array(Hu)
+        Hp = cp.array(Hp)
 
-    AHA = [
-        np.sum(np.abs(Hu) ** 2, axis=2) + reg_u,
-        np.sum(np.conj(Hu) * Hp, axis=2),
-        np.sum(np.conj(Hp) * Hu, axis=2),
-        np.sum(np.abs(Hp) ** 2, axis=2) + reg_p,
-    ]
+        S0_stack_f = cp.fft.fft2(S0_stack, axes=(0, 1))
 
-    b_vec = [
-        np.sum(np.conj(Hu) * S0_stack_f, axis=2),
-        np.sum(np.conj(Hp) * S0_stack_f, axis=2),
-    ]
+        AHA = [
+            cp.sum(cp.abs(Hu) ** 2, axis=2) + reg_u,
+            cp.sum(cp.conj(Hu) * Hp, axis=2),
+            cp.sum(cp.conj(Hp) * Hu, axis=2),
+            cp.sum(cp.abs(Hp) ** 2, axis=2) + reg_p,
+        ]
+
+        b_vec = [
+            cp.sum(cp.conj(Hu) * S0_stack_f, axis=2),
+            cp.sum(cp.conj(Hp) * S0_stack_f, axis=2),
+        ]
+    else:
+        S0_stack_f = np.fft.fft2(S0_stack, axes=(0, 1))
+
+        AHA = [
+            np.sum(np.abs(Hu) ** 2, axis=2) + reg_u,
+            np.sum(np.conj(Hu) * Hp, axis=2),
+            np.sum(np.conj(Hp) * Hu, axis=2),
+            np.sum(np.abs(Hp) ** 2, axis=2) + reg_p,
+        ]
+
+        b_vec = [
+            np.sum(np.conj(Hu) * S0_stack_f, axis=2),
+            np.sum(np.conj(Hp) * S0_stack_f, axis=2),
+        ]
 
     # Deconvolution with Tikhonov regularization
     if method == "Tikhonov":
         mu_sample, phi_sample = util.Dual_variable_Tikhonov_deconv_2D(
-            AHA, b_vec
+            AHA, b_vec, use_gpu=use_gpu, gpu_id=gpu_id
         )
+
     # ADMM deconvolution with anisotropic TV regularization
     elif method == "TV":
         mu_sample, phi_sample = util.Dual_variable_ADMM_TV_deconv_2D(
-            AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose
+            AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose, use_gpu=use_gpu, gpu_id=gpu_id
         )
 
     phi_sample -= phi_sample.mean()
