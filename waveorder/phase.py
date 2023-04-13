@@ -2,7 +2,6 @@ import numpy as np
 import cupy as cp
 from waveorder import optics, util
 
-
 # OTF precomputations
 def phase_2D_to_3D_OTF(
     YX_shape,
@@ -32,7 +31,6 @@ def phase_2D_to_3D_OTF(
         )
 
     return Hu, Hp
-
 
 def phase_3D_to_3D_OTF(
     ZYX_shape,
@@ -72,7 +70,6 @@ def phase_3D_to_3D_OTF(
 
     return H_re, H_im
 
-
 ## Reconstructions
 def phase_2D_to_3D_recon(
     ZYX_data,
@@ -86,46 +83,6 @@ def phase_2D_to_3D_recon(
     gpu_id=0,
     **kwargs
 ):
-    """
-
-    2D phase reconstruction from defocused set of intensity images
-
-    Parameters
-    ----------
-        ZYX_data  : numpy.ndarray
-                    defocused set of intensity images with size (Z, Y, X)
-
-        method    : str
-                    denoiser for 2D phase reconstruction
-                    'Tikhonov' for Tikhonov denoiser
-                    'TV'       for TV denoiser
-
-        reg_u     : float
-                    Tikhonov regularization parameter for 2D absorption
-
-        reg_p     : float
-                    Tikhonov regularization parameter for 2D phase
-
-        bg_filter : bool
-                    option for slow-varying 2D background normalization with uniform filter
-
-        use_gpu :   False
-
-        gpu_id :    0
-
-        **kwargs
-
-    Returns
-    -------
-        mu_sample  : numpy.ndarray
-                        2D absorption reconstruction with the size of (Y, X)
-
-        phi_sample : numpy.ndarray
-                        2D phase reconstruction (in the unit of rad) with the size of (Y, X)
-
-
-    """
-
     S0_stack = util.inten_normalization(ZYX_data, bg_filter=bg_filter)
 
     if use_gpu:
@@ -187,45 +144,7 @@ def phase_3D_to_3D_recon(
     method="Tikhonov",
     **kwargs
 ):
-    """
-
-    conduct 3D phase reconstruction from defocused or asymmetrically-illuminated stack of intensity images (TIE or DPC)
-
-    Parameters
-    ----------
-        ZYX_data          : numpy.ndarray
-                           defocused or asymmetrically-illuminated stack of S0 intensity images with the size of (Z, Y, X)
-
-        H_re
-
-        H_im
-
-        pad_z
-
-        psz
-
-        lamda_illu
-
-        absorption_ratio : float
-                           assumption of correlation between phase and absorption (0 means absorption = phase*0, effective when N_pattern==1)
-
-        method           : str
-                           denoiser for 3D phase reconstruction
-                           'Tikhonov' for Tikhonov denoiser
-                           'TV'       for TV denoiser
-
-        kwargs
-
-
-    Returns
-    -------
-        scaled f_real    : numpy.ndarray
-                           3D reconstruction of phase (in the unit of rad) with the size of (Z, Y, X)
-                           if autotune_re is True, returns 3 reconstructions from different regularization parameters, size (3, Z, Y, X)
-
-
-    """
-
+    # TODO HANDLE PADDING IN A SIMPLE WAY
     pad_z = H_re.shape[0] - ZYX_data.shape[0]
 
     if pad_z < 0:
