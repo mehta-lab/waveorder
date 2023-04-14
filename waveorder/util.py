@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pywt
 import time
+import torch
 
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from scipy.ndimage import uniform_filter
@@ -226,7 +227,6 @@ def gen_sphere_target(img_dim, ps, psz, radius, blur_size=0.1):
 
     return sphere, azimuth, inc_angle
 
-
 def gen_coordinate(img_dim, ps):
     """
 
@@ -265,6 +265,15 @@ def gen_coordinate(img_dim, ps):
     fxx, fyy = np.meshgrid(fx, fy)
 
     return (xx, yy, fxx, fyy)
+
+
+def gen_radial_freq(img_dim, ps):
+    fy = torch.fft.fftfreq(img_dim[0], ps)
+    fx = torch.fft.fftfreq(img_dim[1], ps)
+
+    fyy, fxx = torch.meshgrid(fy, fx)
+
+    return torch.sqrt(fyy**2 + fxx**2)
 
 
 def axial_upsampling(I_meas, upsamp_factor=1):
@@ -772,7 +781,15 @@ def Dual_variable_Tikhonov_deconv_2D(
 
 
 def Dual_variable_ADMM_TV_deconv_2D(
-    AHA, b_vec, rho=1e-5, lambda_u=1e-3, lambda_p=1e-3, itr=20, verbose=False, use_gpu=False, gpu_id=0
+    AHA,
+    b_vec,
+    rho=1e-5,
+    lambda_u=1e-3,
+    lambda_p=1e-3,
+    itr=20,
+    verbose=False,
+    use_gpu=False,
+    gpu_id=0,
 ):
     """
 

@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import matplotlib.pyplot as plt
 import gc
 import itertools
@@ -118,24 +119,22 @@ def analyzer_output(Ein, alpha, beta):
     return Eout
 
 
-def gen_Pupil(fxx, fyy, NA, lambda_in):
+def gen_pupil(frr, NA, lambda_in):
     """
 
     compute pupil function given spatial frequency, NA, wavelength.
 
     Parameters
     ----------
-        fxx       : numpy.ndarray
-                    x component of 2D spatial frequency array with the size of (Ny, Nx)
-
-        fyy       : numpy.ndarray
-                    y component of 2D spatial frequency array with the size of (Ny, Nx)
+        frr       : torch.tensor
+                    radial frequency coordinate in units of inverse length
 
         NA        : float
                     numerical aperture of the pupil function (normalized by the refractive index of the immersion media)
 
         lambda_in : float
                     wavelength of the light (inside the immersion media)
+                    in units of length (inverse of frr's units)
 
     Returns
     -------
@@ -144,11 +143,8 @@ def gen_Pupil(fxx, fyy, NA, lambda_in):
 
     """
 
-    N, M = fxx.shape
-
-    Pupil = np.zeros((N, M))
-    fr = (fxx**2 + fyy**2) ** (1 / 2)
-    Pupil[fr < NA / lambda_in] = 1
+    Pupil = torch.zeros(frr.shape)
+    Pupil[frr < NA / lambda_in] = 1
 
     return Pupil
 
@@ -318,7 +314,7 @@ def gen_Hz_stack(fxx, fyy, Pupil_support, lambda_in, z_stack):
 
     """
 
-    N, M = fxx.shape
+    N, M = fxx.size()
     N_stack = len(z_stack)
     N_defocus = len(z_stack)
 
@@ -328,12 +324,8 @@ def gen_Hz_stack(fxx, fyy, Pupil_support, lambda_in, z_stack):
         1 / 2
     ) / lambda_in
 
-    Hz_stack = Pupil_support[np.newaxis, :, :] * np.exp(
-        1j
-        * 2
-        * np.pi
-        * z_stack[:, np.newaxis, np.newaxis]
-        * oblique_factor[np.newaxis, :, :]
+    Hz_stack = Pupil_support[None, :, :] * np.exp(
+        1j * 2 * np.pi * z_stack[:, None, None] * oblique_factor[None, :, :]
     )
 
     return Hz_stack
@@ -580,7 +572,7 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
         )
 
 
-def WOTF_2D_compute(Source, Pupil, use_gpu=False, gpu_id=0):
+def WOTF_2D_compute(Source, Pupil):
     """
 
     compute 2D weak object transfer function (2D WOTF)
@@ -593,12 +585,6 @@ def WOTF_2D_compute(Source, Pupil, use_gpu=False, gpu_id=0):
         Pupil   : numpy.ndarray
                   pupil function with the size of (Ny, Nx)
 
-        use_gpu : bool
-                  option to use gpu or not
-
-        gpu_id  : int
-                  number refering to which gpu will be used
-
     Returns
     -------
         Hu      : numpy.ndarray
@@ -609,32 +595,14 @@ def WOTF_2D_compute(Source, Pupil, use_gpu=False, gpu_id=0):
 
     """
 
-    if use_gpu:
-        globals()["cp"] = __import__("cupy")
-        cp.cuda.Device(gpu_id).use()
+    SP_hat = torch.fft.fft2(Source * Pupil)
+    P_hat = torch.fft.fft2(Pupil)
 
-        Source = cp.array(Source)
-        Pupil = cp.array(Pupil)
-
-        H1 = cp.fft.ifft2(
-            cp.conj(cp.fft.fft2(Source * Pupil)) * cp.fft.fft2(Pupil)
-        )
-        H2 = cp.fft.ifft2(
-            cp.fft.fft2(Source * Pupil) * cp.conj(cp.fft.fft2(Pupil))
-        )
-        I_norm = cp.sum(Source * Pupil * cp.conj(Pupil))
-        Hu = (H1 + H2) / I_norm
-        Hp = 1j * (H1 - H2) / I_norm
-
-        Hu = cp.asnumpy(Hu)
-        Hp = cp.asnumpy(Hp)
-
-    else:
-        H1 = ifft2(fft2(Source * Pupil).conj() * fft2(Pupil))
-        H2 = ifft2(fft2(Source * Pupil) * fft2(Pupil).conj())
-        I_norm = np.sum(Source * Pupil * Pupil.conj())
-        Hu = (H1 + H2) / I_norm
-        Hp = 1j * (H1 - H2) / I_norm
+    H1 = torch.fft.ifft2(torch.conj(SP_hat) * P_hat)
+    H2 = torch.fft.ifft2(SP_hat * torch.conj(P_hat))
+    I_norm = torch.sum(Source * Pupil * Pupil.conj())
+    Hu = (H1 + H2) / I_norm
+    Hp = 1j * (H1 - H2) / I_norm
 
     return Hu, Hp
 
