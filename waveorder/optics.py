@@ -563,35 +563,35 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
         )
 
 
-def WOTF_2D_compute(Source, Pupil):
+def WOTF_2D_compute(source, pupil):
     """
 
     compute 2D weak object transfer function (2D WOTF)
 
     Parameters
     ----------
-        Source  : numpy.ndarray
-                  illumination source pattern with the size of (Ny, Nx)
+        source  : torch.tensor
+                  illumination source pattern with the size of (Y, X)
 
-        Pupil   : numpy.ndarray
-                  pupil function with the size of (Ny, Nx)
+        pupil   : torch.tensor
+                  pupil function with the size of (Y, X)
 
     Returns
     -------
-        Hu      : numpy.ndarray
-                  absorption transfer function with size of (Ny, Nx)
+        Hu      : torch.tensro
+                  absorption transfer function with size of (Y, X)
 
-        Hp      : numpy.ndarray
-                  phase transfer function with size of (Ny, Nx)
+        Hp      : torch.tesnor
+                  phase transfer function with size of (Y, X)
 
     """
 
-    SP_hat = torch.fft.fft2(Source * Pupil)
-    P_hat = torch.fft.fft2(Pupil)
+    SP_hat = torch.fft.fft2(source * pupil)
+    P_hat = torch.fft.fft2(pupil)
 
     H1 = torch.fft.ifft2(torch.conj(SP_hat) * P_hat)
     H2 = torch.fft.ifft2(SP_hat * torch.conj(P_hat))
-    I_norm = torch.sum(Source * Pupil * Pupil.conj())
+    I_norm = torch.sum(source * pupil * torch.conj(pupil))
     Hu = (H1 + H2) / I_norm
     Hp = 1j * (H1 - H2) / I_norm
 

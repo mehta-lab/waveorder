@@ -25,3 +25,18 @@ def test_gen_Hz_stack():
     assert Hz_stack.shape == (3, 10, 10)
     assert Hz_stack[1, 0, 0] == 1
     assert Hz_stack[1, 5, 5] == 0
+
+
+def test_WOTF_2D_compute():
+    frr = util.gen_radial_freq((10, 10), 0.5)
+    source = optics.gen_pupil(frr, 0.5, 0.5)
+    pupil = optics.gen_pupil(frr, 0.5, 0.5)
+
+    Hu, Hp = optics.WOTF_2D_compute(source, pupil)
+
+    # Absorption DC term
+    assert Hu[0, 0] == 2
+
+    # No phase contrast for an in-focus slice
+    assert torch.all(torch.real(Hp) == 0)
+    assert torch.all(torch.imag(Hp) == 0)
