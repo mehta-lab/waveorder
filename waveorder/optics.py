@@ -316,63 +316,56 @@ def gen_Hz_stack(frr, pupil_support, lambda_in, z_positions):
     ) / lambda_in
 
     Hz_stack = pupil_support[None, :, :] * torch.exp(
-        1j * 2 * np.pi * z_positions[:, None, None] * oblique_factor[None, :, :]
+        1j
+        * 2
+        * np.pi
+        * z_positions[:, None, None]
+        * oblique_factor[None, :, :]
     )
 
     return Hz_stack
 
 
-def gen_Greens_function_z(fxx, fyy, Pupil_support, lambda_in, z_stack):
+def gen_Greens_function_z(frr, pupil_support, lambda_in, z_positions):
     """
 
     generate Green's function in u_x, u_y, z space
 
     Parameters
     ----------
-        fxx           : numpy.ndarray
-                        x component of 2D spatial frequency array with the size of (Ny, Nx)
+        frr           : torch.tensor
+                        x component of 2D spatial frequency array with the size of (Y, X)
 
-        fyy           : numpy.ndarray
-                        y component of 2D spatial frequency array with the size of (Ny, Nx)
-
-        Pupil_support : numpy.ndarray
-                        the array that defines the support of the pupil function with the size of (Ny, Nx)
+        pupil_support : torch.tensor
+                        the array that defines the support of the pupil function with the size of (Y, X)
 
         lambda_in     : float
                         wavelength of the light in the immersion media
 
-        z_stack       : numpy.ndarray
-                        1D array of defocused z position with the size of (Nz,)
+        z_stack       : torch.tensor
+                        1D array of defocused z position with the size of (Z,)
 
     Returns
     -------
-        G_fun_z       : numpy.ndarray
-                        corresponding Green's function in u_x, u_y, z space with size of (Ny, Nx, Nz)
+        G_fun_z       : torch.tensor
+                        corresponding Green's function in u_x, u_y, z space with size of (Z, Y, X)
 
     """
 
-    N, M = fxx.shape
-    N_stack = len(z_stack)
-    N_defocus = len(z_stack)
-
-    fr = (fxx**2 + fyy**2) ** (1 / 2)
-
-    oblique_factor = ((1 - lambda_in**2 * fr**2) * Pupil_support) ** (
+    oblique_factor = ((1 - lambda_in**2 * frr**2) * pupil_support) ** (
         1 / 2
     ) / lambda_in
+
     G_fun_z = (
         -1j
         / 4
         / np.pi
-        * Pupil_support[:, :, np.newaxis]
-        * np.exp(
-            1j
-            * 2
-            * np.pi
-            * z_stack[np.newaxis, np.newaxis, :]
-            * oblique_factor[:, :, np.newaxis]
+        * pupil_support[None, :, :]
+        * torch.exp(
+            1j * 2 * np.pi * z_positions[:, None, None],
+            *oblique_factor[None, :, :]
         )
-        / (oblique_factor[:, :, np.newaxis] + 1e-15)
+        / (oblique_factor[None, :, :] + 1e-15)
     )
 
     return G_fun_z
@@ -578,10 +571,10 @@ def WOTF_2D_compute(source, pupil):
 
     Returns
     -------
-        Hu      : torch.tensro
+        Hu      : torch.tensor
                   absorption transfer function with size of (Y, X)
 
-        Hp      : torch.tesnor
+        Hp      : torch.tensor
                   phase transfer function with size of (Y, X)
 
     """

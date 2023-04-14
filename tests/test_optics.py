@@ -27,6 +27,19 @@ def test_gen_Hz_stack():
     assert Hz_stack[1, 5, 5] == 0
 
 
+def test_gen_Greens_function_z():
+    lambda_in = 0.5
+    z_positions = torch.tensor([0, 1, -1])  # note fftfreq coords
+    frr = util.gen_radial_freq((10, 10), 0.5)
+    pupil = optics.gen_pupil(frr, 0.5, 0.5)
+
+    G = optics.gen_Hz_stack(frr, pupil, lambda_in, z_positions)
+
+    assert G.shape == (3, 10, 10)
+    assert G[0, 0, 0] == 1
+    assert G[1, 5, 5] == 0
+
+
 def test_WOTF_2D_compute():
     frr = util.gen_radial_freq((10, 10), 0.5)
     source = optics.gen_pupil(frr, 0.5, 0.5)
