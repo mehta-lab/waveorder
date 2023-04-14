@@ -285,47 +285,38 @@ def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA=0.1):
     return Source_discrete
 
 
-def gen_Hz_stack(fxx, fyy, Pupil_support, lambda_in, z_stack):
+def gen_Hz_stack(frr, pupil_support, lambda_in, z_positions):
     """
 
     generate propagation kernel
 
     Parameters
     ----------
-        fxx           : numpy.ndarray
+        frr           : torch.tensor
                         x component of 2D spatial frequency array with the size of (Y, X)
 
-        fyy           : numpy.ndarray
-                        y component of 2D spatial frequency array with the size of (Y, X)
-
-        Pupil_support : numpy.ndarray
+        pupil_support : torch.tensor
                         the array that defines the support of the pupil function with the size of (Y, X)
 
         lambda_in     : float
                         wavelength of the light in the immersion media
 
-        z_stack       : numpy.ndarray
-                        1D array of defocused z position with the size of (Z)
+        z_positions   : torch.tensor
+                        1D array of defocused z positions with the size of (Z)
 
     Returns
     -------
-        Hz_stack      : numpy.ndarray
-                        corresponding propagation kernel with size of (Z, Y, X)
+        Hz_stack      : torch.tensor
+                        corresponding propagation kernel with size (Z, Y, X)
 
     """
 
-    N, M = fxx.size()
-    N_stack = len(z_stack)
-    N_defocus = len(z_stack)
-
-    fr = (fxx**2 + fyy**2) ** (1 / 2)
-
-    oblique_factor = ((1 - lambda_in**2 * fr**2) * Pupil_support) ** (
+    oblique_factor = ((1 - lambda_in**2 * frr**2) * pupil_support) ** (
         1 / 2
     ) / lambda_in
 
-    Hz_stack = Pupil_support[None, :, :] * np.exp(
-        1j * 2 * np.pi * z_stack[:, None, None] * oblique_factor[None, :, :]
+    Hz_stack = pupil_support[None, :, :] * torch.exp(
+        1j * 2 * np.pi * z_positions[:, None, None] * oblique_factor[None, :, :]
     )
 
     return Hz_stack
