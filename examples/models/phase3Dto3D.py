@@ -6,7 +6,7 @@ import torch
 import napari
 import numpy as np
 from waveorder import util
-from waveorder.models import iso3Dto3D
+from waveorder.models import phase3Dto3D
 
 v = napari.Viewer()
 
@@ -49,8 +49,8 @@ input("Showing input phantom. Press <enter> to continue...")
 v.layers.remove("Phantom")
 
 # Calculate and display OTF
-H_re, H_im = iso3Dto3D.calc_TF(**tf_params)
-iso3Dto3D.visualize_TF(v, H_re, H_im, ZYX_scale)
+H_re, H_im = phase3Dto3D.calc_TF(**tf_params)
+phase3Dto3D.visualize_TF(v, H_re, H_im, ZYX_scale)
 input("Showing OTFs. Press <enter> to continue...")
 v.layers.remove("Re(H_im)")
 v.layers.remove("Im(H_im)")
@@ -58,8 +58,8 @@ v.layers.remove("Re(H_re)")
 v.layers.remove("Im(H_re)")
 
 # Perform simulation, reconstruction, and display both
-ZYX_data = iso3Dto3D.apply_TF(t_obj, H_re)
-ZYX_recon = iso3Dto3D.apply_inv_TF(
+ZYX_data = phase3Dto3D.apply_TF(t_obj, H_re)
+ZYX_recon = phase3Dto3D.apply_inv_TF(
     ZYX_data, H_re, H_im, tf_params["Z_ps"], tf_params["lamb_ill"]
 )
 
