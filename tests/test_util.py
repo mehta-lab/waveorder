@@ -1,4 +1,5 @@
 from waveorder import util
+import torch
 
 
 def test_gen_coordinate():
