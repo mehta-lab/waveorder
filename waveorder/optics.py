@@ -119,7 +119,7 @@ def analyzer_output(Ein, alpha, beta):
     return Eout
 
 
-def gen_pupil(frr, NA, lambda_in):
+def gen_pupil(frr, NA, lamb_in):
     """
 
     compute pupil function given spatial frequency, NA, wavelength.
@@ -132,7 +132,7 @@ def gen_pupil(frr, NA, lambda_in):
         NA        : float
                     numerical aperture of the pupil function (normalized by the refractive index of the immersion media)
 
-        lambda_in : float
+        lamb_in : float
                     wavelength of the light (inside the immersion media)
                     in units of length (inverse of frr's units)
 
@@ -144,12 +144,12 @@ def gen_pupil(frr, NA, lambda_in):
     """
 
     Pupil = torch.zeros(frr.shape)
-    Pupil[frr < NA / lambda_in] = 1
+    Pupil[frr < NA / lamb_in] = 1
 
     return Pupil
 
 
-def gen_sector_Pupil(fxx, fyy, NA, lambda_in, sector_angle, rotation_angle):
+def gen_sector_Pupil(fxx, fyy, NA, lamb_in, sector_angle, rotation_angle):
     """
 
     compute sector pupil functions given spatial frequency, NA, wavelength, sector angle, and the rotational angles.
@@ -165,7 +165,7 @@ def gen_sector_Pupil(fxx, fyy, NA, lambda_in, sector_angle, rotation_angle):
         NA             : float
                          numerical aperture of the pupil function (normalized by the refractive index of the immersion media)
 
-        lambda_in      : float
+        lamb_in      : float
                          wavelength of the light (inside the immersion media)
 
         sector_angle   : float
@@ -186,7 +186,7 @@ def gen_sector_Pupil(fxx, fyy, NA, lambda_in, sector_angle, rotation_angle):
 
     Pupil = np.zeros((N, M))
     fr = (fxx**2 + fyy**2) ** (1 / 2)
-    Pupil[fr < NA / lambda_in] = 1
+    Pupil[fr < NA / lamb_in] = 1
     Pupil_sector = []
 
     if sector_angle > 180 or sector_angle < 0:
@@ -285,7 +285,7 @@ def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA=0.1):
     return Source_discrete
 
 
-def gen_Hz_stack(frr, pupil_support, lambda_in, z_positions):
+def gen_Hz_stack(frr, pupil_support, lamb_in, Z_pos_list):
     """
 
     generate propagation kernel
@@ -298,10 +298,10 @@ def gen_Hz_stack(frr, pupil_support, lambda_in, z_positions):
         pupil_support : torch.tensor
                         the array that defines the support of the pupil function with the size of (Y, X)
 
-        lambda_in     : float
+        lamb_in     : float
                         wavelength of the light in the immersion media
 
-        z_positions   : torch.tensor
+        Z_pos_list    : torch.tensor or list
                         1D array of defocused z positions with the size of (Z)
 
     Returns
@@ -311,38 +311,38 @@ def gen_Hz_stack(frr, pupil_support, lambda_in, z_positions):
 
     """
 
-    oblique_factor = ((1 - lambda_in**2 * frr**2) * pupil_support) ** (
+    oblique_factor = ((1 - lamb_in**2 * frr**2) * pupil_support) ** (
         1 / 2
-    ) / lambda_in
+    ) / lamb_in
 
     Hz_stack = pupil_support[None, :, :] * torch.exp(
         1j
         * 2
         * np.pi
-        * z_positions[:, None, None]
+        * torch.tensor(Z_pos_list)[:, None, None]
         * oblique_factor[None, :, :]
     )
 
     return Hz_stack
 
 
-def gen_Greens_function_z(frr, pupil_support, lambda_in, z_positions):
+def gen_Greens_function_z(frr, pupil_support, lamb_in, Z_pos_list):
     """
 
     generate Green's function in u_x, u_y, z space
 
     Parameters
     ----------
-        frr           : torch.tensor
+        frr             : torch.tensor
                         x component of 2D spatial frequency array with the size of (Y, X)
 
-        pupil_support : torch.tensor
+        pupil_support   : torch.tensor
                         the array that defines the support of the pupil function with the size of (Y, X)
 
-        lambda_in     : float
+        lamb_in       : float
                         wavelength of the light in the immersion media
 
-        z_stack       : torch.tensor
+        Z_pos_list      : torch.tensor or list
                         1D array of defocused z position with the size of (Z,)
 
     Returns
@@ -352,9 +352,9 @@ def gen_Greens_function_z(frr, pupil_support, lambda_in, z_positions):
 
     """
 
-    oblique_factor = ((1 - lambda_in**2 * frr**2) * pupil_support) ** (
+    oblique_factor = ((1 - lamb_in**2 * frr**2) * pupil_support) ** (
         1 / 2
-    ) / lambda_in
+    ) / lamb_in
 
     G_fun_z = (
         -1j
@@ -362,8 +362,11 @@ def gen_Greens_function_z(frr, pupil_support, lambda_in, z_positions):
         / np.pi
         * pupil_support[None, :, :]
         * torch.exp(
-            1j * 2 * np.pi * z_positions[:, None, None],
-            *oblique_factor[None, :, :]
+            1j
+            * 2
+            * np.pi
+            * torch.tensor(Z_pos_list)[:, None, None]
+            * oblique_factor[None, :, :]
         )
         / (oblique_factor[None, :, :] + 1e-15)
     )
@@ -671,121 +674,69 @@ def WOTF_semi_3D_compute(
 
 
 def WOTF_3D_compute(
-    Source_support,
-    Source,
-    Pupil,
+    source_support,
+    source,
+    pupil,
     Hz_det,
     G_fun_z,
     psz,
-    use_gpu=False,
-    gpu_id=0,
 ):
     """
-
-    compute 3D weak object transfer function (2D WOTF)
+    compute 3D weak object transfer function (3D WOTF)
 
     Parameters
     ----------
-        Source_support : numpy.ndarray
-                         illumination source pattern support with the size of (Ny, Nx)
+        source_support : torch.tensor
+                         illumination source pattern support with the size of (Y, X)
 
-        Source         : numpy.ndarray
-                         source with spatial frequency modulation with the size of (Ny, Nx)
+        source         : torch.tensor
+                         source with spatial frequency modulation with the size of (Y, X)
 
-        Pupil          : numpy.ndarray
-                         pupil function with the size of (Ny, Nx)
+        pupil          : torch.tensor
+                         pupil function with the size of (Y, X)
 
-        Hz_det         : numpy.ndarray
-                         propagation kernel with size of (Ny, Nx, Nz)
+        Hz_det         : torch.tensor
+                         propagation kernel with size of (Z, Y, X)
 
-        G_fun_z        : numpy.ndarray
-                         2D Fourier transform of Green's function in xy-dimension with size of (Ny, Nx, Nz)
+        G_fun_z        : torch.tensor
+                         2D Fourier transform of Green's function in xy-dimension with size of (Z, Y, X)
 
         psz            : float
                          pixel size in the z-dimension
 
-        use_gpu        : bool
-                         option to use gpu or not
-
-        gpu_id         : int
-                         number refering to which gpu will be used
-
     Returns
     -------
-        H_re           : numpy.ndarray
-                         transfer function of real scattering potential with the size of (Ny, Nx, Nz)
+        H_re           : torch.tensor
+                         transfer function of real scattering potential with the size of (Z, Y, X)
 
-        H_im           : numpy.ndarray
-                         transfer function of imaginary scattering potential with the size of (Ny, Nx, Nz)
+        H_im           : torch.tensor
+                         transfer function of imaginary scattering potential with the size of (Z, Y, X)
 
     """
 
-    _, _, Nz = Hz_det.shape
+    # NOTE: To match numpy's hanning window, I needed `periodic=False. I think
+    # I would prefer `periodic=True` so that window[0] == 1, but the difference
+    # should be marginal.
+    window = torch.fft.ifftshift(
+        torch.hann_window(Hz_det.shape[0], periodic=False)
+    )
 
-    window = ifftshift(np.hanning(Nz)).astype("float32")
+    SPHz_hat = torch.fft.fft2(
+        (source * pupil)[None, :, :] * Hz_det, dim=(1, 2)
+    )
+    PG_hat = torch.fft.fft2(pupil[None, :, :] * G_fun_z, dim=(1, 2))
 
-    if use_gpu:
-        globals()["cp"] = __import__("cupy")
-        cp.cuda.Device(gpu_id).use()
+    H1 = torch.fft.ifft2(torch.conj(SPHz_hat) * PG_hat, dim=(1, 2))
+    H1 = H1 * window[:, None, None]
+    H1 = torch.fft.fft(H1, dim=0) * psz
 
-        Source = cp.array(Source)
-        Source_support = cp.array(Source_support)
-        Pupil = cp.array(Pupil)
-        Hz_det = cp.array(Hz_det)
-        G_fun_z = cp.array(G_fun_z)
-        window = cp.array(window)
+    H2 = torch.fft.ifft2(SPHz_hat * torch.conj(PG_hat), dim=(1, 2))
+    H2 = H2 * window[:, None, None]
+    H2 = torch.fft.fft(H2, dim=0) * psz
 
-        H1 = cp.fft.ifft2(
-            cp.conj(
-                cp.fft.fft2(
-                    (Source * Pupil)[:, :, cp.newaxis] * Hz_det, axes=(0, 1)
-                )
-            )
-            * cp.fft.fft2(Pupil[:, :, cp.newaxis] * G_fun_z, axes=(0, 1)),
-            axes=(0, 1),
-        )
-        H1 = H1 * window[cp.newaxis, cp.newaxis, :]
-        H1 = cp.fft.fft(H1, axis=2) * psz
-        H2 = cp.fft.ifft2(
-            cp.fft.fft2(
-                (Source * Pupil)[:, :, cp.newaxis] * Hz_det, axes=(0, 1)
-            )
-            * cp.conj(
-                cp.fft.fft2(Pupil[:, :, cp.newaxis] * G_fun_z, axes=(0, 1))
-            ),
-            axes=(0, 1),
-        )
-        H2 = H2 * window[cp.newaxis, cp.newaxis, :]
-        H2 = cp.fft.fft(H2, axis=2) * psz
-
-        I_norm = cp.sum(Source_support * Pupil * cp.conj(Pupil))
-        H_re = (H1 + H2) / I_norm
-        H_im = 1j * (H1 - H2) / I_norm
-
-        H_re = cp.asnumpy(H_re)
-        H_im = cp.asnumpy(H_im)
-
-    else:
-        H1 = ifft2(
-            fft2(
-                (Source * Pupil)[:, :, np.newaxis] * Hz_det, axes=(0, 1)
-            ).conj()
-            * fft2(Pupil[:, :, np.newaxis] * G_fun_z, axes=(0, 1)),
-            axes=(0, 1),
-        )
-        H1 = H1 * window[np.newaxis, np.newaxis, :]
-        H1 = fft(H1, axis=2) * psz
-        H2 = ifft2(
-            fft2((Source * Pupil)[:, :, np.newaxis] * Hz_det, axes=(0, 1))
-            * fft2(Pupil[:, :, np.newaxis] * G_fun_z, axes=(0, 1)).conj(),
-            axes=(0, 1),
-        )
-        H2 = H2 * window[np.newaxis, np.newaxis, :]
-        H2 = fft(H2, axis=2) * psz
-
-        I_norm = np.sum(Source_support * Pupil * Pupil.conj())
-        H_re = (H1 + H2) / I_norm
-        H_im = 1j * (H1 - H2) / I_norm
+    I_norm = torch.sum(source_support * pupil * torch.conj(pupil))
+    H_re = (H1 + H2) / I_norm
+    H_im = 1j * (H1 - H2) / I_norm
 
     return H_re, H_im
 
