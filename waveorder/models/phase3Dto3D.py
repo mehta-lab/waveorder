@@ -67,17 +67,18 @@ def apply_TF(ZYX_obj, H_re):
     return data
 
 
+# TODO CONSIDER MAKING THIS A PHASE-ONLY RECONSTRUCTION
 def apply_inv_TF(
     ZYX_data,
     H_re,
     H_im,
-    Z_ps,  # TODO: MOVE THIS PARAM TO OTF
-    lamb_ill,  # TOOD: MOVE THIS PARAM TO OTF
+    Z_ps,  # TODO: MOVE THIS PARAM TO OTF? (leaky param)
+    lamb_ill,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
     absorption_ratio=0.0,
     method="Tikhonov",
     **kwargs
 ):
-    # # TODO HANDLE PADDING IN A SIMPLE WAY
+    # TODO HANDLE PADDING
     # pad_z = H_re.shape[0] - ZYX_data.shape[0]
 
     # if pad_z < 0:
@@ -99,9 +100,6 @@ def apply_inv_TF(
     #             "pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
     #         )
 
-    import pdb
-
-    pdb.set_trace()
     ZYX_data = util.inten_normalization_3D(ZYX_data)
 
     H_eff = H_re + absorption_ratio * H_im
@@ -116,6 +114,7 @@ def apply_inv_TF(
             ZYX_data, H_eff, **kwargs
         )
 
+    # TODO HANDLE UNPADDING
     # if Z_pad != 0:
     #    f_real = f_real[pad_z:-pad_z, ...]
 
