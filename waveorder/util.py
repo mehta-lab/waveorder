@@ -161,7 +161,7 @@ def genStarTarget_3D(
     return star, azimuth, inc_angle
 
 
-def gen_sphere_target(ZYX_shape, ps, psz, radius, blur_size=0.1):
+def gen_sphere_target(ZYX_shape, YX_ps, Z_ps, radius, blur_size=0.1):
     """
 
     generate 3D sphere target for simulation
@@ -198,9 +198,9 @@ def gen_sphere_target(ZYX_shape, ps, psz, radius, blur_size=0.1):
     """
 
     Z, Y, X = ZYX_shape
-    x = (torch.arange(X) - X // 2) * ps
-    y = (torch.arange(Y) - Y // 2) * ps
-    z = (torch.arange(Z) - Z // 2) * psz
+    x = (torch.arange(X) - X // 2) * YX_ps
+    y = (torch.arange(Y) - Y // 2) * YX_ps
+    z = (torch.arange(Z) - Z // 2) * Z_ps
 
     zz, yy, xx = torch.meshgrid(z, y, x)
 
@@ -681,6 +681,9 @@ def inten_normalization_3D(img_stack):
     )
     img_norm_stack -= 1
 
+    import pdb
+
+    pdb.set_trace
     return img_norm_stack
 
 

@@ -56,10 +56,15 @@ def visualize_TF(viewer, H_re, H_im, ZYX_scale):
 
 
 def apply_TF(ZYX_obj, H_re):
+    # Very simple simulation, consider adding noise and bkg knobs
+
     # TODO: extend to absorption, or restrict to just phase
     ZYX_obj_hat = torch.fft.fftn(ZYX_obj)
     ZYX_data = ZYX_obj_hat * H_re
-    return torch.real(torch.fft.ifftn(ZYX_data))
+    data = torch.real(torch.fft.ifftn(ZYX_data))
+
+    data = torch.tensor(data + 10)  # Add a direct background
+    return data
 
 
 def apply_inv_TF(
@@ -94,6 +99,9 @@ def apply_inv_TF(
     #             "pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
     #         )
 
+    import pdb
+
+    pdb.set_trace()
     ZYX_data = util.inten_normalization_3D(ZYX_data)
 
     H_eff = H_re + absorption_ratio * H_im
