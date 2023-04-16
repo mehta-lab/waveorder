@@ -22,8 +22,14 @@ def calc_TF(YX_shape, YX_ps, Z_pos_list, lamb_ill, n_media, NA_ill, NA_obj):
 
     return Hu, Hp
 
+
 def visualize_TF(viewer, Hu, Hp, ZYX_scale):
-    raise NotImplementedError 
+    raise NotImplementedError
+
+
+def apply_TF():
+    raise NotImplementedError
+
 
 def apply_inv_TF(
     ZYX_data,
