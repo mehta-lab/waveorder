@@ -20,7 +20,6 @@ def numericalSort(value):
 
 
 def genStarTarget(N, M, blur_px=2, margin=60):
-
     """
 
     generate Siemens star image for simulation
@@ -91,7 +90,6 @@ def genStarTarget_3D(
     inc_upper_bound=np.pi / 8,
     inc_range=np.pi / 64,
 ):
-
     """
 
     generate 3D star image for simulation
@@ -163,7 +161,6 @@ def genStarTarget_3D(
 
 
 def gen_sphere_target(img_dim, ps, psz, radius, blur_size=0.1):
-
     """
 
     generate 3D sphere target for simulation
@@ -231,7 +228,6 @@ def gen_sphere_target(img_dim, ps, psz, radius, blur_size=0.1):
 
 
 def gen_coordinate(img_dim, ps):
-
     """
 
     generate spatial and spatial frequency coordinate arrays
@@ -272,7 +268,6 @@ def gen_coordinate(img_dim, ps):
 
 
 def axial_upsampling(I_meas, upsamp_factor=1):
-
     F = lambda x: ifftshift(fft(fftshift(x, axes=2), axis=2), axes=2)
     iF = lambda x: ifftshift(ifft(fftshift(x, axes=2), axis=2), axes=2)
 
@@ -305,7 +300,6 @@ def axial_upsampling(I_meas, upsamp_factor=1):
 
 
 def softTreshold(x, threshold, use_gpu=False, gpu_id=0):
-
     """
 
     compute soft thresholding operation on numpy ndarray with gpu option
@@ -346,7 +340,6 @@ def softTreshold(x, threshold, use_gpu=False, gpu_id=0):
 
 
 def wavelet_softThreshold(img, wavelet, threshold, level=1, axes=None):
-
     """
 
     soft thresholding in the nD wavelet space
@@ -406,7 +399,6 @@ def wavelet_softThreshold(img, wavelet, threshold, level=1, axes=None):
 
 
 def array_based_4x4_det(a):
-
     """
 
     compute array-based determinant on 4 x 4 matrix
@@ -453,7 +445,6 @@ def array_based_4x4_det(a):
 
 
 def array_based_5x5_det(a):
-
     """
 
     compute array-based determinant on 5 x 5 matrix
@@ -482,7 +473,6 @@ def array_based_5x5_det(a):
 
 
 def array_based_6x6_det(a):
-
     """
 
     compute array-based determinant on 6 x 6 matrix
@@ -512,7 +502,6 @@ def array_based_6x6_det(a):
 
 
 def array_based_7x7_det(a):
-
     """
 
     compute array-based determinant on 7 x 7 matrix
@@ -543,7 +532,6 @@ def array_based_7x7_det(a):
 
 
 def uniform_filter_2D(image, size, use_gpu=False, gpu_id=0):
-
     """
 
     compute uniform filter operation on 2D image with gpu option
@@ -622,7 +610,6 @@ def uniform_filter_2D(image, size, use_gpu=False, gpu_id=0):
 
 
 def inten_normalization(img_stack, bg_filter=True, use_gpu=False, gpu_id=0):
-
     """
 
     layer-by-layer intensity normalization to reduce low-frequency phase artifacts
@@ -654,7 +641,6 @@ def inten_normalization(img_stack, bg_filter=True, use_gpu=False, gpu_id=0):
     N, M, Nimg = img_stack.shape
 
     if use_gpu:
-
         globals()["cp"] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
 
@@ -693,7 +679,6 @@ def inten_normalization(img_stack, bg_filter=True, use_gpu=False, gpu_id=0):
 
 
 def inten_normalization_3D(img_stack):
-
     """
 
     whole-stack intensity normalization to reduce low-frequency phase artifacts
@@ -725,7 +710,6 @@ def inten_normalization_3D(img_stack):
 def Dual_variable_Tikhonov_deconv_2D(
     AHA, b_vec, determinant=None, use_gpu=False, gpu_id=0, move_cpu=True
 ):
-
     """
 
     2D Tikhonov deconvolution to solve for phase and absorption with weak object transfer function
@@ -770,7 +754,6 @@ def Dual_variable_Tikhonov_deconv_2D(
     phi_sample_f = (b_vec[1] * AHA[0] - b_vec[0] * AHA[2]) / determinant
 
     if use_gpu:
-
         globals()["cp"] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
 
@@ -791,7 +774,6 @@ def Dual_variable_Tikhonov_deconv_2D(
 def Dual_variable_ADMM_TV_deconv_2D(
     AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose, use_gpu=False, gpu_id=0
 ):
-
     """
 
     2D TV deconvolution to solve for phase and absorption with weak object transfer function
@@ -853,7 +835,6 @@ def Dual_variable_ADMM_TV_deconv_2D(
     Dy[-1, 0] = -1
 
     if use_gpu:
-
         globals()["cp"] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
 
@@ -882,9 +863,7 @@ def Dual_variable_ADMM_TV_deconv_2D(
     determinant = AHA[0] * AHA[3] - AHA[1] * AHA[2]
 
     for i in range(itr):
-
         if use_gpu:
-
             v_para = cp.fft.fft2(z_para - u_para)
             b_vec_new = [
                 b_vec[0]
@@ -923,7 +902,6 @@ def Dual_variable_ADMM_TV_deconv_2D(
                 phi_sample = cp.asnumpy(phi_sample)
 
         else:
-
             v_para = fft2(z_para - u_para)
             b_vec_new = [
                 b_vec[0]
@@ -966,7 +944,6 @@ def Single_variable_Tikhonov_deconv_3D(
     search_range_auto=6,
     verbose=True,
 ):
-
     """
 
     Single variable 3D Tikhonov deconvolution to solve for 3D phase (from defocus, with weak object transfer function) or 3D fluorescence.
@@ -1186,7 +1163,6 @@ def Single_variable_Tikhonov_deconv_3D(
 def Dual_variable_Tikhonov_deconv_3D(
     AHA, b_vec, determinant=None, use_gpu=False, gpu_id=0, move_cpu=True
 ):
-
     """
 
     3D Tikhonov deconvolution to solve for phase and absorption with weak object transfer function
@@ -1231,7 +1207,6 @@ def Dual_variable_Tikhonov_deconv_3D(
     f_imag_f = (b_vec[1] * AHA[0] - b_vec[0] * AHA[2]) / determinant
 
     if use_gpu:
-
         globals()["cp"] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
 
@@ -1260,7 +1235,6 @@ def Single_variable_ADMM_TV_deconv_3D(
     use_gpu=False,
     gpu_id=0,
 ):
-
     """
 
     3D TV deconvolution to solve for phase with weak object transfer function
@@ -1317,7 +1291,6 @@ def Single_variable_ADMM_TV_deconv_3D(
     Dz[0, 0, -1] = -1
 
     if use_gpu:
-
         globals()["cp"] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
 
@@ -1370,7 +1343,6 @@ def Single_variable_ADMM_TV_deconv_3D(
                 f_real = cp.asnumpy(f_real)
 
     else:
-
         S0_stack_f = fftn(S0_stack, axes=(0, 1, 2))
 
         Dx = fftn(Dx, axes=(0, 1, 2))
@@ -1425,7 +1397,6 @@ def Dual_variable_ADMM_TV_deconv_3D(
     use_gpu=False,
     gpu_id=0,
 ):
-
     """
 
     3D TV deconvolution to solve for phase and absorption with weak object transfer function
@@ -1490,7 +1461,6 @@ def Dual_variable_ADMM_TV_deconv_3D(
     Dz[0, 0, -1] = -1
 
     if use_gpu:
-
         globals()["cp"] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
 
@@ -1525,9 +1495,7 @@ def Dual_variable_ADMM_TV_deconv_3D(
     determinant = AHA[0] * AHA[3] - AHA[1] * AHA[2]
 
     for i in range(itr):
-
         if use_gpu:
-
             v_para = cp.fft.fftn(z_para - u_para, axes=(1, 2, 3))
             b_vec_new = [
                 b_vec[0]
@@ -1578,7 +1546,6 @@ def Dual_variable_ADMM_TV_deconv_3D(
                 f_imag = cp.asnumpy(f_imag)
 
         else:
-
             v_para = fftn(z_para - u_para, axes=(1, 2, 3))
             b_vec_new = [
                 b_vec[0]
@@ -1624,7 +1591,6 @@ def Dual_variable_ADMM_TV_deconv_3D(
 def cylindrical_shell_local_orientation(
     VOI, ps, psz, scale, beta=0.5, c_para=0.5, evec_idx=0
 ):
-
     """
 
     segmentation of 3D cylindrical shell structure and the estimation of local orientation of the geometry
@@ -1699,7 +1665,6 @@ def cylindrical_shell_local_orientation(
     t0 = time.time()
 
     for i, s in enumerate(scale):
-
         kernel[i] = np.exp(
             -(xx_r**2 + yy_r**2 + zz_r**2) / 2 / s**2
         ) / (2 * np.pi * s**2) ** (3 / 2)
@@ -1801,7 +1766,6 @@ def cylindrical_shell_local_orientation(
 
 
 def integer_factoring(integer):
-
     """
 
     find all the factors of an integer
@@ -1835,7 +1799,6 @@ def integer_factoring(integer):
 def generate_FOV_splitting_parameters(
     img_size, overlapping_range, max_image_size
 ):
-
     """
 
     calculate the overlap and pixels of increment for sub-FOV processing
@@ -1903,7 +1866,6 @@ def generate_FOV_splitting_parameters(
 
 
 def generate_sub_FOV_coordinates(img_size, img_space, overlap):
-
     """
 
     calculate the starting pixel indices of each sub-FOV
@@ -1970,7 +1932,6 @@ def generate_sub_FOV_coordinates(img_size, img_space, overlap):
 def image_stitching(
     coord_list, overlap, file_loading_func, gen_ref_map=True, ref_stitch=None
 ):
-
     """
 
     stitch images (with size (Ny, Nx, ...)) with alpha blending algorithm given the image coordinate, overlap, and file_loading_functions
@@ -2025,14 +1986,12 @@ def image_stitching(
 
     t0 = time.time()
     for i in range(num_row * num_column):
-
         row_idx = int(row_list[i])
         column_idx = int(column_list[i])
 
         img_i = file_loading_func(i)
 
         if i == 0:
-
             Ns, Ms = img_i.shape[:2]
             N_full = (num_row - 1) * (Ns - overlap_y) + Ns
             M_full = (num_column - 1) * (Ms - overlap_x) + Ms
@@ -2078,7 +2037,6 @@ def image_stitching(
             * np.sum(column_idx == np.r_[1 : num_column - 1])
             == 1
         ):
-
             for p in range(overlap_y):
                 img_i[-1 - p, :] = img_i[-1 - p, :] * p / overlap_y
                 #             img_i[p,:] = img_i[p,:]*p/overlap_y
@@ -2099,7 +2057,6 @@ def image_stitching(
             * np.sum(column_idx == np.r_[1 : num_column - 1])
             == 1
         ):
-
             for p in range(overlap_y):
                 #             img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
                 img_i[p, :] = img_i[p, :] * p / overlap_y
@@ -2119,7 +2076,6 @@ def image_stitching(
             np.sum(row_idx == np.r_[1 : num_row - 1]) * np.sum(column_idx == 0)
             == 1
         ):
-
             for p in range(overlap_y):
                 img_i[-1 - p, :] = img_i[-1 - p, :] * p / overlap_y
                 img_i[p, :] = img_i[p, :] * p / overlap_y
@@ -2140,7 +2096,6 @@ def image_stitching(
             * np.sum(column_idx == num_column - 1)
             == 1
         ):
-
             for p in range(overlap_y):
                 img_i[-1 - p, :] = img_i[-1 - p, :] * p / overlap_y
                 img_i[p, :] = img_i[p, :] * p / overlap_y
@@ -2157,7 +2112,6 @@ def image_stitching(
 
         # top left
         if np.sum(row_idx == 0) * np.sum(column_idx == 0) == 1:
-
             for p in range(overlap_y):
                 img_i[-1 - p, :] = img_i[-1 - p, :] * p / overlap_y
                 #             img_i[p,:] = img_i[p,:]*p/overlap_y
@@ -2174,7 +2128,6 @@ def image_stitching(
 
         # top right
         if np.sum(row_idx == 0) * np.sum(column_idx == num_column - 1) == 1:
-
             for p in range(overlap_y):
                 img_i[-1 - p, :] = img_i[-1 - p, :] * p / overlap_y
                 #             img_i[p,:] = img_i[p,:]*p/overlap_y
@@ -2191,7 +2144,6 @@ def image_stitching(
 
         # bottom left
         if np.sum(row_idx == num_row - 1) * np.sum(column_idx == 0) == 1:
-
             for p in range(overlap_y):
                 #             img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
                 img_i[p, :] = img_i[p, :] * p / overlap_y
@@ -2212,7 +2164,6 @@ def image_stitching(
             * np.sum(column_idx == num_column - 1)
             == 1
         ):
-
             for p in range(overlap_y):
                 #             img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
                 img_i[p, :] = img_i[p, :] * p / overlap_y
@@ -2274,7 +2225,6 @@ def image_stitching(
 def orientation_3D_continuity_map(
     azimuth, theta, psz_ps_ratio=None, avg_px_size=10, reg_ret_pr=1e-1
 ):
-
     """
 
     calculate the 3D orientation continuity map that is used to suppress noisy retardance measurements

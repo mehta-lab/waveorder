@@ -29,7 +29,8 @@ for array_name in list_of_array_names:
 
 print(list_of_array_names)
 
-I_meas = np.transpose(I_meas[:, :, :, :, 50], (0, 2, 3, 1))
+L = I_meas.shape[-1]
+I_meas = np.transpose(I_meas[:, :, :, :, L // 2], (0, 2, 3, 1))
 z_defocus = np.array([0])
 
 I_meas = I_meas[1:]
@@ -166,13 +167,13 @@ phase_nm, absorption_nm, retardance_pr_nm = [
     )
 ]
 
-# clean up GPU memory leftorver
+# # clean up GPU memory leftorver
 
-import gc
-import cupy as cp
+# import gc
+# import cupy as cp
 
-gc.collect()
-cp.get_default_memory_pool().free_all_blocks()
+# gc.collect()
+# cp.get_default_memory_pool().free_all_blocks()
 
 ## Visualize reconstructed physical properties of simulated sample
 ### Phase, principal retardance, azimuth, inclination, and optic sign
