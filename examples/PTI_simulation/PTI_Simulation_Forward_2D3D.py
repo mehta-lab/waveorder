@@ -470,7 +470,7 @@ I_meas_noise = I_meas_SEAGLE / np.mean(I_meas_SEAGLE) * photon_count
 
 # Save simulations
 
-output_dir = "/home/lihao.yeh/Desktop/recorder_test/processed_data/"
+output_dir = "./"
 
 if sample_type == "3D":
     output_file = "PTI_simulation_data_NA_det_147_NA_illu_140_3D_spoke_discrete_no_1528_ne_1553_no_noise_Born"

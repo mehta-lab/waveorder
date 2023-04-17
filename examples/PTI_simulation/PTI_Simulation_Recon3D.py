@@ -16,7 +16,7 @@ import waveorder as wo
 ## Initialization
 ## Load simulated images and parameters
 
-file_name = "/data_sm/home/lihao/project/Polscope/Simulation/3D_Pol_Phase/PTI_repo_demo/PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
+file_name = "./PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
 
 array_loaded = np.load(file_name)
 list_of_array_names = sorted(array_loaded)
