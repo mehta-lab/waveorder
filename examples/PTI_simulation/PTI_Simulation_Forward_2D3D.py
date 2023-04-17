@@ -115,9 +115,6 @@ azimuth = (azimuth) % (2 * np.pi)
 
 
 no_map = np.zeros((N, M, L))
-import pdb
-
-pdb.set_trace()
 no_map[target > 0] = target[target > 0] * (n_o - n_media)
 no_map += n_media
 no_map_copy = no_map.copy()
