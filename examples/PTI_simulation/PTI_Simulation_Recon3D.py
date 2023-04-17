@@ -32,7 +32,7 @@ print(I_meas.shape)
 _, _, N, M, L = I_meas.shape
 cali = False
 bg_option = "global"
-use_gpu = True
+use_gpu = False
 gpu_id = 0
 
 
