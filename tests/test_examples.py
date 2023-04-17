@@ -5,7 +5,7 @@ import waveorder
 from pathlib import Path
 
 
-# Currently, these testswill run in the background if no screen is available
+# Currently, these tests will run in the background if no screen is available
 # If you do have a screen available, plots will appear, and you'll need to
 # close them to make the tests pass.
 # TODO: see if we can make these run locally w/o showing matplotlib
