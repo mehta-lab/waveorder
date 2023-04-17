@@ -60,7 +60,7 @@ NA_obj = 1.47  # objective NA
 NA_illu = 1.4  # illumination NA
 chi = 0.25 * 2 * np.pi  # swing of the microscope
 z_defocus = (np.r_[:L] - L // 2) * psz  # defocus position
-use_gpu = True  # option to use gpu
+use_gpu = False  # option to use gpu
 gpu_id = 0  # gpu to be used
 
 ### Sample pattern
