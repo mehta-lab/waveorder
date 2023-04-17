@@ -18,8 +18,8 @@ def test_examples():
         "3D_PODT_phase_simulation/3D_PODT_Phase_forward.py",
         "3D_PODT_phase_simulation/3D_PODT_Phase_recon.py",
         "PTI_simulation/PTI_Simulation_Forward_2D3D.py",
-        "PTI_simulation/PTI_Simulation_Recond2D.py",
-        "PTI_simulation/PTI_Simulation_Recond3D.py",
+        "PTI_simulation/PTI_Simulation_Recon2D.py",
+        "PTI_simulation/PTI_Simulation_Recon3D.py",
     ]
 
     for script in scripts:
