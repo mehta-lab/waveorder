@@ -1,8 +1,10 @@
 import subprocess
 import os
-from pathlib import Path
+import pytest
+import sys
 
 
+@pytest.mark.skipif("napari" not in sys.modules, reason="requires napari")
 def test_example_phase3Dto3D():
     path = os.path.join(os.getcwd(), "examples/models/phase3Dto3D.py")
     # examples needs two <enters>s so send input="e\ne"
