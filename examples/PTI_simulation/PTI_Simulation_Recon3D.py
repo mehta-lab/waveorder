@@ -499,9 +499,9 @@ z_step = psz
 
 ### select slices to plot ###
 spacing = 4
-z_layer = L//2
-x_layer = N//2
-y_layer = M//2
+z_layer = L // 2
+x_layer = N // 2
+y_layer = M // 2
 linelength_scale = 20
 #########################
 
