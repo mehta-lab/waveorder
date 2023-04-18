@@ -1,7 +1,5 @@
 import subprocess
 import os
-import runpy
-import waveorder
 from pathlib import Path
 
 
@@ -11,7 +9,6 @@ from pathlib import Path
 # TODO: see if we can make these run locally w/o showing matplotlib
 # @patch("matplotlib.pyplot.show")
 def test_examples():
-    EXAMPLE_DIR = Path(waveorder.__file__).parent.parent / "examples"
     scripts = [
         "2D_QLIPP_simulation/2D_QLIPP_forward.py",
         "2D_QLIPP_simulation/2D_QLIPP_recon.py",
