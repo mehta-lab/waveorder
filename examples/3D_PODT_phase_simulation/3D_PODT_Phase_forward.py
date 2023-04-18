@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from numpy.fft import fft, ifft, fft2, ifft2, fftshift, ifftshift, fftn, ifftn
 import waveorder as wo
 
-# ### Experiment parameters
+# Experiment parameters
 N = 256  # number of pixel in y dimension
 M = 256  # number of pixel in x dimension
 L = 100  # number of layers in z dimension
@@ -27,7 +27,7 @@ lambda_illu = 0.532  # wavelength
 NA_obj = 1.2  # objective NA
 NA_illu = 0.9  # illumination NA
 
-# ### Sample creation
+# Sample creation
 radius = 5
 blur_size = 2 * ps
 sphere, _, _ = wo.gen_sphere_target((N, M, L), ps, psz, radius, blur_size)
@@ -53,7 +53,7 @@ plt.imshow(
 )
 plt.show()
 
-# ### Setup acquisition
+# Setup acquisition
 # Subsampled Source pattern
 
 xx, yy, fxx, fyy = wo.gen_coordinate((N, M), ps)
@@ -155,7 +155,7 @@ plt.show()
 
 
 # Save simulations
-output_file = "/data_sm/home/lihao/project/Polscope/Simulation/3D_Pol_Phase/PTI_repo_demo/3D_PODT_simulation"
+output_file = "./3D_PODT_simulation.npz"
 np.savez(
     output_file,
     I_meas=I_meas,

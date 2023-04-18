@@ -18,9 +18,9 @@ from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 
 import waveorder as wo
 
-# ### Load data
+# Load data
 # Load simulations
-file_name = "/data_sm/home/lihao/project/Polscope/Simulation/3D_Pol_Phase/PTI_repo_demo/3D_PODT_simulation.npz"
+file_name = "./3D_PODT_simulation.npz"
 array_loaded = np.load(file_name)
 list_of_array_names = sorted(array_loaded)
 for array_name in list_of_array_names:
@@ -30,7 +30,7 @@ print(list_of_array_names)
 N, M, L = I_meas.shape
 
 
-# ### Refractive index reconstruction
+# Refractive index reconstruction
 z_defocus = (np.r_[:L] - L // 2) * psz
 chi = 0.1 * 2 * np.pi
 setup = wo.waveorder_microscopy(

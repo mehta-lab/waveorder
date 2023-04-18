@@ -43,11 +43,11 @@ import waveorder as wo
 ### Parameters of sample
 
 sample_type = "2D"  # 2D or 3D
-N = 200  # number of pixel in y dimension
-M = 200  # number of pixel in x dimension
-L = 100  # number of layers in z dimension
-z_layer = 50  # default z-slice to display in XY views.
-y_layer = 100  # default y-slice to display in XZ views.
+N = 50  # number of pixel in y dimension
+M = 50  # number of pixel in x dimension
+L = 26  # number of layers in z dimension
+z_layer = L // 2  # default z-slice to display in XY views.
+y_layer = M // 2  # default y-slice to display in XZ views.
 
 ### Parameters of imaging system
 
@@ -60,7 +60,7 @@ NA_obj = 1.47  # objective NA
 NA_illu = 1.4  # illumination NA
 chi = 0.25 * 2 * np.pi  # swing of the microscope
 z_defocus = (np.r_[:L] - L // 2) * psz  # defocus position
-use_gpu = True  # option to use gpu
+use_gpu = False  # option to use gpu
 gpu_id = 0  # gpu to be used
 
 ### Sample pattern
@@ -80,21 +80,25 @@ if sample_type == "3D":
     azimuth = np.round(azimuth / np.pi / 2 * 16) / 16 * np.pi * 2
 elif sample_type == "2D":
     ## 2D spoke pattern, azimuth aligned with spokes, and the inclination set to 60 degrees ##
-    target, azimuth, _ = wo.genStarTarget(N, M, blur_px=1 * ps, margin=60)
+    target, azimuth, _ = wo.genStarTarget(N, M, blur_px=1 * ps, margin=10)
     inclination = np.ones_like(target) * np.pi / 3
     azimuth = azimuth % (np.pi * 2)
     azimuth = np.round(azimuth / np.pi / 2 * 16) / 16 * np.pi * 2
 
     # pad zero in the z direction outside of the focal plane to mimic thin specimens
     target = np.pad(
-        target[:, :, np.newaxis], ((0, 0), (0, 0), (50, 49)), mode="constant"
+        target[:, :, np.newaxis],
+        ((0, 0), (0, 0), (L // 2, L // 2 - 1)),
+        mode="constant",
     )
     azimuth = np.pad(
-        azimuth[:, :, np.newaxis], ((0, 0), (0, 0), (50, 49)), mode="constant"
+        azimuth[:, :, np.newaxis],
+        ((0, 0), (0, 0), (L // 2, L // 2 - 1)),
+        mode="constant",
     )
     inclination = np.pad(
         inclination[:, :, np.newaxis],
-        ((0, 0), (0, 0), (50, 49)),
+        ((0, 0), (0, 0), (L // 2, L // 2 - 1)),
         mode="constant",
     )
 else:
@@ -470,7 +474,7 @@ I_meas_noise = I_meas_SEAGLE / np.mean(I_meas_SEAGLE) * photon_count
 
 # Save simulations
 
-output_dir = "/home/lihao.yeh/Desktop/recorder_test/processed_data/"
+output_dir = "./"
 
 if sample_type == "3D":
     output_file = "PTI_simulation_data_NA_det_147_NA_illu_140_3D_spoke_discrete_no_1528_ne_1553_no_noise_Born"
