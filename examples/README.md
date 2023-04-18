@@ -3,7 +3,7 @@ This folder of examples consists of:
 1) A set of simulations that will run as is. Any of the files in these folders 
 can be run with `python <script-name>.py`, and these files are included in 
 `waveorder`'s automated testing.  
-- `/QLIPP_simulation/`
+- `/2D_QLIPP_simulation/`
 - `/3D_PODT_Phase_simulation/`
 - `/PTI_simulation/`
 
