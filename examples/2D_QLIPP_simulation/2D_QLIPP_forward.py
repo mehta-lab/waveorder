@@ -16,7 +16,7 @@ from numpy.fft import fft2, ifft2, fftshift, ifftshift
 
 import waveorder as wo
 
-# ### Key parameters
+# Key parameters
 N = 256  # number of pixel in y dimension
 M = 256  # number of pixel in x dimension
 mag = 40  # magnification
@@ -29,7 +29,7 @@ NA_illu_in = 0.4  # illumination NA (phase contrast inner ring)
 z_defocus = (np.r_[:5] - 2) * 1.757  # a set of defocus plane
 chi = 0.03 * 2 * np.pi  # swing of Polscope analyzer
 
-# ## Sample : star with uniform phase, uniform retardance, and radial orientation
+# Sample : star with uniform phase, uniform retardance, and radial orientation
 # generate Siemens star pattern
 star, theta, _ = wo.genStarTarget(N, M)
 wo.plot_multicolumn(np.array([star, theta]), num_col=2, size=5)
@@ -54,8 +54,8 @@ wo.plot_multicolumn(
 )
 plt.show()
 
-# ## Forward model of QLIPP <br> (polarization-diverse and depth-diverse acquisition)
-# #### Source pupil
+# Forward model of QLIPP <br> (polarization-diverse and depth-diverse acquisition)
+# Source pupil
 # Subsample source pattern for speed
 
 xx, yy, fxx, fyy = wo.gen_coordinate((N, M), ps)
@@ -67,7 +67,7 @@ plt.figure(figsize=(10, 10))
 plt.imshow(fftshift(Source_discrete), cmap="gray")
 plt.show()
 
-# #### Initialize microscope simulator with above source pattern and uniform imaging pupil
+# Initialize microscope simulator with above source pattern and uniform imaging pupil
 # Microscope object generation
 
 simulator = wo.waveorder_microscopy_simulator(
@@ -83,7 +83,7 @@ simulator = wo.waveorder_microscopy_simulator(
     Source=Source_discrete,
 )
 
-# ## Compute image volumes and Stokes volumes
+# Compute image volumes and Stokes volumes
 I_meas, Stokes_out = simulator.simulate_waveorder_measurements(
     t_eigen, sa, multiprocess=False
 )
@@ -96,8 +96,8 @@ I_meas_noise = (
     np.random.poisson(I_meas / np.max(I_meas) * photon_count + const_bg)
 ).astype("float64")
 
-# #### Save simulation
-output_file = "/data_sm/home/lihao/project/Polscope/Simulation/3D_Pol_Phase/PTI_repo_demo/2D_QLIPP_simulation"
+# Save simulation
+output_file = "./2D_QLIPP_simulation.npz"
 np.savez(
     output_file,
     I_meas=I_meas_noise,

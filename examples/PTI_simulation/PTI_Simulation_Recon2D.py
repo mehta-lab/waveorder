@@ -19,7 +19,7 @@ import waveorder as wo
 ## Initialization
 ## Load simulated images and parameters
 
-file_name = "/data_sm/home/lihao/project/Polscope/Simulation/3D_Pol_Phase/PTI_repo_demo/PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
+file_name = "./PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
 
 array_loaded = np.load(file_name)
 list_of_array_names = sorted(array_loaded)
@@ -29,7 +29,8 @@ for array_name in list_of_array_names:
 
 print(list_of_array_names)
 
-I_meas = np.transpose(I_meas[:, :, :, :, 50], (0, 2, 3, 1))
+L = I_meas.shape[-1]
+I_meas = np.transpose(I_meas[:, :, :, :, L // 2], (0, 2, 3, 1))
 z_defocus = np.array([0])
 
 I_meas = I_meas[1:]
@@ -41,7 +42,7 @@ print(I_meas.shape)
 _, N, M, _ = I_meas.shape
 cali = False
 bg_option = "global"
-use_gpu = True
+use_gpu = False
 gpu_id = 0
 
 # chi = pi/2
@@ -166,13 +167,13 @@ phase_nm, absorption_nm, retardance_pr_nm = [
     )
 ]
 
-# clean up GPU memory leftorver
+# # clean up GPU memory leftorver
 
-import gc
-import cupy as cp
+# import gc
+# import cupy as cp
 
-gc.collect()
-cp.get_default_memory_pool().free_all_blocks()
+# gc.collect()
+# cp.get_default_memory_pool().free_all_blocks()
 
 ## Visualize reconstructed physical properties of simulated sample
 ### Phase, principal retardance, azimuth, inclination, and optic sign

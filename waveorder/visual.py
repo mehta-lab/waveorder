@@ -407,7 +407,7 @@ def parallel_4D_viewer(
         raise ValueError(
             "number of titles does not match with the number of channels"
         )
-    num_row = np.int(np.ceil(N_channel / num_col))
+    num_row = int(np.ceil(N_channel / num_col))
     figsize = (num_col * size, num_row * size)
 
     def interact_plot(stack_idx):
@@ -634,7 +634,7 @@ def parallel_5D_viewer(
         raise ValueError(
             "number of titles does not match with the number of channels"
         )
-    num_row = np.int(np.ceil(N_channel / num_col))
+    num_row = int(np.ceil(N_channel / num_col))
     figsize = (num_col * size, num_row * size)
 
     def interact_plot(stack_idx_1, stack_idx_2):
@@ -819,7 +819,7 @@ def plot_multicolumn(
     """
 
     N_stack = len(image_stack)
-    num_row = np.int(np.ceil(N_stack / num_col))
+    num_row = int(np.ceil(N_stack / num_col))
     figsize = (num_col * size, num_row * size)
 
     f1, ax = plt.subplots(num_row, num_col, figsize=figsize)
@@ -1801,7 +1801,7 @@ def orientation_3D_hist(
     elif azimuth.ndim == 2:
         N_hist, _ = azimuth.shape
 
-    num_row = np.int(np.ceil(N_hist / num_col))
+    num_row = int(np.ceil(N_hist / num_col))
     figsize = (num_col * size, num_row * size)
 
     if top_hemi:

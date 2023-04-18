@@ -16,7 +16,7 @@ import waveorder as wo
 ## Initialization
 ## Load simulated images and parameters
 
-file_name = "/data_sm/home/lihao/project/Polscope/Simulation/3D_Pol_Phase/PTI_repo_demo/PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
+file_name = "./PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
 
 array_loaded = np.load(file_name)
 list_of_array_names = sorted(array_loaded)
@@ -32,7 +32,7 @@ print(I_meas.shape)
 _, _, N, M, L = I_meas.shape
 cali = False
 bg_option = "global"
-use_gpu = True
+use_gpu = False
 gpu_id = 0
 
 
@@ -169,11 +169,11 @@ phase_PT, absorption_PT, retardance_pr_PT = [
 
 # clean up GPU memory leftorver
 
-import gc
-import cupy as cp
+# import gc
+# import cupy as cp
 
-gc.collect()
-cp.get_default_memory_pool().free_all_blocks()
+# gc.collect()
+# cp.get_default_memory_pool().free_all_blocks()
 
 ## Visualize reconstructed physical properties of simulated sample
 ### Reconstructed phase, absorption, principal retardance, azimuth, and inclination assuming (+) and (-) optic sign
@@ -225,9 +225,9 @@ plt.show()
 ######################################
 
 ## display parameters for 2D dataset ##
-z_layer = 50
-y_layer = 100
-x_layer = 100
+z_layer = L // 2
+y_layer = M // 2
+x_layer = N // 2
 phase_min = -0.012
 phase_max = 0.012
 ret_min = 0
@@ -499,9 +499,9 @@ z_step = psz
 
 ### select slices to plot ###
 spacing = 4
-z_layer = 50
-x_layer = 100
-y_layer = 100
+z_layer = L // 2
+x_layer = N // 2
+y_layer = M // 2
 linelength_scale = 20
 #########################
 

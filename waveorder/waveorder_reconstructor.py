@@ -1429,7 +1429,7 @@ class waveorder_microscopy:
             G_real, self.ps, psz, self.lambda_illu, space="Fourier"
         )
         G_tensor_z = (ifft(G_tensor, axis=4) / psz)[
-            ..., :: np.int(self.G_tensor_z_upsampling)
+            ..., :: int(self.G_tensor_z_upsampling)
         ]
 
         # compute transfer functions
