@@ -19,7 +19,7 @@ import waveorder as wo
 # Load simulations
 
 
-file_name = "/data_sm/home/lihao/project/Polscope/Simulation/3D_Pol_Phase/PTI_repo_demo/2D_QLIPP_simulation.npz"
+file_name = "./2D_QLIPP_simulation.npz"
 
 array_loaded = np.load(file_name)
 list_of_array_names = sorted(array_loaded)
