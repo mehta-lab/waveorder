@@ -3,7 +3,6 @@
 # 3D tomographic imaging for partially coherent light microscopy," Opt. Express
 # 25, 15699-15712 (2017)
 
-import torch
 import napari
 import numpy as np
 from waveorder import util
