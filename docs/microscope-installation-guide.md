@@ -72,4 +72,4 @@ Finally, enable port access so that `Micromanager` can communicate with recOrder
 
 From the `recOrder` window, click `Switch to Online`. If you see `Success`, your installation is complete and you can [proceed to the napari plugin guide](./napari-plugin-guide.md). 
 
-If you you see `Failed`, check that `Micromanager` is open, check that you've enabled `Run server on port 4827`. If the connection continues to fail, report an issue with you stack trace for support. 
+If you you see `Failed`, check that `Micromanager` is open, check that you've enabled `Run server on port 4827`. If the connection continues to fail, report an issue with your stack trace for support. 

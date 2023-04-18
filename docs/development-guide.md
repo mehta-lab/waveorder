@@ -9,16 +9,6 @@
     conda activate recOrder
     ```
 
-    > *Apple Silicon users please use*:
-    >
-    > ```sh
-    > CONDA_SUBDIR=osx-64 conda create -y -n recOrder python=3.9
-    > conda activate recOrder
-    > ```
-    >
-    > Reason: `napari` requires `PyQt5` which is not available for `arm64` from PyPI wheels.
-    > Specifying `CONDA_SUBDIR=osx-64` will install an `x86_64` version of `python` which has `PyQt5` wheels available.
-
 2. Clone the `recOrder` directory:
 
     ```sh

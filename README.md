@@ -14,7 +14,7 @@ The acquisition, calibration, background correction, reconstruction, and applica
 Syuan-Ming Guo, Li-Hao Yeh, Jenny Folkesson, Ivan E Ivanov, Anitha P Krishnan, Matthew G Keefe, Ezzat Hashemi, David Shin, Bryant B Chhun, Nathan H Cho, Manuel D Leonetti, May H Han, Tomasz J Nowakowski, Shalin B Mehta, "Revealing architectural order with quantitative label-free imaging and deep learning," eLife 2020;9:e55502 DOI: 10.7554/eLife.55502 (2020).
 ```
 
-`recOrder` is to be used alongside a conventional widefield microscope fitted with a universal polarizer (Panel A below).  The universal polarizer allows for the collection of label-free information including the intrinsic anisotropy of the sample and its relative phase (density). These measurements are collected by acquiring data under calibrated, polarization-diverse illumination followed by a computational reconstruction.  The overall structure of `recOrder` is shown in Panel B, highlighting the two different usage modes and their features: graphical user interface (GUI) through a napari plugin, and a command line interface (CLI).
+`recOrder` is to be used alongside a conventional widefield microscope fitted with a universal polarizer (Panel A below).  The universal polarizer allows for the collection of label-free information including the intrinsic anisotropy of the sample and its relative phase (density). These measurements are collected by acquiring data under calibrated, polarization-diverse illumination followed by a computational reconstruction. The overall structure of `recOrder` is shown in Panel B, highlighting the structure of the graphical user interface (GUI) through a napari plugin.
 
 ![Flow Chart](https://github.com/mehta-lab/recOrder/blob/main/docs/images/recOrder_Fig1_Overview.png?raw=true)
 
@@ -34,13 +34,6 @@ conda create -y -n recOrder python=3.9
 conda activate recOrder
 ```
 
-> *Apple Silicon users please use*:
->
-> ```sh
-> CONDA_SUBDIR=osx-64 conda create -y -n recOrder python=3.9
-> conda activate recOrder
-> ```
-
 Install `recOrder-napari`:
 
 ```sh
@@ -53,4 +46,5 @@ Open `napari` with `recOrder-napari`:
 napari -w recOrder-napari
 ```
 
-For more help, see [`recOrder`'s documentation](./docs).
+For more help, see [`recOrder`'s documentation](./docs). To install `recOrder` 
+on a microscope, see the [microscope installation guide](./docs/microscope-installation-guide.md).
