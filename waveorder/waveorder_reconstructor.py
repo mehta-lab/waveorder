@@ -407,9 +407,10 @@ class waveorder_microscopy:
             self.xx, self.yy, self.fxx, self.fyy = gen_coordinate(
                 (self.N, self.M), ps
             )
-            self.Pupil_obj = gen_Pupil(
-                self.fxx, self.fyy, self.NA_obj, self.lambda_illu
-            )
+            self.frr = np.sqrt(self.fxx**2 + self.fyy**2)
+            self.Pupil_obj = gen_pupil(
+                self.frr, self.NA_obj, self.lambda_illu
+            ).numpy()
             self.Pupil_support = self.Pupil_obj.copy()
 
             # illumination setup
@@ -577,12 +578,15 @@ class waveorder_microscopy:
             or inc_recon == "2D-vec-WOTF"
         ):
             # generate defocus kernel based on Pupil function and z_defocus
-            self.Hz_det_2D = gen_Hz_stack(
-                self.fxx,
-                self.fyy,
-                self.Pupil_support,
-                self.lambda_illu,
-                self.z_defocus,
+            self.Hz_det_2D = (
+                gen_Hz_stack(
+                    torch.tensor(self.frr),
+                    torch.tensor(self.Pupil_support),
+                    self.lambda_illu,
+                    torch.tensor(self.z_defocus),
+                )
+                .numpy()
+                .transpose((1, 2, 0))
             )
 
         if phase_deconv == "semi-3D":
@@ -632,11 +636,25 @@ class waveorder_microscopy:
                     (np.r_[0 : self.N_defocus_3D] - self.N_defocus_3D // 2)
                     * self.psz
                 )
-            self.Hz_det_3D = gen_Hz_stack(
-                self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z
+            self.Hz_det_3D = (
+                gen_Hz_stack(
+                    torch.tensor(self.frr),
+                    torch.tensor(self.Pupil_support),
+                    self.lambda_illu,
+                    torch.tensor(z),
+                )
+                .numpy()
+                .transpose((1, 2, 0))
             )
-            self.G_fun_z_3D = gen_Greens_function_z(
-                self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z
+            self.G_fun_z_3D = (
+                gen_Greens_function_z(
+                    torch.tensor(self.frr),
+                    torch.tensor(self.Pupil_support),
+                    self.lambda_illu,
+                    torch.tensor(z),
+                )
+                .numpy()
+                .transpose((1, 2, 0))
             )
 
     def phase_deconv_setup(self, phase_deconv):
@@ -842,10 +860,8 @@ class waveorder_microscopy:
             ):
                 idx = i * self.N_pattern + j
                 self.Hu[:, :, idx], self.Hp[:, :, idx] = WOTF_2D_compute(
-                    self.Source[j],
-                    self.Pupil_obj * self.Hz_det_2D[:, :, i],
-                    use_gpu=self.use_gpu,
-                    gpu_id=self.gpu_id,
+                    torch.tensor(self.Source[j]),
+                    torch.tensor(self.Pupil_obj * self.Hz_det_2D[:, :, i]),
                 )
 
     def gen_semi_3D_WOTF(self):
@@ -978,12 +994,15 @@ class waveorder_microscopy:
         E_field_factor[4, nondc_idx] = -self.lambda_illu * self.fyy[nondc_idx]
 
         # generate dyadic Green's tensor
-        G_fun_z = gen_Greens_function_z(
-            self.fxx,
-            self.fyy,
-            self.Pupil_support,
-            self.lambda_illu,
-            self.z_defocus,
+        G_fun_z = (
+            gen_Greens_function_z(
+                torch.tensor(self.frr),
+                torch.tensor(self.Pupil_support),
+                self.lambda_illu,
+                torch.tensor(self.z_defocus),
+            )
+            .numpy()
+            .transpose((1, 2, 0))
         )
         G_tensor_z = gen_dyadic_Greens_tensor_z(
             self.fxx, self.fyy, G_fun_z, self.Pupil_support, self.lambda_illu
@@ -1420,8 +1439,15 @@ class waveorder_microscopy:
             z = -ifftshift((np.r_[0:N_defocus] - N_defocus // 2) * psz)
         else:
             z = ifftshift((np.r_[0:N_defocus] - N_defocus // 2) * psz)
-        G_fun_z = gen_Greens_function_z(
-            self.fxx, self.fyy, self.Pupil_support, self.lambda_illu, z
+        G_fun_z = (
+            gen_Greens_function_z(
+                torch.tensor(self.frr),
+                torch.tensor(self.Pupil_support),
+                self.lambda_illu,
+                torch.tensor(z),
+            )
+            .numpy()
+            .transpose((1, 2, 0))
         )
 
         G_real = fftshift(ifft2(G_fun_z, axes=(0, 1)) / self.ps**2)
@@ -1433,16 +1459,20 @@ class waveorder_microscopy:
         ]
 
         # compute transfer functions
-        OTF_compute = lambda x, y, z: WOTF_3D_compute(
-            x.astype("float32"),
-            y.astype("complex64"),
-            self.Pupil_obj.astype("complex64"),
-            self.Hz_det_3D.astype("complex64"),
-            z.astype("complex64"),
-            self.psz,
-            use_gpu=self.use_gpu,
-            gpu_id=self.gpu_id,
-        )
+        def OTF_compute(x, y, z):
+            H_re, H_im = WOTF_3D_compute(
+                torch.tensor(x.astype("float32")),
+                torch.tensor(y.astype("complex64")),
+                torch.tensor(self.Pupil_obj.astype("complex64")),
+                torch.tensor(
+                    self.Hz_det_3D.astype("complex64").transpose((2, 1, 0))
+                ),
+                torch.tensor(z.astype("complex64").transpose((2, 1, 0))),
+                torch.tensor(self.psz),
+            )
+            return H_re.numpy().transpose((1, 2, 0)),  H_im.numpy().transpose(
+                (1, 2, 0)
+            )
 
         for i in range(self.N_pattern):
             if self.N_pattern == 1:

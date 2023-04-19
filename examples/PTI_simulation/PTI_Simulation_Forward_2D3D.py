@@ -362,10 +362,12 @@ plt.show()
 # DPC + BF illumination + PolState (sector illumination)
 
 xx, yy, fxx, fyy = wo.gen_coordinate((N, M), ps)
-Pupil_obj = wo.gen_Pupil(fxx, fyy, NA_obj / n_media, lambda_illu / n_media)
-Source_support = wo.gen_Pupil(
-    fxx, fyy, NA_illu / n_media, lambda_illu / n_media
-)
+frr = np.sqrt(fxx**2 + fyy**2)
+
+Pupil_obj = wo.gen_pupil(frr, NA_obj / n_media, lambda_illu / n_media).numpy()
+Source_support = wo.gen_pupil(
+    frr, NA_illu / n_media, lambda_illu / n_media
+).numpy()
 
 NAx_coord = lambda_illu / n_media * fxx
 NAy_coord = lambda_illu / n_media * fyy
@@ -375,9 +377,9 @@ rotation_angle = [0, 45, 90, 135, 180, 225, 270, 315]
 Source = np.zeros((len(rotation_angle) + 1, N, M))
 Source_cont = np.zeros_like(Source)
 
-Source_BF = wo.gen_Pupil(
-    fxx, fyy, NA_illu / n_media / 2, lambda_illu / n_media
-)
+Source_BF = wo.gen_pupil(
+    frr, NA_illu / n_media / 2, lambda_illu / n_media
+).numpy()
 
 Source_cont[-1] = Source_BF.copy()
 Source[-1] = wo.Source_subsample(
