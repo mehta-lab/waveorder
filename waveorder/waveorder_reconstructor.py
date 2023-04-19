@@ -859,7 +859,7 @@ class waveorder_microscopy:
                 idx = i * self.N_pattern + j
                 Hu_temp, Hp_temp = WOTF_2D_compute(
                     torch.tensor(self.Source[j]),
-                    torch.tensor(self.Pupil_obj * self.Hz_det_2D[:, :, idx]),
+                    torch.tensor(self.Pupil_obj * self.Hz_det_2D[idx, :, :]),
                 )
                 self.Hu[:, :, idx] = Hu_temp.numpy()
                 self.Hp[:, :, idx] = Hp_temp.numpy()
