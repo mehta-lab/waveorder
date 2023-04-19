@@ -861,8 +861,8 @@ class waveorder_microscopy:
                     torch.tensor(self.Source[j]),
                     torch.tensor(self.Pupil_obj * self.Hz_det_2D[:, :, idx]),
                 )
-                self.Hu[:, :, idx] = Hu_temp.numpy().transpose((1, 2, 0))
-                self.Hp[:, :, idx] = Hp_temp.numpy().transpose((1, 2, 0))
+                self.Hu[:, :, idx] = Hu_temp.numpy()
+                self.Hp[:, :, idx] = Hp_temp.numpy()
 
     def gen_semi_3D_WOTF(self):
         """
