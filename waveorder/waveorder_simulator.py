@@ -98,9 +98,6 @@ class waveorder_microscopy_simulator:
         self.lambda_illu = lambda_illu / n_media
         self.ps = ps
         self.z_defocus = z_defocus.copy()
-        import pdb
-
-        pdb.set_trace()
         if len(z_defocus) >= 2:
             self.psz = np.abs(z_defocus[0] - z_defocus[1])
         self.NA_obj = NA_obj / n_media
