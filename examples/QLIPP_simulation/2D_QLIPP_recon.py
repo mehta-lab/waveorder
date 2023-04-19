@@ -47,6 +47,7 @@ setup = wo.waveorder_microscopy(
     bire_in_plane_deconv="2D",
     illu_mode="BF",
 )
+
 S_image_recon = setup.Stokes_recon(I_meas)
 S_image_tm = setup.Stokes_transform(S_image_recon)
 Recon_para = setup.Polarization_recon(
@@ -122,38 +123,41 @@ wo.plot_hsv([azimuth_TV, retardance_TV], size=10, origin="lower")
 plt.show()
 
 
-# ## 2D Phase reconstruction with $S_0$
-# Tikhonov regularizer
-reg_u = 1e-3
-reg_p = 1e-3
-S0_stack = S_image_recon[0].copy()
-mu_sample, phi_sample = setup.Phase_recon(
-    S0_stack, method="Tikhonov", reg_u=reg_u, reg_p=reg_p
-)
-wo.plot_multicolumn(
-    np.array([mu_sample, phi_sample]),
-    num_col=2,
-    size=10,
-    set_title=True,
-    titles=["Reconstructed absorption", "Reconstructed phase"],
-    origin="lower",
-)
-plt.show()
+# Commenting for now...phase recon has changed its API
 
-# TV-regularized phase reconstruction
-lambda_u = 3e-3
-lambda_p = 1e-3
-S0_stack = S_image_recon[0].copy()
+# # ## 2D Phase reconstruction with $S_0$
+# # Tikhonov regularizer
+# reg_u = 1e-3
+# reg_p = 1e-3
+# S0_stack = S_image_recon[0].copy()
+# mu_sample, phi_sample = setup.Phase_recon(
+#     S0_stack, method="Tikhonov", reg_u=reg_u, reg_p=reg_p
+# )
+# wo.plot_multicolumn(
+#     np.array([mu_sample, phi_sample]),
+#     num_col=2,
+#     size=10,
+#     set_title=True,
+#     titles=["Reconstructed absorption", "Reconstructed phase"],
+#     origin="lower",
+# )
+# plt.show()
 
-mu_sample_TV, phi_sample_TV = setup.Phase_recon(
-    S0_stack, method="TV", lambda_u=lambda_u, lambda_p=lambda_p, itr=10, rho=1
-)
-wo.plot_multicolumn(
-    np.array([mu_sample_TV, phi_sample_TV]),
-    num_col=2,
-    size=10,
-    set_title=True,
-    titles=["Reconstructed absorption", "Reconstructed phase"],
-    origin="lower",
-)
-plt.show()
+
+# # TV-regularized phase reconstruction
+# lambda_u = 3e-3
+# lambda_p = 1e-3
+# S0_stack = S_image_recon[0].copy()
+
+# mu_sample_TV, phi_sample_TV = setup.Phase_recon(
+#     S0_stack, method="TV", lambda_u=lambda_u, lambda_p=lambda_p, itr=10, rho=1
+# )
+# wo.plot_multicolumn(
+#     np.array([mu_sample_TV, phi_sample_TV]),
+#     num_col=2,
+#     size=10,
+#     set_title=True,
+#     titles=["Reconstructed absorption", "Reconstructed phase"],
+#     origin="lower",
+# )
+# plt.show()

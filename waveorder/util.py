@@ -687,7 +687,7 @@ def inten_normalization_3D(img_stack):
     return img_norm_stack
 
 
-def Dual_variable_Tikhonov_deconv_2D(AHA, b_vec):
+def Dual_variable_Tikhonov_deconv_2D(AHA, b_vec, determinant=None):
     """
 
     2D Tikhonov deconvolution to solve for phase and absorption with weak object transfer function
@@ -704,16 +704,19 @@ def Dual_variable_Tikhonov_deconv_2D(AHA, b_vec):
                       | b_vec[0] |
                       | b_vec[1] |
 
+        determinant : optional torch.tensor
+
     Returns
     -------
-        mu_sample   : numpy.ndarray
-                      2D absorption reconstruction with the size of (Ny, Nx)
+        mu_sample   : torch.tensor
+                      2D absorption reconstruction with the size of (Y, X)
 
-        phi_sample  : numpy.ndarray
-                      2D phase reconstruction with the size of (Ny, Nx)
+        phi_sample  : torch.tensor
+                      2D phase reconstruction with the size of (Y, X)
     """
 
-    determinant = AHA[0] * AHA[3] - AHA[1] * AHA[2]
+    if determinant is None:
+        determinant = AHA[0] * AHA[3] - AHA[1] * AHA[2]
 
     mu_sample_f = (b_vec[0] * AHA[3] - b_vec[1] * AHA[1]) / determinant
     phi_sample_f = (b_vec[1] * AHA[0] - b_vec[0] * AHA[2]) / determinant

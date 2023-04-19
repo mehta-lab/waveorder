@@ -109,7 +109,7 @@ class waveorder_microscopy_simulator:
         self.xx, self.yy, self.fxx, self.fyy = gen_coordinate(
             (self.N, self.M), ps
         )
-        self.frr = np.sqrt(self.xx**2 + self.yy**2)
+        self.frr = np.sqrt(self.fxx**2 + self.fyy**2)
 
         self.Pupil_obj = gen_pupil(
             self.frr, self.NA_obj, self.lambda_illu
@@ -147,7 +147,9 @@ class waveorder_microscopy_simulator:
         self, illu_mode, NA_illu_in, Source, Source_PolState
     ):
         if illu_mode == "BF":
-            self.Source = gen_pupil(self.frr, self.NA_illu, self.lambda_illu)
+            self.Source = gen_pupil(
+                self.frr, self.NA_illu, self.lambda_illu
+            ).numpy()
             self.N_pattern = 1
 
         elif illu_mode == "PH":

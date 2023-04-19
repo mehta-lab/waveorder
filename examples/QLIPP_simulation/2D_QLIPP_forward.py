@@ -59,7 +59,8 @@ plt.show()
 # Subsample source pattern for speed
 
 xx, yy, fxx, fyy = wo.gen_coordinate((N, M), ps)
-Source_cont = wo.gen_pupil(fxx, fyy, NA_illu, lambda_illu)
+frr = np.sqrt(fxx**2 + fyy**2)
+Source_cont = wo.gen_pupil(frr, NA_illu, lambda_illu).numpy()
 Source_discrete = wo.Source_subsample(
     Source_cont, lambda_illu * fxx, lambda_illu * fyy, subsampled_NA=0.1
 )

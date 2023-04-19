@@ -478,9 +478,7 @@ class waveorder_microscopy:
         """
 
         if illu_mode == "BF":
-            self.Source = gen_Pupil(
-                self.fxx, self.fyy, self.NA_illu, self.lambda_illu
-            )
+            self.Source = gen_pupil(self.frr, self.NA_illu, self.lambda_illu)
             self.N_pattern = 1
 
         elif illu_mode == "PH":
@@ -848,21 +846,23 @@ class waveorder_microscopy:
 
         if self.N_pattern == 1:
             for i in range(self.N_defocus):
-                self.Hu[:, :, i], self.Hp[:, :, i] = WOTF_2D_compute(
-                    self.Source,
-                    self.Pupil_obj * self.Hz_det_2D[:, :, i],
-                    use_gpu=self.use_gpu,
-                    gpu_id=self.gpu_id,
+                Hu_temp, Hp_temp = WOTF_2D_compute(
+                    torch.tensor(self.Source),
+                    torch.tensor(self.Pupil_obj * self.Hz_det_2D[:, :, i]),
                 )
+                self.Hu[:, :, i] = Hu_temp.numpy()
+                self.Hp[:, :, i] = Hp_temp.numpy()
         else:
             for i, j in itertools.product(
                 range(self.N_defocus), range(self.N_pattern)
             ):
                 idx = i * self.N_pattern + j
-                self.Hu[:, :, idx], self.Hp[:, :, idx] = WOTF_2D_compute(
+                Hu_temp, Hp_temp = WOTF_2D_compute(
                     torch.tensor(self.Source[j]),
-                    torch.tensor(self.Pupil_obj * self.Hz_det_2D[:, :, i]),
+                    torch.tensor(self.Pupil_obj * self.Hz_det_2D[:, :, idx]),
                 )
+                self.Hu[:, :, idx] = Hu_temp.numpy().transpose((1, 2, 0))
+                self.Hp[:, :, idx] = Hp_temp.numpy().transpose((1, 2, 0))
 
     def gen_semi_3D_WOTF(self):
         """
@@ -1023,7 +1023,7 @@ class waveorder_microscopy:
             range(self.N_defocus), range(self.N_pattern)
         ):
             if self.N_pattern == 1:
-                Source_current = self.Source.copy()
+                Source_current = self.Source.numpy().copy()
             else:
                 Source_current = self.Source[j].copy()
 
@@ -1470,7 +1470,7 @@ class waveorder_microscopy:
                 torch.tensor(z.astype("complex64").transpose((2, 1, 0))),
                 torch.tensor(self.psz),
             )
-            return H_re.numpy().transpose((1, 2, 0)),  H_im.numpy().transpose(
+            return H_re.numpy().transpose((1, 2, 0)), H_im.numpy().transpose(
                 (1, 2, 0)
             )
 
@@ -2267,21 +2267,19 @@ class waveorder_microscopy:
             ),
         ]
 
-        if self.use_gpu:
-            AHA = cp.array(AHA)
-            b_vec = cp.array(b_vec)
+        for i in range(4):
+            AHA[i] = torch.tensor(AHA[i])
+        for i in range(2):
+            b_vec[i] = torch.tensor(b_vec[i])
 
         if method == "Tikhonov":
             # Deconvolution with Tikhonov regularization
-
-            g_1c, g_1s = Dual_variable_Tikhonov_deconv_2D(
-                AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id
-            )
+            g_1c_temp, g_1s_temp = Dual_variable_Tikhonov_deconv_2D(AHA, b_vec)
 
         elif method == "TV":
             # ADMM deconvolution with anisotropic TV regularization
 
-            g_1c, g_1s = Dual_variable_ADMM_TV_deconv_2D(
+            g_1c_temp, g_1s_temp = Dual_variable_ADMM_TV_deconv_2D(
                 AHA,
                 b_vec,
                 rho,
@@ -2289,9 +2287,10 @@ class waveorder_microscopy:
                 lambda_br,
                 itr,
                 verbose,
-                use_gpu=self.use_gpu,
-                gpu_id=self.gpu_id,
             )
+
+        g_1c = g_1c_temp.numpy()
+        g_1s = g_1s_temp.numpy()
 
         azimuth = (np.arctan2(-g_1s, -g_1c) / 2) % np.pi
         retardance = ((np.abs(g_1s) ** 2 + np.abs(g_1c) ** 2) ** (1 / 2)) / (
