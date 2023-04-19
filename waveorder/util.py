@@ -671,19 +671,8 @@ def inten_normalization_3D(img_stack):
                          normalized image stack with size of (Z, Y, X)
 
     """
-
-    img_norm_stack = np.zeros_like(img_stack)
-    img_norm_stack = (
-        img_stack
-        / torch.mean(img_stack, axis=(-3, -2, -1))[
-            ..., np.newaxis, np.newaxis, np.newaxis
-        ]
-    )
+    img_norm_stack = img_stack / torch.mean(img_stack)
     img_norm_stack -= 1
-
-    import pdb
-
-    pdb.set_trace
     return img_norm_stack
 
 

@@ -50,9 +50,14 @@ ZYX_phase = (
 )  # phase in radians
 
 # Perform simulation, reconstruction, and display both
-ZYX_data = phase3Dto3D.apply_TF(ZYX_phase, H_re)
+ZYX_data = phase3Dto3D.apply_TF(ZYX_phase, H_re, tf_args["Z_pad"])
 ZYX_recon = phase3Dto3D.apply_inv_TF(
-    ZYX_data, H_re, H_im, tf_args["Z_ps"], tf_args["lamb_ill"]
+    ZYX_data,
+    H_re,
+    H_im,
+    tf_args["Z_pad"],
+    tf_args["Z_ps"],
+    tf_args["lamb_ill"],
 )
 
 v.add_image(ZYX_phase.numpy(), name="Phantom", scale=ZYX_scale)

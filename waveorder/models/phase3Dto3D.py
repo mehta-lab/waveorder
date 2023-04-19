@@ -56,7 +56,14 @@ def visualize_TF(viewer, H_re, H_im, ZYX_scale):
     viewer.dims.order = (2, 0, 1)
 
 
-def apply_TF(ZYX_obj, H_re):
+def apply_TF(ZYX_obj, H_re, Z_pad):
+    if ZYX_obj.shape[0] + 2 * Z_pad != H_re.shape[0]:
+        raise ValueError(
+            "Please check padding: ZYX_obj.shape[0] + 2 * Z_pad != H_re.shape[0]"
+        )
+    if Z_pad > 0:
+        H_re = H_re[Z_pad:-Z_pad]
+
     # Very simple simulation, consider adding noise and bkg knobs
 
     # TODO: extend to absorption, or restrict to just phase
@@ -73,50 +80,52 @@ def apply_inv_TF(
     ZYX_data,
     H_re,
     H_im,
+    Z_pad,
     Z_ps,  # TODO: MOVE THIS PARAM TO OTF? (leaky param)
     lamb_ill,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
     absorption_ratio=0.0,
     method="Tikhonov",
     **kwargs
 ):
-    # TODO HANDLE PADDING
-    # pad_z = H_re.shape[0] - ZYX_data.shape[0]
+    # Handle padding
+    if Z_pad < 0:
+        raise ("Z_pad cannot be negative.")
+    elif Z_pad == 0:
+        ZYX_pad = ZYX_data
+    elif Z_pad >= 0:
+        ZYX_pad = torch.nn.functional.pad(
+            ZYX_data,
+            (0, 0, 0, 0, Z_pad, Z_pad),
+            mode="constant",
+            value=0,
+        )
+        if Z_pad < ZYX_data.shape[0]:
+            ZYX_pad[:Z_pad] = torch.flip(ZYX_data[:Z_pad], dims=[0])
+            ZYX_pad[-Z_pad:] = torch.flip(ZYX_data[-Z_pad:], dims=[0])
+        else:
+            print(
+                "Z_pad is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
+            )
 
-    # if pad_z < 0:
-    #     raise ("")
-    # elif pad_z == 0:
-    #     S0_stack = util.inten_normalization_3D(ZYX_data)
-    # elif pad_z >= 0:  ## FINISH THIS
-    #     S0_pad = np.pad(
-    #         ZYX_data,
-    #         ((pad_z, pad_z), (0, 0), (0, 0)),
-    #         mode="constant",
-    #         constant_values=0,
-    #     )
-    #     if pad_z < ZYX_data.shape[0]:
-    #         S0_pad[:pad_z, :, :] = (S0_stack[:pad_z, :, :])[::-1, :, :]
-    #         S0_pad[-pad_z:, :] = (S0_stack[-pad_z:, :])[::-1, :, :]
-    #     else:
-    #         print(
-    #             "pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
-    #         )
+    # Normalize
+    ZYX_normalized = util.inten_normalization_3D(ZYX_pad)
 
-    ZYX_data = util.inten_normalization_3D(ZYX_data)
-
+    # Prepare TF
     H_eff = H_re + absorption_ratio * H_im
 
+    # Reconstruct
     if method == "Tikhonov":
         f_real = util.Single_variable_Tikhonov_deconv_3D(
-            ZYX_data, H_eff, **kwargs
+            ZYX_normalized, H_eff, **kwargs
         )
 
     elif method == "TV":
         f_real = util.Single_variable_ADMM_TV_deconv_3D(
-            ZYX_data, H_eff, **kwargs
+            ZYX_normalized, H_eff, **kwargs
         )
 
-    # TODO HANDLE UNPADDING
-    # if Z_pad != 0:
-    #    f_real = f_real[pad_z:-pad_z, ...]
+    # Unpad
+    if Z_pad != 0:
+        f_real = f_real[Z_pad:-Z_pad]
 
     return f_real * Z_ps / 4 / np.pi * lamb_ill
