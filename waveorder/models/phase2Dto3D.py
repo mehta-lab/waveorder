@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from waveorder import optics, util
 
 
@@ -24,11 +25,35 @@ def calc_TF(YX_shape, YX_ps, Z_pos_list, lamb_ill, n_media, NA_ill, NA_obj):
 
 
 def visualize_TF(viewer, Hu, Hp, ZYX_scale):
-    raise NotImplementedError
+    # TODO: consider generalizing w/ phase3Dto3D.visualize_TF
+    arrays = [
+        (torch.imag(Hu).numpy(), "Im(H_u)"),
+        (torch.real(Hu).numpy(), "Re(H_u)"),
+        (torch.imag(Hp).numpy(), "Im(H_p)"),
+        (torch.real(Hp).numpy(), "Re(H_p)"),
+    ]
 
+    for array in arrays:
+        lim = 0.5 * np.max(np.abs(array[0]))
+        viewer.add_image(
+            np.fft.ifftshift(array[0], axes=(1,2)),
+            name=array[1],
+            colormap="bwr",
+            contrast_limits=(-lim, lim),
+            scale=(1,1,1),
+        )
+    viewer.dims.order = (2, 0, 1)
 
-def apply_TF():
-    raise NotImplementedError
+def apply_TF(ZYX_obj, Hp):
+    # Very simple simulation, consider adding noise and bkg knobs
+
+    # TODO: extend to absorption, or restrict to just phase
+    ZYX_obj_hat = torch.fft.fftn(ZYX_obj, dim=(1,2))
+    ZYX_data = ZYX_obj_hat * torch.real(Hp)
+    data = torch.real(torch.fft.ifftn(ZYX_data, dim=(1,2)))
+
+    data = torch.tensor(data + 10)  # Add a direct background
+    return data
 
 
 def apply_inv_TF(
@@ -43,18 +68,18 @@ def apply_inv_TF(
 ):
     S0_stack = util.inten_normalization(ZYX_data, bg_filter=bg_filter)
 
-    S0_stack_f = torch.fft.fft2(S0_stack, axes=(1, 2))
+    S0_stack_f = torch.fft.fft2(S0_stack, dim=(1, 2))
 
     AHA = [
-        torch.sum(torch.abs(Hu) ** 2, axis=0) + reg_u,
-        torch.sum(torch.conj(Hu) * Hp, axis=0),
-        torch.sum(torch.conj(Hp) * Hu, axis=0),
-        torch.sum(torch.abs(Hp) ** 2, axis=0) + reg_p,
+        torch.sum(torch.abs(Hu) ** 2, dim=0) + reg_u,
+        torch.sum(torch.conj(Hu) * Hp, dim=0),
+        torch.sum(torch.conj(Hp) * Hu, dim=0),
+        torch.sum(torch.abs(Hp) ** 2, dim=0) + reg_p,
     ]
 
     b_vec = [
-        torch.sum(torch.conj(Hu) * S0_stack_f, axis=0),
-        torch.sum(torch.conj(Hp) * S0_stack_f, axis=0),
+        torch.sum(torch.conj(Hu) * S0_stack_f, dim=0),
+        torch.sum(torch.conj(Hp) * S0_stack_f, dim=0),
     ]
 
     # Deconvolution with Tikhonov regularization
@@ -69,6 +94,6 @@ def apply_inv_TF(
             AHA, b_vec, **kwargs
         )
 
-    phi_sample -= phi_sample.mean()
+    phi_sample -= torch.mean(phi_sample)
 
-    return mu_sample, phi_sample
+    return phi_sample

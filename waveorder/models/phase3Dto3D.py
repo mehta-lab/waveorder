@@ -36,6 +36,7 @@ def calc_TF(
 
 
 def visualize_TF(viewer, H_re, H_im, ZYX_scale):
+    # TODO: consider generalizing w/ phase2Dto3D.visualize_TF
     arrays = [
         (torch.real(H_im).numpy(), "Re(H_im)"),
         (torch.imag(H_im).numpy(), "Im(H_im)"),
