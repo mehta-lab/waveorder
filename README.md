@@ -39,7 +39,7 @@ In addition to label-free reconstruction algorithms, `waveorder` also implements
 
 1. Correlative measurements of biomolecular density and orientation from polarization-diverse widefield imaging ([multimodal Instant PolScope](https://opg.optica.org/boe/fulltext.cfm?uri=boe-13-5-3102&id=472350))
 
-We provide an [example notebook](examples/fluorescence_deconvolution/) for widefield fluorescence deconvolution.
+We provide an [example notebook](examples/experimental_reconstructions/fluorescence_deconvolution/) for widefield fluorescence deconvolution.
 
 ## Citation
 
