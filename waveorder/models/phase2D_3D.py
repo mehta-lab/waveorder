@@ -76,7 +76,7 @@ def visualize_transfer_function(
             contrast_limits=(-lim, lim),
             scale=(1, 1, 1),
         )
-    viewer.dims.order = (2, 0, 1)
+    viewer.dims.order = (0, 1, 2)
 
 
 def apply_transfer_function(zyx_object, phase_2D_to_3D_transfer_function):
@@ -160,4 +160,4 @@ def apply_inverse_transfer_function(
 
     phi_sample -= torch.mean(phi_sample)
 
-    return phi_sample
+    return mu_sample, phi_sample
