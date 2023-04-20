@@ -11,5 +11,9 @@ def visualize_TF(viewer, A, M_inv):
     raise NotImplementedError
 
 
+def apply_TF():
+    raise NotImplementedError
+
+
 def apply_inv_TF():
     raise NotImplementedError
