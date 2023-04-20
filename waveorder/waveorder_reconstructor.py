@@ -408,7 +408,7 @@ class waveorder_microscopy:
                 (self.N, self.M), ps
             )
             self.frr = np.sqrt(self.fxx**2 + self.fyy**2)
-            self.Pupil_obj = gen_pupil(
+            self.Pupil_obj = generate_pupil(
                 self.frr, self.NA_obj, self.lambda_illu
             ).numpy()
             self.Pupil_support = self.Pupil_obj.copy()
@@ -478,7 +478,9 @@ class waveorder_microscopy:
         """
 
         if illu_mode == "BF":
-            self.Source = gen_pupil(self.frr, self.NA_illu, self.lambda_illu)
+            self.Source = generate_pupil(
+                self.frr, self.NA_illu, self.lambda_illu
+            )
             self.N_pattern = 1
 
         elif illu_mode == "PH":
@@ -577,7 +579,7 @@ class waveorder_microscopy:
         ):
             # generate defocus kernel based on Pupil function and z_defocus
             self.Hz_det_2D = (
-                gen_Hz_stack(
+                generate_propagation_kernel(
                     torch.tensor(self.frr),
                     torch.tensor(self.Pupil_support),
                     self.lambda_illu,
@@ -603,14 +605,14 @@ class waveorder_microscopy:
                     np.r_[: self.ph_deconv_layer] - self.ph_deconv_layer // 2
                 ) * self.psz
 
-            self.Hz_det_semi_3D = gen_Hz_stack(
+            self.Hz_det_semi_3D = generate_propagation_kernel(
                 self.fxx,
                 self.fyy,
                 self.Pupil_support,
                 self.lambda_illu,
                 z_deconv,
             )
-            self.G_fun_z_semi_3D = gen_Greens_function_z(
+            self.G_fun_z_semi_3D = generate_greens_function_z(
                 self.fxx,
                 self.fyy,
                 self.Pupil_support,
@@ -635,7 +637,7 @@ class waveorder_microscopy:
                     * self.psz
                 )
             self.Hz_det_3D = (
-                gen_Hz_stack(
+                generate_propagation_kernel(
                     torch.tensor(self.frr),
                     torch.tensor(self.Pupil_support),
                     self.lambda_illu,
@@ -645,7 +647,7 @@ class waveorder_microscopy:
                 .transpose((1, 2, 0))
             )
             self.G_fun_z_3D = (
-                gen_Greens_function_z(
+                generate_greens_function_z(
                     torch.tensor(self.frr),
                     torch.tensor(self.Pupil_support),
                     self.lambda_illu,
@@ -846,7 +848,7 @@ class waveorder_microscopy:
 
         if self.N_pattern == 1:
             for i in range(self.N_defocus):
-                Hu_temp, Hp_temp = WOTF_2D_compute(
+                Hu_temp, Hp_temp = compute_weak_object_transfer_function_2D(
                     torch.tensor(self.Source),
                     torch.tensor(self.Pupil_obj * self.Hz_det_2D[:, :, i]),
                 )
@@ -857,7 +859,7 @@ class waveorder_microscopy:
                 range(self.N_defocus), range(self.N_pattern)
             ):
                 idx = i * self.N_pattern + j
-                Hu_temp, Hp_temp = WOTF_2D_compute(
+                Hu_temp, Hp_temp = compute_weak_object_transfer_function_2D(
                     torch.tensor(self.Source[j]),
                     torch.tensor(self.Pupil_obj * self.Hz_det_2D[idx, :, :]),
                 )
@@ -995,7 +997,7 @@ class waveorder_microscopy:
 
         # generate dyadic Green's tensor
         G_fun_z = (
-            gen_Greens_function_z(
+            generate_greens_function_z(
                 torch.tensor(self.frr),
                 torch.tensor(self.Pupil_support),
                 self.lambda_illu,
@@ -1440,7 +1442,7 @@ class waveorder_microscopy:
         else:
             z = ifftshift((np.r_[0:N_defocus] - N_defocus // 2) * psz)
         G_fun_z = (
-            gen_Greens_function_z(
+            generate_greens_function_z(
                 torch.tensor(self.frr),
                 torch.tensor(self.Pupil_support),
                 self.lambda_illu,
@@ -1460,7 +1462,7 @@ class waveorder_microscopy:
 
         # compute transfer functions
         def OTF_compute(x, y, z):
-            H_re, H_im = WOTF_3D_compute(
+            H_re, H_im = compute_weak_object_transfer_function_3D(
                 torch.tensor(x.astype("float32")),
                 torch.tensor(y.astype("complex64")),
                 torch.tensor(self.Pupil_obj.astype("complex64")),
@@ -2166,7 +2168,7 @@ class waveorder_microscopy:
                 ),
             ]
 
-        del_phi_s, del_phi_c = Dual_variable_Tikhonov_deconv_2D(
+        del_phi_s, del_phi_c = dual_variable_tikhonov_deconvolution_2D(
             AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id
         )
 
@@ -2274,12 +2276,14 @@ class waveorder_microscopy:
 
         if method == "Tikhonov":
             # Deconvolution with Tikhonov regularization
-            g_1c_temp, g_1s_temp = Dual_variable_Tikhonov_deconv_2D(AHA, b_vec)
+            g_1c_temp, g_1s_temp = dual_variable_tikhonov_deconvolution_2D(
+                AHA, b_vec
+            )
 
         elif method == "TV":
             # ADMM deconvolution with anisotropic TV regularization
 
-            g_1c_temp, g_1s_temp = Dual_variable_ADMM_TV_deconv_2D(
+            g_1c_temp, g_1s_temp = dual_variable_admm_tv_deconv_2D(
                 AHA,
                 b_vec,
                 rho,
@@ -3397,7 +3401,7 @@ class waveorder_microscopy:
                 (
                     mu_sample_temp,
                     phi_sample_temp,
-                ) = Dual_variable_Tikhonov_deconv_2D(
+                ) = dual_variable_tikhonov_deconvolution_2D(
                     AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id
                 )
 
@@ -3407,7 +3411,7 @@ class waveorder_microscopy:
                 (
                     mu_sample_temp,
                     phi_sample_temp,
-                ) = Dual_variable_ADMM_TV_deconv_2D(
+                ) = dual_variable_admm_tv_deconv_2D(
                     AHA,
                     b_vec,
                     rho,
@@ -3519,7 +3523,7 @@ class waveorder_microscopy:
             H_eff = self.H_re + absorption_ratio * self.H_im
 
             if method == "Tikhonov":
-                f_real = Single_variable_Tikhonov_deconv_3D(
+                f_real = single_variable_tikhonov_deconvolution_3D(
                     S0_stack,
                     H_eff,
                     reg_re,
@@ -3530,7 +3534,7 @@ class waveorder_microscopy:
                 )
 
             elif method == "TV":
-                f_real = Single_variable_ADMM_TV_deconv_3D(
+                f_real = single_variable_admm_tv_deconvolution_3D(
                     S0_stack,
                     H_eff,
                     rho,
@@ -3767,7 +3771,7 @@ class fluorescence_microscopy:
             )
 
             for i in range(self.N_wavelength):
-                self.Hz_det[i] = gen_Hz_stack(
+                self.Hz_det[i] = generate_propagation_kernel(
                     self.fxx,
                     self.fyy,
                     self.Pupil_support[i],
@@ -3967,7 +3971,7 @@ class fluorescence_microscopy:
         for i in range(self.N_wavelength):
             I_fluor_minus_bg = np.maximum(0, I_fluor_pad[i] - bg_level[i])
 
-            I_fluor_deconv_pad = Single_variable_Tikhonov_deconv_3D(
+            I_fluor_deconv_pad = single_variable_tikhonov_deconvolution_3D(
                 I_fluor_minus_bg,
                 self.OTF_WF_3D[i],
                 reg[i],

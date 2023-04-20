@@ -1,4 +1,4 @@
-def calc_TF():
+def calculate_transfer_function():
     # Will accept all background correction options and
     # background correction data
 
@@ -7,13 +7,13 @@ def calc_TF():
     raise NotImplementedError
 
 
-def visualize_TF(viewer, A, M_inv):
+def visualize_transfer_function(viewer, A, M_inv):
     raise NotImplementedError
 
 
-def apply_TF():
+def apply_transfer_function():
     raise NotImplementedError
 
 
-def apply_inv_TF():
+def apply_inverse_transfer_function():
     raise NotImplementedError

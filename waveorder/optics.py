@@ -119,7 +119,7 @@ def analyzer_output(Ein, alpha, beta):
     return Eout
 
 
-def gen_pupil(frr, NA, lamb_in):
+def generate_pupil(frr, NA, lamb_in):
     """
 
     compute pupil function given spatial frequency, NA, wavelength.
@@ -285,78 +285,80 @@ def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA=0.1):
     return Source_discrete
 
 
-def gen_Hz_stack(frr, pupil_support, lamb_in, Z_pos_list):
+def generate_propagation_kernel(
+    radial_frequencies, pupil_support, wavelength, z_position_list
+):
     """
-
-    generate propagation kernel
-
     Parameters
     ----------
-        frr           : torch.tensor
-                        x component of 2D spatial frequency array with the size of (Y, X)
+        radial_frequencies : torch.tensor
+                             radial of 2D spatial frequency array with the size of (Y, X)
 
-        pupil_support : torch.tensor
+        pupil_support   : torch.tensor
                         the array that defines the support of the pupil function with the size of (Y, X)
 
-        lamb_in     : float
+        wavelength      : float
                         wavelength of the light in the immersion media
 
-        Z_pos_list    : torch.tensor or list
+        z_position_list : torch.tensor or list
                         1D array of defocused z positions with the size of (Z)
 
     Returns
     -------
-        Hz_stack      : torch.tensor
-                        corresponding propagation kernel with size (Z, Y, X)
+        propagation_kernel  : torch.tensor
+                            corresponding propagation kernel with size (Z, Y, X)
 
     """
 
-    oblique_factor = ((1 - lamb_in**2 * frr**2) * pupil_support) ** (
-        1 / 2
-    ) / lamb_in
+    oblique_factor = (
+        (1 - wavelength**2 * radial_frequencies**2) * pupil_support
+    ) ** (1 / 2) / wavelength
 
-    Hz_stack = pupil_support[None, :, :] * torch.exp(
+    propagation_kernel = pupil_support[None, :, :] * torch.exp(
         1j
         * 2
         * np.pi
-        * torch.tensor(Z_pos_list)[:, None, None]
+        * torch.tensor(z_position_list)[:, None, None]
         * oblique_factor[None, :, :]
     )
 
-    return Hz_stack
+    return propagation_kernel
 
 
-def gen_Greens_function_z(frr, pupil_support, lamb_in, Z_pos_list):
+def generate_greens_function_z(
+    radial_frequencies, pupil_support, illumination_wavelength, z_position_list
+):
     """
 
     generate Green's function in u_x, u_y, z space
 
     Parameters
     ----------
-        frr             : torch.tensor
+        radial_frequencies             : torch.tensor
                         x component of 2D spatial frequency array with the size of (Y, X)
 
         pupil_support   : torch.tensor
                         the array that defines the support of the pupil function with the size of (Y, X)
 
-        lamb_in       : float
+        illumination_wavelength       : float
                         wavelength of the light in the immersion media
 
-        Z_pos_list      : torch.tensor or list
+        z_position_list      : torch.tensor or list
                         1D array of defocused z position with the size of (Z,)
 
     Returns
     -------
-        G_fun_z       : torch.tensor
+        greens_function_z       : torch.tensor
                         corresponding Green's function in u_x, u_y, z space with size of (Z, Y, X)
 
     """
 
-    oblique_factor = ((1 - lamb_in**2 * frr**2) * pupil_support) ** (
-        1 / 2
-    ) / lamb_in
+    oblique_factor = (
+        (1 - illumination_wavelength**2 * radial_frequencies**2)
+        * pupil_support
+    ) ** (1 / 2) / illumination_wavelength
 
-    G_fun_z = (
+    greens_function_z = (
         -1j
         / 4
         / np.pi
@@ -365,13 +367,13 @@ def gen_Greens_function_z(frr, pupil_support, lamb_in, Z_pos_list):
             1j
             * 2
             * np.pi
-            * torch.tensor(Z_pos_list)[:, None, None]
+            * torch.tensor(z_position_list)[:, None, None]
             * oblique_factor[None, :, :]
         )
         / (oblique_factor[None, :, :] + 1e-15)
     )
 
-    return G_fun_z
+    return greens_function_z
 
 
 def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
@@ -559,39 +561,44 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
         )
 
 
-def WOTF_2D_compute(source, pupil):
+def compute_weak_object_transfer_function_2D(
+    illumination_pupil, detection_pupil
+):
     """
 
     compute 2D weak object transfer function (2D WOTF)
 
     Parameters
     ----------
-        source  : torch.tensor
+        illumination_pupil  : torch.tensor
                   illumination source pattern with the size of (Y, X)
 
-        pupil   : torch.tensor
+        detection_pupil   : torch.tensor
                   pupil function with the size of (Y, X)
 
     Returns
     -------
-        Hu      : torch.tensor
+
+        absorption_transfer_function      : torch.tensor
                   absorption transfer function with size of (Y, X)
 
-        Hp      : torch.tensor
+        phase_transfer_function      : torch.tensor
                   phase transfer function with size of (Y, X)
 
     """
 
-    SP_hat = torch.fft.fft2(source * pupil)
-    P_hat = torch.fft.fft2(pupil)
+    SP_hat = torch.fft.fft2(illumination_pupil * detection_pupil)
+    P_hat = torch.fft.fft2(detection_pupil)
 
     H1 = torch.fft.ifft2(torch.conj(SP_hat) * P_hat)
     H2 = torch.fft.ifft2(SP_hat * torch.conj(P_hat))
-    I_norm = torch.sum(source * pupil * torch.conj(pupil))
-    Hu = (H1 + H2) / I_norm
-    Hp = 1j * (H1 - H2) / I_norm
+    I_norm = torch.sum(
+        illumination_pupil * detection_pupil * torch.conj(detection_pupil)
+    )
+    absorption_transfer_function = (H1 + H2) / I_norm
+    phase_transfer_function = 1j * (H1 - H2) / I_norm
 
-    return Hu, Hp
+    return absorption_transfer_function, phase_transfer_function
 
 
 def WOTF_semi_3D_compute(
@@ -673,43 +680,43 @@ def WOTF_semi_3D_compute(
     return Hu, Hp
 
 
-def WOTF_3D_compute(
-    source_support,
-    source,
-    pupil,
-    Hz_det,
-    G_fun_z,
-    psz,
+def compute_weak_object_transfer_function_3D(
+    illumination_pupil_support,
+    illumination_pupil,
+    detection_pupil,
+    propagation_kernel,
+    greens_function_z,
+    z_pixel_size,
 ):
     """
     compute 3D weak object transfer function (3D WOTF)
 
     Parameters
     ----------
-        source_support : torch.tensor
+        illumination_pupil_support : torch.tensor
                          illumination source pattern support with the size of (Y, X)
 
-        source         : torch.tensor
+        illumination_pupil         : torch.tensor
                          source with spatial frequency modulation with the size of (Y, X)
 
-        pupil          : torch.tensor
+        detection_pupil          : torch.tensor
                          pupil function with the size of (Y, X)
 
-        Hz_det         : torch.tensor
+        propagation_kernel         : torch.tensor
                          propagation kernel with size of (Z, Y, X)
 
-        G_fun_z        : torch.tensor
+        greens_function_z        : torch.tensor
                          2D Fourier transform of Green's function in xy-dimension with size of (Z, Y, X)
 
-        psz            : float
+        z_pixel_size            : float
                          pixel size in the z-dimension
 
     Returns
     -------
-        H_re           : torch.tensor
+        real_potential_transfer_function           : torch.tensor
                          transfer function of real scattering potential with the size of (Z, Y, X)
 
-        H_im           : torch.tensor
+        imag_potential_transfer_function           : torch.tensor
                          transfer function of imaginary scattering potential with the size of (Z, Y, X)
 
     """
@@ -718,27 +725,35 @@ def WOTF_3D_compute(
     # I would prefer `periodic=True` so that window[0] == 1, but the difference
     # should be marginal.
     window = torch.fft.ifftshift(
-        torch.hann_window(Hz_det.shape[0], periodic=False)
+        torch.hann_window(propagation_kernel.shape[0], periodic=False)
     )
 
     SPHz_hat = torch.fft.fft2(
-        (source * pupil)[None, :, :] * Hz_det, dim=(1, 2)
+        (illumination_pupil * detection_pupil)[None, :, :]
+        * propagation_kernel,
+        dim=(1, 2),
     )
-    PG_hat = torch.fft.fft2(pupil[None, :, :] * G_fun_z, dim=(1, 2))
+    PG_hat = torch.fft.fft2(
+        detection_pupil[None, :, :] * greens_function_z, dim=(1, 2)
+    )
 
     H1 = torch.fft.ifft2(torch.conj(SPHz_hat) * PG_hat, dim=(1, 2))
     H1 = H1 * window[:, None, None]
-    H1 = torch.fft.fft(H1, dim=0) * psz
+    H1 = torch.fft.fft(H1, dim=0) * z_pixel_size
 
     H2 = torch.fft.ifft2(SPHz_hat * torch.conj(PG_hat), dim=(1, 2))
     H2 = H2 * window[:, None, None]
-    H2 = torch.fft.fft(H2, dim=0) * psz
+    H2 = torch.fft.fft(H2, dim=0) * z_pixel_size
 
-    I_norm = torch.sum(source_support * pupil * torch.conj(pupil))
-    H_re = (H1 + H2) / I_norm
-    H_im = 1j * (H1 - H2) / I_norm
+    I_norm = torch.sum(
+        illumination_pupil_support
+        * detection_pupil
+        * torch.conj(detection_pupil)
+    )
+    real_potential_transfer_function = (H1 + H2) / I_norm
+    imag_potential_transfer_function = 1j * (H1 - H2) / I_norm
 
-    return H_re, H_im
+    return real_potential_transfer_function, imag_potential_transfer_function
 
 
 def gen_geometric_inc_matrix(incident_theta, incident_phi, Source):

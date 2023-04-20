@@ -111,13 +111,13 @@ class waveorder_microscopy_simulator:
         )
         self.frr = np.sqrt(self.fxx**2 + self.fyy**2)
 
-        self.Pupil_obj = gen_pupil(
+        self.Pupil_obj = generate_pupil(
             self.frr, self.NA_obj, self.lambda_illu
         ).numpy()
         self.Pupil_support = self.Pupil_obj.copy()
 
         self.Hz_det = (
-            gen_Hz_stack(
+            generate_propagation_kernel(
                 torch.tensor(self.frr),
                 torch.tensor(self.Pupil_support),
                 self.lambda_illu,
@@ -147,7 +147,7 @@ class waveorder_microscopy_simulator:
         self, illu_mode, NA_illu_in, Source, Source_PolState
     ):
         if illu_mode == "BF":
-            self.Source = gen_pupil(
+            self.Source = generate_pupil(
                 self.frr, self.NA_illu, self.lambda_illu
             ).numpy()
             self.N_pattern = 1
@@ -157,22 +157,22 @@ class waveorder_microscopy_simulator:
                 raise ("No inner rim NA specified in the PH illumination mode")
             else:
                 self.NA_illu_in = NA_illu_in / self.n_media
-                inner_pupil = gen_pupil(
+                inner_pupil = generate_pupil(
                     self.frr,
                     self.NA_illu_in / self.n_media,
                     self.lambda_illu,
                 ).numpy()
-                self.Source = gen_pupil(
+                self.Source = generate_pupil(
                     self.frr, self.NA_illu, self.lambda_illu
                 ).numpy()
                 self.Source -= inner_pupil
 
-                Pupil_ring_out = gen_pupil(
+                Pupil_ring_out = generate_pupil(
                     self.frr,
                     self.NA_illu / self.n_media,
                     self.lambda_illu,
                 ).numpy()
-                Pupil_ring_in = gen_pupil(
+                Pupil_ring_in = generate_pupil(
                     self.frr,
                     self.NA_illu_in / self.n_media,
                     self.lambda_illu,
@@ -442,7 +442,7 @@ class waveorder_microscopy_simulator:
 
     def simulate_3D_scalar_measurements(self, t_obj):
         fr = (self.fxx**2 + self.fyy**2) ** (0.5)
-        Pupil_prop = gen_pupil(self.frr, 1, self.lambda_illu).numpy()
+        Pupil_prop = generate_pupil(self.frr, 1, self.lambda_illu).numpy()
         oblique_factor_prop = (
             (1 - self.lambda_illu**2 * fr**2) * Pupil_prop
         ) ** (1 / 2) / self.lambda_illu
@@ -922,7 +922,7 @@ class waveorder_microscopy_simulator:
                 )
 
         fr = (self.fxx**2 + self.fyy**2) ** (0.5)
-        Pupil_prop = gen_pupil(fr, 1, self.lambda_illu).numpy()
+        Pupil_prop = generate_pupil(fr, 1, self.lambda_illu).numpy()
         oblique_factor_prop = (
             (1 - self.lambda_illu**2 * fr**2) * Pupil_prop
         ) ** (1 / 2) / self.lambda_illu

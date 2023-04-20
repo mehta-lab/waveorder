@@ -3,129 +3,168 @@ import torch
 from waveorder import optics, util
 
 
-def calc_TF(
-    ZYX_shape,
-    YX_ps,
-    Z_ps,
-    Z_pad,
-    lamb_ill,
-    n_media,
-    NA_ill,
-    NA_obj,
+def calculate_transfer_function(
+    zyx_shape,
+    yx_pixel_size,
+    z_pixel_size,
+    z_padding,
+    wavelength_illumination,
+    index_of_refraction_media,
+    numerical_aperture_illumination,
+    numerical_aperture_detection,
 ):
-    frr = util.gen_radial_freq(ZYX_shape[1:], YX_ps)
-    Z_total = ZYX_shape[0] + 2 * Z_pad
-    Z_pos_list = torch.fft.ifftshift(
-        (torch.arange(Z_total) - Z_total // 2) * Z_ps
+    radial_frequencies = util.generate_radial_frequencies(
+        zyx_shape[1:], yx_pixel_size
+    )
+    z_total = zyx_shape[0] + 2 * z_padding
+    z_position_list = torch.fft.ifftshift(
+        (torch.arange(z_total) - z_total // 2) * z_pixel_size
     )
 
-    ill_pupil = optics.gen_pupil(frr, NA_ill, lamb_ill)
-    det_pupil = optics.gen_pupil(frr, NA_obj, lamb_ill)
-    Hz_stack = optics.gen_Hz_stack(
-        frr, det_pupil, lamb_ill / n_media, Z_pos_list
+    ill_pupil = optics.generate_pupil(
+        radial_frequencies,
+        numerical_aperture_illumination,
+        wavelength_illumination,
     )
-    G_fun_z_3D = optics.gen_Greens_function_z(
-        frr, det_pupil, lamb_ill / n_media, Z_pos_list
+    det_pupil = optics.generate_pupil(
+        radial_frequencies,
+        numerical_aperture_detection,
+        wavelength_illumination,
+    )
+    propagation_kernel = optics.generate_propagation_kernel(
+        radial_frequencies,
+        det_pupil,
+        wavelength_illumination / index_of_refraction_media,
+        z_position_list,
+    )
+    greens_function_z = optics.generate_greens_function_z(
+        radial_frequencies,
+        det_pupil,
+        wavelength_illumination / index_of_refraction_media,
+        z_position_list,
     )
 
-    H_re, H_im = optics.WOTF_3D_compute(
-        ill_pupil, ill_pupil, det_pupil, Hz_stack, G_fun_z_3D, Z_ps
+    (
+        real_potential_transfer_function,
+        imag_potential_transfer_function,
+    ) = optics.compute_weak_object_transfer_function_3D(
+        ill_pupil,
+        ill_pupil,
+        det_pupil,
+        propagation_kernel,
+        greens_function_z,
+        z_pixel_size,
     )
 
-    return H_re, H_im
+    return real_potential_transfer_function, imag_potential_transfer_function
 
 
-def visualize_TF(viewer, H_re, H_im, ZYX_scale):
+def visualize_transfer_function(
+    viewer,
+    real_potential_transfer_function,
+    imag_potential_transfer_function,
+    zyx_scale,
+):
     # TODO: consider generalizing w/ phase2Dto3D.visualize_TF
     arrays = [
-        (torch.real(H_im).numpy(), "Re(H_im)"),
-        (torch.imag(H_im).numpy(), "Im(H_im)"),
-        (torch.real(H_re).numpy(), "Re(H_re)"),
-        (torch.imag(H_re).numpy(), "Im(H_re)"),
+        (torch.real(imag_potential_transfer_function), "Re(imag pot. TF)"),
+        (torch.imag(imag_potential_transfer_function), "Im(imag pot. TF)"),
+        (torch.real(real_potential_transfer_function), "Re(real pot. TF)"),
+        (torch.imag(real_potential_transfer_function), "Im(real pot. TF)"),
     ]
 
     for array in arrays:
-        lim = 0.5 * np.max(np.abs(array[0]))
+        lim = 0.5 * torch.max(torch.abs(array[0]))
         viewer.add_image(
-            np.fft.ifftshift(array[0]),
+            torch.fft.ifftshift(array[0]).cpu().numpy(),
             name=array[1],
             colormap="bwr",
             contrast_limits=(-lim, lim),
-            scale=1 / ZYX_scale,
+            scale=1 / zyx_scale,
         )
     viewer.dims.order = (2, 0, 1)
 
 
-def apply_TF(ZYX_obj, H_re, Z_pad):
-    if ZYX_obj.shape[0] + 2 * Z_pad != H_re.shape[0]:
+def apply_transfer_function(
+    zyx_object, real_potential_transfer_function, z_padding
+):
+    if (
+        zyx_object.shape[0] + 2 * z_padding
+        != real_potential_transfer_function.shape[0]
+    ):
         raise ValueError(
             "Please check padding: ZYX_obj.shape[0] + 2 * Z_pad != H_re.shape[0]"
         )
-    if Z_pad > 0:
-        H_re = H_re[Z_pad:-Z_pad]
+    if z_padding > 0:
+        real_potential_transfer_function = real_potential_transfer_function[
+            z_padding:-z_padding
+        ]
 
     # Very simple simulation, consider adding noise and bkg knobs
 
     # TODO: extend to absorption, or restrict to just phase
-    ZYX_obj_hat = torch.fft.fftn(ZYX_obj)
-    ZYX_data = ZYX_obj_hat * H_re
-    data = torch.real(torch.fft.ifftn(ZYX_data))
+    zyx_obj_hat = torch.fft.fftn(zyx_object)
+    zyx_data = zyx_obj_hat * real_potential_transfer_function
+    data = torch.real(torch.fft.ifftn(zyx_data))
 
     data = torch.tensor(data + 10)  # Add a direct background
     return data
 
 
 # TODO CONSIDER MAKING THIS A PHASE-ONLY RECONSTRUCTION
-def apply_inv_TF(
-    ZYX_data,
-    H_re,
-    H_im,
-    Z_pad,
-    Z_ps,  # TODO: MOVE THIS PARAM TO OTF? (leaky param)
-    lamb_ill,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
+def apply_inverse_transfer_function(
+    zyx_data,
+    real_potential_transfer_function,
+    imag_potential_transfer_function,
+    z_padding,
+    z_pixel_size,  # TODO: MOVE THIS PARAM TO OTF? (leaky param)
+    illumination_wavelength,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
     absorption_ratio=0.0,
     method="Tikhonov",
     **kwargs
 ):
     # Handle padding
-    if Z_pad < 0:
+    if z_padding < 0:
         raise ("Z_pad cannot be negative.")
-    elif Z_pad == 0:
-        ZYX_pad = ZYX_data
-    elif Z_pad >= 0:
-        ZYX_pad = torch.nn.functional.pad(
-            ZYX_data,
-            (0, 0, 0, 0, Z_pad, Z_pad),
+    elif z_padding == 0:
+        zyx_pad = zyx_data
+    elif z_padding >= 0:
+        zyx_pad = torch.nn.functional.pad(
+            zyx_data,
+            (0, 0, 0, 0, z_padding, z_padding),
             mode="constant",
             value=0,
         )
-        if Z_pad < ZYX_data.shape[0]:
-            ZYX_pad[:Z_pad] = torch.flip(ZYX_data[:Z_pad], dims=[0])
-            ZYX_pad[-Z_pad:] = torch.flip(ZYX_data[-Z_pad:], dims=[0])
+        if z_padding < zyx_data.shape[0]:
+            zyx_pad[:z_padding] = torch.flip(zyx_data[:z_padding], dims=[0])
+            zyx_pad[-z_padding:] = torch.flip(zyx_data[-z_padding:], dims=[0])
         else:
             print(
                 "Z_pad is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
             )
 
     # Normalize
-    ZYX_normalized = util.inten_normalization_3D(ZYX_pad)
+    zyx = util.inten_normalization_3D(zyx_pad)
 
     # Prepare TF
-    H_eff = H_re + absorption_ratio * H_im
+    effective_transfer_function = (
+        real_potential_transfer_function
+        + absorption_ratio * imag_potential_transfer_function
+    )
 
     # Reconstruct
     if method == "Tikhonov":
-        f_real = util.Single_variable_Tikhonov_deconv_3D(
-            ZYX_normalized, H_eff, **kwargs
+        f_real = util.single_variable_tikhonov_deconvolution_3D(
+            zyx, effective_transfer_function, **kwargs
         )
 
     elif method == "TV":
-        f_real = util.Single_variable_ADMM_TV_deconv_3D(
-            ZYX_normalized, H_eff, **kwargs
+        f_real = util.single_variable_admm_tv_deconvolution_3D(
+            zyx, effective_transfer_function, **kwargs
         )
 
     # Unpad
-    if Z_pad != 0:
-        f_real = f_real[Z_pad:-Z_pad]
+    if z_padding != 0:
+        f_real = f_real[z_padding:-z_padding]
 
-    return f_real * Z_ps / 4 / np.pi * lamb_ill
+    return f_real * z_pixel_size / 4 / np.pi * illumination_wavelength

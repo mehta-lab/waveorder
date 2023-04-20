@@ -9,49 +9,67 @@ from waveorder import util
 from waveorder.models import phase2D_3D
 
 
-v = napari.Viewer()
+viewer = napari.Viewer()
 
 # 3D OTF parameters
 # all lengths must use consistent units e.g. um
-Z_ps = 0.25  # Z spacing
-Z_shape = 100  # Z simulation size
-tf_args = {
-    "YX_shape": (256, 256),  # simulation size
-    "YX_ps": 6.5 / 63,  # object-space YX pixel size
-    "Z_pos_list": (np.arange(Z_shape) - Z_shape // 2) * Z_ps,
-    "lamb_ill": 0.532,  # illumination wavelength
-    "n_media": 1.3,  # refractive index in the media
-    "NA_ill": 0.9,  # illumination NA
-    "NA_obj": 1.2,  # objective NA
+z_pixel_size = 0.25
+z_shape = 100
+args = {
+    "yx_shape": (256, 256),
+    "yx_pixel_size": 6.5 / 63,
+    "z_position_list": (np.arange(z_shape) - z_shape // 2) * z_pixel_size,
+    "wavelength_illumination": 0.532,
+    "index_of_refraction_media": 1.3,
+    "numerical_aperture_illumination": 0.9,
+    "numerical_aperture_detection": 1.2,
 }
 
 # Calculate and display OTF
-Hu, Hp = phase2D_3D.calc_TF(**tf_args)
+(
+    absorption_transfer_function,
+    phase_2D_to_3D_transfer_function,
+) = phase2D_3D.calculate_transfer_function(**args)
 
-ZYX_scale = np.array([Z_ps, tf_args["YX_ps"], tf_args["YX_ps"]])
-phase2D_3D.visualize_TF(v, Hu, Hp, ZYX_scale)
+zyx_scale = np.array(
+    [z_pixel_size, args["yx_pixel_size"], args["yx_pixel_size"]]
+)
+phase2D_3D.visualize_transfer_function(
+    viewer,
+    absorption_transfer_function,
+    phase_2D_to_3D_transfer_function,
+)
 input("Showing OTFs. Press <enter> to continue...")
-v.layers.select_all()
-v.layers.remove_selected()
+viewer.layers.select_all()
+viewer.layers.remove_selected()
 
 # Create a phantom
-n_sample = 1.50
-sphere, _, _ = util.gen_sphere_target(
-    (Z_shape,) + tf_args["YX_shape"],
-    tf_args["YX_ps"],
-    Z_ps,
+index_of_refraction_sample = 1.50
+sphere, _, _ = util.generate_sphere_target(
+    (z_shape,) + args["yx_shape"],
+    args["yx_pixel_size"],
+    z_pixel_size,
     radius=5,
-    blur_size=2 * tf_args["YX_ps"],
+    blur_size=2 * args["yx_pixel_size"],
 )
-ZYX_phase = (
-    sphere * (n_sample - tf_args["n_media"]) * Z_ps / tf_args["lamb_ill"]
+zyx_phase = (
+    sphere
+    * (index_of_refraction_sample - args["index_of_refraction_media"])
+    * z_pixel_size
+    / args["wavelength_illumination"]
 )  # phase in radians
 
 # Perform simulation, reconstruction, and display both
-ZYX_data = phase2D_3D.apply_TF(ZYX_phase, Hp)
-ZYX_recon = phase2D_3D.apply_inv_TF(ZYX_data, Hu, Hp)
+zyx_data = phase2D_3D.apply_transfer_function(
+    zyx_phase, phase_2D_to_3D_transfer_function
+)
+zyx_recon = phase2D_3D.apply_inverse_transfer_function(
+    zyx_data, absorption_transfer_function, phase_2D_to_3D_transfer_function
+)
 
-v.add_image(ZYX_phase.numpy(), name="Phantom", scale=ZYX_scale)
-v.add_image(ZYX_data.numpy(), name="Data", scale=ZYX_scale)
-v.add_image(ZYX_recon.numpy(), name="Reconstruction", scale=ZYX_scale[1:])
+viewer.add_image(zyx_phase.cpu().numpy(), name="Phantom", scale=zyx_scale)
+viewer.add_image(zyx_data.cpu().numpy(), name="Data", scale=zyx_scale)
+viewer.add_image(
+    zyx_recon.cpu().numpy(), name="Reconstruction", scale=zyx_scale[1:]
+)
 input("Showing object, data, and recon. Press <enter> to quit...")

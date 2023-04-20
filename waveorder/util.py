@@ -161,20 +161,20 @@ def genStarTarget_3D(
     return star, azimuth, inc_angle
 
 
-def gen_sphere_target(ZYX_shape, YX_ps, Z_ps, radius, blur_size=0.1):
+def generate_sphere_target(zyx_shape, yx_pixel_size, z_pixel_size, radius, blur_size=0.1):
     """
 
     generate 3D sphere target for simulation
 
     Parameters
     ----------
-        ZYX_shape   : tuple
+        zyx_shape   : tuple
                     shape of the computed 3D space with size of (Z, Y, X)
 
-        ps        : float
+        yx_pixel_size        : float
                     transverse pixel size of the image space
 
-        psz       : float
+        z_pixel_size       : float
                     axial step size of the image space
 
         radius    : float
@@ -197,10 +197,10 @@ def gen_sphere_target(ZYX_shape, YX_ps, Z_ps, radius, blur_size=0.1):
 
     """
 
-    Z, Y, X = ZYX_shape
-    x = (torch.arange(X) - X // 2) * YX_ps
-    y = (torch.arange(Y) - Y // 2) * YX_ps
-    z = (torch.arange(Z) - Z // 2) * Z_ps
+    Z, Y, X = zyx_shape
+    x = (torch.arange(X) - X // 2) * yx_pixel_size
+    y = (torch.arange(Y) - Y // 2) * yx_pixel_size
+    z = (torch.arange(Z) - Z // 2) * z_pixel_size
 
     zz, yy, xx = torch.meshgrid(z, y, x)
 
@@ -267,7 +267,7 @@ def gen_coordinate(img_dim, ps):
     return (xx, yy, fxx, fyy)
 
 
-def gen_radial_freq(img_dim, ps):
+def generate_radial_frequencies(img_dim, ps):
     fy = torch.fft.fftfreq(img_dim[0], ps)
     fx = torch.fft.fftfreq(img_dim[1], ps)
 
@@ -676,7 +676,7 @@ def inten_normalization_3D(img_stack):
     return img_norm_stack
 
 
-def Dual_variable_Tikhonov_deconv_2D(AHA, b_vec, determinant=None):
+def dual_variable_tikhonov_deconvolution_2D(AHA, b_vec, determinant=None):
     """
 
     2D Tikhonov deconvolution to solve for phase and absorption with weak object transfer function
@@ -716,7 +716,7 @@ def Dual_variable_Tikhonov_deconv_2D(AHA, b_vec, determinant=None):
     return mu_sample, phi_sample
 
 
-def Dual_variable_ADMM_TV_deconv_2D(
+def dual_variable_admm_tv_deconv_2D(
     AHA,
     b_vec,
     rho=1e-5,
@@ -808,7 +808,7 @@ def Dual_variable_ADMM_TV_deconv_2D(
             + rho * (np.conj(Dx) * v_para[2] + np.conj(Dy) * v_para[3]),
         ]
 
-        mu_sample, phi_sample = Dual_variable_Tikhonov_deconv_2D(
+        mu_sample, phi_sample = dual_variable_tikhonov_deconvolution_2D(
             AHA, b_vec_new, determinant=determinant
         )
 
@@ -830,7 +830,7 @@ def Dual_variable_ADMM_TV_deconv_2D(
     return mu_sample, phi_sample
 
 
-def Single_variable_Tikhonov_deconv_3D(
+def single_variable_tikhonov_deconvolution_3D(
     S0_stack,
     H_eff,
     reg_re=1e-4,
@@ -1101,7 +1101,7 @@ def Dual_variable_Tikhonov_deconv_3D(
     return f_real, f_imag
 
 
-def Single_variable_ADMM_TV_deconv_3D(
+def single_variable_admm_tv_deconvolution_3D(
     S0_stack,
     H_eff,
     rho=1e-5,
