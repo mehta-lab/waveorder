@@ -35,11 +35,11 @@ def test_pti_examples():
 
 @pytest.mark.skipif("napari" not in sys.modules, reason="requires napari")
 def test_phase_examples():
-    scripts = ["phase3Dto3D.py", "phase2Dto3D.py"]
+    scripts = ["phase3D_3D.py", "phase2D_3D.py"]
 
     for script in scripts:
         path = os.path.join(
-            os.getcwd(), "examples/PODT_phase_simulation/",script
+            os.getcwd(), "examples/PODT_phase_simulation/", script
         )
         # examples needs two <enters>s so send input="e\ne"
         completed_process = subprocess.run(

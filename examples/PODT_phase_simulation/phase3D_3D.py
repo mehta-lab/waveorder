@@ -6,7 +6,7 @@
 import napari
 import numpy as np
 from waveorder import util
-from waveorder.models import phase3Dto3D
+from waveorder.models import phase3D_3D
 
 
 v = napari.Viewer()
@@ -25,10 +25,10 @@ tf_args = {
 }
 
 # Calculate and display OTF
-H_re, H_im = phase3Dto3D.calc_TF(**tf_args)
+H_re, H_im = phase3D_3D.calc_TF(**tf_args)
 
 ZYX_scale = np.array([tf_args["Z_ps"], tf_args["YX_ps"], tf_args["YX_ps"]])
-phase3Dto3D.visualize_TF(v, H_re, H_im, ZYX_scale)
+phase3D_3D.visualize_TF(v, H_re, H_im, ZYX_scale)
 input("Showing OTFs. Press <enter> to continue...")
 v.layers.select_all()
 v.layers.remove_selected()
@@ -50,8 +50,8 @@ ZYX_phase = (
 )  # phase in radians
 
 # Perform simulation, reconstruction, and display both
-ZYX_data = phase3Dto3D.apply_TF(ZYX_phase, H_re, tf_args["Z_pad"])
-ZYX_recon = phase3Dto3D.apply_inv_TF(
+ZYX_data = phase3D_3D.apply_TF(ZYX_phase, H_re, tf_args["Z_pad"])
+ZYX_recon = phase3D_3D.apply_inv_TF(
     ZYX_data,
     H_re,
     H_im,
