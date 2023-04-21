@@ -6,7 +6,7 @@
 import napari
 import numpy as np
 from waveorder import util
-from waveorder.models import phase3D_3D
+from waveorder.models import phase_thick_3d
 
 
 viewer = napari.Viewer()
@@ -28,12 +28,12 @@ args = {
 (
     real_potential_transfer_function,
     imag_potential_transfer_function,
-) = phase3D_3D.calculate_transfer_function(**args)
+) = phase_thick_3d.calculate_transfer_function(**args)
 
 zyx_scale = np.array(
     [args["z_pixel_size"], args["yx_pixel_size"], args["yx_pixel_size"]]
 )
-phase3D_3D.visualize_transfer_function(
+phase_thick_3d.visualize_transfer_function(
     viewer,
     real_potential_transfer_function,
     imag_potential_transfer_function,
@@ -60,10 +60,10 @@ zyx_phase = (
 )  # phase in radians
 
 # Perform simulation, reconstruction, and display both
-zyx_data = phase3D_3D.apply_transfer_function(
+zyx_data = phase_thick_3d.apply_transfer_function(
     zyx_phase, real_potential_transfer_function, args["z_padding"]
 )
-zyx_recon = phase3D_3D.apply_inverse_transfer_function(
+zyx_recon = phase_thick_3d.apply_inverse_transfer_function(
     zyx_data,
     real_potential_transfer_function,
     imag_potential_transfer_function,

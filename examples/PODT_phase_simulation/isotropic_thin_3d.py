@@ -6,7 +6,7 @@
 import napari
 import numpy as np
 from waveorder import util
-from waveorder.models import phase2D_3D
+from waveorder.models import isotropic_thin_3d
 
 
 viewer = napari.Viewer()
@@ -29,12 +29,12 @@ args = {
 (
     absorption_transfer_function,
     phase_2D_to_3D_transfer_function,
-) = phase2D_3D.calculate_transfer_function(**args)
+) = isotropic_thin_3d.calculate_transfer_function(**args)
 
 zyx_scale = np.array(
     [z_pixel_size, args["yx_pixel_size"], args["yx_pixel_size"]]
 )
-phase2D_3D.visualize_transfer_function(
+isotropic_thin_3d.visualize_transfer_function(
     viewer,
     absorption_transfer_function,
     phase_2D_to_3D_transfer_function,
@@ -60,18 +60,21 @@ zyx_phase = (
 )  # phase in radians
 
 # Perform simulation, reconstruction, and display both
-zyx_data = phase2D_3D.apply_transfer_function(
+zyx_data = isotropic_thin_3d.apply_transfer_function(
     zyx_phase, phase_2D_to_3D_transfer_function
 )
 
-zyx_abs_recon, zyx_phase_recon = phase2D_3D.apply_inverse_transfer_function(
+(
+    zyx_absorption_recon,
+    zyx_phase_recon,
+) = isotropic_thin_3d.apply_inverse_transfer_function(
     zyx_data, absorption_transfer_function, phase_2D_to_3D_transfer_function
 )
 
 viewer.add_image(zyx_phase.cpu().numpy(), name="Phantom", scale=zyx_scale)
 viewer.add_image(zyx_data.cpu().numpy(), name="Data", scale=zyx_scale)
 viewer.add_image(
-    zyx_abs_recon.cpu().numpy(),
+    zyx_absorption_recon.cpu().numpy(),
     name="Reconstruction - absorption",
     scale=zyx_scale[1:],
 )

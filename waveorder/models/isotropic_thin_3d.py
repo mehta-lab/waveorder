@@ -106,7 +106,7 @@ def apply_inverse_transfer_function(
 
     zyx_data_hat = torch.fft.fft2(zyx_data_normalized, dim=(1, 2))
 
-    # TODO AHA and b_vec calculations should be moved into tikhonov calculations
+    # TODO AHA and b_vec calculations should be moved into tikhonov/tv calculations
     AHA = [
         torch.sum(torch.abs(absorption_2D_to_3D_transfer_function) ** 2, dim=0)
         + reg_u,
@@ -148,16 +148,16 @@ def apply_inverse_transfer_function(
 
     # Deconvolution with Tikhonov regularization
     if method == "Tikhonov":
-        mu_sample, phi_sample = util.dual_variable_tikhonov_deconvolution_2D(
+        absorption, phase = util.dual_variable_tikhonov_deconvolution_2D(
             AHA, b_vec
         )
 
     # ADMM deconvolution with anisotropic TV regularization
     elif method == "TV":
-        mu_sample, phi_sample = util.dual_variable_admm_tv_deconv_2D(
+        absorption, phase = util.dual_variable_admm_tv_deconv_2D(
             AHA, b_vec, **kwargs
         )
 
-    phi_sample -= torch.mean(phi_sample)
+    phase -= torch.mean(phase)
 
-    return mu_sample, phi_sample
+    return absorption, phase
