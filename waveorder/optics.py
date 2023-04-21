@@ -561,7 +561,7 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
         )
 
 
-def compute_weak_object_transfer_function_2D(
+def compute_weak_object_transfer_function_2d(
     illumination_pupil, detection_pupil
 ):
     """

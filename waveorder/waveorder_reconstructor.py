@@ -848,7 +848,7 @@ class waveorder_microscopy:
 
         if self.N_pattern == 1:
             for i in range(self.N_defocus):
-                Hu_temp, Hp_temp = compute_weak_object_transfer_function_2D(
+                Hu_temp, Hp_temp = compute_weak_object_transfer_function_2d(
                     torch.tensor(self.Source),
                     torch.tensor(self.Pupil_obj * self.Hz_det_2D[:, :, i]),
                 )
@@ -859,7 +859,7 @@ class waveorder_microscopy:
                 range(self.N_defocus), range(self.N_pattern)
             ):
                 idx = i * self.N_pattern + j
-                Hu_temp, Hp_temp = compute_weak_object_transfer_function_2D(
+                Hu_temp, Hp_temp = compute_weak_object_transfer_function_2d(
                     torch.tensor(self.Source[j]),
                     torch.tensor(self.Pupil_obj * self.Hz_det_2D[idx, :, :]),
                 )
@@ -2168,7 +2168,7 @@ class waveorder_microscopy:
                 ),
             ]
 
-        del_phi_s, del_phi_c = dual_variable_tikhonov_deconvolution_2D(
+        del_phi_s, del_phi_c = dual_variable_tikhonov_deconvolution_2d(
             AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id
         )
 
@@ -2276,14 +2276,14 @@ class waveorder_microscopy:
 
         if method == "Tikhonov":
             # Deconvolution with Tikhonov regularization
-            g_1c_temp, g_1s_temp = dual_variable_tikhonov_deconvolution_2D(
+            g_1c_temp, g_1s_temp = dual_variable_tikhonov_deconvolution_2d(
                 AHA, b_vec
             )
 
         elif method == "TV":
             # ADMM deconvolution with anisotropic TV regularization
 
-            g_1c_temp, g_1s_temp = dual_variable_admm_tv_deconv_2D(
+            g_1c_temp, g_1s_temp = dual_variable_admm_tv_deconv_2d(
                 AHA,
                 b_vec,
                 rho,
@@ -3401,7 +3401,7 @@ class waveorder_microscopy:
                 (
                     mu_sample_temp,
                     phi_sample_temp,
-                ) = dual_variable_tikhonov_deconvolution_2D(
+                ) = dual_variable_tikhonov_deconvolution_2d(
                     AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id
                 )
 
@@ -3411,7 +3411,7 @@ class waveorder_microscopy:
                 (
                     mu_sample_temp,
                     phi_sample_temp,
-                ) = dual_variable_admm_tv_deconv_2D(
+                ) = dual_variable_admm_tv_deconv_2d(
                     AHA,
                     b_vec,
                     rho,

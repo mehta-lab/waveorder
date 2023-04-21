@@ -34,37 +34,37 @@ def calculate_transfer_function(
     )
 
     zyx_shape = (len(z_position_list),) + yx_shape
-    absorption_2D_to_3D_transfer_function = torch.zeros(
+    absorption_2d_to_3d_transfer_function = torch.zeros(
         zyx_shape, dtype=torch.complex64
     )
-    phase_2D_to_3D_transfer_function = torch.zeros(
+    phase_2d_to_3d_transfer_function = torch.zeros(
         zyx_shape, dtype=torch.complex64
     )
     for z in range(len(z_position_list)):
         (
-            absorption_2D_to_3D_transfer_function[z],
-            phase_2D_to_3D_transfer_function[z],
-        ) = optics.compute_weak_object_transfer_function_2D(
+            absorption_2d_to_3d_transfer_function[z],
+            phase_2d_to_3d_transfer_function[z],
+        ) = optics.compute_weak_object_transfer_function_2d(
             illumination_pupil, detection_pupil * propagation_kernel[z]
         )
 
     return (
-        absorption_2D_to_3D_transfer_function,
-        phase_2D_to_3D_transfer_function,
+        absorption_2d_to_3d_transfer_function,
+        phase_2d_to_3d_transfer_function,
     )
 
 
 def visualize_transfer_function(
     viewer,
-    absorption_2D_to_3D_transfer_function,
-    phase_2D_to_3D_transfer_function,
+    absorption_2d_to_3d_transfer_function,
+    phase_2d_to_3d_transfer_function,
 ):
-    # TODO: consider generalizing w/ phase3Dto3D.visualize_TF
+    # TODO: consider generalizing w/ phase_thick_3d.visualize_transfer_function
     arrays = [
-        (torch.imag(absorption_2D_to_3D_transfer_function), "Im(absorb TF)"),
-        (torch.real(absorption_2D_to_3D_transfer_function), "Re(absorb TF)"),
-        (torch.imag(phase_2D_to_3D_transfer_function), "Im(phase TF)"),
-        (torch.real(phase_2D_to_3D_transfer_function), "Re(phase TF)"),
+        (torch.imag(absorption_2d_to_3d_transfer_function), "Im(absorb TF)"),
+        (torch.real(absorption_2d_to_3d_transfer_function), "Re(absorb TF)"),
+        (torch.imag(phase_2d_to_3d_transfer_function), "Im(phase TF)"),
+        (torch.real(phase_2d_to_3d_transfer_function), "Re(phase TF)"),
     ]
 
     for array in arrays:
@@ -82,24 +82,28 @@ def visualize_transfer_function(
 def apply_transfer_function(
     yx_absorption,
     yx_phase,
-    phase_2D_to_3D_transfer_function,
-    absorption_2D_to_3D_transfer_function,
+    phase_2d_to_3d_transfer_function,
+    absorption_2d_to_3d_transfer_function,
 ):
     # Very simple simulation, consider adding noise and bkg knobs
-    
+
     # simulate absorbing object
     yx_absorption_hat = torch.fft.fftn(yx_absorption)
     zyx_absorption_data_hat = yx_absorption_hat[None, ...] * torch.real(
-        absorption_2D_to_3D_transfer_function
+        absorption_2d_to_3d_transfer_function
     )
-    zyx_absorption_data = torch.real(torch.fft.ifftn(zyx_absorption_data_hat, dim=(1, 2)))
+    zyx_absorption_data = torch.real(
+        torch.fft.ifftn(zyx_absorption_data_hat, dim=(1, 2))
+    )
 
     # simulate phase object
     yx_phase_hat = torch.fft.fftn(yx_phase)
     zyx_phase_data_hat = yx_phase_hat[None, ...] * torch.real(
-        phase_2D_to_3D_transfer_function
+        phase_2d_to_3d_transfer_function
     )
-    zyx_phase_data = torch.real(torch.fft.ifftn(zyx_phase_data_hat, dim=(1, 2)))
+    zyx_phase_data = torch.real(
+        torch.fft.ifftn(zyx_phase_data_hat, dim=(1, 2))
+    )
 
     # sum and add background
     data = zyx_absorption_data + zyx_phase_data
@@ -109,8 +113,8 @@ def apply_transfer_function(
 
 def apply_inverse_transfer_function(
     zyx_data,
-    absorption_2D_to_3D_transfer_function,
-    phase_2D_to_3D_transfer_function,
+    absorption_2d_to_3d_transfer_function,
+    phase_2d_to_3d_transfer_function,
     method="Tikhonov",
     reg_u=1e-6,
     reg_p=1e-6,
@@ -125,23 +129,23 @@ def apply_inverse_transfer_function(
 
     # TODO AHA and b_vec calculations should be moved into tikhonov/tv calculations
     AHA = [
-        torch.sum(torch.abs(absorption_2D_to_3D_transfer_function) ** 2, dim=0)
+        torch.sum(torch.abs(absorption_2d_to_3d_transfer_function) ** 2, dim=0)
         + reg_u,
         torch.sum(
-            torch.conj(absorption_2D_to_3D_transfer_function)
-            * phase_2D_to_3D_transfer_function,
+            torch.conj(absorption_2d_to_3d_transfer_function)
+            * phase_2d_to_3d_transfer_function,
             dim=0,
         ),
         torch.sum(
             torch.conj(
-                phase_2D_to_3D_transfer_function,
+                phase_2d_to_3d_transfer_function,
             )
-            * absorption_2D_to_3D_transfer_function,
+            * absorption_2d_to_3d_transfer_function,
             dim=0,
         ),
         torch.sum(
             torch.abs(
-                phase_2D_to_3D_transfer_function,
+                phase_2d_to_3d_transfer_function,
             )
             ** 2,
             dim=0,
@@ -151,12 +155,12 @@ def apply_inverse_transfer_function(
 
     b_vec = [
         torch.sum(
-            torch.conj(absorption_2D_to_3D_transfer_function) * zyx_data_hat,
+            torch.conj(absorption_2d_to_3d_transfer_function) * zyx_data_hat,
             dim=0,
         ),
         torch.sum(
             torch.conj(
-                phase_2D_to_3D_transfer_function,
+                phase_2d_to_3d_transfer_function,
             )
             * zyx_data_hat,
             dim=0,
@@ -165,13 +169,13 @@ def apply_inverse_transfer_function(
 
     # Deconvolution with Tikhonov regularization
     if method == "Tikhonov":
-        absorption, phase = util.dual_variable_tikhonov_deconvolution_2D(
+        absorption, phase = util.dual_variable_tikhonov_deconvolution_2d(
             AHA, b_vec
         )
 
     # ADMM deconvolution with anisotropic TV regularization
     elif method == "TV":
-        absorption, phase = util.dual_variable_admm_tv_deconv_2D(
+        absorption, phase = util.dual_variable_admm_tv_deconv_2d(
             AHA, b_vec, **kwargs
         )
 

@@ -161,7 +161,9 @@ def genStarTarget_3D(
     return star, azimuth, inc_angle
 
 
-def generate_sphere_target(zyx_shape, yx_pixel_size, z_pixel_size, radius, blur_size=0.1):
+def generate_sphere_target(
+    zyx_shape, yx_pixel_size, z_pixel_size, radius, blur_size=0.1
+):
     """
 
     generate 3D sphere target for simulation
@@ -676,7 +678,7 @@ def inten_normalization_3D(img_stack):
     return img_norm_stack
 
 
-def dual_variable_tikhonov_deconvolution_2D(AHA, b_vec, determinant=None):
+def dual_variable_tikhonov_deconvolution_2d(AHA, b_vec, determinant=None):
     """
 
     2D Tikhonov deconvolution to solve for phase and absorption with weak object transfer function
@@ -716,7 +718,7 @@ def dual_variable_tikhonov_deconvolution_2D(AHA, b_vec, determinant=None):
     return mu_sample, phi_sample
 
 
-def dual_variable_admm_tv_deconv_2D(
+def dual_variable_admm_tv_deconv_2d(
     AHA,
     b_vec,
     rho=1e-5,
@@ -808,7 +810,7 @@ def dual_variable_admm_tv_deconv_2D(
             + rho * (np.conj(Dx) * v_para[2] + np.conj(Dy) * v_para[3]),
         ]
 
-        mu_sample, phi_sample = dual_variable_tikhonov_deconvolution_2D(
+        mu_sample, phi_sample = dual_variable_tikhonov_deconvolution_2d(
             AHA, b_vec_new, determinant=determinant
         )
 

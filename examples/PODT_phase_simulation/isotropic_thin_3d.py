@@ -27,8 +27,8 @@ args = {
 
 # Calculate and display OTF
 (
-    absorption_2D_to_3D_transfer_function,
-    phase_2D_to_3D_transfer_function,
+    absorption_2d_to_3d_transfer_function,
+    phase_2d_to_3d_transfer_function,
 ) = isotropic_thin_3d.calculate_transfer_function(**args)
 
 zyx_scale = np.array(
@@ -36,8 +36,8 @@ zyx_scale = np.array(
 )
 isotropic_thin_3d.visualize_transfer_function(
     viewer,
-    absorption_2D_to_3D_transfer_function,
-    phase_2D_to_3D_transfer_function,
+    absorption_2d_to_3d_transfer_function,
+    phase_2d_to_3d_transfer_function,
 )
 input("Showing OTFs. Press <enter> to continue...")
 viewer.layers.select_all()
@@ -65,8 +65,8 @@ yx_absorption = 0.99 * sphere[z_shape // 2]
 zyx_data = isotropic_thin_3d.apply_transfer_function(
     yx_absorption,
     yx_phase,
-    absorption_2D_to_3D_transfer_function,
-    phase_2D_to_3D_transfer_function,
+    absorption_2d_to_3d_transfer_function,
+    phase_2d_to_3d_transfer_function,
 )
 
 (
@@ -74,8 +74,8 @@ zyx_data = isotropic_thin_3d.apply_transfer_function(
     yx_phase_recon,
 ) = isotropic_thin_3d.apply_inverse_transfer_function(
     zyx_data,
-    absorption_2D_to_3D_transfer_function,
-    phase_2D_to_3D_transfer_function,
+    absorption_2d_to_3d_transfer_function,
+    phase_2d_to_3d_transfer_function,
 )
 
 arrays = [

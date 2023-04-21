@@ -51,7 +51,7 @@ def test_WOTF_2D():
     (
         absorption_transfer_function,
         phase_transfer_function,
-    ) = optics.compute_weak_object_transfer_function_2D(
+    ) = optics.compute_weak_object_transfer_function_2d(
         illumination_pupil, detection_pupil
     )
 
