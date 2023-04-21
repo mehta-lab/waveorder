@@ -82,7 +82,7 @@ def visualize_transfer_function(
             contrast_limits=(-lim, lim),
             scale=1 / zyx_scale,
         )
-    viewer.dims.order = (2, 0, 1)
+    viewer.dims.order = (0, 1, 2)
 
 
 def apply_transfer_function(

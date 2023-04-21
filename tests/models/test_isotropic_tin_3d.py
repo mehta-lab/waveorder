@@ -1,8 +1,8 @@
-from waveorder.models import phase2D_3D
+from waveorder.models import isotropic_thin_3d
 
 
-def test_calc_TF():
-    Hu, Hp = phase2D_3D.calculate_transfer_function(
+def test_calculate_transfer_function():
+    Hu, Hp = isotropic_thin_3d.calculate_transfer_function(
         yx_shape=(100, 101),
         yx_pixel_size=6.5 / 40,
         z_position_list=[-1, 0, 1],

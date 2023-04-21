@@ -35,7 +35,7 @@ def test_pti_examples():
 
 @pytest.mark.skipif("napari" not in sys.modules, reason="requires napari")
 def test_phase_examples():
-    scripts = ["phase3D_3D.py", "phase2D_3D.py"]
+    scripts = ["isotropic_thin_3d.py", "phase_thick_3d.py"]
 
     for script in scripts:
         path = os.path.join(
