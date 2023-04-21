@@ -1,13 +1,28 @@
 import torch
 from waveorder import stokes
+from waveorder import background_estimator
 
 
 def calculate_transfer_function(
     swing,
     polarized_illumination_scheme,
-    cyx_background_data=None,  # if not None, apply this as background correction
-    czyx_data_for_background_estimate=None,  # if not None, average over z, estimate background, and remove it
+    no_sample_intensities=None,  # if not None, apply this as background correction
+    with_sample_intensities=None,  # if not None, estimate background, and remove it
 ):
+    # Average `with_sample_intensities` over Z
+    if with_sample_intensities.ndim == 4:
+        with_sample_intensities = torch.mean(with_sample_intensities, dim=1)
+
+    # Check input shapes
+    if (
+        no_sample_intensities is not None
+        and with_sample_intensities is not None
+    ):
+        if no_sample_intensities.shape != with_sample_intensities.shape:
+            raise ValueError(
+                "no_sample_intensities.shape is not compatible with_sample_intensities.shape"
+            )
+
     # Calculate A matrix
     intensity_to_stokes_matrix = stokes.calculate_intensity_to_stokes_matrix(
         swing, scheme=polarized_illumination_scheme
@@ -17,22 +32,47 @@ def calculate_transfer_function(
     inverse_background_mueller = torch.eye(4)
 
     # Calculate measured background correction
-    if cyx_background_data is not None:
-        measured_background_stokes = stokes.mmul(
-            intensity_to_stokes_matrix, cyx_background_data
+    if no_sample_intensities is not None:
+        measured_no_sample_stokes = stokes.mmul(
+            intensity_to_stokes_matrix, no_sample_intensities
         )
         inverse_background_mueller = stokes.mueller_from_stokes(
-            *measured_background_stokes, model="adr", direction="inverse"
+            *measured_no_sample_stokes, model="adr", direction="inverse"
         )
 
-    # TODO: Implement estimated background correction
     # Calculate estimated background correction
-    # if czyx_data_for_background_estimate is not None:
-    #    cyx_data = torch.mean(czyx_data_for_background_estimate, dim=1)
-    #    measured_stokes = stokes.mmul(intensity_to_stokes_matrix, cyx_data)
-    #   inverse_background_mueller = stokes.mueller_from_stokes(
-    #       *measured_stokes, model="adr", direction="inverse"
-    #   )
+    if with_sample_intensities is not None:
+        measured_with_sample_stokes = stokes.mmul(
+            intensity_to_stokes_matrix, with_sample_intensities
+        )
+
+        # Apply measured background correction to raw data
+        # If no measured background correction is given, this applies the identity
+        background_corrected_stokes = stokes.mmul(
+            inverse_background_mueller, measured_with_sample_stokes
+        )
+
+        # Estimate additional background
+        estimator = background_estimator.BackgroundEstimator2D()
+        for stokes_index in range(background_corrected_stokes.shape[0]):
+            background_corrected_stokes[
+                stokes_index
+            ] -= estimator.get_background(
+                background_corrected_stokes[stokes_index],
+                order=2,
+                normalize=False,
+            )
+
+        # Calculate the "estimated-from-data" mueller matrix
+        estimated_inverse_background_mueller = stokes.mueller_from_stokes(
+            *background_corrected_stokes, model="adr", direction="inverse"
+        )
+
+        # Multiply the "estimated-from-data" and the "estimated-from-no-data"
+        # Mueller matrices together. The resulting matrix is a one-step correction.
+        inverse_background_mueller = stokes.mmul(
+            estimated_inverse_background_mueller, inverse_background_mueller
+        )
 
     return intensity_to_stokes_matrix, inverse_background_mueller
 

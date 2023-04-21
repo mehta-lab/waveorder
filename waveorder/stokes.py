@@ -331,15 +331,15 @@ def mueller_from_stokes(
     s2,
     s3,
     input="cpl",
-    model="ar",
+    model="adr",
     direction="inverse",
 ):
     """
     When light with input polarization state (default = circularly polarized
     light = "cpl") has passed through a polarization element of a specific type
-    (default = attenuating retarder = "ar"), its Stokes parameters can be
-    passed to this function to estimate the complete Mueller matrix of the
-    polarization element.
+    (default = attenuating depolarizing retarder = "adr"), its Stokes parameters
+    can be passed to this function to estimate the complete Mueller matrix of
+    the polarization element.
 
     Parameters
     ----------
@@ -349,7 +349,7 @@ def mueller_from_stokes(
     input : "cpl"
         Input polarization state
 
-    model : "ar"
+    model : "adr"
         The type of polarization element
 
     direction : "forward" or "inverse"
@@ -363,8 +363,8 @@ def mueller_from_stokes(
     if input != "cpl":
         raise NotImplementedError("input != cpl")
 
-    if model != "ar":
-        raise NotImplementedError("input != ar")
+    if model != "adr":
+        raise NotImplementedError("input != adr")
 
     if not (direction == "forward" or direction == "inverse"):
         raise NotImplementedError("direction must be `forward` or `inverse`")
@@ -418,7 +418,6 @@ def mmul(matrix, vector):
     -------
     array_like, shape = (N, ...)
     """
-    print("TEST", matrix.shape[1], vector.shape[0])
     if matrix.shape[1] != vector.shape[0]:
         raise ValueError("matrix.shape[1] is not equal to vector.shape[0]")
 
