@@ -27,7 +27,7 @@ args = {
 
 # Calculate and display OTF
 (
-    absorption_transfer_function,
+    absorption_2D_to_3D_transfer_function,
     phase_2D_to_3D_transfer_function,
 ) = isotropic_thin_3d.calculate_transfer_function(**args)
 
@@ -36,7 +36,7 @@ zyx_scale = np.array(
 )
 isotropic_thin_3d.visualize_transfer_function(
     viewer,
-    absorption_transfer_function,
+    absorption_2D_to_3D_transfer_function,
     phase_2D_to_3D_transfer_function,
 )
 input("Showing OTFs. Press <enter> to continue...")
@@ -52,35 +52,40 @@ sphere, _, _ = util.generate_sphere_target(
     radius=5,
     blur_size=2 * args["yx_pixel_size"],
 )
-zyx_phase = (
-    sphere
+yx_phase = (
+    sphere[z_shape // 2]
     * (index_of_refraction_sample - args["index_of_refraction_media"])
     * z_pixel_size
     / args["wavelength_illumination"]
 )  # phase in radians
 
+yx_absorption = 0.99 * sphere[z_shape // 2]
+
 # Perform simulation, reconstruction, and display both
 zyx_data = isotropic_thin_3d.apply_transfer_function(
-    zyx_phase, phase_2D_to_3D_transfer_function
+    yx_absorption,
+    yx_phase,
+    absorption_2D_to_3D_transfer_function,
+    phase_2D_to_3D_transfer_function,
 )
 
 (
-    zyx_absorption_recon,
-    zyx_phase_recon,
+    yx_absorption_recon,
+    yx_phase_recon,
 ) = isotropic_thin_3d.apply_inverse_transfer_function(
-    zyx_data, absorption_transfer_function, phase_2D_to_3D_transfer_function
+    zyx_data,
+    absorption_2D_to_3D_transfer_function,
+    phase_2D_to_3D_transfer_function,
 )
 
-viewer.add_image(zyx_phase.cpu().numpy(), name="Phantom", scale=zyx_scale)
-viewer.add_image(zyx_data.cpu().numpy(), name="Data", scale=zyx_scale)
-viewer.add_image(
-    zyx_absorption_recon.cpu().numpy(),
-    name="Reconstruction - absorption",
-    scale=zyx_scale[1:],
-)
-viewer.add_image(
-    zyx_phase_recon.cpu().numpy(),
-    name="Reconstruction - phase",
-    scale=zyx_scale[1:],
-)
+arrays = [
+    (yx_absorption, "Phantom - absorption"),
+    (yx_phase, "Phantom - phase"),
+    (zyx_data, "Data"),
+    (yx_absorption_recon, "Reconstruction - absorption"),
+    (yx_phase_recon, "Reconstruction - phase"),
+]
+
+for array in arrays:
+    viewer.add_image(array[0].cpu().numpy(), name=array[1])
 input("Showing object, data, and recon. Press <enter> to quit...")

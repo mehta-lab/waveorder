@@ -79,13 +79,30 @@ def visualize_transfer_function(
     viewer.dims.order = (0, 1, 2)
 
 
-def apply_transfer_function(zyx_object, phase_2D_to_3D_transfer_function):
+def apply_transfer_function(
+    yx_absorption,
+    yx_phase,
+    phase_2D_to_3D_transfer_function,
+    absorption_2D_to_3D_transfer_function,
+):
     # Very simple simulation, consider adding noise and bkg knobs
-    # TODO: extend to absorption, or restrict to just phase
-    zyx_object_hat = torch.fft.fftn(zyx_object, dim=(1, 2))
-    zyx_data = zyx_object_hat * torch.real(phase_2D_to_3D_transfer_function)
-    data = torch.real(torch.fft.ifftn(zyx_data, dim=(1, 2)))
+    
+    # simulate absorbing object
+    yx_absorption_hat = torch.fft.fftn(yx_absorption)
+    zyx_absorption_data_hat = yx_absorption_hat[None, ...] * torch.real(
+        absorption_2D_to_3D_transfer_function
+    )
+    zyx_absorption_data = torch.real(torch.fft.ifftn(zyx_absorption_data_hat, dim=(1, 2)))
 
+    # simulate phase object
+    yx_phase_hat = torch.fft.fftn(yx_phase)
+    zyx_phase_data_hat = yx_phase_hat[None, ...] * torch.real(
+        phase_2D_to_3D_transfer_function
+    )
+    zyx_phase_data = torch.real(torch.fft.ifftn(zyx_phase_data_hat, dim=(1, 2)))
+
+    # sum and add background
+    data = zyx_absorption_data + zyx_phase_data
     data = torch.tensor(data + 10)  # Add a direct background
     return data
 
