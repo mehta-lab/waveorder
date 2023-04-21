@@ -7,8 +7,8 @@ This module collects Stokes- and Mueller-related calculations.
 The functions are roughly organized into groups:
 
 1) Polarimeter instrument matrix functions
-S2I = S2I_matrix(swing, scheme="5-State")
-I2S = I2S_matrix(swing, scheme="5-State")
+S2I = calculate_stokes_to_intensity_matrix(swing, scheme="5-State")
+I2S = calculate_intensity_to_stokes_matrix(swing, scheme="5-State")
 
 2) Forward functions (Stokes parameters following a optical element)
 s0, s1, s2, s3 = stokes_after_adr(retardance, orientation, transmittance, depolarization, input="cpl")
@@ -36,16 +36,17 @@ For example, the following usage modes of stokes_after_adr are valid:
 
 >>> stokes_after_adr(1, 1, 1, 1)
 
->>> retardance = np.ones((2,3,4,5))
->>> orientation = np.ones((2,3,4,5))
->>> transmittance = np.ones((2,3,4,5))
->>> depolarization = np.ones((2,3,4,5))
+>>> retardance = torch.ones((2,3,4,5))
+>>> orientation = torch.ones((2,3,4,5))
+>>> transmittance = torch.ones((2,3,4,5))
+>>> depolarization = torch.ones((2,3,4,5))
 >>> stokes_after_adr(retardance, orientation, transmittance, depolarization)
 
->>> adr_params = np.ones((4,2,3,4,5)) # first axis contains the Stokes indices
+>>> adr_params = torch.ones((4,2,3,4,5)) # first axis contains the Stokes indices
 >>> stokes_after_adr(*adr_params) # * expands along the first axis
 
 """
+import torch
 import numpy as np
 
 
@@ -65,7 +66,7 @@ def calculate_stokes_to_intensity_matrix(swing, scheme="5-State"):
 
     Returns
     -------
-    NDarray
+    torch.tensor
         Returns different shapes depending on the scheme
 
         S2I.shape = (5, 4) for scheme = "5-State"
@@ -73,18 +74,19 @@ def calculate_stokes_to_intensity_matrix(swing, scheme="5-State"):
     """
     chi = 2 * np.pi * swing
     if scheme == "5-State":
-        stokes_to_intensity_matrix = np.array(
+        stokes_to_intensity_matrix = torch.tensor(
             [
                 [1, 0, 0, -1],
                 [1, np.sin(chi), 0, -np.cos(chi)],
                 [1, 0, np.sin(chi), -np.cos(chi)],
                 [1, -np.sin(chi), 0, -np.cos(chi)],
                 [1, 0, -np.sin(chi), -np.cos(chi)],
-            ]
+            ],
+            dtype=torch.float32,
         )
 
     elif scheme == "4-State":
-        stokes_to_intensity_matrix = np.array(
+        stokes_to_intensity_matrix = torch.tensor(
             [
                 [1, 0, 0, -1],
                 [1, np.sin(chi), 0, -np.cos(chi)],
@@ -100,7 +102,8 @@ def calculate_stokes_to_intensity_matrix(swing, scheme="5-State"):
                     -np.sqrt(3) * np.cos(chi / 2) * np.sin(chi / 2),
                     -np.cos(chi),
                 ],
-            ]
+            ],
+            dtype=torch.float32,
         )
     else:
         raise ValueError(
@@ -124,13 +127,13 @@ def calculate_intensity_to_stokes_matrix(swing, scheme="5-State"):
 
     Returns
     -------
-    NDarray
+    torch.tensor
         Returns different shapes depending on the scheme
 
         I2S.shape = (5, 4) for scheme = "5-State"
         I2S.shape = (4, 4) for scheme = "4-State"
     """
-    return np.linalg.pinv(
+    return torch.linalg.pinv(
         calculate_stokes_to_intensity_matrix(swing, scheme=scheme)
     )
 
@@ -169,23 +172,23 @@ def stokes_after_adr(
 
     """
     if input != "cpl":
-        NotImplementedError("input != cpl")
+        raise NotImplementedError("input != cpl")
 
     # without copying transmittance, downstream changes to s0 will affect transmittance
-    s0 = np.array(transmittance).copy()
+    s0 = torch.tensor(transmittance).clone()
     s1 = (
         transmittance
         * depolarization
-        * np.sin(retardance)
-        * np.sin(2 * orientation)
+        * torch.sin(retardance)
+        * torch.sin(2 * orientation)
     )
     s2 = (
         transmittance
         * depolarization
-        * -np.sin(retardance)
-        * np.cos(2 * orientation)
+        * -torch.sin(retardance)
+        * torch.cos(2 * orientation)
     )
-    s3 = transmittance * depolarization * np.cos(retardance)
+    s3 = transmittance * depolarization * torch.cos(retardance)
     return s0, s1, s2, s3
 
 
@@ -217,12 +220,12 @@ def stokes012_after_ar(retardance, orientation, transmittance, input="cpl"):
 
     """
     if input != "cpl":
-        NotImplementedError("input != cpl")
+        raise NotImplementedError("input != cpl")
 
     # without copying transmittance, downstream changes to s0 will affect transmittance
-    s0 = np.array(transmittance).copy()
-    s1 = transmittance * np.sin(retardance) * np.sin(2 * orientation)
-    s2 = transmittance * -np.sin(retardance) * np.cos(2 * orientation)
+    s0 = torch.tensor(transmittance).clone()
+    s1 = transmittance * torch.sin(retardance) * torch.sin(2 * orientation)
+    s2 = transmittance * -torch.sin(retardance) * torch.cos(2 * orientation)
     return s0, s1, s2
 
 
@@ -244,7 +247,7 @@ def _s12_to_orientation(s1, s2):
     array_like
         Slow-axis orientation with 0 <= orientation < pi.
     """
-    return (np.arctan2(s1, -s2) % (2 * np.pi)) / 2
+    return (torch.arctan2(s1, -s2) % (2 * np.pi)) / 2
 
 
 def estimate_adr_from_stokes(s0, s1, s2, s3, input="cpl"):
@@ -279,13 +282,13 @@ def estimate_adr_from_stokes(s0, s1, s2, s3, input="cpl"):
         depolarization: depolarization of adr, 0 <= depolarization <= 1
     """
     if input != "cpl":
-        NotImplementedError("input != cpl")
+        raise NotImplementedError("input != cpl")
 
     len_pol = (s1**2 + s2**2 + s3**2) ** 0.5
-    retardance = np.arcsin(((s1**2 + s2**2) ** 0.5) / len_pol)
+    retardance = torch.arcsin(((s1**2 + s2**2) ** 0.5) / len_pol)
     orientation = _s12_to_orientation(s1, s2)
     # without copying s0, downstream changes to transmittance will affect s0
-    transmittance = np.array(s0).copy()
+    transmittance = torch.tensor(s0).clone()
     depolarization = len_pol / s0
     return retardance, orientation, transmittance, depolarization
 
@@ -313,12 +316,12 @@ def estimate_ar_from_stokes012(s0, s1, s2, input="cpl"):
         transmittance: transmittance of ar, 0 <= transmittance <= 1
     """
     if input != "cpl":
-        NotImplementedError("input != cpl")
+        raise NotImplementedError("input != cpl")
 
-    retardance = np.arcsin(((s1**2 + s2**2) ** 0.5) / s0)
+    retardance = torch.arcsin(((s1**2 + s2**2) ** 0.5) / s0)
     orientation = _s12_to_orientation(s1, s2)
     # without copying s0, downstream changes to transmittance will affect s0
-    transmittance = np.array(s0).copy()
+    transmittance = torch.tensor(s0).clone()
     return retardance, orientation, transmittance
 
 
@@ -358,16 +361,16 @@ def mueller_from_stokes(
         Mueller matrix
     """
     if input != "cpl":
-        NotImplementedError("input != cpl")
+        raise NotImplementedError("input != cpl")
 
     if model != "ar":
-        NotImplementedError("input != ar")
+        raise NotImplementedError("input != ar")
 
     if not (direction == "forward" or direction == "inverse"):
-        NotImplementedError("direction must be `forward` or `inverse`")
+        raise NotImplementedError("direction must be `forward` or `inverse`")
 
     if direction == "forward":
-        M = np.zeros((4, 4) + np.array(s0).shape)
+        M = torch.zeros((4, 4) + torch.tensor(s0).shape)
         denom = s1**2 + s2**2
         M[0, 0] = s0
         M[1, 1] = (s0 * s2**2 + s1**2 * s3) / denom
@@ -395,9 +398,9 @@ def mueller_from_stokes(
         M = mueller_from_stokes(
             s0, s1, s2, s3, input=input, model=model, direction="forward"
         )
-        M_flip = np.moveaxis(M, (0, 1), (-2, -1))
-        M_inv_flip = np.linalg.inv(M_flip)  # applied over the last two axes
-        M_inv = np.moveaxis(M_inv_flip, (-2, -1), (0, 1))
+        M_flip = torch.moveaxis(M, (0, 1), (-2, -1))
+        M_inv_flip = torch.linalg.inv(M_flip)  # applied over the last two axes
+        M_inv = torch.moveaxis(M_inv_flip, (-2, -1), (0, 1))
         return M_inv
 
 
@@ -415,7 +418,8 @@ def mmul(matrix, vector):
     -------
     array_like, shape = (N, ...)
     """
+    print("TEST", matrix.shape[1], vector.shape[0])
     if matrix.shape[1] != vector.shape[0]:
-        ValueError("matrix.shape[1] is not equal to vector.shape[0]")
+        raise ValueError("matrix.shape[1] is not equal to vector.shape[0]")
 
-    return np.einsum("NM...,M...->N...", matrix, vector)
+    return torch.einsum("NM...,M...->N...", matrix, vector)
