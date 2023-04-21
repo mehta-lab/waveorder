@@ -1,0 +1,1 @@
+This folder of `maintainance` examples consists of a set of simulations that will run as is. Any of the files in these folders can be run with `python <script-name>.py`, and these files are included in `waveorder`'s automated testing.

@@ -6,7 +6,7 @@ import sys
 
 def _run_scripts(scripts):
     for script in scripts:
-        path = os.path.join(os.getcwd(), "examples/", script)
+        path = os.path.join(os.getcwd(), "examples/maintenance/", script)
         completed_process = subprocess.run(["python", path])
         assert completed_process.returncode == 0
 
@@ -35,12 +35,14 @@ def test_pti_examples():
 
 @pytest.mark.skipif("napari" not in sys.modules, reason="requires napari")
 def test_phase_examples():
-    scripts = ["isotropic_thin_3d.py", "phase_thick_3d.py"]
+    scripts = [
+        "isotropic_thin_3d.py",
+        "phase_thick_3d.py",
+        "inplane_anisotropic_thin_pol3D.py",
+    ]
 
     for script in scripts:
-        path = os.path.join(
-            os.getcwd(), "examples/PODT_phase_simulation/", script
-        )
+        path = os.path.join(os.getcwd(), "examples/models/", script)
         # examples needs two <enters>s so send input="e\ne"
         completed_process = subprocess.run(
             ["python", path], input="e\ne", encoding="ascii"

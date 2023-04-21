@@ -59,7 +59,6 @@ def calculate_transfer_function(
                 stokes_index
             ] -= estimator.get_background(
                 background_corrected_stokes[stokes_index],
-                order=2,
                 normalize=False,
             )
 
