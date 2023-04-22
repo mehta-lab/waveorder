@@ -52,10 +52,10 @@ def generate_star_target(yx_shape, blur_px=2, margin=60):
     # Construct Siemens star
     Y, X = yx_shape
 
-    x = torch.arange(X) - X // 2
-    y = torch.arange(Y) - Y // 2
+    x = np.arange(X) - X // 2
+    y = np.arange(Y) - Y // 2
 
-    xx, yy = torch.meshgrid(x, y)
+    xx, yy = torch.tensor(np.meshgrid(x, y))
 
     rho = torch.sqrt(xx**2 + yy**2)
     theta = torch.arctan2(yy, xx)
