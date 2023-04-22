@@ -4,4 +4,4 @@ The `models/` folder demonstrates the latest functionality of `waveorder`. These
 
 The `maintenance/` folder demonstrates the functionality of `waveorder` that we plan to move to `models/`. These scripts can be run as is, and they are being maintained with tests.
 
-The `legacy/` folder consists of examples that demonstrate reconstruction with real data. These examples require access to the complete datasets, so they are not being actively maintained and serve primarily as documentation.
+The `documentation/` folder consists of examples that demonstrate reconstruction with real data. These examples require access to the complete datasets, so they are not being actively maintained and serve primarily as documentation.

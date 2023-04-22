@@ -1,1 +1,0 @@
-This folder of `legacy` examples consists of a set of data-dependent reconstructions in `/experimental_reconstructions/`. These files serve as a form of documentation for the types of reconstructions that `waveorder` can perform.
