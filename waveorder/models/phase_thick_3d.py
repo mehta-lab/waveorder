@@ -3,12 +3,38 @@ import torch
 from waveorder import optics, util
 
 
+def generate_test_phantom(
+    zyx_shape,
+    yx_pixel_size,
+    z_pixel_size,
+    wavelength_illumination,
+    index_of_refraction_media,
+    index_of_refraction_sample,
+    sphere_radius,
+):
+    sphere, _, _ = util.generate_sphere_target(
+        zyx_shape,
+        yx_pixel_size,
+        z_pixel_size,
+        radius=sphere_radius,
+        blur_size=2 * yx_pixel_size,
+    )
+    zyx_phase = (
+        sphere
+        * (index_of_refraction_sample - index_of_refraction_media)
+        * z_pixel_size
+        / wavelength_illumination
+    )  # phase in radians
+
+    return zyx_phase
+
+
 def calculate_transfer_function(
     zyx_shape,
     yx_pixel_size,
     z_pixel_size,
-    z_padding,
     wavelength_illumination,
+    z_padding,
     index_of_refraction_media,
     numerical_aperture_illumination,
     numerical_aperture_detection,

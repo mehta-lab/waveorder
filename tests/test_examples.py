@@ -38,7 +38,7 @@ def test_phase_examples():
     scripts = [
         "isotropic_thin_3d.py",
         "phase_thick_3d.py",
-        "inplane_anisotropic_thin_pol3D.py",
+        "inplane_anisotropic_thin_pol3d.py",
     ]
 
     for script in scripts:
