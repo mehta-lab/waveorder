@@ -31,7 +31,9 @@ chi = 0.03 * 2 * np.pi  # swing of Polscope analyzer
 
 # Sample : star with uniform phase, uniform retardance, and radial orientation
 # generate Siemens star pattern
-star, theta, _ = wo.genStarTarget(N, M)
+star, theta, _ = wo.generate_star_target((N, M))
+star = star.numpy()
+theta = theta.numpy()
 wo.plot_multicolumn(np.array([star, theta]), num_col=2, size=5)
 
 # Assign uniform phase, uniform retardance, and radial slow axes to the star pattern

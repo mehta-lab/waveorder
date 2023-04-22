@@ -27,7 +27,7 @@ def generate_star_target(yx_shape, blur_px=2, margin=60):
 
     Parameters
     ----------
-        yx_shape  : int
+        yx_shape  : tuple
                   size of the simulated image in (Y, X)
 
         blur_px : float
