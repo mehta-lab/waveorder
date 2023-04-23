@@ -60,7 +60,7 @@ def calculate_transfer_function(
         torch.tensor(z_position_list),
     )
 
-    zyx_shape = (len(z_position_list),) + yx_shape
+    zyx_shape = (len(z_position_list),) + tuple(yx_shape)
     absorption_2d_to_3d_transfer_function = torch.zeros(
         zyx_shape, dtype=torch.complex64
     )
