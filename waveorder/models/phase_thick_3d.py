@@ -137,11 +137,10 @@ def apply_transfer_function(
     return data
 
 
-# TODO CONSIDER MAKING THIS A PHASE-ONLY RECONSTRUCTION
 def apply_inverse_transfer_function(
     zyx_data,
     real_potential_transfer_function,
-    imag_potential_transfer_function,
+    imaginary_potential_transfer_function,
     z_padding,
     z_pixel_size,  # TODO: MOVE THIS PARAM TO OTF? (leaky param)
     illumination_wavelength,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
@@ -151,7 +150,7 @@ def apply_inverse_transfer_function(
 ):
     # Handle padding
     if z_padding < 0:
-        raise ("Z_pad cannot be negative.")
+        raise ("z_pading cannot be negative.")
     elif z_padding == 0:
         zyx_pad = zyx_data
     elif z_padding >= 0:
@@ -166,7 +165,7 @@ def apply_inverse_transfer_function(
             zyx_pad[-z_padding:] = torch.flip(zyx_data[-z_padding:], dims=[0])
         else:
             print(
-                "Z_pad is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
+                "z_padding is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
             )
 
     # Normalize
@@ -175,7 +174,7 @@ def apply_inverse_transfer_function(
     # Prepare TF
     effective_transfer_function = (
         real_potential_transfer_function
-        + absorption_ratio * imag_potential_transfer_function
+        + absorption_ratio * imaginary_potential_transfer_function
     )
 
     # Reconstruct

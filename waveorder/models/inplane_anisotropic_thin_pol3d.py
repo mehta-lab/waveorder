@@ -50,8 +50,12 @@ def apply_transfer_function(
 def apply_inverse_transfer_function(
     czyx_data,
     intensity_to_stokes_matrix,
+    illumination_wavelength,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
     cyx_no_sample_data=None,  # if not None, use this data for background correction
+    project_stokes_to_2d=False,
     remove_estimated_background=False,  # if True estimate background from czyx_data and remove it
+    orientation_flip=False,  # TODO implement
+    orientation_rotate=False,  # TODO implement
 ):
     data_stokes = stokes.mmul(intensity_to_stokes_matrix, czyx_data)
 
@@ -83,4 +87,17 @@ def apply_inverse_transfer_function(
                 normalize=False,
             )
 
-    return stokes.estimate_adr_from_stokes(*background_corrected_stokes)
+    # Project to 2D (typically for SNR reasons)
+    if project_stokes_to_2d:
+        background_corrected_stokes = torch.mean(
+            background_corrected_stokes, dim=1
+        )[:, None, ...]
+
+    adr_parameters = stokes.estimate_adr_from_stokes(
+        *background_corrected_stokes
+    )
+
+    # Return retardance in distance units (matching illumination_wavelength)
+    retardance = adr_parameters[0] * illumination_wavelength / (2 * np.pi)
+
+    return retardance, adr_parameters[1], adr_parameters[2], adr_parameters[3]
