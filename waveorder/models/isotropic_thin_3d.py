@@ -3,6 +3,33 @@ import numpy as np
 from waveorder import optics, util
 
 
+def generate_test_phantom(
+    yx_shape,
+    yx_pixel_size,
+    wavelength_illumination,
+    index_of_refraction_media,
+    index_of_refraction_sample,
+    sphere_radius,
+):
+    sphere, _, _ = util.generate_sphere_target(
+        (3,) + yx_shape,
+        yx_pixel_size,
+        z_pixel_size=1.0,
+        radius=sphere_radius,
+        blur_size=2 * yx_pixel_size,
+    )
+    yx_phase = (
+        sphere[1]
+        * (index_of_refraction_sample - index_of_refraction_media)
+        * 0.1
+        / wavelength_illumination
+    )  # phase in radians
+
+    yx_absorption = 0.99 * sphere[1]
+
+    return yx_absorption, yx_phase
+
+
 def calculate_transfer_function(
     yx_shape,
     yx_pixel_size,
@@ -33,7 +60,7 @@ def calculate_transfer_function(
         torch.tensor(z_position_list),
     )
 
-    zyx_shape = (len(z_position_list),) + yx_shape
+    zyx_shape = (len(z_position_list),) + tuple(yx_shape)
     absorption_2d_to_3d_transfer_function = torch.zeros(
         zyx_shape, dtype=torch.complex64
     )

@@ -80,7 +80,11 @@ if sample_type == "3D":
     azimuth = np.round(azimuth / np.pi / 2 * 16) / 16 * np.pi * 2
 elif sample_type == "2D":
     ## 2D spoke pattern, azimuth aligned with spokes, and the inclination set to 60 degrees ##
-    target, azimuth, _ = wo.genStarTarget(N, M, blur_px=1 * ps, margin=10)
+    target, azimuth, _ = wo.generate_star_target(
+        (N, M), blur_px=1 * ps, margin=10
+    )
+    target = target.numpy()
+    azimuth = azimuth.numpy()
     inclination = np.ones_like(target) * np.pi / 3
     azimuth = azimuth % (np.pi * 2)
     azimuth = np.round(azimuth / np.pi / 2 * 16) / 16 * np.pi * 2

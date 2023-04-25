@@ -1,12 +1,7 @@
-This folder of examples consists of:
+`waveorder` is undergoing a significant refactor, and this `examples/` folder serves as a good place to understand the current state of the repository.
 
-1) A set of simulations that will run as is. Any of the files in these folders 
-can be run with `python <script-name>.py`, and these files are included in 
-`waveorder`'s automated testing.  
-- `/QLIPP_simulation/`
-- `/PODT_phase_simulation/`
-- `/PTI_simulation/`
+The `models/` folder demonstrates the latest functionality of `waveorder`. These scripts will run as is in an environment with `waveorder` and `napari` installed. Each script demonstrates a simulation and reconstruction with a **model**: a specific set of assumptions about the sample and the data being acquired. 
 
-2) A set of data-dependent reconstructions in `/experimental_reconstructions/`. 
-These files serve as a form of documentation for the types of reconstructions
-that `waveorder` can perform. 
+The `maintenance/` folder demonstrates the functionality of `waveorder` that we plan to move to `models/`. These scripts can be run as is, and they are being maintained with tests.
+
+The `documentation/` folder consists of examples that demonstrate reconstruction with real data. These examples require access to the complete datasets, so they are not being actively maintained and serve primarily as documentation.

@@ -20,18 +20,15 @@ def numericalSort(value):
     return parts
 
 
-def genStarTarget(N, M, blur_px=2, margin=60):
+def generate_star_target(yx_shape, blur_px=2, margin=60):
     """
 
     generate Siemens star image for simulation
 
     Parameters
     ----------
-        N       : int
-                  size of the simulated image in y dimension
-
-        M       : int
-                  size of the simulated image in x dimension
+        yx_shape  : tuple
+                  size of the simulated image in (Y, X)
 
         blur_px : float
                   the standard deviation of the imposed Gaussian blur on the simulated image
@@ -41,44 +38,51 @@ def genStarTarget(N, M, blur_px=2, margin=60):
 
     Returns
     -------
-        star    : numpy.ndarray
-                  Siemens star with the size of (Ny, Nx)
+        star    : torch.tensor
+                  Siemens star with the size of (Y, X)
 
-        theta   : numpy.ndarray
-                  azimuthal angle of the polar coordinate with the size of (Ny, Nx)
+        theta   : torch.tensor
+                  azimuthal angle of the polar coordinate with the size of (Y, X)
 
         xx      : numpy.ndarray
-                  x coordinate array with the size of (Ny, Nx)
+                  x coordinate array with the size of (Y, X)
 
     """
 
     # Construct Siemens star
+    Y, X = yx_shape
 
-    x = np.r_[:N] - N // 2
-    y = np.r_[:M] - M // 2
+    x = np.arange(X) - X // 2
+    y = np.arange(Y) - Y // 2
 
-    xx, yy = np.meshgrid(x, y)
+    xx, yy = torch.tensor(np.meshgrid(x, y))
 
-    rho = np.sqrt(xx**2 + yy**2)
-    theta = np.arctan2(yy, xx)
+    rho = torch.sqrt(xx**2 + yy**2)
+    theta = torch.arctan2(yy, xx)
 
     # star = (1 + np.cos(40*theta))
     # star = np.pad(star[10:-10,10:-10],(10,),mode='constant')
-    star = 1 + np.cos(16 * theta)
-    star = np.pad(
-        star[margin:-margin, margin:-margin], (margin,), mode="constant"
+    star = 1 + torch.cos(16 * theta)
+    star = torch.nn.functional.pad(
+        star[margin:-margin, margin:-margin], 4 * (margin,), mode="constant"
     )
     star[star < 1] = 0
 
     # Filter to prevent aliasing
 
-    Gaussian = np.exp(-(rho**2) / (2 * blur_px**2))
+    Gaussian = torch.exp(-(rho**2) / (2 * blur_px**2))
 
-    star = np.maximum(
-        0, np.real(ifft2(fft2(star) * fft2(ifftshift(Gaussian))))
+    star = torch.clip(
+        torch.real(
+            torch.fft.ifft2(
+                torch.fft.fft2(star)
+                * torch.fft.fft2(torch.fft.ifftshift(Gaussian))
+            )
+        ),
+        min=0,
     )
     # star = np.maximum(0, np.real(ifft2(fft2(star) * fft2(ifftshift(Gaussian)))))*(2+np.sin(2*np.pi*(1/5)*rho))
-    star /= np.max(star)
+    star /= torch.max(star)
 
     return star, theta, xx
 
