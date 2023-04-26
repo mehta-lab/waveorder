@@ -146,7 +146,9 @@ def apply_inverse_transfer_function(
     illumination_wavelength,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
     absorption_ratio=0.0,
     method="Tikhonov",
-    **kwargs
+    reg_re=1e-3,
+    rho=1e-3,
+    itr=10,
 ):
     # Handle padding
     if z_padding < 0:
@@ -180,12 +182,12 @@ def apply_inverse_transfer_function(
     # Reconstruct
     if method == "Tikhonov":
         f_real = util.single_variable_tikhonov_deconvolution_3D(
-            zyx, effective_transfer_function, **kwargs
+            zyx, effective_transfer_function, reg_re=reg_re
         )
 
     elif method == "TV":
         f_real = util.single_variable_admm_tv_deconvolution_3D(
-            zyx, effective_transfer_function, **kwargs
+            zyx, effective_transfer_function, reg_re=reg_re, rho=rho, itr=itr
         )
 
     # Unpad
