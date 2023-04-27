@@ -78,7 +78,7 @@ def apply_inverse_transfer_function(
         estimator = background_estimator.BackgroundEstimator2D()
         for stokes_index in range(background_corrected_stokes.shape[0]):
             z_projection = torch.mean(
-                background_corrected_stokes[stokes_index], dim=1
+                background_corrected_stokes[stokes_index], dim=0
             )
             background_corrected_stokes[
                 stokes_index
