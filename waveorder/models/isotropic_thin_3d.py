@@ -145,8 +145,9 @@ def apply_inverse_transfer_function(
     method="Tikhonov",
     reg_u=1e-6,
     reg_p=1e-6,
+    rho=1e-3,
+    itr=10,
     bg_filter=True,
-    **kwargs
 ):
     zyx_data_normalized = util.inten_normalization(
         zyx_data, bg_filter=bg_filter
@@ -203,7 +204,7 @@ def apply_inverse_transfer_function(
     # ADMM deconvolution with anisotropic TV regularization
     elif method == "TV":
         absorption, phase = util.dual_variable_admm_tv_deconv_2d(
-            AHA, b_vec, **kwargs
+            AHA, b_vec, rho=rho, itr=itr
         )
 
     phase -= torch.mean(phase)
