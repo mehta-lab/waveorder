@@ -9,6 +9,7 @@ from collections import namedtuple
 from .optics import scattering_potential_tensor_to_3D_orientation_PN
 
 import re
+from typing import Tuple, Any
 
 numbers = re.compile(r"(\d+)")
 
@@ -2298,3 +2299,49 @@ def orientation_3D_continuity_map(
     retardance_pr_avg /= np.max(retardance_pr_avg)
 
     return retardance_pr_avg
+
+
+def create_pad_width(
+    pad: int, pad_dims: Tuple[int], ndim: int
+) -> Tuple[Tuple[int]]:
+    """
+    Create the pad_width tuple for np.pad based on the specified pad dimensions.
+
+    Args:
+        pad (int): Number of pixels to pad on each side.
+        pad_dims (tuple): Dimensions to pad.
+        ndim (int): Total number of dimensions.
+
+    Returns:
+        tuple: pad_width tuple for np.pad.
+    """
+    pad_width = [(0, 0)] * ndim
+    for dim in pad_dims:
+        pad_width[dim] = (pad, pad)
+    return tuple(pad_width)
+
+
+def pad_array(
+    input_array: np.ndarray,
+    pad: int,
+    pad_dims: Tuple[int],
+    mode: str = "reflect",
+    **kwargs: Any
+) -> np.ndarray:
+    """
+    Pad the image array given the pad and pad dimensions.
+
+    Args:
+        input_array (np.ndarray): Input array.
+        pad (int): Number of pixels to pad on each side.
+        pad_dims (tuple): Dimensions to pad.
+        mode (str): Padding mode for np.pad. Default is 'reflect'.
+        **kwargs: Additional keyword arguments to pass to np.pad.
+
+    Returns:
+        np.ndarray: Padded image array.
+    """
+    ndims = input_array.ndim
+    pad_width = create_pad_width(pad, pad_dims, ndims)
+    padded_image = np.pad(input_array, pad_width, mode=mode, **kwargs)
+    return padded_image
