@@ -1,4 +1,3 @@
-# TODO: remove in Python 3.11
 from __future__ import annotations
 
 from recOrder.calib.Calibration import QLIPP_Calibration, LC_DEVICE_NAME
