@@ -143,7 +143,7 @@ def apply_inverse_transfer_function(
     imaginary_potential_transfer_function,
     z_padding,
     z_pixel_size,  # TODO: MOVE THIS PARAM TO OTF? (leaky param)
-    illumination_wavelength,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
+    wavelength_illumination,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
     absorption_ratio=0.0,
     method="Tikhonov",
     reg_re=1e-3,
@@ -194,4 +194,4 @@ def apply_inverse_transfer_function(
     if z_padding != 0:
         f_real = f_real[z_padding:-z_padding]
 
-    return f_real * z_pixel_size / 4 / np.pi * illumination_wavelength
+    return f_real * z_pixel_size / 4 / np.pi * wavelength_illumination

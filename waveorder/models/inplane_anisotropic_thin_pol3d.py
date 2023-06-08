@@ -50,7 +50,7 @@ def apply_transfer_function(
 def apply_inverse_transfer_function(
     czyx_data,
     intensity_to_stokes_matrix,
-    illumination_wavelength,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
+    wavelength_illumination,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
     cyx_no_sample_data=None,  # if not None, use this data for background correction
     project_stokes_to_2d=False,
     remove_estimated_background=False,  # if True estimate background from czyx_data and remove it
@@ -97,7 +97,7 @@ def apply_inverse_transfer_function(
         *background_corrected_stokes
     )
 
-    # Return retardance in distance units (matching illumination_wavelength)
-    retardance = adr_parameters[0] * illumination_wavelength / (2 * np.pi)
+    # Return retardance in distance units (matching wavelength_illumination)
+    retardance = adr_parameters[0] * wavelength_illumination / (2 * np.pi)
 
     return retardance, adr_parameters[1], adr_parameters[2], adr_parameters[3]
