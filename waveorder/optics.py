@@ -326,7 +326,7 @@ def generate_propagation_kernel(
 
 
 def generate_greens_function_z(
-    radial_frequencies, pupil_support, illumination_wavelength, z_position_list
+    radial_frequencies, pupil_support, wavelength_illumination, z_position_list
 ):
     """
 
@@ -340,7 +340,7 @@ def generate_greens_function_z(
         pupil_support   : torch.tensor
                         the array that defines the support of the pupil function with the size of (Y, X)
 
-        illumination_wavelength       : float
+        wavelength_illumination       : float
                         wavelength of the light in the immersion media
 
         z_position_list      : torch.tensor or list
@@ -354,9 +354,9 @@ def generate_greens_function_z(
     """
 
     oblique_factor = (
-        (1 - illumination_wavelength**2 * radial_frequencies**2)
+        (1 - wavelength_illumination**2 * radial_frequencies**2)
         * pupil_support
-    ) ** (1 / 2) / illumination_wavelength
+    ) ** (1 / 2) / wavelength_illumination
 
     greens_function_z = (
         -1j
