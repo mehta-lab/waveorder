@@ -1806,7 +1806,7 @@ def is_power_of_two(n):
 def generate_FOV_splitting_parameters(
     img_size, overlapping_range, max_image_size, power_of_two=False
 ):
-    overlap = float('inf')
+    overlap = float("inf")
     N_space = 0
     M_space = 0
     valid_overlap_found = False
@@ -2330,40 +2330,23 @@ def pad_array(
         **kwargs: Additional keyword arguments to pass to np.pad.
 
     Returns:
-        np.ndarray: Padded image array with a shape that is a power of 2.
+        np.ndarray: Padded image array
     """
     ndims = input_array.ndim
     pad_width = create_pad_width(pad, pad_dims, ndims)
     padded_image = np.pad(input_array, pad_width, mode=mode, **kwargs)
 
-    # Calculate the desired padded shape
-    desired_shape = []
-    for dim, pad_dim in zip(input_array.shape, pad_dims):
-        desired_dim = dim + 2 * pad_dim
-        # Find the nearest power of 2 greater than or equal to the desired dimension
-        padded_dim = int(2 ** np.ceil(np.log2(desired_dim)))
-        desired_shape.append(padded_dim)
-
-    # Pad the array further if necessary to achieve the desired shape
-    additional_pad = [
-        dim - padded_dim
-        for dim, padded_dim in zip(desired_shape, padded_image.shape)
-    ]
-    pad_width = [(0, pad) for pad in additional_pad]
-    padded_image = np.pad(padded_image, pad_width, mode=mode, **kwargs)
-
     return padded_image
 
 
-def tile_processing(tile_proc_func, image_array, output_store):
+def init_tile_parameters(
+    image_array, overlapping_range=[50, 250], max_image_size=[500, 500]
+):
     # Input should be a 5D array
     T, C, Z, Y, X = image_array.shape
-
     # # Splitting the FOV
     N_full = X
     M_full = Y
-    overlapping_range = [50, 250]
-    max_image_size = [500, 500]
 
     N_edge, N_space, M_space = generate_FOV_splitting_parameters(
         (N_full, M_full), overlapping_range, max_image_size
@@ -2375,65 +2358,137 @@ def tile_processing(tile_proc_func, image_array, output_store):
     ns, ms = generate_sub_FOV_coordinates(
         (Y, X), (N_space, M_space), (N_edge, N_edge)
     )
+    
+    return (Ns, Ms, ns, ms, N_edge)
 
-    tmp_store = "./tmp"
-    if not os.path.exists(tmp_store):
-        os.makedirs(tmp_store)
 
-    # Add some padding
+
+def tile_processing(tile_proc_func, tiling_params, input_data_path, output_store, xyx=False):
+    from iohub import open_ome_zarr
+    from tqdm import tqdm
+
+    # Pad the image array
     # TODO: make this a variable
-    pad = 30
-    Ns_padded = Ns + pad * 2
-    Ms_padded = Ms + pad * 2
+    Ns = tiling_params[0]
+    Ms = tiling_params[1]
+    ns = tiling_params[2]
+    ms = tiling_params[3]
+    N_edge = tiling_params[4]
+    pad = tiling_params[5]
+
+    with open_ome_zarr(input_data_path) as dataset:
+        image_array = dataset[0]
+
+    T,C,Z,Y,X = image_array.shape
 
     # Get the chunk sizes and data shapes
-    row_list = (ns // N_space).astype("int")
-    column_list = (ms // M_space).astype("int")
+    row_list = (ns // (Ns - N_edge)).astype("int")
+    column_list = (ms // (Ms - N_edge)).astype("int")
 
+    # Padding YX
+    padded_image_array = pad_array(
+        input_array=image_array,
+        pad=pad,
+        pad_dims=(3, 4),
+        mode="reflect",
+    )
+    print(f"padded {padded_image_array.shape}")
+
+    # Create a temporary datastore for the tiles
+    tmp_store = "./tmp.zarr"
+    if not os.path.exists(tmp_store):
+        os.makedirs(tmp_store)
     # Chunking the data
     dchunks = (1, 1, Z, int(Ns), int(Ms))
     zchunks = (1, 1, 1, int(Ns), int(Ms))
 
+
+    # Create an empty array
+    with open_ome_zarr(
+        tmp_store,
+        layout="hcs",
+        mode="w",
+        channel_names=["FITC"],
+    ) as dataset:
+        # Make the positions
+        for i in tqdm(range(len(ns))):
+            pos = dataset.create_position("0", "0", str(i))
+            # this is a 'hack' to create placeholder metadata
+            # future iohub should expose a public API for emtpy images
+            pos._create_image_meta("0")
+            _ = pos.zgroup.zeros(
+                "0",
+                shape=dchunks,
+                chunks=zchunks,
+                dtype=np.float32,
+                **pos._storage_options,
+            )
+        dataset.print_tree()
+    
+    #Process each tile
     for t in range(T):
         with open_ome_zarr(tmp_store, mode="a") as dataset:
             for ll in tqdm(range(len(ns))):
                 n_start = [int(ns[ll]), int(ms[ll])]
                 start_time = time.time()
 
-                tile = image_array[
+                # Get the tile.
+                # ns = starting point
+                # Ns = size of one tile
+                tile = padded_image_array[
                     t,
-                    c,
+                    0,
                     :,
-                    n_start[0] : n_start[0] + Ns,
-                    n_start[1] : n_start[1] + Ms,
+                    n_start[0] : n_start[0] + Ns + pad,
+                    n_start[1] : n_start[1] + Ms + pad,
                 ]
 
-                padded_tile = pad_array(
-                    input_array=data_array,
-                    pad=pad,
-                    pad_dims=(3, 4),
-                    mode="reflect",
-                )
+                if xyx:
+                    tile=np.transpose(tile, (2, 1, 0))
+
 
                 # Wrapper for running function
-                processed_tile = tile_proc_func(padded_tile)
-
+                processed_tile = tile_proc_func(tile)
+                print(f'proc tile {processed_tile.shape}')
                 # Copy only the non-padded/reflection part
                 processed_tile_crop = processed_tile[
                     pad : pad + Ns, pad : pad + Ms, :
                 ]
+                print(f'proc tile crop {processed_tile_crop.shape}')
+                if xyx:
+                    processed_tile_crop=np.transpose(processed_tile_crop, (2, 1, 0))
 
                 print(
                     "Finish process at (y, x) = (%d, %d), elapsed time: %.2f"
                     % (ns[ll], ms[ll], time.time() - start_time)
                 )
-
                 stack = dataset["0/0/" + str(ll) + "/0"]
+
                 print(
-                    f"stack.shape {stack.shape}, Iflordeconv {I_fluor_deconv.shape}"
+                    f"stack.shape {stack.shape}, Iflordeconv {processed_tile_crop.shape}"
                 )
                 # TODO: this needs to be changed
                 # Copy in only the non-reflection
-                stack[0, 0] = I_fluor_deconv
+                stack[0, 0] = processed_tile_crop
+        dataset.print_tree()
+
+        # Save the stitched results
+        # Open the tiled store path
+        tiled_dataset = open_ome_zarr(tmp_store, mode="r")
+        coord_list = (row_list, column_list)
+        overlap = (int(np.array(N_edge)), int(np.array(N_edge)))
+        # file_loading_func = lambda x: np.transpose(tiled_datset.get_zarr(x), (3, 4, 0, 1, 2))
+        file_loading_func = lambda x: np.transpose(
+            tiled_dataset["0/0/" + str(x) + "/0"], (3, 4, 0, 1, 2)
+        )
+        img_normalized, ref_stitch = image_stitching(
+            coord_list, overlap, file_loading_func, gen_ref_map=True, ref_stitch=None
+        )
+        tiled_dataset.close()
+        img_normalized = np.transpose(img_normalized, (2, 3, 4, 0, 1))
+
+        with open_ome_zarr(output_store, mode="a") as dataset:
+            dataset[0][t, 0, :Z, :Y, :X] = img_normalized[0, 0]
+        print(f"FINISHED t:{t},pos:{0}")
 
         dataset.print_tree()
