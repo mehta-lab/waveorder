@@ -139,27 +139,10 @@ def apply_inverse_transfer_function(
     itr=10,
 ):
     # Handle padding
-    if z_padding < 0:
-        raise ("z_padding cannot be negative.")
-    elif z_padding == 0:
-        zyx_pad = zyx_data
-    elif z_padding >= 0:
-        zyx_pad = torch.nn.functional.pad(
-            zyx_data,
-            (0, 0, 0, 0, z_padding, z_padding),
-            mode="constant",
-            value=0,
-        )
-        if z_padding < zyx_data.shape[0]:
-            zyx_pad[:z_padding] = torch.flip(zyx_data[:z_padding], dims=[0])
-            zyx_pad[-z_padding:] = torch.flip(zyx_data[-z_padding:], dims=[0])
-        else:
-            print(
-                "z_padding is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
-            )
+    zyx_padded = util.pad_zyx(zyx_data, z_padding)
 
     # Normalize
-    zyx = util.inten_normalization_3D(zyx_pad)
+    zyx = util.inten_normalization_3D(zyx_padded)
 
     # Prepare TF
     effective_transfer_function = (

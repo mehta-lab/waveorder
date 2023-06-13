@@ -103,4 +103,7 @@ def apply_transfer_function(zyx_object, optical_transfer_function, z_padding):
 
 
 def apply_inverse_transfer_function():
+    # Handle padding
+    zyx_padded = util.pad_zyx(zyx_data, z_padding)
+
     return NotImplementedError
