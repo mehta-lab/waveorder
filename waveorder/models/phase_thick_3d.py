@@ -140,7 +140,7 @@ def apply_inverse_transfer_function(
 ):
     # Handle padding
     if z_padding < 0:
-        raise ("z_pading cannot be negative.")
+        raise ("z_padding cannot be negative.")
     elif z_padding == 0:
         zyx_pad = zyx_data
     elif z_padding >= 0:
