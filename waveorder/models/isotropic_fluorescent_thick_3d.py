@@ -1,6 +1,5 @@
 import torch
 from waveorder import optics, util
-from waveorder.models import phase_thick_3d
 
 
 def generate_test_phantom(
@@ -82,10 +81,25 @@ def visualize_transfer_function(viewer, optical_transfer_function, zyx_scale):
 
 
 def apply_transfer_function(zyx_object, optical_transfer_function, z_padding):
-    # TODO: phase_thick_3d
-    return phase_thick_3d.apply_transfer_function(
-        zyx_object, optical_transfer_function, z_padding
-    )
+    if (
+        zyx_object.shape[0] + 2 * z_padding
+        != optical_transfer_function.shape[0]
+    ):
+        raise ValueError(
+            "Please check padding: ZYX_obj.shape[0] + 2 * Z_pad != H_re.shape[0]"
+        )
+    if z_padding > 0:
+        optical_transfer_function = optical_transfer_function[
+            z_padding:-z_padding
+        ]
+
+    # Very simple simulation, consider adding noise and bkg knobs
+    zyx_obj_hat = torch.fft.fftn(zyx_object)
+    zyx_data = zyx_obj_hat * optical_transfer_function
+    data = torch.real(torch.fft.ifftn(zyx_data))
+
+    data = torch.tensor(data + 10)  # Add a direct background
+    return data
 
 
 def apply_inverse_transfer_function():
