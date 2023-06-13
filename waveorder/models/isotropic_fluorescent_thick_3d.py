@@ -1,10 +1,19 @@
 import torch
 from waveorder import optics, util
+from waveorder.models import phase_thick_3d
 
 
-def generate_test_phantom(yx_shape):
-    star, _, _ = util.generate_star_target(yx_shape, blur_px=0.1)
-    return star
+def generate_test_phantom(
+    zyx_shape,
+    yx_pixel_size,
+    z_pixel_size,
+    sphere_radius,
+):
+    sphere, _, _ = util.generate_sphere_target(
+        zyx_shape, yx_pixel_size, z_pixel_size, sphere_radius
+    )
+
+    return sphere
 
 
 def calculate_transfer_function(
@@ -42,7 +51,7 @@ def calculate_transfer_function(
     )
 
     point_spread_function = (
-        torch.abs(torch.fft.ifft2(propagation_kernel, dim=(0, 1))) ** 2
+        torch.abs(torch.fft.ifft2(propagation_kernel, dim=(1, 2))) ** 2
     )
     optical_transfer_function = torch.fft.fftn(
         point_spread_function, dim=(0, 1, 2)
@@ -54,12 +63,29 @@ def calculate_transfer_function(
     return optical_transfer_function
 
 
-def visualize_transfer_function():
-    return NotImplementedError
+def visualize_transfer_function(viewer, optical_transfer_function, zyx_scale):
+    arrays = [
+        (torch.imag(optical_transfer_function), "Im(OTF)"),
+        (torch.real(optical_transfer_function), "Re(OTF)"),
+    ]
+
+    for array in arrays:
+        lim = 0.1 * torch.max(torch.abs(array[0]))
+        viewer.add_image(
+            torch.fft.ifftshift(array[0]).cpu().numpy(),
+            name=array[1],
+            colormap="bwr",
+            contrast_limits=(-lim, lim),
+            scale=1 / zyx_scale,
+        )
+    viewer.dims.order = (0, 1, 2)
 
 
-def apply_transfer_function():
-    return NotImplementedError
+def apply_transfer_function(zyx_object, optical_transfer_function, z_padding):
+    # TODO: phase_thick_3d
+    return phase_thick_3d.apply_transfer_function(
+        zyx_object, optical_transfer_function, z_padding
+    )
 
 
 def apply_inverse_transfer_function():
