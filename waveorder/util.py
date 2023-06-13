@@ -2439,8 +2439,8 @@ def tile_processing(tile_proc_func, tiling_params, input_data_path, output_store
                     t,
                     0,
                     :,
-                    n_start[0] : n_start[0] + Ns + pad,
-                    n_start[1] : n_start[1] + Ms + pad,
+                    n_start[0] : n_start[0] + Ns + pad*2,
+                    n_start[1] : n_start[1] + Ms + pad*2,
                 ]
 
                 if xyx:
