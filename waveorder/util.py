@@ -10,6 +10,7 @@ from .optics import scattering_potential_tensor_to_3D_orientation_PN
 
 import re
 from typing import Tuple, Any
+import os
 
 numbers = re.compile(r"(\d+)")
 
@@ -1797,41 +1798,18 @@ def integer_factoring(integer):
     return factors
 
 
+def is_power_of_two(n):
+    """Check if a number is a power of 2."""
+    return n > 0 and (n & (n - 1)) == 0
+
+
 def generate_FOV_splitting_parameters(
-    img_size, overlapping_range, max_image_size
+    img_size, overlapping_range, max_image_size, power_of_two=False
 ):
-    """
-
-    calculate the overlap and pixels of increment for sub-FOV processing
-
-    Parameters
-    ----------
-        img_size          : tuple or list
-                            the original size of the image in the format of (Ny, Nx)
-
-        overlapping_range : tuple or list
-                            the targeted range for the number of overlapping pixels in the format of (overlap_min, overlap_max)
-
-        max_image_size    : tuple or list
-                            the maximal accepted size of the sub-FOV in the format of (Ny, Nx)
-
-
-    Returns
-    -------
-        overlap           : int
-                            the number of overlapping pixels
-
-        N_space           : int
-                            the number of y-increment pixels
-
-        M_space           : int
-                            the number of x-increment pixels
-
-    """
-
-    overlap = 0
+    overlap = float('inf')
     N_space = 0
     M_space = 0
+    valid_overlap_found = False
 
     for i in range(overlapping_range[0], overlapping_range[1]):
         pre_N_space = np.max(
@@ -1848,16 +1826,29 @@ def generate_FOV_splitting_parameters(
                 if x <= max_image_size[1] - i
             ]
         )
-
         if (
             pre_N_space > N_space
             and pre_M_space > M_space
             and (pre_N_space + i) % 2 == 0
             and (pre_M_space + i) % 2 == 0
         ):
-            overlap = i
-            N_space = pre_N_space
-            M_space = pre_M_space
+            if power_of_two:
+                # Ensures that the output is a power of 2
+                if is_power_of_two(i + pre_N_space) and is_power_of_two(
+                    i + pre_M_space
+                ):
+                    N_space = int(pre_N_space)
+                    M_space = int(pre_M_space)
+                    overlap = i
+                    valid_overlap_found = True
+            else:
+                N_space = int(pre_N_space)
+                M_space = int(pre_M_space)
+                overlap = i
+                valid_overlap_found = True
+
+    if not valid_overlap_found:
+        raise ValueError("No valid overlap found")
 
     print("Optimal number of overlapping is %d pixels" % (overlap))
     print("The corresponding maximal N_space is %d pixels" % (N_space))
@@ -2326,7 +2317,7 @@ def pad_array(
     pad: int,
     pad_dims: Tuple[int],
     mode: str = "reflect",
-    **kwargs: Any
+    **kwargs: Any,
 ) -> np.ndarray:
     """
     Pad the image array given the pad and pad dimensions.
@@ -2339,9 +2330,110 @@ def pad_array(
         **kwargs: Additional keyword arguments to pass to np.pad.
 
     Returns:
-        np.ndarray: Padded image array.
+        np.ndarray: Padded image array with a shape that is a power of 2.
     """
     ndims = input_array.ndim
     pad_width = create_pad_width(pad, pad_dims, ndims)
     padded_image = np.pad(input_array, pad_width, mode=mode, **kwargs)
+
+    # Calculate the desired padded shape
+    desired_shape = []
+    for dim, pad_dim in zip(input_array.shape, pad_dims):
+        desired_dim = dim + 2 * pad_dim
+        # Find the nearest power of 2 greater than or equal to the desired dimension
+        padded_dim = int(2 ** np.ceil(np.log2(desired_dim)))
+        desired_shape.append(padded_dim)
+
+    # Pad the array further if necessary to achieve the desired shape
+    additional_pad = [
+        dim - padded_dim
+        for dim, padded_dim in zip(desired_shape, padded_image.shape)
+    ]
+    pad_width = [(0, pad) for pad in additional_pad]
+    padded_image = np.pad(padded_image, pad_width, mode=mode, **kwargs)
+
     return padded_image
+
+
+def tile_processing(tile_proc_func, image_array, output_store):
+    # Input should be a 5D array
+    T, C, Z, Y, X = image_array.shape
+
+    # # Splitting the FOV
+    N_full = X
+    M_full = Y
+    overlapping_range = [50, 250]
+    max_image_size = [500, 500]
+
+    N_edge, N_space, M_space = generate_FOV_splitting_parameters(
+        (N_full, M_full), overlapping_range, max_image_size
+    )
+
+    # Create sub-FOV list
+    Ns = N_space + N_edge
+    Ms = M_space + N_edge
+    ns, ms = generate_sub_FOV_coordinates(
+        (Y, X), (N_space, M_space), (N_edge, N_edge)
+    )
+
+    tmp_store = "./tmp"
+    if not os.path.exists(tmp_store):
+        os.makedirs(tmp_store)
+
+    # Add some padding
+    # TODO: make this a variable
+    pad = 30
+    Ns_padded = Ns + pad * 2
+    Ms_padded = Ms + pad * 2
+
+    # Get the chunk sizes and data shapes
+    row_list = (ns // N_space).astype("int")
+    column_list = (ms // M_space).astype("int")
+
+    # Chunking the data
+    dchunks = (1, 1, Z, int(Ns), int(Ms))
+    zchunks = (1, 1, 1, int(Ns), int(Ms))
+
+    for t in range(T):
+        with open_ome_zarr(tmp_store, mode="a") as dataset:
+            for ll in tqdm(range(len(ns))):
+                n_start = [int(ns[ll]), int(ms[ll])]
+                start_time = time.time()
+
+                tile = image_array[
+                    t,
+                    c,
+                    :,
+                    n_start[0] : n_start[0] + Ns,
+                    n_start[1] : n_start[1] + Ms,
+                ]
+
+                padded_tile = pad_array(
+                    input_array=data_array,
+                    pad=pad,
+                    pad_dims=(3, 4),
+                    mode="reflect",
+                )
+
+                # Wrapper for running function
+                processed_tile = tile_proc_func(padded_tile)
+
+                # Copy only the non-padded/reflection part
+                processed_tile_crop = processed_tile[
+                    pad : pad + Ns, pad : pad + Ms, :
+                ]
+
+                print(
+                    "Finish process at (y, x) = (%d, %d), elapsed time: %.2f"
+                    % (ns[ll], ms[ll], time.time() - start_time)
+                )
+
+                stack = dataset["0/0/" + str(ll) + "/0"]
+                print(
+                    f"stack.shape {stack.shape}, Iflordeconv {I_fluor_deconv.shape}"
+                )
+                # TODO: this needs to be changed
+                # Copy in only the non-reflection
+                stack[0, 0] = I_fluor_deconv
+
+        dataset.print_tree()
