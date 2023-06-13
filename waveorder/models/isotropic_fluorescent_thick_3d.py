@@ -102,8 +102,35 @@ def apply_transfer_function(zyx_object, optical_transfer_function, z_padding):
     return data
 
 
-def apply_inverse_transfer_function():
+def apply_inverse_transfer_function(
+    zyx_data,
+    optical_transfer_function,
+    z_padding,
+    method="Tikhonov",
+    reg_re=1e-3,
+    rho=1e-3,
+    itr=10,
+):
     # Handle padding
     zyx_padded = util.pad_zyx(zyx_data, z_padding)
 
-    return NotImplementedError
+    # Reconstruct
+    if method == "Tikhonov":
+        f_real = util.single_variable_tikhonov_deconvolution_3D(
+            zyx_padded, optical_transfer_function, reg_re=reg_re
+        )
+
+    elif method == "TV":
+        f_real = util.single_variable_admm_tv_deconvolution_3D(
+            zyx_padded,
+            optical_transfer_function,
+            reg_re=reg_re,
+            rho=rho,
+            itr=itr,
+        )
+
+    # Unpad
+    if z_padding != 0:
+        f_real = f_real[z_padding:-z_padding]
+
+    return f_real

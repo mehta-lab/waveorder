@@ -62,8 +62,6 @@ zyx_recon = isotropic_fluorescent_thick_3d.apply_inverse_transfer_function(
     zyx_data,
     optical_transfer_function,
     transfer_function_arguments["z_padding"],
-    simulation_arguments["z_pixel_size"],
-    simulation_arguments["wavelength_illumination"],
 )
 
 # Display
