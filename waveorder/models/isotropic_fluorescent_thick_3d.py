@@ -121,6 +121,7 @@ def apply_inverse_transfer_function(
         )
 
     elif method == "TV":
+        raise NotImplementedError
         f_real = util.single_variable_admm_tv_deconvolution_3D(
             zyx_padded,
             optical_transfer_function,

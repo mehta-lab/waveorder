@@ -203,6 +203,7 @@ def apply_inverse_transfer_function(
 
     # ADMM deconvolution with anisotropic TV regularization
     elif method == "TV":
+        raise NotImplementedError
         absorption, phase = util.dual_variable_admm_tv_deconv_2d(
             AHA, b_vec, rho=rho, itr=itr
         )
