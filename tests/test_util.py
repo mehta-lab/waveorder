@@ -24,7 +24,7 @@ def test_pad_zyx_negative_padding():
         util.pad_zyx_along_z(zyx_data, z_padding)
 
 
-def test_pad_zyx_zero_padding(zyx_data):
+def test_pad_zyx_no_padding(zyx_data):
     z_padding = 0
     result = util.pad_zyx_along_z(zyx_data, z_padding)
     assert torch.all(result == zyx_data)
