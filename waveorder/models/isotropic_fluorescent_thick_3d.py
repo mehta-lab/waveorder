@@ -98,7 +98,7 @@ def apply_transfer_function(zyx_object, optical_transfer_function, z_padding):
     zyx_data = zyx_obj_hat * optical_transfer_function
     data = torch.real(torch.fft.ifftn(zyx_data))
 
-    data = torch.tensor(data + 10)  # Add a direct background
+    data += 10  # Add a direct background
     return data
 
 

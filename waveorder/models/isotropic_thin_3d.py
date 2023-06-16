@@ -134,7 +134,7 @@ def apply_transfer_function(
 
     # sum and add background
     data = zyx_absorption_data + zyx_phase_data
-    data = torch.tensor(data + 10)  # Add a direct background
+    data += 10  # Add a direct background
     return data
 
 
