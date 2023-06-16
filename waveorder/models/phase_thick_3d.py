@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 from waveorder import optics, util
+from waveorder.models import isotropic_fluorescent_thick_3d
 
 
 def generate_test_phantom(
@@ -117,27 +118,11 @@ def visualize_transfer_function(
 def apply_transfer_function(
     zyx_object, real_potential_transfer_function, z_padding
 ):
-    if (
-        zyx_object.shape[0] + 2 * z_padding
-        != real_potential_transfer_function.shape[0]
-    ):
-        raise ValueError(
-            "Please check padding: ZYX_obj.shape[0] + 2 * Z_pad != H_re.shape[0]"
-        )
-    if z_padding > 0:
-        real_potential_transfer_function = real_potential_transfer_function[
-            z_padding:-z_padding
-        ]
-
-    # Very simple simulation, consider adding noise and bkg knobs
-
-    # TODO: extend to absorption, or restrict to just phase
-    zyx_obj_hat = torch.fft.fftn(zyx_object)
-    zyx_data = zyx_obj_hat * real_potential_transfer_function
-    data = torch.real(torch.fft.ifftn(zyx_data))
-
-    data = torch.tensor(data + 10)  # Add a direct background
-    return data
+    # This simplified forward model only handles phase, so it resuses the fluorescence forward model
+    # TODO: extend to absorption
+    return isotropic_fluorescent_thick_3d.apply_transfer_function(
+        zyx_object, real_potential_transfer_function, z_padding
+    )
 
 
 def apply_inverse_transfer_function(
@@ -154,27 +139,10 @@ def apply_inverse_transfer_function(
     itr=10,
 ):
     # Handle padding
-    if z_padding < 0:
-        raise ("z_pading cannot be negative.")
-    elif z_padding == 0:
-        zyx_pad = zyx_data
-    elif z_padding >= 0:
-        zyx_pad = torch.nn.functional.pad(
-            zyx_data,
-            (0, 0, 0, 0, z_padding, z_padding),
-            mode="constant",
-            value=0,
-        )
-        if z_padding < zyx_data.shape[0]:
-            zyx_pad[:z_padding] = torch.flip(zyx_data[:z_padding], dims=[0])
-            zyx_pad[-z_padding:] = torch.flip(zyx_data[-z_padding:], dims=[0])
-        else:
-            print(
-                "z_padding is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
-            )
+    zyx_padded = util.pad_zyx_along_z(zyx_data, z_padding)
 
     # Normalize
-    zyx = util.inten_normalization_3D(zyx_pad)
+    zyx = util.inten_normalization_3D(zyx_padded)
 
     # Prepare TF
     effective_transfer_function = (
@@ -189,6 +157,7 @@ def apply_inverse_transfer_function(
         )
 
     elif method == "TV":
+        raise NotImplementedError
         f_real = util.single_variable_admm_tv_deconvolution_3D(
             zyx, effective_transfer_function, reg_re=reg_re, rho=rho, itr=itr
         )

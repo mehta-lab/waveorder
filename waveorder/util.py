@@ -13,6 +13,64 @@ import re
 
 numbers = re.compile(r"(\d+)")
 
+import torch
+
+
+def pad_zyx_along_z(zyx_data, z_padding):
+    """
+    Pad a 3D tensor along the z-dimension.
+
+    Parameters
+    ----------
+    zyx_data : torch.Tensor
+        Input 3D tensor of shape (Z, Y, X).
+    z_padding : int
+        Number of padding slices to add on both ends of the z-dimension.
+
+    Returns
+    -------
+    torch.Tensor
+        Padded 3D tensor of shape (Z + 2 * z_padding, Y, X).
+
+    Raises
+    ------
+    ValueError
+        If z_padding is negative.
+
+    Notes
+    -----
+    - If z_padding is 0, the function returns the input tensor unchanged.
+    - If z_padding is positive, the function pads the tensor with zeros along the z-dimension.
+    - If z_padding is greater than or equal to the number of z-slices in zyx_data, a warning message is included in the returned tensor,
+      indicating that zero padding is used instead of reflection padding (less effective).
+    - Reflection padding is used when z_padding is smaller than the number of z-slices in zyx_data, providing a symmetric padding.
+    """
+    if z_padding < 0:
+        raise ValueError("z_padding cannot be negative.")
+    elif z_padding == 0:
+        return zyx_data
+    else:
+        zyx_padded = torch.nn.functional.pad(
+            zyx_data,
+            (0, 0, 0, 0, z_padding, z_padding),
+            mode="constant",
+            value=0,
+        )
+        if z_padding < zyx_data.shape[0]:
+            zyx_padded[:z_padding] = torch.flip(zyx_data[:z_padding], dims=[0])
+            zyx_padded[-z_padding:] = torch.flip(
+                zyx_data[-z_padding:], dims=[0]
+            )
+        else:
+            warning_msg = "Warning: z_padding is larger than the number of z-slices. Using zero padding instead of reflection padding (less effective)."
+            zyx_padded = torch.nn.functional.pad(
+                zyx_padded,
+                (0, 0, 0, 0, 0, 0),
+                mode="constant",
+                value=0,
+            )
+        return zyx_padded
+
 
 def numericalSort(value):
     parts = numbers.split(value)
