@@ -139,7 +139,7 @@ def apply_inverse_transfer_function(
     itr=10,
 ):
     # Handle padding
-    zyx_padded = util.pad_zyx(zyx_data, z_padding)
+    zyx_padded = util.pad_zyx_along_z(zyx_data, z_padding)
 
     # Normalize
     zyx = util.inten_normalization_3D(zyx_padded)

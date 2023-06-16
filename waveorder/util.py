@@ -16,7 +16,7 @@ numbers = re.compile(r"(\d+)")
 import torch
 
 
-def pad_zyx(zyx_data, z_padding):
+def pad_zyx_along_z(zyx_data, z_padding):
     """
     Pad a 3D tensor along the z-dimension.
 
