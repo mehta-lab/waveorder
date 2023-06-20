@@ -19,7 +19,7 @@ def calculate_transfer_function(
     zyx_shape,
     yx_pixel_size,
     z_pixel_size,
-    wavelength_illumination,
+    wavelength_emission,
     z_padding,
     index_of_refraction_media,
     numerical_aperture_detection,
@@ -39,13 +39,13 @@ def calculate_transfer_function(
     det_pupil = optics.generate_pupil(
         radial_frequencies,
         numerical_aperture_detection,
-        wavelength_illumination,
+        wavelength_emission,
     )
 
     propagation_kernel = optics.generate_propagation_kernel(
         radial_frequencies,
         det_pupil,
-        wavelength_illumination / index_of_refraction_media,
+        wavelength_emission / index_of_refraction_media,
         z_position_list,
     )
 
