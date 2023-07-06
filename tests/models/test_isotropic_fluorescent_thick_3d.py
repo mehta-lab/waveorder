@@ -34,8 +34,8 @@ def test_apply_inverse_transfer_function():
             zyx_data,
             optical_transfer_function,
             z_padding,
-            method="Tikhonov",
-            reg_re=1e-3,
+            reconstruction_algorithm="Tikhonov",
+            regularization_strength=1e-3,
         )
     )
     assert result_tikhonov.shape == (10, 5, 5)

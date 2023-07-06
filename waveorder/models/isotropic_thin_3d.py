@@ -146,11 +146,11 @@ def apply_inverse_transfer_function(
     zyx_data,
     absorption_2d_to_3d_transfer_function,
     phase_2d_to_3d_transfer_function,
-    method="Tikhonov",
-    reg_u=1e-6,
-    reg_p=1e-6,
-    rho=1e-3,
-    itr=10,
+    reconstruction_algorithm="Tikhonov",
+    regularization_strength=1e-6,
+    reg_p=1e-6,  # TODO: use this parameter
+    TV_rho_strength=1e-3,
+    TV_iterations=10,
     bg_filter=True,
 ):
     zyx_data_normalized = util.inten_normalization(
@@ -162,7 +162,7 @@ def apply_inverse_transfer_function(
     # TODO AHA and b_vec calculations should be moved into tikhonov/tv calculations
     AHA = [
         torch.sum(torch.abs(absorption_2d_to_3d_transfer_function) ** 2, dim=0)
-        + reg_u,
+        + regularization_strength,
         torch.sum(
             torch.conj(absorption_2d_to_3d_transfer_function)
             * phase_2d_to_3d_transfer_function,
@@ -200,16 +200,16 @@ def apply_inverse_transfer_function(
     ]
 
     # Deconvolution with Tikhonov regularization
-    if method == "Tikhonov":
+    if reconstruction_algorithm == "Tikhonov":
         absorption, phase = util.dual_variable_tikhonov_deconvolution_2d(
             AHA, b_vec
         )
 
     # ADMM deconvolution with anisotropic TV regularization
-    elif method == "TV":
+    elif reconstruction_algorithm == "TV":
         raise NotImplementedError
         absorption, phase = util.dual_variable_admm_tv_deconv_2d(
-            AHA, b_vec, rho=rho, itr=itr
+            AHA, b_vec, rho=TV_rho_strength, itr=TV_iterations
         )
 
     phase -= torch.mean(phase)
