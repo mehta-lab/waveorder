@@ -11,7 +11,7 @@ def test_calculate_transfer_function(axial_flip):
             zyx_shape=(20, 100, 101),
             yx_pixel_size=6.5 / 40,
             z_pixel_size=2,
-            wavelength_illumination=0.5,
+            wavelength_emission=0.5,
             z_padding=z_padding,
             index_of_refraction_media=1.0,
             numerical_aperture_detection=0.55,
@@ -34,8 +34,8 @@ def test_apply_inverse_transfer_function():
             zyx_data,
             optical_transfer_function,
             z_padding,
-            method="Tikhonov",
-            reg_re=1e-3,
+            reconstruction_algorithm="Tikhonov",
+            regularization_strength=1e-3,
         )
     )
     assert result_tikhonov.shape == (10, 5, 5)

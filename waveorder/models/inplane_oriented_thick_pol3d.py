@@ -50,7 +50,7 @@ def apply_transfer_function(
 def apply_inverse_transfer_function(
     czyx_data,
     intensity_to_stokes_matrix,
-    wavelength_illumination,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
+    wavelength_illumination=0.5,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
     cyx_no_sample_data=None,  # if not None, use this data for background correction
     project_stokes_to_2d=False,
     remove_estimated_background=False,  # if True estimate background from czyx_data and remove it

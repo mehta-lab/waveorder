@@ -19,7 +19,7 @@ def calculate_transfer_function(
     zyx_shape,
     yx_pixel_size,
     z_pixel_size,
-    wavelength_illumination,
+    wavelength_emission,
     z_padding,
     index_of_refraction_media,
     numerical_aperture_detection,
@@ -39,13 +39,13 @@ def calculate_transfer_function(
     det_pupil = optics.generate_pupil(
         radial_frequencies,
         numerical_aperture_detection,
-        wavelength_illumination,
+        wavelength_emission,
     )
 
     propagation_kernel = optics.generate_propagation_kernel(
         radial_frequencies,
         det_pupil,
-        wavelength_illumination / index_of_refraction_media,
+        wavelength_emission / index_of_refraction_media,
         z_position_list,
     )
 
@@ -106,28 +106,30 @@ def apply_inverse_transfer_function(
     zyx_data,
     optical_transfer_function,
     z_padding,
-    method="Tikhonov",
-    reg_re=1e-3,
-    rho=1e-3,
-    itr=10,
+    reconstruction_algorithm="Tikhonov",
+    regularization_strength=1e-3,
+    TV_rho_strength=1e-3,
+    TV_iterations=10,
 ):
     # Handle padding
     zyx_padded = util.pad_zyx_along_z(zyx_data, z_padding)
 
     # Reconstruct
-    if method == "Tikhonov":
+    if reconstruction_algorithm == "Tikhonov":
         f_real = util.single_variable_tikhonov_deconvolution_3D(
-            zyx_padded, optical_transfer_function, reg_re=reg_re
+            zyx_padded,
+            optical_transfer_function,
+            reg_re=regularization_strength,
         )
 
-    elif method == "TV":
+    elif reconstruction_algorithm == "TV":
         raise NotImplementedError
         f_real = util.single_variable_admm_tv_deconvolution_3D(
             zyx_padded,
             optical_transfer_function,
-            reg_re=reg_re,
-            rho=rho,
-            itr=itr,
+            reg_re=regularization_strength,
+            rho=TV_rho_strength,
+            itr=TV_iterations,
         )
 
     # Unpad
