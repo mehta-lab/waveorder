@@ -15,27 +15,38 @@ def focus_from_transverse_band(
 
     Parameters
     ----------
-    zyx_array : np.array
+    zyx_array: np.array
         Data stack in (Z, Y, X) order.
-        Requires len(3d_array.shape) == 3.
-    NA_det : float
+        Requires len(zyx_array.shape) == 3.
+    NA_det: float
         Detection NA.
-    lambda_ill : float
+    lambda_ill: float
         Illumination wavelength
         Units are arbitrary, but must match [pixel_size]
-    pixel_size : float
+    pixel_size: float
         Object-space pixel size = camera pixel size / magnification.
         Units are arbitrary, but must match [lambda_ill]
     midband_fractions: Tuple[float, float], optional
         The minimum and maximum fraction of the cutoff frequency that define the midband.
         Requires: 0 <= midband_fractions[0] < midband_fractions[1] <= 1.
     mode: {'max', 'min'}, optional
-        Option to choose the in-focus slice my minimizing or maximizing the midband frequency.
+        Option to choose the in-focus slice by minimizing or maximizing the midband frequency.
+    plot_path: str or None, optional
+        File name for a diagnostic plot (supports matplotlib filetypes .png, .pdf, .svg, etc.).
+        Use None to skip.
+    peak_width_threshold: float, optional
+        Threshold width for a peak to be considered in focus.
+        The default value, 0, applies no threshold, and the maximum midband power is considered in focus.
+        For values >0, the peak's FWHM must be greater than the threshold for the slice to be considered in focus.
+        If the peak does not meet this threshold, the function returns None.
 
     Returns
     ------
-    slice : int
-        The index of the in-focus slice.
+    slice : int or None
+        If peak's FWHM > peak_width_threshold:
+            return the index of the in-focus slice
+        else:
+            return None
 
     Example
     ------
