@@ -1,5 +1,7 @@
-from typing import Literal
+from scipy.signal import peak_widths
+from typing import Literal, Optional
 from waveorder import util
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -10,6 +12,8 @@ def focus_from_transverse_band(
     pixel_size,
     midband_fractions=(0.125, 0.25),
     mode: Literal["min" "max"] = "max",
+    plot_path: Optional[str] = None,
+    peak_width_threshold: float = 0,
 ):
     """Estimates the in-focus slice from a 3D stack by optimizing a transverse spatial frequency band.
 
@@ -61,7 +65,7 @@ def focus_from_transverse_band(
     N = len(zyx_array.shape)
     if N != 3:
         raise ValueError(
-            f"{N}D array supplied. `estimate_brightfield_focus` only accepts 3D arrays."
+            f"{N}D array supplied. `focus_from_transverse_band` only accepts 3D arrays."
         )
     if zyx_array.shape[0] == 1:
         print(
@@ -111,6 +115,49 @@ def focus_from_transverse_band(
         frr < cutoff * midband_fractions[1],
     )
 
-    # Return slice index with min/max power in midband
+    # Find slice index with min/max power in midband
     midband_sum = np.sum(xy_abs_fft[:, midband_mask], axis=1)
-    return minmaxfunc(midband_sum)
+    peak_index = minmaxfunc(midband_sum)
+
+    peak_results = peak_widths(midband_sum, [peak_index])
+    width = peak_results[0][0]
+    if width > peak_width_threshold:
+        in_focus_index = peak_index
+    else:
+        in_focus_index = None
+
+    # Plot
+    if plot_path is not None:
+        _, ax = plt.subplots(1, 1, figsize=(4, 4))
+        ax.plot(midband_sum, "-k")
+        ax.plot(
+            peak_index,
+            midband_sum[peak_index],
+            "go" if in_focus_index is not None else "ro",
+        )
+        ax.hlines(*peak_results[1:], color="k", linestyles="dashed")
+
+        ax.set_xlabel("Slice index")
+        ax.set_ylabel("Midband power")
+
+        ax.annotate(
+            f"In-focus slice = {in_focus_index}\n Peak width = {width:.2f}\n Peak width threshold = {peak_width_threshold}",
+            xy=(1, 1),
+            xytext=(1.0, 1.1),
+            textcoords="axes fraction",
+            xycoords="axes fraction",
+            ha="right",
+            va="center",
+            annotation_clip=False,
+        )
+
+        ax.spines["right"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["left"].set_position(("outward", 10))
+        ax.spines["bottom"].set_position(("outward", 10))
+        ax.ticklabel_format(style="sci", scilimits=(-2, 2))
+
+        print(f"Saving plot to {plot_path}")
+        plt.savefig(plot_path, bbox_inches="tight", dpi=300)
+
+    return in_focus_index
