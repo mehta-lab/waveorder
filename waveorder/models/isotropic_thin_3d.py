@@ -41,7 +41,7 @@ def calculate_transfer_function(
     axial_flip=False,
 ):
     if axial_flip:
-        z_position_list = torch.flip(z_position_list, dims=(0,))
+        z_position_list = torch.flip(torch.tensor(z_position_list), dims=(0,))
 
     radial_frequencies = util.generate_radial_frequencies(
         yx_shape, yx_pixel_size
