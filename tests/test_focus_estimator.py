@@ -63,13 +63,15 @@ def test_focus_estimator_snr(tmp_path):
             phantom * np.sqrt(snr), size=phantom.shape
         ) + np.random.normal(loc=0, scale=3, size=phantom.shape)
 
+        plot_path = tmp_path / f"test-{snr}.pdf"
         slice = focus.focus_from_transverse_band(
             data,
             ps,
             lambda_ill,
             NA_det,
-            plot_path=f"./test-{snr}.pdf",#tmp_path / 
-            peak_width_threshold=5,
+            plot_path=plot_path,
+            threshold_FWHM=5,
         )
+        assert plot_path.exists()
         if slice is not None:
             assert np.abs(slice - 10) <= 2
