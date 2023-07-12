@@ -157,7 +157,7 @@ visual.plot_multicolumn(
     set_title=True,
 )
 #### XZ sections
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     [
         np.transpose(target[y_layer, :, :]),
         np.transpose(azimuth[y_layer, :, :]) % (2 * np.pi),
@@ -381,7 +381,7 @@ rotation_angle = [0, 45, 90, 135, 180, 225, 270, 315]
 Source = np.zeros((len(rotation_angle) + 1, N, M))
 Source_cont = np.zeros_like(Source)
 
-Source_BF = wo.gen_Pupil(
+Source_BF = optics.gen_Pupil(
     fxx, fyy, NA_illu / n_media / 2, lambda_illu / n_media
 )
 
@@ -407,7 +407,7 @@ for i in range(len(rotation_angle)):
 
     Source_cont[i] = Source_temp * Source_temp2 * Source_support
 
-    Source_discrete = wo.Source_subsample(
+    Source_discrete = optics.Source_subsample(
         Source_cont[i], NAx_coord, NAy_coord, subsampled_NA=0.1 / n_media
     )
     Source[i] = np.maximum(0, Source_discrete.copy())

@@ -38,7 +38,7 @@ N, M, L = I_meas.shape
 # Refractive index reconstruction
 z_defocus = (np.r_[:L] - L // 2) * psz
 chi = 0.1 * 2 * np.pi
-setup = wo.waveorder_microscopy(
+setup = waveorder_reconstructor.waveorder_microscopy(
     (N, M),
     lambda_illu,
     ps,

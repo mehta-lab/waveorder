@@ -115,7 +115,7 @@ f_tensor = setup.scattering_potential_tensor_recon_3D_vec(
     S_image_tm, reg_inc=reg_inc, cupy_det=True
 )
 
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     f_tensor[..., L // 2],
     num_col=4,
     origin="lower",
@@ -391,7 +391,7 @@ orientation_3D_image = np.transpose(
     ),
     (3, 1, 2, 0),
 )
-orientation_3D_image_RGB = wo.orientation_3D_to_rgb(
+orientation_3D_image_RGB = visual.orientation_3D_to_rgb(
     orientation_3D_image, interp_belt=20 / 180 * np.pi, sat_factor=1
 )
 
@@ -442,7 +442,7 @@ plt.imshow(in_plane_orientation[z_layer], origin="lower")
 plt.figure(figsize=(10, 10))
 plt.imshow(in_plane_orientation[:, y_layer], origin="lower", aspect=psz / ps)
 plt.figure(figsize=(3, 3))
-wo.orientation_2D_colorwheel()
+visual.orientation_2D_colorwheel()
 plt.show()
 
 
