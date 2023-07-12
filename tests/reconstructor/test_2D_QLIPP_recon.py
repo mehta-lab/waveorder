@@ -1,8 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
-from numpy.fft import fft2, ifft2, fftshift, ifftshift
-
-import pickle
+from numpy.fft import fft2, ifft2
 from waveorder import (
     optics,
     waveorder_simulator,

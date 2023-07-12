@@ -6,7 +6,6 @@ import os
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from IPython import display
 from scipy.ndimage import uniform_filter
-from concurrent.futures import ProcessPoolExecutor
 from .util import *
 from .optics import *
 from .background_estimator import *

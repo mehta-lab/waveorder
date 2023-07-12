@@ -12,7 +12,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from numpy.fft import fft, ifft, fft2, ifft2, fftshift, ifftshift, fftn, ifftn
+from numpy.fft import fftshift
 from waveorder import (
     optics,
     waveorder_simulator,
