@@ -3,7 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 import gc
 import itertools
-from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
+from numpy.fft import fft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 
 
 def Jones_sample(Ein, t, sa):
