@@ -14,7 +14,13 @@ import matplotlib.pyplot as plt
 from numpy.fft import fft, ifft, fft2, ifft2, fftshift, ifftshift, fftn, ifftn
 
 import pickle
-import waveorder as wo
+from waveorder import (
+    optics,
+    waveorder_simulator,
+    waveorder_reconstructor,
+    visual,
+    util,
+)
 
 #####################################################################
 # Initialization - imaging system and sample                        #
@@ -68,7 +74,7 @@ gpu_id = 0  # gpu to be used
 if sample_type == "3D":
     # 3D spoke pattern whose spokes are inclined 60 degrees relative to the z-axis. The principal retardance varies with depth and 3D orientation of permittivity tensor is aligned with the structural orientation of the spoke.
     blur_size = 1 * ps
-    target, azimuth, inclination = wo.genStarTarget_3D(
+    target, azimuth, inclination = util.genStarTarget_3D(
         (N, M, L),
         ps,
         psz,
@@ -80,7 +86,7 @@ if sample_type == "3D":
     azimuth = np.round(azimuth / np.pi / 2 * 16) / 16 * np.pi * 2
 elif sample_type == "2D":
     ## 2D spoke pattern, azimuth aligned with spokes, and the inclination set to 60 degrees ##
-    target, azimuth, _ = wo.genStarTarget(N, M, blur_px=1 * ps, margin=10)
+    target, azimuth, _ = util.genStarTarget(N, M, blur_px=1 * ps, margin=10)
     inclination = np.ones_like(target) * np.pi / 3
     azimuth = azimuth % (np.pi * 2)
     azimuth = np.round(azimuth / np.pi / 2 * 16) / 16 * np.pi * 2
@@ -138,7 +144,7 @@ biref_map = ne_map_copy - no_map_copy
 ### Visualize sample properties
 
 #### XY sections
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     [
         target[:, :, z_layer],
         azimuth[:, :, z_layer] % (2 * np.pi),
@@ -190,7 +196,7 @@ orientation_3D_image = np.transpose(
     ),
     (3, 1, 2, 0),
 )
-orientation_3D_image_RGB = wo.orientation_3D_to_rgb(
+orientation_3D_image_RGB = visual.orientation_3D_to_rgb(
     orientation_3D_image, interp_belt=20 / 180 * np.pi, sat_factor=1
 )
 
@@ -199,7 +205,7 @@ plt.imshow(orientation_3D_image_RGB[z_layer], origin="lower")
 plt.figure(figsize=(10, 10))
 plt.imshow(orientation_3D_image_RGB[:, y_layer], origin="lower")
 plt.figure(figsize=(3, 3))
-wo.orientation_3D_colorwheel(
+visual.orientation_3D_colorwheel(
     wheelsize=128,
     circ_size=50,
     interp_belt=20 / 180 * np.pi,
@@ -209,7 +215,7 @@ wo.orientation_3D_colorwheel(
 plt.show()
 
 #### Angular histogram of 3D orientation
-wo.orientation_3D_hist(
+visual.orientation_3D_hist(
     azimuth.flatten(),
     inclination.flatten(),
     np.abs(target).flatten(),
@@ -251,7 +257,7 @@ epsilon_tensor[2, 1] = epsilon_del * np.sin(2 * inclination) * np.sin(azimuth)
 epsilon_tensor[2, 2] = epsilon_mean + epsilon_del * np.cos(2 * inclination)
 
 
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     [
         epsilon_tensor[0, 0, :, :, z_layer],
         epsilon_tensor[0, 1, :, :, z_layer],
@@ -327,7 +333,7 @@ del_f_component[6] = (
 )
 
 
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     [
         del_f_component[0, :, :, z_layer],
         del_f_component[1, :, :, z_layer],
@@ -361,9 +367,9 @@ plt.show()
 
 # DPC + BF illumination + PolState (sector illumination)
 
-xx, yy, fxx, fyy = wo.gen_coordinate((N, M), ps)
-Pupil_obj = wo.gen_Pupil(fxx, fyy, NA_obj / n_media, lambda_illu / n_media)
-Source_support = wo.gen_Pupil(
+xx, yy, fxx, fyy = util.gen_coordinate((N, M), ps)
+Pupil_obj = optics.gen_Pupil(fxx, fyy, NA_obj / n_media, lambda_illu / n_media)
+Source_support = optics.gen_Pupil(
     fxx, fyy, NA_illu / n_media, lambda_illu / n_media
 )
 
@@ -380,7 +386,7 @@ Source_BF = wo.gen_Pupil(
 )
 
 Source_cont[-1] = Source_BF.copy()
-Source[-1] = wo.Source_subsample(
+Source[-1] = optics.Source_subsample(
     Source_BF, NAx_coord, NAy_coord, subsampled_NA=0.1 / n_media
 )
 
@@ -414,11 +420,11 @@ for i in range(len(Source)):
 
 #### Circularly polarized illumination patterns
 
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5
 )
 # discretized illumination patterns used in simulation (faster forward model)
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     fftshift(Source, axes=(1, 2)), origin="lower", num_col=5, size=5
 )
 print(Source_PolState)
@@ -430,7 +436,7 @@ print(np.sum(Source, axis=(1, 2)))
 #### Initialize microscope simulator with above source pattern and uniform imaging pupil
 
 ## initiate the simulator
-simulator = wo.waveorder_microscopy_simulator(
+simulator = waveorder_simulator.waveorder_microscopy_simulator(
     (N, M),
     lambda_illu,
     ps,

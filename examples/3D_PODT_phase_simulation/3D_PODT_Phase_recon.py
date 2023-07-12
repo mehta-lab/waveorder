@@ -15,8 +15,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
-
-import waveorder as wo
+from waveorder import (
+    optics,
+    waveorder_simulator,
+    waveorder_reconstructor,
+    visual,
+    util,
+)
 
 # Load data
 # Load simulations
@@ -47,7 +52,7 @@ setup = wo.waveorder_microscopy(
 )
 
 H_re_vis = fftshift(setup.H_re)
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     [
         np.real(H_re_vis)[:, :, L // 2],
         np.transpose(np.real(H_re_vis)[N // 2, :, :]),
@@ -68,7 +73,7 @@ wo.plot_multicolumn(
 plt.show()
 
 H_im_vis = fftshift(setup.H_im)
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     [
         np.real(H_im_vis)[:, :, L // 2],
         np.transpose(np.real(H_im_vis)[N // 2, :, :]),

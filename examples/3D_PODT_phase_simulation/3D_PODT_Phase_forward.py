@@ -13,7 +13,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.fft import fft, ifft, fft2, ifft2, fftshift, ifftshift, fftn, ifftn
-import waveorder as wo
+from waveorder import (
+    optics,
+    waveorder_simulator,
+    waveorder_reconstructor,
+    visual,
+    util,
+)
 
 # Experiment parameters
 N = 256  # number of pixel in y dimension
@@ -30,8 +36,8 @@ NA_illu = 0.9  # illumination NA
 # Sample creation
 radius = 5
 blur_size = 2 * ps
-sphere, _, _ = wo.gen_sphere_target((N, M, L), ps, psz, radius, blur_size)
-wo.image_stack_viewer(np.transpose(sphere, (2, 0, 1)))
+sphere, _, _ = util.gen_sphere_target((N, M, L), ps, psz, radius, blur_size)
+visual.image_stack_viewer(np.transpose(sphere, (2, 0, 1)))
 
 # Physical value assignment
 
@@ -56,9 +62,9 @@ plt.show()
 # Setup acquisition
 # Subsampled Source pattern
 
-xx, yy, fxx, fyy = wo.gen_coordinate((N, M), ps)
-Source_cont = wo.gen_Pupil(fxx, fyy, NA_illu, lambda_illu)
-Source_discrete = wo.Source_subsample(
+xx, yy, fxx, fyy = util.gen_coordinate((N, M), ps)
+Source_cont = optics.gen_Pupil(fxx, fyy, NA_illu, lambda_illu)
+Source_discrete = optics.Source_subsample(
     Source_cont, lambda_illu * fxx, lambda_illu * fyy, subsampled_NA=0.1
 )
 plt.figure(figsize=(10, 10))
@@ -68,7 +74,7 @@ print(np.sum(Source_discrete))
 
 z_defocus = (np.r_[:L] - L // 2) * psz
 chi = 0.1 * 2 * np.pi
-setup = wo.waveorder_microscopy(
+setup = waveorder_reconstructor.waveorder_microscopy(
     (N, M),
     lambda_illu,
     ps,
@@ -82,7 +88,7 @@ setup = wo.waveorder_microscopy(
     Source=Source_cont,
 )
 
-simulator = wo.waveorder_microscopy_simulator(
+simulator = waveorder_simulator.waveorder_microscopy_simulator(
     (N, M),
     lambda_illu,
     ps,
@@ -99,7 +105,7 @@ plt.figure(figsize=(5, 5))
 plt.imshow(fftshift(setup.Source), cmap="gray")
 plt.colorbar()
 H_re_vis = fftshift(setup.H_re)
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     [
         np.real(H_re_vis)[:, :, L // 2],
         np.transpose(np.real(H_re_vis)[N // 2, :, :]),
@@ -120,7 +126,7 @@ wo.plot_multicolumn(
 plt.show()
 
 H_im_vis = fftshift(setup.H_im)
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     [
         np.real(H_im_vis)[:, :, L // 2],
         np.transpose(np.real(H_im_vis)[N // 2, :, :]),

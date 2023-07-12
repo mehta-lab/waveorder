@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from numpy.fft import fft2, ifft2, fftshift, ifftshift
 
 import pickle
-import waveorder as wo
+from waveorder import optics, waveorder_simulator, waveorder_reconstructor, util
 
 
 
@@ -28,7 +28,7 @@ def test_2D_QLIPP_recon():
     z_defocus   = (np.r_[:5]-2)*1.757    # a set of defocus plane
     chi         = 0.03*2*np.pi           # swing of Polscope analyzer
 
-    star, theta, _ = wo.genStarTarget(N,M)
+    star, theta, _ = util.genStarTarget(N,M)
 
     # Assign uniform phase, uniform retardance, and radial slow axes to the star pattern
 
@@ -49,21 +49,21 @@ def test_2D_QLIPP_recon():
 
     # Subsample source pattern for speed
 
-    xx, yy, fxx, fyy = wo.gen_coordinate((N, M), ps)
-    Source_cont = wo.gen_Pupil(fxx, fyy, NA_illu, lambda_illu)
+    xx, yy, fxx, fyy = optics.gen_coordinate((N, M), ps)
+    Source_cont = optics.gen_Pupil(fxx, fyy, NA_illu, lambda_illu)
 
 
-    Source_discrete = wo.Source_subsample(Source_cont, lambda_illu*fxx, lambda_illu*fyy, subsampled_NA = 0.1)
+    Source_discrete = optics.Source_subsample(Source_cont, lambda_illu*fxx, lambda_illu*fyy, subsampled_NA = 0.1)
     
     # initiate simulator
-    simulator = wo.waveorder_microscopy_simulator((N,M), lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi, n_media=n_media,\
+    simulator = waveorder_simulator.waveorder_microscopy_simulator((N,M), lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi, n_media=n_media,\
                                                   illu_mode='Arbitrary', Source=Source_discrete)
 
     I_meas, _ = simulator.simulate_waveorder_measurements(t_eigen, sa, multiprocess=False)
 
 
     # initiate reconstructor
-    setup = wo.waveorder_microscopy((N,M), lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi, n_media=n_media, 
+    setup = waveorder_reconstructor.waveorder_microscopy((N,M), lambda_illu, ps, NA_obj, NA_illu, z_defocus, chi, n_media=n_media, 
                                     phase_deconv='2D', bire_in_plane_deconv='2D', illu_mode='BF')
 
 

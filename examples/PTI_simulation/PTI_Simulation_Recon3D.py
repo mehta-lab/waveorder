@@ -11,7 +11,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
-import waveorder as wo
+from waveorder import (
+    optics,
+    waveorder_simulator,
+    waveorder_reconstructor,
+    visual,
+    util,
+)
 
 ## Initialization
 ## Load simulated images and parameters
@@ -39,7 +45,7 @@ gpu_id = 0
 A_matrix = 0.5 * np.array([[1, 1, 0], [1, 0, 1], [1, -1, 0], [1, 0, -1]])
 
 
-setup = wo.waveorder_microscopy(
+setup = waveorder_simulator.waveorder_microscopy(
     (N, M),
     lambda_illu,
     ps,
@@ -61,7 +67,7 @@ setup = wo.waveorder_microscopy(
 
 
 ### Illumination patterns used
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5
 )
 plt.show()
@@ -154,14 +160,14 @@ plt.show()
 # scaling to the physical properties of the material
 
 # optic sign probability
-p_mat_map = wo.optic_sign_probability(mat_map, mat_map_thres=0.2)
+p_mat_map = optics.optic_sign_probability(mat_map, mat_map_thres=0.2)
 
 
 # absorption and phase
-phase = wo.phase_inc_correction(f_tensor[0], retardance_pr[0], theta[0])
+phase = optics.phase_inc_correction(f_tensor[0], retardance_pr[0], theta[0])
 absorption = f_tensor[1].copy()
 phase_PT, absorption_PT, retardance_pr_PT = [
-    wo.unit_conversion_from_scattering_potential_to_permittivity(
+    optics.unit_conversion_from_scattering_potential_to_permittivity(
         SP_array, lambda_illu, n_media=n_media, imaging_mode="3D"
     )
     for SP_array in [phase, absorption, retardance_pr]
@@ -179,7 +185,7 @@ phase_PT, absorption_PT, retardance_pr_PT = [
 ### Reconstructed phase, absorption, principal retardance, azimuth, and inclination assuming (+) and (-) optic sign
 
 # browse the reconstructed physical properties
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     np.stack(
         [
             phase_PT[..., L // 2],
@@ -398,7 +404,7 @@ plt.imshow(
 )
 # plot the top view of 3D orientation colorsphere
 plt.figure(figsize=(3, 3))
-wo.orientation_3D_colorwheel(
+visual.orientation_3D_colorwheel(
     wheelsize=128,
     circ_size=50,
     interp_belt=20 / 180 * np.pi,
@@ -507,7 +513,7 @@ linelength_scale = 20
 
 
 fig, ax = plt.subplots(2, 2, figsize=(10, 10))
-wo.plot3DVectorField(
+visual.plot3DVectorField(
     np.abs(retardance_pr_PT[0, :, :, z_layer]),
     azimuth[0, :, :, z_layer],
     theta[0, :, :, z_layer],
@@ -525,7 +531,7 @@ wo.plot3DVectorField(
 )
 ax[0, 0].set_title(f"XY section (z= {z_layer})")
 
-wo.plot3DVectorField(
+visual.plot3DVectorField(
     np.transpose(np.abs(retardance_pr_PT[0, :, x_layer, :])),
     np.transpose(azimuth_x[0, :, x_layer, :]),
     np.transpose(theta_x[0, :, x_layer, :]),
@@ -543,7 +549,7 @@ wo.plot3DVectorField(
 )
 ax[0, 1].set_title(f"YZ section (x = {x_layer})")
 
-wo.plot3DVectorField(
+visual.plot3DVectorField(
     np.transpose(np.abs(retardance_pr_PT[0, y_layer, :, :])),
     np.transpose(azimuth_y[0, y_layer, :, :]),
     np.transpose(theta_y[0, y_layer, :, :]),
@@ -580,7 +586,7 @@ ret_mask[ret_mask < 0.00125] = 0
 
 plt.figure(figsize=(10, 10))
 plt.imshow(ret_mask[:, :, z_layer], cmap="gray", origin="lower")
-wo.orientation_3D_hist(
+visual.orientation_3D_hist(
     azimuth[0].flatten(),
     theta[0].flatten(),
     ret_mask.flatten(),
