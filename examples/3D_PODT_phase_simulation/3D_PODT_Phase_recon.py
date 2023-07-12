@@ -14,9 +14,11 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
-
-import waveorder as wo
+from numpy.fft import fftshift
+from waveorder import (
+    waveorder_reconstructor,
+    visual,
+)
 
 # Load data
 # Load simulations
@@ -33,7 +35,7 @@ N, M, L = I_meas.shape
 # Refractive index reconstruction
 z_defocus = (np.r_[:L] - L // 2) * psz
 chi = 0.1 * 2 * np.pi
-setup = wo.waveorder_microscopy(
+setup = waveorder_reconstructor.waveorder_microscopy(
     (N, M),
     lambda_illu,
     ps,
@@ -47,7 +49,7 @@ setup = wo.waveorder_microscopy(
 )
 
 H_re_vis = fftshift(setup.H_re)
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     [
         np.real(H_re_vis)[:, :, L // 2],
         np.transpose(np.real(H_re_vis)[N // 2, :, :]),
@@ -68,7 +70,7 @@ wo.plot_multicolumn(
 plt.show()
 
 H_im_vis = fftshift(setup.H_im)
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     [
         np.real(H_im_vis)[:, :, L // 2],
         np.transpose(np.real(H_im_vis)[N // 2, :, :]),

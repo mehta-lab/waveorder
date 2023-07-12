@@ -11,10 +11,13 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
+from numpy.fft import fftshift
 
-import waveorder as wo
-
+from waveorder import (
+    optics,
+    waveorder_reconstructor,
+    visual,
+)
 
 ## Initialization
 ## Load simulated images and parameters
@@ -50,7 +53,7 @@ gpu_id = 0
 A_matrix = 0.5 * np.array([[1, 1, 0], [1, 0, 1], [1, -1, 0], [1, 0, -1]])
 
 
-setup = wo.waveorder_microscopy(
+setup = waveorder_reconstructor.waveorder_microscopy(
     (N, M),
     lambda_illu,
     ps,
@@ -70,10 +73,10 @@ setup = wo.waveorder_microscopy(
     gpu_id=gpu_id,
 )
 
-## Visualize 2D transfer functions as a function of illumination pattern
+## Visualize 2  D transfer functions as a function of illumination pattern
 
 # illumination patterns used
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5
 )
 plt.show()
@@ -115,7 +118,7 @@ f_tensor = setup.scattering_potential_tensor_recon_2D_vec(
     S_image_tm, reg_inc=reg_inc, cupy_det=True
 )
 
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     f_tensor,
     num_col=4,
     origin="lower",
@@ -153,13 +156,13 @@ plt.show()
 # scaling to the physical properties of the material
 
 # optic sign probability
-p_mat_map = wo.optic_sign_probability(mat_map, mat_map_thres=0.1)
+p_mat_map = optics.optic_sign_probability(mat_map, mat_map_thres=0.1)
 
 # absorption and phase
-phase = wo.phase_inc_correction(f_tensor[0], retardance_pr[0], theta[0])
+phase = optics.phase_inc_correction(f_tensor[0], retardance_pr[0], theta[0])
 absorption = f_tensor[1].copy()
 phase_nm, absorption_nm, retardance_pr_nm = [
-    wo.unit_conversion_from_scattering_potential_to_permittivity(
+    optics.unit_conversion_from_scattering_potential_to_permittivity(
         SP_array, lambda_illu, n_media=n_media, imaging_mode=img_mode
     )
     for img_mode, SP_array in zip(
@@ -252,14 +255,14 @@ orientation_3D_image = np.transpose(
     ),
     (1, 2, 0),
 )
-orientation_3D_image_RGB = wo.orientation_3D_to_rgb(
+orientation_3D_image_RGB = visual.orientation_3D_to_rgb(
     orientation_3D_image, interp_belt=20 / 180 * np.pi, sat_factor=1
 )
 
 plt.figure(figsize=(5, 5))
 plt.imshow(orientation_3D_image_RGB, origin="lower")
 plt.figure(figsize=(3, 3))
-wo.orientation_3D_colorwheel(
+visual.orientation_3D_colorwheel(
     wheelsize=256, circ_size=50, interp_belt=20 / 180 * np.pi, sat_factor=1
 )
 plt.show()
@@ -294,7 +297,7 @@ in_plane_orientation = hsv_to_rgb(I_hsv.copy())
 plt.figure(figsize=(5, 5))
 plt.imshow(in_plane_orientation, origin="lower")
 plt.figure(figsize=(3, 3))
-wo.orientation_2D_colorwheel()
+visual.orientation_2D_colorwheel()
 plt.show()
 
 # out-of-plane tilt
@@ -336,7 +339,7 @@ spacing = 4
 plt.figure(figsize=(10, 10))
 
 fig, ax = plt.subplots(1, 1, figsize=(20, 10))
-wo.plot3DVectorField(
+visual.plot3DVectorField(
     np.abs(retardance_pr_nm[0]),
     azimuth[0],
     theta[0],
@@ -359,7 +362,7 @@ ret_mask[ret_mask < 0.5] = 0
 
 plt.figure(figsize=(10, 10))
 plt.imshow(ret_mask, cmap="gray", origin="lower")
-wo.orientation_3D_hist(
+visual.orientation_3D_hist(
     azimuth[0].flatten(),
     theta[0].flatten(),
     ret_mask.flatten(),

@@ -12,8 +12,11 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from numpy.fft import fft2, ifft2, fftshift, ifftshift
-import waveorder as wo
+from waveorder import (
+    waveorder_reconstructor,
+    visual,
+)
+
 
 # ### Load simulated data
 # Load simulations
@@ -34,7 +37,7 @@ _, N, M, L = I_meas.shape
 cali = False
 bg_option = "global"
 
-setup = wo.waveorder_microscopy(
+setup = waveorder_reconstructor.waveorder_microscopy(
     (N, M),
     lambda_illu,
     ps,
@@ -53,7 +56,7 @@ Recon_para = setup.Polarization_recon(
     S_image_tm
 )  # Without accounting for diffraction
 
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     np.array(
         [
             Recon_para[0, :, :, L // 2],
@@ -69,7 +72,7 @@ wo.plot_multicolumn(
     origin="lower",
 )
 
-wo.plot_hsv(
+visual.plot_hsv(
     [Recon_para[1, :, :, L // 2], Recon_para[0, :, :, L // 2]],
     max_val=1,
     origin="lower",
@@ -86,7 +89,7 @@ retardance, azimuth = setup.Birefringence_recon_2D(
     S1_stack, S2_stack, method="Tikhonov", reg_br=1e-3
 )
 
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     np.array([retardance, azimuth]),
     num_col=2,
     size=10,
@@ -94,7 +97,7 @@ wo.plot_multicolumn(
     titles=["Reconstructed retardance", "Reconstructed orientation"],
     origin="lower",
 )
-wo.plot_hsv([azimuth, retardance], size=10, origin="lower")
+visual.plot_hsv([azimuth, retardance], size=10, origin="lower")
 plt.show()
 
 
@@ -110,7 +113,7 @@ retardance_TV, azimuth_TV = setup.Birefringence_recon_2D(
     verbose=True,
 )
 
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     np.array([retardance_TV, azimuth_TV]),
     num_col=2,
     size=10,
@@ -118,7 +121,7 @@ wo.plot_multicolumn(
     titles=["Reconstructed retardance", "Reconstructed orientation"],
     origin="lower",
 )
-wo.plot_hsv([azimuth_TV, retardance_TV], size=10, origin="lower")
+visual.plot_hsv([azimuth_TV, retardance_TV], size=10, origin="lower")
 plt.show()
 
 
@@ -130,7 +133,7 @@ S0_stack = S_image_recon[0].copy()
 mu_sample, phi_sample = setup.Phase_recon(
     S0_stack, method="Tikhonov", reg_u=reg_u, reg_p=reg_p
 )
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     np.array([mu_sample, phi_sample]),
     num_col=2,
     size=10,
@@ -148,7 +151,7 @@ S0_stack = S_image_recon[0].copy()
 mu_sample_TV, phi_sample_TV = setup.Phase_recon(
     S0_stack, method="TV", lambda_u=lambda_u, lambda_p=lambda_p, itr=10, rho=1
 )
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     np.array([mu_sample_TV, phi_sample_TV]),
     num_col=2,
     size=10,

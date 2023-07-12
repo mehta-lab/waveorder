@@ -12,9 +12,13 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from numpy.fft import fft2, ifft2, fftshift, ifftshift
-
-import waveorder as wo
+from numpy.fft import fftshift
+from waveorder import (
+    optics,
+    waveorder_simulator,
+    visual,
+    util,
+)
 
 # Key parameters
 N = 256  # number of pixel in y dimension
@@ -31,8 +35,8 @@ chi = 0.03 * 2 * np.pi  # swing of Polscope analyzer
 
 # Sample : star with uniform phase, uniform retardance, and radial orientation
 # generate Siemens star pattern
-star, theta, _ = wo.genStarTarget(N, M)
-wo.plot_multicolumn(np.array([star, theta]), num_col=2, size=5)
+star, theta, _ = util.genStarTarget(N, M)
+visual.plot_multicolumn(np.array([star, theta]), num_col=2, size=5)
 
 # Assign uniform phase, uniform retardance, and radial slow axes to the star pattern
 phase_value = 1  # average phase in radians (optical path length)
@@ -44,7 +48,7 @@ t_eigen = np.zeros((2, N, M), complex)  # complex specimen transmission
 t_eigen[0] = np.exp(-mu_s + 1j * phi_s)
 t_eigen[1] = np.exp(-mu_f + 1j * phi_f)
 sa = theta % np.pi  # slow axes.
-wo.plot_multicolumn(
+visual.plot_multicolumn(
     np.array([phi_s, phi_f, mu_s, sa]),
     num_col=2,
     size=5,
@@ -58,9 +62,9 @@ plt.show()
 # Source pupil
 # Subsample source pattern for speed
 
-xx, yy, fxx, fyy = wo.gen_coordinate((N, M), ps)
-Source_cont = wo.gen_Pupil(fxx, fyy, NA_illu, lambda_illu)
-Source_discrete = wo.Source_subsample(
+xx, yy, fxx, fyy = util.gen_coordinate((N, M), ps)
+Source_cont = optics.gen_Pupil(fxx, fyy, NA_illu, lambda_illu)
+Source_discrete = optics.Source_subsample(
     Source_cont, lambda_illu * fxx, lambda_illu * fyy, subsampled_NA=0.1
 )
 plt.figure(figsize=(10, 10))
@@ -70,7 +74,7 @@ plt.show()
 # Initialize microscope simulator with above source pattern and uniform imaging pupil
 # Microscope object generation
 
-simulator = wo.waveorder_microscopy_simulator(
+simulator = waveorder_simulator.waveorder_microscopy_simulator(
     (N, M),
     lambda_illu,
     ps,

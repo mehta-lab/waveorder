@@ -1,6 +1,5 @@
 import subprocess
 import os
-from pathlib import Path
 
 
 def _run_scripts(scripts):
