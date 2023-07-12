@@ -78,7 +78,7 @@ setup = waveorder_reconstructor.waveorder_microscopy(
 ## Visualize 2  D transfer functions as a function of illumination pattern
 
 # illumination patterns used
-waveorder_reconstructor.plot_multicolumn(
+visual.plot_multicolumn(
     fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5
 )
 plt.show()
