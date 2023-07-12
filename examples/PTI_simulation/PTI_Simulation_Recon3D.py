@@ -45,7 +45,7 @@ gpu_id = 0
 A_matrix = 0.5 * np.array([[1, 1, 0], [1, 0, 1], [1, -1, 0], [1, 0, -1]])
 
 
-setup = waveorder_simulator.waveorder_microscopy(
+setup = waveorder_reconstructor.waveorder_microscopy(
     (N, M),
     lambda_illu,
     ps,
