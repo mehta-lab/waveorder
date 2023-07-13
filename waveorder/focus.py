@@ -11,7 +11,7 @@ def focus_from_transverse_band(
     lambda_ill,
     pixel_size,
     midband_fractions=(0.125, 0.25),
-    mode: Literal["min" "max"] = "max",
+    mode: Literal["min", "max"] = "max",
     plot_path: Optional[str] = None,
     threshold_FWHM: float = 0,
 ):
