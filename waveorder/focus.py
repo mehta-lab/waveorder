@@ -84,8 +84,9 @@ def focus_from_transverse_band(
     peak_index = minmaxfunc(midband_sum)
 
     peak_results = peak_widths(midband_sum, [peak_index])
-    FWHM = peak_results[0][0]
-    if FWHM > threshold_FWHM:
+    peak_FWHM = peak_results[0][0]
+
+    if peak_FWHM > threshold_FWHM:
         in_focus_index = peak_index
     else:
         in_focus_index = None
