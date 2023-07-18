@@ -177,3 +177,4 @@ def _plot_focus_metric(
 
     print(f"Saving plot to {plot_path}")
     plt.savefig(plot_path, bbox_inches="tight", dpi=300)
+    plt.close()
