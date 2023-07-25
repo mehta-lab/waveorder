@@ -266,7 +266,7 @@ def generate_sphere_target(
     y = (torch.arange(Y) - Y // 2) * yx_pixel_size
     z = (torch.arange(Z) - Z // 2) * z_pixel_size
 
-    zz, yy, xx = torch.meshgrid(z, y, x)
+    zz, yy, xx = torch.meshgrid(z, y, x, indexing="ij")
 
     rho = torch.sqrt(xx**2 + yy**2 + zz**2)
     azimuth = torch.arctan2(yy, xx)
@@ -335,7 +335,7 @@ def generate_radial_frequencies(img_dim, ps):
     fy = torch.fft.fftfreq(img_dim[0], ps)
     fx = torch.fft.fftfreq(img_dim[1], ps)
 
-    fyy, fxx = torch.meshgrid(fy, fx)
+    fyy, fxx = torch.meshgrid(fy, fx, indexing="ij")
 
     return torch.sqrt(fyy**2 + fxx**2)
 
