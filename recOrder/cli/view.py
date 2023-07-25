@@ -1,7 +1,7 @@
 import click
 import napari
 
-v = napari.Viewer()  # open viewer right away to use on hpc
+#v = napari.Viewer()  # open viewer right away to use on hpc
 import numpy as np
 from recOrder.io.utils import ret_ori_overlay
 from iohub.reader import print_info, _infer_format
@@ -170,14 +170,7 @@ def _create_napari_viewer(arrays, layers, layer_names, slice_names, overlay):
     napari.run()
 
 
-@click.group()
-def cli():
-    print(
-        "\033[92mrecOrder: Computational Toolkit for Label-Free Imaging\033[0m\n"
-    )
-
-
-@cli.command()
+@click.command()
 @click.help_option("-h", "--help")
 @click.argument("filename")
 @click.option(

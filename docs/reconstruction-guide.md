@@ -1,13 +1,25 @@
 # Automating reconstructions
 
-`recOrder` is undergoing changes to the way that it handles automated reconstructions.
+`recOrder` uses a configuration-file-based command-line interface (CLI) to perform all reconstructions.
 
-`recOrder==0.2.0` had an offline mode with `config.yml` files that were used to configure reconstructions. These config files could be generated and saved via the GUI, and the reconstructions could be run via GUI or CLI. 
+## How can I use `recOrder`'s CLI to perform reconstructions?
+`recOrder`'s CLI is summarized in the following figure:
+<img src="./images/cli_structure.png" align="center">
 
-Although the offline mode had many valuable and convenient features, we found that it had diverged from the online mode and it was difficult to recreate results between online and offline modes. These design limitations led us to the following plan for our upcoming releases:
+The main command `reconstruct` command is composed of two subcommands: `compute-tf` and `apply-inv-tf`. 
 
-`recOrder==0.3.0` (release candidate in the coming weeks) will remove the offline mode and use a set of scripts instead. We recommend modifying the reconstruction scripts in `recOrder/examples/` to recreate and automate reconstructions. 
+A reconstruction can be performed with a single `reconstruct` call. For example:
+```
+recorder reconstruct data.zarr/0/0/0 -c config.yml -o reconstruction.zarr
+```
+Equivalently, a reconstruction can be performed with a `compute-tf` call followed by an `apply-inv-tf` call. For example:
+```
+recorder compute-tf data.zarr/0/0/0 -c config.yml -o tf.zarr
+recorder apply-inv-tf data.zarr/0/0/0 tf.zarr -c config.yml -o reconstruction.zarr
+```
+Computing the transfer function is typically the most expensive part of the reconstruction, so saving a transfer function then applying it to many datasets can save time. 
 
-Although these scripts are not as user friendly as a GUI+CLI solution, we are preparing for a much cleaner solution in `1.0.0`, and we appreciate your patience as we go through this change. We ask users who are having any difficulty with the scripts to [open an issue](https://github.com/mehta-lab/recOrder/issues/new/choose) or [send us an email](mailto:shalin.mehta@czbiohub.org,talon.chandler@czbiohub.org).
+## What types of reconstructions are supported?
+See `/recOrder/examples/` for a list of example configuration files. 
 
-`recOrder==1.0.0` will use a single mode to acquire and reconstruct the data. We are currently planning a refactor that will enable an "acquire once, quickly iterate your reconstruction" workflow, an "acquire now, reconstruct later" workflow, and a "live acquisition, live reconstruction" workflow, among others.  
+TODO: Expand this documentation...need docs for each reconstruction type and parameter.

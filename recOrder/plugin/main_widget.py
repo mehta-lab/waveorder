@@ -1,43 +1,50 @@
 from __future__ import annotations
 
-from recOrder.calib.Calibration import QLIPP_Calibration, LC_DEVICE_NAME
-from pycromanager import Core, Studio, zmq_bridge
-from qtpy.QtCore import Slot, Signal, Qt
-from qtpy.QtWidgets import QWidget, QFileDialog, QSizePolicy, QSlider
-from qtpy.QtGui import QPixmap, QColor
-from superqt import QDoubleRangeSlider, QRangeSlider
-from recOrder.calib import Calibration
-from recOrder.calib.calibration_workers import (
-    CalibrationWorker,
-    BackgroundCaptureWorker,
-    load_calibration,
-)
-from recOrder.acq.acquisition_workers import (
-    PolarizationAcquisitionWorker,
-    BFAcquisitionWorker,
-)
-from recOrder.plugin import gui
-from recOrder.io.core_functions import set_lc_state, snap_and_average
-from recOrder.io.metadata_reader import MetadataReader
-from recOrder.io.utils import ret_ori_overlay
-from waveorder.waveorder_reconstructor import waveorder_microscopy
-from pathlib import Path, PurePath
-from napari import Viewer
-from napari.utils.notifications import show_warning, show_info
-from napari.qt.threading import create_worker
-from numpydoc.docscrape import NumpyDocString
-from packaging import version
-import numpy as np
-from numpy.typing import NDArray
-import os
-from os.path import dirname
 import json
 import logging
+import os
 import textwrap
-import yaml
+import time
+from os.path import dirname
+from pathlib import Path, PurePath
 
 # type hint/check
 from typing import TYPE_CHECKING
+
+import dask.array as da
+import numpy as np
+import yaml
+from dask import delayed
+from napari import Viewer
+from napari.components import LayerList
+from napari.qt.threading import create_worker
+from napari.utils.events import Event
+from napari.utils.notifications import show_info, show_warning
+from numpy.typing import NDArray
+from numpydoc.docscrape import NumpyDocString
+from packaging import version
+from pycromanager import Core, Studio, zmq_bridge
+from qtpy.QtCore import Qt, Signal, Slot
+from qtpy.QtGui import QColor, QPixmap
+from qtpy.QtWidgets import QFileDialog, QSizePolicy, QSlider, QWidget
+from superqt import QDoubleRangeSlider, QRangeSlider
+from waveorder.waveorder_reconstructor import waveorder_microscopy
+
+from recOrder.acq.acquisition_workers import (
+    BFAcquisitionWorker,
+    PolarizationAcquisitionWorker,
+)
+from recOrder.calib import Calibration
+from recOrder.calib.Calibration import LC_DEVICE_NAME, QLIPP_Calibration
+from recOrder.calib.calibration_workers import (
+    BackgroundCaptureWorker,
+    CalibrationWorker,
+    load_calibration,
+)
+from recOrder.io.core_functions import set_lc_state, snap_and_average
+from recOrder.io.metadata_reader import MetadataReader
+from recOrder.io.utils import ret_ori_overlay
+from recOrder.plugin import gui
 
 # avoid runtime import error
 if TYPE_CHECKING:
@@ -217,6 +224,12 @@ class MainWidget(QWidget):
         self.ui.qbutton_acq_ret_ori_phase.clicked[bool].connect(
             self.acq_ret_ori_phase
         )
+
+        # hook to render overlay
+        # acquistion updates existing layers and moves them to the top which triggers this event
+        self.viewer.layers.events.moved.connect(self.handle_layers_updated)
+        self.viewer.layers.events.inserted.connect(self.handle_layers_updated)
+
         # Commenting for 0.3.0. Consider debugging or deleting for 1.0.0.
         # self.ui.cb_colormap.currentIndexChanged[int].connect(
         #     self.enter_colormap
@@ -302,7 +315,7 @@ class MainWidget(QWidget):
         self.orientation_offset = False
         self.pad_z = 0
         self.phase_reconstructor = None
-        self.acq_bg_directory = None
+        self.acq_bg_directory = ""
         self.auto_shutter = True
         self.lca_dac = None
         self.lcb_dac = None
@@ -785,7 +798,7 @@ class MainWidget(QWidget):
 
         """
         # check if a QLIPP_Calibration object has been initialized
-        if not self.calib:
+        if mode != "phase" and not self.calib:
             raise RuntimeError("Please run or load calibration first.")
 
         # initialize the variable to keep track of the success of the requirement check
@@ -816,7 +829,10 @@ class MainWidget(QWidget):
                 raise_error = True
 
             # check background path if 'Measured' or 'Measured + Estimated' is selected
-            if self.bg_option == "local_fit+" or self.bg_option == "global":
+            if (
+                self.bg_option == "Measured"
+                or self.bg_option == "Measured + Estimated"
+            ):
                 success = self._check_line_edit("bg_path")
                 if not success:
                     raise_error = True
@@ -878,7 +894,7 @@ class MainWidget(QWidget):
         -------
 
         """
-        RECOMMENDED_MM = "20220920"
+        RECOMMENDED_MM = "20230426"
         ZMQ_TARGET_VERSION = "4.2.0"
         try:
             self.mmc = Core(convert_camel_case=False)
@@ -1126,6 +1142,7 @@ class MainWidget(QWidget):
         if name in self.viewer.layers:
             self.viewer.layers[name].data = image
             if move_to_top:
+                logging.debug(f"Moving layer {name} to the top.")
                 src_index = self.viewer.layers.index(name)
                 self.viewer.layers.move(src_index, dest_index=-1)
         else:
@@ -1145,29 +1162,62 @@ class MainWidget(QWidget):
             value[1], "Background Orientation", cmap="hsv"
         )
 
-    def _draw_bire_overlay(self, overlay):
-        self._add_or_update_image_layer(
-            overlay, "BirefringenceOverlay" + self.acq_mode, cmap="rgb"
+    def handle_layers_updated(self, event: Event):
+        layers: LayerList = event.source
+        latest_layer_name = layers[-1].name
+        channels = ["Retardance", "Orientation"]
+        for ch in channels:
+            if latest_layer_name.startswith(ch):
+                suffix = latest_layer_name.replace(ch, "")
+                other_name = channels[1 - channels.index(ch)] + suffix
+                overlay_name = "BirefringenceOverlay" + suffix
+                if other_name in layers and overlay_name not in layers:
+                    logging.info(
+                        "Detected updated birefringence layers: "
+                        f"'{latest_layer_name}', '{other_name}'"
+                    )
+                    self._draw_bire_overlay(
+                        [ch + suffix, other_name], overlay_name
+                    )
+        if latest_layer_name.startswith(channels[1]):
+            logging.info(
+                "Detected orientation layer in updated layer list."
+                "Setting its colormap to HSV."
+            )
+            self.viewer.layers[latest_layer_name].colormap = "hsv"
+
+    def _draw_bire_overlay(
+        self, source_names: list[str, str], overlay_name: str
+    ):
+        def _layer_data(name: str):
+            return self.viewer.layers[name].data
+
+        def _draw(overlay):
+            self._add_or_update_image_layer(overlay, overlay_name, cmap="rgb")
+
+        orientation_name, retardance_name = sorted(source_names)
+        retardance = _layer_data(retardance_name)
+        orientation = _layer_data(orientation_name)
+        worker = create_worker(
+            ret_ori_overlay,
+            retardance=retardance,
+            orientation=orientation,
+            ret_max=np.percentile(np.ravel(retardance), 99.99),
+            cmap=self.colormap,
         )
+        worker.start()
+        logging.info(f"Updating the birefringence overlay layer.")
+        if retardance.size >= 2 * 2048 * 2048:
+            show_info("Generating large overlay. This might take a moment...")
+        worker.returned.connect(_draw)
 
     @Slot(object)
     def handle_bire_image_update(self, value: NDArray):
         # generate overlay in a separate thread
-        overlay_worker = create_worker(
-            ret_ori_overlay,
-            retardance=value[0],
-            orientation=value[1],
-            ret_max=np.percentile(value[0], 99.99),
-            cmap=self.colormap,
-        )
-        overlay_worker.returned.connect(self._draw_bire_overlay)
-        overlay_worker.start()
         for i, channel in enumerate(("Retardance", "Orientation")):
-            name = channel + self.acq_mode
+            name = channel
             cmap = "gray" if channel != "Orientation" else "hsv"
             self._add_or_update_image_layer(value[i], name, cmap=cmap)
-        if self.acq_mode == "3D":
-            show_info("Generating 3D overlay. This might take a moment...")
 
     @Slot(object)
     def handle_phase_image_update(self, value):
@@ -1520,17 +1570,17 @@ class MainWidget(QWidget):
             self.ui.label_bg_path.setHidden(False)
             self.ui.le_bg_path.setHidden(False)
             self.ui.qbutton_browse_bg_path.setHidden(False)
-            self.bg_option = "global"
+            self.bg_option = "Measured"
         elif state == 2:
             self.ui.label_bg_path.setHidden(True)
             self.ui.le_bg_path.setHidden(True)
             self.ui.qbutton_browse_bg_path.setHidden(True)
-            self.bg_option = "local_fit"
+            self.bg_option = "Estimated"
         elif state == 3:
             self.ui.label_bg_path.setHidden(False)
             self.ui.le_bg_path.setHidden(False)
             self.ui.qbutton_browse_bg_path.setHidden(False)
-            self.bg_option = "local_fit+"
+            self.bg_option = "Measured + Estimated"
 
     @Slot()
     def enter_gpu_id(self):
