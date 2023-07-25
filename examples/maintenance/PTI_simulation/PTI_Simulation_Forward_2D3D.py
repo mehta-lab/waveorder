@@ -57,12 +57,12 @@ y_layer = M // 2  # default y-slice to display in XZ views.
 n_media = 1.518  # refractive index in the media
 mag = 63  # magnification
 ps = 6 / mag  # effective pixel size
-psz = 0.125 / 2  # axial pixel size
+z_pixel_size = 0.125 / 2  # axial pixel size
 lambda_illu = 0.532  # wavelength
 NA_obj = 1.47  # objective NA
 NA_illu = 1.4  # illumination NA
 chi = 0.25 * 2 * np.pi  # swing of the microscope
-z_defocus = (np.r_[:L] - L // 2) * psz  # defocus position
+z_defocus = (np.r_[:L] - L // 2) * z_pixel_size  # defocus position
 use_gpu = False  # option to use gpu
 gpu_id = 0  # gpu to be used
 
@@ -74,7 +74,7 @@ if sample_type == "3D":
     target, azimuth, inclination = util.genStarTarget_3D(
         (N, M, L),
         ps,
-        psz,
+        z_pixel_size,
         blur_size,
         inc_upper_bound=np.pi / 8,
         inc_range=np.pi / 64,
@@ -83,7 +83,11 @@ if sample_type == "3D":
     azimuth = np.round(azimuth / np.pi / 2 * 16) / 16 * np.pi * 2
 elif sample_type == "2D":
     ## 2D spoke pattern, azimuth aligned with spokes, and the inclination set to 60 degrees ##
-    target, azimuth, _ = util.genStarTarget(N, M, blur_px=1 * ps, margin=10)
+    target, azimuth, _ = util.generate_star_target(
+        (N, M), blur_px=1 * ps, margin=10
+    )
+    target = target.numpy()
+    azimuth = azimuth.numpy()
     inclination = np.ones_like(target) * np.pi / 3
     azimuth = azimuth % (np.pi * 2)
     azimuth = np.round(azimuth / np.pi / 2 * 16) / 16 * np.pi * 2
@@ -177,7 +181,7 @@ orientation_3D_image = np.transpose(
             inclination,
             np.clip(
                 (ne_map - no_map)
-                * psz
+                * z_pixel_size
                 * 2
                 * np.pi
                 / lambda_illu
@@ -365,10 +369,14 @@ plt.show()
 # DPC + BF illumination + PolState (sector illumination)
 
 xx, yy, fxx, fyy = util.gen_coordinate((N, M), ps)
-Pupil_obj = optics.gen_Pupil(fxx, fyy, NA_obj / n_media, lambda_illu / n_media)
-Source_support = optics.gen_Pupil(
-    fxx, fyy, NA_illu / n_media, lambda_illu / n_media
-)
+radial_frequencies = np.sqrt(fxx**2 + fyy**2)
+
+Pupil_obj = optics.generate_pupil(
+    radial_frequencies, NA_obj / n_media, lambda_illu / n_media
+).numpy()
+Source_support = optics.generate_pupil(
+    radial_frequencies, NA_illu / n_media, lambda_illu / n_media
+).numpy()
 
 NAx_coord = lambda_illu / n_media * fxx
 NAy_coord = lambda_illu / n_media * fyy
@@ -378,9 +386,9 @@ rotation_angle = [0, 45, 90, 135, 180, 225, 270, 315]
 Source = np.zeros((len(rotation_angle) + 1, N, M))
 Source_cont = np.zeros_like(Source)
 
-Source_BF = optics.gen_Pupil(
-    fxx, fyy, NA_illu / n_media / 2, lambda_illu / n_media
-)
+Source_BF = optics.generate_pupil(
+    radial_frequencies, NA_illu / n_media / 2, lambda_illu / n_media
+).numpy()
 
 Source_cont[-1] = Source_BF.copy()
 Source[-1] = optics.Source_subsample(
@@ -494,7 +502,7 @@ np.savez(
     NA_obj=NA_obj,
     NA_illu=NA_illu,
     ps=ps,
-    psz=psz,
+    psz=z_pixel_size,
     Source_cont=Source_cont,
     Source_PolState=Source_PolState,
     z_defocus=z_defocus,

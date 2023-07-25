@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import itertools
 import time
 import os
+import torch
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from concurrent.futures import ProcessPoolExecutor
 from .util import *
@@ -23,7 +24,6 @@ def Jones_PC_forward_model(
     Hz_det,
     time_re,
 ):
-
     plane_wave = np.exp(1j * 2 * np.pi * (fyy * yy + fxx * xx))
 
     N, M = xx.shape
@@ -75,7 +75,6 @@ class waveorder_microscopy_simulator:
         use_gpu=False,
         gpu_id=0,
     ):
-
         """
 
         initialize the system parameters for phase and orders microscopy
@@ -110,16 +109,22 @@ class waveorder_microscopy_simulator:
         self.xx, self.yy, self.fxx, self.fyy = gen_coordinate(
             (self.N, self.M), ps
         )
-        self.Pupil_obj = gen_Pupil(
-            self.fxx, self.fyy, self.NA_obj, self.lambda_illu
-        )
+        self.frr = np.sqrt(self.fxx**2 + self.fyy**2)
+
+        self.Pupil_obj = generate_pupil(
+            self.frr, self.NA_obj, self.lambda_illu
+        ).numpy()
         self.Pupil_support = self.Pupil_obj.copy()
-        self.Hz_det = gen_Hz_stack(
-            self.fxx,
-            self.fyy,
-            self.Pupil_support,
-            self.lambda_illu,
-            self.z_defocus,
+
+        self.Hz_det = (
+            generate_propagation_kernel(
+                torch.tensor(self.frr),
+                torch.tensor(self.Pupil_support),
+                self.lambda_illu,
+                torch.tensor(self.z_defocus),
+            )
+            .numpy()
+            .transpose((1, 2, 0))
         )
 
         # illumination setup
@@ -141,11 +146,10 @@ class waveorder_microscopy_simulator:
     def illumination_setup(
         self, illu_mode, NA_illu_in, Source, Source_PolState
     ):
-
         if illu_mode == "BF":
-            self.Source = gen_Pupil(
-                self.fxx, self.fyy, self.NA_illu, self.lambda_illu
-            )
+            self.Source = generate_pupil(
+                self.frr, self.NA_illu, self.lambda_illu
+            ).numpy()
             self.N_pattern = 1
 
         elif illu_mode == "PH":
@@ -153,29 +157,26 @@ class waveorder_microscopy_simulator:
                 raise ("No inner rim NA specified in the PH illumination mode")
             else:
                 self.NA_illu_in = NA_illu_in / self.n_media
-                inner_pupil = gen_Pupil(
-                    self.fxx,
-                    self.fyy,
+                inner_pupil = generate_pupil(
+                    self.frr,
                     self.NA_illu_in / self.n_media,
                     self.lambda_illu,
-                )
-                self.Source = gen_Pupil(
-                    self.fxx, self.fyy, self.NA_illu, self.lambda_illu
-                )
+                ).numpy()
+                self.Source = generate_pupil(
+                    self.frr, self.NA_illu, self.lambda_illu
+                ).numpy()
                 self.Source -= inner_pupil
 
-                Pupil_ring_out = gen_Pupil(
-                    self.fxx,
-                    self.fyy,
+                Pupil_ring_out = generate_pupil(
+                    self.frr,
                     self.NA_illu / self.n_media,
                     self.lambda_illu,
-                )
-                Pupil_ring_in = gen_Pupil(
-                    self.fxx,
-                    self.fyy,
+                ).numpy()
+                Pupil_ring_in = generate_pupil(
+                    self.frr,
                     self.NA_illu_in / self.n_media,
                     self.lambda_illu,
-                )
+                ).numpy()
 
                 self.Pupil_obj = self.Pupil_obj * np.exp(
                     (Pupil_ring_out - Pupil_ring_in)
@@ -184,7 +185,6 @@ class waveorder_microscopy_simulator:
                 self.N_pattern = 1
 
         elif illu_mode == "Arbitrary":
-
             self.Source = Source.copy()
             if Source.ndim == 2:
                 self.N_pattern = 1
@@ -211,7 +211,6 @@ class waveorder_microscopy_simulator:
     def simulate_waveorder_measurements(
         self, t_eigen, sa_orientation, multiprocess=False
     ):
-
         Stokes_out = np.zeros(
             (4, self.N, self.M, self.N_defocus * self.N_pattern)
         )
@@ -220,10 +219,8 @@ class waveorder_microscopy_simulator:
         )
 
         if multiprocess:
-
             t0 = time.time()
             for j in range(self.N_pattern):
-
                 if self.N_pattern == 1:
                     [idx_y, idx_x] = np.where(self.Source == 1)
                 else:
@@ -277,7 +274,6 @@ class waveorder_microscopy_simulator:
         else:
             t0 = time.time()
             for j in range(self.N_pattern):
-
                 if self.N_pattern == 1:
                     [idx_y, idx_x] = np.where(self.Source == 1)
                     Source_current = self.Source.copy()
@@ -337,7 +333,6 @@ class waveorder_microscopy_simulator:
     def simulate_waveorder_inc_measurements(
         self, n_e, n_o, dz, mu, orientation, inclination
     ):
-
         Stokes_out = np.zeros(
             (4, self.N, self.M, self.N_defocus * self.N_pattern)
         )
@@ -356,7 +351,6 @@ class waveorder_microscopy_simulator:
         t0 = time.time()
 
         for j in range(self.N_pattern):
-
             if self.N_pattern == 1:
                 [idx_y, idx_x] = np.where(self.Source >= 1)
                 Source_current = self.Source.copy()
@@ -366,7 +360,6 @@ class waveorder_microscopy_simulator:
             N_source = len(idx_y)
 
             for i in range(N_source):
-
                 cos_alpha = (
                     sample_norm_x * wave_x[idx_y[i], idx_x[i]]
                     + sample_norm_y * wave_y[idx_y[i], idx_x[i]]
@@ -448,9 +441,8 @@ class waveorder_microscopy_simulator:
         return I_meas, Stokes_out
 
     def simulate_3D_scalar_measurements(self, t_obj):
-
         fr = (self.fxx**2 + self.fyy**2) ** (0.5)
-        Pupil_prop = gen_Pupil(self.fxx, self.fyy, 1, self.lambda_illu)
+        Pupil_prop = generate_pupil(self.frr, 1, self.lambda_illu).numpy()
         oblique_factor_prop = (
             (1 - self.lambda_illu**2 * fr**2) * Pupil_prop
         ) ** (1 / 2) / self.lambda_illu
@@ -475,7 +467,6 @@ class waveorder_microscopy_simulator:
 
         t0 = time.time()
         for i in range(self.N_pattern):
-
             if self.N_pattern == 1:
                 [idx_y, idx_x] = np.where(self.Source >= 1)
                 Source_current = self.Source.copy()
@@ -489,7 +480,6 @@ class waveorder_microscopy_simulator:
                 I_temp = cp.zeros((self.N, self.M, self.N_defocus))
 
                 for j in range(N_pt_source):
-
                     plane_wave = cp.array(
                         Source_current[idx_y[j], idx_x[j]]
                         * np.exp(
@@ -504,14 +494,12 @@ class waveorder_microscopy_simulator:
                     )
 
                     for m in range(self.N_defocus):
-
                         if m == 0:
                             f_field = plane_wave.copy()
 
                         g_field = f_field * t_obj[:, :, m]
 
                         if m == self.N_defocus - 1:
-
                             f_field_stack_f = (
                                 cp.fft.fft2(
                                     g_field[:, :, cp.newaxis], axes=(0, 1)
@@ -548,9 +536,7 @@ class waveorder_microscopy_simulator:
                 I_meas[i] = cp.asnumpy(I_temp.copy())
 
             else:
-
                 for j in range(N_pt_source):
-
                     plane_wave = Source_current[idx_y[j], idx_x[j]] * np.exp(
                         1j
                         * 2
@@ -562,14 +548,12 @@ class waveorder_microscopy_simulator:
                     )
 
                     for m in range(self.N_defocus):
-
                         if m == 0:
                             f_field = plane_wave
 
                         g_field = f_field * t_obj[:, :, m]
 
                         if m == self.N_defocus - 1:
-
                             f_field_stack_f = (
                                 fft2(g_field[:, :, np.newaxis], axes=(0, 1))
                                 * Hz_defocus
@@ -605,7 +589,6 @@ class waveorder_microscopy_simulator:
     def simulate_3D_scalar_measurements_SEAGLE(
         self, RI_map, itr_max=100, tolerance=1e-4, verbose=False
     ):
-
         G_real = -gen_Greens_function_real(
             (2 * self.N, 2 * self.M, 2 * self.N_defocus),
             self.ps,
@@ -683,7 +666,6 @@ class waveorder_microscopy_simulator:
 
         t0 = time.time()
         for i in range(self.N_pattern):
-
             if self.N_pattern == 1:
                 [idx_y, idx_x] = np.where(self.Source > 0)
                 Source_current = self.Source.copy()
@@ -804,7 +786,6 @@ class waveorder_microscopy_simulator:
                 I_meas[i] = cp.asnumpy(I_temp.copy())
 
             else:
-
                 for j in range(N_pt_source):
                     plane_wave = (
                         Source_current[idx_y[j], idx_x[j]]
@@ -914,7 +895,6 @@ class waveorder_microscopy_simulator:
     def simulate_3D_vectorial_measurements_SEAGLE(
         self, epsilon_tensor, itr_max=100, tolerance=1e-4, verbose=False
     ):
-
         G_real = gen_Greens_function_real(
             (2 * self.N, 2 * self.M, 2 * self.N_defocus),
             self.ps,
@@ -942,7 +922,7 @@ class waveorder_microscopy_simulator:
                 )
 
         fr = (self.fxx**2 + self.fyy**2) ** (0.5)
-        Pupil_prop = gen_Pupil(self.fxx, self.fyy, 1, self.lambda_illu)
+        Pupil_prop = generate_pupil(fr, 1, self.lambda_illu).numpy()
         oblique_factor_prop = (
             (1 - self.lambda_illu**2 * fr**2) * Pupil_prop
         ) ** (1 / 2) / self.lambda_illu
@@ -970,7 +950,6 @@ class waveorder_microscopy_simulator:
 
         t0 = time.time()
         for i in range(self.N_pattern):
-
             if self.N_pattern == 1:
                 [idx_y, idx_x] = np.where(self.Source > 0)
                 Source_current = self.Source.copy()
@@ -981,7 +960,6 @@ class waveorder_microscopy_simulator:
             N_pt_source = len(idx_y)
 
             for j in range(N_pt_source):
-
                 E_in = np.zeros((3, self.N, self.M, self.N_defocus), complex)
                 E_tot = np.zeros((3, self.N, self.M, self.N_defocus), complex)
                 E_in_amp = np.zeros((3,), complex)
@@ -1107,7 +1085,6 @@ class waveorder_microscopy_simulator:
                 tic_time = time.time()
 
                 for m in range(itr_max):
-
                     E_in_est = SEAGLE_vec_forward(
                         E_tot,
                         f_scat_tensor,
@@ -1172,7 +1149,6 @@ class waveorder_microscopy_simulator:
                         )
 
                 if self.use_gpu:
-
                     E_field_out = cp.fft.ifft2(
                         cp.fft.fft2(E_tot[:2, :, :, -1], axes=(1, 2))[
                             :, :, :, cp.newaxis
@@ -1202,7 +1178,6 @@ class waveorder_microscopy_simulator:
                         )
 
                 else:
-
                     E_field_out = ifft2(
                         fft2(E_tot[:2, :, :, -1], axes=(1, 2))[
                             :, :, :, np.newaxis

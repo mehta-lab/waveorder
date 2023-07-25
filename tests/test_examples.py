@@ -1,10 +1,12 @@
 import subprocess
 import os
+import pytest
+import sys
 
 
 def _run_scripts(scripts):
     for script in scripts:
-        path = os.path.join(os.getcwd(), "examples/", script)
+        path = os.path.join(os.getcwd(), "examples/maintenance/", script)
         completed_process = subprocess.run(["python", path])
         assert completed_process.returncode == 0
 
@@ -16,16 +18,8 @@ def _run_scripts(scripts):
 # @patch("matplotlib.pyplot.show")
 def test_qlipp_examples():
     scripts = [
-        "2D_QLIPP_simulation/2D_QLIPP_forward.py",
-        "2D_QLIPP_simulation/2D_QLIPP_recon.py",
-    ]
-    _run_scripts(scripts)
-
-
-def test_phase_examples():
-    scripts = [
-        "3D_PODT_phase_simulation/3D_PODT_Phase_forward.py",
-        "3D_PODT_phase_simulation/3D_PODT_Phase_recon.py",
+        "QLIPP_simulation/2D_QLIPP_forward.py",
+        "QLIPP_simulation/2D_QLIPP_recon.py",
     ]
     _run_scripts(scripts)
 
@@ -37,3 +31,20 @@ def test_pti_examples():
         "PTI_simulation/PTI_Simulation_Recon3D.py",
     ]
     _run_scripts(scripts)
+
+
+@pytest.mark.skipif("napari" not in sys.modules, reason="requires napari")
+def test_phase_examples():
+    scripts = [
+        "isotropic_thin_3d.py",
+        "phase_thick_3d.py",
+        "inplane_anisotropic_thin_pol3d.py",
+    ]
+
+    for script in scripts:
+        path = os.path.join(os.getcwd(), "examples/models/", script)
+        # examples needs two <enters>s so send input="e\ne"
+        completed_process = subprocess.run(
+            ["python", path], input="e\ne", encoding="ascii"
+        )
+        assert completed_process.returncode == 0

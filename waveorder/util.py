@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pywt
 import time
+import torch
 
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from scipy.ndimage import uniform_filter
@@ -12,6 +13,64 @@ import re
 
 numbers = re.compile(r"(\d+)")
 
+import torch
+
+
+def pad_zyx_along_z(zyx_data, z_padding):
+    """
+    Pad a 3D tensor along the z-dimension.
+
+    Parameters
+    ----------
+    zyx_data : torch.Tensor
+        Input 3D tensor of shape (Z, Y, X).
+    z_padding : int
+        Number of padding slices to add on both ends of the z-dimension.
+
+    Returns
+    -------
+    torch.Tensor
+        Padded 3D tensor of shape (Z + 2 * z_padding, Y, X).
+
+    Raises
+    ------
+    ValueError
+        If z_padding is negative.
+
+    Notes
+    -----
+    - If z_padding is 0, the function returns the input tensor unchanged.
+    - If z_padding is positive, the function pads the tensor with zeros along the z-dimension.
+    - If z_padding is greater than or equal to the number of z-slices in zyx_data, a warning message is included in the returned tensor,
+      indicating that zero padding is used instead of reflection padding (less effective).
+    - Reflection padding is used when z_padding is smaller than the number of z-slices in zyx_data, providing a symmetric padding.
+    """
+    if z_padding < 0:
+        raise ValueError("z_padding cannot be negative.")
+    elif z_padding == 0:
+        return zyx_data
+    else:
+        zyx_padded = torch.nn.functional.pad(
+            zyx_data,
+            (0, 0, 0, 0, z_padding, z_padding),
+            mode="constant",
+            value=0,
+        )
+        if z_padding < zyx_data.shape[0]:
+            zyx_padded[:z_padding] = torch.flip(zyx_data[:z_padding], dims=[0])
+            zyx_padded[-z_padding:] = torch.flip(
+                zyx_data[-z_padding:], dims=[0]
+            )
+        else:
+            warning_msg = "Warning: z_padding is larger than the number of z-slices. Using zero padding instead of reflection padding (less effective)."
+            zyx_padded = torch.nn.functional.pad(
+                zyx_padded,
+                (0, 0, 0, 0, 0, 0),
+                mode="constant",
+                value=0,
+            )
+        return zyx_padded
+
 
 def numericalSort(value):
     parts = numbers.split(value)
@@ -19,18 +78,15 @@ def numericalSort(value):
     return parts
 
 
-def genStarTarget(N, M, blur_px=2, margin=60):
+def generate_star_target(yx_shape, blur_px=2, margin=60):
     """
 
     generate Siemens star image for simulation
 
     Parameters
     ----------
-        N       : int
-                  size of the simulated image in y dimension
-
-        M       : int
-                  size of the simulated image in x dimension
+        yx_shape  : tuple
+                  size of the simulated image in (Y, X)
 
         blur_px : float
                   the standard deviation of the imposed Gaussian blur on the simulated image
@@ -40,44 +96,51 @@ def genStarTarget(N, M, blur_px=2, margin=60):
 
     Returns
     -------
-        star    : numpy.ndarray
-                  Siemens star with the size of (Ny, Nx)
+        star    : torch.tensor
+                  Siemens star with the size of (Y, X)
 
-        theta   : numpy.ndarray
-                  azimuthal angle of the polar coordinate with the size of (Ny, Nx)
+        theta   : torch.tensor
+                  azimuthal angle of the polar coordinate with the size of (Y, X)
 
         xx      : numpy.ndarray
-                  x coordinate array with the size of (Ny, Nx)
+                  x coordinate array with the size of (Y, X)
 
     """
 
     # Construct Siemens star
+    Y, X = yx_shape
 
-    x = np.r_[:N] - N // 2
-    y = np.r_[:M] - M // 2
+    x = np.arange(X) - X // 2
+    y = np.arange(Y) - Y // 2
 
-    xx, yy = np.meshgrid(x, y)
+    xx, yy = torch.tensor(np.meshgrid(x, y))
 
-    rho = np.sqrt(xx**2 + yy**2)
-    theta = np.arctan2(yy, xx)
+    rho = torch.sqrt(xx**2 + yy**2)
+    theta = torch.arctan2(yy, xx)
 
     # star = (1 + np.cos(40*theta))
     # star = np.pad(star[10:-10,10:-10],(10,),mode='constant')
-    star = 1 + np.cos(16 * theta)
-    star = np.pad(
-        star[margin:-margin, margin:-margin], (margin,), mode="constant"
+    star = 1 + torch.cos(16 * theta)
+    star = torch.nn.functional.pad(
+        star[margin:-margin, margin:-margin], 4 * (margin,), mode="constant"
     )
     star[star < 1] = 0
 
     # Filter to prevent aliasing
 
-    Gaussian = np.exp(-(rho**2) / (2 * blur_px**2))
+    Gaussian = torch.exp(-(rho**2) / (2 * blur_px**2))
 
-    star = np.maximum(
-        0, np.real(ifft2(fft2(star) * fft2(ifftshift(Gaussian))))
+    star = torch.clip(
+        torch.real(
+            torch.fft.ifft2(
+                torch.fft.fft2(star)
+                * torch.fft.fft2(torch.fft.ifftshift(Gaussian))
+            )
+        ),
+        min=0,
     )
     # star = np.maximum(0, np.real(ifft2(fft2(star) * fft2(ifftshift(Gaussian)))))*(2+np.sin(2*np.pi*(1/5)*rho))
-    star /= np.max(star)
+    star /= torch.max(star)
 
     return star, theta, xx
 
@@ -160,20 +223,22 @@ def genStarTarget_3D(
     return star, azimuth, inc_angle
 
 
-def gen_sphere_target(img_dim, ps, psz, radius, blur_size=0.1):
+def generate_sphere_target(
+    zyx_shape, yx_pixel_size, z_pixel_size, radius, blur_size=0.1
+):
     """
 
     generate 3D sphere target for simulation
 
     Parameters
     ----------
-        img_dim   : tuple
-                    shape of the computed 3D space with size of (Ny, Nx, Nz)
+        zyx_shape   : tuple
+                    shape of the computed 3D space with size of (Z, Y, X)
 
-        ps        : float
+        yx_pixel_size        : float
                     transverse pixel size of the image space
 
-        psz       : float
+        z_pixel_size       : float
                     axial step size of the image space
 
         radius    : float
@@ -185,44 +250,43 @@ def gen_sphere_target(img_dim, ps, psz, radius, blur_size=0.1):
 
     Returns
     -------
-        sphere    : numpy.ndarray
-                    3D star image with the size of (Ny, Nx, Nz)
+        sphere    : torch.tensor
+                    3D star image with the size of (Z, Y, X)
 
-        azimuth   : numpy.ndarray
-                    azimuthal angle of the 3D polar coordinate with the size of (Ny, Nx, Nz)
+        azimuth   : torch.tensor
+                    azimuthal angle of the 3D polar coordinate with the size of (Z, Y, X)
 
-        inc_angle : numpy.ndarray
-                    theta angle of the 3D polar coordinate with the size of (Ny, Nx, Nz)
+        inc_angle : torch.tensor
+                    theta angle of the 3D polar coordinate with the size of (Z, Y, X)
 
     """
 
-    N, M, L = img_dim
-    x = (np.r_[:M] - M // 2) * ps
-    y = (np.r_[:N] - N // 2) * ps
-    z = (np.r_[:L] - L // 2) * psz
+    Z, Y, X = zyx_shape
+    x = (torch.arange(X) - X // 2) * yx_pixel_size
+    y = (torch.arange(Y) - Y // 2) * yx_pixel_size
+    z = (torch.arange(Z) - Z // 2) * z_pixel_size
 
-    xx, yy, zz = np.meshgrid(x, y, z)
+    zz, yy, xx = torch.meshgrid(z, y, x)
 
-    rho = np.sqrt(xx**2 + yy**2 + zz**2)
-    azimuth = np.arctan2(yy, xx)
-    inc_angle = np.arctan2((xx**2 + yy**2) ** (1 / 2), zz)
+    rho = torch.sqrt(xx**2 + yy**2 + zz**2)
+    azimuth = torch.arctan2(yy, xx)
+    inc_angle = torch.arctan2((xx**2 + yy**2) ** (1 / 2), zz)
 
-    sphere = np.zeros_like(xx)
+    sphere = torch.zeros_like(xx)
     sphere[xx**2 + yy**2 + zz**2 < radius**2] = 1
 
     Gaussian = np.exp(-(rho**2) / (2 * blur_size**2))
 
     sphere = np.maximum(
         0,
-        np.real(
-            ifftn(
-                fftn(sphere, axes=(0, 1, 2))
-                * fftn(ifftshift(Gaussian), axes=(0, 1, 2)),
-                axes=(0, 1, 2),
+        torch.real(
+            torch.fft.ifftn(
+                torch.fft.fftn(sphere)
+                * torch.fft.fftn(torch.fft.ifftshift(Gaussian))
             )
         ),
     )
-    sphere /= np.max(sphere)
+    sphere /= torch.max(sphere)
 
     return sphere, azimuth, inc_angle
 
@@ -265,6 +329,15 @@ def gen_coordinate(img_dim, ps):
     fxx, fyy = np.meshgrid(fx, fy)
 
     return (xx, yy, fxx, fyy)
+
+
+def generate_radial_frequencies(img_dim, ps):
+    fy = torch.fft.fftfreq(img_dim[0], ps)
+    fx = torch.fft.fftfreq(img_dim[1], ps)
+
+    fyy, fxx = torch.meshgrid(fy, fx)
+
+    return torch.sqrt(fyy**2 + fxx**2)
 
 
 def axial_upsampling(I_meas, upsamp_factor=1):
@@ -609,71 +682,39 @@ def uniform_filter_2D(image, size, use_gpu=False, gpu_id=0):
     return image_filtered
 
 
-def inten_normalization(img_stack, bg_filter=True, use_gpu=False, gpu_id=0):
+def inten_normalization(img_stack, bg_filter=True):
     """
 
     layer-by-layer intensity normalization to reduce low-frequency phase artifacts
 
     Parameters
     ----------
-        img_stack      : numpy.ndarray
-                         image stack for normalization with size of (Ny, Nx, Nz)
-
-        type           : str
-                         '2D' refers to layer-by-layer and '3D' refers to whole-stack normalization
+        img_stack      : torch.tensor
+                         image stack for normalization with size of (Z, Y, X)
 
         bg_filter      : bool
                          option for slow-varying 2D background normalization with uniform filter
 
-        use_gpu        : bool
-                         option to use gpu or not
-
-        gpu_id         : int
-                         number refering to which gpu will be used
-
     Returns
     -------
-        img_norm_stack : numpy.ndarray
-                         normalized image stack with size of (Ny, Nx, Nz)
+        img_norm_stack : torch.tensor
+                         normalized image stack with size of (Z, Y, X)
 
     """
 
-    N, M, Nimg = img_stack.shape
+    Z, Y, X = img_stack.shape
 
-    if use_gpu:
-        globals()["cp"] = __import__("cupy")
-        cp.cuda.Device(gpu_id).use()
+    img_norm_stack = torch.zeros_like(img_stack)
 
-        img_stack = cp.array(img_stack)
-        img_norm_stack = cp.zeros_like(img_stack)
-
-        for i in range(Nimg):
-            if bg_filter:
-                img_norm_stack[:, :, i] = img_stack[
-                    :, :, i
-                ] / uniform_filter_2D(
-                    img_stack[:, :, i],
-                    size=N // 2,
-                    use_gpu=True,
-                    gpu_id=gpu_id,
-                )
-            else:
-                img_norm_stack[:, :, i] = img_stack[:, :, i].copy()
-            img_norm_stack[:, :, i] /= img_norm_stack[:, :, i].mean()
-            img_norm_stack[:, :, i] -= 1
-
-    else:
-        img_norm_stack = np.zeros_like(img_stack)
-
-        for i in range(Nimg):
-            if bg_filter:
-                img_norm_stack[:, :, i] = img_stack[:, :, i] / uniform_filter(
-                    img_stack[:, :, i], size=N // 2
-                )
-            else:
-                img_norm_stack[:, :, i] = img_stack[:, :, i].copy()
-            img_norm_stack[:, :, i] /= img_norm_stack[:, :, i].mean()
-            img_norm_stack[:, :, i] -= 1
+    for i in range(Z):
+        if bg_filter:
+            img_norm_stack[i] = img_stack[i] / uniform_filter(
+                img_stack[i], size=X // 2
+            )
+        else:
+            img_norm_stack[i] = img_stack[i].copy()
+        img_norm_stack[i] /= torch.mean(img_norm_stack[i])
+        img_norm_stack[i] -= 1
 
     return img_norm_stack
 
@@ -685,31 +726,21 @@ def inten_normalization_3D(img_stack):
 
     Parameters
     ----------
-        img_stack      : numpy.ndarray
-                         image stack for normalization with size of (Ny, Nx, Nz)
+        img_stack      : torch.tensor
+                         image stack for normalization with size of (Z, Y, X)
 
     Returns
     -------
-        img_norm_stack : numpy.ndarray
-                         normalized image stack with size of (Ny, Nx, Nz)
+        img_norm_stack : torch.tensor
+                         normalized image stack with size of (Z, Y, X)
 
     """
-
-    img_norm_stack = np.zeros_like(img_stack)
-    img_norm_stack = (
-        img_stack
-        / np.mean(img_stack, axis=(-3, -2, -1))[
-            ..., np.newaxis, np.newaxis, np.newaxis
-        ]
-    )
+    img_norm_stack = img_stack / torch.mean(img_stack)
     img_norm_stack -= 1
-
     return img_norm_stack
 
 
-def Dual_variable_Tikhonov_deconv_2D(
-    AHA, b_vec, determinant=None, use_gpu=False, gpu_id=0, move_cpu=True
-):
+def dual_variable_tikhonov_deconvolution_2d(AHA, b_vec, determinant=None):
     """
 
     2D Tikhonov deconvolution to solve for phase and absorption with weak object transfer function
@@ -726,25 +757,15 @@ def Dual_variable_Tikhonov_deconv_2D(
                       | b_vec[0] |
                       | b_vec[1] |
 
-        determinant : numpy.ndarray
-                      determinant of the AHA matrix in 2D space
-
-        use_gpu     : bool
-                      option to use gpu or not
-
-        gpu_id      : int
-                      number refering to which gpu will be used
-
-        move_cpu    : bool
-                      option to move the array from gpu to cpu
+        determinant : optional torch.tensor
 
     Returns
     -------
-        mu_sample   : numpy.ndarray
-                      2D absorption reconstruction with the size of (Ny, Nx)
+        mu_sample   : torch.tensor
+                      2D absorption reconstruction with the size of (Y, X)
 
-        phi_sample  : numpy.ndarray
-                      2D phase reconstruction with the size of (Ny, Nx)
+        phi_sample  : torch.tensor
+                      2D phase reconstruction with the size of (Y, X)
     """
 
     if determinant is None:
@@ -753,26 +774,20 @@ def Dual_variable_Tikhonov_deconv_2D(
     mu_sample_f = (b_vec[0] * AHA[3] - b_vec[1] * AHA[1]) / determinant
     phi_sample_f = (b_vec[1] * AHA[0] - b_vec[0] * AHA[2]) / determinant
 
-    if use_gpu:
-        globals()["cp"] = __import__("cupy")
-        cp.cuda.Device(gpu_id).use()
-
-        mu_sample = cp.real(cp.fft.ifft2(mu_sample_f))
-        phi_sample = cp.real(cp.fft.ifft2(phi_sample_f))
-
-        if move_cpu:
-            mu_sample = cp.asnumpy(mu_sample)
-            phi_sample = cp.asnumpy(phi_sample)
-
-    else:
-        mu_sample = np.real(ifft2(mu_sample_f))
-        phi_sample = np.real(ifft2(phi_sample_f))
+    mu_sample = torch.real(torch.fft.ifft2(mu_sample_f))
+    phi_sample = torch.real(torch.fft.ifft2(phi_sample_f))
 
     return mu_sample, phi_sample
 
 
-def Dual_variable_ADMM_TV_deconv_2D(
-    AHA, b_vec, rho, lambda_u, lambda_p, itr, verbose, use_gpu=False, gpu_id=0
+def dual_variable_admm_tv_deconv_2d(
+    AHA,
+    b_vec,
+    rho=1e-5,
+    lambda_u=1e-3,
+    lambda_p=1e-3,
+    itr=20,
+    verbose=False,
 ):
     """
 
@@ -834,28 +849,14 @@ def Dual_variable_ADMM_TV_deconv_2D(
     Dy[0, 0] = 1
     Dy[-1, 0] = -1
 
-    if use_gpu:
-        globals()["cp"] = __import__("cupy")
-        cp.cuda.Device(gpu_id).use()
+    Dx = fft2(Dx)
+    Dy = fft2(Dy)
 
-        Dx = cp.fft.fft2(cp.array(Dx))
-        Dy = cp.fft.fft2(cp.array(Dy))
+    rho_term = rho * (np.conj(Dx) * Dx + np.conj(Dy) * Dy)
 
-        rho_term = rho * (cp.conj(Dx) * Dx + cp.conj(Dy) * Dy)
-
-        z_para = cp.zeros((4, N, M))
-        u_para = cp.zeros((4, N, M))
-        D_vec = cp.zeros((4, N, M))
-
-    else:
-        Dx = fft2(Dx)
-        Dy = fft2(Dy)
-
-        rho_term = rho * (np.conj(Dx) * Dx + np.conj(Dy) * Dy)
-
-        z_para = np.zeros((4, N, M))
-        u_para = np.zeros((4, N, M))
-        D_vec = np.zeros((4, N, M))
+    z_para = np.zeros((4, N, M))
+    u_para = np.zeros((4, N, M))
+    D_vec = np.zeros((4, N, M))
 
     AHA[0] = AHA[0] + rho_term
     AHA[3] = AHA[3] + rho_term
@@ -863,68 +864,29 @@ def Dual_variable_ADMM_TV_deconv_2D(
     determinant = AHA[0] * AHA[3] - AHA[1] * AHA[2]
 
     for i in range(itr):
-        if use_gpu:
-            v_para = cp.fft.fft2(z_para - u_para)
-            b_vec_new = [
-                b_vec[0]
-                + rho * (cp.conj(Dx) * v_para[0] + cp.conj(Dy) * v_para[1]),
-                b_vec[1]
-                + rho * (cp.conj(Dx) * v_para[2] + cp.conj(Dy) * v_para[3]),
-            ]
+        v_para = fft2(z_para - u_para)
+        b_vec_new = [
+            b_vec[0]
+            + rho * (np.conj(Dx) * v_para[0] + np.conj(Dy) * v_para[1]),
+            b_vec[1]
+            + rho * (np.conj(Dx) * v_para[2] + np.conj(Dy) * v_para[3]),
+        ]
 
-            mu_sample, phi_sample = Dual_variable_Tikhonov_deconv_2D(
-                AHA,
-                b_vec_new,
-                determinant=determinant,
-                use_gpu=use_gpu,
-                gpu_id=gpu_id,
-                move_cpu=not use_gpu,
-            )
+        mu_sample, phi_sample = dual_variable_tikhonov_deconvolution_2d(
+            AHA, b_vec_new, determinant=determinant
+        )
 
-            D_vec[0] = mu_sample - cp.roll(mu_sample, -1, axis=1)
-            D_vec[1] = mu_sample - cp.roll(mu_sample, -1, axis=0)
-            D_vec[2] = phi_sample - cp.roll(phi_sample, -1, axis=1)
-            D_vec[3] = phi_sample - cp.roll(phi_sample, -1, axis=0)
+        D_vec[0] = mu_sample - np.roll(mu_sample, -1, axis=1)
+        D_vec[1] = mu_sample - np.roll(mu_sample, -1, axis=0)
+        D_vec[2] = phi_sample - np.roll(phi_sample, -1, axis=1)
+        D_vec[3] = phi_sample - np.roll(phi_sample, -1, axis=0)
 
-            z_para = D_vec + u_para
+        z_para = D_vec + u_para
 
-            z_para[:2, :, :] = softTreshold(
-                z_para[:2, :, :], lambda_u / rho, use_gpu=True, gpu_id=gpu_id
-            )
-            z_para[2:, :, :] = softTreshold(
-                z_para[2:, :, :], lambda_p / rho, use_gpu=True, gpu_id=gpu_id
-            )
+        z_para[:2, :, :] = softTreshold(z_para[:2, :, :], lambda_u / rho)
+        z_para[2:, :, :] = softTreshold(z_para[2:, :, :], lambda_p / rho)
 
-            u_para += D_vec - z_para
-
-            if i == itr - 1:
-                mu_sample = cp.asnumpy(mu_sample)
-                phi_sample = cp.asnumpy(phi_sample)
-
-        else:
-            v_para = fft2(z_para - u_para)
-            b_vec_new = [
-                b_vec[0]
-                + rho * (np.conj(Dx) * v_para[0] + np.conj(Dy) * v_para[1]),
-                b_vec[1]
-                + rho * (np.conj(Dx) * v_para[2] + np.conj(Dy) * v_para[3]),
-            ]
-
-            mu_sample, phi_sample = Dual_variable_Tikhonov_deconv_2D(
-                AHA, b_vec_new, determinant=determinant
-            )
-
-            D_vec[0] = mu_sample - np.roll(mu_sample, -1, axis=1)
-            D_vec[1] = mu_sample - np.roll(mu_sample, -1, axis=0)
-            D_vec[2] = phi_sample - np.roll(phi_sample, -1, axis=1)
-            D_vec[3] = phi_sample - np.roll(phi_sample, -1, axis=0)
-
-            z_para = D_vec + u_para
-
-            z_para[:2, :, :] = softTreshold(z_para[:2, :, :], lambda_u / rho)
-            z_para[2:, :, :] = softTreshold(z_para[2:, :, :], lambda_p / rho)
-
-            u_para += D_vec - z_para
+        u_para += D_vec - z_para
 
         if verbose:
             print("Number of iteration computed (%d / %d)" % (i + 1, itr))
@@ -932,12 +894,10 @@ def Dual_variable_ADMM_TV_deconv_2D(
     return mu_sample, phi_sample
 
 
-def Single_variable_Tikhonov_deconv_3D(
+def single_variable_tikhonov_deconvolution_3D(
     S0_stack,
     H_eff,
-    reg_re,
-    use_gpu=False,
-    gpu_id=0,
+    reg_re=1e-4,
     autotune=False,
     epsilon_auto=0.5,
     output_lambda=False,
@@ -958,12 +918,6 @@ def Single_variable_Tikhonov_deconv_3D(
 
         reg_re           : float
                            Tikhonov regularization parameter
-
-        use_gpu          : bool
-                           option to use gpu or not
-
-        gpu_id           : int
-                           number refering to which gpu will be used
 
         autotune         :  bool
                            option to use L-curve to automatically choose regularization parameter
@@ -986,19 +940,10 @@ def Single_variable_Tikhonov_deconv_3D(
                            3D unscaled phase reconstruction with the size of (Ny, Nx, Nz)
                            (if using autotune) reconstruction for the automatically chosen parameter, plus two others around that parameter value, size (3, Ny, Nx, Nz)
     """
-    if use_gpu:
-        globals()["cp"] = __import__("cupy")
-        cp.cuda.Device(gpu_id).use()
-        S0_stack = cp.array(S0_stack.astype("float32"))
-        H_eff = cp.array(H_eff.astype("complex64"))
-        xp = cp
-    else:
-        xp = np
-
-    S0_stack_f = xp.fft.fftn(S0_stack, axes=(-3, -2, -1))
-    N, M, L = S0_stack_f.shape
-    H_eff_abs_square = xp.abs(H_eff) ** 2
-    H_eff_conj = xp.conj(H_eff)
+    S0_stack_f = torch.fft.fftn(S0_stack, dim=(-3, -2, -1))
+    Z, Y, X = S0_stack_f.shape
+    H_eff_abs_square = torch.abs(H_eff) ** 2
+    H_eff_conj = torch.conj(H_eff)
 
     # a "named tuple" representing a point on the L curve
     # allows for dot notation to access attributes
@@ -1008,7 +953,7 @@ def Single_variable_Tikhonov_deconv_3D(
 
     def menger_curvature(points):
         # x is data norm, y is reg norm
-        x, y = xp.zeros(3), xp.zeros(3)
+        x, y = torch.zeros(3), torch.zeros(3)
         for i in range(3):
             x[i] = points[i].data_norm
             y[i] = points[i].reg_norm
@@ -1029,8 +974,6 @@ def Single_variable_Tikhonov_deconv_3D(
 
         # FT{f} (f=scattering potential (whose real part is (scaled) phase))
         f_real_f = S0_stack_f * H_eff_conj / (H_eff_abs_square + reg_coeff)
-        if use_gpu:
-            cp.get_default_memory_pool().free_all_blocks()
 
         return f_real_f
 
@@ -1043,15 +986,15 @@ def Single_variable_Tikhonov_deconv_3D(
             H_eff * f_real_f
         )  # Ax (put estimate through forward model)
 
-        data_norm_eval = xp.log(
-            xp.linalg.norm(S0_est_stack_f - S0_stack_f) ** 2 / N / M / L
+        data_norm_eval = torch.log(
+            torch.linalg.norm(S0_est_stack_f - S0_stack_f) ** 2 / (Z * Y * X)
         )
-        reg_norm_eval = xp.log(xp.linalg.norm(f_real_f) ** 2 / N / M / L)
+        reg_norm_eval = torch.log(
+            torch.linalg.norm(f_real_f) ** 2 / (Z * Y * X)
+        )
 
         if not keep_f_real_f:
             f_real_f = None
-        if use_gpu:
-            cp.get_default_memory_pool().free_all_blocks()
 
         return Point_L_curve(
             reg_x, 10**reg_x, data_norm_eval, reg_norm_eval, f_real_f
@@ -1060,21 +1003,19 @@ def Single_variable_Tikhonov_deconv_3D(
     # creates return value of the whole function
     # (scaled) phase = real part of inverse FT {scattering potential}
     def ifft_f_real(f_real_f):
-        f_real = xp.real(xp.fft.ifftn(f_real_f, axes=(-3, -2, -1)))
-        if use_gpu:
-            cp.get_default_memory_pool().free_all_blocks()
-            return cp.asnumpy(f_real)
-        else:
-            return f_real
+        f_real = torch.real(torch.fft.ifftn(f_real_f, dim=(-3, -2, -1)))
+        return f_real
 
     def calc_golden_x(a, b):
-        gs_ratio = (1 + xp.sqrt(5)) / 2
+        gs_ratio = (1 + torch.sqrt(5)) / 2
         return (a * gs_ratio + b) / (1 + gs_ratio)
 
     if autotune:
         # initialize golden section search
-        reg_x_cent = xp.log10(reg_re)  # reg_re becomes middle of search range
-        reg_x = xp.zeros(4)
+        reg_x_cent = torch.log10(
+            reg_re
+        )  # reg_re becomes middle of search range
+        reg_x = torch.zeros(4)
         reg_x[0] = (
             reg_x_cent - search_range_auto
         )  # search range = reg_x_cent +/- search_range_auto
@@ -1152,7 +1093,7 @@ def Single_variable_Tikhonov_deconv_3D(
             return np.array(f_real)
 
     else:
-        f_real_f = compute_f_real_f(xp.log10(reg_re))
+        f_real_f = compute_f_real_f(np.log10(reg_re))
         f_real = ifft_f_real(f_real_f)
         return f_real
 
@@ -1224,14 +1165,14 @@ def Dual_variable_Tikhonov_deconv_3D(
     return f_real, f_imag
 
 
-def Single_variable_ADMM_TV_deconv_3D(
+def single_variable_admm_tv_deconvolution_3D(
     S0_stack,
     H_eff,
-    rho,
-    reg_re,
-    lambda_re,
-    itr,
-    verbose,
+    rho=1e-5,
+    reg_re=1e-4,
+    lambda_re=1e-3,
+    itr=20,
+    verbose=False,
     use_gpu=False,
     gpu_id=0,
 ):

@@ -35,7 +35,9 @@ chi = 0.03 * 2 * np.pi  # swing of Polscope analyzer
 
 # Sample : star with uniform phase, uniform retardance, and radial orientation
 # generate Siemens star pattern
-star, theta, _ = util.genStarTarget(N, M)
+star, theta, _ = util.generate_star_target((N, M))
+star = star.numpy()
+theta = theta.numpy()
 visual.plot_multicolumn(np.array([star, theta]), num_col=2, size=5)
 
 # Assign uniform phase, uniform retardance, and radial slow axes to the star pattern
@@ -63,7 +65,10 @@ plt.show()
 # Subsample source pattern for speed
 
 xx, yy, fxx, fyy = util.gen_coordinate((N, M), ps)
-Source_cont = optics.gen_Pupil(fxx, fyy, NA_illu, lambda_illu)
+radial_frequencies = np.sqrt(fxx**2 + fyy**2)
+Source_cont = optics.generate_pupil(
+    radial_frequencies, NA_illu, lambda_illu
+).numpy()
 Source_discrete = optics.Source_subsample(
     Source_cont, lambda_illu * fxx, lambda_illu * fyy, subsampled_NA=0.1
 )
