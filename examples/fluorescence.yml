@@ -1,5 +1,6 @@
 input_channel_names:
 - GFP
+time_indices: all
 reconstruction_dimension: 3
 fluorescence:
   transfer_function:

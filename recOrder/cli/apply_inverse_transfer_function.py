@@ -2,20 +2,21 @@ import click
 import numpy as np
 import torch
 from iohub import open_ome_zarr
-from recOrder.cli.printing import echo_headline, echo_settings
-from recOrder.cli.settings import ReconstructionSettings
-from recOrder.cli.parsing import (
-    input_data_path_argument,
-    config_path_option,
-    output_dataset_option,
-)
-from recOrder.io import utils
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
+    isotropic_fluorescent_thick_3d,
     isotropic_thin_3d,
     phase_thick_3d,
-    isotropic_fluorescent_thick_3d,
 )
+
+from recOrder.cli.parsing import (
+    config_path_option,
+    input_data_path_argument,
+    output_dataset_option,
+)
+from recOrder.cli.printing import echo_headline, echo_settings
+from recOrder.cli.settings import ReconstructionSettings
+from recOrder.io import utils
 
 
 def _check_background_consistency(background_shape, data_shape):
@@ -53,8 +54,20 @@ def apply_inverse_transfer_function_cli(
             input_dataset.channel_names.index(input_channel_name)
         )
 
-    # Load dataset shape
-    t_shape = input_dataset.data.shape[0]
+    # Find time indices
+    if settings.time_indices == "all":
+        time_indices = range(input_dataset.data.shape[0])
+    elif isinstance(settings.time_indices, list):
+        time_indices = settings.time_indices
+    elif isinstance(settings.time_indices, int):
+        time_indices = [settings.time_indices]
+
+    # Check for invalid times
+    time_ubound = input_dataset.data.shape[0] - 1
+    if np.max(time_indices) > time_ubound:
+        raise ValueError(
+            f"time_indices = {time_indices} includes a time index beyond the maximum index of the dataset = {time_ubound}"
+        )
 
     # Simplify important settings names
     recon_biref = settings.birefringence is not None
@@ -87,26 +100,31 @@ def apply_inverse_transfer_function_cli(
         output_z_shape = input_dataset.data.shape[2]
 
     output_shape = (
-        t_shape,
+        input_dataset.data.shape[0],
         len(channel_names),
         output_z_shape,
     ) + input_dataset.data.shape[3:]
 
     # Create output dataset
     output_dataset = open_ome_zarr(
-        output_path, layout="fov", mode="w", channel_names=channel_names
+        output_path, layout="fov", mode="a", channel_names=channel_names
     )
-    output_array = output_dataset.create_zeros(
-        name="0",
-        shape=output_shape,
-        dtype=np.float32,
-        chunks=(
-            1,
-            1,
-            1,
+
+    # Create an empty TCZYX array if it doesn't exist
+    if "0" not in output_dataset:
+        output_array = output_dataset.create_zeros(
+            name="0",
+            shape=output_shape,
+            dtype=np.float32,
+            chunks=(
+                1,
+                1,
+                1,
+            )
+            + input_dataset.data.shape[3:],  # chunk by YX
         )
-        + input_dataset.data.shape[3:],  # chunk by YX
-    )
+    else:
+        output_array = output_dataset[0]
 
     # Load data
     tczyx_uint16_numpy = input_dataset.data.oindex[:, channel_indices]
@@ -143,7 +161,7 @@ def apply_inverse_transfer_function_cli(
             transfer_function_dataset["intensity_to_stokes_matrix"][0, 0, 0]
         )
 
-        for time_index in range(t_shape):
+        for time_index in time_indices:
             # Apply
             reconstructed_parameters = (
                 inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
@@ -180,7 +198,7 @@ def apply_inverse_transfer_function_cli(
                 transfer_function_dataset["phase_transfer_function"][0, 0]
             )
 
-            for time_index in range(t_shape):
+            for time_index in time_indices:
                 # Apply
                 (
                     _,
@@ -210,7 +228,7 @@ def apply_inverse_transfer_function_cli(
             )
 
             # Apply
-            for time_index in range(t_shape):
+            for time_index in time_indices:
                 zyx_phase = phase_thick_3d.apply_inverse_transfer_function(
                     tczyx_data[time_index, 0],
                     real_potential_transfer_function,
@@ -246,7 +264,7 @@ def apply_inverse_transfer_function_cli(
                 transfer_function_dataset["phase_transfer_function"][0, 0]
             )
 
-            for time_index in range(t_shape):
+            for time_index in time_indices:
                 # Apply
                 reconstructed_parameters_2d = inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
                     tczyx_data[time_index],
@@ -304,7 +322,7 @@ def apply_inverse_transfer_function_cli(
             )
 
             # Apply
-            for time_index in range(t_shape):
+            for time_index in time_indices:
                 reconstructed_parameters_3d = inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
                     tczyx_data[time_index],
                     intensity_to_stokes_matrix,
@@ -348,7 +366,7 @@ def apply_inverse_transfer_function_cli(
             )
 
             # Apply
-            for time_index in range(t_shape):
+            for time_index in time_indices:
                 zyx_recon = isotropic_fluorescent_thick_3d.apply_inverse_transfer_function(
                     tczyx_data[time_index, 0],
                     optical_transfer_function,

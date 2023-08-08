@@ -1,5 +1,6 @@
 input_channel_names:
 - BF
+time_indices: all
 reconstruction_dimension: 3
 phase:
   transfer_function:
