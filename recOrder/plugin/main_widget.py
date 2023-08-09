@@ -2367,9 +2367,7 @@ class MainWidget(QWidget):
 
         """
 
-        options = QFileDialog.Options()
-
-        options |= QFileDialog.DontUseNativeDialog
+        options = QFileDialog.DontUseNativeDialog
         if type == "dir":
             path = QFileDialog.getExistingDirectory(
                 None, title, ref, options=options
