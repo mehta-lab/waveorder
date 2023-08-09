@@ -1,6 +1,7 @@
 import numpy as np
 from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
+from iohub.ngff_meta import TransformationMeta
 
 from recOrder.cli import settings
 from recOrder.cli.main import cli
@@ -18,7 +19,13 @@ def test_reconstruct(tmp_path):
         mode="w",
         channel_names=channel_names,
     )
-    dataset.create_zeros("0", (5, 4, 4, 5, 6), dtype=np.uint16)
+    input_scale = [1, 2, 3, 4, 5]
+    dataset.create_zeros(
+        "0",
+        (5, 4, 4, 5, 6),
+        dtype=np.uint16,
+        transform=[TransformationMeta(type="scale", scale=input_scale)],
+    )
 
     # Setup options
     birefringence_settings = settings.BirefringenceSettings(
@@ -111,4 +118,6 @@ def test_reconstruct(tmp_path):
         assert result_path.exists()
         assert result_inv.exit_code == 0
         assert "Reconstructing" in result_inv.output
-        assert "Reconstructing" in result_inv.output
+
+        # Check scale transformations pass through
+        assert input_scale == result_dataset.scale
