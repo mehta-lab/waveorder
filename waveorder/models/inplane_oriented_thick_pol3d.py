@@ -55,8 +55,8 @@ def apply_inverse_transfer_function(
     cyx_no_sample_data=None,  # if not None, use this data for background correction
     project_stokes_to_2d=False,
     remove_estimated_background=False,  # if True estimate background from czyx_data and remove it
-    orientation_flip=False,
-    orientation_rotate=False,
+    flip_orientation=False,
+    rotate_orientation=False,
 ):
     data_stokes = stokes.mmul(intensity_to_stokes_matrix, czyx_data)
 
@@ -103,7 +103,7 @@ def apply_inverse_transfer_function(
 
     # Apply orientation transformations
     orientation = stokes.apply_orientation_offset(
-        adr_parameters[1], rotate=orientation_rotate, flip=orientation_flip
+        adr_parameters[1], rotate=rotate_orientation, flip=flip_orientation
     )
 
     return retardance, orientation, adr_parameters[2], adr_parameters[3]

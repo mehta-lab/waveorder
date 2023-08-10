@@ -1,5 +1,6 @@
 import pytest
 import torch
+
 from waveorder.models import isotropic_fluorescent_thick_3d
 
 
@@ -15,7 +16,7 @@ def test_calculate_transfer_function(axial_flip):
             z_padding=z_padding,
             index_of_refraction_media=1.0,
             numerical_aperture_detection=0.55,
-            axial_flip=axial_flip,
+            invert_phase_contrast=axial_flip,
         )
     )
 
