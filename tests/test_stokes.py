@@ -1,8 +1,9 @@
 import numpy as np
-from waveorder import stokes
 import pytest
 import torch
 import torch.testing as tt
+
+from waveorder import stokes
 
 
 def test_S2I_matrix():
@@ -131,3 +132,48 @@ def test_copying():
     M = stokes.mueller_from_stokes(a, b, c, d)
     M[0, 0, 0] = -1  # modify the output
     assert a[0] == 1
+
+
+def test_orientation_offset():
+    ori = torch.tensor(
+        [0, torch.pi / 4, torch.pi / 2, torch.pi - 0.01, torch.pi]
+    )
+
+    ff = stokes.apply_orientation_offset(ori, rotate=False, flip=False)
+    assert torch.allclose(
+        ff, torch.tensor([0, torch.pi / 4, torch.pi / 2, torch.pi - 0.01, 0])
+    )
+
+    tf = stokes.apply_orientation_offset(ori, rotate=True, flip=False)
+    assert torch.allclose(
+        tf,
+        torch.tensor(
+            [
+                torch.pi / 2,
+                3 * torch.pi / 4,
+                0,
+                (torch.pi / 2) - 0.01,
+                torch.pi / 2,
+            ]
+        ),
+    )
+
+    ft = stokes.apply_orientation_offset(ori, rotate=False, flip=True)
+    assert torch.allclose(
+        ft,
+        torch.tensor([0, 3 * torch.pi / 4, torch.pi / 2, 0.01, 0]),
+    )
+
+    tt = stokes.apply_orientation_offset(ori, rotate=True, flip=True)
+    assert torch.allclose(
+        tt,
+        torch.tensor(
+            [
+                torch.pi / 2,
+                torch.pi / 4,
+                0,
+                (torch.pi / 2) + 0.01,
+                torch.pi / 2,
+            ]
+        ),
+    )

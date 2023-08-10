@@ -46,8 +46,8 @@ For example, the following usage modes of stokes_after_adr are valid:
 >>> stokes_after_adr(*adr_params) # * expands along the first axis
 
 """
-import torch
 import numpy as np
+import torch
 
 
 def calculate_stokes_to_intensity_matrix(swing, scheme="5-State"):
@@ -422,3 +422,37 @@ def mmul(matrix, vector):
         raise ValueError("matrix.shape[1] is not equal to vector.shape[0]")
 
     return torch.einsum("NM...,M...->N...", matrix, vector)
+
+
+def apply_orientation_offset(orientation, rotate, flip):
+    """
+    Applies an in-place rotation and/or flip to an orientation map while
+    keeping the output range within 0 <= orientation < pi.
+
+    Parameters
+    ----------
+    orientation : array_like
+        Array of orientations measured in radians
+    rotate : bool
+        If True, rotate orientation pi/2 radians (90 degrees)
+    flip : bool
+        If True, flip the orientation
+
+    Returns
+    -------
+    array_like with same shape as input
+
+    Transformed array of orientations measured in radians
+    with range 0 <= orientation < pi
+
+    Note
+    ----
+    rotate=False and flip=False leaves the effective orientation unchanged
+    while changing the output range to 0 <= orientation < pi
+    """
+    out_orientation = torch.clone(orientation)
+    if rotate:
+        out_orientation += torch.pi / 2
+    if flip:
+        out_orientation *= -1
+    return torch.remainder(out_orientation, torch.pi)
