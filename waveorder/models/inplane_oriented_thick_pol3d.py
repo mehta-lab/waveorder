@@ -55,8 +55,8 @@ def apply_inverse_transfer_function(
     cyx_no_sample_data=None,  # if not None, use this data for background correction
     project_stokes_to_2d=False,
     remove_estimated_background=False,  # if True estimate background from czyx_data and remove it
-    orientation_flip=False,  # TODO implement
-    orientation_rotate=False,  # TODO implement
+    orientation_flip=False,
+    orientation_rotate=False,
 ):
     data_stokes = stokes.mmul(intensity_to_stokes_matrix, czyx_data)
 
