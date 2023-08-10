@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+
 from waveorder import background_estimator, stokes, util
 
 
@@ -100,4 +101,9 @@ def apply_inverse_transfer_function(
     # Return retardance in distance units (matching wavelength_illumination)
     retardance = adr_parameters[0] * wavelength_illumination / (2 * np.pi)
 
-    return retardance, adr_parameters[1], adr_parameters[2], adr_parameters[3]
+    # Apply orientation transformations
+    orientation = stokes.apply_orientation_offset(
+        adr_parameters[1], rotate=orientation_rotate, flip=orientation_flip
+    )
+
+    return retardance, orientation, adr_parameters[2], adr_parameters[3]
