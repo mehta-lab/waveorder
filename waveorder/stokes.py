@@ -426,7 +426,7 @@ def mmul(matrix, vector):
 
 def apply_orientation_offset(orientation, rotate, flip):
     """
-    Applies an in-place rotation and/or flip to an orientation map while
+    Applies a rotation and/or flip to an orientation map while
     keeping the output range within 0 <= orientation < pi.
 
     Parameters
