@@ -24,7 +24,6 @@ def calculate_transfer_function(
     z_padding,
     index_of_refraction_media,
     numerical_aperture_detection,
-    invert_phase_contrast=False,
 ):
     radial_frequencies = util.generate_radial_frequencies(
         zyx_shape[1:], yx_pixel_size
@@ -34,9 +33,7 @@ def calculate_transfer_function(
     z_position_list = torch.fft.ifftshift(
         (torch.arange(z_total) - z_total // 2) * z_pixel_size
     )
-    if invert_phase_contrast:
-        z_position_list = torch.flip(z_position_list, dims=(0,))
-
+    
     det_pupil = optics.generate_pupil(
         radial_frequencies,
         numerical_aperture_detection,

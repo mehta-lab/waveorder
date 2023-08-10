@@ -1,5 +1,6 @@
-import torch
 import numpy as np
+import torch
+
 from waveorder import optics, util
 
 
@@ -38,9 +39,9 @@ def calculate_transfer_function(
     index_of_refraction_media,
     numerical_aperture_illumination,
     numerical_aperture_detection,
-    axial_flip=False,
+    invert_phase_contrast=False,
 ):
-    if axial_flip:
+    if invert_phase_contrast:
         z_position_list = torch.flip(torch.tensor(z_position_list), dims=(0,))
 
     radial_frequencies = util.generate_radial_frequencies(
