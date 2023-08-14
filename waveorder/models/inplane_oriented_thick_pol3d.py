@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+
 from waveorder import background_estimator, stokes, util
 
 
@@ -54,8 +55,8 @@ def apply_inverse_transfer_function(
     cyx_no_sample_data=None,  # if not None, use this data for background correction
     project_stokes_to_2d=False,
     remove_estimated_background=False,  # if True estimate background from czyx_data and remove it
-    orientation_flip=False,  # TODO implement
-    orientation_rotate=False,  # TODO implement
+    flip_orientation=False,
+    rotate_orientation=False,
 ):
     data_stokes = stokes.mmul(intensity_to_stokes_matrix, czyx_data)
 
@@ -100,4 +101,9 @@ def apply_inverse_transfer_function(
     # Return retardance in distance units (matching wavelength_illumination)
     retardance = adr_parameters[0] * wavelength_illumination / (2 * np.pi)
 
-    return retardance, adr_parameters[1], adr_parameters[2], adr_parameters[3]
+    # Apply orientation transformations
+    orientation = stokes.apply_orientation_offset(
+        adr_parameters[1], rotate=rotate_orientation, flip=flip_orientation
+    )
+
+    return retardance, orientation, adr_parameters[2], adr_parameters[3]

@@ -1,10 +1,10 @@
 import pytest
 import torch
+
 from waveorder.models import isotropic_fluorescent_thick_3d
 
 
-@pytest.mark.parametrize("axial_flip", (True, False))
-def test_calculate_transfer_function(axial_flip):
+def test_calculate_transfer_function():
     z_padding = 5
     transfer_function = (
         isotropic_fluorescent_thick_3d.calculate_transfer_function(
@@ -15,7 +15,6 @@ def test_calculate_transfer_function(axial_flip):
             z_padding=z_padding,
             index_of_refraction_media=1.0,
             numerical_aperture_detection=0.55,
-            axial_flip=axial_flip,
         )
     )
 

@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+
 from waveorder import optics, util
 from waveorder.models import isotropic_fluorescent_thick_3d
 
@@ -39,7 +40,7 @@ def calculate_transfer_function(
     index_of_refraction_media,
     numerical_aperture_illumination,
     numerical_aperture_detection,
-    axial_flip=False,
+    invert_phase_contrast=False,
 ):
     radial_frequencies = util.generate_radial_frequencies(
         zyx_shape[1:], yx_pixel_size
@@ -48,7 +49,7 @@ def calculate_transfer_function(
     z_position_list = torch.fft.ifftshift(
         (torch.arange(z_total) - z_total // 2) * z_pixel_size
     )
-    if axial_flip:
+    if invert_phase_contrast:
         z_position_list = torch.flip(z_position_list, dims=(0,))
 
     ill_pupil = optics.generate_pupil(
