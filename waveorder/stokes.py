@@ -29,7 +29,7 @@ y = mmul(A, x)
 Usage
 -----
 
-All functions are intended to be used with ND-arrays with Stokes- or 
+All functions are intended to be used with torch.Tensors with Stokes- or 
 Mueller-indices as the first axes. 
 
 For example, the following usage modes of stokes_after_adr are valid:
@@ -66,7 +66,7 @@ def calculate_stokes_to_intensity_matrix(swing, scheme="5-State"):
 
     Returns
     -------
-    torch.tensor
+    torch.Tensor
         Returns different shapes depending on the scheme
 
         S2I.shape = (5, 4) for scheme = "5-State"
@@ -127,7 +127,7 @@ def calculate_intensity_to_stokes_matrix(swing, scheme="5-State"):
 
     Returns
     -------
-    torch.tensor
+    torch.Tensor
         Returns different shapes depending on the scheme
 
         I2S.shape = (5, 4) for scheme = "5-State"
@@ -147,7 +147,7 @@ def stokes_after_adr(
     depolarizing retarder (adr) parametrized by its retardance, slow-axis
     orientation, transmittance, and depolarization.
 
-    Note: all four parameters can be torch.tensor, but they must be the same size.
+    Note: all four parameters can be torch.Tensor, but they must be the same size.
     If your parameters are in a tensor with shape = (4, ...), use
     the * operator to expand over the first dimension.
 
@@ -156,7 +156,7 @@ def stokes_after_adr(
 
     Parameters
     ----------
-    retardance, orientation, transmittance, depolarization : torch.tensor, identical shapes
+    retardance, orientation, transmittance, depolarization : torch.Tensor, identical shapes
         retardance: retardance of adr, 2*pi periodic
         orientation: slow-axis orientation of adr, 2*pi periodic
         transmittance: transmittance of adr, 0 <= transmittance <= 1
@@ -167,7 +167,7 @@ def stokes_after_adr(
 
     Returns
     -------
-    s0, s1, s2, s3: torch.tensor, identical shapes
+    s0, s1, s2, s3: torch.Tensor, identical shapes
         Stokes parameters
 
     """
@@ -205,7 +205,7 @@ def stokes012_after_ar(retardance, orientation, transmittance, input="cpl"):
 
     Parameters
     ----------
-    retardance, orientation, transmittance: torch.tensor, identical shapes
+    retardance, orientation, transmittance: torch.Tensor, identical shapes
         retardance: retardance of ar, 2*pi periodic
         orientation: slow-axis orientation of ar, 2*pi periodic
         transmittance: transmittance of ar, 0 <= transmittance <= 1
@@ -215,7 +215,7 @@ def stokes012_after_ar(retardance, orientation, transmittance, input="cpl"):
 
     Returns
     -------
-    s0, s1, s2: torch.tensor
+    s0, s1, s2: torch.Tensor
         First three Stokes parameters
 
     """
@@ -239,12 +239,12 @@ def _s12_to_orientation(s1, s2):
 
     Parameters
     ----------
-    s1, s2: torch.tensor, identical shapes
+    s1, s2: torch.Tensor, identical shapes
         Stokes parameters
 
     Returns
     -------
-    torch.tensor
+    torch.Tensor
         Slow-axis orientation with 0 <= orientation < pi.
     """
     return (torch.arctan2(s1, -s2) % (2 * np.pi)) / 2
@@ -267,7 +267,7 @@ def estimate_adr_from_stokes(s0, s1, s2, s3, input="cpl"):
 
     Parameters
     ----------
-    s0, s1, s2, s3: torch.tensor, identical shapes
+    s0, s1, s2, s3: torch.Tensor, identical shapes
         Stokes parameters
 
     input : "cpl"
@@ -275,7 +275,7 @@ def estimate_adr_from_stokes(s0, s1, s2, s3, input="cpl"):
 
     Returns
     ----------
-    retardance, orientation, transmittance, depolarization: torch.tensor
+    retardance, orientation, transmittance, depolarization: torch.Tensor
         retardance: retardance of adr, 2*pi periodic
         orientation: slow-axis orientation of adr, 2*pi periodic
         transmittance: transmittance of adr, 0 <= transmittance <= 1
@@ -305,12 +305,12 @@ def estimate_ar_from_stokes012(s0, s1, s2, input="cpl"):
 
     Parameters
     ----------
-    s0, s1, s2: torch.tensor, identical shapes
+    s0, s1, s2: torch.Tensor, identical shapes
         First three Stokes parameters
 
     Returns
     ----------
-    retardance, orientation, transmittance: torch.tensor, identical shapes
+    retardance, orientation, transmittance: torch.Tensor, identical shapes
         retardance: retardance of ar, 2*pi periodic
         orientation: slow-axis orientation of ar, 2*pi periodic
         transmittance: transmittance of ar, 0 <= transmittance <= 1
@@ -343,7 +343,7 @@ def mueller_from_stokes(
 
     Parameters
     ----------
-    s0, s1, s2, s3 : torch.tensor, identical shapes
+    s0, s1, s2, s3 : torch.Tensor, identical shapes
         Stokes parameters
 
     input : "cpl"
@@ -411,12 +411,12 @@ def mmul(matrix, vector):
 
     Parameters
     ----------
-    matrix : torch.tensor, shape = (N, M, ...)
-    vector : torch.tensor, shape = (M, ...)
+    matrix : torch.Tensor, shape = (N, M, ...)
+    vector : torch.Tensor, shape = (M, ...)
 
     Returns
     -------
-    torch.tensor, shape = (N, ...)
+    torch.Tensor, shape = (N, ...)
     """
     if matrix.shape[1] != vector.shape[0]:
         raise ValueError("matrix.shape[1] is not equal to vector.shape[0]")
@@ -431,7 +431,7 @@ def apply_orientation_offset(orientation, rotate, flip):
 
     Parameters
     ----------
-    orientation : torch.tensor
+    orientation : torch.Tensor
         Array of orientations measured in radians
     rotate : bool
         If True, rotate orientation pi/2 radians (90 degrees)
@@ -440,7 +440,7 @@ def apply_orientation_offset(orientation, rotate, flip):
 
     Returns
     -------
-    torch.tensor with same shape as input
+    torch.Tensor with same shape as input
 
     Transformed array of orientations measured in radians
     with range 0 <= orientation < pi
