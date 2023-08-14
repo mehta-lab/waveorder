@@ -18,7 +18,7 @@ def test_calculate_transfer_function():
 
 def test_apply_inverse_transfer_function():
     input_shape = (5, 10, 5, 5)
-    czyx_data = torch.randn(input_shape)
+    czyx_data = torch.rand(input_shape)
 
     intensity_to_stokes_matrix = (
         inplane_oriented_thick_pol3d.calculate_transfer_function(
