@@ -1,15 +1,18 @@
-from recOrder.cli.main import cli
+import os
+
 from click.testing import CliRunner
+
 from recOrder.cli import settings
-from recOrder.io import utils
 from recOrder.cli.compute_transfer_function import (
-    generate_and_save_phase_transfer_function,
     generate_and_save_birefringence_transfer_function,
     generate_and_save_fluorescence_transfer_function,
+    generate_and_save_phase_transfer_function,
 )
+from recOrder.cli.main import cli
+from recOrder.io import utils
 
 
-def test_compute_transfer(tmp_path, input_zarr):
+def test_compute_transfer(tmp_path, example_plate):
     recon_settings = settings.ReconstructionSettings(
         input_channel_names=[f"State{i}" for i in range(4)],
         reconstruction_dimension=3,
@@ -19,10 +22,21 @@ def test_compute_transfer(tmp_path, input_zarr):
     config_path = tmp_path / "test.yml"
     utils.model_to_yaml(recon_settings, config_path)
 
-    path, _ = input_zarr
+    output_path = tmp_path / "output.zarr"
+
+    plate_path, _ = example_plate
     runner = CliRunner()
     result = runner.invoke(
-        cli, ["compute-tf", str(path), "-c", str(config_path)]
+        cli,
+        [
+            "compute-tf",
+            "-i",
+            str(plate_path / "A" / "1" / "0"),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
     )
     assert result.exit_code == 0
 
@@ -45,7 +59,7 @@ def test_compute_transfer_blank_output():
         assert "Error" in result.output
 
 
-def test_compute_transfer_output_file(tmp_path, input_zarr):
+def test_compute_transfer_output_file(tmp_path, example_plate):
     recon_settings = settings.ReconstructionSettings(
         input_channel_names=["BF"],
         reconstruction_dimension=3,
@@ -54,16 +68,17 @@ def test_compute_transfer_output_file(tmp_path, input_zarr):
     config_path = tmp_path / "test.yml"
     utils.model_to_yaml(recon_settings, config_path)
 
-    input_path, _ = input_zarr
+    plate_path, _ = example_plate
     runner = CliRunner()
-    for option in ("-o", "--output-path"):
-        for output_folder in ["test1", "test2/test"]:
+    for option in ("-o", "--output-dirpath"):
+        for output_folder in ["test1.zarr", "test2/test.zarr"]:
             output_path = tmp_path.joinpath(output_folder)
             result = runner.invoke(
                 cli,
                 [
                     "compute-tf",
-                    str(input_path),
+                    "-i",
+                    str(plate_path / "A" / "1" / "0"),
                     "-c",
                     str(config_path),
                     str(option),

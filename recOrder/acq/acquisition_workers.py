@@ -1,35 +1,36 @@
 from __future__ import annotations
 
-from qtpy.QtCore import Signal
-from iohub import open_ome_zarr
-from iohub.convert import TIFFConverter
-from recOrder.cli import settings
-from recOrder.cli.compute_transfer_function import (
-    compute_transfer_function_cli,
-)
-from recOrder.cli.apply_inverse_transfer_function import (
-    apply_inverse_transfer_function_cli,
-)
-from recOrder.acq.acq_functions import (
-    generate_acq_settings,
-    acquire_from_settings,
-)
-from recOrder.io.utils import model_to_yaml
-from recOrder.io.utils import ram_message
-from napari.qt.threading import WorkerBaseSignals, WorkerBase
-from napari.utils.notifications import show_warning
 import logging
-import numpy as np
 import os
 import shutil
 
 # type hint/check
 from typing import TYPE_CHECKING
 
+import numpy as np
+from iohub import open_ome_zarr
+from iohub.convert import TIFFConverter
+from napari.qt.threading import WorkerBase, WorkerBaseSignals
+from napari.utils.notifications import show_warning
+from qtpy.QtCore import Signal
+
+from recOrder.acq.acq_functions import (
+    acquire_from_settings,
+    generate_acq_settings,
+)
+from recOrder.cli import settings
+from recOrder.cli.apply_inverse_transfer_function import (
+    apply_inverse_transfer_function_cli,
+)
+from recOrder.cli.compute_transfer_function import (
+    compute_transfer_function_cli,
+)
+from recOrder.io.utils import model_to_yaml, ram_message
+
 # avoid runtime import error
 if TYPE_CHECKING:
-    from recOrder.plugin.main_widget import MainWidget
     from recOrder.calib.Calibration import QLIPP_Calibration
+    from recOrder.plugin.main_widget import MainWidget
 
 
 def _generate_reconstruction_config_from_gui(
@@ -298,16 +299,16 @@ class BFAcquisitionWorker(WorkerBase):
 
         # TODO: skip if config files match
         compute_transfer_function_cli(
-            input_data_path,
-            self.config_path,
-            transfer_function_path,
+            input_position_dirpath=input_data_path,
+            config_filepath=self.config_path,
+            output_dirpath=transfer_function_path,
         )
 
         apply_inverse_transfer_function_cli(
-            input_data_path,
-            transfer_function_path,
-            self.config_path,
-            reconstruction_path,
+            input_position_dirpath=input_data_path,
+            transfer_function_dirpath=transfer_function_path,
+            config_filepath=self.config_path,
+            output_position_dirpath=reconstruction_path,
         )
 
         # Read reconstruction to pass to emitters
@@ -630,16 +631,16 @@ class PolarizationAcquisitionWorker(WorkerBase):
 
         # TODO: skip if config files match
         compute_transfer_function_cli(
-            input_data_path,
-            self.config_path,
-            transfer_function_path,
+            input_position_dirpath=input_data_path,
+            config_filepath=self.config_path,
+            output_dirpath=transfer_function_path,
         )
 
         apply_inverse_transfer_function_cli(
-            input_data_path,
-            transfer_function_path,
-            self.config_path,
-            reconstruction_path,
+            input_position_dirpath=input_data_path,
+            transfer_function_dirpath=transfer_function_path,
+            config_filepath=self.config_path,
+            output_position_dirpath=reconstruction_path,
         )
 
         # Read reconstruction to pass to emitters

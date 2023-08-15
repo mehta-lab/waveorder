@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import click
 import numpy as np
 import torch
@@ -11,12 +13,14 @@ from waveorder.models import (
 )
 
 from recOrder.cli.parsing import (
-    config_path_option,
-    input_data_path_argument,
-    output_dataset_option,
+    config_filepath,
+    input_position_dirpaths,
+    output_dirpath,
+    transfer_function_dirpath,
 )
 from recOrder.cli.printing import echo_headline, echo_settings
 from recOrder.cli.settings import ReconstructionSettings
+from recOrder.cli.utils import get_output_paths
 from recOrder.io import utils
 
 
@@ -29,23 +33,26 @@ def _check_background_consistency(background_shape, data_shape):
 
 
 def apply_inverse_transfer_function_cli(
-    input_data_path, transfer_function_path, config_path, output_path
-):
+    input_position_dirpath: Path,
+    transfer_function_dirpath: Path,
+    config_filepath: Path,
+    output_position_dirpath: Path,
+) -> None:
     echo_headline("Starting reconstruction...")
 
     # Load datasets
-    transfer_function_dataset = open_ome_zarr(transfer_function_path)
-    input_dataset = open_ome_zarr(input_data_path)
+    transfer_function_dataset = open_ome_zarr(transfer_function_dirpath)
+    input_dataset = open_ome_zarr(input_position_dirpath)
 
     # Load config file
-    settings = utils.yaml_to_model(config_path, ReconstructionSettings)
+    settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
 
     # Check input channel names
     if not set(settings.input_channel_names).issubset(
         input_dataset.channel_names
     ):
         raise ValueError(
-            f"Each of the input_channel_names = {settings.input_channel_names} in {config_path} must appear in the dataset {input_data_path} which currently contains channel_names = {input_dataset.channel_names}."
+            f"Each of the input_channel_names = {settings.input_channel_names} in {config_filepath} must appear in the dataset {input_position_dirpath} which currently contains channel_names = {input_dataset.channel_names}."
         )
 
     # Find channel indices
@@ -108,7 +115,10 @@ def apply_inverse_transfer_function_cli(
 
     # Create output dataset
     output_dataset = open_ome_zarr(
-        output_path, layout="fov", mode="a", channel_names=channel_names
+        output_position_dirpath,
+        layout="fov",
+        mode="a",
+        channel_names=channel_names,
     )
 
     # Create an empty TCZYX array if it doesn't exist
@@ -383,36 +393,48 @@ def apply_inverse_transfer_function_cli(
 
     output_dataset.zattrs["settings"] = settings.dict()
 
-    echo_headline(f"Closing {output_path}\n")
+    echo_headline(f"Closing {output_position_dirpath}\n")
     output_dataset.close()
     transfer_function_dataset.close()
     input_dataset.close()
 
     echo_headline(
-        f"Recreate this reconstruction with:\n$ recorder apply-inv-tf {input_data_path} {transfer_function_path} -c {config_path} -o {output_path}"
+        f"Recreate this reconstruction with:\n$ recorder apply-inv-tf {input_position_dirpath} {transfer_function_dirpath} -c {config_filepath} -o {output_position_dirpath}"
     )
 
 
 @click.command()
-@click.help_option("-h", "--help")
-@input_data_path_argument()
-@click.argument(
-    "transfer_function_path",
-    type=click.Path(exists=True),
-)
-@config_path_option()
-@output_dataset_option(default="./reconstruction.zarr")
+@input_position_dirpaths()
+@transfer_function_dirpath()
+@config_filepath()
+@output_dirpath()
 def apply_inv_tf(
-    input_data_path, transfer_function_path, config_path, output_path
-):
+    input_position_dirpaths: list[Path],
+    transfer_function_dirpath: Path,
+    config_filepath: Path,
+    output_dirpath: Path,
+) -> None:
     """
     Apply an inverse transfer function to a dataset using a configuration file.
 
+    Applies a transfer function to all positions in the list `input-position-dirpaths`,
+    so all positions must have the same TCZYX shape.
+
     See /examples for example configuration files.
 
-    Example usage:\n
-    $ recorder apply-inv-tf input.zarr/0/0/0 transfer-function.zarr -c /examples/birefringence.yml -o output.zarr
+    >> recorder apply-inv-tf -i ./input.zarr/*/*/* -t ./transfer-function.zarr -c /examples/birefringence.yml -o ./output.zarr
     """
-    apply_inverse_transfer_function_cli(
-        input_data_path, transfer_function_path, config_path, output_path
+
+    output_position_dirpaths = get_output_paths(
+        input_position_dirpaths, output_dirpath
     )
+
+    for input_position_dirpath, output_position_dirpath in zip(
+        input_position_dirpaths, output_position_dirpaths
+    ):
+        apply_inverse_transfer_function_cli(
+            input_position_dirpath,
+            transfer_function_dirpath,
+            config_filepath,
+            output_position_dirpath,
+        )

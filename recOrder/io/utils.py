@@ -1,18 +1,16 @@
-from typing import Literal
-import glob
-import logging
 import os
+import textwrap
+from pathlib import Path
+from typing import Literal
+
+import numpy as np
 import psutil
 import torch
-import textwrap
-import tifffile as tiff
-import numpy as np
 import yaml
 from colorspacious import cspace_convert
 from iohub import open_ome_zarr
 from matplotlib.colors import hsv_to_rgb
 from waveorder.waveorder_reconstructor import waveorder_microscopy
-from recOrder.cli import settings
 
 
 # TO BE DEPRECATED
@@ -239,7 +237,7 @@ def ret_ori_overlay(
     return overlay_final
 
 
-def model_to_yaml(model, yaml_path):
+def model_to_yaml(model, yaml_path: Path) -> None:
     """
     Save a model's dictionary representation to a YAML file.
 
@@ -247,7 +245,7 @@ def model_to_yaml(model, yaml_path):
     ----------
     model : object
         The model object to convert to YAML.
-    yaml_path : str
+    yaml_path : Path
         The path to the output YAML file.
 
     Raises
@@ -268,6 +266,8 @@ def model_to_yaml(model, yaml_path):
     >>> model_to_yaml(model, 'model.yaml')
 
     """
+    yaml_path = Path(yaml_path)
+
     if not hasattr(model, "dict"):
         raise TypeError("The 'model' object does not have a 'dict()' method.")
 
@@ -284,13 +284,13 @@ def model_to_yaml(model, yaml_path):
         )
 
 
-def yaml_to_model(yaml_path, model):
+def yaml_to_model(yaml_path: Path, model):
     """
     Load model settings from a YAML file and create a model instance.
 
     Parameters
     ----------
-    yaml_path : str
+    yaml_path : Path
         The path to the YAML file containing the model settings.
     model : class
         The model class used to create an instance with the loaded settings.
@@ -318,6 +318,8 @@ def yaml_to_model(yaml_path, model):
     >>> model = yaml_to_model('model.yaml', MyModel)
 
     """
+    yaml_path = Path(yaml_path)
+
     if not callable(getattr(model, "__init__", None)):
         raise TypeError(
             "The provided model must be a class with a callable constructor."

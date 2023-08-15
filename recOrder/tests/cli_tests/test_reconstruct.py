@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
@@ -15,12 +17,14 @@ def test_reconstruct(tmp_path):
     channel_names = [f"State{x}" for x in range(4)]
     dataset = open_ome_zarr(
         input_path,
-        layout="fov",
+        layout="hcs",
         mode="w",
         channel_names=channel_names,
     )
+
+    position = dataset.create_position("0", "0", "0")
     input_scale = [1, 2, 3, 4, 5]
-    dataset.create_zeros(
+    position.create_zeros(
         "0",
         (5, 4, 4, 5, 6),
         dtype=np.uint16,
@@ -68,7 +72,8 @@ def test_reconstruct(tmp_path):
             cli,
             [
                 "compute-tf",
-                str(input_path),
+                "-i",
+                str(input_path / "0" / "0" / "0"),
                 "-c",
                 str(config_path),
                 "-o",
@@ -85,7 +90,9 @@ def test_reconstruct(tmp_path):
             cli,
             [
                 "apply-inv-tf",
-                str(input_path),
+                "-i",
+                str(input_path / "0" / "0" / "0"),
+                "-t",
                 str(tf_path),
                 "-c",
                 str(config_path),
@@ -94,12 +101,12 @@ def test_reconstruct(tmp_path):
             ],
             catch_exceptions=False,
         )
-        assert result_path.exists()
         assert result_inv.exit_code == 0
+        assert result_path.exists()
         assert "Reconstructing" in result_inv.output
 
         # Check output
-        result_dataset = open_ome_zarr(result_path)
+        result_dataset = open_ome_zarr(str(result_path / "0" / "0" / "0"))
         assert result_dataset["0"].shape[0] == time_length_target
         assert result_dataset["0"].shape[3:] == (5, 6)
 
@@ -108,7 +115,8 @@ def test_reconstruct(tmp_path):
             cli,
             [
                 "reconstruct",
-                str(input_path),
+                "-i",
+                str(input_path / "0" / "0" / "0"),
                 "-c",
                 str(config_path),
                 "-o",

@@ -1,21 +1,32 @@
-import pytest
 import numpy as np
-from recOrder.cli import settings
+import pytest
 from iohub.ngff import open_ome_zarr
+
+from recOrder.cli import settings
 
 
 @pytest.fixture(scope="function")
-def input_zarr(tmp_path):
-    path = tmp_path / "input.zarr"
+def example_plate(tmp_path):
+    plate_path = tmp_path / "input.zarr"
 
-    dataset = open_ome_zarr(
-        path,
-        layout="fov",
+    position_list = (
+        ("A", "1", "0"),
+        ("B", "1", "0"),
+        ("B", "2", "0"),
+    )
+
+    plate_dataset = open_ome_zarr(
+        plate_path,
+        layout="hcs",
         mode="w",
         channel_names=[f"State{i}" for i in range(4)] + ["BF"],
     )
-    dataset.create_zeros("0", (2, 5, 4, 5, 6), dtype=np.uint16)
-    yield path, dataset
+
+    for row, col, fov in position_list:
+        position = plate_dataset.create_position(row, col, fov)
+        position.create_zeros("0", (2, 5, 4, 5, 6), dtype=np.uint16)
+
+    yield plate_path, plate_dataset
 
 
 @pytest.fixture(scope="function")

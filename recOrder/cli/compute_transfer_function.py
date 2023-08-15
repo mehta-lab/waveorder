@@ -1,20 +1,23 @@
+from pathlib import Path
+
 import click
 import numpy as np
 from iohub import open_ome_zarr
-from recOrder.cli.printing import echo_settings, echo_headline
-from recOrder.cli.settings import ReconstructionSettings
-from recOrder.cli.parsing import (
-    input_data_path_argument,
-    config_path_option,
-    output_dataset_option,
-)
-from recOrder.io import utils
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
+    isotropic_fluorescent_thick_3d,
     isotropic_thin_3d,
     phase_thick_3d,
-    isotropic_fluorescent_thick_3d,
 )
+
+from recOrder.cli.parsing import (
+    config_filepath,
+    input_position_dirpaths,
+    output_dirpath,
+)
+from recOrder.cli.printing import echo_headline, echo_settings
+from recOrder.cli.settings import ReconstructionSettings
+from recOrder.io import utils
 
 
 def generate_and_save_birefringence_transfer_function(settings, dataset):
@@ -137,29 +140,24 @@ def generate_and_save_fluorescence_transfer_function(
         ] = optical_transfer_function.cpu().numpy()[None, None, ...]
 
 
-def compute_transfer_function_cli(input_data_path, config_path, output_path):
+def compute_transfer_function_cli(
+    input_position_dirpath: Path, config_filepath: Path, output_dirpath: Path
+) -> None:
     """CLI command to compute the transfer function given a configuration file path
     and a desired output path.
-
-    Parameters
-    ----------
-    input_data_path : string
-        Path to the input data file.
-    config_path : string
-        Path of the configuration file.
-    output_path : string
-        Path of the output file.
     """
 
     # Load config file
-    settings = utils.yaml_to_model(config_path, ReconstructionSettings)
+    settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
 
     echo_headline(
-        f"Generating transfer functions and storing in {output_path}\n"
+        f"Generating transfer functions and storing in {output_dirpath}\n"
     )
 
     # Read shape from input dataset
-    input_dataset = open_ome_zarr(input_data_path, layout="fov", mode="r")
+    input_dataset = open_ome_zarr(
+        input_position_dirpath, layout="fov", mode="r"
+    )
     zyx_shape = input_dataset.data.shape[
         2:
     ]  # only loads a single position "0"
@@ -169,12 +167,12 @@ def compute_transfer_function_cli(input_data_path, config_path, output_path):
         input_dataset.channel_names
     ):
         raise ValueError(
-            f"Each of the input_channel_names = {settings.input_channel_names} in {config_path} must appear in the dataset {input_data_path} which currently contains channel_names = {input_dataset.channel_names}."
+            f"Each of the input_channel_names = {settings.input_channel_names} in {config_filepath} must appear in the dataset {input_position_dirpaths[0]} which currently contains channel_names = {input_dataset.channel_names}."
         )
 
     # Prepare output dataset
     output_dataset = open_ome_zarr(
-        output_path, layout="fov", mode="w", channel_names=["None"]
+        output_dirpath, layout="fov", mode="w", channel_names=["None"]
     )
 
     # Pass settings to appropriate calculate_transfer_function and save
@@ -194,26 +192,33 @@ def compute_transfer_function_cli(input_data_path, config_path, output_path):
     # Write settings to metadata
     output_dataset.zattrs["settings"] = settings.dict()
 
-    echo_headline(f"Closing {output_path}\n")
+    echo_headline(f"Closing {output_dirpath}\n")
     output_dataset.close()
 
     echo_headline(
-        f"Recreate this transfer function with:\n$ recorder compute-tf {input_data_path} -c {config_path} -o {output_path}"
+        f"Recreate this transfer function with:\n$ recorder compute-tf {input_position_dirpaths} -c {config_filepath} -o {output_dirpath}"
     )
 
 
 @click.command()
-@click.help_option("-h", "--help")
-@input_data_path_argument()
-@config_path_option()
-@output_dataset_option(default="./transfer-function.zarr")
-def compute_tf(input_data_path, config_path, output_path):
+@input_position_dirpaths()
+@config_filepath()
+@output_dirpath()
+def compute_tf(
+    input_position_dirpaths: list[Path],
+    config_filepath: Path,
+    output_dirpath: Path,
+) -> None:
     """
     Compute a transfer function using a dataset and configuration file.
 
-    See /examples/ for example configuration files.
+    Calculates the transfer function based on the shape of the first position
+    in the list `input-position-dirpaths`.
 
-    Example usage:\n
-    $ recorder compute-tf input.zarr/0/0/0 -c /examples/birefringence.yml -o transfer_function.zarr
+    See /examples for example configuration files.
+
+    >> recorder compute-tf -i ./input.zarr/0/0/0 -c ./examples/birefringence.yml -o ./transfer_function.zarr
     """
-    compute_transfer_function_cli(input_data_path, config_path, output_path)
+    compute_transfer_function_cli(
+        input_position_dirpaths[0], config_filepath, output_dirpath
+    )
