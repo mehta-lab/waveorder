@@ -20,7 +20,7 @@ from recOrder.cli.parsing import (
 )
 from recOrder.cli.printing import echo_headline, echo_settings
 from recOrder.cli.settings import ReconstructionSettings
-from recOrder.cli.utils import get_output_paths
+from recOrder.cli.utils import create_empty_hcs_zarr
 from recOrder.io import utils
 
 
@@ -32,7 +32,55 @@ def _check_background_consistency(background_shape, data_shape):
         )
 
 
-def apply_inverse_transfer_function_cli(
+def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
+    # Load the first position to infer dataset information
+    input_dataset = open_ome_zarr(str(position_path), mode="r")
+    T, C, Z, Y, X = input_dataset.data.shape
+
+    settings = utils.yaml_to_model(config_path, ReconstructionSettings)
+
+    # Simplify important settings names
+    recon_biref = settings.birefringence is not None
+    recon_phase = settings.phase is not None
+    recon_fluo = settings.fluorescence is not None
+    recon_dim = settings.reconstruction_dimension
+
+    # Prepare output dataset
+    channel_names = []
+    if recon_biref:
+        channel_names.append("Retardance")
+        channel_names.append("Orientation")
+        channel_names.append("BF")
+        channel_names.append("Pol")
+    if recon_phase:
+        if recon_dim == 2:
+            channel_names.append("Phase2D")
+        elif recon_dim == 3:
+            channel_names.append("Phase3D")
+    if recon_fluo:
+        fluor_name = settings.input_channel_names[0]
+        if recon_dim == 2:
+            channel_names.append(fluor_name + "_Density2D")
+        elif recon_dim == 3:
+            channel_names.append(fluor_name + "_Density3D")
+
+    if recon_dim == 2:
+        output_z_shape = 1
+    elif recon_dim == 3:
+        output_z_shape = input_dataset.data.shape[2]
+    else:
+        raise ValueError("recon_dims not 2 nor 3. Please double check value")
+
+    return {
+        "shape": (T, len(channel_names), output_z_shape, Y, X),
+        "chunks": (1, 1, 1, Y, X),
+        "scale": input_dataset.scale,
+        "channel_names": channel_names,
+        "dtype": np.float32,
+    }
+
+
+def apply_inverse_transfer_function_single_position(
     input_position_dirpath: Path,
     transfer_function_dirpath: Path,
     config_filepath: Path,
@@ -83,62 +131,13 @@ def apply_inverse_transfer_function_cli(
     recon_fluo = settings.fluorescence is not None
     recon_dim = settings.reconstruction_dimension
 
-    # Prepare output dataset
-    channel_names = []
-    if recon_biref:
-        channel_names.append("Retardance")
-        channel_names.append("Orientation")
-        channel_names.append("BF")
-        channel_names.append("Pol")
-    if recon_phase:
-        if recon_dim == 2:
-            channel_names.append("Phase2D")
-        elif recon_dim == 3:
-            channel_names.append("Phase3D")
-    if recon_fluo:
-        fluor_name = settings.input_channel_names[0]
-        if recon_dim == 2:
-            channel_names.append(fluor_name + "2D")
-        elif recon_dim == 3:
-            channel_names.append(fluor_name + "3D")
-
-    if recon_dim == 2:
-        output_z_shape = 1
-    elif recon_dim == 3:
-        output_z_shape = input_dataset.data.shape[2]
-
-    output_shape = (
-        input_dataset.data.shape[0],
-        len(channel_names),
-        output_z_shape,
-    ) + input_dataset.data.shape[3:]
-
-    # Create output dataset
+    # Open output dataset
     output_dataset = open_ome_zarr(
         output_position_dirpath,
         layout="fov",
         mode="a",
-        channel_names=channel_names,
     )
-
-    # Create an empty TCZYX array if it doesn't exist
-    if "0" not in output_dataset:
-        output_array = output_dataset.create_zeros(
-            name="0",
-            shape=output_shape,
-            dtype=np.float32,
-            chunks=(
-                1,
-                1,
-                1,
-            )
-            + input_dataset.data.shape[3:],  # chunk by YX
-            transform=[
-                TransformationMeta(type="scale", scale=input_dataset.scale)
-            ],
-        )
-    else:
-        output_array = output_dataset[0]
+    output_array = output_dataset[0]
 
     # Load data
     tczyx_uint16_numpy = input_dataset.data.oindex[:, channel_indices]
@@ -403,6 +402,30 @@ def apply_inverse_transfer_function_cli(
     )
 
 
+def apply_inverse_transfer_function_cli(
+    input_position_dirpaths: list[Path],
+    transfer_function_dirpath: Path,
+    config_filepath: Path,
+    output_dirpath: Path,
+) -> None:
+    output_metadata = get_reconstruction_output_metadata(
+        input_position_dirpaths[0], config_filepath
+    )
+    create_empty_hcs_zarr(
+        store_path=output_dirpath,
+        position_keys=[p.parts[-3:] for p in input_position_dirpaths],
+        **output_metadata,
+    )
+
+    for input_position_dirpath in input_position_dirpaths:
+        apply_inverse_transfer_function_single_position(
+            input_position_dirpath,
+            transfer_function_dirpath,
+            config_filepath,
+            output_dirpath / Path(*input_position_dirpath.parts[-3:]),
+        )
+
+
 @click.command()
 @input_position_dirpaths()
 @transfer_function_dirpath()
@@ -424,17 +447,9 @@ def apply_inv_tf(
 
     >> recorder apply-inv-tf -i ./input.zarr/*/*/* -t ./transfer-function.zarr -c /examples/birefringence.yml -o ./output.zarr
     """
-
-    output_position_dirpaths = get_output_paths(
-        input_position_dirpaths, output_dirpath
+    apply_inverse_transfer_function_cli(
+        input_position_dirpaths,
+        transfer_function_dirpath,
+        config_filepath,
+        output_dirpath,
     )
-
-    for input_position_dirpath, output_position_dirpath in zip(
-        input_position_dirpaths, output_position_dirpaths
-    ):
-        apply_inverse_transfer_function_cli(
-            input_position_dirpath,
-            transfer_function_dirpath,
-            config_filepath,
-            output_position_dirpath,
-        )
