@@ -1,15 +1,16 @@
 import os
+from typing import List, Literal, Optional, Union
+
 from pydantic import (
     BaseModel,
     Extra,
-    NonNegativeInt,
     NonNegativeFloat,
-    PositiveInt,
+    NonNegativeInt,
     PositiveFloat,
+    PositiveInt,
     root_validator,
     validator,
 )
-from typing import Literal, List, Optional, Union
 
 # This file defines the configuration settings for the CLI.
 
@@ -42,8 +43,8 @@ class BirefringenceTransferFunctionSettings(MyBaseModel):
 class BirefringenceApplyInverseSettings(WavelengthIllumination):
     background_path: str = ""
     remove_estimated_background: bool = False
-    orientation_flip: bool = False
-    orientation_rotate: bool = False
+    flip_orientation: bool = False
+    rotate_orientation: bool = False
 
     @validator("background_path")
     def check_background_path(cls, v):
@@ -95,7 +96,7 @@ class PhaseTransferFunctionSettings(
     WavelengthIllumination,
 ):
     numerical_aperture_illumination: NonNegativeFloat = 0.5
-    axial_flip: bool = False
+    invert_phase_contrast: bool = False
 
     @validator("numerical_aperture_illumination")
     def na_ill(cls, v, values):

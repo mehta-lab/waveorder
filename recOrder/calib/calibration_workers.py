@@ -353,7 +353,8 @@ class BackgroundCaptureWorker(
                     / 1000,
                     background_path="",
                     remove_estimated_background=False,
-                    orientation_flip=False,
+                    flip_orientation=False,
+                    rotate_orientation=False,
                 ),
             ),
         )

@@ -11,7 +11,7 @@ phase:
     index_of_refraction_media: 1.3
     numerical_aperture_detection: 1.2
     numerical_aperture_illumination: 0.5
-    axial_flip: false
+    invert_phase_contrast: false
   apply_inverse:
     reconstruction_algorithm: Tikhonov
     regularization_strength: 0.001

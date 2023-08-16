@@ -58,12 +58,14 @@ def _generate_reconstruction_config_from_gui(
                 swing=calib_window.swing,
             )
         )
-        birefringence_apply_inverse_settings = settings.BirefringenceApplyInverseSettings(
-            wavelength_illumination=calib_window.recon_wavelength / 1000,
-            background_path=background_path,
-            remove_estimated_background=remove_estimated_background,
-            orientation_flip=False,  # TODO connect this to a recOrder button
-            orientation_rotate=False,  # TODO connect this to a recOrder button
+        birefringence_apply_inverse_settings = (
+            settings.BirefringenceApplyInverseSettings(
+                wavelength_illumination=calib_window.recon_wavelength / 1000,
+                background_path=background_path,
+                remove_estimated_background=remove_estimated_background,
+                flip_orientation=calib_window.flip_orientation,
+                rotate_orientation=calib_window.rotate_orientation,
+            )
         )
         birefringence_settings = settings.BirefringenceSettings(
             transfer_function=birefringence_transfer_function_settings,
@@ -82,7 +84,7 @@ def _generate_reconstruction_config_from_gui(
                 index_of_refraction_media=calib_window.n_media,
                 numerical_aperture_detection=calib_window.obj_na,
                 numerical_aperture_illumination=calib_window.cond_na,
-                axial_flip=False,  # TODO: connect this to a recOrder button
+                invert_phase_contrast=calib_window.invert_phase_contrast,
             )
         )
         phase_apply_inverse_settings = settings.FourierApplyInverseSettings(
@@ -269,11 +271,11 @@ class BFAcquisitionWorker(WorkerBase):
         phase = self._reconstruct()
         self._check_abort()
 
-        # # Save images
-        # logging.debug("Saving Images")
-        # self._save_imgs(phase, meta)
-
-        # self._check_abort()
+        # Warn the user about axial
+        if self.calib_window.invert_phase_contrast:
+            show_warning(
+                "Inverting the phase contrast. This affects the visualization and saved reconstruction."
+            )
 
         logging.info("Finished Acquisition")
         logging.debug("Finished Acquisition")
@@ -519,14 +521,15 @@ class PolarizationAcquisitionWorker(WorkerBase):
         birefringence, phase = self._reconstruct()
         self._check_abort()
 
-        if self.calib_window.orientation_offset:
-            birefringence = self._orientation_offset(birefringence)
-
-        # Save images
-        # logging.debug("Saving Images")
-        # self._save_imgs(birefringence, phase)
-
-        # self._check_abort()
+        # Warn the user about rotations and flips
+        if self.calib_window.rotate_orientation:
+            show_warning(
+                "Applying a +90 degree rotation to the orientation channel. This affects the visualization and saved reconstruction."
+            )
+        if self.calib_window.flip_orientation:
+            show_warning(
+                "Applying a flip to orientation channel. This affects the visualization and saved reconstruction."
+            )
 
         logging.info("Finished Acquisition")
         logging.debug("Finished Acquisition")
@@ -534,37 +537,6 @@ class PolarizationAcquisitionWorker(WorkerBase):
         # Emit the images and let thread know function is finished
         self.bire_image_emitter.emit(birefringence)
         self.phase_image_emitter.emit(phase)
-
-    def _orientation_offset(self, birefringence: np.ndarray):
-        """Apply +90 degree orientation offset
-
-        Parameters
-        ----------
-        birefringence : np.ndarray
-            [2, Y, X] retardance and orientation
-
-        Returns
-        -------
-        ndarray
-            birefringence with offset
-        """
-        show_warning(
-            (
-                "Applying a +90 degree orientation offset to birefringence! "
-                "This will affect both visualization and the saved reconstruction."
-            )
-        )
-
-        # TODO: Move these to waveorder, connect to the `orientation_flip`
-        # and `orientation_rotate` parameters, and connect to recOrder buttons.
-
-        # 90 degree flip
-        birefringence[1] = np.fmod(birefringence[1] + np.pi / 2, np.pi)
-
-        # Reflection
-        birefringence[1] = np.fmod(-birefringence[1], np.pi) + np.pi
-
-        return birefringence
 
     def _check_exposure(self) -> None:
         """

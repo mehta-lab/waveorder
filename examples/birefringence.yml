@@ -12,5 +12,5 @@ birefringence:
     wavelength_illumination: 0.532
     background_path: ''
     remove_estimated_background: false
-    orientation_flip: false
-    orientation_rotate: false
+    flip_orientation: false
+    rotate_orientation: false
