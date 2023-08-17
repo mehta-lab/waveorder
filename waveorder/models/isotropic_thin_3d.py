@@ -1,5 +1,7 @@
-import numpy as np
+from typing import Literal, Tuple
+
 import torch
+from torch import Tensor
 
 from waveorder import optics, util
 
@@ -144,16 +146,55 @@ def apply_transfer_function(
 
 
 def apply_inverse_transfer_function(
-    zyx_data,
-    absorption_2d_to_3d_transfer_function,
-    phase_2d_to_3d_transfer_function,
-    reconstruction_algorithm="Tikhonov",
-    regularization_strength=1e-6,
-    reg_p=1e-6,  # TODO: use this parameter
-    TV_rho_strength=1e-3,
-    TV_iterations=10,
-    bg_filter=True,
-):
+    zyx_data: Tensor,
+    absorption_2d_to_3d_transfer_function: Tensor,
+    phase_2d_to_3d_transfer_function: Tensor,
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    regularization_strength: float = 1e-6,
+    reg_p: float = 1e-6,  # TODO: use this parameter
+    TV_rho_strength: float = 1e-3,
+    TV_iterations: int = 10,
+    bg_filter: bool = True,
+) -> Tuple[Tensor]:
+    """Reconstructs absorption and phase from zyx_data and a pair of
+    3D-to-2D transfer functions named absorption_2d_to_3d_transfer_function and
+    phase_2d_to_3d_transfer_function, providing options for reconstruction
+    algorithms.
+
+    Parameters
+    ----------
+    zyx_data : Tensor
+        3D raw data, label-free defocus stack
+    absorption_2d_to_3d_transfer_function : Tensor
+        3D-to-2D absorption transfer function, see calculate_transfer_function above
+    phase_2d_to_3d_transfer_function : Tensor
+        3D-to-2D phase transfer function, see calculate_transfer_function above
+    reconstruction_algorithm : Literal[&quot;Tikhonov&quot;, &quot;TV&quot;], optional
+        "Tikhonov" or "TV", by default "Tikhonov"
+        "TV" is not implemented.
+    regularization_strength : float, optional
+        regularization parameter, by default 1e-6
+    reg_p : float, optional
+        TV-specific phase regularization parameter, by default 1e-6
+        "TV" is not implemented.
+    TV_iterations : int, optional
+        TV-specific number of iterations, by default 10
+        "TV" is not implemented.
+    bg_filter : bool, optional
+        option for slow-varying 2D background normalization with uniform filter
+        by default True
+
+    Returns
+    -------
+    Tuple[Tensor]
+        yx_absorption (unitless)
+        yx_phase (radians)
+
+    Raises
+    ------
+    NotImplementedError
+        TV is not implemented
+    """
     zyx_data_normalized = util.inten_normalization(
         zyx_data, bg_filter=bg_filter
     )
