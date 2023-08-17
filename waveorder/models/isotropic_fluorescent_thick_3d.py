@@ -124,7 +124,7 @@ def apply_inverse_transfer_function(
         3D optical transfer function, see calculate_transfer_function above
     z_padding : int
         Padding for axial dimension. Use zero for defocus stacks that
-        extend past the complete sample, and 5-10 otherwise.
+        extend ~3 PSF widths beyond the sample. Pad by ~3 PSF widths otherwise.
     reconstruction_algorithm : str, optional
         "Tikhonov" or "TV", by default "Tikhonov"
         "TV" is not implemented.
@@ -140,7 +140,7 @@ def apply_inverse_transfer_function(
     Returns
     -------
     Tensor
-        fluorescence_density (fluorophores per volumes)
+        zyx_fluorescence_density (fluorophores per volumes)
 
     Raises
     ------

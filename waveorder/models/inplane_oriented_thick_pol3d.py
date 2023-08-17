@@ -97,10 +97,10 @@ def apply_inverse_transfer_function(
     Returns
     -------
     Tuple[Tensor]
-        retardance (radians)
-        orientation (radians)
-        transmittance (unitless)
-        depolarization (unitless)
+        zyx_retardance (radians)
+        zyx_orientation (radians)
+        zyx_transmittance (unitless)
+        zyx_depolarization (unitless)
     """
     data_stokes = stokes.mmul(intensity_to_stokes_matrix, czyx_data)
 
