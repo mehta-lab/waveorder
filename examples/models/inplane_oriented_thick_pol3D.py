@@ -1,6 +1,5 @@
 import napari
-import numpy as np
-from waveorder import util
+
 from waveorder.models import inplane_oriented_thick_pol3d
 
 # Parameters
@@ -46,13 +45,13 @@ inplane_oriented_parameters_recon = (
 arrays = [
     (inplane_oriented_parameters_recon[3], "Depolarization - recon"),
     (inplane_oriented_parameters_recon[2], "Transmittance - recon"),
-    (inplane_oriented_parameters_recon[1], "Orientation - recon"),
-    (inplane_oriented_parameters_recon[0], "Retardance - recon"),
+    (inplane_oriented_parameters_recon[1], "Orientation (rad) - recon"),
+    (inplane_oriented_parameters_recon[0], "Retardance (rad) - recon"),
     (czyx_data, "Data"),
     (inplane_oriented_parameters[3], "Depolarization"),
     (inplane_oriented_parameters[2], "Transmittance"),
-    (inplane_oriented_parameters[1], "Orientation"),
-    (inplane_oriented_parameters[0], "Retardance"),
+    (inplane_oriented_parameters[1], "Orientation (rad)"),
+    (inplane_oriented_parameters[0], "Retardance (rad)"),
 ]
 
 for array in arrays:

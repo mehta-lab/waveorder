@@ -1,4 +1,7 @@
+from typing import Literal
+
 import torch
+from torch import Tensor
 
 from waveorder import optics, util
 
@@ -33,7 +36,7 @@ def calculate_transfer_function(
     z_position_list = torch.fft.ifftshift(
         (torch.arange(z_total) - z_total // 2) * z_pixel_size
     )
-    
+
     det_pupil = optics.generate_pupil(
         radial_frequencies,
         numerical_aperture_detection,
@@ -101,14 +104,49 @@ def apply_transfer_function(zyx_object, optical_transfer_function, z_padding):
 
 
 def apply_inverse_transfer_function(
-    zyx_data,
-    optical_transfer_function,
-    z_padding,
-    reconstruction_algorithm="Tikhonov",
-    regularization_strength=1e-3,
-    TV_rho_strength=1e-3,
-    TV_iterations=10,
+    zyx_data: Tensor,
+    optical_transfer_function: Tensor,
+    z_padding: int,
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    regularization_strength: float = 1e-3,
+    TV_rho_strength: float = 1e-3,
+    TV_iterations: int = 10,
 ):
+    """Reconstructs fluorescence density from zyx_data and
+    an optical_transfer_function, providing options for z padding and
+    reconstruction algorithms.
+
+    Parameters
+    ----------
+    zyx_data : Tensor
+        3D raw data, fluorescence defocus stack
+    optical_transfer_function : Tensor
+        3D optical transfer function, see calculate_transfer_function above
+    z_padding : int
+        Padding for axial dimension. Use zero for defocus stacks that
+        extend ~3 PSF widths beyond the sample. Pad by ~3 PSF widths otherwise.
+    reconstruction_algorithm : str, optional
+        "Tikhonov" or "TV", by default "Tikhonov"
+        "TV" is not implemented.
+    regularization_strength : float, optional
+        regularization parameter, by default 1e-3
+    TV_rho_strength : _type_, optional
+        TV-specific regularization parameter, by default 1e-3
+        "TV" is not implemented.
+    TV_iterations : int, optional
+        TV-specific number of iterations, by default 10
+        "TV" is not implemented.
+
+    Returns
+    -------
+    Tensor
+        zyx_fluorescence_density (fluorophores per volumes)
+
+    Raises
+    ------
+    NotImplementedError
+        TV is not implemented
+    """
     # Handle padding
     zyx_padded = util.pad_zyx_along_z(zyx_data, z_padding)
 

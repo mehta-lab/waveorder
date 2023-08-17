@@ -1,5 +1,8 @@
+from typing import Literal
+
 import numpy as np
 import torch
+from torch import Tensor
 
 from waveorder import optics, util
 from waveorder.models import isotropic_fluorescent_thick_3d
@@ -127,18 +130,67 @@ def apply_transfer_function(
 
 
 def apply_inverse_transfer_function(
-    zyx_data,
-    real_potential_transfer_function,
-    imaginary_potential_transfer_function,
-    z_padding,
-    z_pixel_size,  # TODO: MOVE THIS PARAM TO OTF? (leaky param)
-    wavelength_illumination,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
-    absorption_ratio=0.0,
-    reconstruction_algorithm="Tikhonov",
-    regularization_strength=1e-3,
-    TV_rho_strength=1e-3,
-    TV_iterations=10,
+    zyx_data: Tensor,
+    real_potential_transfer_function: Tensor,
+    imaginary_potential_transfer_function: Tensor,
+    z_padding: int,
+    z_pixel_size: float,  # TODO: MOVE THIS PARAM TO OTF? (leaky param)
+    wavelength_illumination: float,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
+    absorption_ratio: float = 0.0,
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    regularization_strength: float = 1e-3,
+    TV_rho_strength: float = 1e-3,
+    TV_iterations: int = 10,
 ):
+    """Reconstructs 3D phase from labelfree defocus zyx_data and a pair of
+    complex 3D transfer functions real_potential_transfer_function and
+    imag_potential_transfer_function, providing options for reconstruction
+    algorithms.
+
+    Parameters
+    ----------
+    zyx_data : Tensor
+        3D raw data, label-free defocus stack
+    real_potential_transfer_function : Tensor
+        Real potential transfer function, see calculate_transfer_function abov
+    imaginary_potential_transfer_function : Tensor
+        Imaginary potential transfer function, see calculate_transfer_function abov
+    z_padding : int
+        Padding for axial dimension. Use zero for defocus stacks that
+        extend ~3 PSF widths beyond the sample. Pad by ~3 PSF widths otherwise.
+    z_pixel_size : float
+        spacing between axial samples in sample space
+        units must be consistent with wavelength_illumination
+        TODO: move this leaky parameter to calculate_transfer_function
+    wavelength_illumination : float,
+        illumination wavelength
+        units must be consistent with z_pixel_size
+        TODO: move this leaky parameter to calculate_transfer_function
+    absorption_ratio : float, optional,
+        Absorption-to-phase ratio in the sample.
+        Use default 0 for purely phase objects.
+    reconstruction_algorithm : str, optional
+        "Tikhonov" or "TV", by default "Tikhonov"
+        "TV" is not implemented.
+    regularization_strength : float, optional
+        regularization parameter, by default 1e-3
+    TV_rho_strength : _type_, optional
+        TV-specific regularization parameter, by default 1e-3
+        "TV" is not implemented.
+    TV_iterations : int, optional
+        TV-specific number of iterations, by default 10
+        "TV" is not implemented.
+
+    Returns
+    -------
+    Tensor
+        zyx_phase (radians)
+
+    Raises
+    ------
+    NotImplementedError
+        TV is not implemented
+    """
     # Handle padding
     zyx_padded = util.pad_zyx_along_z(zyx_data, z_padding)
 
