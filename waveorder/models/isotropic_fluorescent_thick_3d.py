@@ -113,14 +113,15 @@ def apply_inverse_transfer_function(
     TV_iterations: int = 10,
 ):
     """Reconstructs fluorescence density from zyx_data and
-    an optical_transfer_function.
+    an optical_transfer_function, providing options for z padding and
+    reconstruction algorithms.
 
     Parameters
     ----------
     zyx_data : Tensor
-        3D raw data
+        3D raw data, fluorescence defocus stack
     optical_transfer_function : Tensor
-        3D optical transfer function, see calculate transfer_function above
+        3D optical transfer function, see calculate_transfer_function above
     z_padding : int
         Padding for axial dimension. Use zero for defocus stacks that
         extend past the complete sample, and 5-10 otherwise.
