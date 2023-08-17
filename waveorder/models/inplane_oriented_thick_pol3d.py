@@ -104,27 +104,34 @@ def apply_inverse_transfer_function(
     """
     data_stokes = stokes.mmul(intensity_to_stokes_matrix, czyx_data)
 
-    # "Measured" background correction
+    # Apply a "Measured" background correction
     if cyx_no_sample_data is None:
         background_corrected_stokes = data_stokes
     else:
+        # Find the no-sample Stokes parameters from the background data
         measured_no_sample_stokes = stokes.mmul(
             intensity_to_stokes_matrix, cyx_no_sample_data
         )
+        # Estimate the attenuating, depolarizing, retarder's inverse Mueller
+        # matrix that caused this background data
         inverse_background_mueller = stokes.mueller_from_stokes(
             *measured_no_sample_stokes, model="adr", direction="inverse"
         )
+        # Apply this background-correction Mueller matrix to the data to remove
+        # the background contribution
         background_corrected_stokes = stokes.mmul(
             inverse_background_mueller, data_stokes
         )
 
-    # "Estimated" background correction
+    # Apply an "Estimated" background correction
     if remove_estimated_background:
         estimator = background_estimator.BackgroundEstimator2D()
         for stokes_index in range(background_corrected_stokes.shape[0]):
+            # Project to 2D
             z_projection = torch.mean(
                 background_corrected_stokes[stokes_index], dim=0
             )
+            # Estimate the background and subtract
             background_corrected_stokes[
                 stokes_index
             ] -= estimator.get_background(
@@ -138,6 +145,9 @@ def apply_inverse_transfer_function(
             background_corrected_stokes, dim=1
         )[:, None, ...]
 
+    # Estimate an attenuating, depolarizing, retarder's parameters,
+    # i.e. (retardance, orientation, transmittance, depolarization)
+    # from the background-corrected Stokes values
     adr_parameters = stokes.estimate_adr_from_stokes(
         *background_corrected_stokes
     )
@@ -147,4 +157,5 @@ def apply_inverse_transfer_function(
         adr_parameters[1], rotate=rotate_orientation, flip=flip_orientation
     )
 
+    # Return (retardance, orientation, transmittance, depolarization)
     return adr_parameters[0], orientation, adr_parameters[2], adr_parameters[3]
