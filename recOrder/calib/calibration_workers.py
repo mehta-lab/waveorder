@@ -12,12 +12,13 @@ from typing import TYPE_CHECKING
 import numpy as np
 from iohub import open_ome_zarr
 from napari.qt.threading import WorkerBase, WorkerBaseSignals, thread_worker
+from pathlib import Path
 from qtpy.QtCore import Signal
 
 from recOrder.calib.Calibration import LC_DEVICE_NAME
 from recOrder.cli import settings
 from recOrder.cli.apply_inverse_transfer_function import (
-    apply_inverse_transfer_function_single_position,
+    apply_inverse_transfer_function_cli,
 )
 from recOrder.cli.compute_transfer_function import (
     compute_transfer_function_cli,
@@ -364,13 +365,9 @@ class BackgroundCaptureWorker(
         )
         model_to_yaml(reconstruction_settings, reconstruction_config_path)
 
-        input_data_path = os.path.join(
-            bg_path, "background.zarr", "0", "0", "0"
-        )
-        transfer_function_path = os.path.join(
-            bg_path, "transfer_function.zarr"
-        )
-        reconstruction_path = os.path.join(bg_path, "reconstruction.zarr")
+        input_data_path = Path(bg_path) / "background.zarr" / "0" / "0" / "0"
+        transfer_function_path = Path(bg_path) / "transfer_function.zarr"
+        reconstruction_path = Path(bg_path) / "reconstruction.zarr"
 
         compute_transfer_function_cli(
             input_position_dirpath=input_data_path,
@@ -378,17 +375,17 @@ class BackgroundCaptureWorker(
             output_dirpath=transfer_function_path,
         )
 
-        apply_inverse_transfer_function_single_position(
-            input_position_dirpath=input_data_path,
+        apply_inverse_transfer_function_cli(
+            input_position_dirpaths=[input_data_path],
             transfer_function_dirpath=transfer_function_path,
             config_filepath=reconstruction_config_path,
-            output_position_dirpath=reconstruction_path,
+            output_dirpath=reconstruction_path,
         )
 
         # Load reconstructions from file for layers
         with open_ome_zarr(reconstruction_path, mode="r") as dataset:
-            self.retardance = dataset["0"][0, 0, 0]
-            self.birefringence = dataset["0"][0, :, 0]
+            self.retardance = dataset["0/0/0/0"][0, 0, 0]
+            self.birefringence = dataset["0/0/0/0"][0, :, 0]
 
         # Save metadata file and emit imgs
         meta_file = os.path.join(bg_path, "calibration_metadata.txt")

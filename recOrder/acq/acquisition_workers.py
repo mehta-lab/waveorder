@@ -12,6 +12,7 @@ from iohub import open_ome_zarr
 from iohub.convert import TIFFConverter
 from napari.qt.threading import WorkerBase, WorkerBaseSignals
 from napari.utils.notifications import show_warning
+from pathlib import Path
 from qtpy.QtCore import Signal
 
 from recOrder.acq.acq_functions import (
@@ -20,7 +21,7 @@ from recOrder.acq.acq_functions import (
 )
 from recOrder.cli import settings
 from recOrder.cli.apply_inverse_transfer_function import (
-    apply_inverse_transfer_function_single_position,
+    apply_inverse_transfer_function_cli,
 )
 from recOrder.cli.compute_transfer_function import (
     compute_transfer_function_cli,
@@ -290,14 +291,9 @@ class BFAcquisitionWorker(WorkerBase):
         self._check_abort()
 
         # Create i/o paths
-        transfer_function_path = os.path.join(
-            self.snap_dir, "transfer_function.zarr"
-        )
-        reconstruction_path = os.path.join(
-            self.snap_dir, "reconstruction.zarr"
-        )
-
-        input_data_path = os.path.join(self.latest_out_path, "0", "0", "0")
+        transfer_function_path = Path(self.snap_dir) / "transfer_function.zarr"
+        reconstruction_path = Path(self.snap_dir) / "reconstruction.zarr"
+        input_data_path = Path(self.latest_out_path) / "0" / "0" / "0"
 
         # TODO: skip if config files match
         compute_transfer_function_cli(
@@ -306,16 +302,16 @@ class BFAcquisitionWorker(WorkerBase):
             output_dirpath=transfer_function_path,
         )
 
-        apply_inverse_transfer_function_single_position(
-            input_position_dirpath=input_data_path,
+        apply_inverse_transfer_function_cli(
+            input_position_dirpats=[input_data_path],
             transfer_function_dirpath=transfer_function_path,
             config_filepath=self.config_path,
-            output_position_dirpath=reconstruction_path,
+            output_dirpath=reconstruction_path,
         )
 
         # Read reconstruction to pass to emitters
         with open_ome_zarr(reconstruction_path, mode="r") as dataset:
-            phase = dataset["0"][0]
+            phase = dataset["0/0/0/0"][0]
 
         return phase
 
@@ -592,14 +588,9 @@ class PolarizationAcquisitionWorker(WorkerBase):
         self._check_abort()
 
         # Create config and i/o paths
-        transfer_function_path = os.path.join(
-            self.snap_dir, "transfer_function.zarr"
-        )
-        reconstruction_path = os.path.join(
-            self.snap_dir, "reconstruction.zarr"
-        )
-
-        input_data_path = os.path.join(self.latest_out_path, "0", "0", "0")
+        transfer_function_path = Path(self.snap_dir) / "transfer_function.zarr"
+        reconstruction_path = Path(self.snap_dir) / "reconstruction.zarr"
+        input_data_path = Path(self.latest_out_path) / "0" / "0" / "0"
 
         # TODO: skip if config files match
         compute_transfer_function_cli(
@@ -608,16 +599,16 @@ class PolarizationAcquisitionWorker(WorkerBase):
             output_dirpath=transfer_function_path,
         )
 
-        apply_inverse_transfer_function_single_position(
-            input_position_dirpath=input_data_path,
+        apply_inverse_transfer_function_cli(
+            input_position_dirpaths=[input_data_path],
             transfer_function_dirpath=transfer_function_path,
             config_filepath=self.config_path,
-            output_position_dirpath=reconstruction_path,
+            output_dirpath=reconstruction_path,
         )
 
         # Read reconstruction to pass to emitters
         with open_ome_zarr(reconstruction_path, mode="r") as dataset:
-            czyx_data = dataset["0"][0]
+            czyx_data = dataset["0/0/0/0"][0]
             birefringence = czyx_data[0:4]
             try:
                 phase = czyx_data[4]
