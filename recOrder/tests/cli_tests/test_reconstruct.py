@@ -8,11 +8,39 @@ from iohub.ngff_meta import TransformationMeta
 from recOrder.cli import settings
 from recOrder.cli.main import cli
 from recOrder.io import utils
+from recOrder.cli.apply_inverse_transfer_function import (
+    apply_inverse_transfer_function_cli,
+)
+from unittest.mock import patch
+import pytest
+from pathlib import Path
+from tempfile import TemporaryDirectory
 
 
-def test_reconstruct(tmp_path):
-    input_path = tmp_path / "input.zarr"
+input_scale = [1, 2, 3, 4, 5]
+# Setup options
+birefringence_settings = settings.BirefringenceSettings(
+    transfer_function=settings.BirefringenceTransferFunctionSettings()
+)
 
+# birefringence_option, time_indices, phase_option, dimension_option, time_length_target
+all_options = [
+    (birefringence_settings, [0, 3, 4], None, 2, 5),
+    (birefringence_settings, 0, settings.PhaseSettings(), 2, 5),
+    (birefringence_settings, [0, 1], None, 3, 5),
+    (birefringence_settings, "all", settings.PhaseSettings(), 3, 5),
+]
+
+
+@pytest.fixture(scope="session")
+def tmp_input_path_zarr():
+    tmp_path = TemporaryDirectory()
+    yield Path(tmp_path.name) / "input.zarr", Path(tmp_path.name) / "test.yml"
+    tmp_path.cleanup()
+
+
+def test_reconstruct(tmp_input_path_zarr):
+    input_path, tmp_config_yml = tmp_input_path_zarr
     # Generate input "dataset"
     channel_names = [f"State{x}" for x in range(4)]
     dataset = open_ome_zarr(
@@ -23,26 +51,12 @@ def test_reconstruct(tmp_path):
     )
 
     position = dataset.create_position("0", "0", "0")
-    input_scale = [1, 2, 3, 4, 5]
     position.create_zeros(
         "0",
         (5, 4, 4, 5, 6),
         dtype=np.uint16,
         transform=[TransformationMeta(type="scale", scale=input_scale)],
     )
-
-    # Setup options
-    birefringence_settings = settings.BirefringenceSettings(
-        transfer_function=settings.BirefringenceTransferFunctionSettings()
-    )
-
-    # birefringence_option, time_indices, phase_option, dimension_option, time_length_target
-    all_options = [
-        (birefringence_settings, [0, 3, 4], None, 2, 5),
-        (birefringence_settings, 0, settings.PhaseSettings(), 2, 5),
-        (birefringence_settings, [0, 1], None, 3, 5),
-        (birefringence_settings, "all", settings.PhaseSettings(), 3, 5),
-    ]
 
     for i, (
         birefringence_option,
@@ -62,12 +76,12 @@ def test_reconstruct(tmp_path):
             birefringence=birefringence_option,
             phase=phase_option,
         )
-        config_path = tmp_path / "test.yml"
+        config_path = tmp_config_yml.with_name(f"{i}.yml")
         utils.model_to_yaml(recon_settings, config_path)
 
         # Run CLI
         runner = CliRunner()
-        tf_path = input_path.with_name("tf.zarr")
+        tf_path = input_path.with_name(f"tf_{i}.zarr")
         runner.invoke(
             cli,
             [
@@ -83,49 +97,82 @@ def test_reconstruct(tmp_path):
         )
         assert tf_path.exists()
 
-        # Apply the tf
-        result_path = input_path.with_name(f"result{i}.zarr")
 
+def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
+    tmp_input_zarr, tmp_config_yml = tmp_input_path_zarr
+    tmp_config_yml = tmp_config_yml.with_name("0.yml").resolve()
+    tf_path = tmp_input_zarr.with_name("tf_0.zarr").resolve()
+    input_path = (tmp_input_zarr / "0" / "0" / "0").resolve()
+    result_path = tmp_input_zarr.with_name("result.zarr").resolve()
+
+    assert tmp_config_yml.exists()
+    assert tf_path.exists()
+    assert input_path.exists()
+    assert not result_path.exists()
+
+    runner = CliRunner()
+    with patch(
+        "recOrder.cli.apply_inverse_transfer_function.apply_inverse_transfer_function_cli"
+    ) as mock:
+        cmd = [
+            "apply-inv-tf",
+            "-i",
+            str(input_path),
+            "-t",
+            str(tf_path),
+            "-c",
+            str(tmp_config_yml),
+            "-o",
+            str(result_path),
+            "-j",
+            str(1),
+        ]
         result_inv = runner.invoke(
             cli,
-            [
-                "apply-inv-tf",
-                "-i",
-                str(input_path / "0" / "0" / "0"),
-                "-t",
-                str(tf_path),
-                "-c",
-                str(config_path),
-                "-o",
-                str(result_path),
-            ],
+            cmd,
             catch_exceptions=False,
         )
+        mock.assert_called_with(
+            [input_path],
+            Path(tf_path),
+            Path(tmp_config_yml),
+            Path(result_path),
+            1,
+        )
         assert result_inv.exit_code == 0
-        assert result_path.exists()
-        assert "Reconstructing" in result_inv.output
 
-        # Check output
+
+def test_cli_apply_inv_tf_output(tmp_input_path_zarr, capsys):
+    tmp_input_zarr, tmp_config_yml = tmp_input_path_zarr
+    input_path = tmp_input_zarr / "0" / "0" / "0"
+
+    for i, (
+        birefringence_option,
+        time_indices,
+        phase_option,
+        dimension_option,
+        time_length_target,
+    ) in enumerate(all_options):
+        if (birefringence_option is None) and (phase_option is None):
+            continue
+
+        result_path = tmp_input_zarr.with_name(f"result{i}.zarr").resolve()
+
+        tf_path = tmp_input_zarr.with_name(f"tf_{i}.zarr")
+        tmp_config_yml = tmp_config_yml.with_name(f"{i}.yml")
+
+        # # Check output
+        apply_inverse_transfer_function_cli(
+            [input_path], tf_path, tmp_config_yml, result_path, 1
+        )
+
         result_dataset = open_ome_zarr(str(result_path / "0" / "0" / "0"))
         assert result_dataset["0"].shape[0] == time_length_target
         assert result_dataset["0"].shape[3:] == (5, 6)
 
-        # Test direct recon
-        result_inv = runner.invoke(
-            cli,
-            [
-                "reconstruct",
-                "-i",
-                str(input_path / "0" / "0" / "0"),
-                "-c",
-                str(config_path),
-                "-o",
-                str(result_path),
-            ],
-        )
         assert result_path.exists()
-        assert result_inv.exit_code == 0
-        assert "Reconstructing" in result_inv.output
+        captured = capsys.readouterr()
+        assert "Reconstructing" in captured.out
 
         # Check scale transformations pass through
         assert input_scale == result_dataset.scale

@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Callable
 
 import click
+import torch.multiprocessing as mp
 from iohub.ngff import Plate, open_ome_zarr
 from natsort import natsorted
 
@@ -78,6 +79,29 @@ def output_dirpath() -> Callable:
             type=click.Path(exists=False),
             callback=_str_to_path,
             help="Path to output directory.",
+        )(f)
+
+    return decorator
+
+
+# TODO: this setting will have to be collected from SLURM?
+def processes_option(default: int = None) -> Callable:
+    def check_processes_option(ctx, param, value):
+        max_processes = mp.cpu_count()
+        if value > max_processes:
+            raise click.BadParameter(
+                f"Maximum number of processes is {max_processes}"
+            )
+        return value
+
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--num_processes",
+            "-j",
+            default=default or mp.cpu_count(),
+            type=int,
+            help="Number of processes to run in parallel.",
+            callback=check_processes_option,
         )(f)
 
     return decorator

@@ -12,6 +12,7 @@ from recOrder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,
+    processes_option,
 )
 
 
@@ -19,7 +20,10 @@ from recOrder.cli.parsing import (
 @input_position_dirpaths()
 @config_filepath()
 @output_dirpath()
-def reconstruct(input_position_dirpaths, config_filepath, output_dirpath):
+@processes_option(default=1)
+def reconstruct(
+    input_position_dirpaths, config_filepath, output_dirpath, num_processes
+):
     """
     Reconstruct a dataset using a configuration file. This is a
     convenience function for a `compute-tf` call followed by a `apply-inv-tf`
@@ -53,4 +57,5 @@ def reconstruct(input_position_dirpaths, config_filepath, output_dirpath):
         transfer_function_path,
         config_filepath,
         output_dirpath,
+        num_processes,
     )
