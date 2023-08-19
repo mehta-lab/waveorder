@@ -1198,7 +1198,14 @@ class MainWidget(QWidget):
         self, source_names: list[str, str], overlay_name: str
     ):
         def _layer_data(name: str):
-            return self.viewer.layers[name].data
+            data = self.viewer.layers[name].data
+            if isinstance(data, da.Array):
+                # the ome-zarr reader will read HCS plates/wells as nested dask graph
+                # which will contain 'get_tile' or 'get_field' in its graph
+                # this object will remain a dask `Array` after calling `compute()`
+                if any([("get_" in k) for k in data.dask.keys()]):
+                    data: da.Array = data.compute()
+            return data
 
         def _draw(overlay):
             self._add_or_update_image_layer(overlay, overlay_name, cmap="rgb")
