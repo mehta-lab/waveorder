@@ -13,50 +13,6 @@ from matplotlib.colors import hsv_to_rgb
 from waveorder.waveorder_reconstructor import waveorder_microscopy
 
 
-# TO BE DEPRECATED
-def extract_reconstruction_parameters(reconstructor, magnification=None):
-    """
-    Function that extracts the reconstruction parameters from a waveorder reconstructor.  Works for waveorder_microscopy class.
-
-    Parameters
-    ----------
-    reconstructor:      (waveorder reconstructor object) initalized reconstructor
-    magnification:      (float or None) magnification of the microscope setup (value not saved in reconstructor)
-
-    Returns
-    -------
-    attr_dict           (dict) dictionary of reconstruction parameters in their native units
-
-    """
-
-    ps = reconstructor.ps
-    if ps:
-        ps = ps * magnification if magnification else ps
-
-    if isinstance(reconstructor, waveorder_microscopy):
-        attr_dict = {
-            "phase_dimension": reconstructor.phase_deconv,
-            "wavelength (nm)": np.round(
-                reconstructor.lambda_illu * 1000 * reconstructor.n_media, 1
-            ),
-            "pad_z": reconstructor.pad_z,
-            "n_objective_media": reconstructor.n_media,
-            "bg_correction_option": reconstructor.bg_option,
-            "objective_NA": reconstructor.NA_obj * reconstructor.n_media,
-            "condenser_NA": reconstructor.NA_illu * reconstructor.n_media,
-            "magnification": magnification,
-            "swing": reconstructor.chi
-            if reconstructor.N_channel == 4
-            else reconstructor.chi / 2 / np.pi,
-            "pixel_size": ps,
-        }
-
-    else:
-        attr_dict = dict()
-
-    return attr_dict
-
-
 def load_background(background_path):
     with open_ome_zarr(
         os.path.join(background_path, "background.zarr", "0", "0", "0")
@@ -96,25 +52,6 @@ def ram_message():
         message = f"{gb_available:.1f} GB of RAM is available."
 
     return (is_warning, message)
-
-
-def rec_bkg_to_wo_bkg(recorder_option) -> str:
-    """
-    Converts recOrder's background options to waveorder's background options.
-
-    Parameters
-    ----------
-    recorder_option
-
-    Returns
-    -------
-    waveorder_option
-
-    """
-    if recorder_option == "local_fit+":
-        return "local_fit"
-    else:
-        return recorder_option
 
 
 def generic_hsv_overlay(
