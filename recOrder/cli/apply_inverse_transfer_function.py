@@ -131,13 +131,16 @@ def apply_inverse_transfer_function_single_position(
     recon_fluo = settings.fluorescence is not None
     recon_dim = settings.reconstruction_dimension
 
-    # Load background
+    # Prepare birefringence parameters
     if settings.birefringence is not None:
+        # settings.birefringence has more parameters than waveorder needs,
+        # so this section converts the settings to a dict and separates the
+        # waveorder parameters (biref_inverse_dict) from the recorder
+        # parameters (cyx_no_sample_data, and wavelength_illumination)
         biref_inverse_dict = settings.birefringence.apply_inverse.dict()
 
         # Resolve background path into array
-        background_path = biref_inverse_dict["background_path"]
-        biref_inverse_dict.pop("background_path")
+        background_path = biref_inverse_dict.pop("background_path")
         if background_path != "":
             cyx_no_sample_data = utils.load_background(background_path)
             _check_background_consistency(
@@ -145,6 +148,13 @@ def apply_inverse_transfer_function_single_position(
             )
         else:
             cyx_no_sample_data = None
+
+        # Get illumination wavelength for retardance radians -> nanometers conversion
+        biref_wavelength_illumination = biref_inverse_dict.pop(
+            "wavelength_illumination"
+        )
+
+    # Prepare the apply_inverse_model_function and its arguments
 
     # [biref only]
     if recon_biref and (not recon_phase):
@@ -155,6 +165,7 @@ def apply_inverse_transfer_function_single_position(
         apply_inverse_model_function = apply_inverse_models.birefringence
         apply_inverse_args = {
             "cyx_no_sample_data": cyx_no_sample_data,
+            "wavelength_illumination": biref_wavelength_illumination,
             "recon_dim": recon_dim,
             "biref_inverse_dict": biref_inverse_dict,
             "transfer_function_dataset": transfer_function_dataset,
@@ -185,6 +196,7 @@ def apply_inverse_transfer_function_single_position(
         )
         apply_inverse_args = {
             "cyx_no_sample_data": cyx_no_sample_data,
+            "wavelength_illumination": biref_wavelength_illumination,
             "recon_dim": recon_dim,
             "biref_inverse_dict": biref_inverse_dict,
             "settings_phase": settings.phase,
@@ -214,7 +226,7 @@ def apply_inverse_transfer_function_single_position(
         **apply_inverse_args,
     )
 
-    # Multiprocessing Logic
+    # Multiprocessing logic
     if num_processes > 1:
         # Loop through T, processing and writing as we go
         click.echo(

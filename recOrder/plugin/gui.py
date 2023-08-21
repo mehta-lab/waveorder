@@ -1136,7 +1136,7 @@ class Ui_Form(object):
         self.gridLayout_7.addWidget(self.label_logo, 0, 0, 1, 1)
 
         self.retranslateUi(Form)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         self.tabWidget_2.setCurrentIndex(2)
         self.cb_loglevel.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(Form)
@@ -1225,7 +1225,7 @@ class Ui_Form(object):
         self.qbutton_stop_calib.setText(_translate("Form", "STOP"))
         self.qbutton_load_calib.setText(_translate("Form", "Load Calibration"))
         self.calib_params.setTitle(_translate("Form", "Calibration Parameters"))
-        self.label_wavelength.setText(_translate("Form", "Wavelength"))
+        self.label_wavelength.setText(_translate("Form", "Wavelength (nm)"))
         self.label_dir.setText(_translate("Form", "Directory"))
         self.cb_lca.setItemText(0, _translate("Form", "-"))
         self.cb_calib_scheme.setItemText(0, _translate("Form", "4-State (Ext, 0, 60, 120)"))

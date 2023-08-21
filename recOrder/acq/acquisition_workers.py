@@ -61,7 +61,8 @@ def _generate_reconstruction_config_from_gui(
         )
         birefringence_apply_inverse_settings = (
             settings.BirefringenceApplyInverseSettings(
-                wavelength_illumination=calib_window.recon_wavelength / 1000,
+                wavelength_illumination=calib_window.recon_wavelength
+                / 1000,  # convert from um to nm
                 background_path=background_path,
                 remove_estimated_background=remove_estimated_background,
                 flip_orientation=calib_window.flip_orientation,
@@ -78,9 +79,10 @@ def _generate_reconstruction_config_from_gui(
     if mode == "phase" or mode == "all":
         phase_transfer_function_settings = (
             settings.PhaseTransferFunctionSettings(
-                wavelength_illumination=calib_window.recon_wavelength / 1000,
-                yx_pixel_size=calib_window.ps / calib_window.mag,
-                z_pixel_size=calib_window.z_step,
+                wavelength_illumination=calib_window.recon_wavelength
+                / 1000,  # um
+                yx_pixel_size=calib_window.ps / calib_window.mag,  # um
+                z_pixel_size=calib_window.z_step,  # um
                 z_padding=calib_window.pad_z,
                 index_of_refraction_media=calib_window.n_media,
                 numerical_aperture_detection=calib_window.obj_na,
@@ -303,7 +305,7 @@ class BFAcquisitionWorker(WorkerBase):
         )
 
         apply_inverse_transfer_function_cli(
-            input_position_dirpats=[input_data_path],
+            input_position_dirpaths=[input_data_path],
             transfer_function_dirpath=transfer_function_path,
             config_filepath=self.config_path,
             output_dirpath=reconstruction_path,

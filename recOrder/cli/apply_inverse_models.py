@@ -1,7 +1,7 @@
 """
 This module converts recOrder's reconstructions into waveorder calls
 """
-
+import numpy as np
 import torch
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
@@ -11,9 +11,20 @@ from waveorder.models import (
 )
 
 
+def radians_to_nanometers(retardance_rad, wavelength_illumination_um):
+    """
+    waveorder returns retardance in radians, while recorder displays and saves
+    retardance in nanometers. This function converts from radians to nanometers
+    using the illumination wavelength (which is internally handled in um
+    in recOrder).
+    """
+    return retardance_rad * wavelength_illumination_um * 1e3 / (2 * np.pi)
+
+
 def birefringence(
     czyx_data,
     cyx_no_sample_data,
+    wavelength_illumination,
     recon_dim,
     biref_inverse_dict,
     transfer_function_dataset,
@@ -23,7 +34,8 @@ def birefringence(
         transfer_function_dataset["intensity_to_stokes_matrix"][0, 0, 0]
     )
 
-    # Apply
+    # Apply reconstruction
+    # (retardance, orientation, transmittance, depolarization)
     reconstructed_parameters = (
         inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
             czyx_data,
@@ -34,7 +46,12 @@ def birefringence(
         )
     )
 
-    return torch.stack(reconstructed_parameters)
+    # Convert retardance
+    retardance = radians_to_nanometers(
+        reconstructed_parameters[0], wavelength_illumination
+    )
+
+    return torch.stack((retardance,) + reconstructed_parameters[1:])
 
 
 def phase(
@@ -97,6 +114,7 @@ def phase(
 def birefringence_and_phase(
     czyx_data,
     cyx_no_sample_data,
+    wavelength_illumination,
     recon_dim,
     biref_inverse_dict,
     settings_phase,
@@ -150,8 +168,15 @@ def birefringence_and_phase(
             **settings_phase.apply_inverse.dict(),
         )
 
+        # Convert retardance
+        retardance = radians_to_nanometers(
+            reconstructed_parameters_2d[0], wavelength_illumination
+        )
+
         output = torch.stack(
-            reconstructed_parameters_2d + (torch.unsqueeze(yx_phase, 0),)
+            (retardance,)
+            + reconstructed_parameters_2d[1:]
+            + (torch.unsqueeze(yx_phase, 0),)
         )  # CZYX
 
     # [biref and phase, 3]
@@ -192,8 +217,16 @@ def birefringence_and_phase(
             wavelength_illumination=settings_phase.transfer_function.wavelength_illumination,
             **settings_phase.apply_inverse.dict(),
         )
+
+        # Convert retardance
+        retardance = radians_to_nanometers(
+            reconstructed_parameters_3d[0], wavelength_illumination
+        )
+
         # Save
-        output = torch.stack(reconstructed_parameters_3d + (zyx_phase,))
+        output = torch.stack(
+            (retardance,) + reconstructed_parameters_3d[1:] + (zyx_phase,)
+        )
     return output
 
 
