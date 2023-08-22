@@ -920,7 +920,7 @@
                  </font>
                 </property>
                 <property name="text">
-                 <string>BG</string>
+                 <string>bg</string>
                 </property>
                </widget>
               </item>

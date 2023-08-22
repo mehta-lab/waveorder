@@ -55,7 +55,7 @@ Once finished, you will get a calibration assessment and an extinction value. Th
 For a deeper discussion of the calibration procedure, swing, and the extinction ratio, see the [calibration guide](./calibration-guide.md).
 
 ### Optional: Load Calibration
-If a user wants to use a previous calibration to acquire new data, then the "Load Calibration" button can be pressed.  It will direct you to select a *calibration_metadata.txt* file and these settings will be automatically updated in MicroManager. recOrder will also collect a few images to update the extinction ratio to reflect the current conditions. Once this has finished, a user can now acquire data as they normally would.  
+If a user wants to use a previous calibration to acquire new data, then the "Load Calibration" button can be pressed.  It will direct you to select a *polarization_calibration.txt* file and these settings will be automatically updated in MicroManager. recOrder will also collect a few images to update the extinction ratio to reflect the current conditions. Once this has finished, a user can now acquire data as they normally would.  
 
 This is quite useful if micromanager and/or recOrder crashes. If the sample and imaging setup haven't changed, it is safe to use a past calibration. Otherwise, if a new sample is used or some microscope components are changed, we recommend performing a new calibration.
 

@@ -1,21 +1,23 @@
-import numpy as np
-import matplotlib.pyplot as plt
+import json
+import logging
+import os
 import time
+import warnings
+from datetime import datetime
+
+import matplotlib.pyplot as plt
+import numpy as np
+from importlib_metadata import version
 from iohub import open_ome_zarr
-from recOrder.io.core_functions import *
-from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from napari.utils.notifications import show_warning
 from scipy.interpolate import interp1d
-from scipy.stats import linregress
 from scipy.optimize import least_squares
-import json
-import os
-import logging
-import warnings
+from scipy.stats import linregress
+
+from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
+from recOrder.io.core_functions import *
 from recOrder.io.utils import MockEmitter
-from datetime import datetime
-from importlib_metadata import version
 
 LC_DEVICE_NAME = "MeadowlarkLC"
 
@@ -945,9 +947,6 @@ class QLIPP_Calibration:
                     "Instrument matrix": inst_mat,
                 }
             )
-
-        if not self.meta_file.endswith(".txt"):
-            self.meta_file += ".txt"
 
         with open(self.meta_file, "w") as metafile:
             json.dump(metadata, metafile, indent=1)

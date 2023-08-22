@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import glob
 import json
 import logging
-import os
-import shutil
+from pathlib import Path
 
 # type hint/check
 from typing import TYPE_CHECKING
@@ -12,7 +10,6 @@ from typing import TYPE_CHECKING
 import numpy as np
 from iohub import open_ome_zarr
 from napari.qt.threading import WorkerBase, WorkerBaseSignals, thread_worker
-from pathlib import Path
 from qtpy.QtCore import Signal
 
 from recOrder.calib.Calibration import LC_DEVICE_NAME
@@ -24,8 +21,8 @@ from recOrder.cli.compute_transfer_function import (
     compute_transfer_function_cli,
 )
 from recOrder.io.core_functions import set_lc_state, snap_and_average
-from recOrder.io.metadata_reader import MetadataReader, get_last_metadata_file
-from recOrder.io.utils import MockEmitter, model_to_yaml
+from recOrder.io.metadata_reader import MetadataReader
+from recOrder.io.utils import MockEmitter, add_index_to_path, model_to_yaml
 
 # avoid runtime import error
 if TYPE_CHECKING:
@@ -45,7 +42,7 @@ class CalibrationSignals(WorkerBaseSignals):
     intensity_update = Signal(object)
     calib_assessment = Signal(str)
     calib_assessment_msg = Signal(str)
-    calib_file_emit = Signal(str)
+    calib_file_emit = Signal(Path)
     plot_sequence_emit = Signal(str)
     lc_states = Signal(tuple)
     aborted = Signal()
@@ -58,7 +55,7 @@ class BackgroundSignals(WorkerBaseSignals):
 
     bg_image_emitter = Signal(object)
     bire_image_emitter = Signal(object)
-    bg_path_update_emitter = Signal(str)
+    bg_path_update_emitter = Signal(Path)
     aborted = Signal()
 
 
@@ -170,18 +167,10 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
         self.extinction_update.emit(str(extinction_ratio))
 
         # determine metadata filename
-        def _meta_path(metadata_idx: str):
-            metadata_filename = "calibration_metadata" + metadata_idx + ".txt"
-            return os.path.join(self.calib_window.directory, metadata_filename)
-
-        meta_file = _meta_path("")
-        idx = 1
-        while os.path.exists(meta_file):
-            if meta_file == _meta_path(""):
-                meta_file = _meta_path("1")
-            else:
-                idx += 1
-                meta_file = _meta_path(str(idx))
+        meta_file = (
+            Path(self.calib_window.directory) / "calibration_metadata.txt"
+        )
+        meta_file = add_index_to_path(meta_file)
 
         # Write Metadata
         self._write_meta_file(meta_file)
@@ -311,32 +300,17 @@ class BackgroundCaptureWorker(
 
     def work(self):
         # Make the background folder
-        bg_path = os.path.join(
-            self.calib_window.directory,
-            self.calib_window.ui.le_bg_folder.text(),
+        bg_path = (
+            Path(self.calib_window.directory)
+            / self.calib_window.ui.le_bg_folder.text()
         )
-        if not os.path.exists(bg_path):
-            os.mkdir(bg_path)
-        else:
-            # increment background paths
-            idx = 1
-            while os.path.exists(bg_path + f"_{idx}"):
-                idx += 1
-
-            bg_path = bg_path + f"_{idx}"
-            for state_file in glob.glob(os.path.join(bg_path, "State*")):
-                os.remove(state_file)
-
-            if os.path.exists(
-                os.path.join(bg_path, "calibration_metadata.txt")
-            ):
-                os.remove(os.path.join(bg_path, "calibration_metadata.txt"))
+        bg_path = add_index_to_path(bg_path)
+        bg_path.mkdir()
 
         self._check_abort()
 
         # capture and return background images
         imgs = self.calib.capture_bg(self.calib_window.n_avg, bg_path)
-        self.calib_window._dump_gui_state(bg_path)
 
         # build background-specific reconstruction settings
         reconstruction_settings = settings.ReconstructionSettings(
@@ -360,14 +334,12 @@ class BackgroundCaptureWorker(
             ),
         )
 
-        reconstruction_config_path = os.path.join(
-            bg_path, "reconstruction_settings.yml"
-        )
+        reconstruction_config_path = bg_path / "reconstruction_settings.yml"
         model_to_yaml(reconstruction_settings, reconstruction_config_path)
 
-        input_data_path = Path(bg_path) / "background.zarr" / "0" / "0" / "0"
-        transfer_function_path = Path(bg_path) / "transfer_function.zarr"
-        reconstruction_path = Path(bg_path) / "reconstruction.zarr"
+        input_data_path = bg_path / "background.zarr" / "0" / "0" / "0"
+        transfer_function_path = bg_path / "transfer_function.zarr"
+        reconstruction_path = bg_path / "reconstruction.zarr"
 
         compute_transfer_function_cli(
             input_position_dirpath=input_data_path,
@@ -388,7 +360,7 @@ class BackgroundCaptureWorker(
             self.birefringence = dataset["0/0/0/0"][0, :, 0]
 
         # Save metadata file and emit imgs
-        meta_file = os.path.join(bg_path, "calibration_metadata.txt")
+        meta_file = bg_path / "polarization_calibration.txt"
         self._write_meta_file(meta_file)
 
         # Update last calibration file

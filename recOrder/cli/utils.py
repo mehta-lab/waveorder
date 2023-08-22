@@ -8,8 +8,6 @@ from iohub.ngff import Position, open_ome_zarr
 from iohub.ngff_meta import TransformationMeta
 from numpy.typing import DTypeLike
 
-from recOrder.cli.settings import ReconstructionSettings
-
 
 def create_empty_hcs_zarr(
     store_path: Path,

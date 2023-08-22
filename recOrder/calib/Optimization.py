@@ -1,16 +1,14 @@
+import logging
+
 import numpy as np
 from scipy import optimize
-from recOrder.io.core_functions import snap_and_average
-import logging
 
 
 class BrentOptimizer:
     def __init__(self, calib):
-
         self.calib = calib
 
     def _check_bounds(self, lca_bound, lcb_bound):
-
         current_lca = self.calib.get_lc("LCA")
         current_lcb = self.calib.get_lc("LCB")
 
@@ -50,7 +48,6 @@ class BrentOptimizer:
         reference,
         cost_function_args,
     ):
-
         xopt, fval, ierr, numfunc = optimize.fminbound(
             cost_function,
             x1=lower_bound,
@@ -81,7 +78,6 @@ class BrentOptimizer:
         reference,
         cost_function_args,
     ):
-
         xopt, fval, ierr, numfunc = optimize.fminbound(
             cost_function,
             x1=lower_bound,
@@ -105,7 +101,6 @@ class BrentOptimizer:
         return [lca, lcb, abs_intensity, difference]
 
     def optimize(self, state, lca_bound, lcb_bound, reference, thresh, n_iter):
-
         converged = False
         iteration = 1
         self.calib.inten = []
@@ -122,7 +117,6 @@ class BrentOptimizer:
             ) = self._check_bounds(lca_bound, lcb_bound)
 
             if state == "ext":
-
                 results_lca = self.opt_lca(
                     self.calib.opt_lc,
                     lca_lower_bound,
@@ -150,7 +144,6 @@ class BrentOptimizer:
                 results = results_lcb
 
             if state == "45" or state == "135":
-
                 results = self.opt_lcb(
                     self.calib.opt_lc,
                     lca_lower_bound,
@@ -162,7 +155,6 @@ class BrentOptimizer:
                 optimal.append(results)
 
             if state == "60":
-
                 results = self.opt_lca(
                     self.calib.opt_lc_cons,
                     lca_lower_bound,
@@ -178,7 +170,6 @@ class BrentOptimizer:
                 optimal.append([lca, lcb, results[2], results[3]])
 
             if state == "90":
-
                 results = self.opt_lca(
                     self.calib.opt_lc,
                     lca_lower_bound,
@@ -232,11 +223,9 @@ class BrentOptimizer:
 
 class MinScalarOptimizer:
     def __init__(self, calib):
-
         self.calib = calib
 
     def _check_bounds(self, lca_bound, lcb_bound):
-
         current_lca = self.calib.get_lc("LCA")
         current_lcb = self.calib.get_lc("LCB")
 
@@ -303,7 +292,6 @@ class MinScalarOptimizer:
         reference,
         cost_function_args,
     ):
-
         res = optimize.minimize_scalar(
             cost_function,
             bounds=(lower_bound, upper_bound),
@@ -332,7 +320,6 @@ class MinScalarOptimizer:
         reference,
         cost_function_args,
     ):
-
         res = optimize.minimize_scalar(
             cost_function,
             bounds=(lower_bound, upper_bound),
@@ -356,7 +343,6 @@ class MinScalarOptimizer:
     def optimize(
         self, state, lca_bound, lcb_bound, reference, thresh=None, n_iter=None
     ):
-
         (
             lca_lower_bound,
             lca_upper_bound,

@@ -1254,7 +1254,7 @@ class Ui_Form(object):
         self.capture_background.setTitle(_translate("Form", "Capture Background"))
         self.label_bg_folder.setText(_translate("Form", "Background Folder Name"))
         self.qbutton_capture_bg.setText(_translate("Form", "Capture Background"))
-        self.le_bg_folder.setText(_translate("Form", "BG"))
+        self.le_bg_folder.setText(_translate("Form", "bg"))
         self.le_n_avg.setText(_translate("Form", "5"))
         self.label_n_avg.setText(_translate("Form", "Number of Images to Average"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.Calibration), _translate("Form", "LC Calibration"))

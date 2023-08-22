@@ -13,6 +13,33 @@ from matplotlib.colors import hsv_to_rgb
 from waveorder.waveorder_reconstructor import waveorder_microscopy
 
 
+def add_index_to_path(path: Path):
+    """Takes a path to a file or folder and appends the smallest index that does
+    not already exist in that folder.
+
+    For example:
+    './output.txt' -> './output_0.txt' if no other files named './output*.txt' exist.
+    './output.txt' -> './output_2.txt' if './output_0.txt' and './output_1.txt' already exist.
+
+    Parameters
+    ----------
+    path: Path
+        Base path to add index to
+
+    Returns
+    -------
+    Path
+    """
+    index = 0
+    new_stem = f"{path.stem}_{index}"
+
+    while (path.parent / (new_stem + path.suffix)).exists():
+        index += 1
+        new_stem = f"{path.stem}_{index}"
+
+    return path.parent / (new_stem + path.suffix)
+
+
 def load_background(background_path):
     with open_ome_zarr(
         os.path.join(background_path, "background.zarr", "0", "0", "0")

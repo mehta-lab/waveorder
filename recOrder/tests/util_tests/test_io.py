@@ -1,9 +1,11 @@
 import os
+from pathlib import Path
+
 import pytest
 import yaml
 
 from recOrder.cli import settings
-from recOrder.io.utils import model_to_yaml, yaml_to_model
+from recOrder.io.utils import add_index_to_path, model_to_yaml
 
 
 @pytest.fixture
@@ -45,3 +47,26 @@ def test_model_to_yaml_invalid_model():
     # Call the function and expect a TypeError
     with pytest.raises(TypeError):
         model_to_yaml(invalid_model, "model.yaml")
+
+
+def test_add_index_to_path(tmp_path):
+    test_cases = [
+        ("output.txt", "output_0.txt"),
+        ("output.txt", "output_1.txt"),
+        ("output.txt", "output_2.txt"),
+        ("output.png", "output_0.png"),
+        ("output.png", "output_1.png"),
+        ("output.png", "output_2.png"),
+        ("folder", "folder_0"),
+        ("folder", "folder_1"),
+        ("folder", "folder_2"),
+    ]
+
+    for input_path_str, expected_output_str in test_cases:
+        input_path = tmp_path / Path(input_path_str)
+        expected_output = tmp_path / Path(expected_output_str)
+
+        output_path = add_index_to_path(input_path)
+        assert output_path == expected_output
+
+        output_path.touch()  # Create a file/folder at the expected output path for testing

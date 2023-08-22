@@ -7,7 +7,6 @@ from pydantic import (
     NonNegativeFloat,
     NonNegativeInt,
     PositiveFloat,
-    PositiveInt,
     root_validator,
     validator,
 )

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import logging
-import os
 import shutil
+from pathlib import Path
 
 # type hint/check
 from typing import TYPE_CHECKING
@@ -12,7 +12,6 @@ from iohub import open_ome_zarr
 from iohub.convert import TIFFConverter
 from napari.qt.threading import WorkerBase, WorkerBaseSignals
 from napari.utils.notifications import show_warning
-from pathlib import Path
 from qtpy.QtCore import Signal
 
 from recOrder.acq.acq_functions import (
@@ -26,7 +25,7 @@ from recOrder.cli.apply_inverse_transfer_function import (
 from recOrder.cli.compute_transfer_function import (
     compute_transfer_function_cli,
 )
-from recOrder.io.utils import model_to_yaml, ram_message
+from recOrder.io.utils import add_index_to_path, model_to_yaml, ram_message
 
 # avoid runtime import error
 if TYPE_CHECKING:
@@ -45,13 +44,13 @@ def _generate_reconstruction_config_from_gui(
             background_path = ""
             remove_estimated_background = False
         elif calib_window.bg_option == "Measured":
-            background_path = calib_window.acq_bg_directory
+            background_path = str(calib_window.acq_bg_directory)
             remove_estimated_background = False
         elif calib_window.bg_option == "Estimated":
             background_path = ""
             remove_estimated_background = True
         elif calib_window.bg_option == "Measured + Estimated":
-            background_path = calib_window.acq_bg_directory
+            background_path = str(calib_window.acq_bg_directory)
             remove_estimated_background = True
 
         birefringence_transfer_function_settings = (
@@ -147,7 +146,7 @@ class BFAcquisitionWorker(WorkerBase):
         self.calib_window = calib_window
 
         # Init Properties
-        self.prefix = "recOrderPluginSnap"
+        self.prefix = "snap"
         self.dm = self.calib_window.mm.displays()
         self.dim = (
             "2D"
@@ -167,24 +166,14 @@ class BFAcquisitionWorker(WorkerBase):
                 "save directory is empty, please specify a directory in the plugin"
             )
 
-        # increment filename one more than last found saved snap
-        i = 0
-        prefix = self.calib_window.save_name
-        snap_dir = (
-            f"recOrderPluginSnap_{i}"
-            if not prefix
-            else f"{prefix}_recOrderPluginSnap_{i}"
-        )
-        while os.path.exists(os.path.join(save_dir, snap_dir)):
-            i += 1
-            snap_dir = (
-                f"recOrderPluginSnap_{i}"
-                if not prefix
-                else f"{prefix}_recOrderPluginSnap_{i}"
+        if self.calib_window.save_name is None:
+            self.snap_dir = Path(save_dir) / "snap"
+        else:
+            self.snap_dir = Path(save_dir) / (
+                self.calib_window.save_name + "_snap"
             )
-
-        self.snap_dir = os.path.join(save_dir, snap_dir)
-        os.mkdir(self.snap_dir)
+        self.snap_dir = add_index_to_path(self.snap_dir)
+        self.snap_dir.mkdir()
 
     def _check_abort(self):
         if self.abort_requested:
@@ -208,7 +197,6 @@ class BFAcquisitionWorker(WorkerBase):
         self._check_ram()
         logging.info("Running Acquisition...")
         self._check_abort()
-        self.calib_window._dump_gui_state(self.snap_dir)
 
         channel_idx = self.calib_window.ui.cb_acq_channel.currentIndex()
         channel = self.calib_window.ui.cb_acq_channel.itemText(channel_idx)
@@ -227,9 +215,8 @@ class BFAcquisitionWorker(WorkerBase):
                     break
 
         # Create and validate reconstruction settings
-        self.config_path = os.path.join(
-            self.snap_dir, "reconstruction_settings.yml"
-        )
+        self.config_path = self.snap_dir / "reconstruction_settings.yml"
+
         _generate_reconstruction_config_from_gui(
             self.config_path,
             "phase",
@@ -248,7 +235,7 @@ class BFAcquisitionWorker(WorkerBase):
             zstart=self.calib_window.z_start,
             zend=self.calib_window.z_end,
             zstep=self.calib_window.z_step,
-            save_dir=self.snap_dir,
+            save_dir=str(self.snap_dir),
             prefix=self.prefix,
             keep_shutter_open_slices=True,
         )
@@ -339,25 +326,15 @@ class BFAcquisitionWorker(WorkerBase):
                 # Try to delete the data, sometime it isn't cleaned up quickly enough and will
                 # return an error.  In this case, catch the error and then try to close again (seems to work).
                 try:
-                    save_prefix = (
-                        self.calib_window.save_name
-                        if self.calib_window.save_name
-                        else None
-                    )
-                    name = (
-                        f"RawBFDataSnap.zarr"
-                        if not save_prefix
-                        else f"{save_prefix}_RawBFDataSnap.zarr"
-                    )
-                    self.latest_out_path = os.path.join(self.snap_dir, name)
+                    self.latest_out_path = self.snap_dir / "raw_data.zarr"
                     converter = TIFFConverter(
-                        os.path.join(dir_, prefix),
-                        self.latest_out_path,
+                        str(Path(dir_) / prefix),
+                        str(self.latest_out_path),
                         data_type="ometiff",
                         grid_layout=False,
                     )
                     converter.run()
-                    shutil.rmtree(os.path.join(dir_, prefix))
+                    shutil.rmtree(Path(dir_) / prefix)
                 except PermissionError as ex:
                     dp.close()
                 break
@@ -405,24 +382,14 @@ class PolarizationAcquisitionWorker(WorkerBase):
                 "save directory is empty, please specify a directory in the plugin"
             )
 
-        # increment filename one more than last found saved snap
-        i = 0
-        prefix = self.calib_window.save_name
-        snap_dir = (
-            f"recOrderPluginSnap_{i}"
-            if not prefix
-            else f"{prefix}_recOrderPluginSnap_{i}"
-        )
-        while os.path.exists(os.path.join(save_dir, snap_dir)):
-            i += 1
-            snap_dir = (
-                f"recOrderPluginSnap_{i}"
-                if not prefix
-                else f"{prefix}_recOrderPluginSnap_{i}"
+        if self.calib_window.save_name is None:
+            self.snap_dir = Path(save_dir) / "snap"
+        else:
+            self.snap_dir = Path(save_dir) / (
+                self.calib_window.save_name + "_snap"
             )
-
-        self.snap_dir = os.path.join(save_dir, snap_dir)
-        os.mkdir(self.snap_dir)
+        self.snap_dir = add_index_to_path(self.snap_dir)
+        self.snap_dir.mkdir()
 
     def _check_abort(self):
         if self.abort_requested:
@@ -445,7 +412,6 @@ class PolarizationAcquisitionWorker(WorkerBase):
         """
         self._check_ram()
         logging.info("Running Acquisition...")
-        self.calib_window._dump_gui_state(self.snap_dir)
 
         # List the Channels to acquire, if 5-state then append 5th channel
         channels = ["State0", "State1", "State2", "State3"]
@@ -455,9 +421,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         self._check_abort()
 
         # Create and validate reconstruction settings
-        self.config_path = os.path.join(
-            self.snap_dir, "reconstruction_settings.yml"
-        )
+        self.config_path = self.snap_dir / "reconstruction_settings.yml"
         _generate_reconstruction_config_from_gui(
             self.config_path,
             self.mode,
@@ -474,7 +438,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
                 self.calib_window.mm,
                 channel_group=self.channel_group,
                 channels=channels,
-                save_dir=self.snap_dir,
+                save_dir=str(self.snap_dir),
                 prefix=self.prefix,
                 keep_shutter_open_channels=True,
             )
@@ -494,7 +458,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
                 zstart=self.calib_window.z_start,
                 zend=self.calib_window.z_end,
                 zstep=self.calib_window.z_step,
-                save_dir=self.snap_dir,
+                save_dir=str(self.snap_dir),
                 prefix=self.prefix,
                 keep_shutter_open_channels=True,
                 keep_shutter_open_slices=True,
@@ -640,25 +604,15 @@ class PolarizationAcquisitionWorker(WorkerBase):
                 # Try to delete the data, sometime it isn't cleaned up quickly enough and will
                 # return an error.  In this case, catch the error and then try to close again (seems to work).
                 try:
-                    save_prefix = (
-                        self.calib_window.save_name
-                        if self.calib_window.save_name
-                        else None
-                    )
-                    name = (
-                        f"RawPolDataSnap.zarr"
-                        if not save_prefix
-                        else f"{save_prefix}_RawPolDataSnap.zarr"
-                    )
-                    self.latest_out_path = os.path.join(self.snap_dir, name)
+                    self.latest_out_path = self.snap_dir / "raw_data.zarr"
                     converter = TIFFConverter(
-                        os.path.join(dir_, prefix),
-                        self.latest_out_path,
+                        str(Path(dir_) / prefix),
+                        str(self.latest_out_path),
                         data_type="ometiff",
                         grid_layout=False,
                     )
                     converter.run()
-                    shutil.rmtree(os.path.join(dir_, prefix))
+                    shutil.rmtree(Path(dir_) / prefix)
                 except PermissionError as ex:
                     dp.close()
                 break
