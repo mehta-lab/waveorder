@@ -236,6 +236,11 @@ class MainWidget(QWidget):
         self.viewer.layers.events.moved.connect(self.handle_layers_updated)
         self.viewer.layers.events.inserted.connect(self.handle_layers_updated)
 
+        # Birefringence overlay controls
+        self.ui.retMaxSlider.sliderMoved[int].connect(
+            self.handle_ret_max_slider_move
+        )
+
         # Commenting for 0.3.0. Consider debugging or deleting for 1.0.0.
         # self.ui.cb_colormap.currentIndexChanged[int].connect(
         #     self.enter_colormap
@@ -341,6 +346,7 @@ class MainWidget(QWidget):
         self.reconstruction_data_path = None
         self.reconstruction_data = None
         self.calib_assessment_level = None
+        self.ret_max = 25
         recorder_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
         self.worker = None
 
@@ -1133,6 +1139,7 @@ class MainWidget(QWidget):
         name: str,
         cmap: str = "gray",
         move_to_top: bool = True,
+        scale: tuple = 5 * (1,),
     ):
         """Add image layer of the given name if it does not exist, update existing layer otherwise.
 
@@ -1147,6 +1154,8 @@ class MainWidget(QWidget):
         move_to_top : bool, optional
             whether to move the updated layer to the top of layers list, by default True
         """
+        scale = scale[-image.ndim :]  # match shapes
+
         if name in self.viewer.layers:
             self.viewer.layers[name].data = image
             if move_to_top:
@@ -1155,19 +1164,33 @@ class MainWidget(QWidget):
                 self.viewer.layers.move(src_index, dest_index=-1)
         else:
             if cmap == "rgb":
-                self.viewer.add_image(image, name=name, rgb=True)
+                self.viewer.add_image(
+                    image,
+                    name=name,
+                    rgb=True,
+                    scale=scale,
+                )
             else:
-                self.viewer.add_image(image, name=name, colormap=cmap)
+                self.viewer.add_image(
+                    image,
+                    name=name,
+                    colormap=cmap,
+                    scale=scale,
+                )
 
-    @Slot(object)
+    @Slot(tuple)
     def handle_bg_image_update(self, value):
-        self._add_or_update_image_layer(value, "Background Images")
+        data, scale = value
+        self._add_or_update_image_layer(data, "Background Images", scale=scale)
 
-    @Slot(object)
+    @Slot(tuple)
     def handle_bg_bire_image_update(self, value):
-        self._add_or_update_image_layer(value[0], "Background Retardance")
+        data, scale = value
         self._add_or_update_image_layer(
-            value[1], "Background Orientation", cmap="hsv"
+            data[0], "Background Retardance", scale=scale
+        )
+        self._add_or_update_image_layer(
+            data[1], "Background Orientation", cmap="hsv", scale=scale
         )
 
     def handle_layers_updated(self, event: Event):
@@ -1194,7 +1217,10 @@ class MainWidget(QWidget):
                     f"'{retardance_name}', '{orientation_name}'"
                 )
                 self._draw_bire_overlay(
-                    retardance_name, orientation_name, overlay_name
+                    retardance_name,
+                    orientation_name,
+                    overlay_name,
+                    scale=layers[-1].scale,
                 )
 
             # always display layers that start with "Orientation" in hsv
@@ -1205,7 +1231,11 @@ class MainWidget(QWidget):
             self.viewer.layers[orientation_name].colormap = "hsv"
 
     def _draw_bire_overlay(
-        self, retardance_name: str, orientation_name: str, overlay_name: str
+        self,
+        retardance_name: str,
+        orientation_name: str,
+        overlay_name: str,
+        scale: tuple,
     ):
         def _layer_data(name: str):
             data = self.viewer.layers[name].data
@@ -1215,40 +1245,58 @@ class MainWidget(QWidget):
                 # this object will remain a dask `Array` after calling `compute()`
                 if any([("get_" in k) for k in data.dask.keys()]):
                     data: da.Array = data.compute()
+            else:
+                chunks = (data.ndim - 2) * (1,) + data.shape[
+                    -2:
+                ]  # needs to match
+                data = da.from_array(data, chunks=chunks)
             return data
 
-        def _draw(overlay):
-            self._add_or_update_image_layer(overlay, overlay_name, cmap="rgb")
+        self.overlay_scale = scale
+        self.overlay_name = overlay_name
+        self.overlay_retardance = _layer_data(retardance_name)
+        self.overlay_orientation = _layer_data(orientation_name)
+        self.update_overlay_dask_array()
 
-        retardance = _layer_data(retardance_name)
-        orientation = _layer_data(orientation_name)
-        worker = create_worker(
+    def update_overlay_dask_array(self):
+        self.rgb_chunks = (
+            (self.overlay_retardance.ndim - 2) * (1,)
+            + self.overlay_retardance.shape[-2:]
+            + (3,)
+        )
+        overlay = da.map_blocks(
             ret_ori_overlay,
-            retardance=retardance,
-            orientation=orientation,
-            ret_max=np.percentile(np.ravel(retardance), 99.99),
+            self.overlay_retardance,
+            self.overlay_orientation,
+            chunks=self.rgb_chunks,
+            new_axis=-1,
+            ret_max=self.ret_max,
             cmap=self.colormap,
         )
-        worker.start()
-        logging.info(f"Updating the birefringence overlay layer.")
-        if retardance.size >= 2 * 2048 * 2048:
-            show_info("Generating large overlay. This might take a moment...")
-        worker.returned.connect(_draw)
 
-    @Slot(object)
-    def handle_bire_image_update(self, value: NDArray):
+        self._add_or_update_image_layer(
+            overlay, self.overlay_name, cmap="rgb", scale=self.overlay_scale
+        )
+
+    @Slot(tuple)
+    def handle_bire_image_update(self, value):
+        data, scale = value
+
         # generate overlay in a separate thread
         for i, channel in enumerate(("Retardance", "Orientation")):
             name = channel
             cmap = "gray" if channel != "Orientation" else "hsv"
-            self._add_or_update_image_layer(value[i], name, cmap=cmap)
+            self._add_or_update_image_layer(
+                data[i], name, cmap=cmap, scale=scale
+            )
 
-    @Slot(object)
+    @Slot(tuple)
     def handle_phase_image_update(self, value):
+        phase, scale = value
         name = "Phase2D" if self.acq_mode == "2D" else "Phase3D"
 
         # Add new layer if none exists, otherwise update layer data
-        self._add_or_update_image_layer(value, name)
+        self._add_or_update_image_layer(phase, name, scale=scale)
 
         if "Phase" not in [
             self.ui.cb_saturation.itemText(i)
@@ -2202,6 +2250,11 @@ class MainWidget(QWidget):
             self.config_reader.timepoints = f"[!!python/tuple [{t[0]},{t[1]}]]"
 
         self.config_reader.save_yaml(dir_=dir_, name=name)
+
+    @Slot(int)
+    def handle_ret_max_slider_move(self, value):
+        self.ret_max = value
+        self.update_overlay_dask_array()
 
     # Commenting for 0.3.0. Consider debugging or deleting for 1.0.0.
     # @Slot(int)

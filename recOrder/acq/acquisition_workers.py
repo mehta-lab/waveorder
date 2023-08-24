@@ -33,6 +33,20 @@ if TYPE_CHECKING:
     from recOrder.plugin.main_widget import MainWidget
 
 
+def _check_scale_mismatch(
+    recon_scale: np.array,
+    ngff_scale: tuple[float, float, float, float, float],
+) -> None:
+    if not np.allclose(np.array(ngff_scale[2:]), recon_scale, rtol=1e-2):
+        show_warning(
+            f"Requested reconstruction scale = {recon_scale} "
+            f"and OME-Zarr metadata scale = {ngff_scale[2:]} are not equal. "
+            "recOrder's reconstruction uses the GUI's "
+            "Z-step, pixel size, and magnification, "
+            "while napari's viewer uses the input array's metadata."
+        )
+
+
 def _generate_reconstruction_config_from_gui(
     reconstruction_config_path,
     mode,
@@ -117,8 +131,8 @@ class PolarizationAcquisitionSignals(WorkerBaseSignals):
     Custom Signals class that includes napari native signals
     """
 
-    phase_image_emitter = Signal(object)
-    bire_image_emitter = Signal(object)
+    phase_image_emitter = Signal(tuple)
+    bire_image_emitter = Signal(tuple)
     phase_reconstructor_emitter = Signal(object)
     aborted = Signal()
 
@@ -128,7 +142,7 @@ class BFAcquisitionSignals(WorkerBaseSignals):
     Custom Signals class that includes napari native signals
     """
 
-    phase_image_emitter = Signal(object)
+    phase_image_emitter = Signal(tuple)
     phase_reconstructor_emitter = Signal(object)
     aborted = Signal()
 
@@ -258,7 +272,7 @@ class BFAcquisitionWorker(WorkerBase):
         # Reconstruct snapped images
         self.n_slices = stack.shape[2]
 
-        phase = self._reconstruct()
+        phase, scale = self._reconstruct()
         self._check_abort()
 
         # Warn the user about axial
@@ -267,11 +281,18 @@ class BFAcquisitionWorker(WorkerBase):
                 "Inverting the phase contrast. This affects the visualization and saved reconstruction."
             )
 
+        # Warn user about mismatched scales
+        recon_scale = np.array(
+            (self.calib_window.z_step,)
+            + 2 * (self.calib_window.ps / self.calib_window.mag,)
+        )
+        _check_scale_mismatch(recon_scale, scale)
+
         logging.info("Finished Acquisition")
         logging.debug("Finished Acquisition")
 
         # Emit the images and let thread know function is finished
-        self.phase_image_emitter.emit(phase)
+        self.phase_image_emitter.emit((phase, scale))
 
     def _reconstruct(self):
         """
@@ -301,8 +322,9 @@ class BFAcquisitionWorker(WorkerBase):
         # Read reconstruction to pass to emitters
         with open_ome_zarr(reconstruction_path, mode="r") as dataset:
             phase = dataset["0/0/0/0"][0]
+            scale = dataset["0/0/0"].scale
 
-        return phase
+        return phase, scale
 
     def _cleanup_acq(self):
         # Get display windows
@@ -479,7 +501,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         # Reconstruct snapped images
         self._check_abort()
         self.n_slices = stack.shape[2]
-        birefringence, phase = self._reconstruct()
+        birefringence, phase, scale = self._reconstruct()
         self._check_abort()
 
         # Warn the user about rotations and flips
@@ -492,12 +514,19 @@ class PolarizationAcquisitionWorker(WorkerBase):
                 "Applying a flip to orientation channel. This affects the visualization and saved reconstruction."
             )
 
+        # Warn user about mismatched scales
+        recon_scale = np.array(
+            (self.calib_window.z_step,)
+            + 2 * (self.calib_window.ps / self.calib_window.mag,)
+        )
+        _check_scale_mismatch(recon_scale, scale)
+
         logging.info("Finished Acquisition")
         logging.debug("Finished Acquisition")
 
         # Emit the images and let thread know function is finished
-        self.bire_image_emitter.emit(birefringence)
-        self.phase_image_emitter.emit(phase)
+        self.bire_image_emitter.emit((birefringence, scale))
+        self.phase_image_emitter.emit((phase, scale))
 
     def _check_exposure(self) -> None:
         """
@@ -579,8 +608,9 @@ class PolarizationAcquisitionWorker(WorkerBase):
                 phase = czyx_data[4]
             except:
                 phase = None
+            scale = dataset["0/0/0"].scale
 
-        return birefringence, phase
+        return birefringence, phase, scale
 
     def _cleanup_acq(self):
         # Get display windows

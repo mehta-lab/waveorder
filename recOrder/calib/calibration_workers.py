@@ -53,8 +53,8 @@ class BackgroundSignals(WorkerBaseSignals):
     Custom Signals class that includes napari native signals
     """
 
-    bg_image_emitter = Signal(object)
-    bire_image_emitter = Signal(object)
+    bg_image_emitter = Signal(tuple)
+    bire_image_emitter = Signal(tuple)
     bg_path_update_emitter = Signal(Path)
     aborted = Signal()
 
@@ -358,6 +358,7 @@ class BackgroundCaptureWorker(
         with open_ome_zarr(reconstruction_path, mode="r") as dataset:
             self.retardance = dataset["0/0/0/0"][0, 0, 0]
             self.birefringence = dataset["0/0/0/0"][0, :, 0]
+            scale = dataset["0/0/0"].scale
 
         # Save metadata file and emit imgs
         meta_file = bg_path / "polarization_calibration.txt"
@@ -381,8 +382,10 @@ class BackgroundCaptureWorker(
         self._check_abort()
 
         # Emit background images + background birefringence
-        self.bg_image_emitter.emit(imgs)
-        self.bire_image_emitter.emit((self.retardance, self.birefringence[1]))
+        self.bg_image_emitter.emit((imgs, scale))
+        self.bire_image_emitter.emit(
+            ((self.retardance, self.birefringence[1]), scale)
+        )
 
         # Emit bg path
         self.bg_path_update_emitter.emit(bg_path)

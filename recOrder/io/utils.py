@@ -1,7 +1,7 @@
 import os
 import textwrap
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Union
 
 import numpy as np
 import psutil
@@ -130,7 +130,10 @@ def generic_hsv_overlay(
 
 
 def ret_ori_overlay(
-    retardance, orientation, ret_max=10, cmap: Literal["JCh", "HSV"] = "JCh"
+    retardance,
+    orientation,
+    ret_max: Union[float, Literal["auto"]] = 10,
+    cmap: Literal["JCh", "HSV"] = "JCh",
 ):
     """
     This function will create an overlay of retardance and orientation with two different colormap options.
@@ -153,6 +156,9 @@ def ret_ori_overlay(
             "Retardance and Orientation shapes do not match: "
             f"{retardance.shape} vs. {orientation.shape}"
         )
+
+    if ret_max == "auto":
+        ret_max = np.percentile(np.ravel(retardance), 99.99)
 
     # Prepare input and output arrays
     ret_ = np.clip(retardance, 0, ret_max)  # clip and copy
