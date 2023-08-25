@@ -394,7 +394,7 @@ class MainWidget(QWidget):
 
         # Hide temporarily unsupported "Overlay" functions
         self.ui.tabWidget.setTabText(
-            self.ui.tabWidget.indexOf(self.ui.Display), "Orientation Legend"
+            self.ui.tabWidget.indexOf(self.ui.Display), "Visualization"
         )
         self.ui.label_orientation_legend.setHidden(True)
         self.ui.DisplayOptions.setHidden(True)

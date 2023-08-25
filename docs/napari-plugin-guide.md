@@ -170,5 +170,5 @@ If the **Orientation*** layer has a matching **Retardance*** layer in the layer 
 If the **BirefringenceOverlay*** needs to be regenerated, an **Orientation*** layer can be dragged to the top of the layer list:
 ![](./images/no-overlay.png)
 
-The **Orientation Legend** tab shows the mapping between HSV colors and the orientation, and the **Overlay Retardance Maximum** slider controls the mapping between retardance values and saturated colors in the overlay.
+The **Visualization** tab shows the mapping between HSV colors and the orientation, and the **Overlay Retardance Maximum** slider controls the mapping between retardance values and saturated colors in the overlay.
 ![](./images/overlay-demo.png)
