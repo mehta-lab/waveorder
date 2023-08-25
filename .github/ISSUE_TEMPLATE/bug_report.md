@@ -25,4 +25,4 @@ A clear and concise description of what you expected to happen.
 Operating system:
 Python version:
 Python environment (command line, IDE, Jupyter notebook, etc):
-MicroManager/pycromanager version:
+Micro-Manager/pycromanager version:

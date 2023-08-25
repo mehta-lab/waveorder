@@ -1,9 +1,10 @@
-import numpy as np
+import glob
 import json
 import os
-from iohub import read_micromanager
 import time
-import glob
+
+import numpy as np
+from iohub import read_micromanager
 from pycromanager import Studio
 
 
@@ -20,7 +21,7 @@ def generate_acq_settings(
     keep_shutter_open_slices=False,
 ):
     """
-    This function generates a json file specific to the micromanager SequenceSettings.
+    This function generates a json file specific to the Micro-Manager SequenceSettings.
     It has default parameters for a multi-channels z-stack acquisition but does not yet
     support multi-position or multi-frame acquisitions.
 

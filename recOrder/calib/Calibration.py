@@ -39,17 +39,17 @@ class QLIPP_Calibration:
         Parameters
         ----------
         mmc : object
-            MicroManager core instance
+            Micro-Manager core instance
         mm : object
-            MicroManager Studio instance
+            Micro-Manager Studio instance
         group : str
-            Name of the MicroManager channel group used defining LC states [State0, State1, State2, ...]
+            Name of the Micro-Manager channel group used defining LC states [State0, State1, State2, ...]
         lc_control_mode : str
             Defined the control mode of the liquid crystals. One of the following:
-            * MM-Retardance: The retardance of the LC is set directly through the MicroManager LC device adapter. The
-            MicroManager device adapter determines the corresponding voltage which is sent to the LC.
+            * MM-Retardance: The retardance of the LC is set directly through the Micro-Manager LC device adapter. The
+            Micro-Manager device adapter determines the corresponding voltage which is sent to the LC.
             * MM-Voltage: The CalibrationData class in recOrder uses the LC calibration data to determine the correct
-            LC voltage for a given retardance. The LC voltage is set through the MicroManager LC device adapter.
+            LC voltage for a given retardance. The LC voltage is set through the Micro-Manager LC device adapter.
             * DAC: The CalibrationData class in recOrder uses the LC calibration data to determine the correct
             LC voltage for a given retardance. The voltage is applied to the IO port of the LC controller through the
             TriggerScope DAC outputs.
@@ -65,7 +65,7 @@ class QLIPP_Calibration:
             Set verbose option
         """
 
-        # Micromanager API
+        # Micro-Manager API
         self.mm = mm
         self.mmc = mmc
         self.snap_manager = mm.getSnapLiveManager()
@@ -1055,7 +1055,7 @@ class QLIPP_Calibration:
         """ "
         This function will capture an image at every state
         and save to specified directory
-        This may throw errors depending on the micromanager config file--
+        This may throw errors depending on the Micro-Manager config file--
         modify 'State_' to match to the corresponding channel preset in config
         :param: n_states (int)
             Number of states used for calibration

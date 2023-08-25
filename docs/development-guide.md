@@ -70,8 +70,8 @@ Running `pytest` for the first time will download ~50 MB of test data from Zenod
 
 Although many of `recOrder`'s tests are automated, many features require manual testing. The following is a summary of features that need to be tested manually before release:
 
-* Install a compatible version of micromanager and check that `recOrder` can connect.
-* Perform calibrations with and without an ROI; with and without a shutter configured in micromanager, in 4- and 5-state modes; and in MM-Voltage, MM-Retardance, and DAC modes (if the TriggerScope is available).  
+* Install a compatible version of Micro-Manager and check that `recOrder` can connect.
+* Perform calibrations with and without an ROI; with and without a shutter configured in Micro-Manager, in 4- and 5-state modes; and in MM-Voltage, MM-Retardance, and DAC modes (if the TriggerScope is available).  
 * Test "Load Calibration" and "Calculate Extinction" buttons.
 * Test "Capture Background" button.
 * Test the "Acquire Birefringence" button on a background FOV. Does a background-corrected background acquisition give random orientations?

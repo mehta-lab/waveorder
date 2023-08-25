@@ -4,8 +4,8 @@ This guide will walk through a complete recOrder installation consisting of:
 1. Checking pre-requisites for compatibility.
 2. Installing Meadowlark DS5020 and liquid crystals.
 3. Installing and launching the latest stable version of `recOrder` via `pip`. 
-4. Installing a compatible version of `MicroManager` and LC device drivers.
-5. Connecting `recOrder` to `MicroManager` via a `pycromanager` connection.
+4. Installing a compatible version of Micro-Manager and LC device drivers.
+5. Connecting `recOrder` to Micro-Manager via a `pycromanager` connection.
  
 ## Compatibility Summary 
 Before you start you will need to confirm that your system is compatible with the following software:
@@ -14,7 +14,7 @@ Before you start you will need to confirm that your system is compatible with th
 | :--- | :--- |
 | `recOrder` | 0.4.x |
 | OS | Windows 10 | 
-| Micromanager version | [2023-04-26 (160 MB)](https://download.micro-manager.org/nightly/2.0/Windows/MMSetup_64bit_2.0.1_20230426.exe) | 
+| Micro-Manager version | [2023-04-26 (160 MB)](https://download.micro-manager.org/nightly/2.0/Windows/MMSetup_64bit_2.0.1_20230426.exe) | 
 | Meadowlark drivers | [USB driver (82 kB)](https://github.com/mehta-lab/recOrder/releases/download/0.4.0rc0/usbdrvd.dll) | 
 | Meadowlark PC software version | 1.08 | 
 | Meadowlark controller firmware version | >=1.04 |
@@ -48,17 +48,17 @@ napari -w recOrder-napari
 ```
 should launch napari with the recOrder plugin (may take 15 seconds on a fresh installation). 
  
-## Install and configure `Micromanager`
+## Install and configure Micro-Manager
 
-Download and install [`Micromanager 2.0` nightly build `20230426` (~150 MB link).](https://download.micro-manager.org/nightly/2.0/Windows/MMSetup_64bit_2.0.1_20230426.exe)
+Download and install [`Micro-Manager 2.0` nightly build `20230426` (~150 MB link).](https://download.micro-manager.org/nightly/2.0/Windows/MMSetup_64bit_2.0.1_20230426.exe)
 
 **Note:** We have tested recOrder with `20230426`, but most features will work with newer builds. We recommend testing a minimal installation with `20230426` before testing with a different nightly build or additional device drivers. 
 
-Before launching `Micromanager`, download the [USB driver](https://github.com/mehta-lab/recOrder/releases/download/0.4.0rc0/usbdrvd.dll) and place this file into your `Micromanager` folder (likely `C:\Program Files\Micro-Manager` or similar). 
+Before launching Micro-Manager, download the [USB driver](https://github.com/mehta-lab/recOrder/releases/download/0.4.0rc0/usbdrvd.dll) and place this file into your Micro-Manager folder (likely `C:\Program Files\Micro-Manager` or similar). 
 
-Launch `Micromanager`, open `Devices > Hardware Configuration Wizard...`, and add the `MeadowlarkLC` device to your configuration. Confirm your installation by opening `Devices > Device Property Browser...` and confirming that `MeadowlarkLC` properties appear. 
+Launch Micro-Manager, open `Devices > Hardware Configuration Wizard...`, and add the `MeadowlarkLC` device to your configuration. Confirm your installation by opening `Devices > Device Property Browser...` and confirming that `MeadowlarkLC` properties appear. 
 
-**Upgrading users:** you will need to reinstall the Meadowlark device to your micromanager configuration file, because the device driver's name has changed to from `MeadowlarkLcOpenSource` to `MeadowlarkLC`. 
+**Upgrading users:** you will need to reinstall the Meadowlark device to your Micro-Manager configuration file, because the device driver's name has changed to from `MeadowlarkLcOpenSource` to `MeadowlarkLC`. 
 
 ### Option 1 (recommended): Voltage-mode calibration installation
  Create a new channel group and add the `MeadowlarkLC-Voltage (V) LC-A` and `MeadowlarkLC-Voltage (V) LC-B` properties. 
@@ -81,7 +81,7 @@ Add 5 presets to this group named `State0`, `State1`, `State2`, `State3`, and `S
 
 ### (Optional) Enable "Phase From BF" acquisition
 
-If you would like to reconstruct phase from brightfield, add a `Micromanager` preset with brightfield properties (e.g. moving the polarization analyzer out the light path) and give the preset a name that contains one of the following case-insensitive keywords:
+If you would like to reconstruct phase from brightfield, add a Micro-Manager preset with brightfield properties (e.g. moving the polarization analyzer out the light path) and give the preset a name that contains one of the following case-insensitive keywords:
 
 `["bf", "brightfield", "bright", "labelfree", "label-free", "lf", "label", "phase, "ph"]`
 
@@ -89,12 +89,12 @@ In `recOrder` you can select this preset using the `Acquisition Settings > BF Ch
 
 ### Enable port access
 
-Finally, enable port access so that `Micromanager` can communicate with recOrder through the `pycromanager` bridge. To do so open `Micromanager` and navigate to `Tools > Options` and check the box that says `Run server on port 4827`
+Finally, enable port access so that Micro-Manager can communicate with recOrder through the `pycromanager` bridge. To do so open Micro-Manager and navigate to `Tools > Options` and check the box that says `Run server on port 4827`
 
 ![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/run_port.png)
 
-## Connect `recOrder` to `Micromanager`
+## Connect `recOrder` to Micro-Manager
 
 From the `recOrder` window, click `Switch to Online`. If you see `Success`, your installation is complete and you can [proceed to the napari plugin guide](./napari-plugin-guide.md). 
 
-If you you see `Failed`, check that `Micromanager` is open, check that you've enabled `Run server on port 4827`. If the connection continues to fail, report an issue with your stack trace for support. 
+If you you see `Failed`, check that Micro-Manager is open, check that you've enabled `Run server on port 4827`. If the connection continues to fail, report an issue with your stack trace for support. 

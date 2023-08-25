@@ -3,7 +3,7 @@ This guide describes `recOrder`'s calibration routine with details about its goa
 
 ## Why calibrate?
 
-`recOrder` sends commands via MicroManager (or a TriggerScope) to apply voltages to the liquid crystals which modify the polarization of the light that illuminates the sample. `recOrder` could apply a fixed set of voltages so the user would never have to worry about these details, but this approach leads to extremely poor performance because
+`recOrder` sends commands via Micro-Manager (or a TriggerScope) to apply voltages to the liquid crystals which modify the polarization of the light that illuminates the sample. `recOrder` could apply a fixed set of voltages so the user would never have to worry about these details, but this approach leads to extremely poor performance because
 
 - the sample, the sample holder, lenses, dichroics, and other optical elements introduce small changes in polarization, and 
 - the liquid crystals' voltage response drifts over time.

@@ -1,9 +1,12 @@
 # This script can be modified to debug and test calibrations
 
-import napari
-import time, random
+import random
+import time
 from contextlib import contextmanager
+
+import napari
 from pycromanager import Core
+
 from recOrder.plugin.main_widget import MainWidget
 
 SAVE_DIR = "."
@@ -57,7 +60,7 @@ def stage_detour(app: MainWidget, dx: float, dy: float, wait=5):
 
 
 def measure_fov(mmc: Core):
-    """Calculate the MM FOV in microns.
+    """Calculate the MM FOV in micrometers.
 
     Parameters
     ----------
@@ -73,7 +76,7 @@ def measure_fov(mmc: Core):
     if pixel_size == 0:
         float(
             input(
-                "Pixel size is not calibrated. Please provide an estimate (in microns):"
+                "Pixel size is not calibrated. Please provide an estimate (in micrometers):"
             )
         )
     fov_x = pixel_size * float(mmc.getImageWidth())
@@ -87,7 +90,7 @@ def rand_shift(length: float):
     Parameters
     ----------
     length : float
-        absolote length in microns
+        absolote length in micrometers
 
     Returns
     -------

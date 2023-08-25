@@ -1,4 +1,5 @@
 # Napari Plugin Guide
+This guide summarizes a complete `recOrder` workflow. 
 
 ## Launch `recOrder`
 Activate the `recOrder` environment
@@ -10,120 +11,164 @@ Launch `napari` with `recOrder`
 ```
 napari -w recOrder-napari
 ```
+## Connect to Micro-Manager
+Click “Connect to MM”. If the connection succeeds, proceed to calibration. If not, revisit the [microscope installation guide](./microscope-installation-guide.md).
+
+![](./images/connect_to_mm.png)
+
+For polarization imaging, start with the **Calibration** tab. For phase-from-brightfield imaging, you can skip the calibration and go to the **Aquisition / Reconstruction** tab.
 
 ## Calibration tab
-The first step in the QLIPP process is to calibrate the liquid crystals. This process involves generating the polarization states and acquiring a background **on an empty FOV**, so begin by placing your sample on the stage and focusing on the surface of the coverslip or well. 
+The first step in the acquisition process is to calibrate the liquid crystals and measure a background. In the `recOrder` plugin you will see the following options for controlling the calibration:
 
-The light path must also be in **Kohler Illumination** to ensure uniform illumination of the sample. [Please follow these steps to setup Kohler illumination.](https://www.microscopyu.com/tutorials/kohler)
+![](./images/run_calib.png)
 
-After pressing “Connect to MM” and choosing a directory (where the calibration metadata / background images will be stored), the first step in calibration is to input the illumination wavelength and decide on the swing to use. 
 
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/connect_to_mm.png)
+### Prepare for a calibration
+Place your sample on the stage, focus on the surface of the coverslip/well, navigate to **an empty FOV**, then align the light source into **Kohler illumination** [following these steps](https://www.microscopyu.com/tutorials/kohler).
 
-### Choose a swing value
-The swing value is the deviation away from circular illumination states. The larger the swing, the more elliptical the polarized states becomes, until finally reaching a linear state at `swing = 0.25`. Picking a swing is dependent on the anisotropy of the sample. We recommend
+### Choose calibration parameters
+Browse for and choose a **Directory** where you calibration and background images will be saved.
+
+Choose a **Swing** based on the anisotropy of your sample. We recommend
 
 * ​Tissue Imaging: `swing = 0.1 - 0.05`
 * Live or fixed Cells: `swing = 0.05 – 0.03`
 
-We recommend starting with a swing of **0.1** for tissue samples and **0.05** for cells then reducing the swing to measure smaller structures.
+We recommend starting with a swing of **0.1** for tissue samples and **0.05** for cells then reducing the swing to measure smaller structures. See the [calibration guide](./calibration-guide.md) for more information about this parameter and the calibration process. 
 
-### Choose an illumination scheme
-The illumination scheme decides which polarization states to calibrate and use. We recommend sticking with the *4-State (Ext, 0, 60, 120)* scheme as it requires one less illumination state than the *5-State* scheme.
+Choose an **Illumination Scheme** to decides how many polarization states you will calibrate and use. We recommend starting with the *4-State (Ext, 0, 60, 120)* scheme as it requires one less illumination state than the *5-State* scheme.
+
+**Calibration Mode** is set automatically, so the default value is a good place to start. Different modes allow calibrations with voltages, retardances, or hardware sequencing. 
+
+The **Config Group** is set automatically to the Micro-Manager configuration group that contains the `State*` presets. You can modify this option if you have multple configuration groups with these presets. 
 
 ### Run the calibration
-Once the above parameters are set, the user is ready for "Run Calibration"
-
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/run_calib.png)
+Start a calibration with **Run Calibration**. 
 
 The progress bar will show the progress of calibration, and it should take less than 2 minutes on most systems.
 
-The plot shows the intensities over time during the optimization. One way to diagnose if calibration is going smoothly is to look at the shape of this plot. An example of an ideal plot is below:
+The plot shows the intensities over time during calibration. One way to diagnose an in-progress calibration is to watch the intensity plot. An ideal plot will look similar to the following:
 
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/ideal_plot.png)
+![](./images/ideal_plot.png)
 
-Once finished, you will get a calibration assessment and an extinction value. The calibration assessment will tell you if anything is incorrect with the light path or if calibration went awry. Extinctions gives you a metric for calibration quality—the higher the extinction, the cleaner the light path and the greater the sensitivity of QLIPP.
+Once finished, you will get a calibration assessment and an extinction value. The extinction value gives you a metric for calibration quality: the higher the extinction, the cleaner the light path and the greater the sensitivity of QLIPP.
 
-* Extinction 0 – 50:  Very poor. The alignment of the universal compensator may be off or the sample chamber may be highly birefringent. 
+* **Extinction 0 – 50**:  Very poor. The alignment of the universal compensator may be off or the sample chamber may be highly birefringent. 
 
-* Extinction 50-100: Okay extinction, could be okay for tissue imaging and strong anisotropic structures. Most likely not suitable for cell imaging
+* **Extinction 50 - 100**: Okay extinction, could be okay for tissue imaging and strong anisotropic structures. Most likely not suitable for cell imaging
 
-* Extinction 100-200: Good Extinction. These are the typical values we get on our microscopes.
+* **Extinction 100 - 200**: Good Extinction. These are the typical values we get on our microscopes.
 
-* Extinction 200+: Excellent. Indicates a very well-aligned and clean light path and high sensitivity of the system.
+* **Extinction 200+**: Excellent. Indicates a very well-aligned and clean light path and high sensitivity of the system.
 
 For a deeper discussion of the calibration procedure, swing, and the extinction ratio, see the [calibration guide](./calibration-guide.md).
 
 ### Optional: Load Calibration
-If a user wants to use a previous calibration to acquire new data, then the "Load Calibration" button can be pressed.  It will direct you to select a *polarization_calibration.txt* file and these settings will be automatically updated in MicroManager. recOrder will also collect a few images to update the extinction ratio to reflect the current conditions. Once this has finished, a user can now acquire data as they normally would.  
+The **Load Calibration** button allows earlier calibrations to be reused. Select a *polarization_calibration.txt* file and Micro-Manager's presets will be updated with these settings. `recOrder` will also collect a few images to update the extinction ratio to reflect the current condition of the light path. Once this short acquisition has finished, the user can acquire data as normal.  
 
-This is quite useful if micromanager and/or recOrder crashes. If the sample and imaging setup haven't changed, it is safe to use a past calibration. Otherwise, if a new sample is used or some microscope components are changed, we recommend performing a new calibration.
+This feature is useful if Micro-Manager and/or `recOrder` crashes. If the sample and imaging setup haven't changed, it is safe to reuse a calibration. Otherwise, if the sample or the microscope changes, we recommend performing a new calibration.
 
 ### Optional: Calculate Extinction
-This is a useful feature to see if the extinction level varies as you move around the sample. Sometimes there can be local variations present in the sample which can cause slightly different perturbations to the polarization state. If the extinction level varies dramatically across the sample, it is worthwhile to calibrate and acquire background images as close to the area in which you will be imaging as possible.
+The **Calculate Extinction** button acquires a few images and recalculates the extinction value. 
+
+This feature is useful for checking if a new region of your sample requires a recalibration. If the sample or background varies as you move around the sample, the extinction will drop and you should recalibrate and acquire background images as close to the area you will be imaging as possible.
 
 ### Capture Background
-The next important step in the calibration process. This will later serve in reconstruction to correct for any local and global background anisotropy. 
 
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/cap_bg.png)
+The **Capture Background** button will acquire several images under each of the calibrated polarization states, average them (we recommend 5), save them to specified **Background Folder Name** within the main **Directory**, then display the result in napari layers.
 
-Choose the name of the folder to which to save your background images (will be placed into the save directory chosen at the beginning). Choose the number of images to average, 20 and below is generally good.  The background image results will then be displayed in the napari window.  It is normal to see some level of background retardance and orientation bias-- this can be corrected with the background correction step in reconstruction.  Examples of this display are below.
+![](./images/cap_bg.png)
 
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/bg_example.png)
+It is normal to see background retardance and orientation. We will use these background images to correct the data we collect our acquisitions of the sample. 
 
 ### Advanced Tab
 The advanced tab gives the user a log output which can be useful for debugging purposes. There is a log level “debugging” which serves as a verbose output. Look here for any hints as to what may have gone wrong during calibration or acquisition.
 
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/advanced.png)
-
-### Example of Successful Calibration
-Below is an example of a successful calibration with a reasonable extinction value:
-
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/calib_finished.png)
-
 ## Acquisition / Reconstruction Tab
-This acquisition module is designed to take single image volumes for both phase and birefringence measurements and allows the user to test the outcome of their calibration with small snapshots or volumes. We recommend this acquisition mode for quick testing and the Micromanager MDA acquisition for high-throughput data collection.
+This acquisition tab is designed to acquire and reconstruct single volumes of both phase and birefringence measurements to allow the user to test their calibration and background. We recommend this tab for quick testing and the Micro-Manager MDA acquisition for high-throughput data collection.
 
-### Save Path
-User specifies the directory in which the images will be saved.
+### Acquire Buttons
+![](./images/acquire_buttons.png)
+
+The **Retardance + Orientation**, **Phase From BF**, and **Retardance + Orientation + Phase** buttons set off Micro-Manager acquisitions that use the upcoming acquisition settings. After the acquisition is complete, these routines will set off `recOrder` reconstructions that estimate the named parameters. 
+
+The **STOP** button will end the acquisition as soon as possible, though Micro-Manager acquisitions cannot always be interrupted. 
 
 ### Acquisition Settings
-*Z Start, Z End, Z Step* specify the relative z-parameters to use for acquiring an image volume. Values are in the default units of the stage, typically in microns. The center slice will be the current position of the z-stage
+![](./images/acquisition_settings.png)
 
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/acquisition.png)
+The **Acquisition Mode** sets the target dimensions for the reconstruction. Perhaps surprisingly, all 2D reconstructions require 3D data except for **Retardance + Orientation** in **2D Acquisition Mode**. The following table summarizes the data that will be acquired when an acquisition button is pressed in **2D** and **3D** acquisition modes:
 
-Ex. for a 20 um thick cell, the user would first focus in the middle of the cell and then set the following parameters: 
+| **Acquisition** \ Acquisition Mode | 2D mode | 3D mode |  
+| :--- | :--- | :--- |
+| **Retardance + Orientation** | CYX data | CZYX data | 
+| **Phase From BF** | ZYX data | ZYX data | 
+| **Retardance + Orientation + Phase** | CZYX data | CZYX data | 
 
-* `Z Start = -12`
-* `Z End: 12`
-* `Z Step: 0.25` 
+Unless a **Retardance + Orientation** reconstruction in **2D Acquisition Mode** is requested, `recOrder` uses Micro-Manager's z-stage to acquire 3D data. **Z Start**, **Z End**, and **Z Step** are stage settings for acquiring an image volume, relative to the current position of the stage. Values are in the stage's default units, typically in micrometers.
 
-For phase reconstruction, the stack should have sufficient defocus along the top and bottom of the stack. The reconstruction algorithm uses the defocus information to more accurately reconstruct phase.
+For example, to image a 20 um thick cell the user would focus in the middle of the cell then choose
 
-User can then choose whether they want to acquire a 2D or 3D Birefringence/Phase stack. Note that even for a 2D phase stack, a full image volume is required for reconstruction purposes.
+* **Z Start** = -12
+* **Z End** = 12
+* **Z Step** =  0.25
 
-### Reconstruction Settings 
-These settings are solely for reconstructing the acquired image / image volume. The *Phase Only* parameters are only needed for reconstructing phase. The user is also able to specify the use of a GPU for reconstruction (requires CuPy / CudaToolKit) if present, otherwise leave blank.
+For phase reconstruction, the stack should have about two depths-of-focus above and below the edges of the sample because the reconstruction algorithm uses defocus information to more accurately reconstruct phase.
 
-Explanation of background correction methods:
-  
-* None: No background correction is performed. 
-* Measured: Corrects sample images with a background image acquired at an empty field of view, loaded from "Background Path". 
-* Estimated: Estimate the sample background by fitting a 2D surface to the sample images. Works well when structures are spatially distributed across the field of view and a clear background is unavailable.
-* Measured + Estimated: Applies "Measured" background correction and then "Estimated" background correction. Use to remove residual background after the sample retardance is corrected with measured background.
+### General Reconstruction Settings 
+![](./images/general_reconstruction_settings.png)
 
-An explanation of phase reconstruction parameters:
+The **Save Directory** and **Save Name** are where the acquired data (`<save_dir>/<save_name>_snap_<n>/raw_data.zarr`) and reconstructions (`<save_dir>/<save_name>_snap_<n>/reconstruction.zarr`) will be saved. 
+
+The **Background Correction** menu has several options (each with mouseover explanations):
+* **None**: No background correction is performed. 
+* **Measured**: Corrects sample images with a background image acquired at an empty field of view, loaded from **Background Path**, by default the most recent background acquisition. 
+* **Estimated**: Estimates the sample background by fitting a 2D surface to the sample images. Works well when structures are spatially distributed across the field of view and a clear background is unavailable.
+* **Measured + Estimated**: Applies a **Measured** background correction then an **Estimated** background correction. Use to remove residual background after the sample retardance is corrected with measured background.
+
+The remaining parameters are used by the reconstructions:
  
-* Wavelength (nm): Wavelength used for illumination
-* Objective NA: Numerical Aperture of Objective, typically found next to magnification
-* Condenser NA: Numerical Aperture of Condenser
-* Magnification: Magnfication of the objective
-* Camera Pixel Size: Pixel size of the camera in microns (ex. 6.5)
-* RI of Obj Media: Refractive index of the objective media. Defaults to air (1.003). Typical values also include 1.512 (oil) or 1.473 (glycerol).
-* Z Padding: The number of slices to pad on either end of the stack in order to correct for edge reflection artifacts. Necessary if the sample is not fully out of focus on either end of the stack.
+* **GPU ID**: Not implemented
+* **Wavelength (nm)**: illumination wavelength
+* **Objective NA**: numerical aperture of the objective, typically found next to magnification
+* **Condenser NA**: numerical aperture of the condenser
+* **Camera Pixel Size (um)**: pixel size of the camera in micrometers (e.g. 6.5 μm)
+* **RI of Obj. Media**: refractive index of the objective media, typical values are 1.0 (air), 1.3 (water), 1.473 (glycerol), or 1.512 (oil)
+* **Magnification**: magnification of the objective
+* **Rotate Orientation (90 deg)**: rotates "Orientation" reconstructions by +90 degrees clockwise and saves the result, most useful when a known-orientation sample is available
+* **Flip Orientation**: flips "Orientation" reconstructions about napari's horizontal axis before saving the result
+* **Invert Phase Contrast**: inverts the phase reconstruction's contrast by flipping the positive and negative directions of the stage during the reconstruction, and saves the result 
 
-The acquired data will then be displayed in the `napari` window. Note that phase reconstruction is more computationally expensive and may take several minutes depending on your system.
+### Phase Reconstruction Settings
+![](./images/phase_reconstruction_settings.png)
+
+These parameters are used only by phase reconstructions
+
+* **Z Padding**: The number of slices to pad on either end of the stack, necessary if the sample is not fully out of focus on either end of the stack
+* **Regularizer**: Choose "Tikhonov", the "TV" regularizer is not implemented
+* **Strength**: The Tikhonov regularization strength, too small/large will result in reconstructions that are too noisy/smooth
+
+The acquired data will then be displayed in napari layers. Note that phase reconstruction is more computationally expensive and may take several minutes depending on your system.
 
 Examples of acquiring 2D birefringence data (kidney tissue) with this snap method are below:
 
-![](https://github.com/mehta-lab/recOrder/blob/main/docs/images/acq_finished.png)
+![](./images/acq_finished.png)
+
+### Recreating reconstructions
+`recOrder`'s GUI acquires data from Micro-Manager, reads the GUI to generate a configuration file, then uses a CLI to reconstruct the acquired data with the configuration file, which makes all reconstructions exactly reproducible via a CLI. See the terminal that started napari for a log of the exact CLI commands that will reproduce the results in the napari window. 
+
+See the [reconstruction guide](./reconstruction-guide.md) for CLI usage instructions. 
+
+## Visualizations
+When an **Orientation*** layer appears at the top of the layers list, `recOrder` will automatically color it with an HSV color map that indicates the orientation. 
+
+If the **Orientation*** layer has a matching **Retardance*** layer in the layer list, a **BirefringenceOverlay*** layer that only shows orientation colors in regions with large retardance is generated. This overlay is computed lazily (when the slider moves), and this computation can be turned off by hiding the layer (eyeball in the layer list).
+
+![](./images/overlay.png)
+
+If the **BirefringenceOverlay*** needs to be regenerated, an **Orientation*** layer can be dragged to the top of the layer list:
+![](./images/no-overlay.png)
+
+The **Orientation Legend** tab shows the mapping between HSV colors and the orientation, and the **Overlay Retardance Maximum** slider controls the mapping between retardance values and saturated colors in the overlay.
+![](./images/overlay-demo.png)

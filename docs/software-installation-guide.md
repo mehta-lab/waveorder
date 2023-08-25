@@ -25,4 +25,4 @@
     recOrder
     ```
 
-5. To acquire data via `Micromanager`, follow the [microscope installation guide](./microscope-installation-guide.md).
+5. To acquire data via Micro-Manager`, follow the [microscope installation guide](./microscope-installation-guide.md).
