@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from importlib_metadata import version
 from iohub import open_ome_zarr
+from iohub.ngff_meta import TransformationMeta
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from napari.utils.notifications import show_warning
 from scipy.interpolate import interp1d
@@ -1081,6 +1082,7 @@ class QLIPP_Calibration:
             yx_list.append(self._capture_state(f"State{channel}", n_avg))
             logging.debug(f"Saving Background State{channel}")
         cyx_data = np.array(yx_list)
+        yx_scale = self.mmc.getPixelSizeUm()
 
         # Save to zarr
         with open_ome_zarr(
@@ -1095,6 +1097,11 @@ class QLIPP_Calibration:
                 shape=(1, num_states, 1, cyx_data.shape[1], cyx_data.shape[2]),
                 dtype=np.float32,
                 chunks=(1, 1, 1, cyx_data.shape[1], cyx_data.shape[2]),
+                transform=[
+                    TransformationMeta(
+                        type="scale", scale=[1, 1, 1, yx_scale, yx_scale]
+                    )
+                ],
             )
             position["0"][0, :, 0] = cyx_data  # save to 1C1YX array
 
