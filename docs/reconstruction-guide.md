@@ -2,6 +2,17 @@
 
 `recOrder` uses a configuration-file-based command-line interface (CLI) to perform all reconstructions.
 
+## Preparing your data
+
+`recOrder` is compatible with OME-Zarr, a chunked next generation file format with an [open specification](https://ngff.openmicroscopy.org/0.4/). All acquisitions completed with the `recOrder` plugin will be automatically converted to `.zarr` format, and existing data can be converted using `iohub`'s `convert` utility. 
+
+Inside a `recOrder` environment, convert a Micro-Manager TIFF sequence, OME-TIFF, or pycromanager NDTiff dataset with
+```
+iohub convert `
+    -i ./dataset/ `
+    -o ./dataset.zarr
+```
+
 ## How can I use `recOrder`'s CLI to perform reconstructions?
 `recOrder`'s CLI is summarized in the following figure:
 <img src="./images/cli_structure.png" align="center">
@@ -39,4 +50,4 @@ The `recorder compute-tf` command accepts a list of inputs, but it only computes
 ## What types of reconstructions are supported?
 See `/recOrder/examples/` for a list of example configuration files. 
 
-TODO: Expand this documentation...need docs for each reconstruction type and parameter.
+WIP: This documentation will be expanded for each reconstruction type and parameter.

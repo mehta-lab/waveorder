@@ -4,7 +4,7 @@
 [![Python package index](https://img.shields.io/pypi/v/recOrder-napari.svg)](https://pypi.org/project/recOrder-napari)
 [![Development Status](https://img.shields.io/pypi/status/napari.svg)](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha)
 
-This package provides a napari plugin for quantitative label-free microscopy.
+`recOrder` is a napari plugin and command-line tool for quantitative label-free microscopy that depends on a computational optics library, [`waveorder`](https://github.com/mehta-lab/waveorder), and an I/O library, [`iohub`](https://github.com/czbiohub-sf/iohub).  
 
 In this repository you will find python tools and a napari plugin that allow the user to calibrate microscope hardware, acquire multi-modal data, reconstruct density and anisotropy, and visualize the results.
 

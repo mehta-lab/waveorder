@@ -12,7 +12,7 @@ Before you start you will need to confirm that your system is compatible with th
 
 | Software | Version |  
 | :--- | :--- |
-| `recOrder` | 0.4.x |
+| `recOrder` | 0.4.0 |
 | OS | Windows 10 | 
 | Micro-Manager version | [2023-04-26 (160 MB)](https://download.micro-manager.org/nightly/2.0/Windows/MMSetup_64bit_2.0.1_20230426.exe) | 
 | Meadowlark drivers | [USB driver (82 kB)](https://github.com/mehta-lab/recOrder/releases/download/0.4.0rc0/usbdrvd.dll) | 
