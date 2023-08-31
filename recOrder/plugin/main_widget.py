@@ -1156,6 +1156,8 @@ class MainWidget(QWidget):
         """
         if image.shape[0] == 1:
             image = image.squeeze(axis=0)
+            scale = scale[1:]
+
         scale = scale[-image.ndim :]  # match shapes
 
         if name in self.viewer.layers:
@@ -1275,7 +1277,6 @@ class MainWidget(QWidget):
             ret_max=self.ret_max,
             cmap=self.colormap,
         )
-
         self._add_or_update_image_layer(
             overlay, self.overlay_name, cmap="rgb", scale=self.overlay_scale
         )
