@@ -9,4 +9,5 @@ def device_params():
         devices.append("mps")
     return "device", devices
 
+
 _DEVICE = device_params()
