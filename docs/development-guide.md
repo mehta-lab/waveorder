@@ -118,4 +118,4 @@ If you make a formatting commit, please add the commit's hash to this file.
 
 ## Pre-release checklist 
 - merge `README.md` figures to `main`, then update the links to point to these uploaded figures. We do not upload figures to PyPI, so without this step the README figure will not appear on PyPI or napari-hub. 
-- update version numbers in [the microscope dependency guide](./microscope-installation-guide.md).
+- update version numbers and links in [the microscope dependency guide](./microscope-installation-guide.md).
