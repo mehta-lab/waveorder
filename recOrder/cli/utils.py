@@ -51,11 +51,11 @@ def apply_inverse_to_zyx_and_save(
     click.echo(f"Reconstructing t={t_idx}")
 
     # Load data
-    tczyx_uint16_numpy = position.data.oindex[:, channel_indices]
+    czyx_uint16_numpy = position.data.oindex[t_idx, channel_indices]
     # convert to np.int32 (torch doesn't accept np.uint16), then convert to tensor float32
     czyx_data = torch.tensor(
-        np.int32(tczyx_uint16_numpy), dtype=torch.float32
-    )[t_idx]
+        np.int32(czyx_uint16_numpy), dtype=torch.float32
+    )
 
     # Apply transformation
     reconstruction_czyx = func(czyx_data, **kwargs)
