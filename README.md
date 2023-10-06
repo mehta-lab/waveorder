@@ -6,7 +6,7 @@
 
 `recOrder` is a collection of computational imaging methods. It currently provides QLIPP (quantitative label-free imaging with phase and polarization), phase from defocus, and fluorescence deconvolution. 
 
-[![Unveiling the invisible](./docs/images/comms_video_screenshot.png)](https://www.youtube.com/watch?v=JEZAaPeZhck)
+[![Unveiling the invisible](https://github.com/mehta-lab/recOrder/blob/main/docs/images/comms_video_screenshot.png?raw=true)](https://www.youtube.com/watch?v=JEZAaPeZhck)
 
 Acquisition, calibration, background correction, reconstruction, and applications of QLIPP are described in the following [E-Life Paper](https://elifesciences.org/articles/55502):
 
