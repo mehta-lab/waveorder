@@ -14,6 +14,9 @@ contributions:
   - id: recOrder-napari.polarization_target_reconstruction
     title: Polarization Target Data
     python_name: recOrder.scripts.samples:read_polarization_target_reconstruction
+  - id: recOrder-napari.zebrafish_embryo_reconstruction
+    title: Zebrafish Embryo Reconstruction
+    python_name: recOrder.scripts.samples:read_zebrafish_embryo_reconstruction
   readers:
   - command: recOrder-napari.get_reader
     accepts_directories: true
@@ -24,8 +27,11 @@ contributions:
   sample_data:
   - command: recOrder-napari.polarization_target_data
     key: polarization-target-data
-    display_name: Polarization Target Data
+    display_name: Polarization Target Data (10 MB)
   - command: recOrder-napari.polarization_target_reconstruction
     key: polarization-target-reconstruction
-    display_name: Polarization Target Reconstruction
+    display_name: Polarization Target Reconstruction (10 MB)
+  - command: recOrder-napari.zebrafish_embryo_reconstruction
+    key: zebrafish-embryo-reconstruction
+    display_name: Zebrafish Embryo Reconstruction (92 MB)
 
