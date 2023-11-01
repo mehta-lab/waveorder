@@ -34,7 +34,7 @@ If you need to change your PC software version, follow these steps:
 
 (Optional but recommended) install [anaconda](https://www.anaconda.com/products/distribution) and create a virtual environment  
 ```
-conda create -y -n recOrder python=3.9
+conda create -y -n recOrder python=3.10
 conda activate recOrder
 ```
 

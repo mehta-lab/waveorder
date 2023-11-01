@@ -3,7 +3,7 @@
 1. (Optional but recommended) install [`conda`](https://github.com/conda-forge/miniforge) and create a virtual environment  
 
     ```sh
-    conda create -y -n recOrder python=3.9
+    conda create -y -n recOrder python=3.10
     conda activate recOrder
     ```
 
