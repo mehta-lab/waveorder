@@ -41,7 +41,7 @@ def reconstruct(
 
     # Handle transfer function path
     transfer_function_path = output_dirpath.parent / Path(
-        "transfer_function.zarr"
+        "transfer_function_" + config_filepath.stem + ".zarr"
     )
 
     # Compute transfer function

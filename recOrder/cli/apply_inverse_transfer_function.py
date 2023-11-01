@@ -85,12 +85,14 @@ def apply_inverse_transfer_function_single_position(
     config_filepath: Path,
     output_position_dirpath: Path,
     num_processes,
+    output_channel_names: list[str],
 ) -> None:
     echo_headline("\nStarting reconstruction...")
 
     # Load datasets
     transfer_function_dataset = open_ome_zarr(transfer_function_dirpath)
     input_dataset = open_ome_zarr(input_position_dirpath)
+    output_dataset = open_ome_zarr(output_position_dirpath, mode="r+")
 
     # Load config file
     settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
@@ -103,11 +105,18 @@ def apply_inverse_transfer_function_single_position(
             f"Each of the input_channel_names = {settings.input_channel_names} in {config_filepath} must appear in the dataset {input_position_dirpath} which currently contains channel_names = {input_dataset.channel_names}."
         )
 
-    # Find channel indices
-    channel_indices = []
+    # Find input channel indices
+    input_channel_indices = []
     for input_channel_name in settings.input_channel_names:
-        channel_indices.append(
+        input_channel_indices.append(
             input_dataset.channel_names.index(input_channel_name)
+        )
+
+    # Find output channel indices
+    output_channel_indices = []
+    for output_channel_name in output_channel_names:
+        output_channel_indices.append(
+            output_dataset.channel_names.index(output_channel_name)
         )
 
     # Find time indices
@@ -222,7 +231,8 @@ def apply_inverse_transfer_function_single_position(
         apply_inverse_model_function,
         input_dataset,
         output_position_dirpath,
-        channel_indices,
+        input_channel_indices,
+        output_channel_indices,
         **apply_inverse_args,
     )
 
@@ -242,11 +252,10 @@ def apply_inverse_transfer_function_single_position(
             partial_apply_inverse_to_zyx_and_save(t_idx)
 
     # Save metadata at position level
-    with open_ome_zarr(output_position_dirpath, mode="r+") as output_dataset:
-        output_dataset.zattrs["settings"] = settings.dict()
+    output_dataset.zattrs["settings"] = settings.dict()
 
     echo_headline(f"Closing {output_position_dirpath}\n")
-    # output_dataset.close()
+    output_dataset.close()
     transfer_function_dataset.close()
     input_dataset.close()
 
@@ -282,6 +291,7 @@ def apply_inverse_transfer_function_cli(
             config_filepath,
             output_dirpath / Path(*input_position_dirpath.parts[-3:]),
             num_processes,
+            output_metadata["channel_names"],
         )
 
 
@@ -303,6 +313,8 @@ def apply_inv_tf(
 
     Applies a transfer function to all positions in the list `input-position-dirpaths`,
     so all positions must have the same TCZYX shape.
+
+    Appends channels to ./output.zarr, so multiple reconstructions can fill a single store.
 
     See /examples for example configuration files.
 

@@ -98,6 +98,89 @@ def test_reconstruct(tmp_input_path_zarr):
         assert tf_path.exists()
 
 
+def test_append_channel_reconstruction(tmp_input_path_zarr):
+    input_path, tmp_config_yml = tmp_input_path_zarr
+    output_path = input_path.with_name(f"output.zarr")
+
+    # Generate input "dataset"
+    channel_names = [f"State{x}" for x in range(4)] + ["GFP"]
+    dataset = open_ome_zarr(
+        input_path,
+        layout="hcs",
+        mode="w",
+        channel_names=channel_names,
+    )
+    position = dataset.create_position("0", "0", "0")
+    position.create_zeros(
+        "0",
+        (5, 5, 4, 5, 6),
+        dtype=np.uint16,
+        transform=[TransformationMeta(type="scale", scale=input_scale)],
+    )
+
+    # Generate recon settings
+    biref_settings = settings.ReconstructionSettings(
+        input_channel_names=[f"State{x}" for x in range(4)],
+        time_indices="all",
+        reconstruction_dimension=3,
+        birefringence=settings.BirefringenceSettings(),
+        phase=None,
+        fluorescence=None,
+    )
+    fluor_settings = settings.ReconstructionSettings(
+        input_channel_names=["GFP"],
+        time_indices="all",
+        reconstruction_dimension=3,
+        birefringence=None,
+        phase=None,
+        fluorescence=settings.FluorescenceSettings(),
+    )
+    biref_config_path = tmp_config_yml.with_name(f"biref.yml")
+    fluor_config_path = tmp_config_yml.with_name(f"fluor.yml")
+
+    utils.model_to_yaml(biref_settings, biref_config_path)
+    utils.model_to_yaml(fluor_settings, fluor_config_path)
+
+    # Apply birefringence reconstruction
+    runner = CliRunner()
+    runner.invoke(
+        cli,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(biref_config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
+    assert output_path.exists()
+    with open_ome_zarr(output_path) as dataset:
+        assert dataset["0/0/0"]["0"].shape[1] == 4
+
+    # Append fluoresncence reconstruction
+    runner.invoke(
+        cli,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(fluor_config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
+    assert output_path.exists()
+    with open_ome_zarr(output_path) as dataset:
+        assert dataset["0/0/0"]["0"].shape[1] == 5
+        assert dataset.channel_names[-1] == "GFP_Density3D"
+        assert dataset.channel_names[-2] == "Pol"
+
+
 def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
     tmp_input_zarr, tmp_config_yml = tmp_input_path_zarr
     tmp_config_yml = tmp_config_yml.with_name("0.yml").resolve()
