@@ -38,9 +38,9 @@ conda create -y -n recOrder python=3.10
 conda activate recOrder
 ```
 
-Install `recOrder`:
+Install `recOrder` with acquisition dependencies (napari and pycro-manager):
 ```
-pip install recOrder-napari
+pip install recOrder-napari[acq]
 ```
 Check your installation:
 ```
