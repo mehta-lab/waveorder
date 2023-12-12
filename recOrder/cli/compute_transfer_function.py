@@ -2,7 +2,7 @@ from pathlib import Path
 
 import click
 import numpy as np
-from iohub import open_ome_zarr
+from iohub.ngff import open_ome_zarr, Position
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
     isotropic_fluorescent_thick_3d,
@@ -45,13 +45,15 @@ def generate_and_save_birefringence_transfer_function(settings, dataset):
     ] = intensity_to_stokes_matrix.cpu().numpy()[None, None, None, ...]
 
 
-def generate_and_save_phase_transfer_function(settings, dataset, zyx_shape):
+def generate_and_save_phase_transfer_function(
+    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple
+):
     """Generates and saves the phase transfer function to the dataset, based on the settings.
 
     Parameters
     ----------
     settings: ReconstructionSettings
-    dataset: NGFF Node
+    dataset: Position
         The dataset that will be updated.
     zyx_shape : tuple
         A tuple of integers specifying the input data's shape in (Z, Y, X) order
@@ -81,12 +83,16 @@ def generate_and_save_phase_transfer_function(settings, dataset, zyx_shape):
         )
 
         # Save
-        dataset[
-            "absorption_transfer_function"
-        ] = absorption_transfer_function.cpu().numpy()[None, None, ...]
-        dataset[
-            "phase_transfer_function"
-        ] = phase_transfer_function.cpu().numpy()[None, None, ...]
+        dataset.create_image(
+            "absorption_transfer_function",
+            absorption_transfer_function.cpu().numpy()[None, None, ...],
+            chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
+        )
+        dataset.create_image(
+            "phase_transfer_function",
+            phase_transfer_function.cpu().numpy()[None, None, ...],
+            chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
+        )
 
     elif settings.reconstruction_dimension == 3:
         # Calculate transfer functions
@@ -98,25 +104,29 @@ def generate_and_save_phase_transfer_function(settings, dataset, zyx_shape):
             **settings.phase.transfer_function.dict(),
         )
         # Save
-        dataset[
-            "real_potential_transfer_function"
-        ] = real_potential_transfer_function.cpu().numpy()[None, None, ...]
-        dataset[
-            "imaginary_potential_transfer_function"
-        ] = imaginary_potential_transfer_function.cpu().numpy()[
-            None, None, ...
-        ]
+        dataset.create_image(
+            "real_potential_transfer_function",
+            real_potential_transfer_function.cpu().numpy()[None, None, ...],
+            chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
+        )
+        dataset.create_image(
+            "imaginary_potential_transfer_function",
+            imaginary_potential_transfer_function.cpu().numpy()[
+                None, None, ...
+            ],
+            chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
+        )
 
 
 def generate_and_save_fluorescence_transfer_function(
-    settings, dataset, zyx_shape
+    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple
 ):
     """Generates and saves the fluorescence transfer function to the dataset, based on the settings.
 
     Parameters
     ----------
     settings: ReconstructionSettings
-    dataset: NGFF Node
+    dataset: Position
         The dataset that will be updated.
     zyx_shape : tuple
         A tuple of integers specifying the input data's shape in (Z, Y, X) order
@@ -135,9 +145,11 @@ def generate_and_save_fluorescence_transfer_function(
             )
         )
         # Save
-        dataset[
-            "optical_transfer_function"
-        ] = optical_transfer_function.cpu().numpy()[None, None, ...]
+        dataset.create_image(
+            "optical_transfer_function",
+            optical_transfer_function.cpu().numpy()[None, None, ...],
+            chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
+        )
 
 
 def compute_transfer_function_cli(
