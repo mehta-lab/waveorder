@@ -1,4 +1,5 @@
 import itertools
+import warnings
 from functools import partial
 from pathlib import Path
 
@@ -34,6 +35,19 @@ def _check_background_consistency(background_shape, data_shape):
 
 
 def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
+    # Get non-OME-Zarr plate-level metadata if it's available
+    plate_metadata = {}
+    try:
+        input_plate = open_ome_zarr(
+            position_path.parent.parent.parent, mode="r"
+        )
+        plate_metadata = dict(input_plate.zattrs)
+        plate_metadata.pop("plate")
+    except RuntimeError:
+        warnings.warn(
+            "Position is not part of a plate...no plate metadata will be copied."
+        )
+
     # Load the first position to infer dataset information
     input_dataset = open_ome_zarr(str(position_path), mode="r")
     T, _, Z, Y, X = input_dataset.data.shape
@@ -76,6 +90,7 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
         "scale": input_dataset.scale,
         "channel_names": channel_names,
         "dtype": np.float32,
+        "plate_metadata": plate_metadata,
     }
 
 

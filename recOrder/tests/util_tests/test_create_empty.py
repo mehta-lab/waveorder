@@ -17,13 +17,22 @@ def test_create_empty_hcs_zarr():
     scale = (1, 1, 1, 0.5, 0.5)
     channel_names = ["Channel1", "Channel2"]
     dtype = np.uint16
+    plate_metadata = {"test": 2}
 
     create_empty_hcs_zarr(
-        store_path, position_keys, shape, chunks, scale, channel_names, dtype
+        store_path,
+        position_keys,
+        shape,
+        chunks,
+        scale,
+        channel_names,
+        dtype,
+        plate_metadata,
     )
 
     # Verify existence of positions and channels
     with open_ome_zarr(store_path, mode="r") as plate:
+        assert plate.zattrs["test"] == 2
         for position_key in position_keys:
             position = plate["/".join(position_key)]
             assert isinstance(position, Position)
