@@ -133,7 +133,9 @@ def apply_inverse_transfer_function(
             # Estimate the background and subtract
             background_corrected_stokes[
                 stokes_index
-            ] -= correction.estimate_background(z_projection, normalize=False)
+            ] -= correction.estimate_background(
+                z_projection, order=2, block_size=32
+            )
 
     # Project to 2D (typically for SNR reasons)
     if project_stokes_to_2d:
