@@ -76,17 +76,22 @@ def _fit_2d_polynomial_surface(
 
 def estimate_background(image: Tensor, order: int = 2, block_size: int = 32):
     """
-
-
     Combine sampling and polynomial surface fit for background estimation.
     To background correct an image, divide it by the background.
 
-    :param np.array im:        2D image
-    :param int order:          Order of polynomial (default 2)
-    :param bool normalize:     Normalize surface by dividing by its mean
-                                for background correction (default True)
+    Parameters
+    ----------
+    image : Tensor
+        2D image
+    order : int, optional
+        Order of polynomial, by default 2
+    block_size : int, optional
+        Width and height of the blocks, by default 32
 
-    :return np.array background:    Background image
+    Returns
+    -------
+    Tensor
+        Background image
     """
     if image.ndim != 2:
         raise ValueError(f"Image must be 2D, got shape {image.shape}")
