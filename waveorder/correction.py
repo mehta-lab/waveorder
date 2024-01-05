@@ -22,6 +22,8 @@ def _sample_block_medians(image: Tensor, block_size) -> Tensor:
     Tensor
         Median intensity values for each block, flattened
     """
+    if not image.dtype.is_floating_point:
+        image.to(torch.float)
     blocks = F.unfold(image[None, None], block_size, stride=block_size)[0]
     return blocks.median(0)[0]
 
