@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from waveorder import background_estimator, stokes, util
+from waveorder import correction, stokes, util
 
 
 def generate_test_phantom(yx_shape):
@@ -125,7 +125,6 @@ def apply_inverse_transfer_function(
 
     # Apply an "Estimated" background correction
     if remove_estimated_background:
-        estimator = background_estimator.BackgroundEstimator2D()
         for stokes_index in range(background_corrected_stokes.shape[0]):
             # Project to 2D
             z_projection = torch.mean(
@@ -134,10 +133,7 @@ def apply_inverse_transfer_function(
             # Estimate the background and subtract
             background_corrected_stokes[
                 stokes_index
-            ] -= estimator.get_background(
-                z_projection,
-                normalize=False,
-            )
+            ] -= correction.estimate_background(z_projection, normalize=False)
 
     # Project to 2D (typically for SNR reasons)
     if project_stokes_to_2d:
