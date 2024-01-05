@@ -17,8 +17,9 @@ def test_calculate_transfer_function():
 
 
 @pytest.mark.parametrize(*_DEVICE)
-def test_apply_inverse_transfer_function(device):
-    input_shape = (5, 10, 5, 5)
+@pytest.mark.parametrize("estimate_bg", [True, False])
+def test_apply_inverse_transfer_function(device, estimate_bg):
+    input_shape = (5, 10, 100, 100)
     czyx_data = torch.rand(input_shape, device=device)
 
     intensity_to_stokes_matrix = (
@@ -31,6 +32,7 @@ def test_apply_inverse_transfer_function(device):
     results = inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
         czyx_data=czyx_data,
         intensity_to_stokes_matrix=intensity_to_stokes_matrix,
+        remove_estimated_background=estimate_bg,
     )
 
     assert len(results) == 4
