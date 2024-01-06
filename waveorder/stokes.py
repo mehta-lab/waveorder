@@ -358,7 +358,7 @@ def mueller_from_stokes(
     Returns
     -------
     torch.tensor, float, M.shape = (4, 4,) + s0.shape
-        Mueller matrix
+        Mueller matrix on the same device as s0
     """
     if input != "cpl":
         raise NotImplementedError("input != cpl")
@@ -370,7 +370,7 @@ def mueller_from_stokes(
         raise NotImplementedError("direction must be `forward` or `inverse`")
 
     if direction == "forward":
-        M = torch.zeros((4, 4) + torch.tensor(s0).shape)
+        M = torch.zeros((4, 4) + torch.tensor(s0).shape, device=s0.device)
         denom = s1**2 + s2**2
         M[0, 0] = s0
         M[1, 1] = (s0 * s2**2 + s1**2 * s3) / denom
