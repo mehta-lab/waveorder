@@ -85,3 +85,5 @@ python
 ```
 
 To use GPUs in `waveorder` set ```use_gpu=True``` when initializing the simulator and reconstructor classes.
+
+(M1 users) `pytorch` has [incomplete GPU support](https://github.com/pytorch/pytorch/issues/77764), so please use `export PYTORCH_ENABLE_MPS_FALLBACK=1` to fallback to CPU. 
