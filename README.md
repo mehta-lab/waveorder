@@ -76,4 +76,7 @@ pip install jupyter
 jupyter notebook ./waveorder/examples/
 ```
 
-(M1 users) `pytorch` has [incomplete GPU support](https://github.com/pytorch/pytorch/issues/77764), so please use `export PYTORCH_ENABLE_MPS_FALLBACK=1` to fallback to CPU. 
+(M1 users) `pytorch` has [incomplete GPU support](https://github.com/pytorch/pytorch/issues/77764),
+so please use `export PYTORCH_ENABLE_MPS_FALLBACK=1`
+to allow some operators to fallback to CPU
+if you plan to use GPU acceleration for polarization reconstruction. 
