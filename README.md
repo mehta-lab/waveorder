@@ -30,7 +30,7 @@ PTI provides volumetric reconstructions of mean permittivity ($\propto$ material
 ![Data_flow](https://github.com/mehta-lab/waveorder/blob/main/readme.png?raw=true)
 
 
-The [example notebooks](https://github.com/mehta-lab/waveorder/tree/main/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D PODT, and 2D/3D PTI methods.
+The [examples](https://github.com/mehta-lab/waveorder/tree/main/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D PODT, and 2D/3D PTI methods.
 
 If you are interested in deploying QLIPP or PODT for label-free imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
 
