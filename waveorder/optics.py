@@ -1147,7 +1147,7 @@ def unit_conversion_from_scattering_potential_to_permittivity(
 ):
     """
 
-    compute the optic sign probability from the reconstructed material tendancy
+    Convert the scattering potential of the specimen to the relative permittivity.
 
     Parameters
     ----------
