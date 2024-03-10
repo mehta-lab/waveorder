@@ -16,7 +16,7 @@ simulation_arguments = {
     "wavelength_illumination": 0.532,
     "index_of_refraction_media": 1.3,
 }
-phantom_arguments = {"index_of_refraction_sample": 1.33, "sphere_radius": 5}
+phantom_arguments = {"index_of_refraction_sample": 1.4, "sphere_radius": 0.05}
 z_shape = 100
 z_pixel_size = 0.25
 transfer_function_arguments = {

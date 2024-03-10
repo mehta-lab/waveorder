@@ -39,7 +39,7 @@ gpu_id = 0  # id of gpu to use
 # %%
 # Load data and bg
 # Download data from
-PTI_file_name = "/Users/talon.chandler/Downloads/Anisotropic_target_small/Anisotropic_target_small_raw.zarr"
+PTI_file_name = "/Users/shalin.mehta/docs/data/waveOrder/Anisotropic_target_small/Anisotropic_target_small_raw.zarr"
 reader = zarr.open(PTI_file_name, mode="r")
 I_meas = np.transpose(
     np.array(reader["Row_0/Col_0/I_meas/array"]), (0, 1, 3, 4, 2)
@@ -305,24 +305,6 @@ visual.parallel_4D_viewer(
     ],
 )
 
-# %%
-# (Obsolete, not maintained) save results to zarr array
-
-# writer = WaveorderWriter('.', hcs=False, hcs_meta=None, verbose=True)
-# writer.create_zarr_root('Anisotropic_target_small_processed.zarr')
-# chan_names = ['f_tensor0r', 'f_tensor0i', 'f_tensor1c','f_tensor1s','f_tensor2c','f_tensor2s', 'f_tensor3', 'mat_map0', 'mat_map1']
-# PTI_array = np.transpose(np.concatenate((f_tensor, mat_map),axis=0)[np.newaxis,...],(0,1,4,2,3)) # dimension (T, C, Z, Y, X)
-# data_shape = PTI_array.shape
-# chunk_size = (1,1,1)+PTI_array.shape[3:]
-# writer.init_array(0, data_shape, chunk_size, chan_names, position_name='f_tensor', overwrite=True)
-# writer.write(PTI_array, p=0)
-
-# chan_names_phys = ['Phase3D', 'Retardance3D', 'Orientation', 'Inclination', 'Optic_sign']
-# phys_data_array = np.transpose(np.array([phase_PT, np.abs(retardance_pr_PT[1]), azimuth[1], theta[1], p_mat_map]),(0,3,1,2))[np.newaxis,...]
-# data_shape_phys = phys_data_array.shape
-# dtype = 'float32'
-# writer.init_array(1, data_shape_phys, chunk_size, chan_names_phys, dtype, position_name='Stitched_physical', overwrite=True)
-# writer.write(phys_data_array, p=1)
 
 # %%
 # Load the processed results
