@@ -9,6 +9,7 @@ import waveorder as wo
 from waveorder import optics, waveorder_reconstructor, util, visual
 
 import zarr
+from pathlib import Path
 
 # %%
 # Initialization
@@ -39,7 +40,11 @@ gpu_id = 0  # id of gpu to use
 # %%
 # Load data and bg
 # Download data from
-PTI_file_name = "/Users/shalin.mehta/docs/data/waveOrder/Anisotropic_target_small/Anisotropic_target_small_raw.zarr"
+
+data_folder = Path(
+    "/Users/shalin.mehta/docs/data/waveOrder/Anisotropic_target_small/"
+)
+PTI_file_name = data_folder / "Anisotropic_target_small_raw.zarr"
 reader = zarr.open(PTI_file_name, mode="r")
 I_meas = np.transpose(
     np.array(reader["Row_0/Col_0/I_meas/array"]), (0, 1, 3, 4, 2)
@@ -305,13 +310,16 @@ visual.parallel_4D_viewer(
     ],
 )
 
+# %%
+# TODO: Write the reconstructed scattering potential tensor to the zarr store.
+PTI_output_file = data_folder / "Anisotropic_target_small_processed.zarr"
+writer = zarr.open(PTI_output_file, mode="w")
+writer["Row_0/Col_0/f_tensor/array"] = f_tensor
 
 # %%
 # Load the processed results
-PTI_file_name = (
-    "/path/to/Anisotropic_target_small/Anisotropic_target_small_processed.zarr"
-)
-reader = zarr.open(PTI_file_name, mode="r")
+PTI_output_file = data_folder / "Anisotropic_target_small_processed.zarr"
+reader = zarr.open(PTI_output_file, mode="r")
 PTI_array = np.array(reader["Row_0/Col_0/f_tensor/array"])
 print(PTI_array.shape)
 PTI_array = np.transpose(PTI_array, (0, 1, 3, 4, 2))[0]
@@ -356,7 +364,12 @@ mean_permittivity_PT = np.array(
 
 
 # %%
-# Phase, mean permittivity, azimuth, inclination, and optic sign reconstruction
+# mean permittivity (phase and absorption), differential permittivity, azimuth, inclination, and optic sign reconstruction
+
+# mean permittivity reports the isotropic component of the permittivity tensor, and the differential permittivity reports the anisotropic component of the permittivity tensor.
+# phase is the real component of the mean permittivity, and absorption is the imaginary component of the mean permittivity.
+# The azimuth and inclination report the 3D orientation of the optic axis of the anisotropic material.
+# The optic sign reports whether the material is positively or negatively uniaxial.
 
 # %%
 z_layer = 44
