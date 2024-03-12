@@ -42,7 +42,7 @@ gpu_id = 0  # id of gpu to use
 # Load data and bg
 # Download data from
 
-data_folder = Path("/Users/talon.chandler/Downloads/Anisotropic_target_small/")
+data_folder = Path("/path/to/Anisotropic_target_small/")
 PTI_file_name = data_folder / "Anisotropic_target_small_raw.zarr"
 reader = zarr.open(PTI_file_name, mode="r")
 I_meas = np.transpose(
@@ -733,3 +733,5 @@ visual.orientation_3D_hist(
     hist_cmap="gray",
     top_hemi=True,
 )
+
+# %%
