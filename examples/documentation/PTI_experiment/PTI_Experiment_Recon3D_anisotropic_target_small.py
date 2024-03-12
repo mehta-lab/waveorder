@@ -231,7 +231,7 @@ visual.parallel_4D_viewer(
 )
 
 # %%
-# reconstruct 3D anisotropy (mean permittivity, 3D orientation, optic sign probability)
+# reconstruct 3D anisotropy (differential permittivity, 3D orientation, optic sign probability)
 # material type:
 # "positive" -> only solution of positively uniaxial material
 # "negative" -> only solution of negatively uniaxial material
@@ -274,7 +274,7 @@ differential_permittivity_PT = np.array(
 # Visualize reconstructed physical properties of the anisotropic glass target
 
 # %%
-# Reconstructed phase, absorption, mean permittivity, azimuth, and inclination assuming (+) and (-) optic sign
+# Reconstructed phase, absorption, differential permittivity, azimuth, and inclination assuming (+) and (-) optic sign
 
 # %%
 # browse the reconstructed physical properties
@@ -545,7 +545,7 @@ ax[5, 1].set_title("inclination (+) (xz)")
 
 
 # %%
-# browse XY planes of the phase and mean permittivity
+# browse XY planes of the phase and differential permittivity
 visual.parallel_4D_viewer(
     np.transpose(
         [
