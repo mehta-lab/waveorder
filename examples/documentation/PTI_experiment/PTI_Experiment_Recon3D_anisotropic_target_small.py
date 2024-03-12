@@ -203,8 +203,8 @@ visual.parallel_5D_viewer(
 # It is good to set the regularization such that (1c, 1s), (2c, 2s) have the same regularization
 reg_inc = np.array([2.5, 5, 1, 1, 3, 3, 3]) * 1
 
-# regulairzation for estimating mean permittivity
-reg_mean_permittivity = 1e-2
+# regulairzation for estimating differential permittivity
+reg_differential_permittivity = 1e-2
 
 # reconstruct components of scattering potential tensor
 f_tensor = setup.scattering_potential_tensor_recon_3D_vec(
@@ -237,12 +237,12 @@ visual.parallel_4D_viewer(
 # "negative" -> only solution of negatively uniaxial material
 # "unknown" -> both solutions of positively and negatively uniaxial material + optic sign estimation
 
-mean_permittivity, azimuth, theta, mat_map = (
+differential_permittivity, azimuth, theta, mat_map = (
     setup.scattering_potential_tensor_to_3D_orientation(
         f_tensor,
         S_image_tm,
         material_type="unknown",
-        reg_ret_pr=reg_mean_permittivity,
+        reg_ret_pr=reg_differential_permittivity,
         itr=10,
         fast_gpu_mode=True,
     )
@@ -251,19 +251,19 @@ mean_permittivity, azimuth, theta, mat_map = (
 # %%
 p_mat_map = optics.optic_sign_probability(mat_map, mat_map_thres=0.2)
 phase = optics.phase_inc_correction(
-    f_tensor[0], mean_permittivity[1], theta[1]
+    f_tensor[0], differential_permittivity[1], theta[1]
 )
-phase_PT, absorption_PT, mean_permittivity_PT = [
+phase_PT, absorption_PT, differential_permittivity_PT = [
     optics.unit_conversion_from_scattering_potential_to_permittivity(
         SP_array, lambda_illu, n_media=n_media, imaging_mode="3D"
     )
-    for SP_array in [phase, f_tensor[1].copy(), mean_permittivity]
+    for SP_array in [phase, f_tensor[1].copy(), differential_permittivity]
 ]
-mean_permittivity_PT = np.array(
+differential_permittivity_PT = np.array(
     [
         ((-1) ** i)
         * util.wavelet_softThreshold(
-            ((-1) ** i) * mean_permittivity_PT[i], "db8", 0.00303, level=1
+            ((-1) ** i) * differential_permittivity_PT[i], "db8", 0.00303, level=1
         )
         for i in range(2)
     ]
@@ -283,11 +283,11 @@ visual.parallel_4D_viewer(
         np.stack(
             [
                 phase_PT,
-                mean_permittivity_PT[0],
+                differential_permittivity_PT[0],
                 azimuth[0],
                 theta[0],
                 absorption_PT,
-                mean_permittivity_PT[1],
+                differential_permittivity_PT[1],
                 azimuth[1],
                 theta[1],
             ]
@@ -299,11 +299,11 @@ visual.parallel_4D_viewer(
     set_title=True,
     titles=[
         r"phase",
-        r"mean permittivity (+)",
+        r"differential permittivity (+)",
         r"$\omega$ (+)",
         r"$\theta$ (+)",
         r"absorption",
-        r"mean permittivity (-)",
+        r"differential permittivity (-)",
         r"$\omega$ (-)",
         r"$\theta$ (-)",
     ],
@@ -328,7 +328,7 @@ output_channel_names = [
     "f_3",
     "phase",
     "absorption",
-    "mean_permittivity (-)",
+    "differential_permittivity (-)",
     "azimuth (-)",
     "theta (-)",
 ]
@@ -356,7 +356,7 @@ with open_ome_zarr(
     array[0, :7] = np.transpose(f_tensor, (0, 3, 1, 2))
     array[0, 7] = np.transpose(phase_PT, (2, 1, 0))
     array[0, 8] = np.transpose(absorption_PT, (2, 1, 0))
-    array[0, 9] = np.transpose(mean_permittivity_PT[1], (2, 1, 0))
+    array[0, 9] = np.transpose(differential_permittivity_PT[1], (2, 1, 0))
     array[0, 10] = np.transpose(azimuth[1], (2, 1, 0))
     array[0, 11] = np.transpose(theta[1], (2, 1, 0))
 
@@ -373,35 +373,35 @@ mat_map = PTI_array[7:]
 
 # compute the physical properties from the scattering potential tensor
 
-mean_permittivity_p, azimuth_p, theta_p = (
+differential_permittivity_p, azimuth_p, theta_p = (
     optics.scattering_potential_tensor_to_3D_orientation_PN(
-        f_tensor, material_type="positive", reg_ret_pr=reg_mean_permittivity
+        f_tensor, material_type="positive", reg_ret_pr=reg_differential_permittivity
     )
 )
-mean_permittivity_n, azimuth_n, theta_n = (
+differential_permittivity_n, azimuth_n, theta_n = (
     optics.scattering_potential_tensor_to_3D_orientation_PN(
-        f_tensor, material_type="negative", reg_ret_pr=reg_mean_permittivity
+        f_tensor, material_type="negative", reg_ret_pr=reg_differential_permittivity
     )
 )
-mean_permittivity = np.array([mean_permittivity_p, mean_permittivity_n])
+differential_permittivity = np.array([differential_permittivity_p, differential_permittivity_n])
 azimuth = np.array([azimuth_p, azimuth_n])
 theta = np.array([theta_p, theta_n])
 
 p_mat_map = optics.optic_sign_probability(mat_map, mat_map_thres=0.09)
 phase = optics.phase_inc_correction(
-    f_tensor[0], mean_permittivity[1], theta[1]
+    f_tensor[0], differential_permittivity[1], theta[1]
 )
-phase_PT, absorption_PT, mean_permittivity_PT = [
+phase_PT, absorption_PT, differential_permittivity_PT = [
     optics.unit_conversion_from_scattering_potential_to_permittivity(
         SP_array, lambda_illu, n_media=n_media, imaging_mode="3D"
     )
-    for SP_array in [phase, f_tensor[1].copy(), mean_permittivity]
+    for SP_array in [phase, f_tensor[1].copy(), differential_permittivity]
 ]
-mean_permittivity_PT = np.array(
+differential_permittivity_PT = np.array(
     [
         ((-1) ** i)
         * util.wavelet_softThreshold(
-            ((-1) ** i) * mean_permittivity_PT[i], "db8", 0.00303, level=1
+            ((-1) ** i) * differential_permittivity_PT[i], "db8", 0.00303, level=1
         )
         for i in range(2)
     ]
@@ -472,24 +472,24 @@ ax[1, 1].set_title("phase (xz)")
 plt.colorbar(sub_ax, ax=ax[1, 1])
 
 sub_ax = ax[2, 0].imshow(
-    np.abs(mean_permittivity_PT[0, :, :, z_layer]),
+    np.abs(differential_permittivity_PT[0, :, :, z_layer]),
     cmap="gray",
     origin="lower",
     vmin=ret_min,
     vmax=ret_max,
 )
-ax[2, 0].set_title("mean permittivity (+) (xy)")
+ax[2, 0].set_title("differential permittivity (+) (xy)")
 plt.colorbar(sub_ax, ax=ax[2, 0])
 
 sub_ax = ax[2, 1].imshow(
-    np.transpose(np.abs(mean_permittivity_PT[0, y_layer, :, :])),
+    np.transpose(np.abs(differential_permittivity_PT[0, y_layer, :, :])),
     cmap="gray",
     origin="lower",
     vmin=ret_min,
     vmax=ret_max,
     aspect=z_step / ps,
 )
-ax[2, 1].set_title("mean permittivity (+) (xz)")
+ax[2, 1].set_title("differential permittivity (+) (xz)")
 plt.colorbar(sub_ax, ax=ax[2, 1])
 
 sub_ax = ax[3, 0].imshow(
@@ -550,7 +550,7 @@ visual.parallel_4D_viewer(
     np.transpose(
         [
             np.clip(phase_PT, phase_min, phase_max),
-            np.clip(np.abs(mean_permittivity_PT[1]), ret_min, ret_max),
+            np.clip(np.abs(differential_permittivity_PT[1]), ret_min, ret_max),
         ],
         (3, 0, 1, 2),
     ),
@@ -574,7 +574,7 @@ orientation_3D_image = np.transpose(
             theta[1],
             (
                 np.clip(
-                    np.abs(mean_permittivity_PT[1]),
+                    np.abs(differential_permittivity_PT[1]),
                     ret_min_color,
                     ret_max_color,
                 )
@@ -615,10 +615,10 @@ I_hsv = np.transpose(
     np.array(
         [
             (azimuth[1]) % np.pi / np.pi,
-            np.ones_like(mean_permittivity_PT[1]),
+            np.ones_like(differential_permittivity_PT[1]),
             (
                 np.clip(
-                    np.abs(mean_permittivity_PT[1]),
+                    np.abs(differential_permittivity_PT[1]),
                     ret_min_color,
                     ret_max_color,
                 )
@@ -655,10 +655,10 @@ I_hsv = np.transpose(
                 + threshold_inc
             )
             / np.pi,
-            np.ones_like(mean_permittivity_PT[1]),
+            np.ones_like(differential_permittivity_PT[1]),
             (
                 np.clip(
-                    np.abs(mean_permittivity_PT[1]),
+                    np.abs(differential_permittivity_PT[1]),
                     ret_min_color,
                     ret_max_color,
                 )
@@ -687,10 +687,10 @@ z_layer = 44
 fig, ax = plt.subplots(1, 1, figsize=(15, 15))
 
 visual.plot3DVectorField(
-    np.abs(mean_permittivity_PT[1, :, :, z_layer]),
+    np.abs(differential_permittivity_PT[1, :, :, z_layer]),
     azimuth[1, :, :, z_layer],
     theta[1, :, :, z_layer],
-    anisotropy=40 * np.abs(mean_permittivity_PT[1, :, :, z_layer]),
+    anisotropy=40 * np.abs(differential_permittivity_PT[1, :, :, z_layer]),
     cmapImage="gray",
     clim=[ret_min, ret_max],
     aspect=1,
@@ -703,7 +703,7 @@ visual.plot3DVectorField(
 )
 
 # %%
-ret_mask = np.abs(mean_permittivity_PT[1]).copy()
+ret_mask = np.abs(differential_permittivity_PT[1]).copy()
 ret_mask[ret_mask < 0.0075] = 0
 ret_mask[ret_mask > 0.0075] = 1
 
