@@ -10,6 +10,7 @@ from waveorder import optics, waveorder_reconstructor, util, visual
 
 import zarr
 from pathlib import Path
+from iohub import open_ome_zarr
 
 # %%
 # Initialization
@@ -41,9 +42,7 @@ gpu_id = 0  # id of gpu to use
 # Load data and bg
 # Download data from
 
-data_folder = Path(
-    "/Users/shalin.mehta/docs/data/waveOrder/Anisotropic_target_small/"
-)
+data_folder = Path("/Users/talon.chandler/Downloads/Anisotropic_target_small/")
 PTI_file_name = data_folder / "Anisotropic_target_small_raw.zarr"
 reader = zarr.open(PTI_file_name, mode="r")
 I_meas = np.transpose(
@@ -311,13 +310,59 @@ visual.parallel_4D_viewer(
 )
 
 # %%
-# TODO: Write the reconstructed scattering potential tensor to the zarr store.
-PTI_output_file = data_folder / "Anisotropic_target_small_processed.zarr"
-writer = zarr.open(PTI_output_file, mode="w")
-writer["Row_0/Col_0/f_tensor/array"] = f_tensor
+# Save the reconstructed scattering potential tensor to an OME zarr store for viewing in napari.
+# For best results:
+# > pip install napari[all]
+# > pip install napari-ome-zarr
+# > napari Anisotropic_target_small_processed_OME.zarr
+PTI_output_OME_file = (
+    data_folder / "Anisotropic_target_small_processed_OME.zarr"
+)
+output_channel_names = [
+    "f_0r",
+    "f_0i",
+    "f_1c",
+    "f_1s",
+    "f_2c",
+    "f_2s",
+    "f_3",
+    "phase",
+    "absorption",
+    "mean_permittivity (-)",
+    "azimuth (-)",
+    "theta (-)",
+]
+with open_ome_zarr(
+    PTI_output_OME_file,
+    layout="fov",
+    mode="a",
+    channel_names=output_channel_names,
+) as writer:
+    zyx_shape = f_tensor.shape[1:][::-1]
+    array = writer.create_zeros(
+        name="0",
+        shape=(
+            1,
+            12,
+        )
+        + zyx_shape,
+        dtype=np.float32,
+        chunks=(
+            1,
+            1,
+        )
+        + zyx_shape,
+    )
+    array[0, :7] = np.transpose(f_tensor, (0, 3, 1, 2))
+    array[0, 7] = np.transpose(phase_PT, (2, 1, 0))
+    array[0, 8] = np.transpose(absorption_PT, (2, 1, 0))
+    array[0, 9] = np.transpose(mean_permittivity_PT[1], (2, 1, 0))
+    array[0, 10] = np.transpose(azimuth[1], (2, 1, 0))
+    array[0, 11] = np.transpose(theta[1], (2, 1, 0))
 
 # %%
 # Load the processed results
+# This loads an precomputed store, so this cell does not depend on earlier cells.
 PTI_output_file = data_folder / "Anisotropic_target_small_processed.zarr"
 reader = zarr.open(PTI_output_file, mode="r")
 PTI_array = np.array(reader["Row_0/Col_0/f_tensor/array"])
