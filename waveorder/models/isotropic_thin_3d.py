@@ -28,7 +28,7 @@ def generate_test_phantom(
         / wavelength_illumination
     )  # phase in radians
 
-    yx_absorption = 0.99 * sphere[1]
+    yx_absorption = 0.02 * sphere[1]
 
     return yx_absorption, yx_phase
 
@@ -99,6 +99,28 @@ def visualize_transfer_function(
         (torch.real(absorption_2d_to_3d_transfer_function), "Re(absorb TF)"),
         (torch.imag(phase_2d_to_3d_transfer_function), "Im(phase TF)"),
         (torch.real(phase_2d_to_3d_transfer_function), "Re(phase TF)"),
+    ]
+
+    for array in arrays:
+        lim = 0.5 * torch.max(torch.abs(array[0]))
+        viewer.add_image(
+            torch.fft.ifftshift(array[0], dim=(1, 2)).cpu().numpy(),
+            name=array[1],
+            colormap="bwr",
+            contrast_limits=(-lim, lim),
+            scale=(1, 1, 1),
+        )
+    viewer.dims.order = (0, 1, 2)
+
+
+def visualize_point_spread_function(
+    viewer,
+    absorption_2d_to_3d_transfer_function,
+    phase_2d_to_3d_transfer_function,
+):
+    arrays = [
+        (torch.fft.ifftn(absorption_2d_to_3d_transfer_function), "absorb PSF"),
+        (torch.fft.ifftn(phase_2d_to_3d_transfer_function), "phase PSF"),
     ]
 
     for array in arrays:
