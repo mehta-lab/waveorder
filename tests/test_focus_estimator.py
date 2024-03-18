@@ -45,6 +45,15 @@ def test_focus_estimator(tmp_path):
     assert slice <= data3D.shape[0]
     assert plot_path.exists()
 
+    # Check single slice
+    slice = focus.focus_from_transverse_band(
+        np.random.random((1, 10, 10)),
+        NA_det,
+        lambda_ill,
+        ps,
+    )
+    assert slice == 0
+
 
 def test_focus_estimator_snr(tmp_path):
     ps = 6.5 / 100
