@@ -104,7 +104,12 @@ def focus_from_transverse_band(
     # Plot
     if plot_path is not None:
         _plot_focus_metric(
-            plot_path, midband_sum, peak_index, in_focus_index, peak_results, threshold_FWHM
+            plot_path,
+            midband_sum,
+            peak_index,
+            in_focus_index,
+            peak_results,
+            threshold_FWHM,
         )
 
     return in_focus_index
@@ -152,7 +157,12 @@ def _check_focus_inputs(
 
 
 def _plot_focus_metric(
-    plot_path, midband_sum, peak_index, in_focus_index, peak_results, threshold_FWHM
+    plot_path,
+    midband_sum,
+    peak_index,
+    in_focus_index,
+    peak_results,
+    threshold_FWHM,
 ):
     _, ax = plt.subplots(1, 1, figsize=(4, 4))
     ax.plot(midband_sum, "-k")
