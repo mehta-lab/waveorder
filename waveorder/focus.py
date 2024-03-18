@@ -3,6 +3,7 @@ from typing import Literal, Optional
 from waveorder import util
 import matplotlib.pyplot as plt
 import numpy as np
+import warnings
 
 
 def focus_from_transverse_band(
@@ -63,6 +64,8 @@ def focus_from_transverse_band(
     minmaxfunc = _check_focus_inputs(
         zyx_array, NA_det, lambda_ill, pixel_size, midband_fractions, mode
     )
+    if minmaxfunc is None:
+        return 0
 
     # Calculate coordinates
     _, Y, X = zyx_array.shape
@@ -109,10 +112,8 @@ def _check_focus_inputs(
             f"{N}D array supplied. `focus_from_transverse_band` only accepts 3D arrays."
         )
     if zyx_array.shape[0] == 1:
-        print(
-            "WARNING: The dataset only contained a single slice. Returning trivial slice index = 0."
-        )
-        return 0
+        warnings.warn("The dataset only contained a single slice. Returning trivial slice index = 0.")
+        return
 
     if NA_det < 0:
         raise ValueError("NA must be > 0")
