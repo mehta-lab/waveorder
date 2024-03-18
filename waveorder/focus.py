@@ -141,7 +141,7 @@ def _check_focus_inputs(
     if pixel_size < 0:
         raise ValueError("pixel_size must be > 0")
     if not 0.4 < lambda_ill / pixel_size < 10:
-        print(
+        warnings.warn(
             f"WARNING: lambda_ill/pixel_size = {lambda_ill/pixel_size}."
             f"Did you use the same units?"
             f"Did you enter the pixel size in (demagnified) object-space units?"
