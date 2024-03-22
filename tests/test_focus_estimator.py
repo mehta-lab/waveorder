@@ -39,11 +39,20 @@ def test_focus_estimator(tmp_path):
     plot_path = tmp_path.joinpath("test.pdf")
     data3D = np.random.random((11, 256, 256))
     slice = focus.focus_from_transverse_band(
-        data3D, ps, lambda_ill, NA_det, plot_path=str(plot_path)
+        data3D, NA_det, lambda_ill, ps, plot_path=str(plot_path)
     )
     assert slice >= 0
     assert slice <= data3D.shape[0]
     assert plot_path.exists()
+
+    # Check single slice
+    slice = focus.focus_from_transverse_band(
+        np.random.random((1, 10, 10)),
+        NA_det,
+        lambda_ill,
+        ps,
+    )
+    assert slice == 0
 
 
 def test_focus_estimator_snr(tmp_path):
@@ -66,9 +75,9 @@ def test_focus_estimator_snr(tmp_path):
         plot_path = tmp_path / f"test-{snr}.pdf"
         slice = focus.focus_from_transverse_band(
             data,
-            ps,
-            lambda_ill,
             NA_det,
+            lambda_ill,
+            ps,
             plot_path=plot_path,
             threshold_FWHM=5,
         )
