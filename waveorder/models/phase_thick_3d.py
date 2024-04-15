@@ -154,14 +154,6 @@ def apply_inverse_transfer_function(
     z_padding : int
         Padding for axial dimension. Use zero for defocus stacks that
         extend ~3 PSF widths beyond the sample. Pad by ~3 PSF widths otherwise.
-    z_pixel_size : float
-        spacing between axial samples in sample space
-        units must be consistent with wavelength_illumination
-        TODO: move this leaky parameter to calculate_transfer_function
-    wavelength_illumination : float,
-        illumination wavelength
-        units must be consistent with z_pixel_size
-        TODO: move this leaky parameter to calculate_transfer_function
     absorption_ratio : float, optional,
         Absorption-to-phase ratio in the sample.
         Use default 0 for purely phase objects.
@@ -219,4 +211,4 @@ def apply_inverse_transfer_function(
     if z_padding != 0:
         f_real = f_real[z_padding:-z_padding]
 
-    return f_real * z_pixel_size / 4 / np.pi * wavelength_illumination
+    return f_real  # * z_pixel_size / 4 / np.pi * wavelength_illumination
