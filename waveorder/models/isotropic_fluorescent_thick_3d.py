@@ -81,7 +81,9 @@ def visualize_transfer_function(viewer, optical_transfer_function, zyx_scale):
     viewer.dims.order = (0, 1, 2)
 
 
-def apply_transfer_function(zyx_object, optical_transfer_function, z_padding):
+def apply_transfer_function(
+    zyx_object, optical_transfer_function, z_padding, background=10
+):
     if (
         zyx_object.shape[0] + 2 * z_padding
         != optical_transfer_function.shape[0]
@@ -99,7 +101,7 @@ def apply_transfer_function(zyx_object, optical_transfer_function, z_padding):
     zyx_data = zyx_obj_hat * optical_transfer_function
     data = torch.real(torch.fft.ifftn(zyx_data))
 
-    data += 10  # Add a direct background
+    data += background  # Add a direct background
     return data
 
 
