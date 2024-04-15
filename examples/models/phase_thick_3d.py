@@ -14,12 +14,12 @@ simulation_arguments = {
     "zyx_shape": (100, 256, 256),
     "yx_pixel_size": 6.5 / 63,
     "z_pixel_size": 0.25,
-    "wavelength_illumination": 0.532,
     "index_of_refraction_media": 1.3,
 }
 phantom_arguments = {"index_of_refraction_sample": 1.50, "sphere_radius": 5}
 transfer_function_arguments = {
     "z_padding": 0,
+    "wavelength_illumination": 0.532,
     "numerical_aperture_illumination": 0.9,
     "numerical_aperture_detection": 1.2,
 }
@@ -61,6 +61,7 @@ zyx_data = phase_thick_3d.apply_transfer_function(
     zyx_phase,
     real_potential_transfer_function,
     transfer_function_arguments["z_padding"],
+    brightness=1e3,
 )
 
 # Reconstruct
@@ -69,8 +70,6 @@ zyx_recon = phase_thick_3d.apply_inverse_transfer_function(
     real_potential_transfer_function,
     imag_potential_transfer_function,
     transfer_function_arguments["z_padding"],
-    simulation_arguments["z_pixel_size"],
-    simulation_arguments["wavelength_illumination"],
 )
 
 # Display
