@@ -12,7 +12,6 @@ def generate_test_phantom(
     zyx_shape,
     yx_pixel_size,
     z_pixel_size,
-    wavelength_illumination,
     index_of_refraction_media,
     index_of_refraction_sample,
     sphere_radius,
@@ -24,12 +23,9 @@ def generate_test_phantom(
         radius=sphere_radius,
         blur_size=2 * yx_pixel_size,
     )
-    zyx_phase = (
-        sphere
-        * (index_of_refraction_sample - index_of_refraction_media)
-        * z_pixel_size
-        / wavelength_illumination
-    )  # phase in radians
+    zyx_phase = sphere * (
+        index_of_refraction_sample - index_of_refraction_media
+    )  # refractive index increment
 
     return zyx_phase
 
