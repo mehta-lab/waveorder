@@ -216,4 +216,4 @@ def apply_inverse_transfer_function(
     if z_padding != 0:
         f_real = f_real[z_padding:-z_padding]
 
-    return f_real  # * z_pixel_size / 4 / np.pi * wavelength_illumination
+    return f_real
