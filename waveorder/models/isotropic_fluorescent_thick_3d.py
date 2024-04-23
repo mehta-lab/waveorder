@@ -84,6 +84,21 @@ def visualize_transfer_function(viewer, optical_transfer_function, zyx_scale):
 def apply_transfer_function(
     zyx_object, optical_transfer_function, z_padding, background=10
 ):
+    """Simulate imaging by applying a transfer function
+
+    Parameters
+    ----------
+    zyx_object : torch.Tensor
+    optical_transfer_function : torch.Tensor
+    z_padding : int
+    background : int, optional
+        constant background counts added to each voxel, by default 10
+
+    Returns
+    -------
+    Simulated data : torch.Tensor
+        
+    """
     if (
         zyx_object.shape[0] + 2 * z_padding
         != optical_transfer_function.shape[0]
