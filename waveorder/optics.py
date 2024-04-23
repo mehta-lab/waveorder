@@ -739,19 +739,23 @@ def compute_weak_object_transfer_function_3D(
 
     H1 = torch.fft.ifft2(torch.conj(SPHz_hat) * PG_hat, dim=(1, 2))
     H1 = H1 * window[:, None, None]
-    H1 = torch.fft.fft(H1, dim=0) * z_pixel_size
+    H1 = torch.fft.fft(H1, dim=0)
 
     H2 = torch.fft.ifft2(SPHz_hat * torch.conj(PG_hat), dim=(1, 2))
     H2 = H2 * window[:, None, None]
-    H2 = torch.fft.fft(H2, dim=0) * z_pixel_size
+    H2 = torch.fft.fft(H2, dim=0)
 
-    I_norm = torch.sum(
+    direct_intensity = torch.sum(
         illumination_pupil_support
         * detection_pupil
         * torch.conj(detection_pupil)
     )
-    real_potential_transfer_function = (H1 + H2) / I_norm
-    imag_potential_transfer_function = 1j * (H1 - H2) / I_norm
+    real_potential_transfer_function = (H1 + H2) / direct_intensity
+    imag_potential_transfer_function = 1j * (H1 - H2) / direct_intensity
+
+    # Discretization factor for unitless input and output
+    real_potential_transfer_function *= z_pixel_size
+    imag_potential_transfer_function *= z_pixel_size
 
     return real_potential_transfer_function, imag_potential_transfer_function
 
