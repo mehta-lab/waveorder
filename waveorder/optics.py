@@ -133,7 +133,7 @@ def generate_pupil(frr, NA, lamb_in):
                     numerical aperture of the pupil function (normalized by the refractive index of the immersion media)
 
         lamb_in : float
-                    wavelength of the light (inside the immersion media)
+                    wavelength of the light in free space
                     in units of length (inverse of frr's units)
 
     Returns
@@ -225,6 +225,101 @@ def gen_sector_Pupil(fxx, fyy, NA, lamb_in, sector_angle, rotation_angle):
     return Pupil_sector
 
 
+def rotation_matrix(nu_z, nu_y, nu_x, wavelength):
+    nu_perp_squared = nu_x**2 + nu_y**2
+    nu_zz = wavelength * nu_z - 1
+
+    R_xx = (wavelength * nu_x**2 * nu_z + nu_y**2) / nu_perp_squared
+    R_yy = (wavelength * nu_y**2 * nu_z + nu_x**2) / nu_perp_squared
+    R_xy = nu_x * nu_y * nu_zz / nu_perp_squared
+
+    row0 = torch.stack((-wavelength * nu_y, -wavelength * nu_x), dim=0)
+    row1 = torch.stack((R_yy, R_xy), dim=0)
+    row2 = torch.stack((R_xy, R_xx), dim=0)
+
+    out = torch.stack((row0, row1, row2), dim=0)
+
+    # KLUDGE to avoid fix nans
+    out[..., 0, 0] = torch.tensor([[0, 0], [1, 0], [0, 1]])[..., None]
+
+    return out
+
+
+def generate_vector_source_defocus_pupil(
+    x_frequencies,
+    y_frequencies,
+    z_position_list,
+    defocus_pupil,
+    input_jones,
+    ill_pupil,
+    wavelength,
+):
+    ill_pupil_3d = torch.einsum(
+        "zyx,yx->zyx", torch.fft.fft(defocus_pupil, dim=0), ill_pupil
+    ).abs()  # make this real
+
+    # Calculate zyx_frequency grid (inelegant)
+    z_frequencies = torch.fft.ifft(z_position_list)
+    freq_shape = z_frequencies.shape + x_frequencies.shape
+    z_broadcast = torch.broadcast_to(z_frequencies[:, None, None], freq_shape)
+    y_broadcast = torch.broadcast_to(y_frequencies[None, :, :], freq_shape)
+    x_broadcast = torch.broadcast_to(x_frequencies[None, :, :], freq_shape)
+
+    # Calculate rotation matrix
+    rotations = rotation_matrix(
+        z_broadcast, y_broadcast, x_broadcast, wavelength
+    ).type(torch.complex64)
+
+    # Main calculation in the frequency domain
+    source_pupil = (
+        torch.einsum(
+            "ijzyx,j,zyx->izyx", rotations, input_jones, ill_pupil_3d
+        )  # .abs()
+        # ** 2
+    )  # abs here is critical...incoherent pupil
+
+    # Convert back to defocus pupil
+    source_defocus_pupil = torch.fft.ifft(source_pupil, dim=-3)
+
+    return source_defocus_pupil
+
+
+def generate_vector_detection_defocus_pupil(
+    x_frequencies,
+    y_frequencies,
+    z_position_list,
+    det_defocus_pupil,
+    det_pupil,
+    wavelength,
+):
+    # TODO: refactor redundancy with illumination pupil
+    det_pupil_3d = torch.einsum(
+        "zyx,yx->zyx", torch.fft.ifft(det_defocus_pupil, dim=0), det_pupil
+    )
+
+    # Calculate zyx_frequency grid (inelegant)
+    z_frequencies = torch.fft.ifft(z_position_list)
+    freq_shape = z_frequencies.shape + x_frequencies.shape
+    z_broadcast = torch.broadcast_to(z_frequencies[:, None, None], freq_shape)
+    y_broadcast = torch.broadcast_to(y_frequencies[None, :, :], freq_shape)
+    x_broadcast = torch.broadcast_to(x_frequencies[None, :, :], freq_shape)
+
+    # Calculate rotation matrix
+    rotations = rotation_matrix(
+        z_broadcast, y_broadcast, x_broadcast, wavelength
+    ).type(torch.complex64)
+
+    # Main calculation in the frequency domain
+    vector_detection_pupil = torch.einsum(
+        "jizyx,zyx->ijzyx", rotations, det_pupil_3d
+    )
+
+    # Convert back to defocus pupil
+    detection_defocus_pupil = torch.fft.fft(vector_detection_pupil, dim=-3)
+
+    return detection_defocus_pupil
+
+
 def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA=0.1):
     """
 
@@ -310,9 +405,10 @@ def generate_propagation_kernel(
 
     """
 
-    oblique_factor = (
-        (1 - wavelength**2 * radial_frequencies**2) * pupil_support
-    ) ** (1 / 2) / wavelength
+    oblique_factor = ((1 - wavelength**2 * radial_frequencies**2)) ** (
+        1 / 2
+    ) / wavelength
+    oblique_factor = torch.nan_to_num(oblique_factor, nan=0.0)
 
     propagation_kernel = pupil_support[None, :, :] * torch.exp(
         1j
@@ -367,7 +463,7 @@ def generate_greens_function_z(
             1j
             * 2
             * np.pi
-            * torch.tensor(z_position_list)[:, None, None]
+            * torch.abs(torch.tensor(z_position_list)[:, None, None])
             * oblique_factor[None, :, :]
         )
         / (oblique_factor[None, :, :] + 1e-15)
@@ -376,23 +472,25 @@ def generate_greens_function_z(
     return greens_function_z
 
 
-def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
+def generate_defocus_greens_tensor(
+    fxx, fyy, G_fun_z, Pupil_support, lambda_in
+):
     """
 
     generate forward dyadic Green's function in u_x, u_y, z space
 
     Parameters
     ----------
-        fxx           : numpy.ndarray
+        fxx           : tensor.Tensor
                         x component of 2D spatial frequency array with the size of (Ny, Nx)
 
-        fyy           : numpy.ndarray
+        fyy           : tensor.Tensor
                         y component of 2D spatial frequency array with the size of (Ny, Nx)
 
-        G_fun_z       : numpy.ndarray
-                        forward Green's function in u_x, u_y, z space with size of (Ny, Nx, Nz)
+        G_fun_z       : tensor.Tensor
+                        forward Green's function in u_x, u_y, z space with size of (Nz, Ny, Nx)
 
-        Pupil_support : numpy.ndarray
+        Pupil_support : tensor.Tensor
                         the array that defines the support of the pupil function with the size of (Ny, Nx)
 
         lambda_in     : float
@@ -400,22 +498,21 @@ def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
 
     Returns
     -------
-        G_tensor_z    : numpy.ndarray
-                        forward dyadic Green's function in u_x, u_y, z space with the size of (3, 3, Ny, Nx, Nz)
+        G_tensor_z    : tensor.Tensor
+                        forward dyadic Green's function in u_x, u_y, z space with the size of (3, 3, Nz, Ny, Nx)
     """
 
-    N, M = fxx.shape
     fr = (fxx**2 + fyy**2) ** (1 / 2)
     oblique_factor = ((1 - lambda_in**2 * fr**2) * Pupil_support) ** (
         1 / 2
     ) / lambda_in
 
-    diff_filter = np.zeros((3,) + G_fun_z.shape, complex)
-    diff_filter[0] = (1j * 2 * np.pi * fxx * Pupil_support)[..., np.newaxis]
-    diff_filter[1] = (1j * 2 * np.pi * fyy * Pupil_support)[..., np.newaxis]
-    diff_filter[2] = (1j * 2 * np.pi * oblique_factor)[..., np.newaxis]
+    diff_filter = torch.zeros((3,) + G_fun_z.shape, dtype=torch.complex64)
+    diff_filter[0] = (1j * 2 * np.pi * oblique_factor)[None, ...]
+    diff_filter[1] = (1j * 2 * np.pi * fyy * Pupil_support)[None, ...]
+    diff_filter[2] = (1j * 2 * np.pi * fxx * Pupil_support)[None, ...]
 
-    G_tensor_z = np.zeros((3, 3) + G_fun_z.shape, complex)
+    G_tensor_z = torch.zeros((3, 3) + G_fun_z.shape, dtype=torch.complex64)
 
     for i in range(3):
         for j in range(3):
