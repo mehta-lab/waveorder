@@ -199,9 +199,9 @@ H_re_stokes = torch.einsum("sik,ikpjzyx,lpj->slzyx", s, H_re, Y)
 
 print("H_re_stokes: (RE, IM, ABS)")
 torch.set_printoptions(precision=1)
-print(torch.log10(torch.sum(torch.real(H_re_stokes) ** 2, dim=(-3, -2, -1))))
-print(torch.log10(torch.sum(torch.imag(H_re_stokes) ** 2, dim=(-3, -2, -1))))
-print(torch.log10(torch.sum(torch.abs(H_re_stokes) ** 2, dim=(-3, -2, -1))))
+print(torch.amax(torch.real(H_re_stokes), dim=(-3, -2, -1)))
+print(torch.amax(torch.imag(H_re_stokes), dim=(-3, -2, -1)))
+print(torch.amax(torch.abs(H_re_stokes), dim=(-3, -2, -1)))
 
 # Display transfer function
 v = napari.Viewer()
@@ -253,35 +253,44 @@ import matplotlib.colors as mcolors
 
 
 def plot_data(data, y_slices, filename):
-    fig, axs = plt.subplots(4, 9, figsize=(20, 10))  # Adjust the size as needed
+    fig, axs = plt.subplots(
+        4, 9, figsize=(20, 10)
+    )  # Adjust the size as needed
 
     for i in range(data.shape[0]):  # Stokes parameter
         for j in range(data.shape[1]):  # Object parameter
             for k, y in enumerate(y_slices):  # Y slices
                 z = data[i, j, :, y, :]
-                hue = np.angle(z) / (2 * np.pi) + 0.5  # Normalize and shift to make red at 0
+                hue = (
+                    np.angle(z) / (2 * np.pi) + 0.5
+                )  # Normalize and shift to make red at 0
                 sat = np.abs(z) / np.amax(np.abs(z))
                 hsv = np.stack((hue, sat, np.ones_like(sat)), axis=-1)
                 rgb = mcolors.hsv_to_rgb(hsv)
-                
+
                 ax = axs[i, j]
-                ax.imshow(rgb, aspect='auto')
-                ax.set_title('')  # Remove titles
+                ax.imshow(rgb, aspect="auto")
+                ax.set_title("")  # Remove titles
                 ax.set_xticks([])  # Remove x-axis ticks
                 ax.set_yticks([])  # Remove y-axis ticks
-                ax.spines['top'].set_visible(False)  # Hide top spine
-                ax.spines['right'].set_visible(False)  # Hide right spine
-                ax.spines['bottom'].set_visible(False)  # Hide bottom spine
-                ax.spines['left'].set_visible(False)  # Hide left spine
-                ax.set_xlabel('')  # Remove x-axis labels
+                ax.spines["top"].set_visible(False)  # Hide top spine
+                ax.spines["right"].set_visible(False)  # Hide right spine
+                ax.spines["bottom"].set_visible(False)  # Hide bottom spine
+                ax.spines["left"].set_visible(False)  # Hide left spine
+                ax.set_xlabel("")  # Remove x-axis labels
 
     plt.tight_layout()
-    plt.savefig(filename, format='pdf')
+    plt.savefig(filename, format="pdf")
+
 
 # Adjust y_slices according to your index base (check if your array index starts at 0)
-y_center = 128 # Assuming the middle index for Y dimension
-y_slices = [y_center - 10, y_center, y_center + 10]
-plot_data(torch.fft.ifftshift(H_re_stokes, dim=(-3, -2, -1)).numpy(), y_slices, './output.pdf')
+y_center = 128  # Assuming the middle index for Y dimension
+y_slices = [y_center, y_center, y_center]
+plot_data(
+    torch.fft.ifftshift(H_re_stokes, dim=(-3, -2, -1)).numpy(),
+    y_slices,
+    "./output.pdf",
+)
 
 # Simulate
 yx_star, yx_theta, _ = util.generate_star_target(
@@ -299,20 +308,122 @@ object = torch.zeros((3,) + zyx_shape)
 object[:, zyx_shape[0] // 2, ...] = center_slice_object
 
 # Simulate
+H = H_re_stokes[:, (0, 4, 8), ...]  # for transverse linear birefringence
 object_spectrum = torch.fft.fftn(object, dim=(-3, -2, -1))
-data_spectrum = torch.einsum(
-    "slzyx,lzyx->szyx", H_re_stokes[:, (0, 4, 8), ...], object_spectrum
-)
+data_spectrum = torch.einsum("slzyx,lzyx->szyx", H, object_spectrum)
 data = torch.fft.ifftn(data_spectrum, dim=(-3, -2, -1))
 
-v.add_image(object.numpy())
-v.add_image(torch.real(data).numpy())
-v.add_image(torch.imag(data).numpy())
+# Simple measurement space
+Hsvd = torch.movedim(H, (0, 1), (-2, -1))
+# Computing SVD...can simplify this
+print("Calculating SVD")
+_, Ssvd, _ = torch.linalg.svd(Hsvd, full_matrices=False)
+Hinv = torch.linalg.pinv(Hsvd)
+
+S_trunc = Ssvd > 5  # cutoff small singular values
+recon_spectrum = torch.einsum(
+    "zyxl,zyxls,szyx->lzyx", S_trunc, Hinv, data_spectrum
+)
+recon_object = torch.fft.ifftn(recon_spectrum, dim=(-3, -2, -1))
+
+# Tikhonov-regularized reconstruction (aka project onto measurement space)
+# print("Computing SVD")
+
+# # Correct reconstruction
+# reg = 1
+# S_reg = S / (S**2 + reg**2)
+# # recon_object_spectrum = torch.einsum("jkzyx,jzyx,ijzyx,izyx->kzyx", Vh, S_reg, torch.conj(U), data_spectrum)
+# recon_object_spectrum = torch.einsum(
+#     "kjzyx,jzyx,jizyx,izyx->kzyx", U, S_reg, Vh, data_spectrum
+# )
+
+# recon_object = torch.fft.ifftn(recon_object_spectrum, dim=(-3, -2, -1))
+
+
+# v.add_image(object.numpy())
+# v.add_image(torch.real(data).numpy())
+# v.add_image(torch.real(recon_object).numpy())
+# v.add_image(torch.imag(recon_object).numpy())
+
+# Plot
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.gridspec as gridspec
+
+
+def plot_3d_array_slices(data, filename="output.pdf"):
+    # Dimensions of the data
+    z_dim, y_dim, x_dim = data.shape
+
+    vmax = np.max(data)
+    vmin = np.min(data)
+
+    # Create the figure and define the subplots using GridSpec
+    fig = plt.figure(figsize=(10, 10))  # Adjust the overall size as necessary
+    gs = gridspec.GridSpec(
+        2, 2, height_ratios=[y_dim, z_dim], width_ratios=[x_dim, z_dim]
+    )
+
+    # XY view (Z slice through the middle)
+    ax1 = fig.add_subplot(gs[0, 0])
+    xy_slice = np.copy(data[z_dim // 2, :, :])
+    xy_slice[:, : x_dim // 3] = data[z_dim // 2 + 2, :, : x_dim // 3]
+    xy_slice[:, -x_dim // 3 :] = data[z_dim // 2 - 2, :, -x_dim // 3 :]
+
+    ax1.imshow(
+        xy_slice,
+        origin="upper",
+        cmap="gray",
+        extent=[0, x_dim, y_dim, 0],
+        vmin=vmin,
+        vmax=vmax,
+    )
+    ax1.axis("off")
+
+    # YZ view (X slice through the middle) - need to transpose and adjust extent
+    ax2 = fig.add_subplot(gs[0, 1])
+    yz_slice = np.flip(data[:, :, x_dim // 2].T, axis=1)
+    ax2.imshow(
+        yz_slice,
+        origin="upper",
+        cmap="gray",
+        extent=[0, z_dim, y_dim, 0],
+        vmin=vmin,
+        vmax=vmax,
+    )
+    ax2.axis("off")
+
+    # XZ view (Y slice through the middle) - need to transpose and adjust extent
+    ax3 = fig.add_subplot(gs[1, 0])
+    xz_slice = data[:, y_dim // 2, :]
+    ax3.imshow(
+        xz_slice,
+        origin="lower",
+        cmap="gray",
+        extent=[0, x_dim, z_dim, 0],
+        vmin=vmin,
+        vmax=vmax,
+    )
+    ax3.axis("off")
+
+    # Adjust layout
+    plt.tight_layout()
+    plt.savefig(filename, format="pdf")
+    plt.close(fig)
+
+
+for i, plot_data in enumerate(object):
+    plot_3d_array_slices(torch.real(plot_data).numpy(), f"object{i}.pdf")
+
+for i, plot_data in enumerate(data):
+    plot_3d_array_slices(torch.real(plot_data).numpy(), f"data{i}.pdf")
+
+for i, plot_data in enumerate(recon_object):
+    plot_3d_array_slices(torch.real(plot_data).numpy(), f"recon{i}.pdf")
 
 import pdb
 
 pdb.set_trace()
-
 
 zyx_data = phase_thick_3d.apply_transfer_function(
     zyx_phase,
