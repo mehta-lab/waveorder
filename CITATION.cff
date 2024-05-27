@@ -4,9 +4,7 @@
 cff-version: 1.2.0
 title: waveorder
 message: >-
-  A generalist library of wave optical models and inverse
-  algorithms for label-free imaging of density &
-  orientation.
+  Wave optical models and inverse algorithms for label-agnostic imaging of density & orientation.
 type: software
 authors:
   - given-names: Talon
@@ -71,6 +69,7 @@ keywords:
   - qlipp
   - mipolscope
   - simulation
+  - reconstruction
 license: BSD-3-Clause
 version: 2.1.0
 date-released: '2024-03-12'
