@@ -286,11 +286,11 @@ def plot_data(data, y_slices, filename):
 # Adjust y_slices according to your index base (check if your array index starts at 0)
 y_center = 128  # Assuming the middle index for Y dimension
 y_slices = [y_center, y_center, y_center]
-plot_data(
-    torch.fft.ifftshift(H_re_stokes, dim=(-3, -2, -1)).numpy(),
-    y_slices,
-    "./output.pdf",
-)
+# plot_data(
+#     torch.fft.ifftshift(H_re_stokes, dim=(-3, -2, -1)).numpy(),
+#     y_slices,
+#     "./output.pdf",
+# )
 
 # Simulate
 yx_star, yx_theta, _ = util.generate_star_target(
@@ -351,7 +351,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 
 
-def plot_3d_array_slices(data, filename="output.pdf"):
+def plot_3d_array_slices(data, z_shift=0, filename="output.pdf"):
     # Dimensions of the data
     z_dim, y_dim, x_dim = data.shape
 
@@ -366,9 +366,7 @@ def plot_3d_array_slices(data, filename="output.pdf"):
 
     # XY view (Z slice through the middle)
     ax1 = fig.add_subplot(gs[0, 0])
-    xy_slice = np.copy(data[z_dim // 2, :, :])
-    xy_slice[:, : x_dim // 3] = data[z_dim // 2 + 2, :, : x_dim // 3]
-    xy_slice[:, -x_dim // 3 :] = data[z_dim // 2 - 2, :, -x_dim // 3 :]
+    xy_slice = np.copy(data[z_dim // 2 - z_shift, :, :])
 
     ax1.imshow(
         xy_slice,
@@ -412,14 +410,21 @@ def plot_3d_array_slices(data, filename="output.pdf"):
     plt.close(fig)
 
 
-for i, plot_data in enumerate(object):
-    plot_3d_array_slices(torch.real(plot_data).numpy(), f"object{i}.pdf")
+for z_shift in [0, -2, 2]:
+    for i, plot_data in enumerate(object):
+        plot_3d_array_slices(
+            torch.real(plot_data).numpy(), z_shift, f"object{i}{z_shift}.pdf"
+        )
 
-for i, plot_data in enumerate(data):
-    plot_3d_array_slices(torch.real(plot_data).numpy(), f"data{i}.pdf")
+    for i, plot_data in enumerate(data):
+        plot_3d_array_slices(
+            torch.real(plot_data).numpy(), z_shift, f"data{i}{z_shift}.pdf"
+        )
 
-for i, plot_data in enumerate(recon_object):
-    plot_3d_array_slices(torch.real(plot_data).numpy(), f"recon{i}.pdf")
+    for i, plot_data in enumerate(recon_object):
+        plot_3d_array_slices(
+            torch.real(plot_data).numpy(), z_shift, f"recon{i}{z_shift}.pdf"
+        )
 
 import pdb
 
