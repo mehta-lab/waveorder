@@ -1,11 +1,12 @@
+# %%
+
 import torch
 import napari
 import numpy as np
 from waveorder import optics, util
-from waveorder.models import phase_thick_3d
 
 # Parameters
-# all lengths must use consistent units e.g. um
+# all lengths use consistent units e.g. um
 margin = 50
 simulation_arguments = {
     "zyx_shape": (129, 256, 256),
@@ -13,19 +14,13 @@ simulation_arguments = {
     "z_pixel_size": 0.1,
     "index_of_refraction_media": 1.25,
 }
-# phantom_arguments = {"index_of_refraction_sample": 1.50, "sphere_radius": 5}
 transfer_function_arguments = {
     "z_padding": 0,
     "wavelength_illumination": 0.5,
-    "numerical_aperture_illumination": 0.75,  # 75,
+    "numerical_aperture_illumination": 0.75,
     "numerical_aperture_detection": 1.0,
 }
 input_jones = torch.tensor([0.0 + 1.0j, 1.0 + 0j])
-
-# # Create a phantom
-# zyx_phase = phase_thick_3d.generate_test_phantom(
-#     **simulation_arguments, **phantom_arguments
-# )
 
 # Convert
 zyx_shape = simulation_arguments["zyx_shape"]
@@ -123,42 +118,7 @@ G = optics.generate_defocus_greens_tensor(
     lambda_in=wavelength_illumination / index_of_refraction_media,
 )
 
-# window = torch.fft.ifftshift(
-#    torch.hann_window(z_position_list.shape[0], periodic=False)
-# )
-
-# ###### LATEST
-
-# # abs() and *(1j) are hacks to correct for tricky phase shifts
-# P_3D = torch.abs(torch.fft.ifft(P, dim=-3)).type(torch.complex64)
-# G_3D = torch.abs(torch.fft.ifft(G, dim=-3)) * (-1j)
-# S_3D = torch.fft.ifft(S, dim=-3)
-
-# # Normalize
-# P_3D /= torch.amax(torch.abs(P_3D))
-# G_3D /= torch.amax(torch.abs(G_3D))
-# S_3D /= torch.amax(torch.abs(S_3D))
-
-# # Main part
-# PG_3D = torch.einsum("ijzyx,jpzyx->ipzyx", P_3D, G_3D)
-# PS_3D = torch.einsum("jlzyx,lzyx,kzyx->jlzyx", P_3D, S_3D, torch.conj(S_3D))
-
-# # PG_3D /= torch.amax(torch.abs(PG_3D))
-# # PS_3D /= torch.amax(torch.abs(PS_3D))
-
-# pg = torch.fft.fftn(PG_3D, dim=(-3, -2, -1))
-# ps = torch.fft.fftn(PS_3D, dim=(-3, -2, -1))
-
-# H1 = torch.fft.ifftn(
-#     torch.einsum("ipzyx,jkzyx->ijpkzyx", pg, torch.conj(ps)),
-#     dim=(-3, -2, -1),
-# )
-
-# H2 = torch.fft.ifftn(
-#     torch.einsum("ikzyx,jpzyx->ijpkzyx", ps, torch.conj(pg)),
-#     dim=(-3, -2, -1),
-# )
-
+# %%
 # MAY 12 Simplified
 P_3D = torch.abs(torch.fft.ifft(sP, dim=-3)).type(torch.complex64)
 G_3D = torch.abs(torch.fft.ifft(G, dim=-3)) * (-1j)
@@ -241,11 +201,12 @@ def view_transfer_function(
     # v.dims.order = (2, 1, 0)
 
 
-# view_transfer_function(H_re_stokes)
+view_transfer_function(H_re_stokes)
 # view_transfer_function(G_3D)
 # view_transfer_function(H_re)
 # view_transfer_function(P_3D)
 
+# %%
 # PLOT transfer function
 import numpy as np
 import matplotlib.pyplot as plt
@@ -345,6 +306,7 @@ recon_object = torch.fft.ifftn(recon_spectrum, dim=(-3, -2, -1))
 # v.add_image(torch.real(recon_object).numpy())
 # v.add_image(torch.imag(recon_object).numpy())
 
+# %%
 # Plot
 import numpy as np
 import matplotlib.pyplot as plt
@@ -429,26 +391,3 @@ for z_shift in [0, -2, 2]:
 import pdb
 
 pdb.set_trace()
-
-zyx_data = phase_thick_3d.apply_transfer_function(
-    zyx_phase,
-    real_potential_transfer_function,
-    transfer_function_arguments["z_padding"],
-    brightness=1e3,
-)
-
-# Reconstruct
-zyx_recon = phase_thick_3d.apply_inverse_transfer_function(
-    zyx_data,
-    real_potential_transfer_function,
-    imag_potential_transfer_function,
-    transfer_function_arguments["z_padding"],
-)
-
-# Display
-viewer.add_image(zyx_phase.numpy(), name="Phantom", scale=zyx_scale)
-viewer.add_image(zyx_data.numpy(), name="Data", scale=zyx_scale)
-viewer.add_image(zyx_recon.numpy(), name="Reconstruction", scale=zyx_scale)
-input("Showing object, data, and recon. Press <enter> to quit...")
-
-# %%
