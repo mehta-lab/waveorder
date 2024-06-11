@@ -51,7 +51,7 @@ Please cite this repository, along with the relevant preprint or paper, if you u
 (Optional but recommended) install [anaconda](https://www.anaconda.com/products/distribution) and create a virtual environment:
 
 ```sh
-conda create -y -n waveorder python=3.9
+conda create -y -n waveorder python=3.11
 conda activate waveorder
 ```
 
