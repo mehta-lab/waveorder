@@ -1,3 +1,4 @@
+# WIP for the most general case
 # %%
 
 import torch
@@ -205,7 +206,7 @@ view_transfer_function(H_re_stokes)
 # view_transfer_function(G_3D)
 # view_transfer_function(H_re)
 # view_transfer_function(P_3D)
-
+import pdb; pdb.set_trace()
 # %%
 # PLOT transfer function
 import numpy as np
