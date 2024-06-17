@@ -160,7 +160,6 @@ def instrument_matrix_calibration(I_cali_norm, I_meas):
 
 
 class waveorder_microscopy:
-
     """
 
        waveorder_microscopy contains reconstruction algorithms for label-free
@@ -732,9 +731,7 @@ class waveorder_microscopy:
                 wave_vec_norm_x = self.lambda_illu * self.fxx
                 wave_vec_norm_y = self.lambda_illu * self.fyy
                 wave_vec_norm_z = (
-                    np.maximum(
-                        0, 1 - wave_vec_norm_x**2 - wave_vec_norm_y**2
-                    )
+                    np.maximum(0, 1 - wave_vec_norm_x**2 - wave_vec_norm_y**2)
                 ) ** (0.5)
 
                 incident_theta = np.arctan2(
@@ -1005,7 +1002,7 @@ class waveorder_microscopy:
             .numpy()
             .transpose((1, 2, 0))
         )
-        G_tensor_z = gen_dyadic_Greens_tensor_z(
+        G_tensor_z = generate_defocus_greens_tensor(
             self.fxx, self.fyy, G_fun_z, self.Pupil_support, self.lambda_illu
         )
 
@@ -4017,9 +4014,7 @@ class fluorescence_microscopy:
             S1_stack = cp.array(S1_stack)
             S2_stack = cp.array(S2_stack)
 
-            anisotropy = cp.asnumpy(
-                0.5 * cp.sqrt(S1_stack**2 + S2_stack**2)
-            )
+            anisotropy = cp.asnumpy(0.5 * cp.sqrt(S1_stack**2 + S2_stack**2))
             orientation = cp.asnumpy(
                 (0.5 * cp.arctan2(S2_stack, S1_stack)) % np.pi
             )
