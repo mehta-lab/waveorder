@@ -168,9 +168,16 @@ def calculate_transfer_function(
         "sik,ikpjzyx,lpj->slzyx", s, H_re, Y
     )
 
+    # Compute regularized inverse filter
+    print("Computing SVD")
+    ZYXsf_transfer_function = sfZYX_transfer_function.permute(2, 3, 4, 0, 1)
+    U, S, Vh = torch.linalg.svd(ZYXsf_transfer_function, full_matrices=False)
+    S /= torch.max(S)
+    singular_system = (U, S, Vh)
+
     # transfer function
     return (
-        sfZYX_transfer_function,
+        singular_system,
         intensity_to_stokes_matrix,
     )  # (3 stokes, 3 object, Z, Y, X)
 
@@ -226,20 +233,15 @@ def apply_transfer_function(
 
 def apply_inverse_transfer_function(
     szyx_data: Tensor,
-    sfZYX_transfer_function: Tensor,
+    singular_system: tuple[Tensor],
     intensity_to_stokes_matrix: Tensor,
     regularization_strength: float = 1e-3,
 ):
     sZYX_data = torch.fft.fftn(szyx_data, dim=(1, 2, 3))
-    ZYXsf_transfer_function = sfZYX_transfer_function.permute(2, 3, 4, 0, 1)
-
-    # Compute regularized inverse filter
-    print("Computing SVD")
-    U, S, Vh = torch.linalg.svd(ZYXsf_transfer_function, full_matrices=False)
-    S /= torch.max(S)
 
     # Key computation
     print("Computing inverse filter")
+    U, S, Vh = singular_system
     S_reg = S / (S**2 + regularization_strength**2)
     ZYXsf_inverse_filter = -torch.einsum(
         "zyxij,zyxj,zyxjk->zyxki", U, S_reg, Vh
