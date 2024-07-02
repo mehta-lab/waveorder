@@ -43,7 +43,7 @@ from recOrder.calib.calibration_workers import (
 )
 from recOrder.io.core_functions import set_lc_state, snap_and_average
 from recOrder.io.metadata_reader import MetadataReader
-from recOrder.io.utils import ret_ori_overlay
+from recOrder.io.visualization import ret_ori_overlay
 from recOrder.plugin import gui
 
 # avoid runtime import error
@@ -240,44 +240,6 @@ class MainWidget(QWidget):
         self.ui.retMaxSlider.sliderMoved[int].connect(
             self.handle_ret_max_slider_move
         )
-
-        # Commenting for 0.3.0. Consider debugging or deleting for 1.0.0.
-        # self.ui.cb_colormap.currentIndexChanged[int].connect(
-        #     self.enter_colormap
-        # )
-        # self.ui.chb_display_volume.stateChanged[int].connect(
-        #     self.enter_use_full_volume
-        # )
-        # self.ui.le_overlay_slice.editingFinished.connect(
-        #     self.enter_display_slice
-        # )
-        # self.ui.slider_value.sliderMoved[tuple].connect(
-        #     self.handle_val_slider_move
-        # )
-        # self.ui.slider_saturation.sliderMoved[tuple].connect(
-        #     self.handle_sat_slider_move
-        # )
-
-        # Display Tab (Commenting to suppress warnings. Consider debugging or deleting for 1.0.0.)
-        # self.viewer.layers.events.inserted.connect(
-        #    self._add_layer_to_display_boxes
-        # )
-        # self.viewer.layers.events.removed.connect(
-        #    self._remove_layer_from_display_boxes
-        # )
-        # self.ui.qbutton_create_overlay.clicked[bool].connect(
-        #    self.create_overlay
-        # )
-        # self.ui.cb_saturation.currentIndexChanged[int].connect(
-        #    self.update_sat_scale
-        # )
-        # self.ui.cb_value.currentIndexChanged[int].connect(
-        #    self.update_value_scale
-        # )
-        # self.ui.le_sat_max.editingFinished.connect(self.enter_sat_max)
-        # self.ui.le_sat_min.editingFinished.connect(self.enter_sat_min)
-        # self.ui.le_val_max.editingFinished.connect(self.enter_val_max)
-        # self.ui.le_val_min.editingFinished.connect(self.enter_val_min)
 
         # Reconstruction tab
         self.ui.cb_phase_denoiser.currentIndexChanged[int].connect(
@@ -717,62 +679,6 @@ class MainWidget(QWidget):
 
     def _update_calib(self, val):
         self.calib = val
-
-    # Commenting for 0.3.0. Consider debuging or removing for 1.0.0.
-    # def _add_layer_to_display_boxes(self, val):
-    #     """
-    #     When a new napari layer is added to recOrder, update the Display Tab combo boxes with these layers.
-    #     This will allow the user to then choose which layers it wants to use for the overlay.  Will skip over
-    #     any layers that are already an 'Overlay'.  This function is connected to a napari.Layer signal
-
-    #     Parameters
-    #     ----------
-    #     val:            (napari.Layer) layer that was added [not used]
-
-    #     Returns
-    #     -------
-
-    #     """
-
-    #     for layer in self.viewer.layers:
-    #         if "Overlay" in layer.name:
-    #             continue
-    #         if layer.name not in [
-    #             self.ui.cb_hue.itemText(i)
-    #             for i in range(self.ui.cb_hue.count())
-    #         ]:
-    #             self.ui.cb_hue.addItem(layer.name)
-    #         if layer.name not in [
-    #             self.ui.cb_saturation.itemText(i)
-    #             for i in range(self.ui.cb_saturation.count())
-    #         ]:
-    #             self.ui.cb_saturation.addItem(layer.name)
-    #         if layer.name not in [
-    #             self.ui.cb_value.itemText(i)
-    #             for i in range(self.ui.cb_value.count())
-    #         ]:
-    #             self.ui.cb_value.addItem(layer.name)
-
-    # def _remove_layer_from_display_boxes(self, val):
-    #     """
-    #     When a napari layer is removed from napari, remove the corresponding layer from Display Tab combo boxes.
-
-    #     Parameters
-    #     ----------
-    #     val:            (napari.Layer) layer that was removed by the user
-
-    #     Returns
-    #     -------
-
-    #     """
-
-    #     for i in range(self.ui.cb_hue.count()):
-    #         if val.value.name in self.ui.cb_hue.itemText(i):
-    #             self.ui.cb_hue.removeItem(i)
-    #         if val.value.name in self.ui.cb_saturation.itemText(i):
-    #             self.ui.cb_saturation.removeItem(i)
-    #         if val.value.name in self.ui.cb_value.itemText(i):
-    #             self.ui.cb_value.removeItem(i)
 
     def _check_line_edit(self, name):
         """
@@ -1264,19 +1170,23 @@ class MainWidget(QWidget):
 
     def update_overlay_dask_array(self):
         self.rgb_chunks = (
-            (self.overlay_retardance.ndim - 2) * (1,)
+            (3,)
+            + (self.overlay_retardance.ndim - 2) * (1,)
             + self.overlay_retardance.shape[-2:]
-            + (3,)
         )
         overlay = da.map_blocks(
             ret_ori_overlay,
-            self.overlay_retardance,
-            self.overlay_orientation,
-            chunks=self.rgb_chunks,
-            new_axis=-1,
+            np.stack((self.overlay_retardance, self.overlay_orientation)),
             ret_max=self.ret_max,
             cmap=self.colormap,
+            chunks=self.rgb_chunks,
+            dtype=np.float32,
+            drop_axis=0,
+            new_axis=0,
         )
+
+        overlay = da.moveaxis(overlay, source=0, destination=-1)
+
         self._add_or_update_image_layer(
             overlay, self.overlay_name, cmap="rgb", scale=self.overlay_scale
         )
@@ -1801,88 +1711,6 @@ class MainWidget(QWidget):
             self.ui.le_calibration_metadata.setStyleSheet("")
             self.calib_path = entry
 
-    # Comment for 0.3.0. Consider debugging or deleting for 1.0.0.
-    # @Slot()
-    # def enter_colormap(self):
-    #     """
-    #     Handles the update of the display colormap.  Will display different png image legend
-    #     depending on the colormap choice.
-
-    #     Returns
-    #     -------
-
-    #     """
-
-    #     prev_cmap = self.colormap
-    #     state = self.ui.cb_colormap.currentIndex()
-    #     if state == 0:
-    #         self.ui.label_orientation_image.setPixmap(self.jch_pixmap)
-    #         self.colormap = "JCh"
-    #     else:
-    #         self.ui.label_orientation_image.setPixmap(self.hsv_pixmap)
-    #         self.colormap = "HSV"
-
-    #     # Update the birefringence overlay to new colormap if the colormap has changed
-    #     if prev_cmap != self.colormap:
-    #         # TODO: Handle case where there are multiple snaps
-    #         if "BirefringenceOverlay2D" in self.viewer.layers:
-    #             if (
-    #                 "Retardance2D" in self.viewer.layers
-    #                 and "Orientation2D" in self.viewer.layers
-    #             ):
-
-    #                 overlay = ret_ori_overlay(
-    #                     retardance=self.viewer.layers["Retardance2D"].data,
-    #                     orientation=self.viewer.layers["Orientation2D"].data,
-    #                     ret_max=np.percentile(
-    #                         self.viewer.layers["Retardance2D"].data, 99.99
-    #                     ),
-    #                     cmap=self.colormap,
-    #                 )
-
-    #                 self.viewer.layers["BirefringenceOverlay2D"].data = overlay
-
-    # @Slot(int)
-    # def enter_use_full_volume(self):
-    #     state = self.ui.chb_display_volume.checkState()
-
-    #     if state == 2:
-    #         self.ui.le_overlay_slice.clear()
-    #         self.ui.le_overlay_slice.setEnabled(False)
-    #         self.use_full_volume = False
-    #     else:
-    #         self.ui.le_overlay_slice.setEnabled(True)
-    #         self.use_full_volume = True
-
-    # @Slot()
-    # def enter_display_slice(self):
-    #     slice = int(self.ui.le_overlay_slice.text())
-    #     self.display_slice = slice
-
-    # @Slot()
-    # def enter_sat_min(self):
-    #     val = float(self.ui.le_sat_min.text())
-    #     slider_val = self.ui.slider_saturation.value()
-    #     self.ui.slider_saturation.setValue((val, slider_val[1]))
-
-    # @Slot()
-    # def enter_sat_max(self):
-    #     val = float(self.ui.le_sat_max.text())
-    #     slider_val = self.ui.slider_saturation.value()
-    #     self.ui.slider_saturation.setValue((slider_val[0], val))
-
-    # @Slot()
-    # def enter_val_min(self):
-    #     val = float(self.ui.le_val_min.text())
-    #     slider_val = self.ui.slider_value.value()
-    #     self.ui.slider_value.setValue((val, slider_val[1]))
-
-    # @Slot()
-    # def enter_val_max(self):
-    #     val = float(self.ui.le_val_max.text())
-    #     slider_val = self.ui.slider_value.value()
-    #     self.ui.slider_value.setValue((slider_val[0], val))
-
     @Slot(bool)
     def push_note(self):
         """
@@ -2258,124 +2086,6 @@ class MainWidget(QWidget):
     def handle_ret_max_slider_move(self, value):
         self.ret_max = value
         self.update_overlay_dask_array()
-
-    # Commenting for 0.3.0. Consider debugging or deleting for 1.0.0.
-    # @Slot(int)
-    # def update_sat_scale(self):
-    #     idx = self.ui.cb_saturation.currentIndex()
-    #     if idx != -1:
-    #         layer = self.ui.cb_saturation.itemText(idx)
-    #         data = self.viewer.layers[layer].data
-    #         min_, max_ = np.min(data), np.max(data)
-    #         self.ui.slider_saturation.setMinimum(min_)
-    #         self.ui.slider_saturation.setMaximum(max_)
-    #         self.ui.slider_saturation.setSingleStep((max_ - min_) / 250)
-    #         self.ui.slider_saturation.setValue((min_, max_))
-    #         self.ui.le_sat_max.setText(str(np.round(max_, 3)))
-    #         self.ui.le_sat_min.setText(str(np.round(min_, 3)))
-
-    # @Slot(int)
-    # def update_value_scale(self):
-    #     idx = self.ui.cb_value.currentIndex()
-    #     if idx != -1:
-    #         layer = self.ui.cb_value.itemText(idx)
-    #         data = self.viewer.layers[layer].data
-    #         min_, max_ = np.min(data), np.max(data)
-    #         self.ui.slider_value.setMinimum(min_)
-    #         self.ui.slider_value.setMaximum(max_)
-    #         self.ui.slider_value.setSingleStep((max_ - min_) / 250)
-    #         self.ui.slider_value.setValue((min_, max_))
-    #         self.ui.le_val_max.setText(str(np.round(max_, 3)))
-    #         self.ui.le_val_min.setText(str(np.round(min_, 3)))
-
-    # @Slot(bool)
-    # def create_overlay(self):
-    #     """
-    #     Creates HSV or JCh overlay with the specified channels from the combo boxes.  Will compute and then
-    #     display the overlay in napari.
-
-    #     Returns
-    #     -------
-
-    #     """
-
-    #     if (
-    #         self.ui.cb_hue.count() == 0
-    #         or self.ui.cb_saturation.count() == 0
-    #         or self.ui.cb_value == 0
-    #     ):
-    #         raise ValueError(
-    #             "Cannot create overlay until all 3 combo boxes are populated"
-    #         )
-
-    #     # Gather channel data
-    #     H = self.viewer.layers[
-    #         self.ui.cb_hue.itemText(self.ui.cb_hue.currentIndex())
-    #     ].data
-    #     S = self.viewer.layers[
-    #         self.ui.cb_saturation.itemText(
-    #             self.ui.cb_saturation.currentIndex()
-    #         )
-    #     ].data
-    #     V = self.viewer.layers[
-    #         self.ui.cb_value.itemText(self.ui.cb_value.currentIndex())
-    #     ].data
-
-    #     # TODO: this is a temp fix which handles on data with n-dimensions of 4, 3, or 2 which automatically
-    #     # chooses the first timepoint
-    #     if H.ndim > 2 or S.ndim > 2 or V.ndim > 2:
-    #         if H.ndim == 4:
-    #             # assumes this is a (T, Z, Y, X) array read from napari-ome-zarr
-    #             H = (
-    #                 H[0, self.display_slice]
-    #                 if not self.use_full_volume
-    #                 else H[0]
-    #             )
-    #         if S.ndim == 4:
-    #             S = (
-    #                 S[0, self.display_slice]
-    #                 if not self.use_full_volume
-    #                 else S[0]
-    #             )
-    #         if V.ndim == 4:
-    #             V = (
-    #                 V[0, self.display_slice]
-    #                 if not self.use_full_volume
-    #                 else V[0]
-    #             )
-
-    #         if H.ndim == 3:
-    #             # assumes this is a (Z, Y, X) array collected from acquisition module
-    #             H = H[self.display_slice] if not self.use_full_volume else H
-
-    #         if S.ndim == 3:
-    #             S = S[self.display_slice] if not self.use_full_volume else S
-
-    #         if S.ndim == 3:
-    #             S = S[self.display_slice] if not self.use_full_volume else S
-
-    #     mode = "2D" if not self.use_full_volume else "3D"
-
-    #     H_name = self.ui.cb_hue.itemText(self.ui.cb_hue.currentIndex())
-    #     H_scale = (
-    #         (np.min(H), np.max(H))
-    #         if "Orientation" not in H_name
-    #         else (0, np.pi)
-    #     )
-    #     S_scale = self.ui.slider_saturation.value()
-    #     V_scale = self.ui.slider_value.value()
-
-    #     hsv_image = generic_hsv_overlay(
-    #         H, S, V, H_scale, S_scale, V_scale, mode=mode
-    #     )
-
-    #     # Create overlay layer name
-    #     idx = 0
-    #     while f"HSV_Overlay_{idx}" in self.viewer.layers:
-    #         idx += 1
-
-    #     # add overlay image to napari
-    #     self.viewer.add_image(hsv_image, name=f"HSV_Overlay_{idx}", rgb=True)
 
     @Slot(tuple)
     def update_dims(self, dims):
