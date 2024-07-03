@@ -4,30 +4,32 @@
 cff-version: 1.2.0
 title: waveorder
 message: >-
-  A generalist library of wave optical models and inverse
-  algorithms for label-free imaging of density &
-  orientation.
+  Wave optical models and inverse algorithms for label-agnostic imaging of density & orientation.
 type: software
 authors:
-  - given-names: Li-Hao
-    family-names: Yeh
-    affiliation: CZ Biohub
-    orcid: 'https://orcid.org/0000-0003-2803-5996'
   - given-names: Talon
     family-names: Chandler
-    affiliation: CZ Biohub
+    affiliation: Chan Zuckerberg Biohub San Francisco
     orcid: 'https://orcid.org/0000-0002-3033-674X'
+  - given-names: Li-Hao
+    family-names: Yeh
+    affiliation: Chan Zuckerberg Biohub San Francisco
+    orcid: 'https://orcid.org/0000-0003-2803-5996'
   - given-names: Ivan
     family-names: Ivanov
-    affiliation: CZ Biohub
+    affiliation: Chan Zuckerberg Biohub San Francisco
     orcid: 'https://orcid.org/0000-0002-4675-5287'
   - given-names: Cameron
     family-names: Foltz
-    affiliation: CZ Biohub
+    affiliation: Chan Zuckerberg Biohub San Francisco
     orcid: 'https://orcid.org/0000-0001-8933-2172'
+  - given-names: Ziwen
+    family-names: Liu
+    affiliation: Chan Zuckerberg Biohub San Francisco
+    orcid: 'https://orcid.org/0000-0001-7482-1299'
   - given-names: Shalin
     family-names: Mehta
-    affiliation: CZ Biohub
+    affiliation: Chan Zuckerberg Biohub San Francisco
     orcid: 'https://orcid.org/0000-0002-2542-3582'
 identifiers:
   - type: doi
@@ -67,6 +69,7 @@ keywords:
   - qlipp
   - mipolscope
   - simulation
+  - reconstruction
 license: BSD-3-Clause
-version: 1.0.0rc1
-date-released: '2023-02-22'
+version: 2.1.0
+date-released: '2024-03-12'
