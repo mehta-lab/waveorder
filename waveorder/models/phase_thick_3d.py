@@ -12,7 +12,6 @@ def generate_test_phantom(
     zyx_shape,
     yx_pixel_size,
     z_pixel_size,
-    wavelength_illumination,
     index_of_refraction_media,
     index_of_refraction_sample,
     sphere_radius,
@@ -24,12 +23,9 @@ def generate_test_phantom(
         radius=sphere_radius,
         blur_size=2 * yx_pixel_size,
     )
-    zyx_phase = (
-        sphere
-        * (index_of_refraction_sample - index_of_refraction_media)
-        * z_pixel_size
-        / wavelength_illumination
-    )  # phase in radians
+    zyx_phase = sphere * (
+        index_of_refraction_sample - index_of_refraction_media
+    )  # refractive index increment
 
     return zyx_phase
 
@@ -120,12 +116,19 @@ def visualize_transfer_function(
 
 
 def apply_transfer_function(
-    zyx_object, real_potential_transfer_function, z_padding
+    zyx_object, real_potential_transfer_function, z_padding, brightness
 ):
     # This simplified forward model only handles phase, so it resuses the fluorescence forward model
     # TODO: extend to absorption
-    return isotropic_fluorescent_thick_3d.apply_transfer_function(
-        zyx_object, real_potential_transfer_function, z_padding
+    return (
+        isotropic_fluorescent_thick_3d.apply_transfer_function(
+            zyx_object,
+            real_potential_transfer_function,
+            z_padding,
+            background=0,
+        )
+        * brightness
+        + brightness
     )
 
 
@@ -134,8 +137,6 @@ def apply_inverse_transfer_function(
     real_potential_transfer_function: Tensor,
     imaginary_potential_transfer_function: Tensor,
     z_padding: int,
-    z_pixel_size: float,  # TODO: MOVE THIS PARAM TO OTF? (leaky param)
-    wavelength_illumination: float,  # TOOD: MOVE THIS PARAM TO OTF? (leaky param)
     absorption_ratio: float = 0.0,
     reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
     regularization_strength: float = 1e-3,
@@ -158,14 +159,6 @@ def apply_inverse_transfer_function(
     z_padding : int
         Padding for axial dimension. Use zero for defocus stacks that
         extend ~3 PSF widths beyond the sample. Pad by ~3 PSF widths otherwise.
-    z_pixel_size : float
-        spacing between axial samples in sample space
-        units must be consistent with wavelength_illumination
-        TODO: move this leaky parameter to calculate_transfer_function
-    wavelength_illumination : float,
-        illumination wavelength
-        units must be consistent with z_pixel_size
-        TODO: move this leaky parameter to calculate_transfer_function
     absorption_ratio : float, optional,
         Absorption-to-phase ratio in the sample.
         Use default 0 for purely phase objects.
@@ -223,4 +216,4 @@ def apply_inverse_transfer_function(
     if z_padding != 0:
         f_real = f_real[z_padding:-z_padding]
 
-    return f_real * z_pixel_size / 4 / np.pi * wavelength_illumination
+    return f_real

@@ -6,13 +6,13 @@ from waveorder.models import isotropic_fluorescent_thick_3d
 # Parameters
 # all lengths must use consistent units e.g. um
 simulation_arguments = {
-    "zyx_shape": (100, 256, 256),
+    "zyx_shape": (200, 256, 256),
     "yx_pixel_size": 6.5 / 63,
     "z_pixel_size": 0.25,
 }
 phantom_arguments = {"sphere_radius": 5}
 transfer_function_arguments = {
-    "wavelength_illumination": 0.532,
+    "wavelength_emission": 0.532,
     "z_padding": 0,
     "index_of_refraction_media": 1.3,
     "numerical_aperture_detection": 1.2,
