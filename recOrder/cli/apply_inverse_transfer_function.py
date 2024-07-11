@@ -26,8 +26,10 @@ from recOrder.cli.utils import (
 from recOrder.io import utils
 
 
-def _check_background_consistency(background_shape, data_shape):
-    data_cyx_shape = (data_shape[1],) + data_shape[3:]
+def _check_background_consistency(
+    background_shape, data_shape, input_channel_names
+):
+    data_cyx_shape = (len(input_channel_names),) + data_shape[3:]
     if background_shape != data_cyx_shape:
         raise ValueError(
             f"Background shape {background_shape} does not match data shape {data_cyx_shape}"
@@ -168,7 +170,9 @@ def apply_inverse_transfer_function_single_position(
         if background_path != "":
             cyx_no_sample_data = utils.load_background(background_path)
             _check_background_consistency(
-                cyx_no_sample_data.shape, input_dataset.data.shape
+                cyx_no_sample_data.shape,
+                input_dataset.data.shape,
+                settings.input_channel_names,
             )
         else:
             cyx_no_sample_data = None
