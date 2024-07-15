@@ -11,7 +11,7 @@ def ret_ori_overlay(
     czyx,
     ret_min: float = 1,
     ret_max: Union[float, Literal["auto"]] = 10,
-    cmap: Literal["JCh", "HSV"] = "JCh",
+    cmap: Literal["JCh", "HSV"] = "HSV",
 ):
     """
     Creates an overlay of retardance and orientation with two different colormap options.
