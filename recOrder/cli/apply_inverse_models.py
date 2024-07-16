@@ -1,6 +1,7 @@
 """
 This module converts recOrder's reconstructions into waveorder calls
 """
+
 import numpy as np
 import torch
 from waveorder.models import (
@@ -99,8 +100,6 @@ def phase(
             real_potential_transfer_function,
             imaginary_potential_transfer_function,
             z_padding=settings_phase.transfer_function.z_padding,
-            z_pixel_size=settings_phase.transfer_function.z_pixel_size,
-            wavelength_illumination=settings_phase.transfer_function.wavelength_illumination,
             **settings_phase.apply_inverse.dict(),
         )
 
@@ -213,8 +212,6 @@ def birefringence_and_phase(
             real_potential_transfer_function,
             imaginary_potential_transfer_function,
             z_padding=settings_phase.transfer_function.z_padding,
-            z_pixel_size=settings_phase.transfer_function.z_pixel_size,
-            wavelength_illumination=settings_phase.transfer_function.wavelength_illumination,
             **settings_phase.apply_inverse.dict(),
         )
 

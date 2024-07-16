@@ -1,7 +1,7 @@
 import os
 from typing import List, Literal, Optional, Union
 
-from pydantic import (
+from pydantic.v1 import (
     BaseModel,
     Extra,
     NonNegativeFloat,
