@@ -177,14 +177,15 @@ def calculate_transfer_function(
 
     # transfer function
     return (
-        singular_system,
+        singular_system, # (3 stokes, 3 object, Z, Y, X)
+        sfZYX_transfer_function, 
         intensity_to_stokes_matrix,
-    )  # (3 stokes, 3 object, Z, Y, X)
-
+    )  
 
 def visualize_transfer_function(viewer, sfZYX_transfer_function, zyx_scale):
     shift_dims = (-3, -2, -1)
     lim = torch.max(torch.abs(sfZYX_transfer_function)) * 0.9
+
 
     viewer.add_image(
         torch.fft.ifftshift(

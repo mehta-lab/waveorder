@@ -9,7 +9,7 @@ from waveorder.models import (
 # Parameters
 # all lengths must use consistent units e.g. um
 oversample_factor = 2
-zyx_shape = (100, 256, 256)
+zyx_shape = (50, 128, 128) # (100, 256, 256)
 swing = 0.1
 scheme = "5-State"
 yx_pixel_size = 0.325 / oversample_factor  # 0.325
@@ -26,7 +26,7 @@ fzyx_object = inplane_oriented_thick_pol3d_vector.generate_test_phantom(
 )
 
 # Calculate transfer function
-sfZYX_transfer_function, intensity_to_stokes_matrix = (
+singular_system, sfZYX_transfer_function, intensity_to_stokes_matrix = (
     inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
         swing,
         scheme,
@@ -49,7 +49,7 @@ inplane_oriented_thick_pol3d_vector.visualize_transfer_function(
     zyx_scale=(z_pixel_size, yx_pixel_size, yx_pixel_size),
 )
 
-# input("Showing transfer functions. Press <enter> to continue...")
+input("Showing transfer functions. Press <enter> to continue...")
 viewer.layers.select_all()
 viewer.layers.remove_selected()
 
@@ -64,7 +64,7 @@ szyx_data = inplane_oriented_thick_pol3d_vector.apply_transfer_function(
 fzyx_object_recon = (
     inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
         szyx_data,
-        sfZYX_transfer_function,
+        singular_system,
         intensity_to_stokes_matrix,
         regularization_strength=1e-1,
     )
