@@ -72,6 +72,7 @@ def calculate_transfer_function(
         det_pupil,
         wavelength_illumination / index_of_refraction_media,
         z_position_list,
+        axially_even=False,
     )
 
     (

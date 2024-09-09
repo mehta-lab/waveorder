@@ -422,7 +422,8 @@ def generate_propagation_kernel(
 
 
 def generate_greens_function_z(
-    radial_frequencies, pupil_support, wavelength_illumination, z_position_list
+    radial_frequencies, pupil_support, wavelength_illumination, z_position_list, 
+    axially_even=True,
 ):
     """
 
@@ -439,8 +440,13 @@ def generate_greens_function_z(
         wavelength_illumination       : float
                         wavelength of the light in the immersion media
 
-        z_position_list      : torch.tensor or list
+        z_position_list : torch.tensor or list
                         1D array of defocused z position with the size of (Z,)
+
+        axially_even    : bool
+                        For backwards compatibility with legacy phase reconstruction.
+                        Ideally the legacy phase reconstruction should be unified with 
+                        the new reconstructions, and this parameter should be removed.
 
     Returns
     -------
@@ -454,18 +460,17 @@ def generate_greens_function_z(
         * pupil_support
     ) ** (1 / 2) / wavelength_illumination
 
+    if axially_even:
+        z_positions = torch.abs(torch.tensor(z_position_list)[:, None, None])
+    else:
+        z_positions = torch.tensor(z_position_list)[:, None, None]
+        
     greens_function_z = (
         -1j
         / 4
         / np.pi
         * pupil_support[None, :, :]
-        * torch.exp(
-            1j
-            * 2
-            * np.pi
-            * torch.abs(torch.tensor(z_position_list)[:, None, None])
-            * oblique_factor[None, :, :]
-        )
+        * torch.exp(1j * 2 * np.pi * z_positions * oblique_factor[None, :, :])
         / (oblique_factor[None, :, :] + 1e-15)
     )
 
