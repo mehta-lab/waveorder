@@ -1,5 +1,6 @@
 from typing import Literal
 
+import numpy as np
 import torch
 from torch import Tensor
 
@@ -76,9 +77,12 @@ def visualize_transfer_function(viewer, optical_transfer_function, zyx_scale):
             name=array[1],
             colormap="bwr",
             contrast_limits=(-lim, lim),
-            scale=1 / zyx_scale,
+            scale=1/(np.array(zyx_scale) * np.array(optical_transfer_function.shape[-3:])),
         )
-    viewer.dims.order = (0, 1, 2)
+
+    Z, Y, X = optical_transfer_function.shape
+    viewer.dims.current_step = (Z // 2, Y // 2, X // 2)
+    viewer.dims.order = (2, 0, 1)
 
 
 def apply_transfer_function(
