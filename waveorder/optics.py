@@ -365,7 +365,7 @@ def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA=0.1):
             illu_list.append(i)
             first_idx = False
         elif (
-            np.product(
+            np.prod(
                 (NAx_list[i] - NAx_list[illu_list]) ** 2
                 + (NAy_list[i] - NAy_list[illu_list]) ** 2
                 >= subsampled_NA**2
