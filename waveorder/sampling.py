@@ -42,9 +42,11 @@ def axial_nyquist(
 ):
     """Axial Nyquist sample spacing in `wavelength_emission` units.
 
-    For widefield microscopes, the axial Nyquist sample spacing is:
+    For widefield microscopes, the axial Nyquist cutoff frequency is:
 
-    (n/lambda) - sqrt( (n/lambda)^2 - (NA_det/lambda)^2 ).
+    (n/lambda) - sqrt( (n/lambda)^2 - (NA_det/lambda)^2 ),
+
+    and the axial Nyquist sample spacing is 1 / (2 * cutoff_frequency).
 
     Perhaps surprisingly, the axial Nyquist sample spacing is independent of
     the illumination numerical aperture.
@@ -63,10 +65,11 @@ def axial_nyquist(
 
     """
     n_on_lambda = index_of_refraction_media / wavelength_emission
-    return n_on_lambda - np.sqrt(
+    cutoff_frequency = n_on_lambda - np.sqrt(
         n_on_lambda**2
         - (numerical_aperture_detection / wavelength_emission) ** 2
     )
+    return 1 / (2 * cutoff_frequency)
 
 
 def nd_fourier_central_cuboid(source, target_shape):
