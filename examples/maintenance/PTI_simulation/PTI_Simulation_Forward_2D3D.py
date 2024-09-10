@@ -15,9 +15,9 @@ from numpy.fft import fftshift
 from waveorder import (
     optics,
     waveorder_simulator,
-    visual,
     util,
 )
+from waveorder.visuals import jupyter_visuals
 
 #####################################################################
 # Initialization - imaging system and sample                        #
@@ -145,7 +145,7 @@ biref_map = ne_map_copy - no_map_copy
 ### Visualize sample properties
 
 #### XY sections
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     [
         target[:, :, z_layer],
         azimuth[:, :, z_layer] % (2 * np.pi),
@@ -158,7 +158,7 @@ visual.plot_multicolumn(
     set_title=True,
 )
 #### XZ sections
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     [
         np.transpose(target[y_layer, :, :]),
         np.transpose(azimuth[y_layer, :, :]) % (2 * np.pi),
@@ -197,7 +197,7 @@ orientation_3D_image = np.transpose(
     ),
     (3, 1, 2, 0),
 )
-orientation_3D_image_RGB = visual.orientation_3D_to_rgb(
+orientation_3D_image_RGB = jupyter_visuals.orientation_3D_to_rgb(
     orientation_3D_image, interp_belt=20 / 180 * np.pi, sat_factor=1
 )
 
@@ -206,7 +206,7 @@ plt.imshow(orientation_3D_image_RGB[z_layer], origin="lower")
 plt.figure(figsize=(10, 10))
 plt.imshow(orientation_3D_image_RGB[:, y_layer], origin="lower")
 plt.figure(figsize=(3, 3))
-visual.orientation_3D_colorwheel(
+jupyter_visuals.orientation_3D_colorwheel(
     wheelsize=128,
     circ_size=50,
     interp_belt=20 / 180 * np.pi,
@@ -216,7 +216,7 @@ visual.orientation_3D_colorwheel(
 plt.show()
 
 #### Angular histogram of 3D orientation
-visual.orientation_3D_hist(
+jupyter_visuals.orientation_3D_hist(
     azimuth.flatten(),
     inclination.flatten(),
     np.abs(target).flatten(),
@@ -258,7 +258,7 @@ epsilon_tensor[2, 1] = epsilon_del * np.sin(2 * inclination) * np.sin(azimuth)
 epsilon_tensor[2, 2] = epsilon_mean + epsilon_del * np.cos(2 * inclination)
 
 
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     [
         epsilon_tensor[0, 0, :, :, z_layer],
         epsilon_tensor[0, 1, :, :, z_layer],
@@ -334,7 +334,7 @@ del_f_component[6] = (
 )
 
 
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     [
         del_f_component[0, :, :, z_layer],
         del_f_component[1, :, :, z_layer],
@@ -425,11 +425,11 @@ for i in range(len(Source)):
 
 #### Circularly polarized illumination patterns
 
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5
 )
 # discretized illumination patterns used in simulation (faster forward model)
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     fftshift(Source, axes=(1, 2)), origin="lower", num_col=5, size=5
 )
 print(Source_PolState)

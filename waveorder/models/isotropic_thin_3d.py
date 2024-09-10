@@ -5,6 +5,7 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
+from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
 def generate_test_phantom(
@@ -152,7 +153,6 @@ def visualize_transfer_function(
     absorption_2d_to_3d_transfer_function,
     phase_2d_to_3d_transfer_function,
 ):
-    # TODO: consider generalizing w/ phase_thick_3d.visualize_transfer_function
     arrays = [
         (torch.imag(absorption_2d_to_3d_transfer_function), "Im(absorb TF)"),
         (torch.real(absorption_2d_to_3d_transfer_function), "Re(absorb TF)"),
@@ -169,7 +169,7 @@ def visualize_transfer_function(
             contrast_limits=(-lim, lim),
             scale=(1, 1, 1),
         )
-    viewer.dims.order = (0, 1, 2)
+    viewer.dims.order = (2, 0, 1)
 
 
 def visualize_point_spread_function(

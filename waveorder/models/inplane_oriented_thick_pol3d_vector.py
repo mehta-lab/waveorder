@@ -3,6 +3,7 @@ import numpy as np
 
 from torch import Tensor
 from waveorder import optics, stokes, util
+from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
 def generate_test_phantom(zyx_shape):
@@ -107,17 +108,6 @@ def calculate_transfer_function(
         z_position_list,
     )
 
-    # TODO consider testing this instead of sP
-    """ 
-    P = optics.generate_vector_detection_defocus_pupil(
-        x_frequencies,
-        y_frequencies,
-        z_position_list,
-        defocus_pupil,
-        det_pupil,
-        wavelength_illumination / index_of_refraction_media,
-    )
-    """
 
     G = optics.generate_defocus_greens_tensor(
         x_frequencies,
@@ -184,39 +174,12 @@ def calculate_singular_system(sfZYX_transfer_function):
 
 
 def visualize_transfer_function(viewer, sfZYX_transfer_function, zyx_scale):
-    shift_dims = (-3, -2, -1)
-    lim = torch.max(torch.abs(sfZYX_transfer_function)) * 0.9
-
-    viewer.add_image(
-        torch.fft.ifftshift(
-            torch.real(sfZYX_transfer_function), dim=shift_dims
-        )
-        .cpu()
-        .numpy(),
-        name="Real. TF",
-        colormap="bwr",
-        contrast_limits=(-lim, lim),
-        scale=1
-        / (np.array(zyx_scale) * np.array(sfZYX_transfer_function.shape[-3:])),
+    add_transfer_function_to_viewer(
+        viewer,
+        sfZYX_transfer_function,
+        zyx_scale=zyx_scale,
+        layer_name="Transfer Function",
     )
-
-    viewer.add_image(
-        torch.fft.ifftshift(
-            torch.imag(sfZYX_transfer_function), dim=shift_dims
-        )
-        .cpu()
-        .numpy(),
-        name="Imag. TF",
-        colormap="bwr",
-        contrast_limits=(-lim, lim),
-        scale=1
-        / (np.array(zyx_scale) * np.array(sfZYX_transfer_function.shape[-3:])),
-    )
-
-    _, _, Z, Y, X = sfZYX_transfer_function.shape
-    viewer.dims.current_step = (0, 0, Z // 2, Y // 2, X // 2)
-    viewer.dims.order = (4, 0, 1, 2, 3)
-
 
 def apply_transfer_function(
     fzyx_object,

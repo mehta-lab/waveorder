@@ -5,6 +5,7 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
+from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
 def generate_test_phantom(
@@ -108,24 +109,9 @@ def _calculate_wrap_unsafe_transfer_function(
 
 
 def visualize_transfer_function(viewer, optical_transfer_function, zyx_scale):
-    arrays = [
-        (torch.imag(optical_transfer_function), "Im(OTF)"),
-        (torch.real(optical_transfer_function), "Re(OTF)"),
-    ]
-
-    for array in arrays:
-        lim = 0.1 * torch.max(torch.abs(array[0]))
-        viewer.add_image(
-            torch.fft.ifftshift(array[0]).cpu().numpy(),
-            name=array[1],
-            colormap="bwr",
-            contrast_limits=(-lim, lim),
-            scale=1/(np.array(zyx_scale) * np.array(optical_transfer_function.shape[-3:])),
-        )
-
-    Z, Y, X = optical_transfer_function.shape
-    viewer.dims.current_step = (Z // 2, Y // 2, X // 2)
-    viewer.dims.order = (2, 0, 1)
+    add_transfer_function_to_viewer(
+        viewer, torch.real(optical_transfer_function), zyx_scale, clim_factor=0.05
+    )
 
 
 def apply_transfer_function(

@@ -6,6 +6,7 @@ from torch import Tensor
 
 from waveorder import optics, sampling, util
 from waveorder.models import isotropic_fluorescent_thick_3d
+from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
 def generate_test_phantom(
@@ -150,29 +151,19 @@ def visualize_transfer_function(
     imag_potential_transfer_function,
     zyx_scale,
 ):
-    # TODO: consider generalizing w/ phase2Dto3D.visualize_TF
-    arrays = [
-        (torch.real(imag_potential_transfer_function), "Re(imag pot. TF)"),
-        (torch.imag(imag_potential_transfer_function), "Im(imag pot. TF)"),
-        (torch.real(real_potential_transfer_function), "Re(real pot. TF)"),
-        (torch.imag(real_potential_transfer_function), "Im(real pot. TF)"),
-    ]
+    add_transfer_function_to_viewer(
+        viewer,
+        imag_potential_transfer_function,
+        zyx_scale,
+        layer_name="Imag pot. TF",
+    )
 
-    for array in arrays:
-        lim = 0.5 * torch.max(torch.abs(array[0]))
-        viewer.add_image(
-            torch.fft.ifftshift(array[0]).cpu().numpy(),
-            name=array[1],
-            colormap="bwr",
-            contrast_limits=(-lim, lim),
-            scale=1
-        / (np.array(zyx_scale) * np.array(real_potential_transfer_function.shape[-3:])),
-        )
-    Z, Y, X = real_potential_transfer_function.shape
-    viewer.dims.current_step = (Z // 2, Y // 2, X // 2)
-    viewer.dims.order = (2, 0, 1)
-
-    
+    add_transfer_function_to_viewer(
+        viewer,
+        real_potential_transfer_function,
+        zyx_scale,
+        layer_name="Real pot. TF",
+    )
 
 
 def apply_transfer_function(
