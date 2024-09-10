@@ -1,9 +1,8 @@
-from waveorder import optics, stokes, util
-from waveorder.models import inplane_oriented_thick_pol3d
-from torch import Tensor
-
 import torch
 import numpy as np
+
+from torch import Tensor
+from waveorder import optics, stokes, util
 
 
 def generate_test_phantom(zyx_shape):
@@ -168,24 +167,25 @@ def calculate_transfer_function(
         "sik,ikpjzyx,lpj->slzyx", s, H_re, Y
     )
 
+    return (
+        sfZYX_transfer_function,
+        intensity_to_stokes_matrix,
+    )
+
+
+def calculate_singular_system(sfZYX_transfer_function):
     # Compute regularized inverse filter
     print("Computing SVD")
     ZYXsf_transfer_function = sfZYX_transfer_function.permute(2, 3, 4, 0, 1)
     U, S, Vh = torch.linalg.svd(ZYXsf_transfer_function, full_matrices=False)
     S /= torch.max(S)
     singular_system = (U, S, Vh)
+    return singular_system
 
-    # transfer function
-    return (
-        singular_system, # (3 stokes, 3 object, Z, Y, X)
-        sfZYX_transfer_function, 
-        intensity_to_stokes_matrix,
-    )  
 
 def visualize_transfer_function(viewer, sfZYX_transfer_function, zyx_scale):
     shift_dims = (-3, -2, -1)
     lim = torch.max(torch.abs(sfZYX_transfer_function)) * 0.9
-
 
     viewer.add_image(
         torch.fft.ifftshift(

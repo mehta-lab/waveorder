@@ -24,7 +24,7 @@ fzyx_object = inplane_oriented_thick_pol3d_vector.generate_test_phantom(
 )
 
 # Calculate transfer function
-singular_system, sfZYX_transfer_function, intensity_to_stokes_matrix = (
+sfZYX_transfer_function, intensity_to_stokes_matrix = (
     inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
         swing,
         scheme,
@@ -47,12 +47,15 @@ inplane_oriented_thick_pol3d_vector.visualize_transfer_function(
     zyx_scale=(z_pixel_size, yx_pixel_size, yx_pixel_size),
 )
 
-import pdb
-
-pdb.set_trace()
 input("Showing transfer functions. Press <enter> to continue...")
 viewer.layers.select_all()
 viewer.layers.remove_selected()
+
+singular_system = (
+    inplane_oriented_thick_pol3d_vector.calculate_singular_system(
+        sfZYX_transfer_function
+    )
+)
 
 # Simulate
 szyx_data = inplane_oriented_thick_pol3d_vector.apply_transfer_function(
