@@ -395,7 +395,7 @@ def generate_propagation_kernel(
         wavelength      : float
                         wavelength of the light in the immersion media
 
-        z_position_list : torch.tensor
+        z_position_list : torch.tensor or list
                         1D array of defocused z positions with the size of (Z)
 
     Returns
@@ -414,7 +414,7 @@ def generate_propagation_kernel(
         1j
         * 2
         * np.pi
-        * z_position_list[:, None, None]
+        * torch.tensor(z_position_list)[:, None, None]
         * oblique_factor[None, :, :]
     )
 
@@ -440,7 +440,7 @@ def generate_greens_function_z(
         wavelength_illumination       : float
                         wavelength of the light in the immersion media
 
-        z_position_list : torch.tensor
+        z_position_list : torch.tensor or list
                         1D array of defocused z position with the size of (Z,)
 
         axially_even    : bool
@@ -461,9 +461,9 @@ def generate_greens_function_z(
     ) ** (1 / 2) / wavelength_illumination
 
     if axially_even:
-        z_positions = torch.abs(z_position_list[:, None, None])
+        z_positions = torch.abs(torch.tensor(z_position_list)[:, None, None])
     else:
-        z_positions = z_position_list[:, None, None]
+        z_positions = torch.tensor(z_position_list)[:, None, None]
         
     greens_function_z = (
         -1j

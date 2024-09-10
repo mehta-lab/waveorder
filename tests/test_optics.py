@@ -31,7 +31,7 @@ def test_generate_propagation_kernel():
 
 def test_gen_Greens_function_z():
     wavelength = 0.5
-    z_position_list = torch.tensor([0, 1, -1])  # note fftfreq coords
+    z_position_list = [0, 1, -1]  # note fftfreq coords
     radial_frequencies = util.generate_radial_frequencies((10, 10), 0.5)
     pupil = optics.generate_pupil(radial_frequencies, 0.5, 0.5)
 
