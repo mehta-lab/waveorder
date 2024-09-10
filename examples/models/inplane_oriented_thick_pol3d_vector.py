@@ -2,18 +2,16 @@ import torch
 import napari
 
 from waveorder.models import (
-    inplane_oriented_thick_pol3d,
     inplane_oriented_thick_pol3d_vector,
 )
 
 # Parameters
 # all lengths must use consistent units e.g. um
-oversample_factor = 2
-zyx_shape = (50, 128, 128) # (100, 256, 256)
+zyx_shape = (100, 256, 256)
 swing = 0.1
 scheme = "5-State"
-yx_pixel_size = 0.325 / oversample_factor  # 0.325
-z_pixel_size = 2.0 / oversample_factor  # 2.0
+yx_pixel_size = 0.150
+z_pixel_size = 1.0
 wavelength_illumination = 0.532
 z_padding = 0
 index_of_refraction_media = 1.0
@@ -49,6 +47,9 @@ inplane_oriented_thick_pol3d_vector.visualize_transfer_function(
     zyx_scale=(z_pixel_size, yx_pixel_size, yx_pixel_size),
 )
 
+import pdb
+
+pdb.set_trace()
 input("Showing transfer functions. Press <enter> to continue...")
 viewer.layers.select_all()
 viewer.layers.remove_selected()
