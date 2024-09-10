@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from waveorder import optics, util
+from waveorder import optics, sampling, util
 from waveorder.models import isotropic_fluorescent_thick_3d
 
 
@@ -31,6 +31,60 @@ def generate_test_phantom(
 
 
 def calculate_transfer_function(
+    zyx_shape,
+    yx_pixel_size,
+    z_pixel_size,
+    wavelength_illumination,
+    z_padding,
+    index_of_refraction_media,
+    numerical_aperture_illumination,
+    numerical_aperture_detection,
+    invert_phase_contrast=False,
+):
+    transverse_nyquist = sampling.transverse_nyquist(
+        wavelength_illumination,
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+    )
+    axial_nyquist = sampling.axial_nyquist(
+        wavelength_illumination,
+        numerical_aperture_detection,
+        index_of_refraction_media,
+    )
+
+    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
+    z_factor = int(np.ceil(z_pixel_size / axial_nyquist))
+
+    real_potential_transfer_function, imag_potential_transfer_function = (
+        _calculate_wrap_unsafe_transfer_function(
+            (
+                zyx_shape[0] * z_factor,
+                zyx_shape[1] * yx_factor,
+                zyx_shape[2] * yx_factor,
+            ),
+            yx_pixel_size / yx_factor,
+            z_pixel_size / z_factor,
+            wavelength_illumination,
+            z_padding,
+            index_of_refraction_media,
+            numerical_aperture_illumination,
+            numerical_aperture_detection,
+            invert_phase_contrast=invert_phase_contrast,
+        )
+    )
+
+    zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
+    return (
+        sampling.nd_fourier_central_cuboid(
+            real_potential_transfer_function, zyx_out_shape
+        ),
+        sampling.nd_fourier_central_cuboid(
+            imag_potential_transfer_function, zyx_out_shape
+        ),
+    )
+
+
+def _calculate_wrap_unsafe_transfer_function(
     zyx_shape,
     yx_pixel_size,
     z_pixel_size,
