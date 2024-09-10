@@ -1,3 +1,5 @@
+Run `pip install napari[all]` before running these examples.
+
 This folder of `models` examples consists of a set of simulations that are being actively developed and will run as is. 
 
 Each model is named with the schema `<sample-angular-assumptions>_<sample-spatial-assumptions>_<data-shape>`. 
