@@ -57,9 +57,9 @@ def calculate_transfer_function(
         index_of_refraction_media,
         numerical_aperture_detection,
     )
-
+    zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
     return sampling.nd_fourier_central_cuboid(
-        optical_transfer_function, zyx_shape
+        optical_transfer_function, zyx_out_shape
     )
 
 

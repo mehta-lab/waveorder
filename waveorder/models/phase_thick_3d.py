@@ -73,12 +73,13 @@ def calculate_transfer_function(
         )
     )
 
+    zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
     return (
         sampling.nd_fourier_central_cuboid(
-            real_potential_transfer_function, zyx_shape
+            real_potential_transfer_function, zyx_out_shape
         ),
         sampling.nd_fourier_central_cuboid(
-            imag_potential_transfer_function, zyx_shape
+            imag_potential_transfer_function, zyx_out_shape
         ),
     )
 
