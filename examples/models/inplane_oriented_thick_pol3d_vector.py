@@ -10,13 +10,13 @@ from waveorder.models import (
 zyx_shape = (100, 256, 256)
 swing = 0.1
 scheme = "5-State"
-yx_pixel_size = 0.150
-z_pixel_size = 1.0
+yx_pixel_size = 2 * 6.5 / 63
+z_pixel_size = 0.25
 wavelength_illumination = 0.532
 z_padding = 0
-index_of_refraction_media = 1.0
-numerical_aperture_illumination = 0.4
-numerical_aperture_detection = 0.55
+index_of_refraction_media = 1.3
+numerical_aperture_illumination = 0.9
+numerical_aperture_detection = 1.2
 
 # Create a phantom
 fzyx_object = inplane_oriented_thick_pol3d_vector.generate_test_phantom(
