@@ -422,7 +422,10 @@ def generate_propagation_kernel(
 
 
 def generate_greens_function_z(
-    radial_frequencies, pupil_support, wavelength_illumination, z_position_list, 
+    radial_frequencies,
+    pupil_support,
+    wavelength_illumination,
+    z_position_list,
     axially_even=True,
 ):
     """
@@ -445,7 +448,7 @@ def generate_greens_function_z(
 
         axially_even    : bool
                         For backwards compatibility with legacy phase reconstruction.
-                        Ideally the legacy phase reconstruction should be unified with 
+                        Ideally the legacy phase reconstruction should be unified with
                         the new reconstructions, and this parameter should be removed.
 
     Returns
@@ -464,7 +467,7 @@ def generate_greens_function_z(
         z_positions = torch.abs(z_position_list[:, None, None])
     else:
         z_positions = z_position_list[:, None, None]
-        
+
     greens_function_z = (
         -1j
         / 4
@@ -532,6 +535,54 @@ def generate_defocus_greens_tensor(
 
     return G_tensor_z
 
+
+def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
+    """
+    keeping for backwards compatibility
+
+    generate forward dyadic Green's function in u_x, u_y, z space
+    Parameters
+    ----------
+        fxx           : numpy.ndarray
+                        x component of 2D spatial frequency array with the size of (Ny, Nx)
+        fyy           : numpy.ndarray
+                        y component of 2D spatial frequency array with the size of (Ny, Nx)
+        G_fun_z       : numpy.ndarray
+                        forward Green's function in u_x, u_y, z space with size of (Ny, Nx, Nz)
+        Pupil_support : numpy.ndarray
+                        the array that defines the support of the pupil function with the size of (Ny, Nx)
+        lambda_in     : float
+                        wavelength of the light in the immersion media
+    Returns
+    -------
+        G_tensor_z    : numpy.ndarray
+                        forward dyadic Green's function in u_x, u_y, z space with the size of (3, 3, Ny, Nx, Nz)
+    """
+
+    N, M = fxx.shape
+    fr = (fxx**2 + fyy**2) ** (1 / 2)
+    oblique_factor = ((1 - lambda_in**2 * fr**2) * Pupil_support) ** (
+        1 / 2
+    ) / lambda_in
+
+    diff_filter = np.zeros((3,) + G_fun_z.shape, complex)
+    diff_filter[0] = (1j * 2 * np.pi * fxx * Pupil_support)[..., np.newaxis]
+    diff_filter[1] = (1j * 2 * np.pi * fyy * Pupil_support)[..., np.newaxis]
+    diff_filter[2] = (1j * 2 * np.pi * oblique_factor)[..., np.newaxis]
+
+    G_tensor_z = np.zeros((3, 3) + G_fun_z.shape, complex)
+
+    for i in range(3):
+        for j in range(3):
+            G_tensor_z[i, j] = (
+                G_fun_z
+                * diff_filter[i]
+                * diff_filter[j]
+                / (2 * np.pi / lambda_in) ** 2
+            )
+            if i == j:
+                G_tensor_z[i, i] += G_fun_z
+    return G_tensor_z
 
 def gen_Greens_function_real(img_size, ps, psz, lambda_in):
     """

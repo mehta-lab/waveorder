@@ -1002,7 +1002,7 @@ class waveorder_microscopy:
             .numpy()
             .transpose((1, 2, 0))
         )
-        G_tensor_z = generate_defocus_greens_tensor(
+        G_tensor_z = gen_dyadic_Greens_tensor_z(
             self.fxx, self.fyy, G_fun_z, self.Pupil_support, self.lambda_illu
         )
 
