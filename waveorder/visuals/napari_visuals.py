@@ -1,17 +1,16 @@
-import napari
 import numpy as np
 import torch
 
 
 def add_transfer_function_to_viewer(
-    viewer: napari.Viewer,
+    viewer,  # napari viewer
     transfer_function: torch.Tensor,
     zyx_scale: tuple[float, float, float],
     layer_name: str = "Transfer Function",
     clim_factor: float = 1.0,
 ):
     zyx_shape = transfer_function.shape[-3:]
-    lim = torch.max(torch.abs(transfer_function))*clim_factor
+    lim = torch.max(torch.abs(transfer_function)) * clim_factor
     voxel_scale = np.array(
         [
             zyx_shape[0] * zyx_scale[0],
@@ -41,7 +40,7 @@ def add_transfer_function_to_viewer(
             name="Im(" + layer_name + ")",
         )
 
-    viewer.dims.current_step = (0,)*(transfer_function.ndim - 3) + (
+    viewer.dims.current_step = (0,) * (transfer_function.ndim - 3) + (
         zyx_shape[0] // 2,
         zyx_shape[1] // 2,
         zyx_shape[2] // 2,
