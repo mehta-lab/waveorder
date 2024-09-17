@@ -13,6 +13,7 @@ from recOrder.cli.parsing import (
     input_position_dirpaths,
     output_dirpath,
     processes_option,
+    ram_multiplier,
 )
 
 
@@ -21,8 +22,13 @@ from recOrder.cli.parsing import (
 @config_filepath()
 @output_dirpath()
 @processes_option(default=1)
+@ram_multiplier()
 def reconstruct(
-    input_position_dirpaths, config_filepath, output_dirpath, num_processes
+    input_position_dirpaths,
+    config_filepath,
+    output_dirpath,
+    num_processes,
+    ram_multiplier,
 ):
     """
     Reconstruct a dataset using a configuration file. This is a
@@ -58,4 +64,5 @@ def reconstruct(
         config_filepath,
         output_dirpath,
         num_processes,
+        ram_multiplier,
     )

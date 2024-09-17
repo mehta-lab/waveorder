@@ -148,3 +148,4 @@ recOrder/_version.py
 
 # example data
 /examples/data_temp/*
+/logs/*

@@ -12,14 +12,15 @@ from recOrder.cli.option_eat_all import OptionEatAll
 def _validate_and_process_paths(
     ctx: click.Context, opt: click.Option, value: str
 ) -> list[Path]:
-    # Sort and validate the input paths
+    # Sort and validate the input paths, expanding plates into lists of positions
     input_paths = [Path(path) for path in natsorted(value)]
     for path in input_paths:
         with open_ome_zarr(path, mode="r") as dataset:
             if isinstance(dataset, Plate):
-                raise ValueError(
-                    "Please supply a list of positions instead of an HCS plate. Likely fix: replace 'input.zarr' with 'input.zarr/*/*/*' or 'input.zarr/0/0/0'"
-                )
+                plate_path = input_paths.pop()
+                for position in dataset.positions():
+                    input_paths.append(plate_path / position[0])
+
     return input_paths
 
 
@@ -102,6 +103,19 @@ def processes_option(default: int = None) -> Callable:
             type=int,
             help="Number of processes to run in parallel.",
             callback=check_processes_option,
+        )(f)
+
+    return decorator
+
+
+def ram_multiplier() -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--ram-multiplier",
+            "-rx",
+            default=1.0,
+            type=float,
+            help="SLURM RAM multiplier.",
         )(f)
 
     return decorator

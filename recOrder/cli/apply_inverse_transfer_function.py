@@ -7,6 +7,7 @@ import click
 import numpy as np
 import torch
 import torch.multiprocessing as mp
+import submitit
 from iohub import open_ome_zarr
 
 from recOrder.cli import apply_inverse_models
@@ -16,6 +17,7 @@ from recOrder.cli.parsing import (
     output_dirpath,
     processes_option,
     transfer_function_dirpath,
+    ram_multiplier,
 )
 from recOrder.cli.printing import echo_headline, echo_settings
 from recOrder.cli.settings import ReconstructionSettings
@@ -24,6 +26,7 @@ from recOrder.cli.utils import (
     create_empty_hcs_zarr,
 )
 from recOrder.io import utils
+from recOrder.cli.monitor import monitor_jobs
 
 
 def _check_background_consistency(
@@ -289,6 +292,7 @@ def apply_inverse_transfer_function_cli(
     config_filepath: Path,
     output_dirpath: Path,
     num_processes: int = 1,
+    ram_multiplier: float = 1.0,
 ) -> None:
     output_metadata = get_reconstruction_output_metadata(
         input_position_dirpaths[0], config_filepath
@@ -303,15 +307,65 @@ def apply_inverse_transfer_function_cli(
         torch.set_num_threads(1)
         torch.set_num_interop_threads(1)
 
-    for input_position_dirpath in input_position_dirpaths:
-        apply_inverse_transfer_function_single_position(
-            input_position_dirpath,
-            transfer_function_dirpath,
-            config_filepath,
-            output_dirpath / Path(*input_position_dirpath.parts[-3:]),
-            num_processes,
-            output_metadata["channel_names"],
-        )
+    # Estimate resources
+    with open_ome_zarr(input_position_dirpaths[0]) as input_dataset:
+        T, C, Z, Y, X = input_dataset["0"].shape
+
+    settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
+    gb_ram_request = 0
+    gb_per_element = 4 / 2**30  # bytes_per_float32 / bytes_per_gb
+    voxel_resource_multiplier = 4
+    fourier_resource_multiplier = 32
+    input_memory = Z * Y * X * gb_per_element
+    if settings.birefringence is not None:
+        gb_ram_request += input_memory * voxel_resource_multiplier
+    if settings.phase is not None:
+        gb_ram_request += input_memory * fourier_resource_multiplier
+    if settings.fluorescence is not None:
+        gb_ram_request += input_memory * fourier_resource_multiplier
+
+    gb_ram_request = np.ceil(
+        np.max([1, ram_multiplier * gb_ram_request])
+    ).astype(int)
+    cpu_request = np.min([32, num_processes])
+    num_jobs = len(input_position_dirpaths)
+
+    # Prepare and submit jobs
+    echo_headline(
+        f"Preparing {num_jobs} job{'s, each with' if num_jobs > 1 else ' with'} "
+        f"{cpu_request} CPU{'s' if cpu_request > 1 else ''} and "
+        f"{gb_ram_request} GB of memory per CPU."
+    )
+    executor = submitit.AutoExecutor(folder="logs")
+
+    executor.update_parameters(
+        slurm_array_parallelism=np.min([50, num_jobs]),
+        slurm_mem_per_cpu=f"{gb_ram_request}G",
+        slurm_cpus_per_task=cpu_request,
+        slurm_time=60,
+        slurm_partition="cpu",
+        # more slurm_*** resource parameters here
+    )
+
+    jobs = []
+    with executor.batch():
+        for input_position_dirpath in input_position_dirpaths:
+            jobs.append(
+                executor.submit(
+                    apply_inverse_transfer_function_single_position,
+                    input_position_dirpath,
+                    transfer_function_dirpath,
+                    config_filepath,
+                    output_dirpath / Path(*input_position_dirpath.parts[-3:]),
+                    num_processes,
+                    output_metadata["channel_names"],
+                )
+            )
+    echo_headline(
+        f"{num_jobs} job{'s' if num_jobs > 1 else ''} submitted {'locally' if executor.cluster == 'local' else 'via ' + executor.cluster}."
+    )
+
+    monitor_jobs(jobs, input_position_dirpaths)
 
 
 @click.command()
@@ -320,12 +374,14 @@ def apply_inverse_transfer_function_cli(
 @config_filepath()
 @output_dirpath()
 @processes_option(default=1)
+@ram_multiplier()
 def apply_inv_tf(
     input_position_dirpaths: list[Path],
     transfer_function_dirpath: Path,
     config_filepath: Path,
     output_dirpath: Path,
     num_processes,
+    ram_multiplier: float = 1.0,
 ) -> None:
     """
     Apply an inverse transfer function to a dataset using a configuration file.
@@ -345,4 +401,5 @@ def apply_inv_tf(
         config_filepath,
         output_dirpath,
         num_processes,
+        ram_multiplier,
     )
