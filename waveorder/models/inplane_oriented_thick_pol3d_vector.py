@@ -2,6 +2,7 @@ import torch
 import numpy as np
 
 from torch import Tensor
+from torch.nn.functional import avg_pool3d
 from waveorder import optics, sampling, stokes, util
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
@@ -37,6 +38,7 @@ def calculate_transfer_function(
     numerical_aperture_illumination,
     numerical_aperture_detection,
     invert_phase_contrast=False,
+    fourier_oversample_factor=1,
 ):
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
@@ -57,9 +59,9 @@ def calculate_transfer_function(
             swing,
             scheme,
             (
-                zyx_shape[0] * z_factor,
-                zyx_shape[1] * yx_factor,
-                zyx_shape[2] * yx_factor,
+                zyx_shape[0] * z_factor * fourier_oversample_factor,
+                zyx_shape[1] * yx_factor * fourier_oversample_factor,
+                zyx_shape[2] * yx_factor * fourier_oversample_factor,
             ),
             yx_pixel_size / yx_factor,
             z_pixel_size / z_factor,
@@ -71,10 +73,28 @@ def calculate_transfer_function(
             invert_phase_contrast=invert_phase_contrast,
         )
     )
-    sfzyx_out_shape = (3, 3, zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
+
+    # avg_pool3d does not support complex numbers
+    pooled_sfZYX_transfer_function_real = avg_pool3d(
+        sfZYX_transfer_function.real, (fourier_oversample_factor,) * 3
+    )
+    pooled_sfZYX_transfer_function_imag = avg_pool3d(
+        sfZYX_transfer_function.imag, (fourier_oversample_factor,) * 3
+    )
+    pooled_sfZYX_transfer_function = (
+        pooled_sfZYX_transfer_function_real
+        + 1j * pooled_sfZYX_transfer_function_imag
+    )
+
+    # Crop to original size
+    sfzyx_out_shape = (
+        3,
+        3,
+        zyx_shape[0] + 2 * z_padding,
+    ) + zyx_shape[1:]
     return (
         sampling.nd_fourier_central_cuboid(
-            sfZYX_transfer_function, sfzyx_out_shape
+            pooled_sfZYX_transfer_function, sfzyx_out_shape
         ),
         intensity_to_stokes_matrix,
     )
