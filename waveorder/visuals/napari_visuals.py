@@ -45,4 +45,16 @@ def add_transfer_function_to_viewer(
         zyx_shape[1] // 2,
         zyx_shape[2] // 2,
     )
-    viewer.dims.order = (2, 0, 1)
+
+    # Show XZ view by default, and only allow rolling between XY and XZ
+    viewer.dims.order = list(range(transfer_function.ndim - 3)) + [
+        transfer_function.ndim - 2,
+        transfer_function.ndim - 3,
+        transfer_function.ndim - 1,
+    ]
+    viewer.dims.rollable = (False,) * (transfer_function.ndim - 3) + (
+        True,
+        True,
+        False,
+    )
+    

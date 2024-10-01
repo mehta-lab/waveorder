@@ -17,7 +17,7 @@ z_padding = 0
 index_of_refraction_media = 1.3
 numerical_aperture_illumination = 0.9
 numerical_aperture_detection = 1.2
-fourier_oversample_factor = 2
+fourier_oversample_factor = 1
 
 # Create a phantom
 fzyx_object = inplane_oriented_thick_pol3d_vector.generate_test_phantom(
