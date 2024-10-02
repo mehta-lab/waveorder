@@ -239,6 +239,9 @@ def rotation_matrix(nu_z, nu_y, nu_x, wavelength):
 
     out = torch.stack((row0, row1, row2), dim=0)
 
+    # KLUDGE: fix the DC term manually, avoiding nan
+    out[..., 0, 0] = torch.tensor([[0, 0], [1, 0], [0, 1]])[..., None]
+
     return torch.nan_to_num(out, nan=0.0)
 
 
