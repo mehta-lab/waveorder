@@ -239,10 +239,7 @@ def rotation_matrix(nu_z, nu_y, nu_x, wavelength):
 
     out = torch.stack((row0, row1, row2), dim=0)
 
-    # KLUDGE to avoid fix nans
-    out[..., 0, 0] = torch.tensor([[0, 0], [1, 0], [0, 1]])[..., None]
-
-    return out
+    return torch.nan_to_num(out, nan=0.0)
 
 
 def generate_vector_source_defocus_pupil(
@@ -258,12 +255,12 @@ def generate_vector_source_defocus_pupil(
         "zyx,yx->zyx", torch.fft.fft(defocus_pupil, dim=0), ill_pupil
     ).abs()  # make this real
 
-    # Calculate zyx_frequency grid (inelegant)
-    z_frequencies = torch.fft.ifft(z_position_list)
-    freq_shape = z_frequencies.shape + x_frequencies.shape
-    z_broadcast = torch.broadcast_to(z_frequencies[:, None, None], freq_shape)
+
+    freq_shape = z_position_list.shape + x_frequencies.shape
+
     y_broadcast = torch.broadcast_to(y_frequencies[None, :, :], freq_shape)
     x_broadcast = torch.broadcast_to(x_frequencies[None, :, :], freq_shape)
+    z_broadcast = np.sqrt(wavelength**(-2) - x_broadcast**2 - y_broadcast**2)
 
     # Calculate rotation matrix
     rotations = rotation_matrix(
@@ -274,10 +271,9 @@ def generate_vector_source_defocus_pupil(
     source_pupil = (
         torch.einsum(
             "ijzyx,j,zyx->izyx", rotations, input_jones, ill_pupil_3d
-        )  # .abs()
-        # ** 2
-    )  # abs here is critical...incoherent pupil
-
+        )
+    )
+    
     # Convert back to defocus pupil
     source_defocus_pupil = torch.fft.ifft(source_pupil, dim=-3)
 
