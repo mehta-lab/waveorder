@@ -17,7 +17,7 @@ def generate_test_phantom(zyx_shape):
     )
     c00 = yx_star
     c2_2 = -torch.sin(2 * yx_theta) * yx_star
-    c22 = torch.cos(2 * yx_theta) * yx_star
+    c22 = -torch.cos(2 * yx_theta) * yx_star
 
     # Put in a center slices of a 3D object
     center_slice_object = torch.stack((c00, c2_2, c22), dim=0)
@@ -195,10 +195,10 @@ def _calculate_wrap_unsafe_transfer_function(
     G_3D = torch.abs(torch.fft.ifft(G, dim=-3)) * (-1j)
     S_3D = torch.fft.ifft(S, dim=-3)
 
-    # Normalize
-    P_3D /= torch.amax(torch.abs(P_3D))
-    G_3D /= torch.amax(torch.abs(G_3D))
-    S_3D /= torch.amax(torch.abs(S_3D))
+    # # Normalize
+    # P_3D /= torch.amax(torch.abs(P_3D))
+    # G_3D /= torch.amax(torch.abs(G_3D))
+    # S_3D /= torch.amax(torch.abs(S_3D))
 
     # Main part
     PG_3D = torch.einsum("zyx,ipzyx->ipzyx", P_3D, G_3D)
@@ -222,6 +222,8 @@ def _calculate_wrap_unsafe_transfer_function(
 
     H_re = H1[1:, 1:] + H2[1:, 1:]  # drop data-side z components
     # H_im = 1j * (H1 - H2) # ignore absorptive terms
+
+    H_re /= torch.amax(torch.abs(H_re))
 
     s = util.pauli()[[0, 1, 2]]  # select s0, s1, and s2 (drop s3)
     Y = util.gellmann()[[0, 4, 8]]
@@ -253,6 +255,7 @@ def visualize_transfer_function(viewer, sfZYX_transfer_function, zyx_scale):
         sfZYX_transfer_function,
         zyx_scale=zyx_scale,
         layer_name="Transfer Function",
+        complex_rgb=True,
     )
 
 
@@ -267,7 +270,7 @@ def apply_transfer_function(
     )
     szyx_data = torch.fft.ifftn(sZYX_data, dim=(1, 2, 3))
 
-    return (5 * szyx_data) + 0.1 * torch.randn(szyx_data.shape)
+    return (50 * szyx_data) + 0.1 * torch.randn(szyx_data.shape)
 
 
 def apply_inverse_transfer_function(
@@ -282,7 +285,7 @@ def apply_inverse_transfer_function(
     print("Computing inverse filter")
     U, S, Vh = singular_system
     S_reg = S / (S**2 + regularization_strength**2)
-    ZYXsf_inverse_filter = -torch.einsum(
+    ZYXsf_inverse_filter = torch.einsum(
         "zyxij,zyxj,zyxjk->zyxki", U, S_reg, Vh
     )
 

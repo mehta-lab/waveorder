@@ -7,15 +7,15 @@ from waveorder.models import (
 
 # Parameters
 # all lengths must use consistent units e.g. um
-zyx_shape = (100, 256, 256)
+zyx_shape = (101, 256, 256)
 swing = 0.1
 scheme = "5-State"
 yx_pixel_size = 6.5 / 63
-z_pixel_size = 0.25
+z_pixel_size = 0.15
 wavelength_illumination = 0.532
 z_padding = 0
 index_of_refraction_media = 1.3
-numerical_aperture_illumination = 0.9
+numerical_aperture_illumination = 0.01  # 0.5
 numerical_aperture_detection = 1.2
 fourier_oversample_factor = 1
 
@@ -86,6 +86,9 @@ arrays = [
 for array in arrays:
     viewer.add_image(torch.real(array[0]).cpu().numpy(), name=array[1])
 
-# viewer.grid.enabled = True
-# viewer.grid.shape = (2, 5)
+viewer.grid.enabled = True
+viewer.grid.shape = (2, 5)
+import pdb
+
+pdb.set_trace()
 input("Showing object, data, and recon. Press <enter> to quit...")
