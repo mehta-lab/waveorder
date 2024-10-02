@@ -4,7 +4,7 @@ import matplotlib.colors as mcolors
 
 # Main function to convert a complex-valued torch tensor to RGB numpy array
 # with red at +1, green at +i, blue at -1, and purple at -i
-def complex_tensor_to_rgb(tensor):
+def complex_tensor_to_rgb(tensor, saturate_clim_fraction=1.0):
     # Convert the torch tensor to a numpy array
     tensor_np = tensor.numpy()
 
@@ -17,7 +17,8 @@ def complex_tensor_to_rgb(tensor):
     hue = np.mod(hue + 0.5, 1)
 
     # Normalize magnitude to [0, 1] for saturation
-    max_abs_val = np.amax(magnitude)
+    max_abs_val = np.amax(magnitude) * saturate_clim_fraction
+
     sat = magnitude / max_abs_val if max_abs_val != 0 else magnitude
 
     # Create HSV array: hue, saturation, value (value is set to 1)

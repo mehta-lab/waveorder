@@ -25,7 +25,8 @@ def add_transfer_function_to_viewer(
 
     if complex_rgb:
         rgb_transfer_function = complex_tensor_to_rgb(
-            torch.fft.ifftshift(transfer_function, dim=shift_dims)
+            torch.fft.ifftshift(transfer_function, dim=shift_dims),
+            saturate_clim_fraction=clim_factor,
         )
         viewer.add_image(
             rgb_transfer_function,

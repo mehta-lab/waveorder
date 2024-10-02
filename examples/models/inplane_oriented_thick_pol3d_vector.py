@@ -15,7 +15,7 @@ z_pixel_size = 0.15
 wavelength_illumination = 0.532
 z_padding = 0
 index_of_refraction_media = 1.3
-numerical_aperture_illumination = 0.01  # 0.5
+numerical_aperture_illumination = 0.5
 numerical_aperture_detection = 1.2
 fourier_oversample_factor = 1
 

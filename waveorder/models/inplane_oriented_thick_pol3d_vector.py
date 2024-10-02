@@ -195,10 +195,6 @@ def _calculate_wrap_unsafe_transfer_function(
     G_3D = torch.abs(torch.fft.ifft(G, dim=-3)) * (-1j)
     S_3D = torch.fft.ifft(S, dim=-3)
 
-    # # Normalize
-    # P_3D /= torch.amax(torch.abs(P_3D))
-    # G_3D /= torch.amax(torch.abs(G_3D))
-    # S_3D /= torch.amax(torch.abs(S_3D))
 
     # Main part
     PG_3D = torch.einsum("zyx,ipzyx->ipzyx", P_3D, G_3D)
@@ -256,6 +252,7 @@ def visualize_transfer_function(viewer, sfZYX_transfer_function, zyx_scale):
         zyx_scale=zyx_scale,
         layer_name="Transfer Function",
         complex_rgb=True,
+        clim_factor=0.5,
     )
 
 
