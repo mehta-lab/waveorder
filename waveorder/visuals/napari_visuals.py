@@ -24,7 +24,9 @@ def add_transfer_function_to_viewer(
     shift_dims = (-3, -2, -1)
 
     if complex_rgb:
-        rgb_transfer_function = complex_tensor_to_rgb(torch.fft.ifftshift(transfer_function, dim=shift_dims))
+        rgb_transfer_function = complex_tensor_to_rgb(
+            torch.fft.ifftshift(transfer_function, dim=shift_dims)
+        )
         viewer.add_image(
             rgb_transfer_function,
             scale=1 / voxel_scale,
@@ -42,7 +44,9 @@ def add_transfer_function_to_viewer(
         )
         if transfer_function.dtype == torch.complex64:
             viewer.add_image(
-                torch.fft.ifftshift(torch.imag(transfer_function), dim=shift_dims)
+                torch.fft.ifftshift(
+                    torch.imag(transfer_function), dim=shift_dims
+                )
                 .cpu()
                 .numpy(),
                 colormap="bwr",
@@ -68,4 +72,3 @@ def add_transfer_function_to_viewer(
         True,
         False,
     )
-    
