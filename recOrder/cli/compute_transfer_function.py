@@ -4,6 +4,7 @@ import click
 import numpy as np
 from iohub.ngff import open_ome_zarr, Position
 from waveorder.models import (
+    inplane_oriented_thick_pol3d_vector,
     inplane_oriented_thick_pol3d,
     isotropic_fluorescent_thick_3d,
     isotropic_thin_3d,
@@ -18,6 +19,44 @@ from recOrder.cli.parsing import (
 from recOrder.cli.printing import echo_headline, echo_settings
 from recOrder.cli.settings import ReconstructionSettings
 from recOrder.io import utils
+
+
+def generate_and_save_vector_birefringence_transfer_function(
+    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple
+):
+    """Generates and saves the vector birefringence transfer function
+    to the dataset, based on the settings.
+
+    Parameters
+    ----------
+    settings : ReconstructionSettings
+    dataset : NGFF Node
+        The dataset that will be updated.
+    zyx_shape : tuple
+        A tuple of integers specifying the input data's shape in (Z, Y, X) order
+    """
+    echo_headline(
+        "Generating vector birefringence transfer function with settings:"
+    )
+    echo_settings(settings.birefringence.transfer_function)
+    echo_settings(settings.phase.transfer_function)
+
+    sfZYX_transfer_function, _ = (
+        inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
+            zyx_shape=zyx_shape,
+            scheme=str(len(settings.input_channel_names)) + "-State",
+            **settings.birefringence.transfer_function.dict(),
+            **settings.phase.transfer_function.dict(),
+        )
+    )
+
+    dataset.append_channel("ch1")
+    dataset.append_channel("ch2")
+    dataset.create_image(
+        "vector_transfer_function",
+        sfZYX_transfer_function.cpu().numpy(),
+        chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
+    )
 
 
 def generate_and_save_birefringence_transfer_function(settings, dataset):
@@ -40,9 +79,9 @@ def generate_and_save_birefringence_transfer_function(settings, dataset):
         )
     )
     # Save
-    dataset[
-        "intensity_to_stokes_matrix"
-    ] = intensity_to_stokes_matrix.cpu().numpy()[None, None, None, ...]
+    dataset["intensity_to_stokes_matrix"] = (
+        intensity_to_stokes_matrix.cpu().numpy()[None, None, None, ...]
+    )
 
 
 def generate_and_save_phase_transfer_function(
@@ -198,6 +237,10 @@ def compute_transfer_function_cli(
         )
     if settings.fluorescence is not None:
         generate_and_save_fluorescence_transfer_function(
+            settings, output_dataset, zyx_shape
+        )
+    if settings.birefringence is not None and settings.phase is not None:
+        generate_and_save_vector_birefringence_transfer_function(
             settings, output_dataset, zyx_shape
         )
 
