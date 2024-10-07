@@ -258,25 +258,28 @@ def generate_vector_source_defocus_pupil(
         "zyx,yx->zyx", torch.fft.fft(defocus_pupil, dim=0), ill_pupil
     ).abs()  # make this real
 
-
     freq_shape = z_position_list.shape + x_frequencies.shape
 
     y_broadcast = torch.broadcast_to(y_frequencies[None, :, :], freq_shape)
     x_broadcast = torch.broadcast_to(x_frequencies[None, :, :], freq_shape)
-    z_broadcast = np.sqrt(wavelength**(-2) - x_broadcast**2 - y_broadcast**2)
+    z_broadcast = np.sqrt(wavelength ** (-2) - x_broadcast**2 - y_broadcast**2)
 
     # Calculate rotation matrix
     rotations = rotation_matrix(
         z_broadcast, y_broadcast, x_broadcast, wavelength
     ).type(torch.complex64)
 
+    # TEMPORARY SIMPLIFY ROTATIONS "TURN OFF ROTATIONS"
+    # 3x2 IDENTITY MATRIX
+    rotations = torch.zeros_like(rotations)
+    rotations[1, 0, ...] = 1 
+    rotations[2, 1, ...] = 1
+
     # Main calculation in the frequency domain
-    source_pupil = (
-        torch.einsum(
-            "ijzyx,j,zyx->izyx", rotations, input_jones, ill_pupil_3d
-        )
+    source_pupil = torch.einsum(
+        "ijzyx,j,zyx->izyx", rotations, input_jones, ill_pupil_3d
     )
-    
+
     # Convert back to defocus pupil
     source_defocus_pupil = torch.fft.ifft(source_pupil, dim=-3)
 
@@ -582,6 +585,7 @@ def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
             if i == j:
                 G_tensor_z[i, i] += G_fun_z
     return G_tensor_z
+
 
 def gen_Greens_function_real(img_size, ps, psz, lambda_in):
     """
