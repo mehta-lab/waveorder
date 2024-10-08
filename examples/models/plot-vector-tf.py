@@ -21,7 +21,7 @@ numerical_aperture_detection = 1.2
 for i, numerical_aperture_illumination in enumerate([0.01, 0.5]):
     file_suffix = str(i)
 
-    input_jones = torch.tensor([0.0 - 1.0j, 1.0 + 0j])  # circular
+    input_jones = torch.tensor([-1j, 1.0 + 0j])  # circular
 
     # Calculate frequencies
     y_frequencies, x_frequencies = util.generate_frequencies(
@@ -166,15 +166,15 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.5]):
     )
 
     H_re = H1[1:, 1:] + H2[1:, 1:]  # drop data-side z components
-    # H_im = 1j * (H1 - H2) # ignore absorptive terms
+    # H_im = 1j * (H1[1:, 1:] - H2[1:,1:]) # ignore absorptive terms
 
     H_re /= torch.amax(torch.abs(H_re))
 
     s_labels = [0, 1, 2, 3]
+    f_labels = [0, 1, 2, 3, 4, 5, 6, 7, 8] #[[0, 4, 8]]
     s = util.pauli()[s_labels]  # select s0, s1, and s2 (drop s3)
-    Y = util.gellmann()[[0, 4, 8]]
+    Y = util.gellmann()[f_labels]
     # select phase f00 and transverse linear isotropic terms 2-2, and f22
-
     sfZYX_transfer_function = torch.einsum(
         "sik,ikpjzyx,lpj->slzyx", s, H_re, Y
     )
@@ -212,7 +212,7 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.5]):
         zyx_scale=(z_pixel_size, yx_pixel_size, yx_pixel_size),
         z_slice=-10,
         s_labels=s_labels,
-        f_labels=[0, 4, 8],
+        f_labels=f_labels,
         rose_path=None,
         inches_per_column=1,
         saturate_clim_fraction=0.2,

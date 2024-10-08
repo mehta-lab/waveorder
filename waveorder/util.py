@@ -2262,6 +2262,8 @@ def pauli():
         ]
     )
     return sigma
+
+
 # torch.allclose(
 #     torch.abs(torch.einsum("kij,lji->kl", s, s) - torch.eye(4)),
 #     torch.zeros((4, 4)),
@@ -2280,25 +2282,26 @@ def gellmann():
     # zyx
     # zyx
     a = 3**-0.5
-    b = -1j * 2**-0.5
     c = 2**-0.5
     d = -(6**-0.5)
     e = 2 * (6**-0.5)
     return torch.tensor(
         [
             [[a, 0, 0], [0, a, 0], [0, 0, a]],
-            [[0, 0, -b], [0, 0, 0], [b, 0, 0]],
-            [[0, 0, 0], [0, 0, -b], [0, b, 0]],
-            [[0, -b, 0], [b, 0, 0], [0, 0, 0]],
+            [[0, 0, -c], [0, 0, 0], [c, 0, 0]],
+            [[0, 0, 0], [0, 0, -c], [0, c, 0]],
+            [[0, -c, 0], [c, 0, 0], [0, 0, 0]],
             [[0, 0, 0], [0, 0, c], [0, c, 0]],  #
             [[0, c, 0], [c, 0, 0], [0, 0, 0]],
             [[e, 0, 0], [0, d, 0], [0, 0, d]],
             [[0, 0, c], [0, 0, 0], [c, 0, 0]],
             [[0, 0, 0], [0, -c, 0], [0, 0, c]],  #
-        ]
+        ], dtype=torch.complex64
     )
 
     # torch.allclose(
+
+
 #     torch.abs(torch.einsum("kij,lji->kl", Y, Y) - torch.eye(9)),
 #     torch.zeros((9, 9)),
 #     atol=1e-5,
