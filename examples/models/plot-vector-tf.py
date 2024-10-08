@@ -120,6 +120,19 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.5]):
 
     ## <end> CANDIDATE FOR REMOVAL <end>
 
+    # Quick Green's tensor, directly in Fourier space
+    G_3D[0, 0] = (1/wavelength) - z_broadcast**2
+    G_3D[0, 1] = -z_broadcast * y_broadcast
+    G_3D[0, 2] = -z_broadcast * x_broadcast
+    G_3D[1, 0] = -y_broadcast * z_broadcast
+    G_3D[1, 1] = (1/wavelength) - y_broadcast**2
+    G_3D[1, 2] = -y_broadcast * x_broadcast
+    G_3D[2, 0] = -x_broadcast * z_broadcast
+    G_3D[2, 1] = -x_broadcast * y_broadcast
+    G_3D[2, 2] = (1/wavelength) - x_broadcast**2
+    G_3D *= 1j * mask
+    G_3D /= torch.amax(torch.abs(G_3D))
+
     # Main transfer function calculation
     PG_3D = torch.einsum("zyx,ipzyx->ipzyx", P_3D, G_3D)
     PS_3D = torch.einsum("zyx,jzyx,kzyx->jkzyx", P_3D, S_3D, torch.conj(S_3D))
