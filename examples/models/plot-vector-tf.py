@@ -147,7 +147,9 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.5]):
     Y = util.gellmann()[[0, 4, 8]]
     # select phase f00 and transverse linear isotropic terms 2-2, and f22
 
-    sfZYX_transfer_function = torch.einsum("sik,ikpjzyx,lpj->slzyx", s, H_re, Y)
+    sfZYX_transfer_function = torch.einsum(
+        "sik,ikpjzyx,lpj->slzyx", s, H_re, Y
+    )
 
     # Make plots
     plot_transfer_function(
@@ -159,7 +161,7 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.5]):
         f_labels=["Z", "Y", "X"],
         rose_path=None,
         inches_per_column=1,
-        saturate_clim_fraction=0.1,
+        saturate_clim_fraction=0.05,
         trim_edges=0,
     )
 
