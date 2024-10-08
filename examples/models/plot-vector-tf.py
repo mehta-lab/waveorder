@@ -109,8 +109,8 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.5]):
 
     nu_rr = torch.sqrt(z_broadcast**2 + y_broadcast**2 + x_broadcast**2)
     wavelength = wavelength_illumination / index_of_refraction_media
-    nu_max = (17 / 16) / (wavelength)
-    nu_min = (15 / 16) / (wavelength)
+    nu_max = (33 / 32) / (wavelength)
+    nu_min = (31 / 32) / (wavelength)
 
     mask = torch.logical_and(nu_rr < nu_max, nu_rr > nu_min)
 
@@ -121,17 +121,32 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.5]):
     ## <end> CANDIDATE FOR REMOVAL <end>
 
     # Quick Green's tensor, directly in Fourier space
-    G_3D[0, 0] = (1/wavelength) - z_broadcast**2
+    G_3D[0, 0] = (1 / wavelength)**2 - (z_broadcast)**2
     G_3D[0, 1] = -z_broadcast * y_broadcast
     G_3D[0, 2] = -z_broadcast * x_broadcast
     G_3D[1, 0] = -y_broadcast * z_broadcast
-    G_3D[1, 1] = (1/wavelength) - y_broadcast**2
+    G_3D[1, 1] = (1 / wavelength)**2 - (y_broadcast)**2
     G_3D[1, 2] = -y_broadcast * x_broadcast
     G_3D[2, 0] = -x_broadcast * z_broadcast
     G_3D[2, 1] = -x_broadcast * y_broadcast
-    G_3D[2, 2] = (1/wavelength) - x_broadcast**2
+    G_3D[2, 2] = (1 / wavelength)**2 - (x_broadcast)**2
     G_3D *= 1j * mask
     G_3D /= torch.amax(torch.abs(G_3D))
+
+    # Use this to visualize Green's tensor
+    # from waveorder.visuals.napari_visuals import (
+    #     add_transfer_function_to_viewer,
+    # )
+    # import napari
+
+    # v = napari.Viewer()
+    # add_transfer_function_to_viewer(
+    #     v,
+    #     G_3D,
+    #     zyx_scale=(z_pixel_size, yx_pixel_size, yx_pixel_size),
+    #     complex_rgb=True,
+    # )
+    # import pdb; pdb.set_trace()
 
     # Main transfer function calculation
     PG_3D = torch.einsum("zyx,ipzyx->ipzyx", P_3D, G_3D)
