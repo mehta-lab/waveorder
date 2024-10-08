@@ -142,7 +142,7 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.5]):
 
     H_re /= torch.amax(torch.abs(H_re))
 
-    s_labels = [0, 1, 2]
+    s_labels = [0, 1, 2, 3]
     s = util.pauli()[s_labels]  # select s0, s1, and s2 (drop s3)
     Y = util.gellmann()[[0, 4, 8]]
     # select phase f00 and transverse linear isotropic terms 2-2, and f22
