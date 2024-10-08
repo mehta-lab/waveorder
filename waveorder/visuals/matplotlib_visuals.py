@@ -292,5 +292,5 @@ def plot_transfer_function(
         color='black'
     )
 
-
+    print(f"Saving {filename}")
     fig.savefig(filename, dpi=300, format="pdf", bbox_inches="tight")

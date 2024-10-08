@@ -156,12 +156,12 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.5]):
         G_3D,
         filename=os.path.join(output_folder, f"G_{file_suffix}.pdf"),
         zyx_scale=(z_pixel_size, yx_pixel_size, yx_pixel_size),
-        z_slice=-20,
+        z_slice=0,
         s_labels=["Z", "Y", "X"],
         f_labels=["Z", "Y", "X"],
         rose_path=None,
         inches_per_column=1,
-        saturate_clim_fraction=0.05,
+        saturate_clim_fraction=1.0,
         trim_edges=0,
     )
 
