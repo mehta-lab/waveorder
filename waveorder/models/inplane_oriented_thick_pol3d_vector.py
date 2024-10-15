@@ -239,7 +239,7 @@ def _calculate_wrap_unsafe_transfer_function(
 
     H_re /= torch.amax(torch.abs(H_re))
 
-    s = util.pauli()[[0, 1, 2]]  # select s0, s1, and s2 (drop s3)
+    s = util.pauli()[[0, 1, 2, 3]]  # select s0, s1, and s2
     Y = util.gellmann()[[0, 4, 8]]
     # select phase f00 and transverse linear isotropic terms 2-2, and f22
 
