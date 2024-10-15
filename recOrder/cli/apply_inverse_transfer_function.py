@@ -77,6 +77,10 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
             channel_names.append("Phase2D")
         elif recon_dim == 3:
             channel_names.append("Phase3D")
+    if recon_biref and recon_phase:
+        channel_names.append("Retardance_Joint_Decon")
+        channel_names.append("Orientation_Joint_Decon")
+        channel_names.append("Phase_Joint_Decon")
     if recon_fluo:
         fluor_name = settings.input_channel_names[0]
         if recon_dim == 2:
@@ -336,7 +340,7 @@ def apply_inverse_transfer_function_cli(
         f"{cpu_request} CPU{'s' if cpu_request > 1 else ''} and "
         f"{gb_ram_request} GB of memory per CPU."
     )
-    executor = submitit.AutoExecutor(folder="logs")
+    executor = submitit.AutoExecutor(folder="logs") #, cluster="debug")
 
     executor.update_parameters(
         slurm_array_parallelism=np.min([50, num_jobs]),
