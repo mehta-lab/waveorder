@@ -258,7 +258,7 @@ def calculate_singular_system(sfZYX_transfer_function):
     print("Computing SVD")
     ZYXsf_transfer_function = sfZYX_transfer_function.permute(2, 3, 4, 0, 1)
     U, S, Vh = torch.linalg.svd(ZYXsf_transfer_function, full_matrices=False)
-    S /= torch.max(S)
+    S  # /= torch.max(S)
     singular_system = (U, S, Vh)
     return singular_system
 
@@ -302,9 +302,9 @@ def apply_inverse_transfer_function(
     # Key computation
     print("Computing inverse filter")
     U, S, Vh = singular_system
-    S_reg = S / (S**2 + regularization_strength**2)
+    S_reg = S / (S**2 + regularization_strength)
     ZYXsf_inverse_filter = torch.einsum(
-        "zyxij,zyxj,zyxjk->zyxki", U, S_reg, Vh
+        "zyxij,zyxj,zyxjk->zyxik", U, S_reg, Vh
     )
 
     # Apply inverse filter
