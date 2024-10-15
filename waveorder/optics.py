@@ -717,6 +717,60 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
         )
 
 
+def generate_greens_tensor_spectrum(
+        zyx_shape, 
+        zyx_pixel_size,
+        wavelength,
+    ):
+    """
+    Parameters
+    ----------
+    zyx_shape : tuple
+    zyx_pixel_size : tuple
+    wavelength : float
+        wavelength in medium
+
+    Returns
+    -------
+    torch.tensor
+        Green's tensor spectrum 
+    """
+    Z, Y, X = zyx_shape
+    dZ, dY, dX = zyx_pixel_size
+
+    z_step = torch.fft.ifftshift(
+        (torch.arange(Z) - Z // 2) * dZ
+    )
+    y_step = torch.fft.ifftshift((torch.arange(Y) - Y // 2) * dY)
+    x_step = torch.fft.ifftshift((torch.arange(X) - X // 2) * dX)
+
+    zz = torch.broadcast_to(z_step[:, None, None], (Z, Y, X))
+    yy = torch.broadcast_to(y_step[None, :, None], (Z, Y, X))
+    xx = torch.broadcast_to(x_step[None, None, :], (Z, Y, X))
+
+    rr = torch.sqrt(xx**2 + yy**2 + zz**2)
+    rhat = torch.stack([zz, yy, xx], dim=0) / rr
+
+    scalar_g = torch.exp(1j * 2 * torch.pi * rr / wavelength) / (
+        4 * torch.pi * rr
+    )
+
+    eye = torch.zeros((3, 3, Z, Y, X))
+    eye[0, 0] = 1
+    eye[1, 1] = 1
+    eye[2, 2] = 1
+
+    Q = eye - torch.einsum("izyx,jzyx->ijzyx", rhat, rhat)
+    g_3d = Q * scalar_g
+    g_3d = torch.nan_to_num(g_3d)
+
+    G_3D = torch.fft.fftn(g_3d, dim=(-3, -2, -1))
+    G_3D = torch.imag(G_3D) * 1j
+    G_3D /= torch.amax(torch.abs(G_3D))
+
+    return G_3D
+    
+
 def compute_weak_object_transfer_function_2d(
     illumination_pupil, detection_pupil
 ):
