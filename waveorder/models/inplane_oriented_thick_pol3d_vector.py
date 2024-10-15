@@ -89,8 +89,8 @@ def calculate_transfer_function(
 
     # Crop to original size
     sfzyx_out_shape = (
-        3,
-        3,
+        pooled_sfZYX_transfer_function.shape[0],
+        pooled_sfZYX_transfer_function.shape[1],
         zyx_shape[0] + 2 * z_padding,
     ) + zyx_shape[1:]
     return (
