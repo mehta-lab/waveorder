@@ -17,8 +17,8 @@ def generate_test_phantom(zyx_shape):
         margin=50,
     )
     c00 = yx_star
-    c2_2 = -torch.sin(2 * yx_theta) * yx_star #torch.zeros_like(c00)  
-    c22 = -torch.cos(2 * yx_theta) * yx_star #torch.zeros_like(c00)  # 
+    c2_2 = -torch.sin(2 * yx_theta) * yx_star  # torch.zeros_like(c00)
+    c22 = -torch.cos(2 * yx_theta) * yx_star  # torch.zeros_like(c00)  #
 
     # Put in a center slices of a 3D object
     center_slice_object = torch.stack((c00, c2_2, c22), dim=0)
@@ -160,13 +160,6 @@ def _calculate_wrap_unsafe_transfer_function(
         z_position_list,
     )
 
-    greens_functions_z = optics.generate_greens_function_z(
-        radial_frequencies,
-        pupil,
-        wavelength_illumination / index_of_refraction_media,
-        z_position_list,
-    )
-
     # Calculate vector defocus pupils
     S = optics.generate_vector_source_defocus_pupil(
         x_frequencies,
@@ -186,40 +179,23 @@ def _calculate_wrap_unsafe_transfer_function(
         z_position_list,
     )
 
-    G = optics.generate_defocus_greens_tensor(
-        x_frequencies,
-        y_frequencies,
-        greens_functions_z,
-        pupil,
-        lambda_in=wavelength_illumination / index_of_refraction_media,
-    )
-
     P_3D = torch.abs(torch.fft.ifft(P, dim=-3)).type(torch.complex64)
-    G_3D = torch.abs(torch.fft.ifft(G, dim=-3)) * (-1j)
     S_3D = torch.fft.ifft(S, dim=-3)
+    G_3D = optics.generate_greens_tensor_spectrum(
+        zyx_shape=(z_total, zyx_shape[1], zyx_shape[2]),
+        zyx_pixel_size=(z_pixel_size, yx_pixel_size, yx_pixel_size),
+        wavelength=wavelength_illumination / index_of_refraction_media,
+    )
+    import pdb; pdb.set_trace()
 
-    # cleanup 
-    freq_shape = z_position_list.shape + x_frequencies.shape
 
-    z_broadcast = torch.broadcast_to(z_frequencies[:, None, None], freq_shape)
-    y_broadcast = torch.broadcast_to(y_frequencies[None, :, :], freq_shape)
-    x_broadcast = torch.broadcast_to(x_frequencies[None, :, :], freq_shape)
-
-    nu_rr = torch.sqrt(z_broadcast**2 + y_broadcast**2 + x_broadcast**2)
-    wavelength = wavelength_illumination / index_of_refraction_media
-    nu_max = (17 / 16) / (wavelength)
-    nu_min = (15 / 16) / (wavelength)
-
-    mask = torch.logical_and(nu_rr < nu_max, nu_rr > nu_min)
-
-    P_3D *= mask
-    G_3D *= mask
-    S_3D *= mask
+    # P_3D *= mask
+    # G_3D *= mask
+    # S_3D *= mask
 
     # Main part
     PG_3D = torch.einsum("zyx,ipzyx->ipzyx", P_3D, G_3D)
     PS_3D = torch.einsum("zyx,jzyx,kzyx->jkzyx", P_3D, S_3D, torch.conj(S_3D))
-
 
     pg = torch.fft.fftn(PG_3D, dim=(-3, -2, -1))
     ps = torch.fft.fftn(PS_3D, dim=(-3, -2, -1))
@@ -246,7 +222,6 @@ def _calculate_wrap_unsafe_transfer_function(
     sfZYX_transfer_function = torch.einsum(
         "sik,ikpjzyx,lpj->slzyx", s, H_re, Y
     )
-
     return (
         sfZYX_transfer_function,
         intensity_to_stokes_matrix,
@@ -258,7 +233,6 @@ def calculate_singular_system(sfZYX_transfer_function):
     print("Computing SVD")
     ZYXsf_transfer_function = sfZYX_transfer_function.permute(2, 3, 4, 0, 1)
     U, S, Vh = torch.linalg.svd(ZYXsf_transfer_function, full_matrices=False)
-    S  # /= torch.max(S)
     singular_system = (U, S, Vh)
     return singular_system
 
@@ -303,6 +277,7 @@ def apply_inverse_transfer_function(
     print("Computing inverse filter")
     U, S, Vh = singular_system
     S_reg = S / (S**2 + regularization_strength)
+
     ZYXsf_inverse_filter = torch.einsum(
         "zyxij,zyxj,zyxjk->zyxik", U, S_reg, Vh
     )
