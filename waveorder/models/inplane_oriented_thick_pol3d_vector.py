@@ -197,8 +197,12 @@ def _calculate_wrap_unsafe_transfer_function(
     PG_3D = torch.einsum("zyx,ipzyx->ipzyx", P_3D, G_3D)
     PS_3D = torch.einsum("zyx,jzyx,kzyx->jkzyx", P_3D, S_3D, torch.conj(S_3D))
 
+    del P_3D, G_3D, S_3D
+
     pg = torch.fft.fftn(PG_3D, dim=(-3, -2, -1))
     ps = torch.fft.fftn(PS_3D, dim=(-3, -2, -1))
+
+    del PG_3D, PS_3D
 
     H1 = torch.fft.ifftn(
         torch.einsum("ipzyx,jkzyx->ijpkzyx", pg, torch.conj(ps)),
@@ -212,6 +216,8 @@ def _calculate_wrap_unsafe_transfer_function(
 
     H_re = H1[1:, 1:] + H2[1:, 1:]  # drop data-side z components
     # H_im = 1j * (H1 - H2) # ignore absorptive terms
+
+    del H1, H2
 
     H_re /= torch.amax(torch.abs(H_re))
 
