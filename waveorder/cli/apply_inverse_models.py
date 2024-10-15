@@ -6,11 +6,13 @@ import numpy as np
 import torch
 
 from waveorder.models import (
+    inplane_oriented_thick_pol3d_vector,
     inplane_oriented_thick_pol3d,
     isotropic_fluorescent_thick_3d,
     isotropic_thin_3d,
     phase_thick_3d,
 )
+from waveorder.stokes import stokes_after_adr, _s12_to_orientation
 
 
 def radians_to_nanometers(retardance_rad, wavelength_illumination_um):
@@ -221,9 +223,52 @@ def birefringence_and_phase(
             reconstructed_parameters_3d[0], wavelength_illumination
         )
 
+        # Load vector transfer function
+        vector_transfer_function = torch.tensor(
+            transfer_function_dataset["vector_transfer_function"]
+        )
+
+        # import napari
+        # v = napari.Viewer()
+        # inplane_oriented_thick_pol3d_vector.visualize_transfer_function(v, vector_transfer_function, zyx_scale=(1,1,1))
+
+        # Convert retardance and orientation to stokes
+        stokes = stokes_after_adr(*reconstructed_parameters_3d)
+
+        # Compute svd
+        singular_system = (
+            inplane_oriented_thick_pol3d_vector.calculate_singular_system(
+                vector_transfer_function
+            )
+        )
+
+        # Apply reconstruction
+        joint_recon_params = inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
+            szyx_data=torch.stack(stokes),
+            singular_system=singular_system,
+            intensity_to_stokes_matrix=None,
+            **settings_phase.apply_inverse.dict(),
+        )
+
+        new_ret = (joint_recon_params[1]**2 + joint_recon_params[2]**2)**(0.5)
+        new_ori = _s12_to_orientation(joint_recon_params[1], -joint_recon_params[2])
+
+        # Convert stokes to retardance and orientation
+        #new_ret, new_ori, _ = estimate_ar_from_stokes012(*joint_recon_params)
+
+        # Convert retardance
+        new_ret_nm = radians_to_nanometers(
+            new_ret, wavelength_illumination
+        )
+
         # Save
         output = torch.stack(
-            (retardance,) + reconstructed_parameters_3d[1:] + (zyx_phase,)
+            (retardance,)
+            + reconstructed_parameters_3d[1:]
+            + (zyx_phase,)
+            + (new_ret_nm,)
+            + (new_ori,)
+            + (joint_recon_params[0],)
         )
     return output
 
