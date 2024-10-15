@@ -4,7 +4,7 @@ import numpy as np
 from waveorder import util, optics
 from waveorder.visuals.matplotlib_visuals import plot_5d_ortho
 
-output_folder = "2024-10-14"
+output_folder = "2024-10-15"
 os.makedirs(output_folder, exist_ok=True)
 
 # Parameters
@@ -65,14 +65,6 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.75]):
         z_position_list,
     )
 
-    greens_functions_z = optics.generate_greens_function_z(
-        radial_frequencies,
-        pupil,
-        wavelength_illumination / index_of_refraction_media,
-        z_position_list,
-        axially_even=True,
-    )
-
     # Calculate vector defocus pupils
     S = optics.generate_vector_source_defocus_pupil(
         x_frequencies,
@@ -95,6 +87,11 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.75]):
 
     P_3D = torch.abs(torch.fft.ifft(P, dim=-3)).type(torch.complex64)
     S_3D = torch.fft.ifft(S, dim=-3)
+    G_3D = optics.generate_greens_tensor_spectrum(
+        zyx_shape=(z_total, zyx_shape[1], zyx_shape[2]), 
+        zyx_pixel_size=(z_pixel_size, yx_pixel_size, yx_pixel_size), 
+        wavelength=wavelength_illumination / index_of_refraction_media
+    )
 
     ## CANDIDATE FOR REMOVAL
     # cleanup some ringing
@@ -114,42 +111,7 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.75]):
     P_3D *= mask
     S_3D *= mask
 
-    ## <end> CANDIDATE FOR REMOVAL <end>
-
-    # TODO REFACTOR: Direct green's tensor
-    Z = z_total
-    Y = zyx_shape[1]
-    X = zyx_shape[2]
-
-    z_step = torch.fft.ifftshift(
-        (torch.arange(z_total) - z_total // 2) * z_pixel_size
-    )
-    y_step = torch.fft.ifftshift((torch.arange(Y) - Y // 2) * yx_pixel_size)
-    x_step = torch.fft.ifftshift((torch.arange(X) - X // 2) * yx_pixel_size)
-
-    zz = torch.broadcast_to(z_step[:, None, None], (Z, Y, X))
-    yy = torch.broadcast_to(y_step[None, :, None], (Z, Y, X))
-    xx = torch.broadcast_to(x_step[None, None, :], (Z, Y, X))
-
-    rr = torch.sqrt(xx**2 + yy**2 + zz**2)
-    rhat = torch.stack([zz, yy, xx], dim=0) / rr
-
-    scalar_g = torch.exp(1j * 2 * torch.pi * rr / wavelength) / (
-        4 * torch.pi * rr
-    )
-
-    eye = torch.zeros((3, 3, Z, Y, X))
-    eye[0, 0] = 1
-    eye[1, 1] = 1
-    eye[2, 2] = 1
-
-    Q = eye - torch.einsum("izyx,jzyx->ijzyx", rhat, rhat)
-    g_3d = Q * scalar_g
-    g_3d = torch.nan_to_num(g_3d)
-
-    G_3D = torch.fft.fftn(g_3d, dim=(-3, -2, -1))
-    G_3D = torch.imag(G_3D) * 1j
-    G_3D /= torch.amax(torch.abs(G_3D))
+    # <end> CANDIDATE FOR REMOVAL <end>
 
     # Main transfer function calculation
     PG_3D = torch.einsum("zyx,ipzyx->ipzyx", P_3D, G_3D)
@@ -208,6 +170,7 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.75]):
     # import pdb
     # pdb.set_trace()
 
+    g_3d = torch.fft.ifftn(G_3D, dim=(-3, -2, -1))
     plot_5d_ortho(
         g_3d,
         filename=os.path.join(output_folder, f"greens_{file_suffix}.pdf"),
@@ -244,7 +207,7 @@ for i, numerical_aperture_illumination in enumerate([0.01, 0.75]):
         column_labels=["Y", "X"],
         rose_path=None,
         inches_per_column=1,
-        saturate_clim_fraction=0.75,
+        saturate_clim_fraction=1.0,
         trim_edges=0,
         fourier_space=True,
     )
