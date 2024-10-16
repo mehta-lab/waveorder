@@ -231,9 +231,12 @@ def _calculate_wrap_unsafe_transfer_function(
 def calculate_singular_system(sfZYX_transfer_function):
     # Compute regularized inverse filter
     print("Computing SVD")
-    ZYXsf_transfer_function = sfZYX_transfer_function.permute(2, 3, 4, 0, 1)
-    U, S, Vh = torch.linalg.svd(ZYXsf_transfer_function, full_matrices=False)
-    singular_system = (U, S, Vh)
+    U, S, Vh = torch.linalg.svd(
+        sfZYX_transfer_function.permute(2, 3, 4, 0, 1), full_matrices=False
+    )
+    singular_system = (U.permute(3, 4, 0, 1, 2), 
+                       S.permute(3, 0, 1, 2), 
+                       Vh.permute(3, 4, 0, 1, 2))
     return singular_system
 
 
@@ -279,12 +282,12 @@ def apply_inverse_transfer_function(
     S_reg = S / (S**2 + regularization_strength)
 
     ZYXsf_inverse_filter = torch.einsum(
-        "zyxij,zyxj,zyxjk->zyxik", U, S_reg, Vh
+        "sjzyx,jzyx,jfzyx->sfzyx", U, S_reg, Vh
     )
 
     # Apply inverse filter
     fZYX_reconstructed = torch.einsum(
-        "szyx,zyxsf->fzyx", sZYX_data, ZYXsf_inverse_filter
+        "szyx,sfzyx->fzyx", sZYX_data, ZYXsf_inverse_filter
     )
 
     return torch.real(torch.fft.ifftn(fZYX_reconstructed, dim=(1, 2, 3)))
