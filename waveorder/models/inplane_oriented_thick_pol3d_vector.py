@@ -114,6 +114,7 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_detection,
     invert_phase_contrast=False,
 ):
+    print("Computing transfer function")
     intensity_to_stokes_matrix = stokes.calculate_intensity_to_stokes_matrix(
         swing, scheme=scheme
     )
@@ -131,7 +132,9 @@ def _calculate_wrap_unsafe_transfer_function(
     z_position_list = torch.fft.ifftshift(
         (torch.arange(z_total) - z_total // 2) * z_pixel_size
     )
-    if not invert_phase_contrast: # opposite sign of direct phase reconstruction
+    if (
+        not invert_phase_contrast
+    ):  # opposite sign of direct phase reconstruction
         z_position_list = torch.flip(z_position_list, dims=(0,))
     z_frequencies = torch.fft.fftfreq(z_total, d=z_pixel_size)
 
@@ -231,12 +234,15 @@ def _calculate_wrap_unsafe_transfer_function(
 def calculate_singular_system(sfZYX_transfer_function):
     # Compute regularized inverse filter
     print("Computing SVD")
+    ZYXsf_transfer_function = sfZYX_transfer_function.permute(2, 3, 4, 0, 1)
     U, S, Vh = torch.linalg.svd(
-        sfZYX_transfer_function.permute(2, 3, 4, 0, 1), full_matrices=False
+        ZYXsf_transfer_function, full_matrices=False
     )
-    singular_system = (U.permute(3, 4, 0, 1, 2), 
-                       S.permute(3, 0, 1, 2), 
-                       Vh.permute(3, 4, 0, 1, 2))
+    singular_system = (
+        U.permute(3, 4, 0, 1, 2),
+        S.permute(3, 0, 1, 2),
+        Vh.permute(3, 4, 0, 1, 2),
+    )
     return singular_system
 
 
