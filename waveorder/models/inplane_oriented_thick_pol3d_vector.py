@@ -186,12 +186,6 @@ def _calculate_wrap_unsafe_transfer_function(
         zyx_pixel_size=(z_pixel_size, yx_pixel_size, yx_pixel_size),
         wavelength=wavelength_illumination / index_of_refraction_media,
     )
-    import pdb; pdb.set_trace()
-
-
-    # P_3D *= mask
-    # G_3D *= mask
-    # S_3D *= mask
 
     # Main part
     PG_3D = torch.einsum("zyx,ipzyx->ipzyx", P_3D, G_3D)
