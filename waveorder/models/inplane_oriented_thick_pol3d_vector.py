@@ -131,7 +131,7 @@ def _calculate_wrap_unsafe_transfer_function(
     z_position_list = torch.fft.ifftshift(
         (torch.arange(z_total) - z_total // 2) * z_pixel_size
     )
-    if invert_phase_contrast:
+    if not invert_phase_contrast: # opposite sign of direct phase reconstruction
         z_position_list = torch.flip(z_position_list, dims=(0,))
     z_frequencies = torch.fft.fftfreq(z_total, d=z_pixel_size)
 
