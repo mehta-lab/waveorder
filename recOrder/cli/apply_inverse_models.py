@@ -222,20 +222,21 @@ def birefringence_and_phase(
             reconstructed_parameters_3d[0], wavelength_illumination
         )
 
-        # Load vector transfer function
-        vector_transfer_function = torch.tensor(
-            transfer_function_dataset["vector_transfer_function"]
+        # Load singular system
+        U = torch.tensor(
+            transfer_function_dataset["singular_system_U"]
         )
+        S = torch.tensor(
+            transfer_function_dataset["singular_system_S"][0]
+        )
+        Vh = torch.tensor(
+            transfer_function_dataset["singular_system_Vh"]
+        )
+        singular_system = (U, S, Vh)
+
 
         # Convert retardance and orientation to stokes
         stokes = stokes_after_adr(*reconstructed_parameters_3d)
-
-        # Compute svd
-        singular_system = (
-            inplane_oriented_thick_pol3d_vector.calculate_singular_system(
-                vector_transfer_function
-            )
-        )
 
         # Apply reconstruction
         joint_recon_params = inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(

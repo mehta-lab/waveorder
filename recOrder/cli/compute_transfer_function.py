@@ -50,12 +50,35 @@ def generate_and_save_vector_birefringence_transfer_function(
         )
     )
 
-    dataset.append_channel("ch1")
-    dataset.append_channel("ch2")
+    # Compute svd
+    U, S, Vh = inplane_oriented_thick_pol3d_vector.calculate_singular_system(
+        sfZYX_transfer_function
+    )
+    chunks = (1, 1, 1, zyx_shape[1], zyx_shape[2])
+
+    # Add dummy channels
+    for i in range(3):
+        dataset.append_channel(f"ch{i}")
+
     dataset.create_image(
         "vector_transfer_function",
         sfZYX_transfer_function.cpu().numpy(),
-        chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
+        chunks=chunks,
+    )
+    dataset.create_image(
+        "singular_system_U",
+        U.cpu().numpy(),
+        chunks=chunks,
+    )
+    dataset.create_image(
+        "singular_system_S",
+        S[None].cpu().numpy(),
+        chunks=chunks,
+    )
+    dataset.create_image(
+        "singular_system_Vh",
+        Vh.cpu().numpy(),
+        chunks=chunks,
     )
 
 
