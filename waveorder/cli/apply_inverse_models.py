@@ -228,10 +228,6 @@ def birefringence_and_phase(
             transfer_function_dataset["vector_transfer_function"]
         )
 
-        # import napari
-        # v = napari.Viewer()
-        # inplane_oriented_thick_pol3d_vector.visualize_transfer_function(v, vector_transfer_function, zyx_scale=(1,1,1))
-
         # Convert retardance and orientation to stokes
         stokes = stokes_after_adr(*reconstructed_parameters_3d)
 
