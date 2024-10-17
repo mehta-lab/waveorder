@@ -41,6 +41,9 @@ def calculate_transfer_function(
     invert_phase_contrast=False,
     fourier_oversample_factor=1,
 ):
+    if z_padding != 0:
+        raise NotImplementedError("Padding not implemented for this model")
+
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
         numerical_aperture_illumination,
@@ -196,11 +199,13 @@ def _calculate_wrap_unsafe_transfer_function(
 
     del P_3D, G_3D, S_3D
 
+    print("\tComputing pg and ps...")
     pg = torch.fft.fftn(PG_3D, dim=(-3, -2, -1))
     ps = torch.fft.fftn(PS_3D, dim=(-3, -2, -1))
 
     del PG_3D, PS_3D
 
+    print("\tComputing H1 and H2...")
     H1 = torch.fft.ifftn(
         torch.einsum("ipzyx,jkzyx->ijpkzyx", pg, torch.conj(ps)),
         dim=(-3, -2, -1),
@@ -222,6 +227,7 @@ def _calculate_wrap_unsafe_transfer_function(
     Y = util.gellmann()[[0, 4, 8]]
     # select phase f00 and transverse linear isotropic terms 2-2, and f22
 
+    print("\tComputing final transfer function...")
     sfZYX_transfer_function = torch.einsum(
         "sik,ikpjzyx,lpj->slzyx", s, H_re, Y
     )
@@ -235,9 +241,7 @@ def calculate_singular_system(sfZYX_transfer_function):
     # Compute regularized inverse filter
     print("Computing SVD")
     ZYXsf_transfer_function = sfZYX_transfer_function.permute(2, 3, 4, 0, 1)
-    U, S, Vh = torch.linalg.svd(
-        ZYXsf_transfer_function, full_matrices=False
-    )
+    U, S, Vh = torch.linalg.svd(ZYXsf_transfer_function, full_matrices=False)
     singular_system = (
         U.permute(3, 4, 0, 1, 2),
         S.permute(3, 0, 1, 2),
