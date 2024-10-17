@@ -9,73 +9,69 @@ import torch
 
 
 def plot_5d_ortho(
-    rczyx_data,
+    rcCzyx_data,
     filename,
-    zyx_scale,
-    z_slice,
-    row_labels,
-    column_labels,
+    voxel_size,
+    zyx_slice,
+    color_func,
+    row_labels=None,
+    column_labels=None,
     rose_path=None,
-    inches_per_column=1,
-    saturate_clim_fraction=1.0,
-    trim_edges=0,
-    fourier_space=True,
+    inches_per_column=1.5,
+    label_size=1,
+    ortho_line_width=0.5,
+    row_column_line_width=0.5,
+    **kwargs,
 ):
-    R, C, Z, Y, X = rczyx_data.shape
+    R, C, Ch, Z, Y, X = rcCzyx_data.shape
 
-    axis_extent = [
-        Z * zyx_scale[0],
-        Y * zyx_scale[1],
-        X * zyx_scale[2],
-    ]
-    if fourier_space:
-        axis_extent = [1 / x for x in axis_extent]
+    # Extent
+    dZ, dY, dX = Z * voxel_size[0], Y * voxel_size[1], X * voxel_size[2]
 
-    rczyx_data = nd_fourier_central_cuboid(
-        rczyx_data, (R, C, Z - trim_edges, Y - trim_edges, X - trim_edges)
-    )
+    # if fourier_space:
+    #     axis_extent = [1 / x for x in axis_extent]
 
-    R, C, Z, Y, X = rczyx_data.shape  # after cropping
+    # rczyx_data = nd_fourier_central_cuboid(
+    #     rczyx_data, (R, C, Z - trim_edges, Y - trim_edges, X - trim_edges)
+    # )
 
-    rczyx_data = torch.fft.ifftshift(rczyx_data, dim=(-3, -2, -1))
-    sfZYX_rgb = complex_tensor_to_rgb(rczyx_data, saturate_clim_fraction)
+    # R, C, Z, Y, X = rczyx_data.shape  # after cropping
+
+    # rczyx_data = torch.fft.ifftshift(rczyx_data, dim=(-3, -2, -1))
+    # sfZYX_rgb = complex_tensor_to_rgb(rczyx_data, saturate_clim_fraction)
 
     assert R == len(row_labels)
     assert C == len(column_labels)
+    assert zyx_slice[0] < Z and zyx_slice[1] < Y and zyx_slice[2] < X
+    assert zyx_slice[0] >= 0 and zyx_slice[1] >= 0 and zyx_slice[2] >= 0
 
-    n_rows = (R * 2) + 1
-    n_cols = (C * 2) + 1
+    n_rows = 1 + (2 * R)
+    n_cols = 1 + (2 * C)
+
+    width_ratios = [label_size] + C * [1, dZ / dX]
+    height_ratios = [label_size] + R * [dY / dX, dZ / dX]
+
+    fig_width = np.array(width_ratios).sum() * inches_per_column
+    fig_height = np.array(height_ratios).sum() * inches_per_column
 
     fig, axes = plt.subplots(
         n_rows,
         n_cols,
-        figsize=(n_cols, n_rows),
+        figsize=(fig_width, fig_height),
         gridspec_kw={
-            "wspace": 0.1,  # Adjust this value to reduce space between columns
-            "hspace": 0.1,  # Adjust this value to reduce space between rows
-            "width_ratios": [1]
-            + C
-            * [
-                1,
-                Z / X,
-            ],
-            "height_ratios": [1]
-            + R
-            * [
-                1,
-                Z / Y,
-            ],
+            "wspace": 0.05,
+            "hspace": 0.05,
+            "width_ratios": width_ratios,
+            "height_ratios": height_ratios,
         },
     )
 
-    rose_path = os.path.join(
-        os.path.dirname(__file__),
-        f"./assets/rose.png",
-    )
-    axes[0, 0].imshow(plt.imread(rose_path))
+    if rose_path is not None:
+        axes[0, 0].imshow(plt.imread(rose_path))
 
     for i in range(n_rows):
         for j in range(n_cols):
+            # Add labels
             if (i == 0 and (j - 1) % 2 == 0) or (j == 0 and (i - 1) % 2 == 0):
                 if i == 0:
                     folder = "gellman"
@@ -98,41 +94,40 @@ def plot_5d_ortho(
                         index,
                         horizontalalignment="center",
                         verticalalignment="center",
-                        fontsize=10,
+                        fontsize=10 * label_size,
                         color="black",
                     )
 
+            # Add data
             if i > 0 and j > 0:
-                # XY
+                Cyx_data = rcCzyx_data[
+                    int((i - 1) / 2), int((j - 1) / 2), :, zyx_slice[0]
+                ]
+                Cyz_data = rcCzyx_data[
+                    int((i - 1) / 2), int((j - 1) / 2), :, :, :, zyx_slice[2]
+                ].transpose(0, 2, 1)
+                Czx_data = rcCzyx_data[
+                    int((i - 1) / 2), int((j - 1) / 2), :, :, zyx_slice[1]
+                ]
+
+                # YX
                 if (i - 1) % 2 == 0 and (j - 1) % 2 == 0:
                     axes[i, j].imshow(
-                        sfZYX_rgb[
-                            int((i - 1) / 2),
-                            int((j - 1) / 2),
-                            (Z // 2) + z_slice,
-                        ],
-                        aspect=axis_extent[1] / axis_extent[2],
+                        color_func(*Cyx_data, **kwargs),
+                        aspect=voxel_size[1] / voxel_size[2],
                     )
                 # YZ
                 elif (i - 1) % 2 == 0 and (j - 1) % 2 == 1:
                     axes[i, j].imshow(
-                        sfZYX_rgb[
-                            int((i - 1) / 2), int((j - 1) / 2), :, :, X // 2, :
-                        ].transpose(1, 0, 2),
-                        aspect=axis_extent[1] / axis_extent[0],
+                        color_func(*Cyz_data, **kwargs),
+                        aspect=voxel_size[1] / voxel_size[0],
                     )
                 # XZ
                 elif (i - 1) % 2 == 1 and (j - 1) % 2 == 0:
                     axes[i, j].imshow(
-                        sfZYX_rgb[
-                            int((i - 1) / 2), int((j - 1) / 2), :, Y // 2
-                        ],
-                        aspect=axis_extent[0] / axis_extent[1],
+                        color_func(*Czx_data, **kwargs),
+                        aspect=voxel_size[0] / voxel_size[2],
                     )
-
-            axes[i, j].tick_params(
-                left=False, bottom=False, labelleft=False, labelbottom=False
-            )
 
             # Draw lines between rows and cols
             top = axes[0, 0].get_position().y1
@@ -150,7 +145,7 @@ def plot_5d_ortho(
                         [bottom, top],
                         transform=fig.transFigure,
                         color="black",
-                        lw=0.5,
+                        lw=row_column_line_width,
                     )
                 )
             if j == 0 and (i - 1) % 2 == 0:
@@ -164,173 +159,129 @@ def plot_5d_ortho(
                         [top_edge, top_edge],
                         transform=fig.transFigure,
                         color="black",
-                        lw=0.5,
+                        lw=row_column_line_width,
                     )
                 )
 
+            # Remove ticks and spines
+            axes[i, j].tick_params(
+                left=False, bottom=False, labelleft=False, labelbottom=False
+            )
             axes[i, j].spines["top"].set_visible(False)
             axes[i, j].spines["right"].set_visible(False)
             axes[i, j].spines["bottom"].set_visible(False)
             axes[i, j].spines["left"].set_visible(False)
 
-    # Draw ortho view lines
-    fig.add_artist(
-        plt.Line2D(
-            [Y // 2, Y // 2],
-            [0, X],
-            transform=axes[1, 1].transData,  # use axis coordinates
-            color="red",
-            lw=0.5,
-        )
-    )
-    fig.add_artist(
-        plt.Line2D(
-            [0, X],
-            [Y // 2, Y // 2],  # from bottom to top in axis coordinates
-            transform=axes[1, 1].transData,  # use axis coordinates
-            color="blue",
-            lw=0.5,
-        )
-    )
-    fig.add_artist(
-        plt.Rectangle(
-            (0, 0),  # lower-left corner
-            X,  # width
-            Y,  # height
-            linewidth=0.5,
-            edgecolor="green",
-            facecolor="none",
-            transform=axes[1, 1].transData,  # use axis coordinates
-        )
-    )
-    axes[1, 1].text(
-        0.1,
-        0.975,
-        "x",
-        horizontalalignment="left",
-        verticalalignment="top",
-        transform=axes[1, 1].transAxes,
-        fontsize=5,
-        color="black",
-    )
-    axes[1, 1].text(
-        0.025,
-        0.9,
-        "y",
-        horizontalalignment="left",
-        verticalalignment="top",
-        transform=axes[1, 1].transAxes,
-        fontsize=5,
-        color="black",
-    )
+    yx_slice_color = "green"
+    yz_slice_color = "red"
+    zx_slice_color = "blue"
 
-    fig.add_artist(
-        plt.Line2D(
-            [
-                Z // 2 + z_slice,
-                Z // 2 + z_slice,
-            ],
-            [0, Y],
-            transform=axes[1, 2].transData,  # use axis coordinates
-            color="green",
-            lw=0.5,
-        )
-    )
-    fig.add_artist(
-        plt.Line2D(
-            [0, Z],  # from bottom to top in axis coordinates
-            [Y // 2, Y // 2],
-            transform=axes[1, 2].transData,  # use axis coordinates
-            color="blue",
-            lw=0.5,
-        )
-    )
+    # Label orthogonal slices
+    add_ortho_lines_to_axis(
+        axes[1, 1],
+        (zyx_slice[1], zyx_slice[2]),
+        ("y", "x"),
+        yx_slice_color,
+        yz_slice_color,
+        zx_slice_color,
+        ortho_line_width,
+    )  # YX axis
 
-    rect = plt.Rectangle(
-        (0, 0),  # lower-left corner
-        Z,  # width
-        Y,  # height
-        linewidth=0.5,
-        edgecolor="red",
-        facecolor="none",
-        transform=axes[1, 2].transData,  # use axis coordinates
-    )
-    fig.add_artist(rect)
+    add_ortho_lines_to_axis(
+        axes[2, 1],
+        (zyx_slice[0], zyx_slice[2]),
+        ("z", "x"),
+        zx_slice_color,
+        yz_slice_color,
+        yx_slice_color,
+        ortho_line_width,
+    )  # ZX axis
 
-    axes[1, 2].text(
-        0.1,
-        0.975,
-        "z",
-        horizontalalignment="left",
-        verticalalignment="top",
-        transform=axes[1, 2].transAxes,
-        fontsize=5,
-        color="black",
-    )
-    axes[1, 2].text(
-        0.025,
-        0.9,
-        "y",
-        horizontalalignment="left",
-        verticalalignment="top",
-        transform=axes[1, 2].transAxes,
-        fontsize=5,
-        color="black",
-    )
-
-    fig.add_artist(
-        plt.Line2D(
-            [0, X],
-            [
-                Z // 2 + z_slice,
-                Z // 2 + z_slice,
-            ],  # from bottom to top in axis coordinates
-            transform=axes[2, 1].transData,  # use axis coordinates
-            color="green",
-            lw=0.5,
-        )
-    )
-    fig.add_artist(
-        plt.Line2D(
-            [X // 2, X // 2],
-            [0, Z],  # from bottom to top in axis coordinates
-            transform=axes[2, 1].transData,  # use axis coordinates
-            color="red",
-            lw=0.5,
-        )
-    )
-
-    rect = plt.Rectangle(
-        (0, 0),  # lower-left corner
-        X,  # width
-        Z,  # height
-        linewidth=0.5,
-        edgecolor="blue",
-        facecolor="none",
-        transform=axes[2, 1].transData,  # use axis coordinates
-    )
-    fig.add_artist(rect)
-
-    axes[2, 1].text(
-        0.1,
-        0.975,
-        "x",
-        horizontalalignment="left",
-        verticalalignment="top",
-        transform=axes[2, 1].transAxes,
-        fontsize=5,
-        color="black",
-    )
-    axes[2, 1].text(
-        0.025,
-        0.9,
-        "z",
-        horizontalalignment="left",
-        verticalalignment="top",
-        transform=axes[2, 1].transAxes,
-        fontsize=5,
-        color="black",
-    )
+    add_ortho_lines_to_axis(
+        axes[1, 2],
+        (zyx_slice[1], zyx_slice[0]),
+        ("y", "z"),
+        yz_slice_color,
+        yx_slice_color,
+        zx_slice_color,
+        ortho_line_width,
+    )  # YZ axis
 
     print(f"Saving {filename}")
-    fig.savefig(filename, dpi=300, format="pdf", bbox_inches="tight")
+    fig.savefig(filename, dpi=400, format="pdf", bbox_inches="tight")
+
+
+def add_ortho_lines_to_axis(
+    axis,
+    yx_slice,
+    axis_labels,
+    outer_color,
+    vertical_color,
+    horizontal_color,
+    line_width=0,
+    text_color="white",
+):
+
+    xmin, xmax = axis.get_xlim()
+    ymin, ymax = axis.get_ylim()
+
+    # Axis labels
+    horizontal_axis_label_pos = (0.1, 0.975)
+    vertical_axis_label_pos = (0.025, 0.9)
+    axis.text(
+        horizontal_axis_label_pos[0],
+        horizontal_axis_label_pos[1],
+        axis_labels[1],
+        horizontalalignment="left",
+        verticalalignment="top",
+        transform=axis.transAxes,
+        fontsize=5,
+        color=text_color,
+    )
+
+    axis.text(
+        vertical_axis_label_pos[0],
+        vertical_axis_label_pos[1],
+        axis_labels[0],
+        horizontalalignment="left",
+        verticalalignment="top",
+        transform=axis.transAxes,
+        fontsize=5,
+        color=text_color,
+    )
+
+    # Outer rectangle
+    axis.add_artist(
+        plt.Rectangle(
+            (xmin, ymin),
+            xmax - xmin,
+            ymax - ymin,
+            linewidth=line_width,
+            edgecolor=outer_color,
+            facecolor="none",
+            transform=axis.transData,
+            clip_on=False,
+        )
+    )
+
+    # Horizontal line
+    axis.add_artist(
+        plt.Line2D(
+            [xmin, xmax],
+            [yx_slice[0], yx_slice[0]],
+            transform=axis.transData,
+            color=horizontal_color,
+            lw=line_width,
+        )
+    )
+
+    # Vertical line
+    axis.add_artist(
+        plt.Line2D(
+            [yx_slice[1], yx_slice[1]],
+            [ymin, ymax],
+            transform=axis.transData,
+            color=vertical_color,
+            lw=line_width,
+        )
+    )
