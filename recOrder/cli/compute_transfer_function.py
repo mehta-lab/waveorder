@@ -41,19 +41,22 @@ def generate_and_save_vector_birefringence_transfer_function(
     echo_settings(settings.birefringence.transfer_function)
     echo_settings(settings.phase.transfer_function)
 
-    sfZYX_transfer_function, _ = (
+    num_elements = np.array(zyx_shape).prod()
+    max_tf_elements = 1e7  # empirical, based on memory usage
+    transverse_downsample_factor = np.ceil(np.sqrt(num_elements / max_tf_elements))
+    echo_headline(f"Downsampling transfer function in X and Y by {transverse_downsample_factor}x")
+
+    sfZYX_transfer_function, _, singular_system= (
         inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
             zyx_shape=zyx_shape,
             scheme=str(len(settings.input_channel_names)) + "-State",
             **settings.birefringence.transfer_function.dict(),
             **settings.phase.transfer_function.dict(),
+            transverse_downsample_factor=transverse_downsample_factor,
         )
     )
 
-    # Compute svd
-    U, S, Vh = inplane_oriented_thick_pol3d_vector.calculate_singular_system(
-        sfZYX_transfer_function
-    )
+    U, S, Vh = singular_system
     chunks = (1, 1, 1, zyx_shape[1], zyx_shape[2])
 
     # Add dummy channels
