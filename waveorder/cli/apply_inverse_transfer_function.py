@@ -356,7 +356,7 @@ def apply_inverse_transfer_function_cli(
         slurm_array_parallelism=np.min([50, num_jobs]),
         slurm_mem_per_cpu=f"{gb_ram_request}G",
         slurm_cpus_per_task=cpu_request,
-        slurm_time=60,
+        slurm_time=600,
         slurm_partition="cpu",
         timeout_min=jobs_mgmt.JOBS_TIMEOUT,
         # more slurm_*** resource parameters here
