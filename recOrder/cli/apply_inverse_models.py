@@ -221,19 +221,17 @@ def birefringence_and_phase(
         retardance = radians_to_nanometers(
             reconstructed_parameters_3d[0], wavelength_illumination
         )
-
         # Load singular system
         U = torch.tensor(
-            transfer_function_dataset["singular_system_U"]
+            np.array(transfer_function_dataset["singular_system_U"])
         )
         S = torch.tensor(
-            transfer_function_dataset["singular_system_S"][0]
+            np.array(transfer_function_dataset["singular_system_S"][0])
         )
         Vh = torch.tensor(
-            transfer_function_dataset["singular_system_Vh"]
+            np.array(transfer_function_dataset["singular_system_Vh"])
         )
         singular_system = (U, S, Vh)
-
 
         # Convert retardance and orientation to stokes
         stokes = stokes_after_adr(*reconstructed_parameters_3d)
