@@ -236,6 +236,8 @@ def birefringence_and_phase(
         # Convert retardance and orientation to stokes
         stokes = stokes_after_adr(*reconstructed_parameters_3d)
 
+        stokes = torch.nan_to_num_(torch.stack(stokes), nan=0.0)  # very rare nans from previous like
+
         # Apply reconstruction
         joint_recon_params = inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
             szyx_data=torch.stack(stokes),
