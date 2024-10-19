@@ -317,7 +317,7 @@ def apply_inverse_transfer_function_cli(
 
     settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
     gb_ram_request = 0
-    gb_per_element = 4 / 2**30  # bytes_per_float32 / bytes_per_gb
+    gb_per_element = 4 / 2 ** 30  # bytes_per_float32 / bytes_per_gb
     voxel_resource_multiplier = 4
     fourier_resource_multiplier = 32
     input_memory = Z * Y * X * gb_per_element
