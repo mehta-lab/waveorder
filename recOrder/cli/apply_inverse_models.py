@@ -240,22 +240,24 @@ def birefringence_and_phase(
 
         # Apply reconstruction
         joint_recon_params = inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
-            szyx_data=torch.stack(stokes),
+            szyx_data=stokes,
             singular_system=singular_system,
             intensity_to_stokes_matrix=None,
             **settings_phase.apply_inverse.dict(),
         )
 
-        new_ret = (joint_recon_params[1]**2 + joint_recon_params[2]**2)**(0.5)
-        new_ori = _s12_to_orientation(joint_recon_params[1], -joint_recon_params[2])
+        new_ret = (
+            joint_recon_params[1] ** 2 + joint_recon_params[2] ** 2
+        ) ** (0.5)
+        new_ori = _s12_to_orientation(
+            joint_recon_params[1], -joint_recon_params[2]
+        )
 
         # Convert stokes to retardance and orientation
-        #new_ret, new_ori, _ = estimate_ar_from_stokes012(*joint_recon_params)
+        # new_ret, new_ori, _ = estimate_ar_from_stokes012(*joint_recon_params)
 
         # Convert retardance
-        new_ret_nm = radians_to_nanometers(
-            new_ret, wavelength_illumination
-        )
+        new_ret_nm = radians_to_nanometers(new_ret, wavelength_illumination)
 
         # Save
         output = torch.stack(
