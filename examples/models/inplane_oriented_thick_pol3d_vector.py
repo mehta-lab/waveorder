@@ -66,25 +66,41 @@ szyx_data = inplane_oriented_thick_pol3d_vector.apply_transfer_function(
     intensity_to_stokes_matrix,
 )
 
-# Reconstruct
-fzyx_object_recon = (
-    inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
-        szyx_data,
-        singular_system,
-        intensity_to_stokes_matrix,
-        regularization_strength=1e-1,
-    )
-)
+# from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
+
+# add_transfer_function_to_viewer(
+#     viewer,
+#     singular_system[1],
+#     zyx_scale=(z_pixel_size, yx_pixel_size, yx_pixel_size),
+#     layer_name="Singular Values",
+# )
+# import pdb; pdb.set_trace()
+
 
 # Display
 arrays = [
-    (fzyx_object_recon, "Object - recon"),
     (szyx_data, "Data"),
     (fzyx_object, "Object"),
 ]
 
 for array in arrays:
     viewer.add_image(torch.real(array[0]).cpu().numpy(), name=array[1])
+
+
+# Reconstruct
+for reg_strength in [0.005, 0.008, 0.01, 0.05, 0.1]:
+    fzyx_object_recon = (
+        inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
+            szyx_data,
+            singular_system,
+            intensity_to_stokes_matrix,
+            regularization_strength=reg_strength,
+        )
+    )
+    viewer.add_image(
+        torch.real(fzyx_object_recon).cpu().numpy(),
+        name=f"Object - recon, reg_strength={reg_strength}",
+    )
 
 viewer.grid.enabled = True
 viewer.grid.shape = (2, 5)
