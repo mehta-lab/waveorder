@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 
 
 def plot_otf_support(
-    filename,
     i,
     det_na,
     N_theta=100,
@@ -50,8 +49,12 @@ def plot_otf_support(
         start_point = points[j]
         end_point = points[j + 1]
 
-        theta_start = np.arctan2(start_point[1] - center[1], start_point[0] - center[0])
-        theta_end = np.arctan2(end_point[1] - center[1], end_point[0] - center[0])
+        theta_start = np.arctan2(
+            start_point[1] - center[1], start_point[0] - center[0]
+        )
+        theta_end = np.arctan2(
+            end_point[1] - center[1], end_point[0] - center[0]
+        )
 
         thetas.append((theta_start, theta_end))
 
@@ -98,10 +101,11 @@ def plot_otf_support(
     for face in faces:
         try:
             ravel_face = [
-                np.ravel_multi_index(vertex, (N_phi, N_theta - 1)) for vertex in face
+                np.ravel_multi_index(vertex, (N_phi, N_theta - 1))
+                for vertex in face
             ]
         except:
-            print(face)
+            continue  # print(face)
         mesh.append(ravel_face)
     mesh = np.array(mesh)
 
@@ -112,12 +116,10 @@ def plot_otf_support(
     top_values = top_values.reshape(-1)
     bottom_values = bottom_values.reshape(-1)
 
-    v = napari.Viewer()
-    
     # Add negative surface first
     points_3d_copy = points_3d.copy()
     points_3d_copy[:, 0] *= -1  # flip z
-    v.add_surface(
+    viewer.add_surface(
         (points_3d_copy, mesh, bottom_values),
         opacity=0.75,
         colormap=bottom_cmap,
@@ -125,7 +127,7 @@ def plot_otf_support(
         shading="smooth",
     )
 
-    v.add_surface(
+    viewer.add_surface(
         (points_3d, mesh, top_values),
         opacity=0.75,
         colormap=top_cmap,
@@ -133,14 +135,11 @@ def plot_otf_support(
         shading="smooth",
     )
 
-    v.theme = "light"
-    v.dims.ndisplay = 3
-    v.camera.set_view_direction(view_direction=[-0.1, -1, -1], up_direction=[1, 0, 0])
-    v.camera.zoom = 250 * 2
-    import pdb; pdb.set_trace()
+    # import pdb; pdb.set_trace()
+    # viewer.screenshot(filename)
 
-    v.screenshot(filename)
 
+viewer = napari.Viewer()
 
 # Main loops
 output_dir = "./output"
@@ -150,44 +149,85 @@ if not os.path.exists(output_dir):
 N_phi = 50
 N_theta = 100
 det_na = 0.75
-ill_nas = [0.5]
+ill_na = 0.5
 
 my_colors = [
-    ["green", "purple"],
-    2 * ["red"],
-    2 * ["cyan"],
+    [["green", "purple"], [np.ones((N_phi,)), np.ones((N_phi,))]],
+    [
+        ["hsv", "hsv"],
+        [
+            (np.linspace(0, 2, N_phi) + 0) % 1.0,
+            -(np.linspace(0, 2, N_phi) + 0) % 1.0,
+        ],
+    ],
+    [
+        ["hsv", "hsv"],
+        [
+            (np.linspace(0, 2, N_phi) + 0.5) % 1.0,
+            -(np.linspace(0, 2, N_phi) + 0.5) % 1.0,
+        ],
+    ],
+    [
+        ["hsv", "hsv"],
+        [
+            (np.linspace(0, 2, N_phi) + 0) % 1.0,
+            -(np.linspace(0, 2, N_phi) + 0) % 1.0,
+        ],
+    ],
+    [["red", "red"], [np.ones((N_phi,)), np.ones((N_phi,))]],
+    [["green", "purple"], [np.ones((N_phi,)), np.ones((N_phi,))]],
+    [
+        ["hsv", "hsv"],
+        [
+            (np.linspace(0, 2, N_phi) + 0.5) % 1.0,
+            -(np.linspace(0, 2, N_phi) + 0.5) % 1.0,
+        ],
+    ],
+    [["green", "purple"], [np.ones((N_phi,)), np.ones((N_phi,))]],
+    [["cyan", "cyan"], [np.ones((N_phi,)), np.ones((N_phi,))]],
+    [["green", "purple"], [np.ones((N_phi,)), np.ones((N_phi,))]],
+    [
+        ["hsv", "hsv"],
+        [
+            (np.linspace(0, 2, N_phi) + 0) % 1.0,
+            -(np.linspace(0, 2, N_phi) + 0) % 1.0,
+        ],
+    ],
+    [
+        ["hsv", "hsv"],
+        [
+            (np.linspace(0, 2, N_phi) + 0.5) % 1.0,
+            -(np.linspace(0, 2, N_phi) + 0.5) % 1.0,
+        ],
+    ],
 ]
 
-for ill_na in ill_nas:
-    for my_color in my_colors:
-        plot_otf_support(
-            os.path.join(output_dir, f"{my_color[0]}-{my_color[1]}-{ill_na}.png"),
-            ill_na,
-            det_na,
-            N_theta=N_theta,
-            N_phi=N_phi,
-            top_cmap=my_color[0],
-            bottom_cmap=my_color[1],
-            top_azimuth_vals=np.ones((N_phi,)),
-            bottom_azimuth_vals=np.ones((N_phi,)),
-        )
+for my_color in my_colors:
 
-    for offset in [0, 0.5]:
-        plot_otf_support(
-            os.path.join(output_dir, f"hsv-{offset}-{ill_na}.png"),
-            ill_na,
-            det_na,
-            N_theta=N_theta,
-            N_phi=N_phi,
-            top_cmap="hsv",
-            bottom_cmap="hsv",
-            top_azimuth_vals=(np.linspace(0, 2, N_phi) + offset) % 1.0,
-            bottom_azimuth_vals=-(np.linspace(0, 2, N_phi) + offset) % 1.0,
-        )
+    plot_otf_support(
+        ill_na,
+        det_na,
+        N_theta=N_theta,
+        N_phi=N_phi,
+        top_cmap=my_color[0][0],
+        bottom_cmap=my_color[0][1],
+        top_azimuth_vals=my_color[1][0],
+        bottom_azimuth_vals=my_color[1][1],
+    )
 
+viewer.theme = "light"
+viewer.dims.ndisplay = 3
+viewer.camera.set_view_direction(
+    view_direction=[-0.1, -1, -1], up_direction=[1, 0, 0]
+)
+viewer.camera.zoom = 250
+viewer.grid.enabled = True
+viewer.grid.stride = 2
+
+
+input("Press Enter to close...")
 plot_otf_support(
-    os.path.join(output_dir, f"red-red-{det_na}-{det_na}.png"),
-    det_na * 0.9,
+    det_na * 0.98,
     det_na,
     N_theta=N_theta,
     N_phi=N_phi,
@@ -196,3 +236,5 @@ plot_otf_support(
     top_azimuth_vals=np.ones((N_phi,)),
     bottom_azimuth_vals=np.ones((N_phi,)),
 )
+
+input("Press Enter to close...")
