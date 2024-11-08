@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 
 
 def plot_otf_support(
-    i,
+    ill_na,
     det_na,
     N_theta=100,
     N_phi=50,
@@ -28,18 +28,18 @@ def plot_otf_support(
     points = np.array(
         [
             [0, 0],
-            [det_na - i, (1 - i**2) ** 0.5 - (1 - det_na**2) ** 0.5],
-            [det_na + i, (1 - i**2) ** 0.5 - (1 - det_na**2) ** 0.5],
-            [2 * i, 0],
+            [det_na - ill_na, (1 - ill_na**2) ** 0.5 - (1 - det_na**2) ** 0.5],
+            [det_na + ill_na, (1 - ill_na**2) ** 0.5 - (1 - det_na**2) ** 0.5],
+            [2 * ill_na, 0],
         ]
     )
 
     # arc centers
     centers = np.array(
         [
-            [-i, (1 - i**2) ** 0.5],
+            [-ill_na, (1 - ill_na**2) ** 0.5],
             [det_na, -((1 - det_na**2) ** 0.5)],
-            [i, (1 - i**2) ** 0.5],
+            [ill_na, (1 - ill_na**2) ** 0.5],
         ]
     )
 
@@ -223,6 +223,7 @@ viewer.camera.set_view_direction(
 viewer.camera.zoom = 250
 viewer.grid.enabled = True
 viewer.grid.stride = 2
+viewer.grid.shape = (-1, 3)
 
 
 input("Press Enter to close...")
