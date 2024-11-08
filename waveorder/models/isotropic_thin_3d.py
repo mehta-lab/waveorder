@@ -1,9 +1,11 @@
 from typing import Literal, Tuple
 
+import numpy as np
 import torch
 from torch import Tensor
 
-from waveorder import optics, util
+from waveorder import optics, sampling, util
+from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
 def generate_test_phantom(
@@ -34,6 +36,64 @@ def generate_test_phantom(
 
 
 def calculate_transfer_function(
+    yx_shape,
+    yx_pixel_size,
+    z_position_list,
+    wavelength_illumination,
+    index_of_refraction_media,
+    numerical_aperture_illumination,
+    numerical_aperture_detection,
+    invert_phase_contrast=False,
+):
+    transverse_nyquist = sampling.transverse_nyquist(
+        wavelength_illumination,
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+    )
+    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
+
+    absorption_2d_to_3d_transfer_function, phase_2d_to_3d_transfer_function = (
+        _calculate_wrap_unsafe_transfer_function(
+            (
+                yx_shape[0] * yx_factor,
+                yx_shape[1] * yx_factor,
+            ),
+            yx_pixel_size / yx_factor,
+            z_position_list,
+            wavelength_illumination,
+            index_of_refraction_media,
+            numerical_aperture_illumination,
+            numerical_aperture_detection,
+            invert_phase_contrast=invert_phase_contrast,
+        )
+    )
+
+    absorption_2d_to_3d_transfer_function_out = torch.zeros(
+        (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64
+    )
+    phase_2d_to_3d_transfer_function_out = torch.zeros(
+        (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64
+    )
+
+    for z in range(len(z_position_list)):
+        absorption_2d_to_3d_transfer_function_out[z] = (
+            sampling.nd_fourier_central_cuboid(
+                absorption_2d_to_3d_transfer_function[z], yx_shape
+            )
+        )
+        phase_2d_to_3d_transfer_function_out[z] = (
+            sampling.nd_fourier_central_cuboid(
+                phase_2d_to_3d_transfer_function[z], yx_shape
+            )
+        )
+
+    return (
+        absorption_2d_to_3d_transfer_function_out,
+        phase_2d_to_3d_transfer_function_out,
+    )
+
+
+def _calculate_wrap_unsafe_transfer_function(
     yx_shape,
     yx_pixel_size,
     z_position_list,
@@ -93,7 +153,6 @@ def visualize_transfer_function(
     absorption_2d_to_3d_transfer_function,
     phase_2d_to_3d_transfer_function,
 ):
-    # TODO: consider generalizing w/ phase_thick_3d.visualize_transfer_function
     arrays = [
         (torch.imag(absorption_2d_to_3d_transfer_function), "Im(absorb TF)"),
         (torch.real(absorption_2d_to_3d_transfer_function), "Re(absorb TF)"),
@@ -110,7 +169,7 @@ def visualize_transfer_function(
             contrast_limits=(-lim, lim),
             scale=(1, 1, 1),
         )
-    viewer.dims.order = (0, 1, 2)
+    viewer.dims.order = (2, 0, 1)
 
 
 def visualize_point_spread_function(

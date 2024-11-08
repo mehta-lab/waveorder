@@ -4,8 +4,9 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from waveorder import optics, util
+from waveorder import optics, sampling, util
 from waveorder.models import isotropic_fluorescent_thick_3d
+from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
 def generate_test_phantom(
@@ -31,6 +32,60 @@ def generate_test_phantom(
 
 
 def calculate_transfer_function(
+    zyx_shape,
+    yx_pixel_size,
+    z_pixel_size,
+    wavelength_illumination,
+    z_padding,
+    index_of_refraction_media,
+    numerical_aperture_illumination,
+    numerical_aperture_detection,
+    invert_phase_contrast=False,
+):
+    transverse_nyquist = sampling.transverse_nyquist(
+        wavelength_illumination,
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+    )
+    axial_nyquist = sampling.axial_nyquist(
+        wavelength_illumination,
+        numerical_aperture_detection,
+        index_of_refraction_media,
+    )
+
+    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
+    z_factor = int(np.ceil(z_pixel_size / axial_nyquist))
+
+    real_potential_transfer_function, imag_potential_transfer_function = (
+        _calculate_wrap_unsafe_transfer_function(
+            (
+                zyx_shape[0] * z_factor,
+                zyx_shape[1] * yx_factor,
+                zyx_shape[2] * yx_factor,
+            ),
+            yx_pixel_size / yx_factor,
+            z_pixel_size / z_factor,
+            wavelength_illumination,
+            z_padding,
+            index_of_refraction_media,
+            numerical_aperture_illumination,
+            numerical_aperture_detection,
+            invert_phase_contrast=invert_phase_contrast,
+        )
+    )
+
+    zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
+    return (
+        sampling.nd_fourier_central_cuboid(
+            real_potential_transfer_function, zyx_out_shape
+        ),
+        sampling.nd_fourier_central_cuboid(
+            imag_potential_transfer_function, zyx_out_shape
+        ),
+    )
+
+
+def _calculate_wrap_unsafe_transfer_function(
     zyx_shape,
     yx_pixel_size,
     z_pixel_size,
@@ -72,6 +127,7 @@ def calculate_transfer_function(
         det_pupil,
         wavelength_illumination / index_of_refraction_media,
         z_position_list,
+        axially_even=False,
     )
 
     (
@@ -95,24 +151,19 @@ def visualize_transfer_function(
     imag_potential_transfer_function,
     zyx_scale,
 ):
-    # TODO: consider generalizing w/ phase2Dto3D.visualize_TF
-    arrays = [
-        (torch.real(imag_potential_transfer_function), "Re(imag pot. TF)"),
-        (torch.imag(imag_potential_transfer_function), "Im(imag pot. TF)"),
-        (torch.real(real_potential_transfer_function), "Re(real pot. TF)"),
-        (torch.imag(real_potential_transfer_function), "Im(real pot. TF)"),
-    ]
+    add_transfer_function_to_viewer(
+        viewer,
+        imag_potential_transfer_function,
+        zyx_scale,
+        layer_name="Imag pot. TF",
+    )
 
-    for array in arrays:
-        lim = 0.5 * torch.max(torch.abs(array[0]))
-        viewer.add_image(
-            torch.fft.ifftshift(array[0]).cpu().numpy(),
-            name=array[1],
-            colormap="bwr",
-            contrast_limits=(-lim, lim),
-            scale=1 / zyx_scale,
-        )
-    viewer.dims.order = (0, 1, 2)
+    add_transfer_function_to_viewer(
+        viewer,
+        real_potential_transfer_function,
+        zyx_scale,
+        layer_name="Real pot. TF",
+    )
 
 
 def apply_transfer_function(
