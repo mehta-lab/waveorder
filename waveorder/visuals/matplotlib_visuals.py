@@ -13,7 +13,7 @@ def plot_5d_ortho(
     filename,
     voxel_size,
     zyx_slice,
-    color_func,
+    color_funcs,
     row_labels=None,
     column_labels=None,
     rose_path=None,
@@ -44,6 +44,13 @@ def plot_5d_ortho(
     assert C == len(column_labels)
     assert zyx_slice[0] < Z and zyx_slice[1] < Y and zyx_slice[2] < X
     assert zyx_slice[0] >= 0 and zyx_slice[1] >= 0 and zyx_slice[2] >= 0
+
+    assert R == len(color_funcs)
+    for color_func_row in color_funcs:
+        if isinstance(color_func_row, list):
+            assert len(color_func_row) == C
+        else:
+            color_func_row = [color_func_row] * C
 
     n_rows = 1 + (2 * R)
     n_cols = 1 + (2 * C)
@@ -100,6 +107,8 @@ def plot_5d_ortho(
 
             # Add data
             if i > 0 and j > 0:
+                color_func = color_funcs[int((i - 1) / 2)][int((j - 1) / 2)]
+
                 Cyx_data = rcCzyx_data[
                     int((i - 1) / 2), int((j - 1) / 2), :, zyx_slice[0]
                 ]

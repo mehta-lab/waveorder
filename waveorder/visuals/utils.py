@@ -15,7 +15,10 @@ def complex_tensor_to_rgb(array, saturate_clim_fraction=1.0):
     hue = np.mod(hue + 0.5, 1)
 
     # Normalize magnitude to [0, 1] for saturation
-    max_abs_val = np.amax(magnitude) * saturate_clim_fraction
+    if saturate_clim_fraction is not None:
+        max_abs_val = np.amax(magnitude) * saturate_clim_fraction
+    else:
+        max_abs_val = 1.0
 
     sat = magnitude / max_abs_val if max_abs_val != 0 else magnitude
 
