@@ -52,17 +52,57 @@ phase_thick_3d.visualize_transfer_function(
     imag_potential_transfer_function,
     zyx_scale,
 )
+import torch
+import time
+
+psf = torch.real(torch.fft.fftn(real_potential_transfer_function))
+psf = torch.fft.fftshift(psf, dim=(0, 1, 2))
+viewer.add_image(psf.numpy(), name="PSF", scale=zyx_scale)
+
 input("Showing OTFs. Press <enter> to continue...")
 viewer.layers.select_all()
 viewer.layers.remove_selected()
 
 # Simulate
+# Time the apply_transfer_function method
+start_time = time.time()
 zyx_data = phase_thick_3d.apply_transfer_function(
     zyx_phase,
     real_potential_transfer_function,
     transfer_function_arguments["z_padding"],
     brightness=1e3,
 )
+end_time = time.time()
+print(f"\tapply_transfer_function took\t{end_time - start_time:.4f} seconds")
+
+# Time the conv3d method
+torch.set_grad_enabled(False)
+start_time = time.time()
+zyx_phase_cuda = zyx_phase[None, None].to("cuda:1")
+psf_cuda = psf[None, None, 25:-25, 50:-51, 50:-51].to("cuda:1")
+end_time = time.time()
+print(f"\tTransfer to GPU took\t\t{end_time - start_time:.4f} seconds")
+start_time = time.time()
+zyx_data_cuda = torch.nn.functional.conv3d(
+    zyx_phase_cuda,
+    psf_cuda,
+    padding="same",
+)
+end_time = time.time()
+import pdb; pdb.set_trace()
+print(f"\tconv3d took\t\t\t{end_time - start_time:.4f} seconds")
+# Time the transfer to CPU
+start_time = time.time()
+# zyx_data_cuda.cpu()
+end_time = time.time()
+print(f"\tTransfer to CPU took\t\t{end_time - start_time:.4f} seconds")
+
+viewer.add_image(zyx_data.numpy(), name="Data", scale=zyx_scale)
+viewer.add_image(zyx_data_cuda[0,0].detach().cpu().numpy(), name="Data-truncpsf", scale=zyx_scale)
+viewer.add_image(psf_cuda[0,0].detach().cpu().numpy(), name="psf", scale=zyx_scale)
+import pdb
+
+pdb.set_trace()
 
 # Reconstruct
 zyx_recon = phase_thick_3d.apply_inverse_transfer_function(

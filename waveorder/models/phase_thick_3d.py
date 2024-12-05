@@ -30,6 +30,27 @@ def generate_test_phantom(
 
     return zyx_phase
 
+def calculate_point_spread_function(
+    zyx_shape, 
+    zyx_scale,
+    wavelength_illumination,
+    index_of_refraction_media,
+    numerical_aperture_illumination,
+    numerical_aperture_detection,
+    invert_phase_contrast=False,        
+):
+    psf_shape = sampling.point_spread_function_shape(
+        zyx_shape[0],
+        zyx_scale,
+        numerical_aperture_illumination,
+        numerical_aperture_detection, 
+        index_of_refraction_media
+    )
+    psf = torch.zeros(psf_shape)
+
+    # Calculate PS and P on the Fourier grid
+    
+
 
 def calculate_transfer_function(
     zyx_shape,
