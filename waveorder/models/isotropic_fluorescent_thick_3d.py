@@ -110,7 +110,10 @@ def _calculate_wrap_unsafe_transfer_function(
 
 def visualize_transfer_function(viewer, optical_transfer_function, zyx_scale):
     add_transfer_function_to_viewer(
-        viewer, torch.real(optical_transfer_function), zyx_scale, clim_factor=0.05
+        viewer,
+        torch.real(optical_transfer_function),
+        zyx_scale,
+        clim_factor=0.05,
     )
 
 
