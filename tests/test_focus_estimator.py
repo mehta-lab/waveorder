@@ -38,21 +38,26 @@ def test_focus_estimator(tmp_path):
 
     plot_path = tmp_path.joinpath("test.pdf")
     data3D = np.random.random((11, 256, 256))
-    slice = focus.focus_from_transverse_band(
+    slice, stats = focus.focus_from_transverse_band(
         data3D, NA_det, lambda_ill, ps, plot_path=str(plot_path)
     )
     assert slice >= 0
     assert slice <= data3D.shape[0]
     assert plot_path.exists()
+    assert isinstance(stats, dict)
+    assert stats["peak_index"] == slice
+    assert stats["peak_FWHM"] > 0
 
     # Check single slice
-    slice = focus.focus_from_transverse_band(
+    slice, stats = focus.focus_from_transverse_band(
         np.random.random((1, 10, 10)),
         NA_det,
         lambda_ill,
         ps,
     )
     assert slice == 0
+    assert stats["peak_index"] is None
+    assert stats["peak_FWHM"] is None
 
 
 def test_focus_estimator_snr(tmp_path):
@@ -80,7 +85,7 @@ def test_focus_estimator_snr(tmp_path):
             ps,
             plot_path=plot_path,
             threshold_FWHM=5,
-        )
+        )[0]
         assert plot_path.exists()
         if slice is not None:
             assert np.abs(slice - 10) <= 2
