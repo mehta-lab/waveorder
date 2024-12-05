@@ -72,6 +72,53 @@ def axial_nyquist(
     return 1 / (2 * cutoff_frequency)
 
 
+def missing_cone_angle(
+    numerical_aperture_illumination,
+    numerical_aperture_detection,
+    index_of_refraction_media,
+):
+    numerator = numerical_aperture_detection - numerical_aperture_illumination
+    denominator = np.sqrt(
+        index_of_refraction_media**2 - numerical_aperture_illumination**2
+    )
+    -np.sqrt(index_of_refraction_media**2 - numerical_aperture_detection**2)
+    return np.arctan2(numerator, denominator)
+
+
+def psf_cone_angle(
+    numerical_aperture_illumination,
+    numerical_aperture_detection,
+    index_of_refraction_media,
+):
+    return (np.pi / 2) - missing_cone_angle(
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+        index_of_refraction_media,
+    )
+
+
+def point_spread_function_shape(
+    z_shape,
+    zyx_scale,
+    numerical_aperture_illumination,
+    numerical_aperture_detection,
+    index_of_refraction_media,
+):
+    angle = psf_cone_angle(
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+        index_of_refraction_media,
+    )
+    cone_radius = np.tan(angle) * z_shape * zyx_scale[0]
+
+    # ensure odd dimensions for all three axes
+    return (
+        2*z_shape + 1,
+        np.ceil(cone_radius / zyx_scale[1]).astype(int) | 1,
+        np.ceil(cone_radius / zyx_scale[2]).astype(int) | 1,
+    )
+
+
 def nd_fourier_central_cuboid(source, target_shape):
     """Central cuboid of an N-D Fourier transform.
 
