@@ -5,7 +5,6 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
-from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
 def generate_test_phantom(
