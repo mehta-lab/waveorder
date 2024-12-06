@@ -215,7 +215,7 @@ for my_color in my_colors:
         bottom_azimuth_vals=my_color[1][1],
     )
 
-viewer.theme = "light"
+viewer.theme = "dark"
 viewer.dims.ndisplay = 3
 viewer.camera.set_view_direction(
     view_direction=[-0.1, -1, -1], up_direction=[1, 0, 0]
