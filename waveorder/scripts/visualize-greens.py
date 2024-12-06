@@ -1,3 +1,4 @@
+from skimage import measure
 import napari
 from napari.experimental import link_layers
 import numpy as np
@@ -9,13 +10,16 @@ from scipy.ndimage import gaussian_filter
 # Parameters
 # all lengths must use consistent units e.g. um
 output_dirpath = "./greens_plots"
-grid_size = 100
-blur_width = 2
+os.makedirs(output_dirpath, exist_ok=True)
+grid_size = 300
+blur_width = grid_size // 35  # blurring to smooth sharp corners
 zyx_shape = 3 * (grid_size,)
 yx_pixel_size = 6.5 / 63
-z_pixel_size = 0.15
+z_pixel_size = 6.5 / 63
 wavelength_illumination = 0.532
 index_of_refraction_media = 1.3
+threshold = 0.5  # for marching cubes
+
 
 # Calculate coordinate grids
 zyx_pixel_size = (z_pixel_size, yx_pixel_size, yx_pixel_size)
@@ -66,64 +70,70 @@ G_neg = gaussian_filter(np.array(G_neg), sigma=sigma)
 # Add to napari
 viewer = napari.Viewer()
 
-settings = [
-    (slice(grid_size // 2, None), "botton", True),
-    (slice(None, grid_size // 2), "top", False),
-]
-for my_slice, name, visible in settings:
-    G_pos_copy = np.array(G_pos)
-    G_neg_copy = np.array(G_neg)
-
-    G_pos_copy[:, :, my_slice] = 0
-    G_neg_copy[:, :, my_slice] = 0
-
-    viewer.add_image(
-        -G_neg_copy,
-        colormap="I Purple",
-        scale=freq_voxel_size,
-        contrast_limits=(0, 0.1),
-        blending="minimum",
-        rendering="mip",
-        name=name + "-negative",
-        visible=visible,
-    )
-    viewer.add_image(
-        G_pos_copy,
-        colormap="greens",
-        scale=freq_voxel_size,
-        contrast_limits=(0, 0.1),
-        blending="minimum",
-        rendering="mip",
-        name=name + "-positive",
-        visible=visible,
-    )
-    link_layers(viewer.layers[-2:])
-
 viewer.theme = "light"
 viewer.dims.ndisplay = 3
-viewer.camera.set_view_direction(
-    view_direction=[1, 1, 1], up_direction=[1, 0, 0]
-)
 viewer.camera.zoom = 100
 
-input("Press <enter> to save screenshots...")
+for i in range(3):
+    for j in range(3):
+        name = f"{i}_{j}"
 
-# Save screenshots
-os.makedirs(output_dirpath, exist_ok=True)
+        volume = G_pos[i, j]
+        verts, faces, normals, _ = measure.marching_cubes(
+            volume, level=threshold * np.max(volume)
+        )
+        viewer.add_surface(
+            (verts, faces),
+            name=name + "-positive-surface",
+            colormap="greens",
+            scale=freq_voxel_size,
+            shading="smooth",
+        )
 
-
-def screenshots_to_folder(folder):
-    out_folder = os.path.join(output_dirpath, folder)
-    os.makedirs(out_folder, exist_ok=True)
-    for i in range(3):
-        for j in range(3):
-            viewer.dims.current_step = (i, j, 0, 0, 0)
-            viewer.screenshot(
-                os.path.join(out_folder, f"{i}_{j}.png"), scale=2
+        volume = -G_neg[i, j]
+        if i != j:
+            verts, faces, normals, _ = measure.marching_cubes(
+                volume, level=threshold * np.max(volume)
             )
+            viewer.add_surface(
+                (verts, faces),
+                opacity=1.0,
+                name=name + "-negative-surface",
+                colormap="I Purple",
+                scale=freq_voxel_size,
+                blending="translucent",
+                shading="smooth",
+            )
+        else:
+            viewer.add_surface(
+                (
+                    np.array([[0, 0, 0], [1, 0, 0], [0, 1, 0]]),
+                    np.array([[0, 1, 2]]),
+                ),
+                opacity=1.0,
+                name=name + "-dummy-surface",
+                colormap="gray",
+                scale=freq_voxel_size,
+                blending="translucent",
+                shading="smooth",
+            )
+        link_layers(viewer.layers[-2:])
 
+        print(f"Screenshotting {i}_{j}")
+        viewer.camera.set_view_direction(
+            view_direction=[-1, -1, -1], up_direction=[0, 0, 1]
+        )
+        viewer.screenshot(
+            os.path.join(output_dirpath, f"{i}_{j}.png"), scale=2
+        )
+        viewer.layers[-1].visible = False
+        viewer.layers[-2].visible = False
 
-screenshots_to_folder("bottoms")
-viewer.layers[0].visible = True
-viewer.layers[-1].visible = False
-screenshots_to_folder("tops")
+# Show in complete grid
+for layer in viewer.layers:
+    layer.visible = True
+viewer.grid.enabled = True
+viewer.grid.stride = 2
+viewer.grid.shape = (-1, 3)
+viewer.theme = "dark"
+napari.run()
