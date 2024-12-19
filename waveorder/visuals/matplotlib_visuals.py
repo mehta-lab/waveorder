@@ -21,6 +21,8 @@ def plot_5d_ortho(
     label_size=1,
     ortho_line_width=0.5,
     row_column_line_width=0.5,
+    xyz_labels=True,
+    background_color="white",
     **kwargs,
 ):
     R, C, Ch, Z, Y, X = rcCzyx_data.shape
@@ -72,6 +74,9 @@ def plot_5d_ortho(
             "height_ratios": height_ratios,
         },
     )
+    fig.patch.set_facecolor(background_color)
+    for ax in axes.flat:
+        ax.set_facecolor(background_color)
 
     if rose_path is not None:
         axes[0, 0].imshow(plt.imread(rose_path))
@@ -189,7 +194,7 @@ def plot_5d_ortho(
     add_ortho_lines_to_axis(
         axes[1, 1],
         (zyx_slice[1], zyx_slice[2]),
-        ("y", "x"),
+        ("y", "x") if xyz_labels else ("", ""),
         yx_slice_color,
         yz_slice_color,
         zx_slice_color,
@@ -199,7 +204,7 @@ def plot_5d_ortho(
     add_ortho_lines_to_axis(
         axes[2, 1],
         (zyx_slice[0], zyx_slice[2]),
-        ("z", "x"),
+        ("z", "x") if xyz_labels else ("", ""),
         zx_slice_color,
         yz_slice_color,
         yx_slice_color,
@@ -209,7 +214,7 @@ def plot_5d_ortho(
     add_ortho_lines_to_axis(
         axes[1, 2],
         (zyx_slice[1], zyx_slice[0]),
-        ("y", "z"),
+        ("y", "z") if xyz_labels else ("", ""),
         yz_slice_color,
         yx_slice_color,
         zx_slice_color,
