@@ -13,6 +13,8 @@ This computational imaging library enables wave-optical simulation and reconstru
 
 ## Computational label-agnostic imaging
 
+https://github.com/user-attachments/assets/4f9969e5-94ce-4e08-9f30-68314a905db6
+
 `waveorder` enables simulations and reconstructions of label-agnostic microscopy data as described in the following [preprint](https://arxiv.org/abs/2412.09775)
 ```bibtex
 @article{chandler_2024,
