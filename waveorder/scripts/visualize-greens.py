@@ -11,7 +11,7 @@ from scipy.ndimage import gaussian_filter
 # all lengths must use consistent units e.g. um
 output_dirpath = "./greens_plots"
 os.makedirs(output_dirpath, exist_ok=True)
-grid_size = 300
+grid_size = 100 # 300 for publication
 blur_width = grid_size // 35  # blurring to smooth sharp corners
 zyx_shape = 3 * (grid_size,)
 yx_pixel_size = 6.5 / 63
