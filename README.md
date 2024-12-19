@@ -1,9 +1,13 @@
 # waveorder
 
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/waveorder)
-[![Downloads](https://pepy.tech/badge/waveorder)](https://pepy.tech/project/waveorder)
 [![Python package index](https://img.shields.io/pypi/v/waveorder.svg)](https://pypi.org/project/waveorder)
-[![Development Status](https://img.shields.io/pypi/status/napari.svg)](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha)
+[![PyPI monthly downloads](https://img.shields.io/pypi/dm/waveorder.svg)](https://pypistats.org/packages/waveorder)
+[![Total downloads](https://pepy.tech/badge/waveorder)](https://pepy.tech/project/waveorder)
+[![GitHub contributors](https://img.shields.io/github/contributors-anon/mehta-lab/waveorder)](https://github.com/mehta-lab/waveorder/graphs/contributors)
+![GitHub Repo stars](https://img.shields.io/github/stars/mehta-lab/waveorder)
+![GitHub forks](https://img.shields.io/github/forks/mehta-lab/waveorder)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/waveorder)
+
 
 This computational imaging library enables wave-optical simulation and reconstruction of optical properties that report microscopic architectural order.
 
