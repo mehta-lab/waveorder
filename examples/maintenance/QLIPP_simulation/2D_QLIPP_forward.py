@@ -16,9 +16,9 @@ from numpy.fft import fftshift
 from waveorder import (
     optics,
     waveorder_simulator,
-    visual,
     util,
 )
+from waveorder.visuals import jupyter_visuals
 
 # Key parameters
 N = 256  # number of pixel in y dimension
@@ -38,7 +38,7 @@ chi = 0.03 * 2 * np.pi  # swing of Polscope analyzer
 star, theta, _ = util.generate_star_target((N, M))
 star = star.numpy()
 theta = theta.numpy()
-visual.plot_multicolumn(np.array([star, theta]), num_col=2, size=5)
+jupyter_visuals.plot_multicolumn(np.array([star, theta]), num_col=2, size=5)
 
 # Assign uniform phase, uniform retardance, and radial slow axes to the star pattern
 phase_value = 1  # average phase in radians (optical path length)
@@ -50,7 +50,7 @@ t_eigen = np.zeros((2, N, M), complex)  # complex specimen transmission
 t_eigen[0] = np.exp(-mu_s + 1j * phi_s)
 t_eigen[1] = np.exp(-mu_f + 1j * phi_f)
 sa = theta % np.pi  # slow axes.
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     np.array([phi_s, phi_f, mu_s, sa]),
     num_col=2,
     size=5,
