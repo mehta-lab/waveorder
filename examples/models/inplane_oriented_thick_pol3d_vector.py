@@ -25,7 +25,7 @@ fzyx_object = inplane_oriented_thick_pol3d_vector.generate_test_phantom(
 )
 
 # Calculate transfer function
-sfZYX_transfer_function, intensity_to_stokes_matrix = (
+sfZYX_transfer_function, intensity_to_stokes_matrix, singular_system = (
     inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
         swing,
         scheme,
@@ -53,29 +53,12 @@ input("Showing transfer functions. Press <enter> to continue...")
 viewer.layers.select_all()
 viewer.layers.remove_selected()
 
-singular_system = (
-    inplane_oriented_thick_pol3d_vector.calculate_singular_system(
-        sfZYX_transfer_function
-    )
-)
-
 # Simulate
 szyx_data = inplane_oriented_thick_pol3d_vector.apply_transfer_function(
     fzyx_object,
     sfZYX_transfer_function,
     intensity_to_stokes_matrix,
 )
-
-# from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
-
-# add_transfer_function_to_viewer(
-#     viewer,
-#     singular_system[1],
-#     zyx_scale=(z_pixel_size, yx_pixel_size, yx_pixel_size),
-#     layer_name="Singular Values",
-# )
-# import pdb; pdb.set_trace()
-
 
 # Display
 arrays = [
@@ -104,7 +87,5 @@ for reg_strength in [0.005, 0.008, 0.01, 0.05, 0.1]:
 
 viewer.grid.enabled = True
 viewer.grid.shape = (2, 5)
-import pdb
 
-pdb.set_trace()
 input("Showing object, data, and recon. Press <enter> to quit...")
