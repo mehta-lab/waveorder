@@ -2,7 +2,7 @@
 
 Some examples require `napari`. Start with `pip install napari[all]`, and visit the [napari installation guide](https://napari.org/dev/tutorials/fundamentals/installation.html) if that fails.  
 
-| Folder Name      | Requires                   | Description                                                                                           |
+| Folder      | Requires                   | Description                                                                                           |
 |------------------|----------------------------|-------------------------------------------------------------------------------------------------------|
 | `models/`        | `waveorder`, `napari`      | Demonstrates the latest functionality of `waveorder` through simulations and reconstructions using various models. |
 | `maintenance/`   | `waveorder`                | Showcases functionality planned for `models/` folder; scripts are maintained with automated tests.               |
