@@ -11,40 +11,60 @@
 
 This computational imaging library enables wave-optical simulation and reconstruction of optical properties that report microscopic architectural order.
 
-## Computational label-free imaging
+## Computational label-agnostic imaging
 
-This vectorial wave simulator and reconstructor enabled the development of a new label-free imaging method, __permittivity tensor imaging (PTI)__, that measures density and  3D orientation of biomolecules with diffraction-limited resolution. These measurements are reconstructed from polarization-resolved images acquired with a sequence of oblique illuminations.
-
-The acquisition, calibration, background correction, reconstruction, and applications of PTI are described in the following [preprint](https://doi.org/10.1101/2020.12.15.422951):
-
+`waveorder` enables simulations and reconstructions of label-agnostic microscopy data as described in the following [preprint](https://arxiv.org/abs/2412.09775)
 ```bibtex
- L.-H. Yeh, I. E. Ivanov, B. B. Chhun, S.-M. Guo, E. Hashemi, J. R. Byrum, J. A. Pérez-Bermejo, H. Wang, Y. Yu, P. G. Kazansky, B. R. Conklin, M. H. Han, and S. B. Mehta, "uPTI: uniaxial permittivity tensor imaging of intrinsic density and anisotropy," bioRxiv 2020.12.15.422951 (2020).
+@article{chandler_2024,
+    author = {Chandler, Talon and Hirata-Miyasaki, Eduardo and Ivanov, Ivan E. and Liu, Ziwen and Sundarraman, Deepika and Ryan, Allyson Quinn and Jacobo, Adrian and Balla, Keir and Mehta, Shalin B.},
+	title = {waveOrder: generalist framework for label-agnostic computational microscopy},
+	journal = {arXiv},
+	year = {2024},
+	month = dec,
+	eprint = {2412.09775},
+	doi = {10.48550/arXiv.2412.09775}
+}
  ```
 
-In addition to PTI, `waveorder` enables simulations and reconstructions of subsets of label-free measurements with subsets of the acquired data:
+Specifically, `waveorder` enables simulation and reconstruction of 2D or 3D:
 
-1. Reconstruction of 2D or 3D phase, projected retardance, and in-plane orientation from a polarization-diverse volumetric brightfield acquisition ([QLIPP](https://elifesciences.org/articles/55502))
+1. __phase, projected retardance, and in-plane orientation__ from a polarization-diverse volumetric brightfield acquisition ([QLIPP](https://elifesciences.org/articles/55502)),
 
-2. Reconstruction of 2D or 3D phase from a volumetric brightfield acquisition ([2D](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-54-28-8566)/[3D (PODT)](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-57-1-a205) phase)
+2. __phase__ from a volumetric brightfield acquisition ([2D](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-54-28-8566)/[3D (PODT)](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-57-1-a205) phase),
 
-3. Reconstruction of 2D or 3D phase from an illumination-diverse volumetric acquisition ([2D](https://www.osapublishing.org/oe/fulltext.cfm?uri=oe-23-9-11394&id=315599)/[3D](https://www.osapublishing.org/boe/fulltext.cfm?uri=boe-7-10-3940&id=349951) differential phase contrast)
+3. __phase__ from an illumination-diverse volumetric acquisition ([2D](https://www.osapublishing.org/oe/fulltext.cfm?uri=oe-23-9-11394&id=315599)/[3D](https://www.osapublishing.org/boe/fulltext.cfm?uri=boe-7-10-3940&id=349951) differential phase contrast),
+
+4. __fluorescence density__ from a widefield volumetric fluorescence acquisition (fluorescence deconvolution).  
+
+The [examples](https://github.com/mehta-lab/waveorder/tree/main/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D PODT, and 2D/3D PTI methods.
+
+If you are interested in deploying QLIPP or phase from brightbrield, or fluorescence deconvolution for label-agnostic imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
+
+## Permittivity tensor imaging 
+
+Additionally, `waveorder` enabled the development of a new label-free imaging method, __permittivity tensor imaging (PTI)__, that measures density and  3D orientation of biomolecules with diffraction-limited resolution. These measurements are reconstructed from polarization-resolved images acquired with a sequence of oblique illuminations.
+
+The acquisition, calibration, background correction, reconstruction, and applications of PTI are described in the following [paper](https://doi.org/10.1101/2020.12.15.422951):
+
+```bibtex
+@article{yeh_2024,
+	author = {Yeh, Li-Hao and Ivanov, Ivan E. and Chandler, Talon and Byrum, Janie R. and Chhun, Bryant B. and Guo, Syuan-Ming and Foltz, Cameron and Hashemi, Ezzat and Perez-Bermejo, Juan A. and Wang, Huijun and Yu, Yanhao and Kazansky, Peter G. and Conklin, Bruce R. and Han, May H. and Mehta, Shalin B.},
+	title = {Permittivity tensor imaging: modular label-free imaging of 3D dry mass and 3D orientation at high resolution},
+	journal = {Nature Methods},
+	volume = {21},
+	number = {7},
+	pages = {1257--1274},
+	year = {2024},
+	month = jul,
+	issn = {1548-7105},
+	publisher = {Nature Publishing Group},
+	doi = {10.1038/s41592-024-02291-w}
+}
+ ```
 
 PTI provides volumetric reconstructions of mean permittivity ($\propto$ material density), differential permittivity ($\propto$ material anisotropy), 3D orientation, and optic sign. The following figure summarizes PTI acquisition and reconstruction with a small optical section of the mouse brain tissue:
 
 ![Data_flow](https://github.com/mehta-lab/waveorder/blob/main/readme.png?raw=true)
-
-
-The [examples](https://github.com/mehta-lab/waveorder/tree/main/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D PODT, and 2D/3D PTI methods.
-
-If you are interested in deploying QLIPP or PODT for label-free imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
-
-## Correlative imaging
-
-In addition to label-free reconstruction algorithms, `waveorder` also implements widefield fluorescence and fluorescence polarization reconstruction algorithms for correlative label-free and fluorescence imaging.
-
-1. Correlative measurements of biomolecular density and orientation from polarization-diverse widefield imaging ([multimodal Instant PolScope](https://opg.optica.org/boe/fulltext.cfm?uri=boe-13-5-3102&id=472350))
-
-We provide an [example notebook](https://github.com/mehta-lab/waveorder/blob/main/examples/documentation/fluorescence_deconvolution/fluorescence_deconv.ipynb) for widefield fluorescence deconvolution.
 
 ## Citation
 
