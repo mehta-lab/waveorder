@@ -1,6 +1,6 @@
 `waveorder` is undergoing a significant refactor, and this `examples/` folder serves as a good place to understand the current state of the repository.
 
-Some example require `napari`. Start with `pip install napari[all]`, and visit the [napari installation guide](https://napari.org/dev/tutorials/fundamentals/installation.html) if that fails.  
+Some examples require `napari`. Start with `pip install napari[all]`, and visit the [napari installation guide](https://napari.org/dev/tutorials/fundamentals/installation.html) if that fails.  
 
 | Folder Name      | Requires                   | Description                                                                                           |
 |------------------|----------------------------|-------------------------------------------------------------------------------------------------------|
