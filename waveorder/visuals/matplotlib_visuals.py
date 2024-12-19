@@ -30,18 +30,6 @@ def plot_5d_ortho(
     # Extent
     dZ, dY, dX = Z * voxel_size[0], Y * voxel_size[1], X * voxel_size[2]
 
-    # if fourier_space:
-    #     axis_extent = [1 / x for x in axis_extent]
-
-    # rczyx_data = nd_fourier_central_cuboid(
-    #     rczyx_data, (R, C, Z - trim_edges, Y - trim_edges, X - trim_edges)
-    # )
-
-    # R, C, Z, Y, X = rczyx_data.shape  # after cropping
-
-    # rczyx_data = torch.fft.ifftshift(rczyx_data, dim=(-3, -2, -1))
-    # sfZYX_rgb = complex_tensor_to_rgb(rczyx_data, saturate_clim_fraction)
-
     assert R == len(row_labels)
     assert C == len(column_labels)
     assert zyx_slice[0] < Z and zyx_slice[1] < Y and zyx_slice[2] < X
