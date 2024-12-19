@@ -74,10 +74,10 @@ Please cite this repository, along with the relevant preprint or paper, if you u
 
 ## Installation
 
-(Optional but recommended) install [anaconda](https://www.anaconda.com/products/distribution) and create a virtual environment:
+Create a virtual environment:
 
 ```sh
-conda create -y -n waveorder python=3.11
+conda create -y -n waveorder python=3.10
 conda activate waveorder
 ```
 
@@ -92,6 +92,13 @@ Use `waveorder` in your scripts:
 ```sh
 python
 >>> import waveorder
+```
+
+(Optional) Install napari, clone the repository, and run an example script:
+```sh
+pip install napari[all]
+git clone https://github.com/mehta-lab/waveorder.git
+python waveorder/examples/models/phase_thick_3d.py
 ```
 
 (Optional) Download the repository, install `jupyter`, and experiment with the example notebooks
