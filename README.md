@@ -16,7 +16,9 @@ This computational imaging library enables wave-optical simulation and reconstru
 https://github.com/user-attachments/assets/4f9969e5-94ce-4e08-9f30-68314a905db6
 
 `waveorder` enables simulations and reconstructions of label-agnostic microscopy data as described in the following [preprint](https://arxiv.org/abs/2412.09775)
-```bibtex
+<details>	
+<summary> Chandler et al. 2024 </summary>
+<pre><code>
 @article{chandler_2024,
     author = {Chandler, Talon and Hirata-Miyasaki, Eduardo and Ivanov, Ivan E. and Liu, Ziwen and Sundarraman, Deepika and Ryan, Allyson Quinn and Jacobo, Adrian and Balla, Keir and Mehta, Shalin B.},
 	title = {waveOrder: generalist framework for label-agnostic computational microscopy},
@@ -26,29 +28,29 @@ https://github.com/user-attachments/assets/4f9969e5-94ce-4e08-9f30-68314a905db6
 	eprint = {2412.09775},
 	doi = {10.48550/arXiv.2412.09775}
 }
- ```
+</code></pre>
+</details>
 
 Specifically, `waveorder` enables simulation and reconstruction of 2D or 3D:
 
 1. __phase, projected retardance, and in-plane orientation__ from a polarization-diverse volumetric brightfield acquisition ([QLIPP](https://elifesciences.org/articles/55502)),
 
-2. __phase__ from a volumetric brightfield acquisition ([2D](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-54-28-8566)/[3D (PODT)](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-57-1-a205) phase),
+2. __phase__ from a volumetric brightfield acquisition ([2D phase](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-54-28-8566)/[3D phase](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-57-1-a205)),
 
 3. __phase__ from an illumination-diverse volumetric acquisition ([2D](https://www.osapublishing.org/oe/fulltext.cfm?uri=oe-23-9-11394&id=315599)/[3D](https://www.osapublishing.org/boe/fulltext.cfm?uri=boe-7-10-3940&id=349951) differential phase contrast),
 
 4. __fluorescence density__ from a widefield volumetric fluorescence acquisition (fluorescence deconvolution).  
 
-The [examples](https://github.com/mehta-lab/waveorder/tree/main/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D PODT, and 2D/3D PTI methods.
-
-If you are interested in deploying QLIPP or phase from brightbrield, or fluorescence deconvolution for label-agnostic imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
 
 ## Permittivity tensor imaging 
 
 Additionally, `waveorder` enabled the development of a new label-free imaging method, __permittivity tensor imaging (PTI)__, that measures density and  3D orientation of biomolecules with diffraction-limited resolution. These measurements are reconstructed from polarization-resolved images acquired with a sequence of oblique illuminations.
 
-The acquisition, calibration, background correction, reconstruction, and applications of PTI are described in the following [paper](https://doi.org/10.1101/2020.12.15.422951):
+The acquisition, calibration, background correction, reconstruction, and applications of PTI are described in the following [paper](https://doi.org/10.1101/2020.12.15.422951) published in Nature Methods:
 
-```bibtex
+<details>
+<summary> Yeh et al. 2024 </summary>
+<pre><code>
 @article{yeh_2024,
 	author = {Yeh, Li-Hao and Ivanov, Ivan E. and Chandler, Talon and Byrum, Janie R. and Chhun, Bryant B. and Guo, Syuan-Ming and Foltz, Cameron and Hashemi, Ezzat and Perez-Bermejo, Juan A. and Wang, Huijun and Yu, Yanhao and Kazansky, Peter G. and Conklin, Bruce R. and Han, May H. and Mehta, Shalin B.},
 	title = {Permittivity tensor imaging: modular label-free imaging of 3D dry mass and 3D orientation at high resolution},
@@ -62,11 +64,17 @@ The acquisition, calibration, background correction, reconstruction, and applica
 	publisher = {Nature Publishing Group},
 	doi = {10.1038/s41592-024-02291-w}
 }
- ```
+</code></pre>
+</details>
 
 PTI provides volumetric reconstructions of mean permittivity ($\propto$ material density), differential permittivity ($\propto$ material anisotropy), 3D orientation, and optic sign. The following figure summarizes PTI acquisition and reconstruction with a small optical section of the mouse brain tissue:
 
 ![Data_flow](https://github.com/mehta-lab/waveorder/blob/main/readme.png?raw=true)
+
+## Examples
+The [examples](https://github.com/mehta-lab/waveorder/tree/main/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D phase from brightfield, and 2D/3D PTI methods.
+
+If you are interested in deploying QLIPP or phase from brightbrield, or fluorescence deconvolution for label-agnostic imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
 
 ## Citation
 
