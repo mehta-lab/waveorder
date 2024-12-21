@@ -2258,6 +2258,10 @@ def pauli():
             [[a, 0], [0, a]],
             [[-a, 0], [0, a]],
             [[0, a], [a, 0]],
+            [[0, 1j * a], [-1j * a, 0]],
+        ]
+    )
+    return sigma
 
 
 def gellmann():
