@@ -38,9 +38,9 @@ Specifically, `waveorder` enables simulation and reconstruction of 2D or 3D:
 
 4. __fluorescence density__ from a widefield volumetric fluorescence acquisition (fluorescence deconvolution).  
 
-The [examples](https://github.com/mehta-lab/waveorder/tree/main/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D PODT, and 2D/3D PTI methods.
+The [examples](https://github.com/mehta-lab/waveorder/tree/main/examples) demonstrate simulations and reconstruction for 2D QLIPP, 3D PODT, 3D fluorescence deconvolution, and 2D/3D PTI methods.
 
-If you are interested in deploying QLIPP or phase from brightbrield, or fluorescence deconvolution for label-agnostic imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
+If you are interested in deploying QLIPP, phase from brightfield, or fluorescence deconvolution for label-agnostic imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
 
 ## Permittivity tensor imaging 
 
