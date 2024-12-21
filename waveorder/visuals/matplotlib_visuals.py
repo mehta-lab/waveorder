@@ -73,30 +73,15 @@ def plot_5d_ortho(
         for j in range(n_cols):
             # Add labels
             if (i == 0 and (j - 1) % 2 == 0) or (j == 0 and (i - 1) % 2 == 0):
-                if i == 0:
-                    folder = "gellman"
-                    index = column_labels[int((j - 1) / 2)]
-                else:
-                    folder = "stokes"
-                    index = row_labels[int((i - 1) / 2)]
-
-                if isinstance(index, int):
-                    image_path = os.path.join(
-                        os.path.dirname(__file__),
-                        f"./assets/{folder}/{index}.png",
-                    )
-                    image = plt.imread(image_path)
-                    axes[i, j].imshow(image)
-                else:
-                    axes[i, j].text(
-                        0.5,
-                        0.5,
-                        index,
-                        horizontalalignment="center",
-                        verticalalignment="center",
-                        fontsize=10 * label_size,
-                        color="black",
-                    )
+                axes[i, j].text(
+                    0.5,
+                    0.5,
+                    index,
+                    horizontalalignment="center",
+                    verticalalignment="center",
+                    fontsize=10 * label_size,
+                    color="black",
+                )
 
             # Add data
             if i > 0 and j > 0:
