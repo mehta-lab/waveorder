@@ -152,6 +152,11 @@ def visualize_transfer_function(
     absorption_2d_to_3d_transfer_function,
     phase_2d_to_3d_transfer_function,
 ):
+    """Note: unlike other `visualize_transfer_function` calls, this transfer 
+    function is a mixed 3D-to-2D transfer function, so it cannot reuse
+    util.add_transfer_function_to_viewer. If more 3D-to-2D transfer functions 
+    are added, consider refactoring.
+    """
     arrays = [
         (torch.imag(absorption_2d_to_3d_transfer_function), "Im(absorb TF)"),
         (torch.real(absorption_2d_to_3d_transfer_function), "Re(absorb TF)"),
