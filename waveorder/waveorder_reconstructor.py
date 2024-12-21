@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import itertools
 import time
 import os
+import warnings
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from IPython import display
 from scipy.ndimage import uniform_filter
@@ -161,6 +162,7 @@ def instrument_matrix_calibration(I_cali_norm, I_meas):
 
 class waveorder_microscopy:
     """
+       DEPRECATED: Please see `waveorder.models` for maintained alternatives.
 
        waveorder_microscopy contains reconstruction algorithms for label-free
        microscopy with various types of dataset:
@@ -366,6 +368,10 @@ class waveorder_microscopy:
         initialize the system parameters for phase and orders microscopy
 
         """
+        warnings.warn(
+            "Please see `waveorder.models` for maintained alternatives.",
+            category=DeprecationWarning,
+        )
 
         t0 = time.time()
 
