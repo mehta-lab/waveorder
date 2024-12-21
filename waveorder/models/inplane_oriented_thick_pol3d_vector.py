@@ -1,16 +1,17 @@
 import torch
-import tqdm
 import numpy as np
 
 from torch import Tensor
-from typing import Literal
+from typing import Literal, TYPE_CHECKING
 from torch.nn.functional import avg_pool3d, interpolate
 from waveorder import optics, sampling, stokes, util
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
+if TYPE_CHECKING:
+    import napari
 
-def generate_test_phantom(zyx_shape):
 
+def generate_test_phantom(zyx_shape: tuple[int, int, int]) -> torch.Tensor:
     # Simulate
     yx_star, yx_theta, _ = util.generate_star_target(
         yx_shape=zyx_shape[1:],
@@ -29,20 +30,22 @@ def generate_test_phantom(zyx_shape):
 
 
 def calculate_transfer_function(
-    swing,
-    scheme,
-    zyx_shape,
-    yx_pixel_size,
-    z_pixel_size,
-    wavelength_illumination,
-    z_padding,
-    index_of_refraction_media,
-    numerical_aperture_illumination,
-    numerical_aperture_detection,
-    invert_phase_contrast=False,
-    fourier_oversample_factor=1,
-    transverse_downsample_factor=1,
-):
+    swing: float,
+    scheme: str,
+    zyx_shape: tuple[int, int, int],
+    yx_pixel_size: float,
+    z_pixel_size: float,
+    wavelength_illumination: float,
+    z_padding: int,
+    index_of_refraction_media: float,
+    numerical_aperture_illumination: float,
+    numerical_aperture_detection: float,
+    invert_phase_contrast: bool = False,
+    fourier_oversample_factor: int = 1,
+    transverse_downsample_factor: int = 1,
+) -> tuple[
+    torch.Tensor, torch.Tensor, tuple[torch.Tensor, torch.Tensor, torch.Tensor]
+]:
     if z_padding != 0:
         raise NotImplementedError("Padding not implemented for this model")
 
@@ -126,11 +129,13 @@ def calculate_transfer_function(
     U, S, Vh = calculate_singular_system(cropped)
 
     # Interpolate to final size in YX
-    def complex_interpolate(tensor, zyx_shape):
+    def complex_interpolate(
+        tensor: torch.Tensor, zyx_shape: tuple[int, int, int]
+    ) -> torch.Tensor:
         interpolated_real = interpolate(tensor.real, size=zyx_shape)
         interpolated_imag = interpolate(tensor.imag, size=zyx_shape)
         return interpolated_real + 1j * interpolated_imag
-    
+
     full_cropped = complex_interpolate(cropped, zyx_shape)
     full_U = complex_interpolate(U, zyx_shape)
     full_S = interpolate(S[None], size=zyx_shape)[0]  # S is real
@@ -292,7 +297,11 @@ def calculate_singular_system(sfZYX_transfer_function):
     return singular_system
 
 
-def visualize_transfer_function(viewer, sfZYX_transfer_function, zyx_scale):
+def visualize_transfer_function(
+    viewer: napari.Viewer,
+    sfZYX_transfer_function: torch.Tensor,
+    zyx_scale: tuple[float, float, float],
+) -> None:
     add_transfer_function_to_viewer(
         viewer,
         sfZYX_transfer_function,
@@ -304,10 +313,10 @@ def visualize_transfer_function(viewer, sfZYX_transfer_function, zyx_scale):
 
 
 def apply_transfer_function(
-    fzyx_object,
-    sfZYX_transfer_function,
-    intensity_to_stokes_matrix,  # TODO use this to simulate intensities
-):
+    fzyx_object: torch.Tensor,
+    sfZYX_transfer_function: torch.Tensor,
+    intensity_to_stokes_matrix: torch.Tensor,  # TODO use this to simulate intensities
+) -> torch.Tensor:
     fZYX_object = torch.fft.fftn(fzyx_object, dim=(1, 2, 3))
     sZYX_data = torch.einsum(
         "fzyx,sfzyx->szyx", fZYX_object, sfZYX_transfer_function

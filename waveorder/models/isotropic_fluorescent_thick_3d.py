@@ -9,11 +9,11 @@ from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
 def generate_test_phantom(
-    zyx_shape,
-    yx_pixel_size,
-    z_pixel_size,
-    sphere_radius,
-):
+    zyx_shape: tuple[int, int, int],
+    yx_pixel_size: float,
+    z_pixel_size: float,
+    sphere_radius: float,
+) -> Tensor:
     sphere, _, _ = util.generate_sphere_target(
         zyx_shape, yx_pixel_size, z_pixel_size, sphere_radius
     )
@@ -22,14 +22,14 @@ def generate_test_phantom(
 
 
 def calculate_transfer_function(
-    zyx_shape,
-    yx_pixel_size,
-    z_pixel_size,
-    wavelength_emission,
-    z_padding,
-    index_of_refraction_media,
-    numerical_aperture_detection,
-):
+    zyx_shape: tuple[int, int, int],
+    yx_pixel_size: float,
+    z_pixel_size: float,
+    wavelength_emission: float,
+    z_padding: int,
+    index_of_refraction_media: float,
+    numerical_aperture_detection: float,
+) -> Tensor:
 
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_emission,
@@ -65,14 +65,14 @@ def calculate_transfer_function(
 
 
 def _calculate_wrap_unsafe_transfer_function(
-    zyx_shape,
-    yx_pixel_size,
-    z_pixel_size,
-    wavelength_emission,
-    z_padding,
-    index_of_refraction_media,
-    numerical_aperture_detection,
-):
+    zyx_shape: tuple[int, int, int],
+    yx_pixel_size: float,
+    z_pixel_size: float,
+    wavelength_emission: float,
+    z_padding: int,
+    index_of_refraction_media: float,
+    numerical_aperture_detection: float,
+) -> Tensor:
     radial_frequencies = util.generate_radial_frequencies(
         zyx_shape[1:], yx_pixel_size
     )
@@ -108,7 +108,7 @@ def _calculate_wrap_unsafe_transfer_function(
     return optical_transfer_function
 
 
-def visualize_transfer_function(viewer, optical_transfer_function, zyx_scale):
+def visualize_transfer_function(viewer, optical_transfer_function: Tensor, zyx_scale: tuple[float, float, float]) -> None:
     add_transfer_function_to_viewer(
         viewer,
         torch.real(optical_transfer_function),
@@ -118,8 +118,8 @@ def visualize_transfer_function(viewer, optical_transfer_function, zyx_scale):
 
 
 def apply_transfer_function(
-    zyx_object, optical_transfer_function, z_padding, background=10
-):
+    zyx_object: Tensor, optical_transfer_function: Tensor, z_padding: int, background: int = 10
+) -> Tensor:
     """Simulate imaging by applying a transfer function
 
     Parameters
@@ -164,7 +164,7 @@ def apply_inverse_transfer_function(
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
-):
+) -> Tensor:
     """Reconstructs fluorescence density from zyx_data and
     an optical_transfer_function, providing options for z padding and
     reconstruction algorithms.
