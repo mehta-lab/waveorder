@@ -2258,17 +2258,6 @@ def pauli():
             [[a, 0], [0, a]],
             [[-a, 0], [0, a]],
             [[0, a], [a, 0]],
-            [[0, 1j * a], [-1j * a, 0]],
-        ]
-    )
-    return sigma
-
-
-# torch.allclose(
-#     torch.abs(torch.einsum("kij,lji->kl", s, s) - torch.eye(4)),
-#     torch.zeros((4, 4)),
-#     atol=1e-5,
-# )
 
 
 def gellmann():
@@ -2298,11 +2287,3 @@ def gellmann():
             [[0, 0, 0], [0, -c, 0], [0, 0, c]],  #
         ], dtype=torch.complex64
     )
-
-    # torch.allclose(
-
-
-#     torch.abs(torch.einsum("kij,lji->kl", Y, Y) - torch.eye(9)),
-#     torch.zeros((9, 9)),
-#     atol=1e-5,
-# )
