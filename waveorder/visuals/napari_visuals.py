@@ -4,12 +4,9 @@ from typing import TYPE_CHECKING
 import numpy as np
 import torch
 
-if TYPE_CHECKING:
-    import napari
-
 
 def add_transfer_function_to_viewer(
-    viewer: napari.Viewer,
+    viewer: "napari.Viewer",
     transfer_function: torch.Tensor,
     zyx_scale: tuple[float, float, float],
     layer_name: str = "Transfer Function",

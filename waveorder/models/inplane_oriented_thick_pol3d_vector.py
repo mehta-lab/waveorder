@@ -2,13 +2,10 @@ import torch
 import numpy as np
 
 from torch import Tensor
-from typing import Literal, TYPE_CHECKING
+from typing import Literal
 from torch.nn.functional import avg_pool3d, interpolate
 from waveorder import optics, sampling, stokes, util
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
-
-if TYPE_CHECKING:
-    import napari
 
 
 def generate_test_phantom(zyx_shape: tuple[int, int, int]) -> torch.Tensor:
@@ -298,7 +295,7 @@ def calculate_singular_system(sfZYX_transfer_function):
 
 
 def visualize_transfer_function(
-    viewer: napari.Viewer,
+    viewer: "napari.Viewer",
     sfZYX_transfer_function: torch.Tensor,
     zyx_scale: tuple[float, float, float],
 ) -> None:
