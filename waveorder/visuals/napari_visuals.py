@@ -1,11 +1,15 @@
 from waveorder.visuals.utils import complex_tensor_to_rgb
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
 
+if TYPE_CHECKING:
+    import napari
+
 
 def add_transfer_function_to_viewer(
-    viewer,  # napari viewer
+    viewer: napari.Viewer,
     transfer_function: torch.Tensor,
     zyx_scale: tuple[float, float, float],
     layer_name: str = "Transfer Function",
