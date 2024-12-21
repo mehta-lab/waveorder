@@ -94,19 +94,11 @@ python
 >>> import waveorder
 ```
 
-(Optional) Install napari, clone the repository, and run an example script:
+(Optional) Install example dependencies, clone the repository, and run an example script:
 ```sh
-pip install napari[all]
+pip install waveorder[examples]
 git clone https://github.com/mehta-lab/waveorder.git
 python waveorder/examples/models/phase_thick_3d.py
-```
-
-(Optional) Download the repository, install `jupyter`, and experiment with the example notebooks
-
-```sh
-git clone https://github.com/mehta-lab/waveorder.git
-pip install jupyter
-jupyter notebook ./waveorder/examples/
 ```
 
 (M1 users) `pytorch` has [incomplete GPU support](https://github.com/pytorch/pytorch/issues/77764),
