@@ -73,3 +73,4 @@ def add_transfer_function_to_viewer(
         True,
         False,
     )
+    viewer.dims.axis_labels = ("DATA", "OBJECT", "Z", "Y", "X")

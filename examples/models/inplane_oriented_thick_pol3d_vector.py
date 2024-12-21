@@ -87,5 +87,6 @@ for reg_strength in [0.005, 0.008, 0.01, 0.05, 0.1]:
 
 viewer.grid.enabled = True
 viewer.grid.shape = (2, 5)
+viewer.dims.axis_labels = ["COMPONENT", "Z", "Y", "X"]
 
 input("Showing object, data, and recon. Press <enter> to quit...")
