@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import itertools
 import time
 import os
+import warnings
 from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from IPython import display
 from scipy.ndimage import uniform_filter
@@ -160,8 +161,8 @@ def instrument_matrix_calibration(I_cali_norm, I_meas):
 
 
 class waveorder_microscopy:
-
     """
+       DEPRECATED: Please see `waveorder.models` for maintained alternatives.
 
        waveorder_microscopy contains reconstruction algorithms for label-free
        microscopy with various types of dataset:
@@ -367,6 +368,10 @@ class waveorder_microscopy:
         initialize the system parameters for phase and orders microscopy
 
         """
+        warnings.warn(
+            "Please see `waveorder.models` for maintained alternatives.",
+            category=DeprecationWarning,
+        )
 
         t0 = time.time()
 
@@ -732,9 +737,7 @@ class waveorder_microscopy:
                 wave_vec_norm_x = self.lambda_illu * self.fxx
                 wave_vec_norm_y = self.lambda_illu * self.fyy
                 wave_vec_norm_z = (
-                    np.maximum(
-                        0, 1 - wave_vec_norm_x**2 - wave_vec_norm_y**2
-                    )
+                    np.maximum(0, 1 - wave_vec_norm_x**2 - wave_vec_norm_y**2)
                 ) ** (0.5)
 
                 incident_theta = np.arctan2(
@@ -4017,9 +4020,7 @@ class fluorescence_microscopy:
             S1_stack = cp.array(S1_stack)
             S2_stack = cp.array(S2_stack)
 
-            anisotropy = cp.asnumpy(
-                0.5 * cp.sqrt(S1_stack**2 + S2_stack**2)
-            )
+            anisotropy = cp.asnumpy(0.5 * cp.sqrt(S1_stack**2 + S2_stack**2))
             orientation = cp.asnumpy(
                 (0.5 * cp.arctan2(S2_stack, S1_stack)) % np.pi
             )

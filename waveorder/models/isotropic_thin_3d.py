@@ -6,15 +6,14 @@ from torch import Tensor
 
 from waveorder import optics, sampling, util
 
-
 def generate_test_phantom(
-    yx_shape,
-    yx_pixel_size,
-    wavelength_illumination,
-    index_of_refraction_media,
-    index_of_refraction_sample,
-    sphere_radius,
-):
+    yx_shape: Tuple[int, int],
+    yx_pixel_size: float,
+    wavelength_illumination: float,
+    index_of_refraction_media: float,
+    index_of_refraction_sample: float,
+    sphere_radius: float,
+) -> Tuple[Tensor, Tensor]:
     sphere, _, _ = util.generate_sphere_target(
         (3,) + yx_shape,
         yx_pixel_size,
@@ -35,15 +34,15 @@ def generate_test_phantom(
 
 
 def calculate_transfer_function(
-    yx_shape,
-    yx_pixel_size,
-    z_position_list,
-    wavelength_illumination,
-    index_of_refraction_media,
-    numerical_aperture_illumination,
-    numerical_aperture_detection,
-    invert_phase_contrast=False,
-):
+    yx_shape: Tuple[int, int],
+    yx_pixel_size: float,
+    z_position_list: list,
+    wavelength_illumination: float,
+    index_of_refraction_media: float,
+    numerical_aperture_illumination: float,
+    numerical_aperture_detection: float,
+    invert_phase_contrast: bool = False,
+) -> Tuple[Tensor, Tensor]:
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
         numerical_aperture_illumination,
@@ -93,15 +92,15 @@ def calculate_transfer_function(
 
 
 def _calculate_wrap_unsafe_transfer_function(
-    yx_shape,
-    yx_pixel_size,
-    z_position_list,
-    wavelength_illumination,
-    index_of_refraction_media,
-    numerical_aperture_illumination,
-    numerical_aperture_detection,
-    invert_phase_contrast=False,
-):
+    yx_shape: Tuple[int, int],
+    yx_pixel_size: float,
+    z_position_list: list,
+    wavelength_illumination: float,
+    index_of_refraction_media: float,
+    numerical_aperture_illumination: float,
+    numerical_aperture_detection: float,
+    invert_phase_contrast: bool = False,
+) -> Tuple[Tensor, Tensor]:
     if invert_phase_contrast:
         z_position_list = torch.flip(torch.tensor(z_position_list), dims=(0,))
 
@@ -149,10 +148,14 @@ def _calculate_wrap_unsafe_transfer_function(
 
 def visualize_transfer_function(
     viewer,
-    absorption_2d_to_3d_transfer_function,
-    phase_2d_to_3d_transfer_function,
-):
-    # TODO: consider generalizing w/ phase_thick_3d.visualize_transfer_function
+    absorption_2d_to_3d_transfer_function: Tensor,
+    phase_2d_to_3d_transfer_function: Tensor,
+) -> None:
+    """Note: unlike other `visualize_transfer_function` calls, this transfer 
+    function is a mixed 3D-to-2D transfer function, so it cannot reuse
+    util.add_transfer_function_to_viewer. If more 3D-to-2D transfer functions 
+    are added, consider refactoring.
+    """
     arrays = [
         (torch.imag(absorption_2d_to_3d_transfer_function), "Im(absorb TF)"),
         (torch.real(absorption_2d_to_3d_transfer_function), "Re(absorb TF)"),
@@ -169,14 +172,14 @@ def visualize_transfer_function(
             contrast_limits=(-lim, lim),
             scale=(1, 1, 1),
         )
-    viewer.dims.order = (0, 1, 2)
+    viewer.dims.order = (2, 0, 1)
 
 
 def visualize_point_spread_function(
     viewer,
-    absorption_2d_to_3d_transfer_function,
-    phase_2d_to_3d_transfer_function,
-):
+    absorption_2d_to_3d_transfer_function: Tensor,
+    phase_2d_to_3d_transfer_function: Tensor,
+) -> None:
     arrays = [
         (torch.fft.ifftn(absorption_2d_to_3d_transfer_function), "absorb PSF"),
         (torch.fft.ifftn(phase_2d_to_3d_transfer_function), "phase PSF"),
@@ -195,11 +198,11 @@ def visualize_point_spread_function(
 
 
 def apply_transfer_function(
-    yx_absorption,
-    yx_phase,
-    phase_2d_to_3d_transfer_function,
-    absorption_2d_to_3d_transfer_function,
-):
+    yx_absorption: Tensor,
+    yx_phase: Tensor,
+    phase_2d_to_3d_transfer_function: Tensor,
+    absorption_2d_to_3d_transfer_function: Tensor,
+) -> Tensor:
     # Very simple simulation, consider adding noise and bkg knobs
 
     # simulate absorbing object
@@ -236,7 +239,7 @@ def apply_inverse_transfer_function(
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
     bg_filter: bool = True,
-) -> Tuple[Tensor]:
+) -> Tuple[Tensor, Tensor]:
     """Reconstructs absorption and phase from zyx_data and a pair of
     3D-to-2D transfer functions named absorption_2d_to_3d_transfer_function and
     phase_2d_to_3d_transfer_function, providing options for reconstruction

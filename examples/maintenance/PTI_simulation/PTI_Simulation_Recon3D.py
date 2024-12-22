@@ -14,8 +14,8 @@ from numpy.fft import fftshift
 from waveorder import (
     optics,
     waveorder_reconstructor,
-    visual,
 )
+from waveorder.visuals import jupyter_visuals
 
 ## Initialization
 ## Load simulated images and parameters
@@ -65,7 +65,7 @@ setup = waveorder_reconstructor.waveorder_microscopy(
 
 
 ### Illumination patterns used
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5
 )
 plt.show()
@@ -113,7 +113,7 @@ f_tensor = setup.scattering_potential_tensor_recon_3D_vec(
     S_image_tm, reg_inc=reg_inc, cupy_det=True
 )
 
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     f_tensor[..., L // 2],
     num_col=4,
     origin="lower",
@@ -183,7 +183,7 @@ phase_PT, absorption_PT, retardance_pr_PT = [
 ### Reconstructed phase, absorption, principal retardance, azimuth, and inclination assuming (+) and (-) optic sign
 
 # browse the reconstructed physical properties
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     np.stack(
         [
             phase_PT[..., L // 2],
@@ -389,7 +389,7 @@ orientation_3D_image = np.transpose(
     ),
     (3, 1, 2, 0),
 )
-orientation_3D_image_RGB = visual.orientation_3D_to_rgb(
+orientation_3D_image_RGB = jupyter_visuals.orientation_3D_to_rgb(
     orientation_3D_image, interp_belt=20 / 180 * np.pi, sat_factor=1
 )
 
@@ -402,7 +402,7 @@ plt.imshow(
 )
 # plot the top view of 3D orientation colorsphere
 plt.figure(figsize=(3, 3))
-visual.orientation_3D_colorwheel(
+jupyter_visuals.orientation_3D_colorwheel(
     wheelsize=128,
     circ_size=50,
     interp_belt=20 / 180 * np.pi,
@@ -440,7 +440,7 @@ plt.imshow(in_plane_orientation[z_layer], origin="lower")
 plt.figure(figsize=(10, 10))
 plt.imshow(in_plane_orientation[:, y_layer], origin="lower", aspect=psz / ps)
 plt.figure(figsize=(3, 3))
-visual.orientation_2D_colorwheel()
+jupyter_visuals.orientation_2D_colorwheel()
 plt.show()
 
 
@@ -511,7 +511,7 @@ linelength_scale = 20
 
 
 fig, ax = plt.subplots(2, 2, figsize=(10, 10))
-visual.plot3DVectorField(
+jupyter_visuals.plot3DVectorField(
     np.abs(retardance_pr_PT[0, :, :, z_layer]),
     azimuth[0, :, :, z_layer],
     theta[0, :, :, z_layer],
@@ -529,7 +529,7 @@ visual.plot3DVectorField(
 )
 ax[0, 0].set_title(f"XY section (z= {z_layer})")
 
-visual.plot3DVectorField(
+jupyter_visuals.plot3DVectorField(
     np.transpose(np.abs(retardance_pr_PT[0, :, x_layer, :])),
     np.transpose(azimuth_x[0, :, x_layer, :]),
     np.transpose(theta_x[0, :, x_layer, :]),
@@ -547,7 +547,7 @@ visual.plot3DVectorField(
 )
 ax[0, 1].set_title(f"YZ section (x = {x_layer})")
 
-visual.plot3DVectorField(
+jupyter_visuals.plot3DVectorField(
     np.transpose(np.abs(retardance_pr_PT[0, y_layer, :, :])),
     np.transpose(azimuth_y[0, y_layer, :, :]),
     np.transpose(theta_y[0, y_layer, :, :]),
@@ -584,7 +584,7 @@ ret_mask[ret_mask < 0.00125] = 0
 
 plt.figure(figsize=(10, 10))
 plt.imshow(ret_mask[:, :, z_layer], cmap="gray", origin="lower")
-visual.orientation_3D_hist(
+jupyter_visuals.orientation_3D_hist(
     azimuth[0].flatten(),
     theta[0].flatten(),
     ret_mask.flatten(),

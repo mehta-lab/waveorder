@@ -44,3 +44,21 @@ def test_pad_zyx_large_padding(zyx_data):
     assert result.shape == (13, 4, 5)
     assert torch.all(result[:5] == 0)
     assert torch.all(result[-5:] == 0)
+
+
+def test_pauli_orthonormal():
+    s = util.pauli()
+    assert torch.allclose(
+        torch.abs(torch.einsum("kij,lji->kl", s, s)) - torch.eye(4),
+        torch.zeros((4, 4)),
+        atol=1e-5,
+    )
+
+
+def test_gellmann_orthonormal():
+    Y = util.gellmann()
+    assert torch.allclose(
+        torch.abs(torch.einsum("kij,lji->kl", Y, Y)) - torch.eye(9),
+        torch.zeros((9, 9)),
+        atol=1e-5,
+    )

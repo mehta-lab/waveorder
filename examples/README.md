@@ -1,7 +1,10 @@
 `waveorder` is undergoing a significant refactor, and this `examples/` folder serves as a good place to understand the current state of the repository.
 
-The `models/` folder demonstrates the latest functionality of `waveorder`. These scripts will run as is in an environment with `waveorder` and `napari` installed. Each script demonstrates a simulation and reconstruction with a **model**: a specific set of assumptions about the sample and the data being acquired. 
+Some examples require `pip install waveorder[examples]` for `napari` and `jupyter`. Visit the [napari installation guide](https://napari.org/dev/tutorials/fundamentals/installation.html) if napari installation fails.
 
-The `maintenance/` folder demonstrates the functionality of `waveorder` that we plan to move to `models/`. These scripts can be run as is, and they are being maintained with tests.
-
-The `documentation/` folder consists of examples that demonstrate reconstruction with real data. These examples require access to the complete datasets, so they are not being actively maintained and serve primarily as documentation.
+| Folder      | Requires                   | Description                                                                                           |
+|------------------|----------------------------|-------------------------------------------------------------------------------------------------------|
+| `models/`        | `pip install waveorder[examples]`      | Demonstrates the latest functionality of `waveorder` through simulations and reconstructions using various models. |
+| `maintenance/`   | `pip install waveorder`                | Examples of computational imaging methods enabled by functionality of waveorder; scripts are maintained with automated tests.               |
+| `visuals/`       | `pip install waveorder[examples]`      | Visualizations of transfer functions and Green's tensors.                                    |
+| `documentation/` | `pip install waveorder`, complete datasets | Provides examples of real-data reconstructions; serves as documentation and is not actively maintained. |

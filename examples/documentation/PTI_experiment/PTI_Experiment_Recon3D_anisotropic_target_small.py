@@ -6,11 +6,12 @@ import matplotlib.pyplot as plt
 from numpy.fft import fftshift
 
 import waveorder as wo
-from waveorder import optics, waveorder_reconstructor, util, visual
+from waveorder import optics, waveorder_reconstructor, util
 
 import zarr
 from pathlib import Path
 from iohub import open_ome_zarr
+from waveorder.visuals import jupyter_visuals
 
 # %%
 # Initialization
@@ -110,7 +111,7 @@ for i in range(len(Source)):
     Source_PolState[i, 1] = E_in[1]
 
 
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     fftshift(Source, axes=(1, 2)), origin="lower", num_col=5
 )
 
@@ -162,7 +163,7 @@ S_image_tm[2] = (
 
 # %%
 # browse raw intensity stacks (stack_idx_1: z index, stack_idx2: pattern index)
-visual.parallel_5D_viewer(
+jupyter_visuals.parallel_5D_viewer(
     np.transpose(I_meas[:, :, :, :, ::-1], (4, 1, 0, 2, 3)),
     num_col=4,
     size=10,
@@ -171,7 +172,7 @@ visual.parallel_5D_viewer(
 
 # %%
 # browse uncorrected Stokes parameters (stack_idx_1: z index, stack_idx2: pattern index)
-visual.parallel_5D_viewer(
+jupyter_visuals.parallel_5D_viewer(
     np.transpose(S_image_recon, (4, 1, 0, 2, 3)),
     num_col=3,
     size=8,
@@ -182,7 +183,7 @@ visual.parallel_5D_viewer(
 
 # %%
 # browse corrected Stokes parameters (stack_idx_1: z index, stack_idx2: pattern index)
-visual.parallel_5D_viewer(
+jupyter_visuals.parallel_5D_viewer(
     np.transpose(S_image_tm, (4, 1, 0, 2, 3)),
     num_col=3,
     size=8,
@@ -213,7 +214,7 @@ f_tensor = setup.scattering_potential_tensor_recon_3D_vec(
 
 # %%
 # browse the z-stack of components of scattering potential tensor
-visual.parallel_4D_viewer(
+jupyter_visuals.parallel_4D_viewer(
     np.transpose(f_tensor, (3, 0, 1, 2)),
     num_col=4,
     origin="lower",
@@ -278,7 +279,7 @@ differential_permittivity_PT = np.array(
 
 # %%
 # browse the reconstructed physical properties
-visual.parallel_4D_viewer(
+jupyter_visuals.parallel_4D_viewer(
     np.transpose(
         np.stack(
             [
@@ -546,7 +547,7 @@ ax[5, 1].set_title("inclination (+) (xz)")
 
 # %%
 # browse XY planes of the phase and differential permittivity
-visual.parallel_4D_viewer(
+jupyter_visuals.parallel_4D_viewer(
     np.transpose(
         [
             np.clip(phase_PT, phase_min, phase_max),
@@ -585,7 +586,7 @@ orientation_3D_image = np.transpose(
     ),
     (3, 1, 2, 0),
 )
-orientation_3D_image_RGB = visual.orientation_3D_to_rgb(
+orientation_3D_image_RGB = jupyter_visuals.orientation_3D_to_rgb(
     orientation_3D_image, interp_belt=20 / 180 * np.pi, sat_factor=1
 )
 
@@ -600,7 +601,7 @@ plt.imshow(
 
 # plot the top view of 3D orientation colorsphere
 plt.figure(figsize=(3, 3))
-visual.orientation_3D_colorwheel(
+jupyter_visuals.orientation_3D_colorwheel(
     wheelsize=256, circ_size=50, interp_belt=20 / 180 * np.pi, sat_factor=1
 )
 
@@ -639,7 +640,7 @@ plt.imshow(
     in_plane_orientation[:, y_layer], origin="lower", aspect=z_step / ps
 )
 plt.figure(figsize=(3, 3))
-visual.orientation_2D_colorwheel()
+jupyter_visuals.orientation_2D_colorwheel()
 
 # %%
 # out-of-plane tilt
@@ -686,7 +687,7 @@ z_layer = 44
 
 fig, ax = plt.subplots(1, 1, figsize=(15, 15))
 
-visual.plot3DVectorField(
+jupyter_visuals.plot3DVectorField(
     np.abs(differential_permittivity_PT[1, :, :, z_layer]),
     azimuth[1, :, :, z_layer],
     theta[1, :, :, z_layer],
@@ -722,7 +723,7 @@ plt.imshow(
 # %%
 # Angular histogram of 3D orientation
 
-visual.orientation_3D_hist(
+jupyter_visuals.orientation_3D_hist(
     azimuth[1].flatten(),
     theta[1].flatten(),
     ret_mask.flatten(),

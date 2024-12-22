@@ -7,7 +7,7 @@ from torch import Tensor
 from waveorder import correction, stokes, util
 
 
-def generate_test_phantom(yx_shape):
+def generate_test_phantom(yx_shape: Tuple[int, int]) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
     star, theta, _ = util.generate_star_target(yx_shape, blur_px=0.1)
     retardance = 0.25 * star
     orientation = (theta % np.pi) * (star > 1e-3)
@@ -17,13 +17,13 @@ def generate_test_phantom(yx_shape):
 
 
 def calculate_transfer_function(
-    swing,
-    scheme,
-):
+    swing: float,
+    scheme: str,
+) -> Tensor:
     return stokes.calculate_intensity_to_stokes_matrix(swing, scheme=scheme)
 
 
-def visualize_transfer_function(viewer, intensity_to_stokes_matrix):
+def visualize_transfer_function(viewer, intensity_to_stokes_matrix: Tensor) -> None:
     viewer.add_image(
         intensity_to_stokes_matrix.cpu().numpy(),
         name="Intensity to stokes matrix",
@@ -31,12 +31,12 @@ def visualize_transfer_function(viewer, intensity_to_stokes_matrix):
 
 
 def apply_transfer_function(
-    retardance,
-    orientation,
-    transmittance,
-    depolarization,
-    intensity_to_stokes_matrix,
-):
+    retardance: Tensor,
+    orientation: Tensor,
+    transmittance: Tensor,
+    depolarization: Tensor,
+    intensity_to_stokes_matrix: Tensor,
+) -> Tensor:
     stokes_params = stokes.stokes_after_adr(
         retardance, orientation, transmittance, depolarization
     )
@@ -59,7 +59,7 @@ def apply_inverse_transfer_function(
     project_stokes_to_2d: bool = False,
     flip_orientation: bool = False,
     rotate_orientation: bool = False,
-) -> Tuple[Tensor]:
+) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
     """Reconstructs retardance, orientation, transmittance, and depolarization
     from czyx_data and an intensity_to_stokes_matrix, providing options for
     background correction, projection, and orientation transformations.

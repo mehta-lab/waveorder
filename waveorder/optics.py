@@ -133,7 +133,7 @@ def generate_pupil(frr, NA, lamb_in):
                     numerical aperture of the pupil function (normalized by the refractive index of the immersion media)
 
         lamb_in : float
-                    wavelength of the light (inside the immersion media)
+                    wavelength of the light in free space
                     in units of length (inverse of frr's units)
 
     Returns
@@ -225,6 +225,103 @@ def gen_sector_Pupil(fxx, fyy, NA, lamb_in, sector_angle, rotation_angle):
     return Pupil_sector
 
 
+def rotation_matrix(nu_z, nu_y, nu_x, wavelength):
+    nu_perp_squared = nu_x**2 + nu_y**2
+    nu_zz = wavelength * nu_z - 1
+
+    R_xx = (wavelength * nu_x**2 * nu_z + nu_y**2) / nu_perp_squared
+    R_yy = (wavelength * nu_y**2 * nu_z + nu_x**2) / nu_perp_squared
+    R_xy = nu_x * nu_y * nu_zz / nu_perp_squared
+
+    row0 = torch.stack((-wavelength * nu_y, -wavelength * nu_x), dim=0)
+    row1 = torch.stack((R_yy, R_xy), dim=0)
+    row2 = torch.stack((R_xy, R_xx), dim=0)
+
+    out = torch.stack((row0, row1, row2), dim=0)
+
+    # KLUDGE: fix the DC term manually, avoiding nan
+    out[..., 0, 0] = torch.tensor([[0, 0], [1, 0], [0, 1]])[..., None]
+
+    return torch.nan_to_num(out, nan=0.0)
+
+
+def generate_vector_source_defocus_pupil(
+    x_frequencies,
+    y_frequencies,
+    z_position_list,
+    defocus_pupil,
+    input_jones,
+    ill_pupil,
+    wavelength,
+):
+    ill_pupil_3d = torch.einsum(
+        "zyx,yx->zyx", torch.fft.fft(defocus_pupil, dim=0), ill_pupil
+    ).abs()  # make this real
+
+    freq_shape = z_position_list.shape + x_frequencies.shape
+
+    y_broadcast = torch.broadcast_to(y_frequencies[None, :, :], freq_shape)
+    x_broadcast = torch.broadcast_to(x_frequencies[None, :, :], freq_shape)
+    z_broadcast = np.sqrt(wavelength ** (-2) - x_broadcast**2 - y_broadcast**2)
+
+    # Calculate rotation matrix
+    rotations = rotation_matrix(
+        z_broadcast, y_broadcast, x_broadcast, wavelength
+    ).type(torch.complex64)
+
+    # TEMPORARY SIMPLIFY ROTATIONS "TURN OFF ROTATIONS"
+    # 3x2 IDENTITY MATRIX
+    rotations = torch.zeros_like(rotations)
+    rotations[1, 0, ...] = 1 
+    rotations[2, 1, ...] = 1
+
+    # Main calculation in the frequency domain
+    source_pupil = torch.einsum(
+        "ijzyx,j,zyx->izyx", rotations, input_jones, ill_pupil_3d
+    )
+
+    # Convert back to defocus pupil
+    source_defocus_pupil = torch.fft.ifft(source_pupil, dim=-3)
+
+    return source_defocus_pupil
+
+
+def generate_vector_detection_defocus_pupil(
+    x_frequencies,
+    y_frequencies,
+    z_position_list,
+    det_defocus_pupil,
+    det_pupil,
+    wavelength,
+):
+    # TODO: refactor redundancy with illumination pupil
+    det_pupil_3d = torch.einsum(
+        "zyx,yx->zyx", torch.fft.ifft(det_defocus_pupil, dim=0), det_pupil
+    )
+
+    # Calculate zyx_frequency grid (inelegant)
+    z_frequencies = torch.fft.ifft(z_position_list)
+    freq_shape = z_frequencies.shape + x_frequencies.shape
+    z_broadcast = torch.broadcast_to(z_frequencies[:, None, None], freq_shape)
+    y_broadcast = torch.broadcast_to(y_frequencies[None, :, :], freq_shape)
+    x_broadcast = torch.broadcast_to(x_frequencies[None, :, :], freq_shape)
+
+    # Calculate rotation matrix
+    rotations = rotation_matrix(
+        z_broadcast, y_broadcast, x_broadcast, wavelength
+    ).type(torch.complex64)
+
+    # Main calculation in the frequency domain
+    vector_detection_pupil = torch.einsum(
+        "jizyx,zyx->ijzyx", rotations, det_pupil_3d
+    )
+
+    # Convert back to defocus pupil
+    detection_defocus_pupil = torch.fft.fft(vector_detection_pupil, dim=-3)
+
+    return detection_defocus_pupil
+
+
 def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA=0.1):
     """
 
@@ -300,7 +397,7 @@ def generate_propagation_kernel(
         wavelength      : float
                         wavelength of the light in the immersion media
 
-        z_position_list : torch.tensor or list
+        z_position_list : torch.tensor
                         1D array of defocused z positions with the size of (Z)
 
     Returns
@@ -310,15 +407,16 @@ def generate_propagation_kernel(
 
     """
 
-    oblique_factor = (
-        (1 - wavelength**2 * radial_frequencies**2) * pupil_support
-    ) ** (1 / 2) / wavelength
+    oblique_factor = ((1 - wavelength**2 * radial_frequencies**2)) ** (
+        1 / 2
+    ) / wavelength
+    oblique_factor = torch.nan_to_num(oblique_factor, nan=0.0)
 
     propagation_kernel = pupil_support[None, :, :] * torch.exp(
         1j
         * 2
         * np.pi
-        * torch.tensor(z_position_list)[:, None, None]
+        * z_position_list[:, None, None]
         * oblique_factor[None, :, :]
     )
 
@@ -326,7 +424,11 @@ def generate_propagation_kernel(
 
 
 def generate_greens_function_z(
-    radial_frequencies, pupil_support, wavelength_illumination, z_position_list
+    radial_frequencies,
+    pupil_support,
+    wavelength_illumination,
+    z_position_list,
+    axially_even=True,
 ):
     """
 
@@ -343,8 +445,13 @@ def generate_greens_function_z(
         wavelength_illumination       : float
                         wavelength of the light in the immersion media
 
-        z_position_list      : torch.tensor or list
+        z_position_list : torch.tensor
                         1D array of defocused z position with the size of (Z,)
+
+        axially_even    : bool
+                        For backwards compatibility with legacy phase reconstruction.
+                        Ideally the legacy phase reconstruction should be unified with
+                        the new reconstructions, and this parameter should be removed.
 
     Returns
     -------
@@ -358,46 +465,96 @@ def generate_greens_function_z(
         * pupil_support
     ) ** (1 / 2) / wavelength_illumination
 
+    if axially_even:
+        z_positions = torch.abs(z_position_list[:, None, None])
+    else:
+        z_positions = z_position_list[:, None, None]
+
     greens_function_z = (
         -1j
         / 4
         / np.pi
         * pupil_support[None, :, :]
-        * torch.exp(
-            1j
-            * 2
-            * np.pi
-            * torch.tensor(z_position_list)[:, None, None]
-            * oblique_factor[None, :, :]
-        )
+        * torch.exp(1j * 2 * np.pi * z_positions * oblique_factor[None, :, :])
         / (oblique_factor[None, :, :] + 1e-15)
     )
 
     return greens_function_z
 
 
-def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
+def generate_defocus_greens_tensor(
+    fxx, fyy, G_fun_z, Pupil_support, lambda_in
+):
     """
 
     generate forward dyadic Green's function in u_x, u_y, z space
 
     Parameters
     ----------
-        fxx           : numpy.ndarray
+        fxx           : tensor.Tensor
                         x component of 2D spatial frequency array with the size of (Ny, Nx)
 
-        fyy           : numpy.ndarray
+        fyy           : tensor.Tensor
                         y component of 2D spatial frequency array with the size of (Ny, Nx)
 
-        G_fun_z       : numpy.ndarray
-                        forward Green's function in u_x, u_y, z space with size of (Ny, Nx, Nz)
+        G_fun_z       : tensor.Tensor
+                        forward Green's function in u_x, u_y, z space with size of (Nz, Ny, Nx)
 
-        Pupil_support : numpy.ndarray
+        Pupil_support : tensor.Tensor
                         the array that defines the support of the pupil function with the size of (Ny, Nx)
 
         lambda_in     : float
                         wavelength of the light in the immersion media
 
+    Returns
+    -------
+        G_tensor_z    : tensor.Tensor
+                        forward dyadic Green's function in u_x, u_y, z space with the size of (3, 3, Nz, Ny, Nx)
+    """
+
+    fr = (fxx**2 + fyy**2) ** (1 / 2)
+    oblique_factor = ((1 - lambda_in**2 * fr**2) * Pupil_support) ** (
+        1 / 2
+    ) / lambda_in
+
+    diff_filter = torch.zeros((3,) + G_fun_z.shape, dtype=torch.complex64)
+    diff_filter[0] = (1j * 2 * np.pi * oblique_factor)[None, ...]
+    diff_filter[1] = (1j * 2 * np.pi * fyy * Pupil_support)[None, ...]
+    diff_filter[2] = (1j * 2 * np.pi * fxx * Pupil_support)[None, ...]
+
+    G_tensor_z = torch.zeros((3, 3) + G_fun_z.shape, dtype=torch.complex64)
+
+    for i in range(3):
+        for j in range(3):
+            G_tensor_z[i, j] = (
+                G_fun_z
+                * diff_filter[i]
+                * diff_filter[j]
+                / (2 * np.pi / lambda_in) ** 2
+            )
+            if i == j:
+                G_tensor_z[i, i] += G_fun_z
+
+    return G_tensor_z
+
+
+def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
+    """
+    keeping for backwards compatibility
+
+    generate forward dyadic Green's function in u_x, u_y, z space
+    Parameters
+    ----------
+        fxx           : numpy.ndarray
+                        x component of 2D spatial frequency array with the size of (Ny, Nx)
+        fyy           : numpy.ndarray
+                        y component of 2D spatial frequency array with the size of (Ny, Nx)
+        G_fun_z       : numpy.ndarray
+                        forward Green's function in u_x, u_y, z space with size of (Ny, Nx, Nz)
+        Pupil_support : numpy.ndarray
+                        the array that defines the support of the pupil function with the size of (Ny, Nx)
+        lambda_in     : float
+                        wavelength of the light in the immersion media
     Returns
     -------
         G_tensor_z    : numpy.ndarray
@@ -427,7 +584,6 @@ def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
             )
             if i == j:
                 G_tensor_z[i, i] += G_fun_z
-
     return G_tensor_z
 
 
@@ -560,6 +716,60 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
             / psz
         )
 
+
+def generate_greens_tensor_spectrum(
+        zyx_shape, 
+        zyx_pixel_size,
+        wavelength,
+    ):
+    """
+    Parameters
+    ----------
+    zyx_shape : tuple
+    zyx_pixel_size : tuple
+    wavelength : float
+        wavelength in medium
+
+    Returns
+    -------
+    torch.tensor
+        Green's tensor spectrum 
+    """
+    Z, Y, X = zyx_shape
+    dZ, dY, dX = zyx_pixel_size
+
+    z_step = torch.fft.ifftshift(
+        (torch.arange(Z) - Z // 2) * dZ
+    )
+    y_step = torch.fft.ifftshift((torch.arange(Y) - Y // 2) * dY)
+    x_step = torch.fft.ifftshift((torch.arange(X) - X // 2) * dX)
+
+    zz = torch.broadcast_to(z_step[:, None, None], (Z, Y, X))
+    yy = torch.broadcast_to(y_step[None, :, None], (Z, Y, X))
+    xx = torch.broadcast_to(x_step[None, None, :], (Z, Y, X))
+
+    rr = torch.sqrt(xx**2 + yy**2 + zz**2)
+    rhat = torch.stack([zz, yy, xx], dim=0) / rr
+
+    scalar_g = torch.exp(1j * 2 * torch.pi * rr / wavelength) / (
+        4 * torch.pi * rr
+    )
+
+    eye = torch.zeros((3, 3, Z, Y, X))
+    eye[0, 0] = 1
+    eye[1, 1] = 1
+    eye[2, 2] = 1
+
+    Q = eye - torch.einsum("izyx,jzyx->ijzyx", rhat, rhat)
+    g_3d = Q * scalar_g
+    g_3d = torch.nan_to_num(g_3d)
+
+    G_3D = torch.fft.fftn(g_3d, dim=(-3, -2, -1))
+    G_3D = torch.imag(G_3D) * 1j
+    G_3D /= torch.amax(torch.abs(G_3D))
+
+    return G_3D
+    
 
 def compute_weak_object_transfer_function_2d(
     illumination_pupil, detection_pupil

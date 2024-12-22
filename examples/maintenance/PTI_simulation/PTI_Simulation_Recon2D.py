@@ -16,8 +16,8 @@ from numpy.fft import fftshift
 from waveorder import (
     optics,
     waveorder_reconstructor,
-    visual,
 )
+from waveorder.visuals import jupyter_visuals
 
 ## Initialization
 ## Load simulated images and parameters
@@ -76,7 +76,7 @@ setup = waveorder_reconstructor.waveorder_microscopy(
 ## Visualize 2  D transfer functions as a function of illumination pattern
 
 # illumination patterns used
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5
 )
 plt.show()
@@ -118,7 +118,7 @@ f_tensor = setup.scattering_potential_tensor_recon_2D_vec(
     S_image_tm, reg_inc=reg_inc, cupy_det=True
 )
 
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     f_tensor,
     num_col=4,
     origin="lower",
@@ -255,14 +255,14 @@ orientation_3D_image = np.transpose(
     ),
     (1, 2, 0),
 )
-orientation_3D_image_RGB = visual.orientation_3D_to_rgb(
+orientation_3D_image_RGB = jupyter_visuals.orientation_3D_to_rgb(
     orientation_3D_image, interp_belt=20 / 180 * np.pi, sat_factor=1
 )
 
 plt.figure(figsize=(5, 5))
 plt.imshow(orientation_3D_image_RGB, origin="lower")
 plt.figure(figsize=(3, 3))
-visual.orientation_3D_colorwheel(
+jupyter_visuals.orientation_3D_colorwheel(
     wheelsize=256, circ_size=50, interp_belt=20 / 180 * np.pi, sat_factor=1
 )
 plt.show()
@@ -297,7 +297,7 @@ in_plane_orientation = hsv_to_rgb(I_hsv.copy())
 plt.figure(figsize=(5, 5))
 plt.imshow(in_plane_orientation, origin="lower")
 plt.figure(figsize=(3, 3))
-visual.orientation_2D_colorwheel()
+jupyter_visuals.orientation_2D_colorwheel()
 plt.show()
 
 # out-of-plane tilt
@@ -339,7 +339,7 @@ spacing = 4
 plt.figure(figsize=(10, 10))
 
 fig, ax = plt.subplots(1, 1, figsize=(20, 10))
-visual.plot3DVectorField(
+jupyter_visuals.plot3DVectorField(
     np.abs(retardance_pr_nm[0]),
     azimuth[0],
     theta[0],
@@ -362,7 +362,7 @@ ret_mask[ret_mask < 0.5] = 0
 
 plt.figure(figsize=(10, 10))
 plt.imshow(ret_mask, cmap="gray", origin="lower")
-visual.orientation_3D_hist(
+jupyter_visuals.orientation_3D_hist(
     azimuth[0].flatten(),
     theta[0].flatten(),
     ret_mask.flatten(),

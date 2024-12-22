@@ -8,11 +8,7 @@ from ipywidgets import (
     Image,
     Layout,
     interact,
-    interactive,
-    fixed,
-    interact_manual,
     HBox,
-    VBox,
 )
 from matplotlib.colors import hsv_to_rgb
 from matplotlib.colors import Normalize
@@ -176,7 +172,7 @@ def image_stack_viewer_fast(
         else:
             raise ValueError('origin can only be either "upper" or "lower"')
 
-    im_wgt = Image(
+    im_wgt = Image(        
         value=im_dict[0],
         layout=Layout(height=str(size[0]) + "px", width=str(size[1]) + "px"),
     )

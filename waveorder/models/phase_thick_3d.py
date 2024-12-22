@@ -6,16 +6,17 @@ from torch import Tensor
 
 from waveorder import optics, sampling, util
 from waveorder.models import isotropic_fluorescent_thick_3d
+from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
 def generate_test_phantom(
-    zyx_shape,
-    yx_pixel_size,
-    z_pixel_size,
-    index_of_refraction_media,
-    index_of_refraction_sample,
-    sphere_radius,
-):
+    zyx_shape: tuple[int, int, int],
+    yx_pixel_size: float,
+    z_pixel_size: float,
+    index_of_refraction_media: float,
+    index_of_refraction_sample: float,
+    sphere_radius: float,
+) -> np.ndarray:
     sphere, _, _ = util.generate_sphere_target(
         zyx_shape,
         yx_pixel_size,
@@ -31,16 +32,16 @@ def generate_test_phantom(
 
 
 def calculate_transfer_function(
-    zyx_shape,
-    yx_pixel_size,
-    z_pixel_size,
-    wavelength_illumination,
-    z_padding,
-    index_of_refraction_media,
-    numerical_aperture_illumination,
-    numerical_aperture_detection,
-    invert_phase_contrast=False,
-):
+    zyx_shape: tuple[int, int, int],
+    yx_pixel_size: float,
+    z_pixel_size: float,
+    wavelength_illumination: float,
+    z_padding: int,
+    index_of_refraction_media: float,
+    numerical_aperture_illumination: float,
+    numerical_aperture_detection: float,
+    invert_phase_contrast: bool = False,
+) -> tuple[np.ndarray, np.ndarray]:
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
         numerical_aperture_illumination,
@@ -85,16 +86,16 @@ def calculate_transfer_function(
 
 
 def _calculate_wrap_unsafe_transfer_function(
-    zyx_shape,
-    yx_pixel_size,
-    z_pixel_size,
-    wavelength_illumination,
-    z_padding,
-    index_of_refraction_media,
-    numerical_aperture_illumination,
-    numerical_aperture_detection,
-    invert_phase_contrast=False,
-):
+    zyx_shape: tuple[int, int, int],
+    yx_pixel_size: float,
+    z_pixel_size: float,
+    wavelength_illumination: float,
+    z_padding: int,
+    index_of_refraction_media: float,
+    numerical_aperture_illumination: float,
+    numerical_aperture_detection: float,
+    invert_phase_contrast: bool = False,
+) -> tuple[np.ndarray, np.ndarray]:
     radial_frequencies = util.generate_radial_frequencies(
         zyx_shape[1:], yx_pixel_size
     )
@@ -126,6 +127,7 @@ def _calculate_wrap_unsafe_transfer_function(
         det_pupil,
         wavelength_illumination / index_of_refraction_media,
         z_position_list,
+        axially_even=False,
     )
 
     (
@@ -145,33 +147,28 @@ def _calculate_wrap_unsafe_transfer_function(
 
 def visualize_transfer_function(
     viewer,
-    real_potential_transfer_function,
-    imag_potential_transfer_function,
-    zyx_scale,
-):
-    # TODO: consider generalizing w/ phase2Dto3D.visualize_TF
-    arrays = [
-        (torch.real(imag_potential_transfer_function), "Re(imag pot. TF)"),
-        (torch.imag(imag_potential_transfer_function), "Im(imag pot. TF)"),
-        (torch.real(real_potential_transfer_function), "Re(real pot. TF)"),
-        (torch.imag(real_potential_transfer_function), "Im(real pot. TF)"),
-    ]
+    real_potential_transfer_function: np.ndarray,
+    imag_potential_transfer_function: np.ndarray,
+    zyx_scale: tuple[float, float, float],
+) -> None:
+    add_transfer_function_to_viewer(
+        viewer,
+        imag_potential_transfer_function,
+        zyx_scale,
+        layer_name="Imag pot. TF",
+    )
 
-    for array in arrays:
-        lim = 0.5 * torch.max(torch.abs(array[0]))
-        viewer.add_image(
-            torch.fft.ifftshift(array[0]).cpu().numpy(),
-            name=array[1],
-            colormap="bwr",
-            contrast_limits=(-lim, lim),
-            scale=1 / zyx_scale,
-        )
-    viewer.dims.order = (0, 1, 2)
+    add_transfer_function_to_viewer(
+        viewer,
+        real_potential_transfer_function,
+        zyx_scale,
+        layer_name="Real pot. TF",
+    )
 
 
 def apply_transfer_function(
-    zyx_object, real_potential_transfer_function, z_padding, brightness
-):
+    zyx_object: np.ndarray, real_potential_transfer_function: np.ndarray, z_padding: int, brightness: float
+) -> np.ndarray:
     # This simplified forward model only handles phase, so it resuses the fluorescence forward model
     # TODO: extend to absorption
     return (
@@ -196,7 +193,7 @@ def apply_inverse_transfer_function(
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
-):
+) -> Tensor:
     """Reconstructs 3D phase from labelfree defocus zyx_data and a pair of
     complex 3D transfer functions real_potential_transfer_function and
     imag_potential_transfer_function, providing options for reconstruction

@@ -331,12 +331,15 @@ def gen_coordinate(img_dim, ps):
     return (xx, yy, fxx, fyy)
 
 
-def generate_radial_frequencies(img_dim, ps):
+def generate_frequencies(img_dim, ps):
     fy = torch.fft.fftfreq(img_dim[0], ps)
     fx = torch.fft.fftfreq(img_dim[1], ps)
-
     fyy, fxx = torch.meshgrid(fy, fx, indexing="ij")
+    return fyy, fxx
 
+
+def generate_radial_frequencies(img_dim, ps):
+    fyy, fxx = generate_frequencies(img_dim, ps)
     return torch.sqrt(fyy**2 + fxx**2)
 
 
@@ -2239,3 +2242,52 @@ def orientation_3D_continuity_map(
     retardance_pr_avg /= np.max(retardance_pr_avg)
 
     return retardance_pr_avg
+
+
+def pauli():
+    # yx order
+    # trace-orthogonal normalization
+    # torch.einsum("kij,lji->kl", pauli(), pauli()) == torch.eye(4)
+
+    # intensity, x-y, +45-(-45), LCP-RCP
+    # yx
+    # yx
+    a = 2**-0.5
+    sigma = torch.tensor(
+        [
+            [[a, 0], [0, a]],
+            [[-a, 0], [0, a]],
+            [[0, a], [a, 0]],
+            [[0, 1j * a], [-1j * a, 0]],
+        ]
+    )
+    return sigma
+
+
+def gellmann():
+    # zyx order
+    # trace-orthogonal normalization
+    # torch.einsum("kij,lji->kl", gellmann(), gellmann()) == torch.eye(9)
+    #
+    # lexicographical order of the Gell-Mann matrices
+    # 00, 1-1, 10, 11, 2-2, 2-1, 20, 21, 22
+    #
+    # zyx
+    # zyx
+    a = 3**-0.5
+    c = 2**-0.5
+    d = -(6**-0.5)
+    e = 2 * (6**-0.5)
+    return torch.tensor(
+        [
+            [[a, 0, 0], [0, a, 0], [0, 0, a]],
+            [[0, 0, -c], [0, 0, 0], [c, 0, 0]],
+            [[0, 0, 0], [0, 0, -c], [0, c, 0]],
+            [[0, -c, 0], [c, 0, 0], [0, 0, 0]],
+            [[0, 0, 0], [0, 0, c], [0, c, 0]],  #
+            [[0, c, 0], [c, 0, 0], [0, 0, 0]],
+            [[e, 0, 0], [0, d, 0], [0, 0, d]],
+            [[0, 0, c], [0, 0, 0], [c, 0, 0]],
+            [[0, 0, 0], [0, -c, 0], [0, 0, c]],  #
+        ], dtype=torch.complex64
+    )

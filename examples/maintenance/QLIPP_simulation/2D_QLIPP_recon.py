@@ -14,8 +14,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from waveorder import (
     waveorder_reconstructor,
-    visual,
 )
+from waveorder.visuals import jupyter_visuals
 
 
 # ### Load simulated data
@@ -57,7 +57,7 @@ Recon_para = setup.Polarization_recon(
     S_image_tm
 )  # Without accounting for diffraction
 
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     np.array(
         [
             Recon_para[0, :, :, L // 2],
@@ -73,7 +73,7 @@ visual.plot_multicolumn(
     origin="lower",
 )
 
-visual.plot_hsv(
+jupyter_visuals.plot_hsv(
     [Recon_para[1, :, :, L // 2], Recon_para[0, :, :, L // 2]],
     max_val=1,
     origin="lower",
@@ -90,7 +90,7 @@ retardance, azimuth = setup.Birefringence_recon_2D(
     S1_stack, S2_stack, method="Tikhonov", reg_br=1e-3
 )
 
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     np.array([retardance, azimuth]),
     num_col=2,
     size=10,
@@ -98,7 +98,7 @@ visual.plot_multicolumn(
     titles=["Reconstructed retardance", "Reconstructed orientation"],
     origin="lower",
 )
-visual.plot_hsv([azimuth, retardance], size=10, origin="lower")
+jupyter_visuals.plot_hsv([azimuth, retardance], size=10, origin="lower")
 plt.show()
 
 
@@ -114,7 +114,7 @@ retardance_TV, azimuth_TV = setup.Birefringence_recon_2D(
     verbose=True,
 )
 
-visual.plot_multicolumn(
+jupyter_visuals.plot_multicolumn(
     np.array([retardance_TV, azimuth_TV]),
     num_col=2,
     size=10,
@@ -122,7 +122,7 @@ visual.plot_multicolumn(
     titles=["Reconstructed retardance", "Reconstructed orientation"],
     origin="lower",
 )
-visual.plot_hsv([azimuth_TV, retardance_TV], size=10, origin="lower")
+jupyter_visuals.plot_hsv([azimuth_TV, retardance_TV], size=10, origin="lower")
 plt.show()
 
 
