@@ -1,8 +1,13 @@
 # recOrder
-![PyPI - Python Version](https://img.shields.io/pypi/pyversions/recOrder-napari)
-[![Python package index download statistics](https://img.shields.io/pypi/dm/recOrder-napari.svg)](https://pypistats.org/packages/recOrder-napari)
 [![Python package index](https://img.shields.io/pypi/v/recOrder-napari.svg)](https://pypi.org/project/recOrder-napari)
-[![Development Status](https://img.shields.io/pypi/status/napari.svg)](https://en.wikipedia.org/wiki/Software_release_life_cycle#Alpha)
+[![PyPI monthly downloads](https://img.shields.io/pypi/dm/recOrder-napari.svg)](https://pypistats.org/packages/recOrder-napari)
+[![Total downloads](https://pepy.tech/badge/recOrder-napari)](https://pepy.tech/project/recOrder-napari)
+[![GitHub contributors](https://img.shields.io/github/contributors-anon/mehta-lab/recOrder)](https://github.com/mehta-lab/recOrder/graphs/contributors)
+![GitHub Repo stars](https://img.shields.io/github/stars/mehta-lab/recOrder)
+![GitHub forks](https://img.shields.io/github/forks/mehta-lab/recOrder)
+![PyPI - Python Version](https://img.shields.io/pypi/pyversions/recOrder-napari)
+
+
 
 `recOrder` is a collection of computational imaging methods. It currently provides QLIPP (quantitative label-free imaging with phase and polarization), phase from defocus, and fluorescence deconvolution. 
 
