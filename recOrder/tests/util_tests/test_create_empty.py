@@ -6,8 +6,8 @@ from iohub.ngff import Position, open_ome_zarr
 from recOrder.cli.utils import create_empty_hcs_zarr
 
 
-def test_create_empty_hcs_zarr():
-    store_path = Path("test_store.zarr")
+def test_create_empty_hcs_zarr(tmp_path):
+    store_path = tmp_path / Path("test_store.zarr")
     position_keys: list[tuple[str]] = [
         ("A", "0", "3"),
         ("B", "10", "4"),
