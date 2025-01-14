@@ -1,5 +1,7 @@
 # Welcome to `recOrder`'s documentation
 
+**I want to buy hardware for a polarized-light installation:** start with the [buyers guide](./buyers-guide.md).
+
 **I would like to install `recOrder` on my microscope:** start with the [microscope installation guide](./microscope-installation-guide.md).
 
 **I would like to use the `napari plugin`:** start with the [plugin guide](./napari-plugin-guide.md).
