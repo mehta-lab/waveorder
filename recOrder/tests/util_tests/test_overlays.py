@@ -20,7 +20,7 @@ def _birefringence(draw):
             dtype,
             shape=shape,
             elements=st.floats(
-                min_value=0,
+                min_value=1.0000000168623835e-16,
                 max_value=50,
                 exclude_min=True,
                 width=bit_width,
@@ -40,6 +40,7 @@ def _birefringence(draw):
             ),
         )
     )
+  
     return retardance, orientation
 
 

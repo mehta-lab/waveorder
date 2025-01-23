@@ -598,6 +598,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
             transfer_function_dirpath=transfer_function_path,
             config_filepath=self.config_path,
             output_dirpath=reconstruction_path,
+            unique_id="recOrderAcq"
         )
 
         # Read reconstruction to pass to emitters

@@ -119,3 +119,16 @@ def ram_multiplier() -> Callable:
         )(f)
 
     return decorator
+
+def unique_id() -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--unique-id",
+            "-uid",
+            default="",
+            required=False,
+            type=str,
+            help="Unique ID.",
+        )(f)
+
+    return decorator

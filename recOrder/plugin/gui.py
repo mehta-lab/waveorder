@@ -9,7 +9,7 @@
 
 
 from qtpy import QtCore, QtGui, QtWidgets
-
+from recOrder.plugin import tab_recon
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -924,6 +924,10 @@ class Ui_Form(object):
         self.scrollArea_4.setWidget(self.scrollAreaWidgetContents_4)
         self.gridLayout_6.addWidget(self.scrollArea_4, 4, 0, 1, 1)
         self.tabWidget.addTab(self.Acquisition, "")
+
+        self.tab_reconstruction = tab_recon.Ui_ReconTab_Form(Form)
+        self.tabWidget.addTab(self.tab_reconstruction.recon_tab_mainScrollArea, 'Reconstruction')
+
         self.Display = QtWidgets.QWidget()
         self.Display.setObjectName("Display")
         self.gridLayout_18 = QtWidgets.QGridLayout(self.Display)

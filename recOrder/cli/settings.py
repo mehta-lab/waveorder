@@ -1,5 +1,6 @@
 import os
 from typing import List, Literal, Optional, Union
+from pathlib import Path
 
 from pydantic.v1 import (
     BaseModel,
@@ -40,7 +41,7 @@ class BirefringenceTransferFunctionSettings(MyBaseModel):
 
 
 class BirefringenceApplyInverseSettings(WavelengthIllumination):
-    background_path: str = ""
+    background_path: Union[str, Path] = ""
     remove_estimated_background: bool = False
     flip_orientation: bool = False
     rotate_orientation: bool = False

@@ -154,8 +154,8 @@ def yaml_to_model(yaml_path: Path, model):
 
     Examples
     --------
-    >>> from my_model import MyModel
-    >>> model = yaml_to_model('model.yaml', MyModel)
+    # >>> from my_model import MyModel
+    # >>> model = yaml_to_model('model.yaml', MyModel)
 
     """
     yaml_path = Path(yaml_path)

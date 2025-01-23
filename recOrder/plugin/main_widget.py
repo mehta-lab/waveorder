@@ -90,6 +90,7 @@ class MainWidget(QWidget):
         # Setup GUI elements
         self.ui = gui.Ui_Form()
         self.ui.setupUi(self)
+        self.ui.tab_reconstruction.set_viewer(napari_viewer)
 
         # Override initial tab focus
         self.ui.tabWidget.setCurrentIndex(0)
@@ -909,7 +910,11 @@ class MainWidget(QWidget):
             raise KeyError(msg)
 
         if not self.bf_channel_found:
-            self.ui.qbutton_acq_phase_from_bf.disconnect()
+            try:
+                self.ui.qbutton_acq_phase_from_bf.disconnect()
+            except Exception as exc:
+                print(exc.args)
+                logging.debug(exc.args)
             self.ui.qbutton_acq_phase_from_bf.setStyleSheet(
                 self.disabled_button_style
             )
