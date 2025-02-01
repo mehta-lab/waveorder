@@ -33,6 +33,18 @@ def apply_transfer_function_filter(
     torch.Tensor
         The filtered output array with the same shape and dtype as input_array.
     """
+    # Ensure all dimensions of transfer_function are smaller than or equal to input_array
+    if any(t > i for t, i in zip(transfer_function.shape, input_array.shape)):
+        raise ValueError(
+            "All dimensions of transfer_function must be <= input_array"
+        )
+
+    # Ensure the number of dimensions match
+    if transfer_function.ndim != input_array.ndim:
+        raise ValueError(
+            "transfer_function and input_array must have the same number of dimensions"
+        )
+
     input_spectrum = torch.fft.fftn(input_array)
     output_spectrum = stretched_multiply(transfer_function, input_spectrum)
     return torch.fft.ifftn(output_spectrum).type(input_array.dtype)
