@@ -47,7 +47,11 @@ def apply_transfer_function_filter(
 
     input_spectrum = torch.fft.fftn(input_array)
     output_spectrum = stretched_multiply(transfer_function, input_spectrum)
-    return torch.fft.ifftn(output_spectrum).type(input_array.dtype)
+
+    # Casts to input_array dtype, which typically ignores imaginary part
+    result = torch.fft.ifftn(output_spectrum).type(input_array.dtype)
+
+    return result
 
 def stretched_multiply(
     small_array: torch.Tensor, large_array: torch.Tensor
