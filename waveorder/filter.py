@@ -1,6 +1,41 @@
 import numpy as np
 import torch
 
+def apply_transfer_function_filter(
+    transfer_function: torch.Tensor, input_array: torch.Tensor, 
+) -> torch.Tensor:
+    """
+    Applies a transfer function filter to an input array.
+
+    transfer_function.shape must be smaller or equal to input_array.shape in all 
+    dimensions. When transfer_function is smaller, it is effectively "stretched"
+    to apply the filter.
+
+    transfer_function is in "wrapped" format, i.e., the zero frequency is the
+    zeroth element. 
+
+    input_array and transfer_function must have inverse sample spacing, i.e.,
+    is input_array contains samples spaced by dx, then transfer_function must 
+    have extent 1/dx. Note that there is no need for transfer_function to have 
+    sample spacing 1/(n*dx) because transfer_function will be stretched. 
+
+    Parameters
+    ----------
+    transfer_function : torch.Tensor
+        The transfer function to be applied in the frequency domain.
+        Extent of transfer_function must be 1/dx, where dx is the sample spacing
+        of input_array.
+    input_array : torch.Tensor
+        The input array to be filtered.
+
+    Returns
+    -------
+    torch.Tensor
+        The filtered output array with the same shape and dtype as input_array.
+    """
+    input_spectrum = torch.fft.fftn(input_array)
+    output_spectrum = stretched_multiply(transfer_function, input_spectrum)
+    return torch.fft.ifftn(output_spectrum).type(input_array.dtype)
 
 def stretched_multiply(
     small_array: torch.Tensor, large_array: torch.Tensor
