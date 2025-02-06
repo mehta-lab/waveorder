@@ -64,13 +64,13 @@ def stretched_multiply(
     element-wise multiplication with the small_array.
 
     For example, a `stretched_multiply` of a 3x3 array by a 100x100 array will
-    break the 100x100 array into 3x3 blocks, with sizes
-    [[34x34, 33x34, 33x33],
-     [34x33, 33x33, 33x33],
-     [34x33, 33x33, 33x33]]
-    and multiply each block by the corresponding element in the 3x3 array.
+    zero pad the 100x100 array so that it is divisible into 3x3 blocks with sizes
+    [[34x34, 34x34, 34x34],
+     [34x34, 34x34, 34x34],
+     [34x34, 34x34, 34x34]]
+    and multiply each block by the corresponding element in the 3x3 array. 
 
-    Returns an array with the same shape as large_array.
+    Returns an array with the same shape as large_array (padding is cropped).
 
     Works for arbitrary dimensions.
 
@@ -119,36 +119,25 @@ def stretched_multiply(
     s_shape = small_array.shape
     l_shape = large_array.shape
 
-    # Compute base block sizes using integer division
-    # This gives the approximate size of each block before handling remainders
-    base_block_size = tuple(l // s for l, s in zip(l_shape, s_shape))
+    # Compute padding sizes to make large_array divisible by small_array
+    pad_sizes = [(0, (s - (l % s)) % s) for l, s in zip(l_shape, s_shape)]
+    pad_sizes_flat = [size for pair in pad_sizes for size in pair]
 
-    # Compute remainder (extra elements that don't fit evenly)
-    remainder = tuple(l % s for l, s in zip(l_shape, s_shape))
+    # Pad the large array
+    padded_large_array = torch.nn.functional.pad(large_array, pad_sizes_flat)
 
-    # Compute block boundaries by spreading remainder elements evenly
-    indices = []
-    for b, s, r in zip(base_block_size, s_shape, remainder):
-        # Create an array where the first 'r' blocks get an extra +1
-        # Example: if b=9, s=11, r=1 -> first remainder block gets size 10 instead of 9
-        block_sizes = [(b + 1) if i < r else b for i in range(s)]
+    # Reshape the padded large array into blocks
+    new_shape = tuple(p // s for p, s in zip(padded_large_array.shape, s_shape)) + s_shape
+    reshaped_large_array = padded_large_array.reshape(new_shape)
 
-        # Compute cumulative sum to determine start and end indices
-        # Example: [0, 10, 19, 28, ..., 100] gives the split points
-        indices.append(np.cumsum([0] + block_sizes))
+    # Multiply the reshaped large array with the small array
+    result_blocks = reshaped_large_array * small_array
 
-    # Create output array initialized as a copy of the large array
-    result = large_array.clone()
+    # Reshape the result back to the padded large array shape
+    result_padded = result_blocks.reshape(padded_large_array.shape)
 
-    # Iterate over small_array indices using ndindex
-    for idx in np.ndindex(s_shape):
-        # Extract multi-dimensional indices
-        slices = tuple(
-            slice(indices[dim][idx[dim]], indices[dim][idx[dim] + 1])
-            for dim in range(small_array.ndim)
-        )
-
-        # Multiply the corresponding block in the large array by the value from the small array
-        result[slices] *= small_array[idx]
+    # Unpad the result to get back to the original large array shape
+    slices = tuple(slice(0, l) for l in l_shape)
+    result = result_padded[slices]
 
     return result
