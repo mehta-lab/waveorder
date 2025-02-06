@@ -7,6 +7,7 @@ from torch import Tensor
 from waveorder import optics, sampling, util
 from waveorder.models import isotropic_fluorescent_thick_3d
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
+from waveorder.filter import apply_transfer_function_filter
 
 
 def generate_test_phantom(
@@ -167,7 +168,10 @@ def visualize_transfer_function(
 
 
 def apply_transfer_function(
-    zyx_object: np.ndarray, real_potential_transfer_function: np.ndarray, z_padding: int, brightness: float
+    zyx_object: np.ndarray,
+    real_potential_transfer_function: np.ndarray,
+    z_padding: int,
+    brightness: float,
 ) -> np.ndarray:
     # This simplified forward model only handles phase, so it resuses the fluorescence forward model
     # TODO: extend to absorption
@@ -249,9 +253,11 @@ def apply_inverse_transfer_function(
 
     # Reconstruct
     if reconstruction_algorithm == "Tikhonov":
-        f_real = util.single_variable_tikhonov_deconvolution_3D(
-            zyx, effective_transfer_function, reg_re=regularization_strength
-        )
+        H_eff = effective_transfer_function
+        H_eff_conj = torch.conj(H_eff)
+        inverse_tf = H_eff_conj / ((H_eff_conj * H_eff) + regularization_strength)
+        
+        f_real = apply_transfer_function_filter(inverse_tf, zyx)
 
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
