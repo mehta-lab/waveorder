@@ -6,6 +6,8 @@ from torch import Tensor
 
 from waveorder import optics, sampling, util
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
+from waveorder.filter import apply_transfer_function_filter
+from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 
 
 def generate_test_phantom(
@@ -108,7 +110,11 @@ def _calculate_wrap_unsafe_transfer_function(
     return optical_transfer_function
 
 
-def visualize_transfer_function(viewer, optical_transfer_function: Tensor, zyx_scale: tuple[float, float, float]) -> None:
+def visualize_transfer_function(
+    viewer,
+    optical_transfer_function: Tensor,
+    zyx_scale: tuple[float, float, float],
+) -> None:
     add_transfer_function_to_viewer(
         viewer,
         torch.real(optical_transfer_function),
@@ -118,7 +124,10 @@ def visualize_transfer_function(viewer, optical_transfer_function: Tensor, zyx_s
 
 
 def apply_transfer_function(
-    zyx_object: Tensor, optical_transfer_function: Tensor, z_padding: int, background: int = 10
+    zyx_object: Tensor,
+    optical_transfer_function: Tensor,
+    z_padding: int,
+    background: int = 10,
 ) -> Tensor:
     """Simulate imaging by applying a transfer function
 
@@ -205,12 +214,10 @@ def apply_inverse_transfer_function(
 
     # Reconstruct
     if reconstruction_algorithm == "Tikhonov":
-        f_real = util.single_variable_tikhonov_deconvolution_3D(
-            zyx_padded,
-            optical_transfer_function,
-            reg_re=regularization_strength,
+        inverse_filter = tikhonov_regularized_inverse_filter(
+            optical_transfer_function, regularization_strength
         )
-
+        f_real = apply_transfer_function_filter(inverse_filter, zyx_padded)
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
         f_real = util.single_variable_admm_tv_deconvolution_3D(
