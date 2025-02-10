@@ -8,6 +8,7 @@ from waveorder import optics, sampling, util
 from waveorder.models import isotropic_fluorescent_thick_3d
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 from waveorder.filter import apply_transfer_function_filter
+from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 
 
 def generate_test_phantom(
@@ -253,11 +254,8 @@ def apply_inverse_transfer_function(
 
     # Reconstruct
     if reconstruction_algorithm == "Tikhonov":
-        H_eff = effective_transfer_function
-        H_eff_conj = torch.conj(H_eff)
-        inverse_tf = H_eff_conj / ((H_eff_conj * H_eff) + regularization_strength)
-        
-        f_real = apply_transfer_function_filter(inverse_tf, zyx)
+        inverse_filter = tikhonov_regularized_inverse_filter(effective_transfer_function, regularization_strength)        
+        f_real = apply_transfer_function_filter(inverse_filter, zyx)
 
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
