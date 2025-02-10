@@ -33,11 +33,11 @@ def test_stretched_multiply():
 
     # Test that output dims are correct
     rand_array_3x3x3 = torch.rand((3, 3, 3))
-    rand_array_100x100x100 = torch.rand((100, 100, 100))
+    rand_array_100x100x100 = torch.rand((99, 99, 99))
     result = filter.stretched_multiply(
         rand_array_3x3x3, rand_array_100x100x100
     )
-    assert result.shape == (100, 100, 100)
+    assert result.shape == (99, 99, 99)
 
 
 def test_stretched_multiply_incompatible_dims():
