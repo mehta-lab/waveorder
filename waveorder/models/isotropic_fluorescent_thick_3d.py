@@ -6,7 +6,7 @@ from torch import Tensor
 
 from waveorder import optics, sampling, util
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
-from waveorder.filter import apply_transfer_function_filter
+from waveorder.filter import apply_filter_bank
 from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 
 
@@ -217,7 +217,7 @@ def apply_inverse_transfer_function(
         inverse_filter = tikhonov_regularized_inverse_filter(
             optical_transfer_function, regularization_strength
         )
-        f_real = apply_transfer_function_filter(inverse_filter, zyx_padded)
+        f_real = apply_filter_bank(inverse_filter, zyx_padded)
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
         f_real = util.single_variable_admm_tv_deconvolution_3D(

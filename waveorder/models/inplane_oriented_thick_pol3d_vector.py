@@ -6,6 +6,7 @@ from typing import Literal
 from torch.nn.functional import avg_pool3d, interpolate
 from waveorder import optics, sampling, stokes, util
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
+from waveorder.filter import apply_filter_bank
 
 
 def generate_test_phantom(zyx_shape: tuple[int, int, int]) -> torch.Tensor:
@@ -332,20 +333,14 @@ def apply_inverse_transfer_function(
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
 ):
-    sZYX_data = torch.fft.fftn(szyx_data, dim=(1, 2, 3))
-
     # Key computation
     print("Computing inverse filter")
     U, S, Vh = singular_system
     S_reg = S / (S**2 + regularization_strength)
-
-    ZYXsf_inverse_filter = torch.einsum(
+    sfzyx_inverse_filter = torch.einsum(
         "sjzyx,jzyx,jfzyx->sfzyx", U, S_reg, Vh
     )
+ 
+    fzyx_recon = apply_filter_bank(sfzyx_inverse_filter, szyx_data)
 
-    # Apply inverse filter
-    fZYX_reconstructed = torch.einsum(
-        "szyx,sfzyx->fzyx", sZYX_data, ZYXsf_inverse_filter
-    )
-
-    return torch.real(torch.fft.ifftn(fZYX_reconstructed, dim=(1, 2, 3)))
+    return fzyx_recon

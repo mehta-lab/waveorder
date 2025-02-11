@@ -4,17 +4,19 @@ import pytest
 
 
 def test_apply_transfer_function_filter():
-    input_array = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
-    transfer_function = torch.tensor([[1, 0], [0, 0]])
-    result = filter.apply_transfer_function_filter(transfer_function, input_array)
-    expected = torch.tensor([[10, 10], [10, 10]])/4
+    input_array = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]])
+    transfer_function_bank = torch.tensor([[[[1, 0], [0, 0]]]])
+    result = filter.apply_filter_bank(transfer_function_bank, input_array)
+    expected = torch.tensor([[[10, 10], [10, 10]]]) / 4
     assert torch.allclose(result, expected)
 
     # Test with incompatible shapes
-    input_array = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
-    transfer_function = torch.tensor([[0.5, 0.5, 0.5], [0.5, 0.5, 0.5]])
+    input_array = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]])
+    transfer_function_bank = torch.tensor(
+        [[[[0.5, 0.5, 0.5], [0.5, 0.5, 0.5]]]]
+    )
     with pytest.raises(ValueError):
-        filter.apply_transfer_function_filter(transfer_function, input_array)
+        filter.apply_filter_bank(transfer_function_bank, input_array)
 
 
 def test_stretched_multiply():
