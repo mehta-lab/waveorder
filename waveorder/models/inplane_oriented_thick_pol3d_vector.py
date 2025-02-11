@@ -40,7 +40,6 @@ def calculate_transfer_function(
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
     fourier_oversample_factor: int = 1,
-    transverse_downsample_factor: int = 1,
 ) -> tuple[
     torch.Tensor, torch.Tensor, tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 ]:
@@ -66,22 +65,8 @@ def calculate_transfer_function(
 
     tf_calculation_shape = (
         zyx_shape[0] * z_factor * fourier_oversample_factor,
-        int(
-            np.ceil(
-                zyx_shape[1]
-                * yx_factor
-                * fourier_oversample_factor
-                / transverse_downsample_factor
-            )
-        ),
-        int(
-            np.ceil(
-                zyx_shape[2]
-                * yx_factor
-                * fourier_oversample_factor
-                / transverse_downsample_factor
-            )
-        ),
+        int(np.ceil(zyx_shape[1] * yx_factor * fourier_oversample_factor)),
+        int(np.ceil(zyx_shape[2] * yx_factor * fourier_oversample_factor)),
     )
 
     sfZYX_transfer_function, intensity_to_stokes_matrix = (
@@ -124,25 +109,12 @@ def calculate_transfer_function(
     )
 
     # Compute singular system on cropped and downsampled
-    U, S, Vh = calculate_singular_system(cropped)
-
-    # Interpolate to final size in YX
-    def complex_interpolate(
-        tensor: torch.Tensor, zyx_shape: tuple[int, int, int]
-    ) -> torch.Tensor:
-        interpolated_real = interpolate(tensor.real, size=zyx_shape)
-        interpolated_imag = interpolate(tensor.imag, size=zyx_shape)
-        return interpolated_real + 1j * interpolated_imag
-
-    full_cropped = complex_interpolate(cropped, zyx_shape)
-    full_U = complex_interpolate(U, zyx_shape)
-    full_S = interpolate(S[None], size=zyx_shape)[0]  # S is real
-    full_Vh = complex_interpolate(Vh, zyx_shape)
+    singular_system = calculate_singular_system(cropped)
 
     return (
-        full_cropped,
+        cropped,
         intensity_to_stokes_matrix,
-        (full_U, full_S, full_Vh),
+        singular_system,
     )
 
 
@@ -340,7 +312,7 @@ def apply_inverse_transfer_function(
     sfzyx_inverse_filter = torch.einsum(
         "sjzyx,jzyx,jfzyx->sfzyx", U, S_reg, Vh
     )
- 
+
     fzyx_recon = apply_filter_bank(sfzyx_inverse_filter, szyx_data)
 
     return fzyx_recon
