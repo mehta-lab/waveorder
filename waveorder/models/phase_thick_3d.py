@@ -257,7 +257,10 @@ def apply_inverse_transfer_function(
         inverse_filter = tikhonov_regularized_inverse_filter(
             effective_transfer_function, regularization_strength
         )
-        f_real = apply_filter_bank(inverse_filter, zyx)
+
+        # [None]s and [0] are for applying a 1x1 "bank" of filters.
+        # For further uniformity, consider returning (1, Z, Y, X)
+        f_real = apply_filter_bank(inverse_filter[None, None], zyx[None])[0]
 
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
