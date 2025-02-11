@@ -346,7 +346,7 @@ def apply_inverse_transfer_function_cli(
     
     name_without_ext = os.path.splitext(Path(output_dirpath).name)[0]
     executor_folder = os.path.join(Path(output_dirpath).parent.absolute(), name_without_ext + "_logs")
-    executor = submitit.AutoExecutor(folder=Path(executor_folder))
+    executor = submitit.AutoExecutor(folder=Path(executor_folder), cluster="debug")
     
     executor.update_parameters(
         slurm_array_parallelism=np.min([50, num_jobs]),
