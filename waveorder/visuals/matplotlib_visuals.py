@@ -23,7 +23,7 @@ def plot_5d_ortho(
     Plot 5D multi-channel data in a grid or ortho-slice views.
 
     Input data is a 6D array with (row, column, channels, Z, Y, X) dimensions.
-    
+
     `color_funcs` permits different RGB color maps for each row and column.
 
     Parameters
@@ -32,7 +32,7 @@ def plot_5d_ortho(
         5D array with shape (R, C, Ch, Z, Y, X) containing the data to plot.
         [r]ows and [c]olumns form a grid
         [C]hannels contain multiple color channels
-        [ZYX] contain 3D volumes. 
+        [ZYX] contain 3D volumes.
     filename : str
         Path to save the output plot.
     voxel_size : tuple[float, float, float]
@@ -40,8 +40,8 @@ def plot_5d_ortho(
     zyx_slice : tuple[int, int, int]
         Indices of the ortho-slices to plot in (Z, Y, X) indices.
     color_funcs : list[list[callable]]
-        A list of lists of callables, one for each element of the plot grid, 
-        with len(color_funcs) == R and len(colors_funcs[0] == C). 
+        A list of lists of callables, one for each element of the plot grid,
+        with len(color_funcs) == R and len(colors_funcs[0] == C).
         Each callable accepts [C]hannel arguments and returns RGB color values,
         enabling different RGB color maps for each member of the grid.
     row_labels : list[str], optional
