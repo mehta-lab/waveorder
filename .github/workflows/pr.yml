@@ -29,8 +29,8 @@ jobs:
           pip install black
       - name: Check code styling with Black
         run: |
-          black --diff -S -t py310 iohub
-          black --check -S -t py310 iohub
+          black --diff -S -t py310 waveorder
+          black --check -S -t py310 waveorder
 
   lint:
     name: Lint Check
@@ -53,7 +53,7 @@ jobs:
       - name: Check code with Flake8
         # E203 conflicts with black
         run: |
-          flake8 iohub --extend-ignore=E203
+          flake8 waveorder --extend-ignore=E203
 
   isort:
     name: isort Check
@@ -75,7 +75,7 @@ jobs:
           pip install isort
       - name: Check code with isort
         run: |
-          isort --check iohub
+          isort --check waveorder
 
   tests:
     needs: [style, lint, isort]
