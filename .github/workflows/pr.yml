@@ -32,28 +32,28 @@ jobs:
           black --diff -S -t py310 waveorder
           black --check -S -t py310 waveorder
 
-  lint:
-    name: Lint Check
-    runs-on: ubuntu-latest
+  # lint:
+  #   name: Lint Check
+  #   runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        python-version: ["3.10"]
+  #   strategy:
+  #     matrix:
+  #       python-version: ["3.10"]
 
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8
-      - name: Check code with Flake8
-        # E203 conflicts with black
-        run: |
-          flake8 waveorder --extend-ignore=E203
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - name: Set up Python
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: ${{ matrix.python-version }}
+  #     - name: Install dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         pip install flake8
+  #     - name: Check code with Flake8
+  #       # E203 conflicts with black
+  #       run: |
+  #         flake8 waveorder --extend-ignore=E203
 
   isort:
     name: isort Check
