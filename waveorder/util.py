@@ -1,15 +1,14 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import pywt
-import time
-import torch
-
-from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
-from scipy.ndimage import uniform_filter
-from collections import namedtuple
-from .optics import scattering_potential_tensor_to_3D_orientation_PN
-
 import re
+import time
+from collections import namedtuple
+
+import numpy as np
+import pywt
+import torch
+from numpy.fft import fft, fft2, fftn, fftshift, ifft, ifftn, ifftshift
+from scipy.ndimage import uniform_filter
+
+from .optics import scattering_potential_tensor_to_3D_orientation_PN
 
 numbers = re.compile(r"(\d+)")
 
@@ -2289,5 +2288,6 @@ def gellmann():
             [[e, 0, 0], [0, d, 0], [0, 0, d]],
             [[0, 0, c], [0, 0, 0], [c, 0, 0]],
             [[0, 0, 0], [0, -c, 0], [0, 0, c]],  #
-        ], dtype=torch.complex64
+        ],
+        dtype=torch.complex64,
     )

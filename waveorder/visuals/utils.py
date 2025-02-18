@@ -1,11 +1,10 @@
-import numpy as np
 import matplotlib.colors as mcolors
+import numpy as np
 
 
 # Main function to convert a complex-valued torch tensor to RGB numpy array
 # with red at +1, green at +i, blue at -1, and purple at -i
 def complex_tensor_to_rgb(array, saturate_clim_fraction=1.0):
-
     # Calculate magnitude and phase for the entire array
     magnitude = np.abs(array)
     phase = np.angle(array)

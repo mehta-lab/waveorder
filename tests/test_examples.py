@@ -1,7 +1,8 @@
-import subprocess
 import os
-import pytest
+import subprocess
 import sys
+
+import pytest
 
 
 def _run_scripts(scripts):

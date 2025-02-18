@@ -7,7 +7,9 @@ from torch import Tensor
 from waveorder import correction, stokes, util
 
 
-def generate_test_phantom(yx_shape: Tuple[int, int]) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
+def generate_test_phantom(
+    yx_shape: Tuple[int, int]
+) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
     star, theta, _ = util.generate_star_target(yx_shape, blur_px=0.1)
     retardance = 0.25 * star
     orientation = (theta % np.pi) * (star > 1e-3)
@@ -23,7 +25,9 @@ def calculate_transfer_function(
     return stokes.calculate_intensity_to_stokes_matrix(swing, scheme=scheme)
 
 
-def visualize_transfer_function(viewer, intensity_to_stokes_matrix: Tensor) -> None:
+def visualize_transfer_function(
+    viewer, intensity_to_stokes_matrix: Tensor
+) -> None:
     viewer.add_image(
         intensity_to_stokes_matrix.cpu().numpy(),
         name="Intensity to stokes matrix",

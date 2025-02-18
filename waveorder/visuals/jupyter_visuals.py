@@ -1,21 +1,15 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import ipywidgets as widgets
-import os
 import io
+import os
+
+import ipywidgets as widgets
+import matplotlib.pyplot as plt
+import numpy as np
+from ipywidgets import HBox, Image, Layout, interact
+from matplotlib.colors import Normalize, hsv_to_rgb
+from numpy.typing import NDArray
 from PIL import Image as PImage
-from ipywidgets import (
-    Image,
-    Layout,
-    interact,
-    HBox,
-)
-from matplotlib.colors import hsv_to_rgb
-from matplotlib.colors import Normalize
 from scipy.ndimage import uniform_filter
 from scipy.stats import binned_statistic_2d
-
-from numpy.typing import NDArray
 
 
 def im_bit_convert(im, bit=16, norm=False, limit=[]):
@@ -172,7 +166,7 @@ def image_stack_viewer_fast(
         else:
             raise ValueError('origin can only be either "upper" or "lower"')
 
-    im_wgt = Image(        
+    im_wgt = Image(
         value=im_dict[0],
         layout=Layout(height=str(size[0]) + "px", width=str(size[1]) + "px"),
     )
@@ -1046,15 +1040,17 @@ def plotVectorField(
     # plot vector field representaiton of the orientation map
 
     # Compute U, V such that they are as long as line-length when anisotropy = 1.
-    U, V = anisotropy * linelength * np.cos(
-        2 * orientation
-    ), anisotropy * linelength * np.sin(2 * orientation)
+    U, V = (
+        anisotropy * linelength * np.cos(2 * orientation),
+        anisotropy * linelength * np.sin(2 * orientation),
+    )
     USmooth = uniform_filter(U, (window, window))  # plot smoothed vector field
     VSmooth = uniform_filter(V, (window, window))  # plot smoothed vector field
     azimuthSmooth = 0.5 * np.arctan2(VSmooth, USmooth)
     RSmooth = np.sqrt(USmooth**2 + VSmooth**2)
-    USmooth, VSmooth = RSmooth * np.cos(azimuthSmooth), RSmooth * np.sin(
-        azimuthSmooth
+    USmooth, VSmooth = (
+        RSmooth * np.cos(azimuthSmooth),
+        RSmooth * np.sin(azimuthSmooth),
     )
 
     nY, nX = img.shape
@@ -1639,8 +1635,9 @@ def plot3DVectorField(
     VSmooth = uniform_filter(V, (window, window))  # plot smoothed vector field
     azimuthSmooth = 0.5 * np.arctan2(VSmooth, USmooth)
     RSmooth = np.sqrt(USmooth**2 + VSmooth**2)
-    USmooth, VSmooth = RSmooth * np.cos(azimuthSmooth), RSmooth * np.sin(
-        azimuthSmooth
+    USmooth, VSmooth = (
+        RSmooth * np.cos(azimuthSmooth),
+        RSmooth * np.sin(azimuthSmooth),
     )
 
     nY, nX = img.shape

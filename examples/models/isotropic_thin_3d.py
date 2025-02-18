@@ -5,7 +5,7 @@
 
 import napari
 import numpy as np
-from waveorder import util
+
 from waveorder.models import isotropic_thin_3d
 
 # Parameters

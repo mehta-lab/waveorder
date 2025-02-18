@@ -10,14 +10,11 @@
 #####################################################################################################
 
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from numpy.fft import fftshift
-from waveorder import (
-    optics,
-    waveorder_simulator,
-    util,
-)
+
+from waveorder import optics, util, waveorder_simulator
 from waveorder.visuals import jupyter_visuals
 
 # Key parameters

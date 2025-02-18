@@ -1,7 +1,7 @@
+import os
+
 import napari
 import numpy as np
-import os
-import matplotlib.pyplot as plt
 
 
 def plot_otf_support(
@@ -28,8 +28,14 @@ def plot_otf_support(
     points = np.array(
         [
             [0, 0],
-            [det_na - ill_na, (1 - ill_na**2) ** 0.5 - (1 - det_na**2) ** 0.5],
-            [det_na + ill_na, (1 - ill_na**2) ** 0.5 - (1 - det_na**2) ** 0.5],
+            [
+                det_na - ill_na,
+                (1 - ill_na**2) ** 0.5 - (1 - det_na**2) ** 0.5,
+            ],
+            [
+                det_na + ill_na,
+                (1 - ill_na**2) ** 0.5 - (1 - det_na**2) ** 0.5,
+            ],
             [2 * ill_na, 0],
         ]
     )
@@ -203,7 +209,6 @@ my_colors = [
 ]
 
 for my_color in my_colors:
-
     plot_otf_support(
         ill_na,
         det_na,

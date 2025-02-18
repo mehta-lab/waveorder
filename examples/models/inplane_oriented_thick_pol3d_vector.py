@@ -1,9 +1,7 @@
-import torch
 import napari
+import torch
 
-from waveorder.models import (
-    inplane_oriented_thick_pol3d_vector,
-)
+from waveorder.models import inplane_oriented_thick_pol3d_vector
 
 # Parameters
 # all lengths must use consistent units e.g. um
@@ -25,20 +23,22 @@ fzyx_object = inplane_oriented_thick_pol3d_vector.generate_test_phantom(
 )
 
 # Calculate transfer function
-sfZYX_transfer_function, intensity_to_stokes_matrix, singular_system = (
-    inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
-        swing,
-        scheme,
-        zyx_shape,
-        yx_pixel_size,
-        z_pixel_size,
-        wavelength_illumination,
-        z_padding,
-        index_of_refraction_media,
-        numerical_aperture_illumination,
-        numerical_aperture_detection,
-        fourier_oversample_factor=fourier_oversample_factor,
-    )
+(
+    sfZYX_transfer_function,
+    intensity_to_stokes_matrix,
+    singular_system,
+) = inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
+    swing,
+    scheme,
+    zyx_shape,
+    yx_pixel_size,
+    z_pixel_size,
+    wavelength_illumination,
+    z_padding,
+    index_of_refraction_media,
+    numerical_aperture_illumination,
+    numerical_aperture_detection,
+    fourier_oversample_factor=fourier_oversample_factor,
 )
 
 # Display transfer function

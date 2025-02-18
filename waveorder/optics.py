@@ -1,9 +1,8 @@
+import itertools
+
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
-import gc
-import itertools
-from numpy.fft import fft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
+from numpy.fft import fft2, fftn, fftshift, ifft2, ifftn, ifftshift
 
 
 def Jones_sample(Ein, t, sa):
@@ -262,7 +261,9 @@ def generate_vector_source_defocus_pupil(
 
     y_broadcast = torch.broadcast_to(y_frequencies[None, :, :], freq_shape)
     x_broadcast = torch.broadcast_to(x_frequencies[None, :, :], freq_shape)
-    z_broadcast = np.sqrt(wavelength ** (-2) - x_broadcast**2 - y_broadcast**2)
+    z_broadcast = np.sqrt(
+        wavelength ** (-2) - x_broadcast**2 - y_broadcast**2
+    )
 
     # Calculate rotation matrix
     rotations = rotation_matrix(
@@ -272,7 +273,7 @@ def generate_vector_source_defocus_pupil(
     # TEMPORARY SIMPLIFY ROTATIONS "TURN OFF ROTATIONS"
     # 3x2 IDENTITY MATRIX
     rotations = torch.zeros_like(rotations)
-    rotations[1, 0, ...] = 1 
+    rotations[1, 0, ...] = 1
     rotations[2, 1, ...] = 1
 
     # Main calculation in the frequency domain
@@ -718,10 +719,10 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
 
 
 def generate_greens_tensor_spectrum(
-        zyx_shape, 
-        zyx_pixel_size,
-        wavelength,
-    ):
+    zyx_shape,
+    zyx_pixel_size,
+    wavelength,
+):
     """
     Parameters
     ----------
@@ -733,14 +734,12 @@ def generate_greens_tensor_spectrum(
     Returns
     -------
     torch.tensor
-        Green's tensor spectrum 
+        Green's tensor spectrum
     """
     Z, Y, X = zyx_shape
     dZ, dY, dX = zyx_pixel_size
 
-    z_step = torch.fft.ifftshift(
-        (torch.arange(Z) - Z // 2) * dZ
-    )
+    z_step = torch.fft.ifftshift((torch.arange(Z) - Z // 2) * dZ)
     y_step = torch.fft.ifftshift((torch.arange(Y) - Y // 2) * dY)
     x_step = torch.fft.ifftshift((torch.arange(X) - X // 2) * dX)
 
@@ -769,7 +768,7 @@ def generate_greens_tensor_spectrum(
     G_3D /= torch.amax(torch.abs(G_3D))
 
     return G_3D
-    
+
 
 def compute_weak_object_transfer_function_2d(
     illumination_pupil, detection_pupil

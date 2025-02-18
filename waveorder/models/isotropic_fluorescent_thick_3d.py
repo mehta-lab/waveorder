@@ -30,7 +30,6 @@ def calculate_transfer_function(
     index_of_refraction_media: float,
     numerical_aperture_detection: float,
 ) -> Tensor:
-
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_emission,
         numerical_aperture_detection,  # ill = det for fluorescence
@@ -108,7 +107,11 @@ def _calculate_wrap_unsafe_transfer_function(
     return optical_transfer_function
 
 
-def visualize_transfer_function(viewer, optical_transfer_function: Tensor, zyx_scale: tuple[float, float, float]) -> None:
+def visualize_transfer_function(
+    viewer,
+    optical_transfer_function: Tensor,
+    zyx_scale: tuple[float, float, float],
+) -> None:
     add_transfer_function_to_viewer(
         viewer,
         torch.real(optical_transfer_function),
@@ -118,7 +121,10 @@ def visualize_transfer_function(viewer, optical_transfer_function: Tensor, zyx_s
 
 
 def apply_transfer_function(
-    zyx_object: Tensor, optical_transfer_function: Tensor, z_padding: int, background: int = 10
+    zyx_object: Tensor,
+    optical_transfer_function: Tensor,
+    z_padding: int,
+    background: int = 10,
 ) -> Tensor:
     """Simulate imaging by applying a transfer function
 

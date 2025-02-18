@@ -1,9 +1,10 @@
-import torch
-import numpy as np
-
-from torch import Tensor
 from typing import Literal
+
+import numpy as np
+import torch
+from torch import Tensor
 from torch.nn.functional import avg_pool3d, interpolate
+
 from waveorder import optics, sampling, stokes, util
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
@@ -83,20 +84,21 @@ def calculate_transfer_function(
         ),
     )
 
-    sfZYX_transfer_function, intensity_to_stokes_matrix = (
-        _calculate_wrap_unsafe_transfer_function(
-            swing,
-            scheme,
-            tf_calculation_shape,
-            yx_pixel_size / yx_factor,
-            z_pixel_size / z_factor,
-            wavelength_illumination,
-            z_padding,
-            index_of_refraction_media,
-            numerical_aperture_illumination,
-            numerical_aperture_detection,
-            invert_phase_contrast=invert_phase_contrast,
-        )
+    (
+        sfZYX_transfer_function,
+        intensity_to_stokes_matrix,
+    ) = _calculate_wrap_unsafe_transfer_function(
+        swing,
+        scheme,
+        tf_calculation_shape,
+        yx_pixel_size / yx_factor,
+        z_pixel_size / z_factor,
+        wavelength_illumination,
+        z_padding,
+        index_of_refraction_media,
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+        invert_phase_contrast=invert_phase_contrast,
     )
 
     # avg_pool3d does not support complex numbers

@@ -1,5 +1,6 @@
-from waveorder import optics, util
 import torch
+
+from waveorder import optics, util
 
 
 def test_generate_pupil():

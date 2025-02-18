@@ -1,8 +1,7 @@
-from waveorder.visuals.utils import complex_tensor_to_rgb
-from typing import TYPE_CHECKING
-
 import numpy as np
 import torch
+
+from waveorder.visuals.utils import complex_tensor_to_rgb
 
 
 def add_transfer_function_to_viewer(
