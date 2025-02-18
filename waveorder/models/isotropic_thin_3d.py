@@ -76,15 +76,15 @@ def calculate_transfer_function(
     )
 
     for z in range(len(z_position_list)):
-        absorption_2d_to_3d_transfer_function_out[
-            z
-        ] = sampling.nd_fourier_central_cuboid(
-            absorption_2d_to_3d_transfer_function[z], yx_shape
+        absorption_2d_to_3d_transfer_function_out[z] = (
+            sampling.nd_fourier_central_cuboid(
+                absorption_2d_to_3d_transfer_function[z], yx_shape
+            )
         )
-        phase_2d_to_3d_transfer_function_out[
-            z
-        ] = sampling.nd_fourier_central_cuboid(
-            phase_2d_to_3d_transfer_function[z], yx_shape
+        phase_2d_to_3d_transfer_function_out[z] = (
+            sampling.nd_fourier_central_cuboid(
+                phase_2d_to_3d_transfer_function[z], yx_shape
+            )
         )
 
     return (

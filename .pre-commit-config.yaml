@@ -29,6 +29,6 @@ repos:
   #       args: [--ignore, "E203,W503", --min-python-version, '3.10']
   #       additional_dependencies: [flake8-typing-imports==1.12.0]
   - repo: https://github.com/psf/black
-    rev: 23.3.0
+    rev: 25.1.0
     hooks:
       - id: black

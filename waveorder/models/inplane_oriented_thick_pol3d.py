@@ -8,7 +8,7 @@ from waveorder import correction, stokes, util
 
 
 def generate_test_phantom(
-    yx_shape: Tuple[int, int]
+    yx_shape: Tuple[int, int],
 ) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
     star, theta, _ = util.generate_star_target(yx_shape, blur_px=0.1)
     retardance = 0.25 * star

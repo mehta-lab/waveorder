@@ -261,9 +261,7 @@ def generate_vector_source_defocus_pupil(
 
     y_broadcast = torch.broadcast_to(y_frequencies[None, :, :], freq_shape)
     x_broadcast = torch.broadcast_to(x_frequencies[None, :, :], freq_shape)
-    z_broadcast = np.sqrt(
-        wavelength ** (-2) - x_broadcast**2 - y_broadcast**2
-    )
+    z_broadcast = np.sqrt(wavelength ** (-2) - x_broadcast**2 - y_broadcast**2)
 
     # Calculate rotation matrix
     rotations = rotation_matrix(

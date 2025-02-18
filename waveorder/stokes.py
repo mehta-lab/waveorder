@@ -46,6 +46,7 @@ For example, the following usage modes of stokes_after_adr are valid:
 >>> stokes_after_adr(*adr_params) # * expands along the first axis
 
 """
+
 import numpy as np
 import torch
 
