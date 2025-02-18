@@ -2,6 +2,17 @@ from waveorder import filter
 import torch
 import pytest
 
+def test_apply_transfer_function_filter_tiled():
+    input_array = torch.ones((100, 100))
+    transfer_function = torch.tensor([[1, 0], [0, 0]])
+    tile_size = (35, 35)
+    overlap_size = (5, 5)
+
+    result = filter.apply_transfer_function_filter_tiled(
+        transfer_function, input_array, tile_size, overlap_size
+    )
+    assert result == 0
+
 
 def test_apply_transfer_function_filter():
     input_array = torch.tensor([[[1.0, 2.0], [3.0, 4.0]]])
