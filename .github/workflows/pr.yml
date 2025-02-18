@@ -78,7 +78,7 @@ jobs:
           isort --check waveorder
 
   tests:
-    needs: [style, lint, isort]
+    needs: [style, isort] # lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
