@@ -19,7 +19,7 @@
 
     ```sh
     cd recOrder
-    pip install -e ".[acq,dev]"
+    pip install -e ".[all,dev]"
     ```
 
 4. Optionally, for the co-development of [`waveorder`](https://github.com/mehta-lab/waveorder) and `recOrder`:

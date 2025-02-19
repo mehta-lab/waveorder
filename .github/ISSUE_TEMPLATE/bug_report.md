@@ -17,6 +17,8 @@ assignees: ''
 
 **Screenshots or steps for reproduction (using napari GUI)**
 
+**Include relevant logs which are created next to the output dir, name of the dataset, yaml file(s) if encountering reconstruction errors.**
+
 **Expected behavior**
 A clear and concise description of what you expected to happen.
 

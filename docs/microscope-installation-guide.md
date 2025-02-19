@@ -40,7 +40,7 @@ conda activate recOrder
 
 Install `recOrder` with acquisition dependencies (napari and pycro-manager):
 ```
-pip install recOrder-napari[acq]
+pip install recOrder-napari[all]
 ```
 Check your installation:
 ```

@@ -48,10 +48,16 @@ conda activate recOrder
 ```
 
 Install `recOrder-napari` with acquisition dependencies
-(napari and pycro-manager):
+(napari with PyQt6 and pycro-manager):
 
 ```sh
-pip install recOrder-napari[acq]
+pip install recOrder-napari[all]
+```
+
+Install `recOrder-napari` without napari, QtBindings (PyQt/PySide) and pycro-manager dependencies:
+
+```sh
+pip install recOrder-napari
 ```
 
 Open `napari` with `recOrder-napari`:

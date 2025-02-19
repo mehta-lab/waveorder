@@ -160,6 +160,36 @@ Examples of acquiring 2D birefringence data (kidney tissue) with this snap metho
 
 See the [reconstruction guide](./reconstruction-guide.md) for CLI usage instructions. 
 
+## Reconstruction Tab
+The **Reconstruction** tab is designed to reconstruct `birefriengence, phase, birefrignence with phase, and flurescenece` datasets that have been either acquired or coverted to `.zarr` store as well as acquisitions that are in progress.
+
+![](./images/reconstruction_data.png)
+
+The **Input Store** and **Output Directory** point to the input and output `.zarr` data locations. Once an Input Store is selected some metadata parameters can be viewed by hovering the cursor over the `info label` ⓘ.
+
+![](./images/reconstruction_models.png)
+
+A `Model` defines the reconstruction parameters. Multiple models can be run against a dataset with varying parameters. The model generates a configuration file `.yml`, then uses the CLI to reconstruct the data with the configuration file, which makes all reconstructions exactly reproducible via a CLI.
+* **New**: Builds a model based on the `Checkbox` selection.
+* **Load**: Allows a model to be imported using a previous reconstruction `.yml` file.
+* **Clear**: This will clear all defined models.
+
+![](./images/reconstruction_birefriengence.png)
+
+Once a `New` model is built, it is pre-populated with default values that can be accessed by clicking on the ► icon and the parameters can be changed as required.
+See the [reconstruction guide](./reconstruction-guide.md) for further information on the parameters.
+
+![](./images/reconstruction_queue.png)
+
+Once the **RUN** button is triggered, the reconstruction will proceed based on the defined model(s) concurrently.
+
+> [!CAUTION]
+> Since the models run concurrently, it is the users responsibility to manage compute resources accordingly on a local or SLURM system.
+
+The `Reconstruction Queue` section will display the progress of the reconstruction in the form of text output. Once a reconstruction finishes the queue will self clear. Only in the case of any issues or error that are encountered the entry will remain.
+
+Once the reconstruction processing finishes, based on the option `Show after Reconstruction` the reconstructed images will show up in the napari viewer.
+
 ## Visualizations
 When an **Orientation*** layer appears at the top of the layers list, `recOrder` will automatically color it with an HSV color map that indicates the orientation. 
 

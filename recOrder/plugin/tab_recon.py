@@ -3,10 +3,9 @@ import socket, threading
 from pathlib import Path
 
 from qtpy import QtCore
-from qtpy.QtCore import Qt, QEvent, QThread
+from qtpy.QtCore import Qt, QEvent, QThread, Signal
 from qtpy.QtWidgets import *
 from magicgui.widgets import *
-from PyQt6.QtCore import pyqtSignal
 
 from iohub.ngff import open_ome_zarr
 
@@ -15,11 +14,13 @@ from magicgui import widgets
 from magicgui.type_map import get_widget_class
 import warnings
 
-from napari import Viewer
+try:
+    from napari import Viewer
+    from napari.utils import notifications
+except:pass
 
 from recOrder.io import utils
 from recOrder.cli import settings, jobs_mgmt
-from napari.utils import notifications
 
 import concurrent.futures
 
@@ -533,25 +534,31 @@ class Ui_ReconTab_Form(QWidget):
                     print(exc.args)
 
                 try:
-                    for _, pos in dataset.positions():
-                        axes = pos.zgroup.attrs["multiscales"][0]["axes"]
-                        string_array_n = [str(x["name"]) for x in axes]
-                        string_array = [
-                            str(x)
-                            for x in pos.zgroup.attrs["multiscales"][0][
-                                "datasets"
-                            ][0]["coordinateTransformations"][0]["scale"]
-                        ]
-                        string_scale = []
-                        for i in range(len(string_array_n)):
-                            string_scale.append(
-                                "{n}={d}".format(
-                                    n=string_array_n[i], d=string_array[i]
+                    string_pos = []
+                    i = 0
+                    for pos_paths, pos in dataset.positions():
+                        string_pos.append(pos_paths)
+                        if i == 0:
+                            axes = pos.zgroup.attrs["multiscales"][0]["axes"]
+                            string_array_n = [str(x["name"]) for x in axes]
+                            string_array = [
+                                str(x)
+                                for x in pos.zgroup.attrs["multiscales"][0][
+                                    "datasets"
+                                ][0]["coordinateTransformations"][0]["scale"]
+                            ]
+                            string_scale = []
+                            for i in range(len(string_array_n)):
+                                string_scale.append(
+                                    "{n}={d}".format(
+                                        n=string_array_n[i], d=string_array[i]
+                                    )
                                 )
-                            )
-                        txt = "\n\nScale: " + ", ".join(string_scale)
-                        self.data_input_Label.tooltip += txt
-                        break
+                            txt = "\n\nScale: " + ", ".join(string_scale)
+                            self.data_input_Label.tooltip += txt
+                        i += 1
+                    txt = "\n\nFOV: " + ", ".join(string_pos)
+                    self.data_input_Label.tooltip += txt
                 except Exception as exc:
                     print(exc.args)
 
@@ -3363,7 +3370,7 @@ class MyWorker:
                                 # this is the only case where row deleting occurs
                                 # we cant delete the row directly from this thread
                                 # we will use the exp_id to identify and delete the row
-                                # using pyqtSignal
+                                # using Signal
                                 # break - based on status
                             elif JOB_TRIGGERED_EXC in jobTXT:
                                 params["status"] = STATUS_errored_job
@@ -3643,7 +3650,7 @@ class ShowDataWorkerThread(QThread):
     """Worker thread for sending signal for adding component when request comes
     from a different thread"""
 
-    show_data_signal = pyqtSignal(str)
+    show_data_signal = Signal(str)
 
     def __init__(self, path):
         super().__init__()
@@ -3657,7 +3664,7 @@ class AddOTFTableEntryWorkerThread(QThread):
     """Worker thread for sending signal for adding component when request comes
     from a different thread"""
 
-    add_tableOTFentry_signal = pyqtSignal(str, bool, bool)
+    add_tableOTFentry_signal = Signal(str, bool, bool)
 
     def __init__(self, OTF_dir_path, bool_msg, doCheck=False):
         super().__init__()
@@ -3675,7 +3682,7 @@ class AddTableEntryWorkerThread(QThread):
     """Worker thread for sending signal for adding component when request comes
     from a different thread"""
 
-    add_tableentry_signal = pyqtSignal(str, str, dict)
+    add_tableentry_signal = Signal(str, str, dict)
 
     def __init__(self, expID, desc, params):
         super().__init__()
@@ -3691,7 +3698,7 @@ class AddWidgetWorkerThread(QThread):
     """Worker thread for sending signal for adding component when request comes
     from a different thread"""
 
-    add_widget_signal = pyqtSignal(QVBoxLayout, str, str, str, str)
+    add_widget_signal = Signal(QVBoxLayout, str, str, str, str)
 
     def __init__(self, layout, expID, jID, desc, wellName):
         super().__init__()
@@ -3711,7 +3718,7 @@ class RowDeletionWorkerThread(QThread):
     """Searches for a row based on its ID and then
     emits a signal to QFormLayout on the main thread for deletion"""
 
-    removeRowSignal = pyqtSignal(int, str)
+    removeRowSignal = Signal(int, str)
 
     def __init__(self, formLayout):
         super().__init__()
@@ -3818,7 +3825,7 @@ class ScrollableLabel(QScrollArea):
         self.label.setText(text)
 
 class MyWidget(QWidget):
-    resized = pyqtSignal()
+    resized = Signal()
 
     def __init__(self):
         super().__init__()

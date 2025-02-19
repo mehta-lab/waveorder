@@ -15,25 +15,33 @@ import dask.array as da
 import numpy as np
 import yaml
 from dask import delayed
-from napari import Viewer
-from napari.components import LayerList
-from napari.qt.threading import create_worker
-from napari.utils.events import Event
-from napari.utils.notifications import show_info, show_warning
 from numpy.typing import NDArray
 from numpydoc.docscrape import NumpyDocString
 from packaging import version
-from pycromanager import Core, Studio, zmq_bridge
 from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtGui import QColor, QPixmap
 from qtpy.QtWidgets import QFileDialog, QSizePolicy, QSlider, QWidget
 from superqt import QDoubleRangeSlider, QRangeSlider
 from waveorder.waveorder_reconstructor import waveorder_microscopy
 
-from recOrder.acq.acquisition_workers import (
-    BFAcquisitionWorker,
-    PolarizationAcquisitionWorker,
-)
+try:
+    from pycromanager import Core, Studio, zmq_bridge
+except:pass
+
+try:
+    from napari import Viewer
+    from napari.components import LayerList
+    from napari.qt.threading import create_worker
+    from napari.utils.events import Event
+    from napari.utils.notifications import show_info, show_warning
+except:pass
+
+try:
+    from recOrder.acq.acquisition_workers import (
+        BFAcquisitionWorker,
+        PolarizationAcquisitionWorker,
+    )
+except:pass
 from recOrder.calib import Calibration
 from recOrder.calib.Calibration import LC_DEVICE_NAME, QLIPP_Calibration
 from recOrder.calib.calibration_workers import (
@@ -825,14 +833,23 @@ class MainWidget(QWidget):
             # Order is important: If the bridge is created before Core, Core will not work
             self.bridge = zmq_bridge._bridge._Bridge()
             logging.debug("Established ZMQ Bridge and found Core and Studio")
-        except:
+        except NameError:
+            print("Is pycromanager package installed?")
+        except Exception as ex:
+            print(
+                    "Could not establish pycromanager bridge.\n"
+                    "Is Micro-Manager open?\n"
+                    "Is Tools > Options > Run server on port 4827 checked?\n"
+                    f"Are you using nightly build {RECOMMENDED_MM}?\n"
+            )
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ", ".join(ex.args))
+            print(message)
             raise EnvironmentError(
-                (
                     "Could not establish pycromanager bridge.\n"
                     "Is Micro-Manager open?\n"
                     "Is Tools > Options > Run server on port 4827 checked?\n"
                     f"Are you using nightly build {RECOMMENDED_MM}?"
-                )
             )
 
         # Warn the user if there is a Micro-Manager/ZMQ version mismatch
