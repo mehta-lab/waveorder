@@ -53,7 +53,7 @@ Then make the changes and [track them with Git](https://docs.github.com/en/get-s
 
 ### Code style
 
-We use [pre-commit](https://pre-commit.com/) to sort imports with [isort](https://github.com/PyCQA/isort), format code with [black](https://black.readthedocs.io/en/stable/), and lint with [flake8](https://github.com/PyCQA/flake8) automatically prior to each commit. To minimize test errors when submitting pull requests, please install pre-commit in your environment as follows:
+We use [pre-commit](https://pre-commit.com/) to sort imports with [isort](https://github.com/PyCQA/isort) and format code with [black](https://black.readthedocs.io/en/stable/) automatically prior to each commit. To minimize test errors when submitting pull requests, please install pre-commit in your environment as follows:
 
 ```bash
 pre-commit install
