@@ -36,7 +36,7 @@ def apply_filter_bank(
         io_filter_bank.shape[2:] == (Z', Y', X') or (Y', X')
 
     i_input_array : torch.Tensor
-        The input array with sample spacing dx to be filtered.
+        The real-valued input array with sample spacing dx to be filtered.
 
         Leading dimension is the input dimension, matching the filter bank.
         i_input_array.shape[0] == i
