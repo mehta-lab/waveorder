@@ -288,6 +288,7 @@ def apply_inverse_transfer_function(
     zyx_data_hat = torch.fft.fft2(zyx_data_normalized, dim=(1, 2))
 
     # TODO AHA and b_vec calculations should be moved into tikhonov/tv calculations
+    # TODO Reformulate to use filter.apply_filter_bank
     AHA = [
         torch.sum(torch.abs(absorption_2d_to_3d_transfer_function) ** 2, dim=0)
         + regularization_strength,
