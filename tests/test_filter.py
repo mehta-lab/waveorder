@@ -36,10 +36,8 @@ def test_stretched_multiply():
 
     # Test that output dims are correct
     rand_array_3x3x3 = torch.rand((3, 3, 3))
-    rand_array_100x100x100 = torch.rand((99, 99, 99))
-    result = filter.stretched_multiply(
-        rand_array_3x3x3, rand_array_100x100x100
-    )
+    rand_array_99x99x99 = torch.rand((99, 99, 99))
+    result = filter.stretched_multiply(rand_array_3x3x3, rand_array_99x99x99)
     assert result.shape == (99, 99, 99)
 
 
