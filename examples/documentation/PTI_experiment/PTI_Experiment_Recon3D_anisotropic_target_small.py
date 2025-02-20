@@ -1,16 +1,16 @@
 # %%
 # This notebook-style script requires a ~500 MB download from https://www.ebi.ac.uk/biostudies/files/S-BIAD1063/PTI-BIA/Anisotropic_target_small.zip
 
-import numpy as np
+from pathlib import Path
+
 import matplotlib.pyplot as plt
+import numpy as np
+import zarr
+from iohub import open_ome_zarr
 from numpy.fft import fftshift
 
 import waveorder as wo
-from waveorder import optics, waveorder_reconstructor, util
-
-import zarr
-from pathlib import Path
-from iohub import open_ome_zarr
+from waveorder import optics, util, waveorder_reconstructor
 from waveorder.visuals import jupyter_visuals
 
 # %%
@@ -62,10 +62,12 @@ PTI_file = zarr.open(PTI_file_name, mode="r")
 I_cali_mean = np.array(PTI_file.I_cali_mean)
 
 # source polarization, instrument matrix calibration
-E_in, A_matrix, I_cali_mean = (
-    wo.waveorder_reconstructor.instrument_matrix_and_source_calibration(
-        I_cali_mean, handedness="RCP"
-    )
+(
+    E_in,
+    A_matrix,
+    I_cali_mean,
+) = wo.waveorder_reconstructor.instrument_matrix_and_source_calibration(
+    I_cali_mean, handedness="RCP"
 )
 
 # %%
@@ -238,15 +240,18 @@ jupyter_visuals.parallel_4D_viewer(
 # "negative" -> only solution of negatively uniaxial material
 # "unknown" -> both solutions of positively and negatively uniaxial material + optic sign estimation
 
-differential_permittivity, azimuth, theta, mat_map = (
-    setup.scattering_potential_tensor_to_3D_orientation(
-        f_tensor,
-        S_image_tm,
-        material_type="unknown",
-        reg_ret_pr=reg_differential_permittivity,
-        itr=10,
-        fast_gpu_mode=True,
-    )
+(
+    differential_permittivity,
+    azimuth,
+    theta,
+    mat_map,
+) = setup.scattering_potential_tensor_to_3D_orientation(
+    f_tensor,
+    S_image_tm,
+    material_type="unknown",
+    reg_ret_pr=reg_differential_permittivity,
+    itr=10,
+    fast_gpu_mode=True,
 )
 
 # %%
@@ -264,7 +269,10 @@ differential_permittivity_PT = np.array(
     [
         ((-1) ** i)
         * util.wavelet_softThreshold(
-            ((-1) ** i) * differential_permittivity_PT[i], "db8", 0.00303, level=1
+            ((-1) ** i) * differential_permittivity_PT[i],
+            "db8",
+            0.00303,
+            level=1,
         )
         for i in range(2)
     ]
@@ -374,17 +382,27 @@ mat_map = PTI_array[7:]
 
 # compute the physical properties from the scattering potential tensor
 
-differential_permittivity_p, azimuth_p, theta_p = (
-    optics.scattering_potential_tensor_to_3D_orientation_PN(
-        f_tensor, material_type="positive", reg_ret_pr=reg_differential_permittivity
-    )
+(
+    differential_permittivity_p,
+    azimuth_p,
+    theta_p,
+) = optics.scattering_potential_tensor_to_3D_orientation_PN(
+    f_tensor,
+    material_type="positive",
+    reg_ret_pr=reg_differential_permittivity,
 )
-differential_permittivity_n, azimuth_n, theta_n = (
-    optics.scattering_potential_tensor_to_3D_orientation_PN(
-        f_tensor, material_type="negative", reg_ret_pr=reg_differential_permittivity
-    )
+(
+    differential_permittivity_n,
+    azimuth_n,
+    theta_n,
+) = optics.scattering_potential_tensor_to_3D_orientation_PN(
+    f_tensor,
+    material_type="negative",
+    reg_ret_pr=reg_differential_permittivity,
 )
-differential_permittivity = np.array([differential_permittivity_p, differential_permittivity_n])
+differential_permittivity = np.array(
+    [differential_permittivity_p, differential_permittivity_n]
+)
 azimuth = np.array([azimuth_p, azimuth_n])
 theta = np.array([theta_p, theta_n])
 
@@ -402,7 +420,10 @@ differential_permittivity_PT = np.array(
     [
         ((-1) ** i)
         * util.wavelet_softThreshold(
-            ((-1) ** i) * differential_permittivity_PT[i], "db8", 0.00303, level=1
+            ((-1) ** i) * differential_permittivity_PT[i],
+            "db8",
+            0.00303,
+            level=1,
         )
         for i in range(2)
     ]

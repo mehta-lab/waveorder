@@ -1,9 +1,11 @@
-from scipy.signal import peak_widths
+import warnings
 from typing import Literal, Optional
-from waveorder import util
+
 import matplotlib.pyplot as plt
 import numpy as np
-import warnings
+from scipy.signal import peak_widths
+
+from waveorder import util
 
 
 def focus_from_transverse_band(

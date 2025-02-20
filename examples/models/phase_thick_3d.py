@@ -5,7 +5,7 @@
 
 import napari
 import numpy as np
-from waveorder import util
+
 from waveorder.models import phase_thick_3d
 
 # Parameters

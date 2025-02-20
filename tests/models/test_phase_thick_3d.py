@@ -1,5 +1,6 @@
-import pytest
 import numpy as np
+import pytest
+
 from waveorder.models import phase_thick_3d
 
 
@@ -27,7 +28,6 @@ def simulate_phase_recon(
     z_pixel_size_um=0.1,
     yx_pixel_size_um=6.5 / 63,
 ):
-
     z_fov_um = 50
     yx_fov_um = 50
 

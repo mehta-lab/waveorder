@@ -55,7 +55,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov"]
+dev = ["pytest", "pytest-cov", "black==25.1.0"]
 examples = ["napari[all]", "jupyter"]
 
 [project.urls]

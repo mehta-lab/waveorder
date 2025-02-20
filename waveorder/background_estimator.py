@@ -1,12 +1,12 @@
 """Estimate flat field images"""
 
-import numpy as np
 import itertools
 
+import numpy as np
 
 """
 
-This script is adopted from 
+This script is adopted from
 
 https://github.com/mehta-lab/reconstruct-order
 

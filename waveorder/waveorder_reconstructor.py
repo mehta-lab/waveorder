@@ -1,15 +1,15 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import itertools
 import time
-import os
 import warnings
-from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
+
+import matplotlib.pyplot as plt
+import numpy as np
 from IPython import display
-from scipy.ndimage import uniform_filter
-from .util import *
-from .optics import *
+from numpy.fft import fft2, fftn, fftshift, ifft, ifft2, ifftn, ifftshift
+
 from .background_estimator import *
+from .optics import *
+from .util import *
 
 
 def intensity_mapping(img_stack):
@@ -1474,8 +1474,9 @@ class waveorder_microscopy:
                 torch.tensor(z.astype("complex64").transpose((2, 1, 0))),
                 torch.tensor(self.psz),
             )
-            return H_re.numpy().transpose((1, 2, 0)), H_im.numpy().transpose(
-                (1, 2, 0)
+            return (
+                H_re.numpy().transpose((1, 2, 0)),
+                H_im.numpy().transpose((1, 2, 0)),
             )
 
         for i in range(self.N_pattern):

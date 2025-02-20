@@ -5,9 +5,9 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
-from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 from waveorder.filter import apply_filter_bank
 from waveorder.reconstruct import tikhonov_regularized_inverse_filter
+from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
 def generate_test_phantom(
@@ -32,7 +32,6 @@ def calculate_transfer_function(
     index_of_refraction_media: float,
     numerical_aperture_detection: float,
 ) -> Tensor:
-
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_emission,
         numerical_aperture_detection,  # ill = det for fluorescence
@@ -217,10 +216,12 @@ def apply_inverse_transfer_function(
         inverse_filter = tikhonov_regularized_inverse_filter(
             optical_transfer_function, regularization_strength
         )
-        
+
         # [None]s and [0] are for applying a 1x1 "bank" of filters.
         # For further uniformity, consider returning (1, Z, Y, X)
-        f_real = apply_filter_bank(inverse_filter[None, None], zyx_padded[None])[0]
+        f_real = apply_filter_bank(
+            inverse_filter[None, None], zyx_padded[None]
+        )[0]
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
         f_real = util.single_variable_admm_tv_deconvolution_3D(
