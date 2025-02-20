@@ -44,6 +44,8 @@ def apply_filter_bank(
         Trailing dimensions are spatial dimensions.
         i_input_array.shape[1:] == (Z, Y, X) or (Y, X)
 
+        dtype can be real or complex, and result will match.
+
     Returns
     -------
     torch.Tensor
@@ -71,7 +73,7 @@ def apply_filter_bank(
             "io_filter_bank.shape[0] and i_input_array.shape[0] must be the same."
         )
 
-    I, O = io_filter_bank.shape[:2]
+    num_input_channels, num_output_channels = io_filter_bank.shape[:2]
     spatial_dims = io_filter_bank.shape[2:]
 
     # Pad input_array until each dimension is divisible by transfer_function
@@ -93,12 +95,14 @@ def apply_filter_bank(
     # a `stretched_matrix_multiply` that uses an call like
     # torch.einsum('io..., i... -> o...', io_filter_bank, padded_input_spectrum)
     padded_output_spectrum = torch.zeros(
-        (O,) + spatial_dims, dtype=padded_input_spectrum.dtype
+        (num_output_channels,) + spatial_dims,
+        dtype=padded_input_spectrum.dtype,
     )
-    for i_idx in range(I):
-        for o_idx in range(O):
-            padded_output_spectrum[o_idx] += stretched_multiply(
-                io_filter_bank[i_idx, o_idx], padded_input_spectrum[i_idx]
+    for input_channel_idx in range(num_input_channels):
+        for output_channel_idx in range(num_output_channels):
+            padded_output_spectrum[output_channel_idx] += stretched_multiply(
+                io_filter_bank[input_channel_idx, output_channel_idx],
+                padded_input_spectrum[input_channel_idx],
             )
 
     # Casts to input_array dtype, which typically ignores imaginary part
