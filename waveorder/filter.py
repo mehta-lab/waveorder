@@ -30,7 +30,7 @@ def apply_filter_bank(
         sample spacing of i_input_array.
 
         Leading dimensions are the input and output dimensions.
-        io_filter_bank.shape[:2] == (i, o)
+        io_filter_bank.shape[:2] == (num_input_channels, num_output_channels)
 
         Trailing dimensions are spatial frequency dimensions.
         io_filter_bank.shape[2:] == (Z', Y', X') or (Y', X')
@@ -44,12 +44,12 @@ def apply_filter_bank(
         Trailing dimensions are spatial dimensions.
         i_input_array.shape[1:] == (Z, Y, X) or (Y, X)
 
-        dtype can be real or complex, and result will match.
-
     Returns
     -------
     torch.Tensor
-        The filtered output array with the same shape and dtype as input_array.
+        The filtered real-valued output array with shape
+        (num_output_channels, Z, Y, X) or (num_output_channels, Y, X).
+
     """
 
     # Ensure all dimensions of transfer_function are smaller than or equal to input_array
@@ -105,9 +105,9 @@ def apply_filter_bank(
                 padded_input_spectrum[input_channel_idx],
             )
 
-    # Casts to input_array dtype, which typically ignores imaginary part
-    padded_result = torch.fft.ifftn(padded_output_spectrum, dim=fft_dims).type(
-        i_input_array.dtype
+    # Cast to real, ignoring imaginary part
+    padded_result = torch.real(
+        torch.fft.ifftn(padded_output_spectrum, dim=fft_dims)
     )
 
     # Remove padding and return
