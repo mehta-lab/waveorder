@@ -97,6 +97,7 @@ def apply_filter_bank(
     padded_output_spectrum = torch.zeros(
         (num_output_channels,) + spatial_dims,
         dtype=padded_input_spectrum.dtype,
+        device=padded_input_spectrum.device,
     )
     for input_channel_idx in range(num_input_channels):
         for output_channel_idx in range(num_output_channels):
