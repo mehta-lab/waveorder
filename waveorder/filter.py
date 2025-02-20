@@ -1,5 +1,5 @@
 import itertools
-import numpy as np
+
 import torch
 
 
@@ -49,7 +49,7 @@ def apply_filter_bank(
     torch.Tensor
         The filtered output array with the same shape and dtype as input_array.
     """
-    
+
     # Ensure all dimensions of transfer_function are smaller than or equal to input_array
     if any(
         t > i
@@ -83,7 +83,7 @@ def apply_filter_bank(
     ]
     flat_pad_sizes = list(itertools.chain(*pad_sizes))
     padded_input_array = torch.nn.functional.pad(i_input_array, flat_pad_sizes)
-    
+
     # Apply the transfer function in the frequency domain
     fft_dims = [d for d in range(1, i_input_array.ndim)]
     padded_input_spectrum = torch.fft.fftn(padded_input_array, dim=fft_dims)
@@ -92,7 +92,9 @@ def apply_filter_bank(
     # If this is a bottleneck, consider extending `stretched_multiply` to
     # a `stretched_matrix_multiply` that uses an call like
     # torch.einsum('io..., i... -> o...', io_filter_bank, padded_input_spectrum)
-    padded_output_spectrum = torch.zeros((O,) + spatial_dims, dtype=padded_input_spectrum.dtype)
+    padded_output_spectrum = torch.zeros(
+        (O,) + spatial_dims, dtype=padded_input_spectrum.dtype
+    )
     for i_idx in range(I):
         for o_idx in range(O):
             padded_output_spectrum[o_idx] += stretched_multiply(

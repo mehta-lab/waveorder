@@ -1,6 +1,7 @@
-from waveorder import filter
-import torch
 import pytest
+import torch
+
+from waveorder import filter
 
 
 def test_apply_transfer_function_filter():
