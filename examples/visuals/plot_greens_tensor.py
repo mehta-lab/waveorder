@@ -1,17 +1,19 @@
-from skimage import measure
+import os
+
 import napari
-from napari.experimental import link_layers
 import numpy as np
 import torch
-import os
-from waveorder import util, optics
+from napari.experimental import link_layers
 from scipy.ndimage import gaussian_filter
+from skimage import measure
+
+from waveorder import optics, util
 
 # Parameters
 # all lengths must use consistent units e.g. um
 output_dirpath = "./greens_plots"
 os.makedirs(output_dirpath, exist_ok=True)
-grid_size = 100 # 300 for publication
+grid_size = 100  # 300 for publication
 blur_width = grid_size // 35  # blurring to smooth sharp corners
 zyx_shape = 3 * (grid_size,)
 yx_pixel_size = 6.5 / 63

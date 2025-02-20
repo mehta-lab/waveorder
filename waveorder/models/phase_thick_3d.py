@@ -56,22 +56,23 @@ def calculate_transfer_function(
     yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
     z_factor = int(np.ceil(z_pixel_size / axial_nyquist))
 
-    real_potential_transfer_function, imag_potential_transfer_function = (
-        _calculate_wrap_unsafe_transfer_function(
-            (
-                zyx_shape[0] * z_factor,
-                zyx_shape[1] * yx_factor,
-                zyx_shape[2] * yx_factor,
-            ),
-            yx_pixel_size / yx_factor,
-            z_pixel_size / z_factor,
-            wavelength_illumination,
-            z_padding,
-            index_of_refraction_media,
-            numerical_aperture_illumination,
-            numerical_aperture_detection,
-            invert_phase_contrast=invert_phase_contrast,
-        )
+    (
+        real_potential_transfer_function,
+        imag_potential_transfer_function,
+    ) = _calculate_wrap_unsafe_transfer_function(
+        (
+            zyx_shape[0] * z_factor,
+            zyx_shape[1] * yx_factor,
+            zyx_shape[2] * yx_factor,
+        ),
+        yx_pixel_size / yx_factor,
+        z_pixel_size / z_factor,
+        wavelength_illumination,
+        z_padding,
+        index_of_refraction_media,
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+        invert_phase_contrast=invert_phase_contrast,
     )
 
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
@@ -167,7 +168,10 @@ def visualize_transfer_function(
 
 
 def apply_transfer_function(
-    zyx_object: np.ndarray, real_potential_transfer_function: np.ndarray, z_padding: int, brightness: float
+    zyx_object: np.ndarray,
+    real_potential_transfer_function: np.ndarray,
+    z_padding: int,
+    brightness: float,
 ) -> np.ndarray:
     # This simplified forward model only handles phase, so it resuses the fluorescence forward model
     # TODO: extend to absorption

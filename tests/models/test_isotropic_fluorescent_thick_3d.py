@@ -1,4 +1,3 @@
-import pytest
 import torch
 
 from waveorder.models import isotropic_fluorescent_thick_3d

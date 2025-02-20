@@ -2,7 +2,7 @@
 Overview
 --------
 
-This module collects Stokes- and Mueller-related calculations. 
+This module collects Stokes- and Mueller-related calculations.
 
 The functions are roughly organized into groups:
 
@@ -29,8 +29,8 @@ y = mmul(A, x)
 Usage
 -----
 
-All functions are intended to be used with torch.Tensors with Stokes- or 
-Mueller-indices as the first axes. 
+All functions are intended to be used with torch.Tensors with Stokes- or
+Mueller-indices as the first axes.
 
 For example, the following usage modes of stokes_after_adr are valid:
 
@@ -46,6 +46,7 @@ For example, the following usage modes of stokes_after_adr are valid:
 >>> stokes_after_adr(*adr_params) # * expands along the first axis
 
 """
+
 import numpy as np
 import torch
 

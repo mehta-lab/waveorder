@@ -1,9 +1,6 @@
 import torch
-import numpy as np
 
-from waveorder.sampling import (
-    nd_fourier_central_cuboid,
-)
+from waveorder.sampling import nd_fourier_central_cuboid
 
 
 def test_nd_fourier_central_cuboid():

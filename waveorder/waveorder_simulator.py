@@ -1,13 +1,13 @@
-import numpy as np
-import matplotlib.pyplot as plt
 import itertools
 import time
-import os
-import torch
-from numpy.fft import fft, ifft, fft2, ifft2, fftn, ifftn, fftshift, ifftshift
 from concurrent.futures import ProcessPoolExecutor
-from .util import *
+
+import numpy as np
+import torch
+from numpy.fft import fft2, fftn, fftshift, ifft2, ifftn, ifftshift
+
 from .optics import *
+from .util import *
 
 
 def Jones_PC_forward_model(

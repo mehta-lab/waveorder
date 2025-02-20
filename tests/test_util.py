@@ -1,6 +1,7 @@
-from waveorder import util
-import torch
 import pytest
+import torch
+
+from waveorder import util
 
 
 def test_gen_coordinate():

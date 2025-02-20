@@ -2,7 +2,7 @@
 
 import torch
 import torch.nn.functional as F
-from torch import Tensor, Size
+from torch import Size, Tensor
 
 
 def _sample_block_medians(image: Tensor, block_size) -> Tensor:

@@ -8,13 +8,11 @@
 #  "uPTI: uniaxial permittivity tensor imaging of intrinsic        #
 #  density and anisotropy," bioRxiv 2020.12.15.422951 (2020).```   #
 ####################################################################
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from numpy.fft import fftshift
-from waveorder import (
-    optics,
-    waveorder_reconstructor,
-)
+
+from waveorder import optics, waveorder_reconstructor
 from waveorder.visuals import jupyter_visuals
 
 ## Initialization

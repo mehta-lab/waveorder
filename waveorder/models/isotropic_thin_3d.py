@@ -6,6 +6,7 @@ from torch import Tensor
 
 from waveorder import optics, sampling, util
 
+
 def generate_test_phantom(
     yx_shape: Tuple[int, int],
     yx_pixel_size: float,
@@ -50,20 +51,21 @@ def calculate_transfer_function(
     )
     yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
 
-    absorption_2d_to_3d_transfer_function, phase_2d_to_3d_transfer_function = (
-        _calculate_wrap_unsafe_transfer_function(
-            (
-                yx_shape[0] * yx_factor,
-                yx_shape[1] * yx_factor,
-            ),
-            yx_pixel_size / yx_factor,
-            z_position_list,
-            wavelength_illumination,
-            index_of_refraction_media,
-            numerical_aperture_illumination,
-            numerical_aperture_detection,
-            invert_phase_contrast=invert_phase_contrast,
-        )
+    (
+        absorption_2d_to_3d_transfer_function,
+        phase_2d_to_3d_transfer_function,
+    ) = _calculate_wrap_unsafe_transfer_function(
+        (
+            yx_shape[0] * yx_factor,
+            yx_shape[1] * yx_factor,
+        ),
+        yx_pixel_size / yx_factor,
+        z_position_list,
+        wavelength_illumination,
+        index_of_refraction_media,
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+        invert_phase_contrast=invert_phase_contrast,
     )
 
     absorption_2d_to_3d_transfer_function_out = torch.zeros(
@@ -151,9 +153,9 @@ def visualize_transfer_function(
     absorption_2d_to_3d_transfer_function: Tensor,
     phase_2d_to_3d_transfer_function: Tensor,
 ) -> None:
-    """Note: unlike other `visualize_transfer_function` calls, this transfer 
+    """Note: unlike other `visualize_transfer_function` calls, this transfer
     function is a mixed 3D-to-2D transfer function, so it cannot reuse
-    util.add_transfer_function_to_viewer. If more 3D-to-2D transfer functions 
+    util.add_transfer_function_to_viewer. If more 3D-to-2D transfer functions
     are added, consider refactoring.
     """
     arrays = [

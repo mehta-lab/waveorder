@@ -9,14 +9,11 @@
 #  density and anisotropy," bioRxiv 2020.12.15.422951 (2020).```   #
 ####################################################################
 
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from numpy.fft import fftshift
 
-from waveorder import (
-    optics,
-    waveorder_reconstructor,
-)
+from waveorder import optics, waveorder_reconstructor
 from waveorder.visuals import jupyter_visuals
 
 ## Initialization
@@ -270,7 +267,6 @@ plt.show()
 ### Render 3D orientation with 2 channels (in-plane orientation and out-of-plane tilt)
 # in-plane orientation
 from matplotlib.colors import hsv_to_rgb
-
 
 ret_min_color = 0
 ret_max_color = 1.5
