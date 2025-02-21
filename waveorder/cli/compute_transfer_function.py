@@ -10,14 +10,14 @@ from waveorder.models import (
     phase_thick_3d,
 )
 
-from recOrder.cli.parsing import (
+from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,
 )
-from recOrder.cli.printing import echo_headline, echo_settings
-from recOrder.cli.settings import ReconstructionSettings
-from recOrder.io import utils
+from waveorder.cli.printing import echo_headline, echo_settings
+from waveorder.cli.settings import ReconstructionSettings
+from waveorder.io import utils
 
 
 def generate_and_save_birefringence_transfer_function(settings, dataset):

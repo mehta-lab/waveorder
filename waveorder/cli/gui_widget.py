@@ -2,7 +2,7 @@ import sys
 import click
 
 try:
-    from recOrder.plugin import tab_recon
+    from waveorder.plugin import tab_recon
 except:pass
 
 try:

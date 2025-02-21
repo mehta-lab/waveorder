@@ -2,14 +2,14 @@ import os
 
 from click.testing import CliRunner
 
-from recOrder.cli import settings
-from recOrder.cli.compute_transfer_function import (
+from waveorder.cli import settings
+from waveorder.cli.compute_transfer_function import (
     generate_and_save_birefringence_transfer_function,
     generate_and_save_fluorescence_transfer_function,
     generate_and_save_phase_transfer_function,
 )
-from recOrder.cli.main import cli
-from recOrder.io import utils
+from waveorder.cli.main import cli
+from waveorder.io import utils
 
 
 def test_compute_transfer(tmp_path, example_plate):

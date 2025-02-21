@@ -5,7 +5,7 @@ from hypothesis import given
 from numpy.typing import NDArray
 from numpy.testing import assert_equal
 
-from recOrder.io.visualization import ret_ori_overlay, ret_ori_phase_overlay
+from waveorder.io.visualization import ret_ori_overlay, ret_ori_phase_overlay
 
 
 @st.composite

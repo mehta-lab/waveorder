@@ -7,7 +7,7 @@ from contextlib import contextmanager
 import napari
 from pycromanager import Core
 
-from recOrder.plugin.main_widget import MainWidget
+from waveorder.plugin.main_widget import MainWidget
 
 SAVE_DIR = "."
 SWING = 0.05

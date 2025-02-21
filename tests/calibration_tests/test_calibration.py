@@ -1,2 +1,2 @@
 def test_calib_imports():
-    from recOrder.calib import Calibration, Optimization
+    from waveorder.calib import Calibration, Optimization

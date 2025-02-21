@@ -3,7 +3,7 @@ from pathlib import Path
 import numpy as np
 from iohub.ngff import Position, open_ome_zarr
 
-from recOrder.cli.utils import create_empty_hcs_zarr
+from waveorder.cli.utils import create_empty_hcs_zarr
 
 
 def test_create_empty_hcs_zarr(tmp_path):

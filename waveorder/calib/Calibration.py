@@ -16,9 +16,9 @@ from scipy.interpolate import interp1d
 from scipy.optimize import least_squares
 from scipy.stats import linregress
 
-from recOrder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
-from recOrder.io.core_functions import *
-from recOrder.io.utils import MockEmitter
+from waveorder.calib.Optimization import BrentOptimizer, MinScalarOptimizer
+from waveorder.io.core_functions import *
+from waveorder.io.utils import MockEmitter
 
 LC_DEVICE_NAME = "MeadowlarkLC"
 

@@ -2,13 +2,13 @@ from pathlib import Path
 
 import click
 
-from recOrder.cli.apply_inverse_transfer_function import (
+from waveorder.cli.apply_inverse_transfer_function import (
     apply_inverse_transfer_function_cli,
 )
-from recOrder.cli.compute_transfer_function import (
+from waveorder.cli.compute_transfer_function import (
     compute_transfer_function_cli,
 )
-from recOrder.cli.parsing import (
+from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,

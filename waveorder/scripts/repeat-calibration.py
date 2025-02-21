@@ -2,7 +2,7 @@
 
 import napari
 import time
-from recOrder.plugin.main_widget import MainWidget
+from waveorder.plugin.main_widget import MainWidget
 
 SAVE_DIR = "./"
 SWINGS = [0.1, 0.03, 0.01, 0.005]

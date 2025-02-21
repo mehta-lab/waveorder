@@ -1,4 +1,4 @@
-from recOrder.cli.main import cli
+from waveorder.cli.main import cli
 from click.testing import CliRunner
 
 

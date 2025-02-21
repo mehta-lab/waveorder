@@ -12,10 +12,10 @@ import submitit
 from iohub import open_ome_zarr
 
 from typing import Final
-from recOrder.cli import jobs_mgmt
+from waveorder.cli import jobs_mgmt
 
-from recOrder.cli import apply_inverse_models
-from recOrder.cli.parsing import (
+from waveorder.cli import apply_inverse_models
+from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,
@@ -24,14 +24,14 @@ from recOrder.cli.parsing import (
     ram_multiplier,
     unique_id,
 )
-from recOrder.cli.printing import echo_headline, echo_settings
-from recOrder.cli.settings import ReconstructionSettings
-from recOrder.cli.utils import (
+from waveorder.cli.printing import echo_headline, echo_settings
+from waveorder.cli.settings import ReconstructionSettings
+from waveorder.cli.utils import (
     apply_inverse_to_zyx_and_save,
     create_empty_hcs_zarr,
 )
-from recOrder.io import utils
-from recOrder.cli.monitor import monitor_jobs
+from waveorder.io import utils
+from waveorder.cli.monitor import monitor_jobs
 
 JM = jobs_mgmt.JobsManagement()
 
