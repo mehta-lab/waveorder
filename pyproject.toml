@@ -2,9 +2,6 @@
 requires = ["setuptools", "wheel", "setuptools_scm"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools_scm]
-write_to = "waveorder/_version.py"
-
 [project]
 name = "waveorder"
 description = "Wave-optical simulations and deconvolution of optical properties"
@@ -51,11 +48,25 @@ dependencies = [
   "pywavelets>=1.1.1",
   "ipywidgets>=7.5.1",
   "torch>=2.4.1",
+  
 ]
 dynamic = ["version"]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "black==25.1.0"]
+all = [
+  "napari[pyqt6]",
+  "napari-ome-zarr>=0.3.2", # drag and drop convenience
+  "pycromanager==0.27.2"
+]
+dev = [
+  "pytest>=5.0.0",
+  "pytest-cov",
+  "pytest-qt",
+  "tox",
+  "pre-commit",
+  "black==25.1.0",
+  "hypothesis"
+]
 examples = ["napari[all]", "jupyter"]
 
 [project.urls]
@@ -63,9 +74,29 @@ Homepage = "https://github.com/mehta-lab/waveorder"
 Repository = "https://github.com/mehta-lab/waveorder"
 Issues = "https://github.com/mehta-lab/waveorder/issues"
 
+[project.scripts]
+recorder = "recOrder.cli.main:cli"
+recOrder = "recOrder.cli.main:cli"
+
+[options]
+packages = find:
+include_package_data = True
+python_requires = >=3.10
+setup_requires = setuptools_scm
+
+[options.entry_points]
+napari.manifest =
+    waveorder = waveorder:napari.yaml
+
+[options.package_data]
+waveorder = napari.yaml
+
 [tool.black]
 line-length = 79
 
 [tool.isort]
 profile = "black"
 line_length = 79
+
+[tool.setuptools_scm]
+write_to = "waveorder/_version.py"

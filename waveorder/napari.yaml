@@ -1,0 +1,37 @@
+name: recOrder-napari
+display_name: recOrder-napari
+contributions:
+  commands:
+  - id: recOrder-napari.MainWidget
+    title: Create Main Widget
+    python_name: recOrder.plugin.main_widget:MainWidget
+  - id: recOrder-napari.get_reader
+    title: Read ome-zarr and ome-tif files
+    python_name: recOrder.io._reader:napari_get_reader
+  - id: recOrder-napari.polarization_target_data
+    title: Polarization Target Data
+    python_name: recOrder.scripts.samples:read_polarization_target_data
+  - id: recOrder-napari.polarization_target_reconstruction
+    title: Polarization Target Data
+    python_name: recOrder.scripts.samples:read_polarization_target_reconstruction
+  - id: recOrder-napari.zebrafish_embryo_reconstruction
+    title: Zebrafish Embryo Reconstruction
+    python_name: recOrder.scripts.samples:read_zebrafish_embryo_reconstruction
+  readers:
+  - command: recOrder-napari.get_reader
+    accepts_directories: true
+    filename_patterns: ['*.zarr', '*.tif']
+  widgets:
+  - command: recOrder-napari.MainWidget
+    display_name: Main Menu
+  sample_data:
+  - command: recOrder-napari.polarization_target_data
+    key: polarization-target-data
+    display_name: Polarization Target Data (10 MB)
+  - command: recOrder-napari.polarization_target_reconstruction
+    key: polarization-target-reconstruction
+    display_name: Polarization Target Reconstruction (10 MB)
+  - command: recOrder-napari.zebrafish_embryo_reconstruction
+    key: zebrafish-embryo-reconstruction
+    display_name: Zebrafish Embryo Reconstruction (92 MB)
+

@@ -1,0 +1,16 @@
+input_channel_names:
+- State0
+- State1
+- State2
+- State3
+time_indices: all
+reconstruction_dimension: 3
+birefringence:
+  transfer_function:
+    swing: 0.1
+  apply_inverse:
+    wavelength_illumination: 0.532
+    background_path: ''
+    remove_estimated_background: false
+    flip_orientation: false
+    rotate_orientation: false
