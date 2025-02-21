@@ -94,6 +94,9 @@ def apply_filter_bank(
     # If this is a bottleneck, consider extending `stretched_multiply` to
     # a `stretched_matrix_multiply` that uses an call like
     # torch.einsum('io..., i... -> o...', io_filter_bank, padded_input_spectrum)
+    #
+    # Further optimization is likely with a combination of
+    # torch.baddbmm, torch.pixel_shuffle, torch.pixel_unshuffle.
     padded_output_spectrum = torch.zeros(
         (num_output_channels,) + spatial_dims,
         dtype=padded_input_spectrum.dtype,
