@@ -91,6 +91,9 @@ Issues = "https://github.com/mehta-lab/waveorder/issues"
 [project.scripts]
 waveorder = "waveorder.cli.main:cli"
 
+[project.entry-points."napari.manifest"]
+waveorder = "waveorder:napari.yaml"
+
 [tool.black]
 line-length = 79
 
@@ -100,3 +103,12 @@ line_length = 79
 
 [tool.setuptools_scm]
 write_to = "waveorder/_version.py"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml"]
