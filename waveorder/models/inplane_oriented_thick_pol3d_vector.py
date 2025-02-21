@@ -3,9 +3,10 @@ from typing import Literal
 import numpy as np
 import torch
 from torch import Tensor
-from torch.nn.functional import avg_pool3d, interpolate
+from torch.nn.functional import avg_pool3d
 
 from waveorder import optics, sampling, stokes, util
+from waveorder.filter import apply_filter_bank
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
@@ -40,7 +41,6 @@ def calculate_transfer_function(
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
     fourier_oversample_factor: int = 1,
-    transverse_downsample_factor: int = 1,
 ) -> tuple[
     torch.Tensor, torch.Tensor, tuple[torch.Tensor, torch.Tensor, torch.Tensor]
 ]:
@@ -66,22 +66,8 @@ def calculate_transfer_function(
 
     tf_calculation_shape = (
         zyx_shape[0] * z_factor * fourier_oversample_factor,
-        int(
-            np.ceil(
-                zyx_shape[1]
-                * yx_factor
-                * fourier_oversample_factor
-                / transverse_downsample_factor
-            )
-        ),
-        int(
-            np.ceil(
-                zyx_shape[2]
-                * yx_factor
-                * fourier_oversample_factor
-                / transverse_downsample_factor
-            )
-        ),
+        int(np.ceil(zyx_shape[1] * yx_factor * fourier_oversample_factor)),
+        int(np.ceil(zyx_shape[2] * yx_factor * fourier_oversample_factor)),
     )
 
     (
@@ -125,25 +111,12 @@ def calculate_transfer_function(
     )
 
     # Compute singular system on cropped and downsampled
-    U, S, Vh = calculate_singular_system(cropped)
-
-    # Interpolate to final size in YX
-    def complex_interpolate(
-        tensor: torch.Tensor, zyx_shape: tuple[int, int, int]
-    ) -> torch.Tensor:
-        interpolated_real = interpolate(tensor.real, size=zyx_shape)
-        interpolated_imag = interpolate(tensor.imag, size=zyx_shape)
-        return interpolated_real + 1j * interpolated_imag
-
-    full_cropped = complex_interpolate(cropped, zyx_shape)
-    full_U = complex_interpolate(U, zyx_shape)
-    full_S = interpolate(S[None], size=zyx_shape)[0]  # S is real
-    full_Vh = complex_interpolate(Vh, zyx_shape)
+    singular_system = calculate_singular_system(cropped)
 
     return (
-        full_cropped,
+        cropped,
         intensity_to_stokes_matrix,
-        (full_U, full_S, full_Vh),
+        singular_system,
     )
 
 
@@ -334,20 +307,14 @@ def apply_inverse_transfer_function(
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
 ):
-    sZYX_data = torch.fft.fftn(szyx_data, dim=(1, 2, 3))
-
     # Key computation
     print("Computing inverse filter")
     U, S, Vh = singular_system
     S_reg = S / (S**2 + regularization_strength)
-
-    ZYXsf_inverse_filter = torch.einsum(
+    sfzyx_inverse_filter = torch.einsum(
         "sjzyx,jzyx,jfzyx->sfzyx", U, S_reg, Vh
     )
 
-    # Apply inverse filter
-    fZYX_reconstructed = torch.einsum(
-        "szyx,sfzyx->fzyx", sZYX_data, ZYXsf_inverse_filter
-    )
+    fzyx_recon = apply_filter_bank(sfzyx_inverse_filter, szyx_data)
 
-    return torch.real(torch.fft.ifftn(fZYX_reconstructed, dim=(1, 2, 3)))
+    return fzyx_recon

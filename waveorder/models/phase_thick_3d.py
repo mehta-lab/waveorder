@@ -5,7 +5,9 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
+from waveorder.filter import apply_filter_bank
 from waveorder.models import isotropic_fluorescent_thick_3d
+from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
@@ -253,9 +255,13 @@ def apply_inverse_transfer_function(
 
     # Reconstruct
     if reconstruction_algorithm == "Tikhonov":
-        f_real = util.single_variable_tikhonov_deconvolution_3D(
-            zyx, effective_transfer_function, reg_re=regularization_strength
+        inverse_filter = tikhonov_regularized_inverse_filter(
+            effective_transfer_function, regularization_strength
         )
+
+        # [None]s and [0] are for applying a 1x1 "bank" of filters.
+        # For further uniformity, consider returning (1, Z, Y, X)
+        f_real = apply_filter_bank(inverse_filter[None, None], zyx[None])[0]
 
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
