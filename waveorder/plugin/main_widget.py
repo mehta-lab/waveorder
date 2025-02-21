@@ -4,7 +4,6 @@ import json
 import logging
 import os
 import textwrap
-import time
 from os.path import dirname
 from pathlib import Path, PurePath
 
@@ -13,8 +12,6 @@ from typing import TYPE_CHECKING
 
 import dask.array as da
 import numpy as np
-import yaml
-from dask import delayed
 from numpy.typing import NDArray
 from numpydoc.docscrape import NumpyDocString
 from packaging import version
@@ -22,26 +19,29 @@ from qtpy.QtCore import Qt, Signal, Slot
 from qtpy.QtGui import QColor, QPixmap
 from qtpy.QtWidgets import QFileDialog, QSizePolicy, QSlider, QWidget
 from superqt import QDoubleRangeSlider, QRangeSlider
+
 from waveorder.waveorder_reconstructor import waveorder_microscopy
 
 try:
     from pycromanager import Core, Studio, zmq_bridge
-except:pass
+except:
+    pass
 
 try:
     from napari import Viewer
     from napari.components import LayerList
-    from napari.qt.threading import create_worker
     from napari.utils.events import Event
-    from napari.utils.notifications import show_info, show_warning
-except:pass
+    from napari.utils.notifications import show_warning
+except:
+    pass
 
 try:
     from waveorder.acq.acquisition_workers import (
         BFAcquisitionWorker,
         PolarizationAcquisitionWorker,
     )
-except:pass
+except:
+    pass
 from waveorder.calib import Calibration
 from waveorder.calib.Calibration import LC_DEVICE_NAME, QLIPP_Calibration
 from waveorder.calib.calibration_workers import (
@@ -56,7 +56,7 @@ from waveorder.plugin import gui
 
 # avoid runtime import error
 if TYPE_CHECKING:
-    from _typeshed import StrOrBytesPath
+    pass
 
 
 class MainWidget(QWidget):
@@ -837,19 +837,19 @@ class MainWidget(QWidget):
             print("Is pycromanager package installed?")
         except Exception as ex:
             print(
-                    "Could not establish pycromanager bridge.\n"
-                    "Is Micro-Manager open?\n"
-                    "Is Tools > Options > Run server on port 4827 checked?\n"
-                    f"Are you using nightly build {RECOMMENDED_MM}?\n"
+                "Could not establish pycromanager bridge.\n"
+                "Is Micro-Manager open?\n"
+                "Is Tools > Options > Run server on port 4827 checked?\n"
+                f"Are you using nightly build {RECOMMENDED_MM}?\n"
             )
             template = "An exception of type {0} occurred. Arguments:\n{1!r}"
             message = template.format(type(ex).__name__, ", ".join(ex.args))
             print(message)
             raise EnvironmentError(
-                    "Could not establish pycromanager bridge.\n"
-                    "Is Micro-Manager open?\n"
-                    "Is Tools > Options > Run server on port 4827 checked?\n"
-                    f"Are you using nightly build {RECOMMENDED_MM}?"
+                "Could not establish pycromanager bridge.\n"
+                "Is Micro-Manager open?\n"
+                "Is Tools > Options > Run server on port 4827 checked?\n"
+                f"Are you using nightly build {RECOMMENDED_MM}?"
             )
 
         # Warn the user if there is a Micro-Manager/ZMQ version mismatch
@@ -1040,12 +1040,15 @@ class MainWidget(QWidget):
         import matplotlib.pyplot as plt
 
         plt.close("all")
-        with plt.rc_context(
-            {
-                "axes.spines.right": False,
-                "axes.spines.top": False,
-            }
-        ) and plt.ion():
+        with (
+            plt.rc_context(
+                {
+                    "axes.spines.right": False,
+                    "axes.spines.top": False,
+                }
+            )
+            and plt.ion()
+        ):
             plt.figure("Calibrated LC States")
             plt.scatter(lc_values["LCA"], lc_values["LCB"], c="r")
             plt.plot(x_circ, y_circ, "k--", alpha=0.25)
@@ -1552,7 +1555,7 @@ class MainWidget(QWidget):
             self.current_bg_path = path
             self.ui.le_bg_path.setText(str(path))
         else:
-            msg = """ 
+            msg = """
                 Background acquisition was not successful.
                 Check latest background capture saving directory!
                 """

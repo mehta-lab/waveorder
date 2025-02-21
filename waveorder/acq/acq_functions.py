@@ -5,9 +5,12 @@ import time
 
 import numpy as np
 from iohub import read_micromanager
+
 try:
     from pycromanager import Studio
-except:pass
+except:
+    pass
+
 
 def generate_acq_settings(
     mm,

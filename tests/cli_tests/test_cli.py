@@ -1,5 +1,6 @@
-from waveorder.cli.main import cli
 from click.testing import CliRunner
+
+from waveorder.cli.main import cli
 
 
 def test_main():

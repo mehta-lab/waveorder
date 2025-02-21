@@ -9,14 +9,18 @@
 
 
 from qtpy import QtCore, QtGui, QtWidgets
+
 from waveorder.plugin import tab_recon
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.NonModal)
         Form.resize(630, 1165)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(Form.sizePolicy().hasHeightForWidth())
@@ -40,10 +44,14 @@ class Ui_Form(object):
         self.gridLayout_22.setContentsMargins(-1, 25, -1, -1)
         self.gridLayout_22.setObjectName("gridLayout_22")
         self.le_mm_status = QtWidgets.QLineEdit(self.recon_status)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_mm_status.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_mm_status.sizePolicy().hasHeightForWidth()
+        )
         self.le_mm_status.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -54,10 +62,14 @@ class Ui_Form(object):
         self.le_mm_status.setObjectName("le_mm_status")
         self.gridLayout_22.addWidget(self.le_mm_status, 0, 1, 1, 1)
         self.qbutton_connect_to_mm = QtWidgets.QPushButton(self.recon_status)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.qbutton_connect_to_mm.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.qbutton_connect_to_mm.sizePolicy().hasHeightForWidth()
+        )
         self.qbutton_connect_to_mm.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -65,12 +77,18 @@ class Ui_Form(object):
         self.qbutton_connect_to_mm.setFont(font)
         self.qbutton_connect_to_mm.setObjectName("qbutton_connect_to_mm")
         self.gridLayout_22.addWidget(self.qbutton_connect_to_mm, 0, 0, 1, 1)
-        self.gridLayout_7.addWidget(self.recon_status, 1, 0, 1, 1, QtCore.Qt.AlignTop)
+        self.gridLayout_7.addWidget(
+            self.recon_status, 1, 0, 1, 1, QtCore.Qt.AlignTop
+        )
         self.tabWidget = QtWidgets.QTabWidget(Form)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.tabWidget.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.tabWidget.sizePolicy().hasHeightForWidth()
+        )
         self.tabWidget.setSizePolicy(sizePolicy)
         self.tabWidget.setMinimumSize(QtCore.QSize(0, 0))
         self.tabWidget.setBaseSize(QtCore.QSize(0, 0))
@@ -85,15 +103,21 @@ class Ui_Form(object):
         self.tabWidget.setMovable(False)
         self.tabWidget.setObjectName("tabWidget")
         self.Calibration = QtWidgets.QWidget()
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.Calibration.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.Calibration.sizePolicy().hasHeightForWidth()
+        )
         self.Calibration.setSizePolicy(sizePolicy)
         self.Calibration.setMinimumSize(QtCore.QSize(0, 0))
         self.Calibration.setObjectName("Calibration")
         self.gridLayout_5 = QtWidgets.QGridLayout(self.Calibration)
-        self.gridLayout_5.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
+        self.gridLayout_5.setSizeConstraint(
+            QtWidgets.QLayout.SetDefaultConstraint
+        )
         self.gridLayout_5.setContentsMargins(4, 4, 4, 4)
         self.gridLayout_5.setObjectName("gridLayout_5")
         self.scrollArea = QtWidgets.QScrollArea(self.Calibration)
@@ -104,11 +128,17 @@ class Ui_Form(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 590, 1032))
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        self.scrollAreaWidgetContents.setGeometry(
+            QtCore.QRect(0, 0, 590, 1032)
+        )
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth()
+        )
         self.scrollAreaWidgetContents.setSizePolicy(sizePolicy)
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
@@ -140,10 +170,14 @@ class Ui_Form(object):
         self.label_progress.setObjectName("label_progress")
         self.gridLayout_12.addWidget(self.label_progress, 4, 0, 1, 1)
         self.label_extinction = QtWidgets.QLabel(self.run_calib)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_extinction.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label_extinction.sizePolicy().hasHeightForWidth()
+        )
         self.label_extinction.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -152,10 +186,14 @@ class Ui_Form(object):
         self.label_extinction.setObjectName("label_extinction")
         self.gridLayout_12.addWidget(self.label_extinction, 6, 0, 1, 1)
         self.qbutton_calibrate = QtWidgets.QPushButton(self.run_calib)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.qbutton_calibrate.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.qbutton_calibrate.sizePolicy().hasHeightForWidth()
+        )
         self.qbutton_calibrate.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -180,10 +218,14 @@ class Ui_Form(object):
         self.qbutton_calc_extinction.setObjectName("qbutton_calc_extinction")
         self.gridLayout_12.addWidget(self.qbutton_calc_extinction, 2, 0, 1, 2)
         self.le_extinction = QtWidgets.QLineEdit(self.run_calib)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_extinction.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_extinction.sizePolicy().hasHeightForWidth()
+        )
         self.le_extinction.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setPointSize(13)
@@ -221,7 +263,11 @@ class Ui_Form(object):
         font.setItalic(False)
         self.calib_params.setFont(font)
         self.calib_params.setContextMenuPolicy(QtCore.Qt.DefaultContextMenu)
-        self.calib_params.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.calib_params.setAlignment(
+            QtCore.Qt.AlignLeading
+            | QtCore.Qt.AlignLeft
+            | QtCore.Qt.AlignVCenter
+        )
         self.calib_params.setCheckable(False)
         self.calib_params.setObjectName("calib_params")
         self.gridLayout_2 = QtWidgets.QGridLayout(self.calib_params)
@@ -365,10 +411,14 @@ class Ui_Form(object):
         self.gridLayout_2.addWidget(self.qbutton_browse, 0, 2, 1, 1)
         self.gridLayout.addWidget(self.calib_params, 0, 0, 1, 1)
         self.tabWidget_2 = QtWidgets.QTabWidget(self.scrollAreaWidgetContents)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.tabWidget_2.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.tabWidget_2.sizePolicy().hasHeightForWidth()
+        )
         self.tabWidget_2.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -388,11 +438,19 @@ class Ui_Form(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 550, 302))
-        self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
-        self.verticalLayout_6 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_3)
+        self.scrollAreaWidgetContents_3.setGeometry(
+            QtCore.QRect(0, 0, 550, 302)
+        )
+        self.scrollAreaWidgetContents_3.setObjectName(
+            "scrollAreaWidgetContents_3"
+        )
+        self.verticalLayout_6 = QtWidgets.QVBoxLayout(
+            self.scrollAreaWidgetContents_3
+        )
         self.verticalLayout_6.setObjectName("verticalLayout_6")
-        self.label_inten_plot = QtWidgets.QLabel(self.scrollAreaWidgetContents_3)
+        self.label_inten_plot = QtWidgets.QLabel(
+            self.scrollAreaWidgetContents_3
+        )
         font = QtGui.QFont()
         font.setBold(False)
         font.setItalic(False)
@@ -415,17 +473,27 @@ class Ui_Form(object):
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.tab_advanced)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.scrollArea_2 = QtWidgets.QScrollArea(self.tab_advanced)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.scrollArea_2.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.scrollArea_2.sizePolicy().hasHeightForWidth()
+        )
         self.scrollArea_2.setSizePolicy(sizePolicy)
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 550, 302))
-        self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
-        self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_2)
+        self.scrollAreaWidgetContents_2.setGeometry(
+            QtCore.QRect(0, 0, 550, 302)
+        )
+        self.scrollAreaWidgetContents_2.setObjectName(
+            "scrollAreaWidgetContents_2"
+        )
+        self.verticalLayout_5 = QtWidgets.QVBoxLayout(
+            self.scrollAreaWidgetContents_2
+        )
         self.verticalLayout_5.setObjectName("verticalLayout_5")
         self.label_loglevel = QtWidgets.QLabel(self.scrollAreaWidgetContents_2)
         self.label_loglevel.setObjectName("label_loglevel")
@@ -456,16 +524,26 @@ class Ui_Form(object):
         self.formLayout.setObjectName("formLayout")
         self.le_notes_field = QtWidgets.QLineEdit(self.tab_notes)
         self.le_notes_field.setObjectName("le_notes_field")
-        self.formLayout.setWidget(1, QtWidgets.QFormLayout.SpanningRole, self.le_notes_field)
+        self.formLayout.setWidget(
+            1, QtWidgets.QFormLayout.SpanningRole, self.le_notes_field
+        )
         self.qbutton_push_note = QtWidgets.QPushButton(self.tab_notes)
         self.qbutton_push_note.setObjectName("qbutton_push_note")
-        self.formLayout.setWidget(2, QtWidgets.QFormLayout.SpanningRole, self.qbutton_push_note)
+        self.formLayout.setWidget(
+            2, QtWidgets.QFormLayout.SpanningRole, self.qbutton_push_note
+        )
         self.label_note = QtWidgets.QLabel(self.tab_notes)
         self.label_note.setObjectName("label_note")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label_note)
+        self.formLayout.setWidget(
+            0, QtWidgets.QFormLayout.LabelRole, self.label_note
+        )
         self.tabWidget_2.addTab(self.tab_notes, "")
-        self.gridLayout.addWidget(self.tabWidget_2, 3, 0, 1, 1, QtCore.Qt.AlignTop)
-        self.capture_background = QtWidgets.QGroupBox(self.scrollAreaWidgetContents)
+        self.gridLayout.addWidget(
+            self.tabWidget_2, 3, 0, 1, 1, QtCore.Qt.AlignTop
+        )
+        self.capture_background = QtWidgets.QGroupBox(
+            self.scrollAreaWidgetContents
+        )
         font = QtGui.QFont()
         font.setBold(True)
         font.setItalic(False)
@@ -482,7 +560,9 @@ class Ui_Form(object):
         self.label_bg_folder.setFont(font)
         self.label_bg_folder.setObjectName("label_bg_folder")
         self.gridLayout_3.addWidget(self.label_bg_folder, 0, 0, 1, 1)
-        self.qbutton_capture_bg = QtWidgets.QPushButton(self.capture_background)
+        self.qbutton_capture_bg = QtWidgets.QPushButton(
+            self.capture_background
+        )
         font = QtGui.QFont()
         font.setBold(False)
         font.setItalic(False)
@@ -515,43 +595,67 @@ class Ui_Form(object):
         self.gridLayout_5.addWidget(self.scrollArea, 0, 0, 1, 1)
         self.tabWidget.addTab(self.Calibration, "")
         self.Acquisition = QtWidgets.QWidget()
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.Acquisition.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.Acquisition.sizePolicy().hasHeightForWidth()
+        )
         self.Acquisition.setSizePolicy(sizePolicy)
         self.Acquisition.setMinimumSize(QtCore.QSize(0, 0))
         self.Acquisition.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.Acquisition.setObjectName("Acquisition")
         self.gridLayout_6 = QtWidgets.QGridLayout(self.Acquisition)
-        self.gridLayout_6.setSizeConstraint(QtWidgets.QLayout.SetDefaultConstraint)
+        self.gridLayout_6.setSizeConstraint(
+            QtWidgets.QLayout.SetDefaultConstraint
+        )
         self.gridLayout_6.setContentsMargins(4, 4, 4, 4)
         self.gridLayout_6.setSpacing(0)
         self.gridLayout_6.setObjectName("gridLayout_6")
         self.scrollArea_4 = QtWidgets.QScrollArea(self.Acquisition)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.scrollArea_4.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.scrollArea_4.sizePolicy().hasHeightForWidth()
+        )
         self.scrollArea_4.setSizePolicy(sizePolicy)
         self.scrollArea_4.setWidgetResizable(True)
         self.scrollArea_4.setObjectName("scrollArea_4")
         self.scrollAreaWidgetContents_4 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 614, 990))
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred)
+        self.scrollAreaWidgetContents_4.setGeometry(
+            QtCore.QRect(0, 0, 614, 990)
+        )
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.scrollAreaWidgetContents_4.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.scrollAreaWidgetContents_4.sizePolicy().hasHeightForWidth()
+        )
         self.scrollAreaWidgetContents_4.setSizePolicy(sizePolicy)
-        self.scrollAreaWidgetContents_4.setObjectName("scrollAreaWidgetContents_4")
-        self.gridLayout_15 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_4)
+        self.scrollAreaWidgetContents_4.setObjectName(
+            "scrollAreaWidgetContents_4"
+        )
+        self.gridLayout_15 = QtWidgets.QGridLayout(
+            self.scrollAreaWidgetContents_4
+        )
         self.gridLayout_15.setVerticalSpacing(20)
         self.gridLayout_15.setObjectName("gridLayout_15")
         self.phase = QtWidgets.QGroupBox(self.scrollAreaWidgetContents_4)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.phase.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.phase.sizePolicy().hasHeightForWidth()
+        )
         self.phase.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(True)
@@ -589,27 +693,41 @@ class Ui_Form(object):
         self.label_phase_strength.setObjectName("label_phase_strength")
         self.gridLayout_23.addWidget(self.label_phase_strength, 2, 0, 1, 1)
         self.label_pad_z = QtWidgets.QLabel(self.phase)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_pad_z.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label_pad_z.sizePolicy().hasHeightForWidth()
+        )
         self.label_pad_z.setSizePolicy(sizePolicy)
         self.label_pad_z.setObjectName("label_pad_z")
         self.gridLayout_23.addWidget(self.label_pad_z, 0, 0, 1, 1)
         self.le_pad_z = QtWidgets.QLineEdit(self.phase)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_pad_z.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_pad_z.sizePolicy().hasHeightForWidth()
+        )
         self.le_pad_z.setSizePolicy(sizePolicy)
         self.le_pad_z.setObjectName("le_pad_z")
         self.gridLayout_23.addWidget(self.le_pad_z, 0, 1, 1, 1)
         self.gridLayout_15.addWidget(self.phase, 3, 0, 1, 1)
-        self.acq_settings = QtWidgets.QGroupBox(self.scrollAreaWidgetContents_4)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        self.acq_settings = QtWidgets.QGroupBox(
+            self.scrollAreaWidgetContents_4
+        )
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.acq_settings.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.acq_settings.sizePolicy().hasHeightForWidth()
+        )
         self.acq_settings.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(True)
@@ -677,35 +795,53 @@ class Ui_Form(object):
         self.le_zstart.setObjectName("le_zstart")
         self.gridLayout_8.addWidget(self.le_zstart, 2, 0, 1, 1)
         self.gridLayout_15.addWidget(self.acq_settings, 1, 0, 1, 1)
-        self.ReconSettings = QtWidgets.QGroupBox(self.scrollAreaWidgetContents_4)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        self.ReconSettings = QtWidgets.QGroupBox(
+            self.scrollAreaWidgetContents_4
+        )
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.ReconSettings.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.ReconSettings.sizePolicy().hasHeightForWidth()
+        )
         self.ReconSettings.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(True)
         font.setItalic(False)
         self.ReconSettings.setFont(font)
-        self.ReconSettings.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.ReconSettings.setAlignment(
+            QtCore.Qt.AlignLeading
+            | QtCore.Qt.AlignLeft
+            | QtCore.Qt.AlignVCenter
+        )
         self.ReconSettings.setObjectName("ReconSettings")
         self.gridLayout_9 = QtWidgets.QGridLayout(self.ReconSettings)
         self.gridLayout_9.setContentsMargins(-1, 12, -1, -1)
         self.gridLayout_9.setVerticalSpacing(6)
         self.gridLayout_9.setObjectName("gridLayout_9")
         self.label_mag = QtWidgets.QLabel(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_mag.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label_mag.sizePolicy().hasHeightForWidth()
+        )
         self.label_mag.setSizePolicy(sizePolicy)
         self.label_mag.setObjectName("label_mag")
         self.gridLayout_9.addWidget(self.label_mag, 10, 0, 1, 1)
         self.le_data_save_name = QtWidgets.QLineEdit(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_data_save_name.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_data_save_name.sizePolicy().hasHeightForWidth()
+        )
         self.le_data_save_name.setSizePolicy(sizePolicy)
         self.le_data_save_name.setText("")
         self.le_data_save_name.setObjectName("le_data_save_name")
@@ -721,18 +857,26 @@ class Ui_Form(object):
         self.label_flip_orientation.setObjectName("label_flip_orientation")
         self.gridLayout_9.addWidget(self.label_flip_orientation, 12, 0, 1, 1)
         self.le_mag = QtWidgets.QLineEdit(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_mag.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_mag.sizePolicy().hasHeightForWidth()
+        )
         self.le_mag.setSizePolicy(sizePolicy)
         self.le_mag.setObjectName("le_mag")
         self.gridLayout_9.addWidget(self.le_mag, 10, 1, 1, 1)
         self.le_cond_na = QtWidgets.QLineEdit(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_cond_na.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_cond_na.sizePolicy().hasHeightForWidth()
+        )
         self.le_cond_na.setSizePolicy(sizePolicy)
         self.le_cond_na.setObjectName("le_cond_na")
         self.gridLayout_9.addWidget(self.le_cond_na, 7, 1, 1, 1)
@@ -740,17 +884,25 @@ class Ui_Form(object):
         self.label_data_save_name.setObjectName("label_data_save_name")
         self.gridLayout_9.addWidget(self.label_data_save_name, 1, 0, 1, 1)
         self.label_gpu_id = QtWidgets.QLabel(self.ReconSettings)
-        self.label_gpu_id.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignVCenter)
+        self.label_gpu_id.setAlignment(
+            QtCore.Qt.AlignLeading
+            | QtCore.Qt.AlignLeft
+            | QtCore.Qt.AlignVCenter
+        )
         self.label_gpu_id.setObjectName("label_gpu_id")
         self.gridLayout_9.addWidget(self.label_gpu_id, 4, 0, 1, 1)
         self.label_bg_method = QtWidgets.QLabel(self.ReconSettings)
         self.label_bg_method.setObjectName("label_bg_method")
         self.gridLayout_9.addWidget(self.label_bg_method, 2, 0, 1, 1)
         self.label_recon_wavelength = QtWidgets.QLabel(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_recon_wavelength.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label_recon_wavelength.sizePolicy().hasHeightForWidth()
+        )
         self.label_recon_wavelength.setSizePolicy(sizePolicy)
         self.label_recon_wavelength.setObjectName("label_recon_wavelength")
         self.gridLayout_9.addWidget(self.label_recon_wavelength, 5, 0, 1, 1)
@@ -759,18 +911,26 @@ class Ui_Form(object):
         self.le_save_dir.setObjectName("le_save_dir")
         self.gridLayout_9.addWidget(self.le_save_dir, 0, 1, 1, 1)
         self.le_gpu_id = QtWidgets.QLineEdit(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_gpu_id.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_gpu_id.sizePolicy().hasHeightForWidth()
+        )
         self.le_gpu_id.setSizePolicy(sizePolicy)
         self.le_gpu_id.setObjectName("le_gpu_id")
         self.gridLayout_9.addWidget(self.le_gpu_id, 4, 1, 1, 1)
         self.label_cond_na = QtWidgets.QLabel(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_cond_na.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label_cond_na.sizePolicy().hasHeightForWidth()
+        )
         self.label_cond_na.setSizePolicy(sizePolicy)
         self.label_cond_na.setObjectName("label_cond_na")
         self.gridLayout_9.addWidget(self.label_cond_na, 7, 0, 1, 1)
@@ -788,18 +948,26 @@ class Ui_Form(object):
         self.label_bg_path.setObjectName("label_bg_path")
         self.gridLayout_9.addWidget(self.label_bg_path, 3, 0, 1, 1)
         self.le_recon_wavelength = QtWidgets.QLineEdit(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_recon_wavelength.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_recon_wavelength.sizePolicy().hasHeightForWidth()
+        )
         self.le_recon_wavelength.setSizePolicy(sizePolicy)
         self.le_recon_wavelength.setObjectName("le_recon_wavelength")
         self.gridLayout_9.addWidget(self.le_recon_wavelength, 5, 1, 1, 1)
         self.le_n_media = QtWidgets.QLineEdit(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_n_media.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_n_media.sizePolicy().hasHeightForWidth()
+        )
         self.le_n_media.setSizePolicy(sizePolicy)
         self.le_n_media.setObjectName("le_n_media")
         self.gridLayout_9.addWidget(self.le_n_media, 9, 1, 1, 1)
@@ -807,35 +975,51 @@ class Ui_Form(object):
         self.label_orientation_offset.setObjectName("label_orientation_offset")
         self.gridLayout_9.addWidget(self.label_orientation_offset, 11, 0, 1, 1)
         self.le_obj_na = QtWidgets.QLineEdit(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_obj_na.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_obj_na.sizePolicy().hasHeightForWidth()
+        )
         self.le_obj_na.setSizePolicy(sizePolicy)
         self.le_obj_na.setObjectName("le_obj_na")
         self.gridLayout_9.addWidget(self.le_obj_na, 6, 1, 1, 1)
         self.label_obj_na = QtWidgets.QLabel(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_obj_na.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label_obj_na.sizePolicy().hasHeightForWidth()
+        )
         self.label_obj_na.setSizePolicy(sizePolicy)
         self.label_obj_na.setObjectName("label_obj_na")
         self.gridLayout_9.addWidget(self.label_obj_na, 6, 0, 1, 1)
         self.le_ps = QtWidgets.QLineEdit(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_ps.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_ps.sizePolicy().hasHeightForWidth()
+        )
         self.le_ps.setSizePolicy(sizePolicy)
         self.le_ps.setText("")
         self.le_ps.setObjectName("le_ps")
         self.gridLayout_9.addWidget(self.le_ps, 8, 1, 1, 1)
         self.label_n_media = QtWidgets.QLabel(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_n_media.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label_n_media.sizePolicy().hasHeightForWidth()
+        )
         self.label_n_media.setSizePolicy(sizePolicy)
         self.label_n_media.setObjectName("label_n_media")
         self.gridLayout_9.addWidget(self.label_n_media, 9, 0, 1, 1)
@@ -847,14 +1031,20 @@ class Ui_Form(object):
         self.label_save_dir.setObjectName("label_save_dir")
         self.gridLayout_9.addWidget(self.label_save_dir, 0, 0, 1, 1)
         self.label_ps = QtWidgets.QLabel(self.ReconSettings)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Preferred
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_ps.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label_ps.sizePolicy().hasHeightForWidth()
+        )
         self.label_ps.setSizePolicy(sizePolicy)
         self.label_ps.setObjectName("label_ps")
         self.gridLayout_9.addWidget(self.label_ps, 8, 0, 1, 1)
-        self.qbutton_browse_save_dir = QtWidgets.QPushButton(self.ReconSettings)
+        self.qbutton_browse_save_dir = QtWidgets.QPushButton(
+            self.ReconSettings
+        )
         font = QtGui.QFont()
         font.setBold(False)
         font.setItalic(False)
@@ -866,8 +1056,12 @@ class Ui_Form(object):
         self.le_bg_path.setObjectName("le_bg_path")
         self.gridLayout_9.addWidget(self.le_bg_path, 3, 1, 1, 1)
         self.label_invert_phase_contrast = QtWidgets.QLabel(self.ReconSettings)
-        self.label_invert_phase_contrast.setObjectName("label_invert_phase_contrast")
-        self.gridLayout_9.addWidget(self.label_invert_phase_contrast, 13, 0, 1, 1)
+        self.label_invert_phase_contrast.setObjectName(
+            "label_invert_phase_contrast"
+        )
+        self.gridLayout_9.addWidget(
+            self.label_invert_phase_contrast, 13, 0, 1, 1
+        )
         self.cb_flip_orientation = QtWidgets.QCheckBox(self.ReconSettings)
         self.cb_flip_orientation.setText("")
         self.cb_flip_orientation.setObjectName("cb_flip_orientation")
@@ -878,10 +1072,14 @@ class Ui_Form(object):
         self.gridLayout_9.addWidget(self.cb_invert_phase_contrast, 13, 1, 1, 1)
         self.gridLayout_15.addWidget(self.ReconSettings, 2, 0, 1, 1)
         self.acquire = QtWidgets.QGroupBox(self.scrollAreaWidgetContents_4)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.acquire.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.acquire.sizePolicy().hasHeightForWidth()
+        )
         self.acquire.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(True)
@@ -904,15 +1102,23 @@ class Ui_Form(object):
         font.setBold(False)
         font.setItalic(False)
         self.qbutton_acq_phase_from_bf.setFont(font)
-        self.qbutton_acq_phase_from_bf.setObjectName("qbutton_acq_phase_from_bf")
-        self.gridLayout_13.addWidget(self.qbutton_acq_phase_from_bf, 2, 1, 1, 1)
+        self.qbutton_acq_phase_from_bf.setObjectName(
+            "qbutton_acq_phase_from_bf"
+        )
+        self.gridLayout_13.addWidget(
+            self.qbutton_acq_phase_from_bf, 2, 1, 1, 1
+        )
         self.qbutton_acq_ret_ori_phase = QtWidgets.QPushButton(self.acquire)
         font = QtGui.QFont()
         font.setBold(False)
         font.setItalic(False)
         self.qbutton_acq_ret_ori_phase.setFont(font)
-        self.qbutton_acq_ret_ori_phase.setObjectName("qbutton_acq_ret_ori_phase")
-        self.gridLayout_13.addWidget(self.qbutton_acq_ret_ori_phase, 2, 2, 1, 1)
+        self.qbutton_acq_ret_ori_phase.setObjectName(
+            "qbutton_acq_ret_ori_phase"
+        )
+        self.gridLayout_13.addWidget(
+            self.qbutton_acq_ret_ori_phase, 2, 2, 1, 1
+        )
         self.qbutton_stop_acq = QtWidgets.QPushButton(self.acquire)
         font = QtGui.QFont()
         font.setBold(False)
@@ -926,40 +1132,64 @@ class Ui_Form(object):
         self.tabWidget.addTab(self.Acquisition, "")
 
         self.tab_reconstruction = tab_recon.Ui_ReconTab_Form(Form)
-        self.tabWidget.addTab(self.tab_reconstruction.recon_tab_mainScrollArea, 'Reconstruction')
+        self.tabWidget.addTab(
+            self.tab_reconstruction.recon_tab_mainScrollArea, "Reconstruction"
+        )
 
         self.Display = QtWidgets.QWidget()
         self.Display.setObjectName("Display")
         self.gridLayout_18 = QtWidgets.QGridLayout(self.Display)
         self.gridLayout_18.setObjectName("gridLayout_18")
         self.scrollArea_5 = QtWidgets.QScrollArea(self.Display)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.scrollArea_5.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.scrollArea_5.sizePolicy().hasHeightForWidth()
+        )
         self.scrollArea_5.setSizePolicy(sizePolicy)
         self.scrollArea_5.setWidgetResizable(True)
         self.scrollArea_5.setObjectName("scrollArea_5")
         self.scrollAreaWidgetContents_5 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_5.setGeometry(QtCore.QRect(0, 0, 574, 974))
-        self.scrollAreaWidgetContents_5.setObjectName("scrollAreaWidgetContents_5")
-        self.gridLayout_4 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_5)
+        self.scrollAreaWidgetContents_5.setGeometry(
+            QtCore.QRect(0, 0, 574, 974)
+        )
+        self.scrollAreaWidgetContents_5.setObjectName(
+            "scrollAreaWidgetContents_5"
+        )
+        self.gridLayout_4 = QtWidgets.QGridLayout(
+            self.scrollAreaWidgetContents_5
+        )
         self.gridLayout_4.setObjectName("gridLayout_4")
-        self.label_orientation_image = QtWidgets.QLabel(self.scrollAreaWidgetContents_5)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        self.label_orientation_image = QtWidgets.QLabel(
+            self.scrollAreaWidgetContents_5
+        )
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_orientation_image.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label_orientation_image.sizePolicy().hasHeightForWidth()
+        )
         self.label_orientation_image.setSizePolicy(sizePolicy)
         self.label_orientation_image.setText("")
         self.label_orientation_image.setAlignment(QtCore.Qt.AlignCenter)
         self.label_orientation_image.setObjectName("label_orientation_image")
         self.gridLayout_4.addWidget(self.label_orientation_image, 6, 0, 1, 1)
-        self.DisplayOptions = QtWidgets.QGroupBox(self.scrollAreaWidgetContents_5)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding)
+        self.DisplayOptions = QtWidgets.QGroupBox(
+            self.scrollAreaWidgetContents_5
+        )
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.DisplayOptions.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.DisplayOptions.sizePolicy().hasHeightForWidth()
+        )
         self.DisplayOptions.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(True)
@@ -1004,10 +1234,14 @@ class Ui_Form(object):
         self.label_saturation.setObjectName("label_saturation")
         self.gridLayout_17.addWidget(self.label_saturation, 10, 0, 1, 1)
         self.le_overlay_slice = QtWidgets.QLineEdit(self.DisplayOptions)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.le_overlay_slice.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.le_overlay_slice.sizePolicy().hasHeightForWidth()
+        )
         self.le_overlay_slice.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -1064,14 +1298,22 @@ class Ui_Form(object):
         font.setItalic(False)
         self.le_sat_max.setFont(font)
         self.le_sat_max.setFrame(False)
-        self.le_sat_max.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.le_sat_max.setAlignment(
+            QtCore.Qt.AlignRight
+            | QtCore.Qt.AlignTrailing
+            | QtCore.Qt.AlignVCenter
+        )
         self.le_sat_max.setObjectName("le_sat_max")
         self.gridLayout_17.addWidget(self.le_sat_max, 9, 3, 1, 1)
         self.slider_value = QtWidgets.QSlider(self.DisplayOptions)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.slider_value.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.slider_value.sizePolicy().hasHeightForWidth()
+        )
         self.slider_value.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -1107,7 +1349,11 @@ class Ui_Form(object):
         font.setItalic(False)
         self.le_val_max.setFont(font)
         self.le_val_max.setFrame(False)
-        self.le_val_max.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.le_val_max.setAlignment(
+            QtCore.Qt.AlignRight
+            | QtCore.Qt.AlignTrailing
+            | QtCore.Qt.AlignVCenter
+        )
         self.le_val_max.setObjectName("le_val_max")
         self.gridLayout_17.addWidget(self.le_val_max, 11, 3, 1, 1)
         self.label_hue = QtWidgets.QLabel(self.DisplayOptions)
@@ -1117,7 +1363,9 @@ class Ui_Form(object):
         self.label_hue.setFont(font)
         self.label_hue.setObjectName("label_hue")
         self.gridLayout_17.addWidget(self.label_hue, 8, 0, 1, 1)
-        self.qbutton_create_overlay = QtWidgets.QPushButton(self.DisplayOptions)
+        self.qbutton_create_overlay = QtWidgets.QPushButton(
+            self.DisplayOptions
+        )
         font = QtGui.QFont()
         font.setBold(False)
         font.setItalic(False)
@@ -1126,10 +1374,14 @@ class Ui_Form(object):
         self.gridLayout_17.addWidget(self.qbutton_create_overlay, 16, 0, 1, 4)
         self.gridLayout_4.addWidget(self.DisplayOptions, 8, 0, 1, 1)
         self.label = QtWidgets.QLabel(self.scrollAreaWidgetContents_5)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label.sizePolicy().hasHeightForWidth()
+        )
         self.label.setSizePolicy(sizePolicy)
         self.label.setObjectName("label")
         self.gridLayout_4.addWidget(self.label, 1, 0, 1, 1)
@@ -1139,16 +1391,27 @@ class Ui_Form(object):
         self.retMaxSlider.setOrientation(QtCore.Qt.Horizontal)
         self.retMaxSlider.setObjectName("retMaxSlider")
         self.gridLayout_4.addWidget(self.retMaxSlider, 2, 0, 1, 1)
-        self.label_orientation_legend = QtWidgets.QLabel(self.scrollAreaWidgetContents_5)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        self.label_orientation_legend = QtWidgets.QLabel(
+            self.scrollAreaWidgetContents_5
+        )
+        sizePolicy = QtWidgets.QSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed
+        )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.label_orientation_legend.sizePolicy().hasHeightForWidth())
+        sizePolicy.setHeightForWidth(
+            self.label_orientation_legend.sizePolicy().hasHeightForWidth()
+        )
         self.label_orientation_legend.setSizePolicy(sizePolicy)
         self.label_orientation_legend.setAlignment(QtCore.Qt.AlignCenter)
         self.label_orientation_legend.setObjectName("label_orientation_legend")
         self.gridLayout_4.addWidget(self.label_orientation_legend, 3, 0, 1, 1)
-        spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        spacerItem = QtWidgets.QSpacerItem(
+            20,
+            40,
+            QtWidgets.QSizePolicy.Minimum,
+            QtWidgets.QSizePolicy.Expanding,
+        )
         self.gridLayout_4.addItem(spacerItem, 7, 0, 1, 1)
         self.scrollArea_5.setWidget(self.scrollAreaWidgetContents_5)
         self.gridLayout_18.addWidget(self.scrollArea_5, 0, 0, 2, 2)
@@ -1237,23 +1500,35 @@ class Ui_Form(object):
         self.le_mm_status.setText(_translate("Form", "Disconnected"))
         self.qbutton_connect_to_mm.setText(_translate("Form", "Connect to MM"))
         self.run_calib.setTitle(_translate("Form", "Run Calibration"))
-        self.labell_calib_assessment.setText(_translate("Form", "Calibration Assessment"))
+        self.labell_calib_assessment.setText(
+            _translate("Form", "Calibration Assessment")
+        )
         self.label_progress.setText(_translate("Form", "Progress"))
         self.label_extinction.setText(_translate("Form", "Extinction"))
         self.qbutton_calibrate.setText(_translate("Form", "Run Calibration"))
-        self.qbutton_calc_extinction.setText(_translate("Form", "Calculate Extinction"))
+        self.qbutton_calc_extinction.setText(
+            _translate("Form", "Calculate Extinction")
+        )
         self.qbutton_stop_calib.setText(_translate("Form", "STOP"))
         self.qbutton_load_calib.setText(_translate("Form", "Load Calibration"))
-        self.calib_params.setTitle(_translate("Form", "Calibration Parameters"))
+        self.calib_params.setTitle(
+            _translate("Form", "Calibration Parameters")
+        )
         self.label_wavelength.setText(_translate("Form", "Wavelength (nm)"))
         self.label_dir.setText(_translate("Form", "Directory"))
         self.cb_lca.setItemText(0, _translate("Form", "-"))
-        self.cb_calib_scheme.setItemText(0, _translate("Form", "4-State (Ext, 0, 60, 120)"))
-        self.cb_calib_scheme.setItemText(1, _translate("Form", "5-State (Ext, 0, 45, 90, 135)"))
+        self.cb_calib_scheme.setItemText(
+            0, _translate("Form", "4-State (Ext, 0, 60, 120)")
+        )
+        self.cb_calib_scheme.setItemText(
+            1, _translate("Form", "5-State (Ext, 0, 45, 90, 135)")
+        )
         self.cb_lcb.setItemText(0, _translate("Form", "-"))
         self.label_lca.setText(_translate("Form", "LC-A"))
         self.le_swing.setText(_translate("Form", "0.1"))
-        self.le_directory.setPlaceholderText(_translate("Form", "/path/to/directory"))
+        self.le_directory.setPlaceholderText(
+            _translate("Form", "/path/to/directory")
+        )
         self.le_wavelength.setText(_translate("Form", "532"))
         self.label_lcb.setText(_translate("Form", "LC-B"))
         self.label_swing.setText(_translate("Form", "Swing"))
@@ -1262,23 +1537,46 @@ class Ui_Form(object):
         self.label_scheme.setText(_translate("Form", "Illumination Scheme"))
         self.qbutton_browse.setText(_translate("Form", "Browse"))
         self.label_inten_plot.setText(_translate("Form", "Intensity Plot"))
-        self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_plot), _translate("Form", "Plot"))
+        self.tabWidget_2.setTabText(
+            self.tabWidget_2.indexOf(self.tab_plot), _translate("Form", "Plot")
+        )
         self.label_loglevel.setText(_translate("Form", "Log Level"))
         self.cb_loglevel.setItemText(0, _translate("Form", "Basic"))
         self.cb_loglevel.setItemText(1, _translate("Form", "Debug"))
         self.label_log.setText(_translate("Form", "Log"))
-        self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_advanced), _translate("Form", "Advanced"))
-        self.qbutton_push_note.setText(_translate("Form", "Push note to last metadata file"))
+        self.tabWidget_2.setTabText(
+            self.tabWidget_2.indexOf(self.tab_advanced),
+            _translate("Form", "Advanced"),
+        )
+        self.qbutton_push_note.setText(
+            _translate("Form", "Push note to last metadata file")
+        )
         self.label_note.setText(_translate("Form", "Note"))
-        self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_notes), _translate("Form", "Notes"))
-        self.capture_background.setTitle(_translate("Form", "Capture Background"))
-        self.label_bg_folder.setText(_translate("Form", "Background Folder Name"))
-        self.qbutton_capture_bg.setText(_translate("Form", "Capture Background"))
+        self.tabWidget_2.setTabText(
+            self.tabWidget_2.indexOf(self.tab_notes),
+            _translate("Form", "Notes"),
+        )
+        self.capture_background.setTitle(
+            _translate("Form", "Capture Background")
+        )
+        self.label_bg_folder.setText(
+            _translate("Form", "Background Folder Name")
+        )
+        self.qbutton_capture_bg.setText(
+            _translate("Form", "Capture Background")
+        )
         self.le_bg_folder.setText(_translate("Form", "bg"))
         self.le_n_avg.setText(_translate("Form", "5"))
-        self.label_n_avg.setText(_translate("Form", "Number of Images to Average"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Calibration), _translate("Form", "LC Calibration"))
-        self.phase.setTitle(_translate("Form", "Phase Reconstruction Settings"))
+        self.label_n_avg.setText(
+            _translate("Form", "Number of Images to Average")
+        )
+        self.tabWidget.setTabText(
+            self.tabWidget.indexOf(self.Calibration),
+            _translate("Form", "LC Calibration"),
+        )
+        self.phase.setTitle(
+            _translate("Form", "Phase Reconstruction Settings")
+        )
         self.label_phase_regularizer.setText(_translate("Form", "Regularizer"))
         self.label_phase_rho.setText(_translate("Form", "Rho"))
         self.le_phase_strength.setText(_translate("Form", ".0001"))
@@ -1300,60 +1598,95 @@ class Ui_Form(object):
         self.label_zstep.setText(_translate("Form", "Z Step (um)"))
         self.label_zend.setText(_translate("Form", "Z End (um)"))
         self.labe_acq_channel.setText(_translate("Form", "BF Channel"))
-        self.ReconSettings.setTitle(_translate("Form", "General Reconstruction Settings"))
+        self.ReconSettings.setTitle(
+            _translate("Form", "General Reconstruction Settings")
+        )
         self.label_mag.setText(_translate("Form", "Magnification"))
-        self.le_data_save_name.setPlaceholderText(_translate("Form", "Optional"))
+        self.le_data_save_name.setPlaceholderText(
+            _translate("Form", "Optional")
+        )
         self.cb_bg_method.setItemText(0, _translate("Form", "None"))
         self.cb_bg_method.setItemText(1, _translate("Form", "Global"))
         self.cb_bg_method.setItemText(2, _translate("Form", "Local Fit"))
-        self.label_flip_orientation.setText(_translate("Form", "Flip Orientation"))
+        self.label_flip_orientation.setText(
+            _translate("Form", "Flip Orientation")
+        )
         self.label_data_save_name.setText(_translate("Form", "Save Name"))
         self.label_gpu_id.setText(_translate("Form", "GPU ID"))
         self.label_bg_method.setText(_translate("Form", "BG Correction"))
-        self.label_recon_wavelength.setText(_translate("Form", "Wavelength (nm)"))
+        self.label_recon_wavelength.setText(
+            _translate("Form", "Wavelength (nm)")
+        )
         self.le_gpu_id.setText(_translate("Form", "0"))
         self.le_gpu_id.setPlaceholderText(_translate("Form", "Optional"))
         self.label_cond_na.setText(_translate("Form", "Condenser NA"))
         self.qbutton_browse_bg_path.setText(_translate("Form", "Browse"))
         self.chb_use_gpu.setText(_translate("Form", "Use GPU"))
         self.label_bg_path.setText(_translate("Form", "Background Path"))
-        self.le_recon_wavelength.setPlaceholderText(_translate("Form", "list: 530, 645 or single value: 532"))
+        self.le_recon_wavelength.setPlaceholderText(
+            _translate("Form", "list: 530, 645 or single value: 532")
+        )
         self.le_n_media.setText(_translate("Form", "1.003"))
-        self.label_orientation_offset.setText(_translate("Form", "Rotate Orientation (90 deg)"))
+        self.label_orientation_offset.setText(
+            _translate("Form", "Rotate Orientation (90 deg)")
+        )
         self.label_obj_na.setText(_translate("Form", "Objective NA"))
         self.label_n_media.setText(_translate("Form", "RI of Obj. Media"))
         self.label_save_dir.setText(_translate("Form", "Save Directory"))
         self.label_ps.setText(_translate("Form", "Camera Pixel Size (um)"))
         self.qbutton_browse_save_dir.setText(_translate("Form", "Browse"))
-        self.label_invert_phase_contrast.setText(_translate("Form", "Invert Phase Contrast"))
+        self.label_invert_phase_contrast.setText(
+            _translate("Form", "Invert Phase Contrast")
+        )
         self.acquire.setTitle(_translate("Form", "Acquire"))
-        self.qbutton_acq_ret_ori.setText(_translate("Form", "Retardance + Orientation"))
-        self.qbutton_acq_phase_from_bf.setText(_translate("Form", "Phase From BF"))
-        self.qbutton_acq_ret_ori_phase.setText(_translate("Form", "Retardance + Orientation + Phase"))
+        self.qbutton_acq_ret_ori.setText(
+            _translate("Form", "Retardance + Orientation")
+        )
+        self.qbutton_acq_phase_from_bf.setText(
+            _translate("Form", "Phase From BF")
+        )
+        self.qbutton_acq_ret_ori_phase.setText(
+            _translate("Form", "Retardance + Orientation + Phase")
+        )
         self.qbutton_stop_acq.setText(_translate("Form", "STOP"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Acquisition), _translate("Form", "Acquisition / Reconstruction"))
+        self.tabWidget.setTabText(
+            self.tabWidget.indexOf(self.Acquisition),
+            _translate("Form", "Acquisition / Reconstruction"),
+        )
         self.DisplayOptions.setTitle(_translate("Form", "Display Options"))
         self.label_saturation.setText(_translate("Form", "Saturation"))
         self.le_overlay_slice.setPlaceholderText(_translate("Form", "Slice"))
         self.le_sat_min.setText(_translate("Form", "20"))
         self.cb_colormap.setItemText(0, _translate("Form", "HSV"))
-        self.cb_colormap.setItemText(1, _translate("Form", "JCh (Perceptually Uniform)"))
+        self.cb_colormap.setItemText(
+            1, _translate("Form", "JCh (Perceptually Uniform)")
+        )
         self.le_val_min.setText(_translate("Form", "20"))
         self.le_sat_max.setText(_translate("Form", "80"))
         self.label_value.setText(_translate("Form", "Value"))
         self.chb_display_volume.setText(_translate("Form", "Use Full Volume"))
-        self.label_colormap.setText(_translate("Form", "BirefringenceOverlay Colormap"))
+        self.label_colormap.setText(
+            _translate("Form", "BirefringenceOverlay Colormap")
+        )
         self.le_val_max.setText(_translate("Form", "80"))
         self.label_hue.setText(_translate("Form", "Hue"))
-        self.qbutton_create_overlay.setText(_translate("Form", "Create Overlay"))
+        self.qbutton_create_overlay.setText(
+            _translate("Form", "Create Overlay")
+        )
         self.label.setText(_translate("Form", "Overlay Retardance Maximum "))
-        self.label_orientation_legend.setText(_translate("Form", "Retardance Orientation Overlay Legend"))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Display), _translate("Form", "Display"))
-from pyqtgraph import PlotWidget
+        self.label_orientation_legend.setText(
+            _translate("Form", "Retardance Orientation Overlay Legend")
+        )
+        self.tabWidget.setTabText(
+            self.tabWidget.indexOf(self.Display), _translate("Form", "Display")
+        )
 
+
+from pyqtgraph import PlotWidget
 
 if __name__ == "__main__":
     import sys
+
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     ui = Ui_Form()

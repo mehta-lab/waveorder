@@ -1,10 +1,10 @@
+import shutil
+import sys
+import time
 from pathlib import Path
 
-import time
 import numpy as np
-import shutil
 import submitit
-import sys
 
 
 def _move_cursor_up(n_lines, do_print=True):
@@ -12,7 +12,9 @@ def _move_cursor_up(n_lines, do_print=True):
         sys.stdout.write("\033[F" * n_lines)
 
 
-def _print_status(jobs, position_dirpaths, elapsed_list, print_indices=None, do_print=True):
+def _print_status(
+    jobs, position_dirpaths, elapsed_list, print_indices=None, do_print=True
+):
 
     columns = [15, 30, 40, 50]
 
@@ -46,7 +48,7 @@ def _print_status(jobs, position_dirpaths, elapsed_list, print_indices=None, do_
             elapsed_list[i] += 1  # inexact timing
         else:
             color = "\033[91m"  # red
-        
+
         if i in print_indices:
             if do_print:
                 sys.stdout.write(
@@ -60,8 +62,8 @@ def _print_status(jobs, position_dirpaths, elapsed_list, print_indices=None, do_
     sys.stdout.flush()
     if do_print:
         print(
-            f"\033[32m{complete_count}/{len(jobs)} jobs complete. " 
-            "<ctrl+z> to move monitor to background. " 
+            f"\033[32m{complete_count}/{len(jobs)} jobs complete. "
+            "<ctrl+z> to move monitor to background. "
             "<ctrl+c> twice to cancel jobs."
         )
 
@@ -92,7 +94,9 @@ def _get_jobs_to_print(jobs, num_to_print):
     return job_indices_to_print
 
 
-def monitor_jobs(jobs: list[submitit.Job], position_dirpaths: list[Path], do_print=True):
+def monitor_jobs(
+    jobs: list[submitit.Job], position_dirpaths: list[Path], do_print=True
+):
     """Displays the status of a list of submitit jobs with corresponding paths.
 
     Parameters
@@ -156,4 +160,4 @@ def monitor_jobs(jobs: list[submitit.Job], position_dirpaths: list[Path], do_pri
                 print("\033[91mSTDERR")
                 print(job.stderr())
 
-    print("\033[97m") # print white
+    print("\033[97m")  # print white

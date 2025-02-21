@@ -1,21 +1,19 @@
-import os
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 import numpy as np
+import pytest
 from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff_meta import TransformationMeta
 
 from waveorder.cli import settings
-from waveorder.cli.main import cli
-from waveorder.io import utils
 from waveorder.cli.apply_inverse_transfer_function import (
     apply_inverse_transfer_function_cli,
 )
-from unittest.mock import patch
-import pytest
-from pathlib import Path
-from tempfile import TemporaryDirectory
-
+from waveorder.cli.main import cli
+from waveorder.io import utils
 
 input_scale = [1, 2, 3, 4, 5]
 # Setup options

@@ -1,6 +1,6 @@
-import torch
 import numpy as np
 import pytest
+import torch
 from iohub.ngff import open_ome_zarr
 
 from waveorder.cli import settings
@@ -70,4 +70,3 @@ def fluorescence_recon_settings_function(tmp_path):
         channel_names=[f"State{i}" for i in range(4)],
     )
     yield recon_settings, dataset
-

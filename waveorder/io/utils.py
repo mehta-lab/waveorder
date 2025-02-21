@@ -8,7 +8,6 @@ import yaml
 from iohub import open_ome_zarr
 
 
-
 def add_index_to_path(path: Path):
     """Takes a path to a file or folder and appends the smallest index that does
     not already exist in that folder.

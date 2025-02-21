@@ -20,7 +20,7 @@ def napari_get_reader(path):
 
 
 def hcs_zarr_reader(
-    path: Union[str, List[str]]
+    path: Union[str, List[str]],
 ) -> List[Tuple[zarr.Array, Dict]]:
     reader = read_micromanager(path)
     results = list()
@@ -44,7 +44,7 @@ def hcs_zarr_reader(
 
 
 def ome_tif_reader(
-    path: Union[str, List[str]]
+    path: Union[str, List[str]],
 ) -> List[Tuple[zarr.Array, Dict]]:
     reader = read_micromanager(path)
     results = list()
