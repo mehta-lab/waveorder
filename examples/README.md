@@ -4,6 +4,7 @@ Some examples require `pip install waveorder[examples]` for `napari` and `jupyte
 
 | Folder      | Requires                   | Description                                                                                           |
 |------------------|----------------------------|-------------------------------------------------------------------------------------------------------|
+| `configs/`       | `pip install waveorder[all]`           | Demonstrates `waveorder`'s config-file-based command-line interface. |
 | `models/`        | `pip install waveorder[examples]`      | Demonstrates the latest functionality of `waveorder` through simulations and reconstructions using various models. |
 | `maintenance/`   | `pip install waveorder`                | Examples of computational imaging methods enabled by functionality of waveorder; scripts are maintained with automated tests.               |
 | `visuals/`       | `pip install waveorder[examples]`      | Visualizations of transfer functions and Green's tensors.                                    |
