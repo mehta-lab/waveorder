@@ -120,6 +120,7 @@ def ram_multiplier() -> Callable:
 
     return decorator
 
+
 def unique_id() -> Callable:
     def decorator(f: Callable) -> Callable:
         return click.option(

@@ -2,8 +2,8 @@ import hypothesis.extra.numpy as npst
 import hypothesis.strategies as st
 import numpy as np
 from hypothesis import given
-from numpy.typing import NDArray
 from numpy.testing import assert_equal
+from numpy.typing import NDArray
 
 from waveorder.io.visualization import ret_ori_overlay, ret_ori_phase_overlay
 
@@ -40,7 +40,7 @@ def _birefringence(draw):
             ),
         )
     )
-  
+
     return retardance, orientation
 
 

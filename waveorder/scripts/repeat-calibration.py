@@ -1,7 +1,9 @@
 # This script can be modified to debug and test calibrations
 
-import napari
 import time
+
+import napari
+
 from waveorder.plugin.main_widget import MainWidget
 
 SAVE_DIR = "./"

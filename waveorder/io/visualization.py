@@ -1,6 +1,6 @@
-import numpy as np
-
 from typing import Literal, Union
+
+import numpy as np
 from colorspacious import cspace_convert
 from matplotlib.colors import hsv_to_rgb
 from skimage.color import hsv2rgb
@@ -23,7 +23,7 @@ def ret_ori_overlay(
     czyx:                   (nd-array) czyx[0] is retardance in nanometers, czyx[1] is orientation in radians [0, pi],
                             czyx.shape = (2, ...)
 
-    ret_min:                (float) minimum displayed retardance. Typically a noise floor. 
+    ret_min:                (float) minimum displayed retardance. Typically a noise floor.
     ret_max:                (float) maximum displayed retardance. Typically used to adjust contrast limits.
 
     cmap:                   (str) 'JCh' or 'HSV'

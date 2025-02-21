@@ -2,13 +2,7 @@ from pathlib import Path
 
 import click
 import numpy as np
-from iohub.ngff import open_ome_zarr, Position
-from waveorder.models import (
-    inplane_oriented_thick_pol3d,
-    isotropic_fluorescent_thick_3d,
-    isotropic_thin_3d,
-    phase_thick_3d,
-)
+from iohub.ngff import Position, open_ome_zarr
 
 from waveorder.cli.parsing import (
     config_filepath,
@@ -18,6 +12,12 @@ from waveorder.cli.parsing import (
 from waveorder.cli.printing import echo_headline, echo_settings
 from waveorder.cli.settings import ReconstructionSettings
 from waveorder.io import utils
+from waveorder.models import (
+    inplane_oriented_thick_pol3d,
+    isotropic_fluorescent_thick_3d,
+    isotropic_thin_3d,
+    phase_thick_3d,
+)
 
 
 def generate_and_save_birefringence_transfer_function(settings, dataset):
@@ -40,9 +40,9 @@ def generate_and_save_birefringence_transfer_function(settings, dataset):
         )
     )
     # Save
-    dataset[
-        "intensity_to_stokes_matrix"
-    ] = intensity_to_stokes_matrix.cpu().numpy()[None, None, None, ...]
+    dataset["intensity_to_stokes_matrix"] = (
+        intensity_to_stokes_matrix.cpu().numpy()[None, None, None, ...]
+    )
 
 
 def generate_and_save_phase_transfer_function(

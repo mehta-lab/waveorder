@@ -3,6 +3,7 @@ import click
 from waveorder.cli.apply_inverse_transfer_function import apply_inv_tf
 from waveorder.cli.compute_transfer_function import compute_tf
 from waveorder.cli.reconstruct import reconstruct
+
 try:
     from waveorder.cli.gui_widget import gui
 except:

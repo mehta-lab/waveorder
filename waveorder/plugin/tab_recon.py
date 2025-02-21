@@ -1,41 +1,36 @@
-import os, json, subprocess, time, datetime, uuid
-import socket, threading
+import datetime
+import json
+import os
+import socket
+import subprocess
+import threading
+import time
+import uuid
+import warnings
 from pathlib import Path
-
-from qtpy import QtCore
-from qtpy.QtCore import Qt, QEvent, QThread, Signal
-from qtpy.QtWidgets import *
-from magicgui.widgets import *
+from typing import Annotated, Final, List, Literal, Union
 
 from iohub.ngff import open_ome_zarr
-
-from typing import List, Literal, Union, Final, Annotated
 from magicgui import widgets
 from magicgui.type_map import get_widget_class
-import warnings
+from magicgui.widgets import *
+from qtpy import QtCore
+from qtpy.QtCore import QEvent, Qt, QThread, Signal
+from qtpy.QtWidgets import *
 
 try:
     from napari import Viewer
     from napari.utils import notifications
-except:pass
-
-from waveorder.io import utils
-from waveorder.cli import settings, jobs_mgmt
+except:
+    pass
 
 import concurrent.futures
-
 import importlib.metadata
 
-import pydantic.v1, pydantic
-from pydantic.v1 import (
-    BaseModel,
-    Extra,
-    NonNegativeFloat,
-    NonNegativeInt,
-    PositiveFloat,
-    root_validator,
-    validator,
-)
+from pydantic.v1 import BaseModel, NonNegativeInt
+
+from waveorder.cli import jobs_mgmt, settings
+from waveorder.io import utils
 
 try:
     # Use version specific pydantic import for ModelMetaclass
@@ -48,22 +43,16 @@ try:
                 v=version
             )
         )
-        from pydantic.main import ValidationError
-        from pydantic.main import BaseModel
-        from pydantic.main import ModelMetaclass
+        from pydantic.main import BaseModel, ModelMetaclass, ValidationError
     elif version >= "1.10.19":
-        from pydantic.main import ValidationError
-        from pydantic.main import BaseModel
-        from pydantic.main import ModelMetaclass
+        from pydantic.main import BaseModel, ModelMetaclass, ValidationError
     else:
         print(
             "Your Pydantic library ver:{v}. Recommended ver is: 1.10.19".format(
                 v=version
             )
         )
-        from pydantic.main import ValidationError
-        from pydantic.main import BaseModel
-        from pydantic.main import ModelMetaclass
+        from pydantic.main import BaseModel, ModelMetaclass, ValidationError
 except:
     print("Pydantic library was not found. Ver 1.10.19 is recommended.")
 
@@ -109,6 +98,7 @@ NEW_WIDGETS_QUEUE = []
 NEW_WIDGETS_QUEUE_THREADS = []
 MULTI_JOBS_REFS = {}
 ROW_POP_QUEUE = []
+
 
 # Main class for the Reconstruction tab
 # Not efficient since instantiated from GUI
@@ -1230,7 +1220,9 @@ class Ui_ReconTab_Form(QWidget):
     # row item will be purged from table as processing finishes
     # there could be 3 tabs for this processing table status
     # Running, Finished, Errored
-    def addTableEntry(self, table_entry_ID, table_entry_short_desc, proc_params):
+    def addTableEntry(
+        self, table_entry_ID, table_entry_short_desc, proc_params
+    ):
         _scrollAreaCollapsibleBoxWidgetLayout = QVBoxLayout()
         _scrollAreaCollapsibleBoxWidgetLayout.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignTop
@@ -1373,7 +1365,11 @@ class Ui_ReconTab_Form(QWidget):
         self.create_acq_contols2(selected_modes, exclude_modes)
 
     def create_acq_contols2(
-        self, selected_modes, exclude_modes, my_loaded_model=None, json_dict=None
+        self,
+        selected_modes,
+        exclude_modes,
+        my_loaded_model=None,
+        json_dict=None,
     ):
         # duplicate settings from the prev model on new model creation
         if json_dict is None and len(self.pydantic_classes) > 0:
@@ -1938,7 +1934,9 @@ class Ui_ReconTab_Form(QWidget):
         for uu_key in _collectAllErrors.keys():
             if len(_collectAllErrors[uu_key]["errs"]) > 0:
                 self.model_highlighter(_collectAllErrors)
-                fmt_str = self.format_string_for_error_display(_collectAllErrors)
+                fmt_str = self.format_string_for_error_display(
+                    _collectAllErrors
+                )
                 self.message_box(fmt_str)
                 return
 
@@ -2855,16 +2853,18 @@ class MyWorker:
         self.pool.shutdown(wait=True)
 
     # This method handles each client response thread. It parses the information received from the client
-    # and is responsible for parsing each well/pos Job if the case may be and starting individual update threads 
+    # and is responsible for parsing each well/pos Job if the case may be and starting individual update threads
     # using the tableUpdateAndCleaupThread() method
     # This is also handling an unused "CoNvErTeR" functioning that can be implemented on 3rd party apps
-    def decode_client_data(self,
+    def decode_client_data(
+        self,
         expIdx="",
         jobIdx="",
         wellName="",
         logs_folder_path="",
-        client_socket=None,):
-        
+        client_socket=None,
+    ):
+
         if client_socket is not None and expIdx == "" and jobIdx == "":
             try:
                 buf = client_socket.recv(10240)
@@ -3053,8 +3053,8 @@ class MyWorker:
                                                 model = pydantic_model
                                                 break
                                     if model is None:
-                                        model, msg = self.tab_recon.build_model(
-                                            mode
+                                        model, msg = (
+                                            self.tab_recon.build_model(mode)
                                         )
                                     yaml_path = os.path.join(
                                         str(
@@ -3119,18 +3119,18 @@ class MyWorker:
     # on successful processing - the row item is expected to be deleted
     # row is being deleted from a seperate thread for which we need to connect using signal
 
-    # This is handling essentially each job thread. Points of entry are on a failed job submission 
-    # which then calls this to update based on the expID (used for .yml naming). On successful job 
-    # submissions jobID, the point of entry is via the socket connection the GUI is listening and 
+    # This is handling essentially each job thread. Points of entry are on a failed job submission
+    # which then calls this to update based on the expID (used for .yml naming). On successful job
+    # submissions jobID, the point of entry is via the socket connection the GUI is listening and
     # then spawns a new thread to avoid blocking of other connections.
-    # If a job submission spawns more jobs then this also calls other methods via signal to create 
+    # If a job submission spawns more jobs then this also calls other methods via signal to create
     # the required GUI components in the main thread.
     # Once we have expID and jobID this thread periodically loops and updates each job status and/or
-    # the job error by reading the log files. Using certain keywords 
-    # eg JOB_COMPLETION_STR = "Job completed successfully" we determine the progress. We also create 
-    # a map for expID which might have multiple jobs to determine when a reconstruction is 
+    # the job error by reading the log files. Using certain keywords
+    # eg JOB_COMPLETION_STR = "Job completed successfully" we determine the progress. We also create
+    # a map for expID which might have multiple jobs to determine when a reconstruction is
     # finished vs a single job finishing.
-    # The loop ends based on user, time-out, job(s) completion and errors and handles removal of 
+    # The loop ends based on user, time-out, job(s) completion and errors and handles removal of
     # processing GUI table items (on main thread).
     # Based on the conditions the loop will end calling clientRelease()
     def table_update_and_cleaup_thread(
@@ -3142,7 +3142,7 @@ class MyWorker:
         client_socket=None,
     ):
         jobIdx = str(jobIdx)
-        
+
         # ToDo: Another approach to this could be to implement a status thread on the client side
         # Since the client is already running till the job is completed, the client could ping status
         # at regular intervals and also provide results and exceptions we currently read from the file
@@ -3151,9 +3151,7 @@ class MyWorker:
 
         if expIdx != "" and jobIdx != "":
             # this request came from server listening so we wait for the Job to finish and update progress
-            if (
-                expIdx not in self.results.keys()
-            ):  
+            if expIdx not in self.results.keys():
                 proc_params = {}
                 tableID = "{exp} - {job} ({pos})".format(
                     exp=expIdx, job=jobIdx, pos=wellName
@@ -3313,17 +3311,17 @@ class MyWorker:
                                 if (
                                     _tUpdateCount > 10
                                 ):  # if out file is empty for 10s, check the err file to update user
-                                    jobERR = self.JobsMgmt.check_for_jobID_File(
-                                        jobIdx,
-                                        logs_folder_path,
-                                        extension="err",
+                                    jobERR = (
+                                        self.JobsMgmt.check_for_jobID_File(
+                                            jobIdx,
+                                            logs_folder_path,
+                                            extension="err",
+                                        )
                                     )
                                     if JOB_OOM_EVENT in jobERR:
                                         params["status"] = STATUS_errored_job
                                         _infoBox.setText(
-                                            jobERR +
-                                            "\n\n"
-                                            + jobTXT
+                                            jobERR + "\n\n" + jobTXT
                                         )
                                         self.client_release(
                                             expIdx,
@@ -3399,17 +3397,17 @@ class MyWorker:
                                 _infoBox.setText(jobTXT)
                                 _tUpdateCount += 1
                                 if _tUpdateCount > 60:
-                                    jobERR = self.JobsMgmt.check_for_jobID_File(
-                                        jobIdx,
-                                        logs_folder_path,
-                                        extension="err",
+                                    jobERR = (
+                                        self.JobsMgmt.check_for_jobID_File(
+                                            jobIdx,
+                                            logs_folder_path,
+                                            extension="err",
+                                        )
                                     )
                                     if JOB_OOM_EVENT in jobERR:
                                         params["status"] = STATUS_errored_job
                                         _infoBox.setText(
-                                            jobERR +
-                                            "\n\n"
-                                            + jobTXT
+                                            jobERR + "\n\n" + jobTXT
                                         )
                                         self.client_release(
                                             expIdx,
@@ -3504,7 +3502,9 @@ class MyWorker:
             json_str = json.dumps(json_obj) + "\n"
             client_socket.send(json_str.encode())
 
-            if reason != 0: # remove processing entry when exiting without error
+            if (
+                reason != 0
+            ):  # remove processing entry when exiting without error
                 ROW_POP_QUEUE.append(expIdx)
             # print("FINISHED")
 
@@ -3660,6 +3660,7 @@ class ShowDataWorkerThread(QThread):
         # Emit the signal to add the widget to the main thread
         self.show_data_signal.emit(self.path)
 
+
 class AddOTFTableEntryWorkerThread(QThread):
     """Worker thread for sending signal for adding component when request comes
     from a different thread"""
@@ -3678,6 +3679,7 @@ class AddOTFTableEntryWorkerThread(QThread):
             self.OTF_dir_path, self.bool_msg, self.doCheck
         )
 
+
 class AddTableEntryWorkerThread(QThread):
     """Worker thread for sending signal for adding component when request comes
     from a different thread"""
@@ -3693,6 +3695,7 @@ class AddTableEntryWorkerThread(QThread):
     def run(self):
         # Emit the signal to add the widget to the main thread
         self.add_tableentry_signal.emit(self.expID, self.desc, self.params)
+
 
 class AddWidgetWorkerThread(QThread):
     """Worker thread for sending signal for adding component when request comes
@@ -3713,6 +3716,7 @@ class AddWidgetWorkerThread(QThread):
         self.add_widget_signal.emit(
             self.layout, self.expID, self.jID, self.desc, self.wellName
         )
+
 
 class RowDeletionWorkerThread(QThread):
     """Searches for a row based on its ID and then
@@ -3753,6 +3757,7 @@ class RowDeletionWorkerThread(QThread):
             else:
                 time.sleep(5)
 
+
 class DropButton(QPushButton):
     """A drag & drop PushButton to load model file(s)"""
 
@@ -3772,6 +3777,7 @@ class DropButton(QPushButton):
             files.append(filepath)
         self.recon_tab.open_model_files(files)
 
+
 class DropWidget(QWidget):
     """A drag & drop widget container to load model file(s)"""
 
@@ -3790,6 +3796,7 @@ class DropWidget(QWidget):
             filepath = url.toLocalFile()
             files.append(filepath)
         self.recon_tab.open_model_files(files)
+
 
 class ScrollableLabel(QScrollArea):
     """A scrollable label widget used for Job entry"""
@@ -3824,6 +3831,7 @@ class ScrollableLabel(QScrollArea):
     def setText(self, text):
         self.label.setText(text)
 
+
 class MyWidget(QWidget):
     resized = Signal()
 
@@ -3833,6 +3841,7 @@ class MyWidget(QWidget):
     def resizeEvent(self, event):
         self.resized.emit()
         super().resizeEvent(event)
+
 
 class CollapsibleBox(QWidget):
     """A collapsible widget"""
@@ -3916,6 +3925,7 @@ class CollapsibleBox(QWidget):
         content_animation.setDuration(500)
         content_animation.setStartValue(0)
         content_animation.setEndValue(content_height)
+
 
 # VScode debugging
 if __name__ == "__main__":

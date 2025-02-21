@@ -26,7 +26,7 @@ from waveorder.io.utils import MockEmitter, add_index_to_path, model_to_yaml
 
 # avoid runtime import error
 if TYPE_CHECKING:
-    from _typeshed import StrOrBytesPath
+    pass
 
     from waveorder.calib.Calibration import QLIPP_Calibration
     from waveorder.plugin.main_widget import MainWidget
@@ -148,7 +148,11 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
         self._check_abort()
 
         # Optimize States
-        self._calibrate_4state() if self.calib_window.calib_scheme == "4-State" else self._calibrate_5state()
+        (
+            self._calibrate_4state()
+            if self.calib_window.calib_scheme == "4-State"
+            else self._calibrate_5state()
+        )
 
         # Reset shutter autoshutter
         self.calib.reset_shutter()

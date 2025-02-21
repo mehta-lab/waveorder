@@ -1,12 +1,12 @@
-from unittest.mock import MagicMock, Mock, call
-import pytest
-import numpy as np
-from numpy import ndarray
 from typing import Callable, Tuple
+from unittest.mock import MagicMock, Mock, call
+
+import numpy as np
+import pytest
+from numpy import ndarray
 
 # tested components
 from waveorder.io.core_functions import *
-
 
 # TODO: move these to fixture or generate with Hypothesis
 # dynamic range
