@@ -42,13 +42,24 @@ classifiers = [
   "Operating System :: MacOS",
 ]
 dependencies = [
-  "numpy>=1.24",
-  "matplotlib>=3.1.1",
-  "scipy>=1.3.0",
-  "pywavelets>=1.1.1",
+  "click>=8.0.1",
+  "colorspacious>=1.1.2",
+  "importlib-metadata",
+  "iohub==0.1.0",
   "ipywidgets>=7.5.1",
+  "matplotlib>=3.1.1",
+  "natsort>=7.1.1",
+  "numpy>=1.24",
+  "ome-zarr==0.8.3", # unpin when resolved: https://github.com/ome/napari-ome-zarr/issues/111
+  "psutil",
+  "pyqtgraph>=0.12.3",
+  "pydantic==1.10.19",
+  "pywavelets>=1.1.1",
+  "scipy>=1.3.0",
+  "submitit",
   "torch>=2.4.1",
-  
+  "qtpy",
+  "wget>=3.2"
 ]
 dynamic = ["version"]
 
@@ -59,15 +70,18 @@ all = [
   "pycromanager==0.27.2"
 ]
 dev = [
-  "pytest>=5.0.0",
+  "black==25.1.0",
+  "hypothesis",
+  "pre-commit",
   "pytest-cov",
   "pytest-qt",
-  "tox",
-  "pre-commit",
-  "black==25.1.0",
-  "hypothesis"
+  "pytest>=5.0.0",
+  "tox"
 ]
-examples = ["napari[all]", "jupyter"]
+examples = [
+   "napari[all]",
+   "jupyter"
+]
 
 [project.urls]
 Homepage = "https://github.com/mehta-lab/waveorder"
@@ -75,21 +89,7 @@ Repository = "https://github.com/mehta-lab/waveorder"
 Issues = "https://github.com/mehta-lab/waveorder/issues"
 
 [project.scripts]
-recorder = "recOrder.cli.main:cli"
-recOrder = "recOrder.cli.main:cli"
-
-[options]
-packages = find:
-include_package_data = True
-python_requires = >=3.10
-setup_requires = setuptools_scm
-
-[options.entry_points]
-napari.manifest =
-    waveorder = waveorder:napari.yaml
-
-[options.package_data]
-waveorder = napari.yaml
+waveorder = "waveorder.cli.main:cli"
 
 [tool.black]
 line-length = 79
