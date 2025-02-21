@@ -37,22 +37,22 @@ try:
 except:pass
 
 try:
-    from recOrder.acq.acquisition_workers import (
+    from waveorder.acq.acquisition_workers import (
         BFAcquisitionWorker,
         PolarizationAcquisitionWorker,
     )
 except:pass
-from recOrder.calib import Calibration
-from recOrder.calib.Calibration import LC_DEVICE_NAME, QLIPP_Calibration
-from recOrder.calib.calibration_workers import (
+from waveorder.calib import Calibration
+from waveorder.calib.Calibration import LC_DEVICE_NAME, QLIPP_Calibration
+from waveorder.calib.calibration_workers import (
     BackgroundCaptureWorker,
     CalibrationWorker,
     load_calibration,
 )
-from recOrder.io.core_functions import set_lc_state, snap_and_average
-from recOrder.io.metadata_reader import MetadataReader
-from recOrder.io.visualization import ret_ori_overlay
-from recOrder.plugin import gui
+from waveorder.io.core_functions import set_lc_state, snap_and_average
+from waveorder.io.metadata_reader import MetadataReader
+from waveorder.io.visualization import ret_ori_overlay
+from waveorder.plugin import gui
 
 # avoid runtime import error
 if TYPE_CHECKING:

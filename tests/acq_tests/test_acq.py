@@ -1,7 +1,7 @@
 from unittest.mock import patch
 
 import numpy as np
-from recOrder.acq.acquisition_workers import _check_scale_mismatch
+from waveorder.acq.acquisition_workers import _check_scale_mismatch
 
 
 def test_check_scale_mismatch():

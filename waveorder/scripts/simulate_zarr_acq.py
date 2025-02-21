@@ -1,8 +1,8 @@
 from pathlib import Path
 from iohub.convert import TIFFConverter
 from iohub.ngff import open_ome_zarr
-from recOrder.cli.utils import create_empty_hcs_zarr
-from recOrder.cli import jobs_mgmt
+from waveorder.cli.utils import create_empty_hcs_zarr
+from waveorder.cli import jobs_mgmt
 
 import time, threading, os, shutil, subprocess
 

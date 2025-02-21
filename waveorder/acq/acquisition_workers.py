@@ -14,23 +14,23 @@ from napari.qt.threading import WorkerBase, WorkerBaseSignals
 from napari.utils.notifications import show_warning
 from qtpy.QtCore import Signal
 
-from recOrder.acq.acq_functions import (
+from waveorder.acq.acq_functions import (
     acquire_from_settings,
     generate_acq_settings,
 )
-from recOrder.cli import settings
-from recOrder.cli.apply_inverse_transfer_function import (
+from waveorder.cli import settings
+from waveorder.cli.apply_inverse_transfer_function import (
     apply_inverse_transfer_function_cli,
 )
-from recOrder.cli.compute_transfer_function import (
+from waveorder.cli.compute_transfer_function import (
     compute_transfer_function_cli,
 )
-from recOrder.io.utils import add_index_to_path, model_to_yaml, ram_message
+from waveorder.io.utils import add_index_to_path, model_to_yaml, ram_message
 
 # avoid runtime import error
 if TYPE_CHECKING:
-    from recOrder.calib.Calibration import QLIPP_Calibration
-    from recOrder.plugin.main_widget import MainWidget
+    from waveorder.calib.Calibration import QLIPP_Calibration
+    from waveorder.plugin.main_widget import MainWidget
 
 
 def _check_scale_mismatch(

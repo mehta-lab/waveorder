@@ -5,7 +5,7 @@ from numpy import ndarray
 from typing import Callable, Tuple
 
 # tested components
-from recOrder.io.core_functions import *
+from waveorder.io.core_functions import *
 
 
 # TODO: move these to fixture or generate with Hypothesis

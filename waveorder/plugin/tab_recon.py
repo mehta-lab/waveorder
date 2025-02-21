@@ -19,8 +19,8 @@ try:
     from napari.utils import notifications
 except:pass
 
-from recOrder.io import utils
-from recOrder.cli import settings, jobs_mgmt
+from waveorder.io import utils
+from waveorder.cli import settings, jobs_mgmt
 
 import concurrent.futures
 

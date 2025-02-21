@@ -9,7 +9,7 @@
 
 
 from qtpy import QtCore, QtGui, QtWidgets
-from recOrder.plugin import tab_recon
+from waveorder.plugin import tab_recon
 
 class Ui_Form(object):
     def setupUi(self, Form):

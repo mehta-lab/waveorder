@@ -1,5 +1,5 @@
 import napari
-from recOrder.plugin.main_widget import MainWidget
+from waveorder.plugin.main_widget import MainWidget
 
 
 def main():

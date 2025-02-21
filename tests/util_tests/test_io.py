@@ -4,8 +4,8 @@ from pathlib import Path
 import pytest
 import yaml
 
-from recOrder.cli import settings
-from recOrder.io.utils import add_index_to_path, model_to_yaml
+from waveorder.cli import settings
+from waveorder.io.utils import add_index_to_path, model_to_yaml
 
 
 @pytest.fixture

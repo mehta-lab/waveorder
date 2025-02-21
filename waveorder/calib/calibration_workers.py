@@ -12,24 +12,24 @@ from iohub import open_ome_zarr
 from napari.qt.threading import WorkerBase, WorkerBaseSignals, thread_worker
 from qtpy.QtCore import Signal
 
-from recOrder.calib.Calibration import LC_DEVICE_NAME
-from recOrder.cli import settings
-from recOrder.cli.apply_inverse_transfer_function import (
+from waveorder.calib.Calibration import LC_DEVICE_NAME
+from waveorder.cli import settings
+from waveorder.cli.apply_inverse_transfer_function import (
     apply_inverse_transfer_function_cli,
 )
-from recOrder.cli.compute_transfer_function import (
+from waveorder.cli.compute_transfer_function import (
     compute_transfer_function_cli,
 )
-from recOrder.io.core_functions import set_lc_state, snap_and_average
-from recOrder.io.metadata_reader import MetadataReader
-from recOrder.io.utils import MockEmitter, add_index_to_path, model_to_yaml
+from waveorder.io.core_functions import set_lc_state, snap_and_average
+from waveorder.io.metadata_reader import MetadataReader
+from waveorder.io.utils import MockEmitter, add_index_to_path, model_to_yaml
 
 # avoid runtime import error
 if TYPE_CHECKING:
     from _typeshed import StrOrBytesPath
 
-    from recOrder.calib.Calibration import QLIPP_Calibration
-    from recOrder.plugin.main_widget import MainWidget
+    from waveorder.calib.Calibration import QLIPP_Calibration
+    from waveorder.plugin.main_widget import MainWidget
 
 
 class CalibrationSignals(WorkerBaseSignals):

@@ -1,6 +1,6 @@
 from napari.viewer import ViewerModel
 
-from recOrder.plugin.main_widget import MainWidget
+from waveorder.plugin.main_widget import MainWidget
 
 
 def test_dock_widget(make_napari_viewer):

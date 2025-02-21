@@ -6,7 +6,7 @@ import torch.multiprocessing as mp
 from iohub.ngff import Plate, open_ome_zarr
 from natsort import natsorted
 
-from recOrder.cli.option_eat_all import OptionEatAll
+from waveorder.cli.option_eat_all import OptionEatAll
 
 
 def _validate_and_process_paths(

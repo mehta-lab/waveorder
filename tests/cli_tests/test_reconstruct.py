@@ -5,10 +5,10 @@ from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff_meta import TransformationMeta
 
-from recOrder.cli import settings
-from recOrder.cli.main import cli
-from recOrder.io import utils
-from recOrder.cli.apply_inverse_transfer_function import (
+from waveorder.cli import settings
+from waveorder.cli.main import cli
+from waveorder.io import utils
+from waveorder.cli.apply_inverse_transfer_function import (
     apply_inverse_transfer_function_cli,
 )
 from unittest.mock import patch

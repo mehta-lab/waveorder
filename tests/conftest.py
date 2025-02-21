@@ -3,7 +3,7 @@ import numpy as np
 import pytest
 from iohub.ngff import open_ome_zarr
 
-from recOrder.cli import settings
+from waveorder.cli import settings
 
 
 def device_params():
