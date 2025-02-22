@@ -6,7 +6,7 @@ from waveorder.acq.acquisition_workers import _check_scale_mismatch
 
 
 def test_check_scale_mismatch():
-    warn_fn_path = "recOrder.acq.acquisition_workers.show_warning"
+    warn_fn_path = "waveorder.acq.acquisition_workers.show_warning"
     identity = np.array((1.0, 1.0, 1.0))
     with patch(warn_fn_path) as mock:
         _check_scale_mismatch(identity, (1, 1, 1, 1, 1))
