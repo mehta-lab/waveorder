@@ -10,8 +10,11 @@
 #  eLife 9:e55502 (2020).```                                                                        #
 #####################################################################################################
 
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
+from platformdirs import user_data_dir
 
 from waveorder import waveorder_reconstructor
 from waveorder.visuals import jupyter_visuals
@@ -19,8 +22,8 @@ from waveorder.visuals import jupyter_visuals
 # ### Load simulated data
 # Load simulations
 
-
-file_name = "./2D_QLIPP_simulation.npz"
+temp_dirpath = Path(user_data_dir("QLIPP_simulation"))
+file_name = temp_dirpath / "2D_QLIPP_simulation.npz"
 
 array_loaded = np.load(file_name)
 list_of_array_names = sorted(array_loaded)
