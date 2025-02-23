@@ -107,7 +107,8 @@ I_meas_noise = (
 
 # Save simulation
 temp_dirpath = Path(user_data_dir("QLIPP_simulation"))
-output_file = temp_dirpath / "/2D_QLIPP_simulation.npz"
+temp_dirpath.mkdir(parents=True, exist_ok=True)
+output_file = temp_dirpath / "2D_QLIPP_simulation.npz"
 np.savez(
     output_file,
     I_meas=I_meas_noise,
