@@ -193,7 +193,7 @@ def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
 
     runner = CliRunner()
     with patch(
-        "recOrder.cli.apply_inverse_transfer_function.apply_inverse_transfer_function_cli"
+        "waveorder.cli.apply_inverse_transfer_function.apply_inverse_transfer_function_cli"
     ) as mock:
         cmd = [
             "apply-inv-tf",
