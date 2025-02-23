@@ -19,6 +19,9 @@ def _run_scripts(scripts):
 # close them to make the tests pass.
 # TODO: see if we can make these run locally w/o showing matplotlib
 # @patch("matplotlib.pyplot.show")
+@pytest.mark.skipif(
+    os.getenv("GITHUB_ACTIONS") == "true", reason="Skip on GitHub Actions"
+)
 def test_qlipp_examples():
     scripts = [
         "QLIPP_simulation/2D_QLIPP_forward.py",
@@ -27,6 +30,9 @@ def test_qlipp_examples():
     _run_scripts(scripts)
 
 
+@pytest.mark.skipif(
+    os.getenv("GITHUB_ACTIONS") == "true", reason="Skip on GitHub Actions"
+)
 def test_pti_examples():
     scripts = [
         "PTI_simulation/PTI_Simulation_Forward_2D3D.py",
