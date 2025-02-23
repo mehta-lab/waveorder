@@ -1,6 +1,5 @@
 import os
 import subprocess
-import sys
 
 import pytest
 
@@ -34,7 +33,10 @@ def test_pti_examples():
     _run_scripts(scripts)
 
 
-@pytest.mark.skipif("napari" not in sys.modules, reason="requires napari")
+@pytest.mark.skipif(
+    os.getenv("GITHUB_ACTIONS") == "true",
+    reason="Skip on GitHub Actions, requires napari",
+)
 def test_phase_examples():
     scripts = [
         "isotropic_thin_3d.py",
