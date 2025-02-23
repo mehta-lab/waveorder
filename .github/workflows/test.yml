@@ -14,12 +14,22 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v1
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+
+      # these libraries enable testing on Qt on linux
+      - uses: tlambert03/setup-qt-libs@v1
+
+      # strategy borrowed from vispy for installing opengl libs on windows
+      - name: Install Windows OpenGL
+        if: runner.os == 'Windows'
+        run: |
+          git clone --depth 1 https://github.com/pyvista/gl-ci-helpers.git
+          powershell gl-ci-helpers/appveyor/install_opengl.ps1
 
       - name: Install dependencies
         run: |
@@ -27,6 +37,7 @@ jobs:
           pip install ".[all,dev]"
 
       - name: Test with pytest
+        uses: aganders3/headless-gui@v1
         run: |
           pytest -v
           pytest -v --cov=./ --cov-report=xml
