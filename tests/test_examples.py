@@ -7,7 +7,7 @@ import pytest
 def _run_scripts(scripts):
     for script in scripts:
         path = os.path.join(os.getcwd(), "examples/maintenance/", script)
-        completed_process = subprocess.run(["python", path])
+        completed_process = subprocess.run(["python", path], env=os.environ)
         assert completed_process.returncode == 0
 
 
@@ -48,6 +48,9 @@ def test_phase_examples():
         path = os.path.join(os.getcwd(), "examples/models/", script)
         # examples needs two <enters>s so send input="e\ne"
         completed_process = subprocess.run(
-            ["python", path], input="e\ne", encoding="ascii"
+            ["python", path],
+            input="e\ne",
+            encoding="ascii",
+            env=os.environ,
         )
         assert completed_process.returncode == 0
