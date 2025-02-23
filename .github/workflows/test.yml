@@ -34,10 +34,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ".[all,dev]"
+          python -m pip install setuptools tox tox-gh-actions
 
-      - name: Test with pytest
+      # https://github.com/napari/cookiecutter-napari-plugin/commit/cb9a8c152b68473e8beabf44e7ab11fc46483b5d
+      - name: Test
         uses: aganders3/headless-gui@v1
-        run: |
-          pytest -v
-          pytest -v --cov=./ --cov-report=xml
+        with:
+          run: python -m tox
+
+      - name: Coverage
+        uses: codecov/codecov-action@v3

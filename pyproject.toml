@@ -76,6 +76,7 @@ dev = [
   "pytest-cov",
   "pytest-qt",
   "pytest>=5.0.0",
+  "tox",
 ]
 examples = [
    "napari[all]",
