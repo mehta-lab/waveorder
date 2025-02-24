@@ -147,6 +147,6 @@ if you plan to use GPU acceleration for polarization reconstruction.
 
 
 ## Examples
-The [examples](https://github.com/mehta-lab/waveorder/tree/main/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D phase from brightfield, and 2D/3D PTI methods.
+The [examples](https://github.com/mehta-lab/waveorder/tree/main/docs/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D phase from brightfield, and 2D/3D PTI methods.
 
 If you are interested in deploying QLIPP or phase from brightbrield, or fluorescence deconvolution for label-agnostic imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
