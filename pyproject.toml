@@ -68,6 +68,7 @@ all = [
   "napari[pyqt6]",
   "napari-ome-zarr>=0.3.2", # drag and drop convenience
   "pycromanager==0.27.2"
+  "jupyter"
 ]
 dev = [
   "black==25.1.0",
@@ -77,10 +78,6 @@ dev = [
   "pytest-qt",
   "pytest>=5.0.0",
   "tox",
-]
-examples = [
-   "napari[all]",
-   "jupyter"
 ]
 
 [project.urls]

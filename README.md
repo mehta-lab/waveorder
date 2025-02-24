@@ -126,16 +126,9 @@ Install `waveorder` from PyPI:
 pip install waveorder
 ```
 
-Use `waveorder` in your scripts:
-
+(Optional) Install all visualization dependencies (napari, jupyter), clone the repository, and run an example script:
 ```sh
-python
->>> import waveorder
-```
-
-(Optional) Install example dependencies, clone the repository, and run an example script:
-```sh
-pip install waveorder[examples]
+pip install waveorder[all]
 git clone https://github.com/mehta-lab/waveorder.git
 python waveorder/examples/models/phase_thick_3d.py
 ```
