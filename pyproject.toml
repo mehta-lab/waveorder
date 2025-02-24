@@ -67,7 +67,7 @@ dynamic = ["version"]
 all = [
   "napari[pyqt6]",
   "napari-ome-zarr>=0.3.2", # drag and drop convenience
-  "pycromanager==0.27.2"
+  "pycromanager==0.27.2",
   "jupyter"
 ]
 dev = [
