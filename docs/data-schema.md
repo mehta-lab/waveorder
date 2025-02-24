@@ -18,8 +18,8 @@ working_directory/                      # commonly YYYY_MM_DD_exp_name, but not 
 │   ├── background.zarr
 │   ├── polarization_calibration.txt    # copied into each bg folder
 │   ├── reconstruction.zarr
-│   ├── reconstruction_settings.yml     # for use with `recorder reconstruct`
-│   └── transfer_function.zarr          # for use with `recorder apply-inv-tf`
+│   ├── reconstruction_settings.yml     # for use with `waveorder reconstruct`
+│   └── transfer_function.zarr          # for use with `waveorder apply-inv-tf`
 │
 ├── <acq_name_0>_snap_0
 ├── <acq_name_0>_snap_1
