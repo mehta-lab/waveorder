@@ -9,9 +9,12 @@
 #  density and anisotropy," bioRxiv 2020.12.15.422951 (2020).```   #
 ####################################################################
 
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.fft import fftshift
+from platformdirs import user_data_dir
 
 from waveorder import optics, util, waveorder_simulator
 from waveorder.visuals import jupyter_visuals
@@ -481,8 +484,8 @@ I_meas_noise = I_meas_SEAGLE / np.mean(I_meas_SEAGLE) * photon_count
 # #################################
 
 # Save simulations
-
-output_dir = "./"
+temp_dirpath = Path(user_data_dir("PTI_simulation"))
+temp_dirpath.mkdir(parents=True, exist_ok=True)
 
 if sample_type == "3D":
     output_file = "PTI_simulation_data_NA_det_147_NA_illu_140_3D_spoke_discrete_no_1528_ne_1553_no_noise_Born"
@@ -491,8 +494,10 @@ elif sample_type == "2D":
 else:
     print("sample_type needs to be 2D or 3D.")
 
+output_path = temp_dirpath / output_file
+
 np.savez(
-    output_dir + output_file,
+    output_path,
     I_meas=I_meas_noise,
     lambda_illu=lambda_illu,
     n_media=n_media,

@@ -8,17 +8,23 @@
 #  "uPTI: uniaxial permittivity tensor imaging of intrinsic        #
 #  density and anisotropy," bioRxiv 2020.12.15.422951 (2020).```   #
 ####################################################################
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.fft import fftshift
+from platformdirs import user_data_dir
 
 from waveorder import optics, waveorder_reconstructor
 from waveorder.visuals import jupyter_visuals
 
 ## Initialization
 ## Load simulated images and parameters
-
-file_name = "./PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
+temp_dirpath = Path(user_data_dir("PTI_simulation"))
+file_name = (
+    temp_dirpath
+    / "PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
+)
 
 array_loaded = np.load(file_name)
 list_of_array_names = sorted(array_loaded)

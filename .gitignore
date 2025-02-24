@@ -151,3 +151,7 @@ recOrder/_version.py
 *.png
 *.tif[f]
 *.pdf
+
+# example data
+/examples/data_temp/*
+/logs/*
