@@ -85,7 +85,7 @@ sed -i '' 's/from PyQt5/from qtpy/g' gui.py
 
 > This is specific for BSD `sed`, omit `''` with GNU.
 
-Note: although much of the GUI is specified in the generated `waveorder_ui.py` file, the `main_widget.py` file makes extensive modifications to the GUI.
+Note: although much of the GUI is specified in the generated `gui.py` file, the `main_widget.py` file makes extensive modifications to the GUI.
 
 ## Make `git blame` ignore formatting commits
 
