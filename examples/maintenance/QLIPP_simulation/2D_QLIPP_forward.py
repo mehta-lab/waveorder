@@ -10,9 +10,12 @@
 #####################################################################################################
 
 
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 from numpy.fft import fftshift
+from platformdirs import user_data_dir
 
 from waveorder import optics, util, waveorder_simulator
 from waveorder.visuals import jupyter_visuals
@@ -103,7 +106,9 @@ I_meas_noise = (
 ).astype("float64")
 
 # Save simulation
-output_file = "./2D_QLIPP_simulation.npz"
+temp_dirpath = Path(user_data_dir("QLIPP_simulation"))
+temp_dirpath.mkdir(parents=True, exist_ok=True)
+output_file = temp_dirpath / "2D_QLIPP_simulation.npz"
 np.savez(
     output_file,
     I_meas=I_meas_noise,
