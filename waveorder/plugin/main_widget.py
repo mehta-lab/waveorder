@@ -340,7 +340,7 @@ class MainWidget(QWidget):
         self.hsv_pixmap = QPixmap(hsv_legend_path)
         self.ui.label_orientation_image.setPixmap(self.hsv_pixmap)
         logo_path = os.path.join(
-            recorder_dir, "docs/images/recOrder_plugin_logo.png"
+            recorder_dir, "docs/images/waveorder_plugin_logo.png"
         )
         logo_pixmap = QPixmap(logo_path)
         self.ui.label_logo.setPixmap(logo_pixmap)
