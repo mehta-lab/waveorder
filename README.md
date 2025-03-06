@@ -7,7 +7,7 @@
 ![GitHub forks](https://img.shields.io/github/forks/mehta-lab/recOrder)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/recOrder-napari)
 
-`recOrder` is a collection of computational imaging methods. It currently provides QLIPP (quantitative label-free imaging with phase and polarization), phase from defocus, and fluorescence deconvolution. 
+`recOrder` is a collection of computational imaging methods. It currently provides QLIPP (quantitative label-free imaging with phase and polarization), phase from defocus, and fluorescence deconvolution.
 
 [![Unveiling the invisible](https://github.com/mehta-lab/recOrder/blob/main/docs/images/comms_video_screenshot.png?raw=true)](https://www.youtube.com/watch?v=JEZAaPeZhck)
 
@@ -24,7 +24,7 @@ https://user-images.githubusercontent.com/9554101/271128301-cc71da57-df6f-401b-a
 https://user-images.githubusercontent.com/9554101/271128510-aa2180af-607f-4c0c-912c-c18dc4f29432.mp4
 
 ## What do I need to use `recOrder`
-`recOrder` is to be used alongside a conventional widefield microscope. For QLIPP, the microscope must be fitted with an analyzer and a universal polarizer: 
+`recOrder` is to be used alongside a conventional widefield microscope. For QLIPP, the microscope must be fitted with an analyzer and a universal polarizer:
 
 https://user-images.githubusercontent.com/9554101/273073475-70afb05a-1eb7-4019-9c42-af3e07bef723.mp4
 
@@ -32,7 +32,7 @@ For phase-from-defocus or fluorescence deconvolution methods, the universal pola
 
 The overall structure of `recOrder` is shown in Panel B, highlighting the structure of the graphical user interface (GUI) through a napari plugin and the command-line interface (CLI) that allows users to perform reconstructions.
 
-![Flow Chart](https://github.com/mehta-lab/recOrder/blob/main/docs/images/recOrder_Fig1_Overview.png?raw=true)
+![Flow Chart](https://github.com/mehta-lab/recOrder/blob/main/docs/images/waveorder_Fig1_Overview.png?raw=true)
 
 
 
@@ -64,7 +64,7 @@ Open `napari` with `recOrder-napari`:
 napari -w recOrder-napari
 ```
 
-For more help, see [`recOrder`'s documentation](https://github.com/mehta-lab/recOrder/tree/main/docs). To install `recOrder` 
+For more help, see [`recOrder`'s documentation](https://github.com/mehta-lab/recOrder/tree/main/docs). To install `recOrder`
 on a microscope, see the [microscope installation guide](https://github.com/mehta-lab/recOrder/blob/main/docs/microscope-installation-guide.md).
 
 ## Dataset
@@ -91,7 +91,7 @@ This computational imaging library enables wave-optical simulation and reconstru
 https://github.com/user-attachments/assets/4f9969e5-94ce-4e08-9f30-68314a905db6
 
 `waveorder` enables simulations and reconstructions of label-agnostic microscopy data as described in the following [preprint](https://arxiv.org/abs/2412.09775)
-<details>	
+<details>
 <summary> Chandler et al. 2024 </summary>
 <pre><code>
 @article{chandler_2024,
@@ -114,13 +114,13 @@ Specifically, `waveorder` enables simulation and reconstruction of 2D or 3D:
 
 3. __phase__ from an illumination-diverse volumetric acquisition ([2D](https://www.osapublishing.org/oe/fulltext.cfm?uri=oe-23-9-11394&id=315599)/[3D](https://www.osapublishing.org/boe/fulltext.cfm?uri=boe-7-10-3940&id=349951) differential phase contrast),
 
-4. __fluorescence density__ from a widefield volumetric fluorescence acquisition (fluorescence deconvolution).  
+4. __fluorescence density__ from a widefield volumetric fluorescence acquisition (fluorescence deconvolution).
 
 The [examples](https://github.com/mehta-lab/waveorder/tree/main/examples) demonstrate simulations and reconstruction for 2D QLIPP, 3D PODT, 3D fluorescence deconvolution, and 2D/3D PTI methods.
 
 If you are interested in deploying QLIPP, phase from brightfield, or fluorescence deconvolution for label-agnostic imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
 
-## Permittivity tensor imaging 
+## Permittivity tensor imaging
 
 Additionally, `waveorder` enabled the development of a new label-free imaging method, __permittivity tensor imaging (PTI)__, that measures density and  3D orientation of biomolecules with diffraction-limited resolution. These measurements are reconstructed from polarization-resolved images acquired with a sequence of oblique illuminations.
 
@@ -190,5 +190,4 @@ python waveorder/examples/models/phase_thick_3d.py
 (M1 users) `pytorch` has [incomplete GPU support](https://github.com/pytorch/pytorch/issues/77764),
 so please use `export PYTORCH_ENABLE_MPS_FALLBACK=1`
 to allow some operators to fallback to CPU
-if you plan to use GPU acceleration for polarization reconstruction. 
-
+if you plan to use GPU acceleration for polarization reconstruction.
