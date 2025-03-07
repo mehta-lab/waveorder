@@ -1,6 +1,4 @@
-
 # WAVEORDER
-
 [![Python package index](https://img.shields.io/pypi/v/waveorder.svg)](https://pypi.org/project/waveorder)
 [![PyPI monthly downloads](https://img.shields.io/pypi/dm/waveorder.svg)](https://pypistats.org/packages/waveorder)
 [![Total downloads](https://pepy.tech/badge/waveorder)](https://pepy.tech/project/waveorder)
@@ -21,6 +19,8 @@ The framework is described in the following [preprint](https://arxiv.org/abs/241
 https://github.com/user-attachments/assets/4f9969e5-94ce-4e08-9f30-68314a905db6
 
 <details>	
+`waveorder` enables simulations and reconstructions of label-agnostic microscopy data as described in the following [preprint](https://arxiv.org/abs/2412.09775)
+<details>
 <summary> Chandler et al. 2024 </summary>
 <pre><code>
 @article{chandler_2024,
@@ -63,7 +63,6 @@ Acquisition, calibration, background correction, reconstruction, and application
 </details>
 
 ### Permittivity tensor imaging (PTI)
-
 
 PTI provides volumetric reconstructions of mean permittivity ($\propto$ material density), differential permittivity ($\propto$ material anisotropy), 3D orientation, and optic sign. The following figure summarizes PTI acquisition and reconstruction with a small optical section of the mouse brain tissue:
 
@@ -135,8 +134,7 @@ python waveorder/examples/models/phase_thick_3d.py
 
 (M1 users) `pytorch` has [incomplete GPU support](https://github.com/pytorch/pytorch/issues/77764),
 so please use `export PYTORCH_ENABLE_MPS_FALLBACK=1`
-to allow some operators to fallback to CPU
-if you plan to use GPU acceleration for polarization reconstruction. 
+to allow some operators to fallback to CPU if you plan to use GPU acceleration for polarization reconstruction. 
 
 
 ## Examples

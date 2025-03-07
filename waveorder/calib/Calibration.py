@@ -795,7 +795,7 @@ class QLIPP_Calibration:
             shutter_warning_msg = """
             recOrder could not find an automatic shutter configured through Micro-Manager.
             >>> If you would like manually enter the black level, enter an integer or float and press <Enter>
-            >>> If you would like to estimate the black level, please close the shutter and press <Enter> 
+            >>> If you would like to estimate the black level, please close the shutter and press <Enter>
             """
 
             in_string = input(shutter_warning_msg)
@@ -877,7 +877,6 @@ class QLIPP_Calibration:
         metadata = {
             "Summary": {
                 "Timestamp": str(datetime.now()),
-                "recOrder-napari version": version("recOrder-napari"),
                 "waveorder version": version("waveorder"),
             },
             "Calibration": {
