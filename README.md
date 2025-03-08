@@ -1,5 +1,4 @@
-# waveorder
-
+# WAVEORDER
 [![Python package index](https://img.shields.io/pypi/v/waveorder.svg)](https://pypi.org/project/waveorder)
 [![PyPI monthly downloads](https://img.shields.io/pypi/dm/waveorder.svg)](https://pypistats.org/packages/waveorder)
 [![Total downloads](https://pepy.tech/badge/waveorder)](https://pepy.tech/project/waveorder)
@@ -8,15 +7,19 @@
 ![GitHub forks](https://img.shields.io/github/forks/mehta-lab/waveorder)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/waveorder)
 
+Label-agnostic computational microscopy of architectural order.
 
-This computational imaging library enables wave-optical simulation and reconstruction of optical properties that report microscopic architectural order.
+# Overview
 
-## Computational label-agnostic imaging
+`waveorder` is a generalist framework for label-agnostic computational microscopy of architectural order, i.e., density, alignment, and orientation of biomolecules with a resolution down to the diffraction limit. The framework implements wave-optical simulations and corresponding reconstruction algorithms for diverse label-free and fluorescence computational imaging methods that enable large-scale image-based profiling of dynamic cell systems. Our goal is to provide unified, accurate, modular, and user-friendly implementations of computational microscopy methods for dynamic imaging across the scales of organelles, cells, and tissues.
+
+
+The framework is described in the following [preprint](https://arxiv.org/abs/2412.09775).
 
 https://github.com/user-attachments/assets/4f9969e5-94ce-4e08-9f30-68314a905db6
 
+<details>
 `waveorder` enables simulations and reconstructions of label-agnostic microscopy data as described in the following [preprint](https://arxiv.org/abs/2412.09775)
-<details>	
 <summary> Chandler et al. 2024 </summary>
 <pre><code>
 @article{chandler_2024,
@@ -31,23 +34,38 @@ https://github.com/user-attachments/assets/4f9969e5-94ce-4e08-9f30-68314a905db6
 </code></pre>
 </details>
 
-Specifically, `waveorder` enables simulation and reconstruction of 2D or 3D:
+# Computational Microscopy Methods
 
-1. __phase, projected retardance, and in-plane orientation__ from a polarization-diverse volumetric brightfield acquisition ([QLIPP](https://elifesciences.org/articles/55502)),
+The key feature of `waveorder` is that it provides a unified interface for simulating and reconstructing data for many one-photon (single-scattering based) computational microscopy methods, summarized below.
 
-2. __phase__ from a volumetric brightfield acquisition ([2D phase](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-54-28-8566)/[3D phase](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-57-1-a205)),
+## Label-free microscopy
 
-3. __phase__ from an illumination-diverse volumetric acquisition ([2D](https://www.osapublishing.org/oe/fulltext.cfm?uri=oe-23-9-11394&id=315599)/[3D](https://www.osapublishing.org/boe/fulltext.cfm?uri=boe-7-10-3940&id=349951) differential phase contrast),
+### Quantitative label-free imaging with phase and polarization (QLIPP)
 
-4. __fluorescence density__ from a widefield volumetric fluorescence acquisition (fluorescence deconvolution).  
+Acquisition, calibration, background correction, reconstruction, and applications of QLIPP are described in the following [E-Life Paper](https://elifesciences.org/articles/55502):
 
-The [examples](https://github.com/mehta-lab/waveorder/tree/main/examples) demonstrate simulations and reconstruction for 2D QLIPP, 3D PODT, 3D fluorescence deconvolution, and 2D/3D PTI methods.
+[![Unveiling the invisible](https://github.com/mehta-lab/recOrder/blob/main/docs/images/comms_video_screenshot.png?raw=true)](https://www.youtube.com/watch?v=JEZAaPeZhck)
 
-If you are interested in deploying QLIPP, phase from brightfield, or fluorescence deconvolution for label-agnostic imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
+<details>
+<summary> Guo et al. 2020 </summary>
+<pre><code>
+@article{guo_2020,
+	author = {Guo, Syuan-Ming and Yeh, Li-Hao and Folkesson, Jenny and Ivanov, Ivan E. and Krishnan, Anitha P. and Keefe, Matthew G. and Hashemi, Ezzat and Shin, David and Chhun, Bryant B. and Cho, Nathan H. and Leonetti, Manuel D. and Han, May H. and Nowakowski, Tomasz J. and Mehta, Shalin B.},
+	title = {Revealing architectural order with quantitative label-free imaging and deep learning},
+	journal = {eLife},
+	volume = {9},
+	pages = {e55502},
+	year = {2020},
+	doi = {10.7554/eLife.55502}
+}
+</code></pre>
+</details>
 
-## Permittivity tensor imaging 
+### Permittivity tensor imaging (PTI)
 
-Additionally, `waveorder` enabled the development of a new label-free imaging method, __permittivity tensor imaging (PTI)__, that measures density and  3D orientation of biomolecules with diffraction-limited resolution. These measurements are reconstructed from polarization-resolved images acquired with a sequence of oblique illuminations.
+PTI provides volumetric reconstructions of mean permittivity ($\propto$ material density), differential permittivity ($\propto$ material anisotropy), 3D orientation, and optic sign. The following figure summarizes PTI acquisition and reconstruction with a small optical section of the mouse brain tissue:
+
+![Data_flow](https://github.com/mehta-lab/waveorder/blob/main/readme.png?raw=true)
 
 The acquisition, calibration, background correction, reconstruction, and applications of PTI are described in the following [paper](https://doi.org/10.1101/2020.12.15.422951) published in Nature Methods:
 
@@ -70,14 +88,22 @@ The acquisition, calibration, background correction, reconstruction, and applica
 </code></pre>
 </details>
 
-PTI provides volumetric reconstructions of mean permittivity ($\propto$ material density), differential permittivity ($\propto$ material anisotropy), 3D orientation, and optic sign. The following figure summarizes PTI acquisition and reconstruction with a small optical section of the mouse brain tissue:
 
-![Data_flow](https://github.com/mehta-lab/waveorder/blob/main/readme.png?raw=true)
+### Quantitative phase imaging (QPI) from defocus
+__phase__ from a volumetric brightfield acquisition ([2D phase](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-54-28-8566)/[3D phase](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-57-1-a205))
 
-## Examples
-The [examples](https://github.com/mehta-lab/waveorder/tree/main/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D phase from brightfield, and 2D/3D PTI methods.
+### QPI with differential phase contrast
+ __phase__ from an illumination-diverse volumetric acquisition ([2D](https://www.osapublishing.org/oe/fulltext.cfm?uri=oe-23-9-11394&id=315599)/[3D](https://www.osapublishing.org/boe/fulltext.cfm?uri=boe-7-10-3940&id=349951) differential phase contrast)
 
-If you are interested in deploying QLIPP or phase from brightbrield, or fluorescence deconvolution for label-agnostic imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).
+## Fluorescence microscopy
+
+### Widefield and confocal deconvolution microscopy
+__fluorescence density__ from a widefield  and confocalvolumetric fluorescence acquisition.
+
+### Oblique plane light-sheet microscopy
+__fluorescence density__ from oblique plane light-sheet microscopy.
+
+
 
 ## Citation
 
@@ -98,21 +124,17 @@ Install `waveorder` from PyPI:
 pip install waveorder
 ```
 
-Use `waveorder` in your scripts:
-
+(Optional) Install all visualization dependencies (napari, jupyter), clone the repository, and run an example script:
 ```sh
-python
->>> import waveorder
-```
-
-(Optional) Install example dependencies, clone the repository, and run an example script:
-```sh
-pip install waveorder[examples]
+pip install waveorder[all]
 git clone https://github.com/mehta-lab/waveorder.git
 python waveorder/examples/models/phase_thick_3d.py
 ```
 
 (M1 users) `pytorch` has [incomplete GPU support](https://github.com/pytorch/pytorch/issues/77764),
 so please use `export PYTORCH_ENABLE_MPS_FALLBACK=1`
-to allow some operators to fallback to CPU
-if you plan to use GPU acceleration for polarization reconstruction. 
+to allow some operators to fallback to CPU if you plan to use GPU acceleration for polarization reconstruction.
+
+
+## Examples
+The [examples](https://github.com/mehta-lab/waveorder/tree/main/docs/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D phase from brightfield, and 2D/3D PTI methods.
