@@ -20,7 +20,6 @@ https://github.com/user-attachments/assets/4f9969e5-94ce-4e08-9f30-68314a905db6
 
 <details>
 `waveorder` enables simulations and reconstructions of label-agnostic microscopy data as described in the following [preprint](https://arxiv.org/abs/2412.09775)
-<details>
 <summary> Chandler et al. 2024 </summary>
 <pre><code>
 @article{chandler_2024,
