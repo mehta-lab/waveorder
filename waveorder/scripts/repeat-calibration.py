@@ -13,17 +13,17 @@ REPEATS = 5
 
 def main():
     viewer = napari.Viewer()
-    recorder = MainWidget(viewer)
-    viewer.window.add_dock_widget(recorder)
-    recorder.ui.qbutton_connect_to_mm.click()
-    recorder.calib_scheme = "5-State"
+    waveorder = MainWidget(viewer)
+    viewer.window.add_dock_widget(waveorder)
+    waveorder.ui.qbutton_connect_to_mm.click()
+    waveorder.calib_scheme = "5-State"
 
     for repeat in range(REPEATS):
         for swing in SWINGS:
             print("Calibrating with swing = " + str(swing))
-            recorder.swing = swing
-            recorder.directory = SAVE_DIR
-            recorder.run_calibration()
+            waveorder.swing = swing
+            waveorder.directory = SAVE_DIR
+            waveorder.run_calibration()
             time.sleep(100)
 
 

@@ -61,8 +61,8 @@ if TYPE_CHECKING:
 
 class MainWidget(QWidget):
     """
-    This is the main recOrder widget that houses all of the GUI components of recOrder.
-    The GUI is designed in QT Designer in /recOrder/plugin/gui.ui and converted to a python file
+    This is the main waveorder widget that houses all of the GUI components of waveorder.
+    The GUI is designed in QT Designer in /waveorder/plugin/gui.ui and converted to a python file
     with the pyuic5 command.
     """
 
@@ -85,7 +85,7 @@ class MainWidget(QWidget):
     no_bf_msg = "\n".join(
         textwrap.wrap(
             f"No brightfield channel found. If you would like to acquire phase from brightfield,"
-            " please restart recOrder after adding a new channel to Micro-Manager with one of the"
+            " please restart waveorder after adding a new channel to Micro-Manager with one of the"
             " following case-insensitive keywords: " + ", ".join(bf_keywords),
             width=70,
         )
@@ -318,7 +318,7 @@ class MainWidget(QWidget):
         self.reconstruction_data = None
         self.calib_assessment_level = None
         self.ret_max = 25
-        recorder_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
+        waveorder_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
         self.worker = None
 
         ## Initialize calibration plot
@@ -329,18 +329,18 @@ class MainWidget(QWidget):
         self.plot_sequence = "Coarse"
 
         ## Initialize visuals
-        # Initialiaze GUI Images (plotting legends, recOrder logo)
+        # Initialiaze GUI Images (plotting legends, waveorder logo)
         jch_legend_path = os.path.join(
-            recorder_dir, "docs/images/JCh_legend.png"
+            waveorder_dir, "docs/images/JCh_legend.png"
         )
         hsv_legend_path = os.path.join(
-            recorder_dir, "docs/images/HSV_legend.png"
+            waveorder_dir, "docs/images/HSV_legend.png"
         )
         self.jch_pixmap = QPixmap(jch_legend_path)
         self.hsv_pixmap = QPixmap(hsv_legend_path)
         self.ui.label_orientation_image.setPixmap(self.hsv_pixmap)
         logo_path = os.path.join(
-            recorder_dir, "docs/images/waveorder_plugin_logo.png"
+            waveorder_dir, "docs/images/waveorder_plugin_logo.png"
         )
         logo_pixmap = QPixmap(logo_path)
         self.ui.label_logo.setPixmap(logo_pixmap)
@@ -422,8 +422,8 @@ class MainWidget(QWidget):
             wrapped_tooltip = "\n".join(textwrap.wrap(tooltip, width=70))
             self.ui.cb_acq_mode.setItemData(i, wrapped_tooltip, Qt.ToolTipRole)
 
-        # make sure the top says recOrder and not 'Form'
-        self.ui.tabWidget.parent().setObjectName("recOrder")
+        # make sure the top says waveorder and not 'Form'
+        self.ui.tabWidget.parent().setObjectName("waveorder")
 
         ## Set GUI behaviors
         # set focus to "Plot" tab by default
@@ -867,7 +867,7 @@ class MainWidget(QWidget):
             )
             logging.warning(
                 (
-                    "This version of Micro-Manager has not been tested with recOrder.\n"
+                    "This version of Micro-Manager has not been tested with waveorder.\n"
                     f"Please {upgrade_str} to Micro-Manager nightly build {RECOMMENDED_MM}."
                 )
             )
@@ -919,7 +919,7 @@ class MainWidget(QWidget):
         if not config_group_found:
             msg = (
                 f"No config group contains channels {self.calib_channels}. "
-                "Please refer to the recOrder wiki on how to set up the config properly."
+                "Please refer to the waveorder docs on how to set up the config properly."
             )
             self.ui.cb_config_group.setStyleSheet(
                 "border: 1px solid rgb(200,0,0);"
@@ -1452,7 +1452,7 @@ class MainWidget(QWidget):
             if len(missing) != 0:
                 msg = (
                     f"The chosen config group ({self.config_group}) is missing states: {missing}. "
-                    "Please refer to the recOrder wiki on how to set up the config properly."
+                    "Please refer to the waveorder wiki on how to set up the config properly."
                 )
 
                 self.ui.cb_config_group.setStyleSheet(

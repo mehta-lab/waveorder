@@ -38,9 +38,6 @@ class MetadataReader:
         self.json_metadata = load_json(self.metadata_path)
 
         self.Timestamp = self.get_summary_calibration_attr("Timestamp")
-        self.recOrder_napari_verion = self.get_summary_calibration_attr(
-            "recOrder-napari version"
-        )
         self.waveorder_version = self.get_summary_calibration_attr(
             "waveorder version"
         )

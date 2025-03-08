@@ -7,18 +7,18 @@
 ![GitHub forks](https://img.shields.io/github/forks/mehta-lab/waveorder)
 ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/waveorder)
 
-Label-agnostic computational microscopy of architectural order. 
+Label-agnostic computational microscopy of architectural order.
 
 # Overview
 
-`waveorder` is a generalist framework for label-agnostic computational microscopy of architectural order, i.e., density, alignment, and orientation of biomolecules with a resolution down to the diffraction limit. The framework implements wave-optical simulations and corresponding reconstruction algorithms for diverse label-free and fluorescence computational imaging methods that enable large-scale image-based profiling of dynamic cell systems. Our goal is to provide unified, accurate, modular, and user-friendly implementations of computational microscopy methods for dynamic imaging across the scales of organelles, cells, and tissues. 
+`waveorder` is a generalist framework for label-agnostic computational microscopy of architectural order, i.e., density, alignment, and orientation of biomolecules with a resolution down to the diffraction limit. The framework implements wave-optical simulations and corresponding reconstruction algorithms for diverse label-free and fluorescence computational imaging methods that enable large-scale image-based profiling of dynamic cell systems. Our goal is to provide unified, accurate, modular, and user-friendly implementations of computational microscopy methods for dynamic imaging across the scales of organelles, cells, and tissues.
 
 
 The framework is described in the following [preprint](https://arxiv.org/abs/2412.09775).
 
 https://github.com/user-attachments/assets/4f9969e5-94ce-4e08-9f30-68314a905db6
 
-<details>	
+<details>
 `waveorder` enables simulations and reconstructions of label-agnostic microscopy data as described in the following [preprint](https://arxiv.org/abs/2412.09775)
 <details>
 <summary> Chandler et al. 2024 </summary>
@@ -98,7 +98,7 @@ __phase__ from a volumetric brightfield acquisition ([2D phase](https://www.osap
 
 ## Fluorescence microscopy
 
-### Widefield and confocal deconvolution microscopy 
+### Widefield and confocal deconvolution microscopy
 __fluorescence density__ from a widefield  and confocalvolumetric fluorescence acquisition.
 
 ### Oblique plane light-sheet microscopy
@@ -134,10 +134,8 @@ python waveorder/examples/models/phase_thick_3d.py
 
 (M1 users) `pytorch` has [incomplete GPU support](https://github.com/pytorch/pytorch/issues/77764),
 so please use `export PYTORCH_ENABLE_MPS_FALLBACK=1`
-to allow some operators to fallback to CPU if you plan to use GPU acceleration for polarization reconstruction. 
+to allow some operators to fallback to CPU if you plan to use GPU acceleration for polarization reconstruction.
 
 
 ## Examples
 The [examples](https://github.com/mehta-lab/waveorder/tree/main/docs/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D phase from brightfield, and 2D/3D PTI methods.
-
-If you are interested in deploying QLIPP or phase from brightbrield, or fluorescence deconvolution for label-agnostic imaging at scale, checkout our [napari plugin](https://www.napari-hub.org/plugins/recOrder-napari),  [`recOrder-napari`](https://github.com/mehta-lab/recOrder).

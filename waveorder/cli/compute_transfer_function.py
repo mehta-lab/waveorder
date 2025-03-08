@@ -208,7 +208,7 @@ def compute_transfer_function_cli(
     output_dataset.close()
 
     echo_headline(
-        f"Recreate this transfer function with:\n$ recorder compute-tf {input_position_dirpaths} -c {config_filepath} -o {output_dirpath}"
+        f"Recreate this transfer function with:\n$ waveorder compute-tf {input_position_dirpaths} -c {config_filepath} -o {output_dirpath}"
     )
 
 
@@ -229,7 +229,7 @@ def compute_tf(
 
     See /examples for example configuration files.
 
-    >> recorder compute-tf -i ./input.zarr/0/0/0 -c ./examples/birefringence.yml -o ./transfer_function.zarr
+    >> waveorder compute-tf -i ./input.zarr/0/0/0 -c ./examples/birefringence.yml -o ./transfer_function.zarr
     """
     compute_transfer_function_cli(
         input_position_dirpaths[0], config_filepath, output_dirpath

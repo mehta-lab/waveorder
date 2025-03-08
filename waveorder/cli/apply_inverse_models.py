@@ -1,5 +1,5 @@
 """
-This module converts recOrder's reconstructions into waveorder calls
+This module converts GUI-level reconstruction calls into library calls
 """
 
 import numpy as np
@@ -15,10 +15,10 @@ from waveorder.models import (
 
 def radians_to_nanometers(retardance_rad, wavelength_illumination_um):
     """
-    waveorder returns retardance in radians, while recorder displays and saves
+    waveorder returns retardance in radians, while waveorder displays and saves
     retardance in nanometers. This function converts from radians to nanometers
     using the illumination wavelength (which is internally handled in um
-    in recOrder).
+    in waveorder).
     """
     return retardance_rad * wavelength_illumination_um * 1e3 / (2 * np.pi)
 
