@@ -138,7 +138,12 @@ doi = {10.1364/AO.57.00A205},
 </details>
 
 ### QPI with differential phase contrast
- __phase__ from an illumination-diverse volumetric acquisition ([2D](https://www.osapublishing.org/oe/fulltext.cfm?uri=oe-23-9-11394&id=315599)/[3D](https://www.osapublishing.org/boe/fulltext.cfm?uri=boe-7-10-3940&id=349951) differential phase contrast)
+ __phase__ from differential phase contrast
+
+***Work in progress***
+
+* [2D](https://www.osapublishing.org/oe/fulltext.cfm?uri=oe-23-9-11394&id=315599) DPC
+* [3D](https://www.osapublishing.org/boe/fulltext.cfm?uri=boe-7-10-3940&id=349951) DPC
 
 
 ## Fluorescence microscopy
@@ -146,9 +151,38 @@ doi = {10.1364/AO.57.00A205},
 ### Widefield and confocal deconvolution microscopy
 __fluorescence density__ from a widefield  and confocal volumetric fluorescence acquisition.
 
+<details>
+<summary> Swedlow 2013 </summary>
+<pre><code>
+@article{Swedlow:13,
+author = {Swedlow, John R.},
+journal = {Methods Cell Biol.},
+title = {Quantitative fluorescence microscopy and image deconvolution},
+year = {2013},
+volume = {114},
+pages = {407--26},
+doi = {10.1016/B978-0-12-407761-4.00017-8}
+}
+</code></pre>
+</details>
+
 ### Oblique plane light-sheet microscopy
 __fluorescence density__ from oblique plane light-sheet microscopy.
 
+<details>
+<summary> Ivanov, Hirata-Miyasaki, Chandler et al. 2024 </summary>
+<pre><code>
+@article{ivanov_2024,
+author = {Ivanov, Ivan E. and Hirata-Miyasaki, Eduardo and Chandler, Talon and Cheloor-Kovilakam, Rasmi and Liu, Ziwen and Pradeep, Soorya and Liu, Chad and Bhave, Madhura and Khadka, Sudip and Arias, Carolina and Leonetti, Manuel D. and Huang, Bo and Mehta, Shalin B.},
+title = {Mantis: High-throughput 4D imaging and analysis of the molecular and physical architecture of cells},
+journal = {PNAS Nexus},
+volume = {3},
+number = {9},
+pages = {pgae323},
+year = {2024},
+doi = {10.1093/pnasnexus/pgae323}
+</code></pre>
+</details>
 
 
 ## Citation
