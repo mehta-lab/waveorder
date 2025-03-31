@@ -11,7 +11,9 @@ Label-agnostic computational microscopy of architectural order.
 
 # Overview
 
-`waveorder` is a generalist framework for label-agnostic computational microscopy of architectural order, i.e., density, alignment, and orientation of biomolecules with a resolution down to the diffraction limit. The framework implements wave-optical simulations and corresponding reconstruction algorithms for diverse label-free and fluorescence computational imaging methods that enable large-scale image-based profiling of dynamic cell systems. Our goal is to provide unified, accurate, modular, and user-friendly implementations of computational microscopy methods for dynamic imaging across the scales of organelles, cells, and tissues.
+`waveorder` is a generalist framework for label-agnostic computational microscopy of architectural order, i.e., density, alignment, and orientation of biomolecules with the spatial resolution down to the diffraction limit. The framework implements wave-optical simulations and corresponding reconstruction algorithms for diverse label-free and fluorescence computational imaging methods that enable quantitative imaging of the architecture of dynamic cell systems. 
+
+Our goal is to enable modular and user-friendly implementations of computational microscopy methods for dynamic imaging across the scales of organelles, cells, and tissues.
 
 
 The framework is described in the following [preprint](https://arxiv.org/abs/2412.09775).
@@ -36,7 +38,7 @@ https://github.com/user-attachments/assets/4f9969e5-94ce-4e08-9f30-68314a905db6
 
 # Computational Microscopy Methods
 
-The key feature of `waveorder` is that it provides a unified interface for simulating and reconstructing data for many one-photon (single-scattering based) computational microscopy methods, summarized below.
+ `waveorder` framework enables simulations and reconstructions of data for diverse one-photon (single-scattering based) computational microscopy methods, summarized below.
 
 ## Label-free microscopy
 
@@ -92,13 +94,57 @@ The acquisition, calibration, background correction, reconstruction, and applica
 ### Quantitative phase imaging (QPI) from defocus
 __phase__ from a volumetric brightfield acquisition ([2D phase](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-54-28-8566)/[3D phase](https://www.osapublishing.org/ao/abstract.cfm?uri=ao-57-1-a205))
 
+![Image](https://github.com/user-attachments/assets/caf7714b-59ee-40bb-9ee4-f13db4feece6)
+
+
+<details>
+<summary> Jenkins and Gaylord 2015 (2D QPI from defocus) </summary>
+<pre><code>
+	@article{Jenkins:15,
+	author = {Micah H. Jenkins and Thomas K. Gaylord},
+	journal = {Appl. Opt.},
+	keywords = {Phase retrieval; Partial coherence in imaging; Interferometric imaging ; Imaging systems; Microlens arrays; Optical transfer functions; Phase contrast; Spatial resolution; Three dimensional imaging},
+	number = {28},
+	pages = {8566--8579},
+	publisher = {Optica Publishing Group},
+	title = {Quantitative phase microscopy via optimized inversion of the phase optical transfer function},
+	volume = {54},
+	month = {Oct},
+	year = {2015},
+	url = {https://opg.optica.org/ao/abstract.cfm?URI=ao-54-28-8566},
+	doi = {10.1364/AO.54.008566},
+}
+</code></pre>
+</details>
+
+<details>
+<summary> Soto, Rodrigo, and Alieva 2018 (3D QPI from defocus) </summary>
+<pre><code>
+@article{Soto:18,
+author = {Juan M. Soto and Jos\'{e} A. Rodrigo and Tatiana Alieva},
+journal = {Appl. Opt.},
+keywords = {Coherence and statistical optics; Image reconstruction techniques; Optical transfer functions; Optical inspection; Three-dimensional microscopy; Acoustooptic modulators; Illumination design; Inverse design; LED sources; Three dimensional imaging; Three dimensional reconstruction},
+number = {1},
+pages = {A205--A214},
+publisher = {Optica Publishing Group},
+title = {Optical diffraction tomography with fully and partially coherent illumination in high numerical aperture label-free microscopy \[Invited\]},
+volume = {57},
+month = {Jan},
+year = {2018},
+url = {https://opg.optica.org/ao/abstract.cfm?URI=ao-57-1-A205},
+doi = {10.1364/AO.57.00A205},
+}
+</code></pre>
+</details>
+
 ### QPI with differential phase contrast
  __phase__ from an illumination-diverse volumetric acquisition ([2D](https://www.osapublishing.org/oe/fulltext.cfm?uri=oe-23-9-11394&id=315599)/[3D](https://www.osapublishing.org/boe/fulltext.cfm?uri=boe-7-10-3940&id=349951) differential phase contrast)
+
 
 ## Fluorescence microscopy
 
 ### Widefield and confocal deconvolution microscopy
-__fluorescence density__ from a widefield  and confocalvolumetric fluorescence acquisition.
+__fluorescence density__ from a widefield  and confocal volumetric fluorescence acquisition.
 
 ### Oblique plane light-sheet microscopy
 __fluorescence density__ from oblique plane light-sheet microscopy.
@@ -107,7 +153,7 @@ __fluorescence density__ from oblique plane light-sheet microscopy.
 
 ## Citation
 
-Please cite this repository, along with the relevant preprint or paper, if you use or adapt this code. The citation information can be found by clicking "Cite this repository" button in the About section in the right sidebar.
+Please cite this repository, along with the relevant publications and preprints, if you use or adapt this code. The citation information can be found by clicking "Cite this repository" button in the About section in the right sidebar.
 
 ## Installation
 
