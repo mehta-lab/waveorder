@@ -1,4 +1,4 @@
-# WAVEORDER
+![Image](https://github.com/user-attachments/assets/1b4fabd4-2ead-40fa-ae88-99642a1589f1)
 [![Python package index](https://img.shields.io/pypi/v/waveorder.svg)](https://pypi.org/project/waveorder)
 [![PyPI monthly downloads](https://img.shields.io/pypi/dm/waveorder.svg)](https://pypistats.org/packages/waveorder)
 [![Total downloads](https://pepy.tech/badge/waveorder)](https://pepy.tech/project/waveorder)
@@ -11,7 +11,7 @@ Label-agnostic computational microscopy of architectural order.
 
 # Overview
 
-`waveorder` is a generalist framework for label-agnostic computational microscopy of architectural order, i.e., density, alignment, and orientation of biomolecules with the spatial resolution down to the diffraction limit. The framework implements wave-optical simulations and corresponding reconstruction algorithms for diverse label-free and fluorescence computational imaging methods that enable quantitative imaging of the architecture of dynamic cell systems. 
+`waveorder` is a generalist framework for label-agnostic computational microscopy of architectural order, i.e., density, alignment, and orientation of biomolecules with the spatial resolution down to the diffraction limit. The framework implements wave-optical simulations and corresponding reconstruction algorithms for diverse label-free and fluorescence computational imaging methods that enable quantitative imaging of the architecture of dynamic cell systems.
 
 Our goal is to enable modular and user-friendly implementations of computational microscopy methods for dynamic imaging across the scales of organelles, cells, and tissues.
 
