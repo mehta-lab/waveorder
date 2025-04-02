@@ -151,8 +151,8 @@ doi = {10.1364/AO.57.00A205},
 
 ## Fluorescence microscopy
 
-### Widefield and confocal deconvolution microscopy
-__fluorescence density__ from a widefield  and confocal volumetric fluorescence acquisition.
+### Widefield deconvolution microscopy
+__fluorescence density__ from a widefield volumetric fluorescence acquisition.
 
 <details>
 <summary> Swedlow 2013 </summary>
