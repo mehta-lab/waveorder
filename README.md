@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/1b4fabd4-2ead-40fa-ae88-99642a1589f1" alt="Image" width="75%">
+  <img src="https://github.com/user-attachments/assets/1b4fabd4-2ead-40fa-ae88-99642a1589f1" alt="Image" width="50%">
 </p>
 
 [![Python package index](https://img.shields.io/pypi/v/waveorder.svg)](https://pypi.org/project/waveorder)
