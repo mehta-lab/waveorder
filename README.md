@@ -1,6 +1,6 @@
-<div align="center" style="width:100%; margin: 0 auto;">
-	<img src="https://github.com/user-attachments/assets/1b4fabd4-2ead-40fa-ae88-99642a1589f1" alt="Image" style="max-width: 75%; height: auto;">
-</div>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/1b4fabd4-2ead-40fa-ae88-99642a1589f1" alt="Image" width="75%">
+</p>
 
 [![Python package index](https://img.shields.io/pypi/v/waveorder.svg)](https://pypi.org/project/waveorder)
 [![PyPI monthly downloads](https://img.shields.io/pypi/dm/waveorder.svg)](https://pypistats.org/packages/waveorder)
