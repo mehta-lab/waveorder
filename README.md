@@ -1,4 +1,7 @@
-![Image](https://github.com/user-attachments/assets/1b4fabd4-2ead-40fa-ae88-99642a1589f1)
+<div align="center" style="width:75%; margin: 0 auto;">
+	<img src="https://github.com/user-attachments/assets/1b4fabd4-2ead-40fa-ae88-99642a1589f1" alt="Image" style="max-width: 100%; height: auto;">
+</div>
+
 [![Python package index](https://img.shields.io/pypi/v/waveorder.svg)](https://pypi.org/project/waveorder)
 [![PyPI monthly downloads](https://img.shields.io/pypi/dm/waveorder.svg)](https://pypistats.org/packages/waveorder)
 [![Total downloads](https://pepy.tech/badge/waveorder)](https://pepy.tech/project/waveorder)
