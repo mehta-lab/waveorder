@@ -116,10 +116,10 @@ plt.show()
     **simulation_arguments, **transfer_function_arguments
 )
 # Convert complex valued transfer functions to real valued
-real_potential_transfer_function = np.fft.ifftshift(
+real_potential_transfer_function_shifted = np.fft.ifftshift(
     real_potential_transfer_function.real
 )
-imag_potential_transfer_function = np.fft.ifftshift(
+imag_potential_transfer_function_shifted = np.fft.ifftshift(
     imag_potential_transfer_function.real
 )
 
@@ -127,12 +127,12 @@ imag_potential_transfer_function = np.fft.ifftshift(
 fig, axes = plt.subplots(2, 5, figsize=(15, 6))
 for i, z in enumerate(z_slices):
     axes[0, i].imshow(
-        real_potential_transfer_function[z], cmap="gray", origin="lower"
+        real_potential_transfer_function_shifted[z], cmap="gray", origin="lower"
     )
     axes[0, i].set_title(f"Real TF, z = {z}")
     axes[0, i].axis("off")
     axes[1, i].imshow(
-        imag_potential_transfer_function[z], cmap="gray", origin="lower"
+        imag_potential_transfer_function_shifted[z], cmap="gray", origin="lower"
     )
     axes[1, i].set_title(f"Imag TF, z = {z}")
     axes[1, i].axis("off")
@@ -187,3 +187,5 @@ for i, z in enumerate(z_slices):
     axes[1, i].axis("off")
 plt.tight_layout()
 plt.show()
+
+# %%
