@@ -51,7 +51,9 @@ import numpy as np
 from pathlib import Path
 from platformdirs import user_data_dir
 import matplotlib.pyplot as plt
+import torch
 
+from waveorder import util
 from waveorder.models import phase_thick_3d
 from waveorder.visuals import jupyter_visuals
 
@@ -88,12 +90,32 @@ transfer_function_arguments = {
 
 # %%
 # Create a phantom
-zyx_phase = phase_thick_3d.generate_test_phantom(
-    **simulation_arguments, **phantom_arguments
-)
 
-# Show 5 z-slices of the phantom
-z_slices = np.linspace(0, zyx_phase.shape[0] - 1, 5).astype(int)
+# Star target
+star, _, _ = util.generate_star_target(
+    yx_shape=simulation_arguments["zyx_shape"][1:3]
+)
+yx_phase = star * (
+    phantom_arguments["index_of_refraction_sample"] - simulation_arguments["index_of_refraction_media"]
+)  # phase in radians
+# Initialize zyx_phase with zeros
+zyx_phase = torch.zeros(simulation_arguments["zyx_shape"])
+
+# Copy yx_phase into the central 10 z slices
+z_center = simulation_arguments["zyx_shape"][0] // 2
+z_start = z_center - 5
+z_end = z_center + 6
+zyx_phase[z_start:z_end] = yx_phase
+
+# Bead target
+# zyx_phase = phase_thick_3d.generate_test_phantom(
+#     **simulation_arguments, **phantom_arguments
+# )
+
+
+# Show 5 z-slices, five apart, centered on the central z slice
+z_slices = np.arange(z_center - 10, z_center + 11, 5)
+
 fig, axes = plt.subplots(1, 5, figsize=(15, 3))
 for i, z in enumerate(z_slices):
     axes[i].imshow(zyx_phase[z], cmap="gray", origin="lower")
@@ -127,12 +149,16 @@ imag_potential_transfer_function_shifted = np.fft.ifftshift(
 fig, axes = plt.subplots(2, 5, figsize=(15, 6))
 for i, z in enumerate(z_slices):
     axes[0, i].imshow(
-        real_potential_transfer_function_shifted[z], cmap="gray", origin="lower"
+        real_potential_transfer_function_shifted[z],
+        cmap="gray",
+        origin="lower",
     )
     axes[0, i].set_title(f"Real TF, z = {z}")
     axes[0, i].axis("off")
     axes[1, i].imshow(
-        imag_potential_transfer_function_shifted[z], cmap="gray", origin="lower"
+        imag_potential_transfer_function_shifted[z],
+        cmap="gray",
+        origin="lower",
     )
     axes[1, i].set_title(f"Imag TF, z = {z}")
     axes[1, i].axis("off")
