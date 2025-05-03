@@ -96,7 +96,8 @@ star, _, _ = util.generate_star_target(
     yx_shape=simulation_arguments["zyx_shape"][1:3]
 )
 yx_phase = star * (
-    phantom_arguments["index_of_refraction_sample"] - simulation_arguments["index_of_refraction_media"]
+    phantom_arguments["index_of_refraction_sample"]
+    - simulation_arguments["index_of_refraction_media"]
 )  # phase in radians
 # Initialize zyx_phase with zeros
 zyx_phase = torch.zeros(simulation_arguments["zyx_shape"])
@@ -119,7 +120,7 @@ z_slices = np.arange(z_center - 10, z_center + 11, 5)
 fig, axes = plt.subplots(1, 5, figsize=(15, 3))
 for i, z in enumerate(z_slices):
     axes[i].imshow(zyx_phase[z], cmap="gray", origin="lower")
-    axes[i].set_title(f"z = {z}")
+    axes[i].set_title(f"z = {z - z_center}")
     axes[i].axis("off")
 plt.tight_layout()
 plt.show()
@@ -132,35 +133,32 @@ plt.show()
 # %%
 # Calculate real and imaginary parts of the transfer function
 (
-    real_potential_transfer_function,
-    imag_potential_transfer_function,
+    real_component_transfer_function,
+    imaginary_component_transfer_function,
 ) = phase_thick_3d.calculate_transfer_function(
     **simulation_arguments, **transfer_function_arguments
 )
-# Convert complex valued transfer functions to real valued
-real_potential_transfer_function_shifted = np.fft.ifftshift(
-    real_potential_transfer_function.real
-)
-imag_potential_transfer_function_shifted = np.fft.ifftshift(
-    imag_potential_transfer_function.real
-)
+
+# Magnitude and phase of the real component of the transfer function
+tf_real_magnitude = np.fft.ifftshift(real_component_transfer_function.abs())
+tf_real_phase = np.fft.ifftshift(real_component_transfer_function.angle())
 
 # Visualize transfer functions
 fig, axes = plt.subplots(2, 5, figsize=(15, 6))
 for i, z in enumerate(z_slices):
     axes[0, i].imshow(
-        real_potential_transfer_function_shifted[z],
+        tf_real_magnitude[z],
         cmap="gray",
         origin="lower",
     )
-    axes[0, i].set_title(f"Real TF, z = {z}")
+    axes[0, i].set_title(f"Magnitude of TF, z = {z - z_center}")
     axes[0, i].axis("off")
     axes[1, i].imshow(
-        imag_potential_transfer_function_shifted[z],
+        tf_real_phase[z],
         cmap="gray",
         origin="lower",
     )
-    axes[1, i].set_title(f"Imag TF, z = {z}")
+    axes[1, i].set_title(f"Phase of TF, z = {z - z_center}")
     axes[1, i].axis("off")
 plt.tight_layout()
 plt.show()
@@ -174,7 +172,7 @@ plt.show()
 # Simulate defocus data
 zyx_data = phase_thick_3d.apply_transfer_function(
     zyx_phase,
-    real_potential_transfer_function,
+    real_component_transfer_function,
     transfer_function_arguments["z_padding"],
     brightness=1e3,
 )
@@ -183,7 +181,7 @@ zyx_data = phase_thick_3d.apply_transfer_function(
 fig, axes = plt.subplots(1, 5, figsize=(15, 3))
 for i, z in enumerate(z_slices):
     axes[i].imshow(zyx_data[z], cmap="gray", origin="lower")
-    axes[i].set_title(f"Data, z = {z}")
+    axes[i].set_title(f"Data, z = {z - z_center}")
     axes[i].axis("off")
 plt.tight_layout()
 plt.show()
@@ -197,20 +195,36 @@ plt.show()
 # Reconstruct phase
 zyx_recon = phase_thick_3d.apply_inverse_transfer_function(
     zyx_data,
-    real_potential_transfer_function,
-    imag_potential_transfer_function,
+    real_component_transfer_function,
+    imaginary_component_transfer_function,
     transfer_function_arguments["z_padding"],
+    reconstruction_algorithm="Tikhonov",
+    regularization_strength=1e-5,
 )
 
 # Visualize reconstruction compared to ground truth
-fig, axes = plt.subplots(2, 5, figsize=(15, 6))
+fig, axes = plt.subplots(3, 5, figsize=(15, 9))
+
+# Normalize data and reconstruction between 0 and 1
+zyx_data_norm = (zyx_data - zyx_data.min()) / (zyx_data.max() - zyx_data.min())
+zyx_recon_norm = (zyx_recon - zyx_recon.min()) / (
+    zyx_recon.max() - zyx_recon.min()
+)
+
 for i, z in enumerate(z_slices):
     axes[0, i].imshow(zyx_phase[z], cmap="gray", origin="lower")
-    axes[0, i].set_title(f"Ground Truth, z = {z}")
+    axes[0, i].set_title(f"Ground Truth, z = {z - z_center}")
     axes[0, i].axis("off")
-    axes[1, i].imshow(zyx_recon[z], cmap="gray", origin="lower")
-    axes[1, i].set_title(f"Reconstruction, z = {z}")
+    axes[1, i].imshow(
+        zyx_data_norm[z], cmap="gray", origin="lower", vmin=0, vmax=1
+    )
+    axes[1, i].set_title(f"Data, z = {z - z_center}")
     axes[1, i].axis("off")
+    axes[2, i].imshow(
+        zyx_recon_norm[z], cmap="gray", origin="lower", vmin=0, vmax=1
+    )
+    axes[2, i].set_title(f"Reconstruction, z = {z - z_center}")
+    axes[2, i].axis("off")
 plt.tight_layout()
 plt.show()
 
