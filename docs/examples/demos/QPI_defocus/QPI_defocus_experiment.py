@@ -45,6 +45,7 @@ subprocess.check_call(
         "git+https://github.com/mehta-lab/waveorder.git@main",
     ]
 )
+!pip install iohub==0.2.0
 
 # %%
 import matplotlib.pyplot as plt
