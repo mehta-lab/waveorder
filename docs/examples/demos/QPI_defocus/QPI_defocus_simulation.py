@@ -176,11 +176,13 @@ zyx_data = phase_thick_3d.apply_transfer_function(
     transfer_function_arguments["z_padding"],
     brightness=1e3,
 )
-
+zyx_data_norm = (zyx_data - zyx_data.min()) / (zyx_data.max() - zyx_data.min())
 # Visualize simulated data
 fig, axes = plt.subplots(1, 5, figsize=(15, 3))
 for i, z in enumerate(z_slices):
-    axes[i].imshow(zyx_data[z], cmap="gray", origin="lower")
+    axes[i].imshow(
+        zyx_data_norm[z], cmap="gray", origin="lower", vmin=0, vmax=1
+    )
     axes[i].set_title(f"Data, z = {z - z_center}")
     axes[i].axis("off")
 plt.tight_layout()
