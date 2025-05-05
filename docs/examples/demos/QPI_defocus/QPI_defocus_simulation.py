@@ -91,7 +91,7 @@ transfer_function_arguments = {
 # %%
 # Create a phantom
 
-# Star target
+# 3D Star target
 star, _, _ = util.generate_star_target(
     yx_shape=simulation_arguments["zyx_shape"][1:3]
 )

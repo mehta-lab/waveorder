@@ -96,6 +96,7 @@ zyx_recon = phase_thick_3d.apply_inverse_transfer_function(
     real_potential_transfer_function,
     imag_potential_transfer_function,
     transfer_function_arguments["z_padding"],
+    regularization_parameter=0.01,
 )
 # %% Compared data and reconstruction
 z_slices = [1, 3, 5, 7, 9]
@@ -103,10 +104,10 @@ z_slices = [1, 3, 5, 7, 9]
 fig, axes = plt.subplots(2, 5, figsize=(15, 6))
 for i, z in enumerate(z_slices):
     axes[0, i].imshow(zyx_data[z], cmap="gray", origin="lower")
-    axes[0, i].set_title(f"Ground Truth, z = {z}")
+    axes[0, i].set_title(f"Brightfield Data, z = {z}")
     axes[0, i].axis("off")
     axes[1, i].imshow(zyx_recon[z], cmap="gray", origin="lower")
-    axes[1, i].set_title(f"Reconstruction, z = {z}")
+    axes[1, i].set_title(f"Phase Reconstruction, z = {z}")
     axes[1, i].axis("off")
 plt.tight_layout()
 plt.show()
