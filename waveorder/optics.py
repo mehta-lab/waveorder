@@ -144,8 +144,53 @@ def generate_pupil(frr, NA, lamb_in):
 
     Pupil = torch.zeros(frr.shape)
     Pupil[frr < NA / lamb_in] = 1
-
+    
     return Pupil
+
+
+def generate_tilted_pupil(
+    fxx,
+    fyy,
+    wavelength_illumination,
+    tilt_angle_degrees=0,
+    n1=1.0,
+    n2=1.0,
+    n3=1.0,
+    na_o1=1.0,
+    na_o2=1.0,
+    na_o3=1.0,
+):
+    tilt_angle_rad = np.deg2rad(tilt_angle_degrees)
+    frr = torch.sqrt(fxx**2 + fyy**2)
+    tt = torch.arcsin(frr * wavelength_illumination / (n1 * n3 / n2))
+    pp = torch.arctan2(fyy, fxx)
+
+    st = np.sin(tilt_angle_rad)
+    ct = np.cos(tilt_angle_rad)
+    theta_in = torch.arccos(
+        st * torch.sin(tt) * torch.cos(pp) + ct * torch.cos(tt)
+    )
+    theta_out = torch.arcsin(n2 / n3 * torch.sin(theta_in))
+
+    pupil = torch.zeros_like(theta_out)
+    tt2 = torch.arcsin(frr * wavelength_illumination / (n1 * n3 / n2))
+    # pupil = fxx
+
+    pupil[theta_out < np.arcsin(na_o1 / n2)] = 1
+
+    # Minimally working?!
+    #pupil *= fxx
+    #pupil[pupil < 0] = 0
+
+    pupil = torch.nan_to_num(pupil, nan=0.0)
+
+    tt2 = torch.arcsin(frr * wavelength_illumination / (n1 * n3 / n2))
+    #pupil *= (n3 / n2) * np.cos(tt2) / np.sqrt(1 - (((n3 / n2) * np.sin(tt2)) ** 2))
+    pupil *= np.cos(tt2) / np.sqrt(1 - 1.3*np.sin(tt2) ** 2)
+    pupil = torch.nan_to_num(pupil, nan=0.0)
+
+
+    return pupil
 
 
 def gen_sector_Pupil(fxx, fyy, NA, lamb_in, sector_angle, rotation_angle):
@@ -943,6 +988,24 @@ def compute_weak_object_transfer_function_3D(
     PG_hat = torch.fft.fft2(
         detection_pupil[None, :, :] * greens_function_z, dim=(1, 2)
     )
+
+    import napari
+
+    v = napari.Viewer()
+    v.add_image(
+        np.fft.fftshift(np.array(detection_pupil)), name="detection_pupil"
+    )
+    v.add_image(
+        np.fft.fftshift(np.array(torch.real(greens_function_z))),
+        name="greens_function_z",
+    )
+    v.add_image(
+        np.fft.fftshift(torch.real(detection_pupil[None] * greens_function_z)),
+        name="PG",
+    )
+    import pdb
+
+    pdb.set_trace()
 
     H1 = torch.fft.ifft2(torch.conj(SPHz_hat) * PG_hat, dim=(1, 2))
     H1 = H1 * window[:, None, None]
