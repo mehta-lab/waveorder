@@ -64,7 +64,7 @@ def ram_message():
     if is_warning:
         message = " \n".join(
             textwrap.wrap(
-                f"recOrder reconstructions often require more than the {gb_available:.1f} "
+                f"waveorder reconstructions often require more than the {gb_available:.1f} "
                 f"GB of RAM that this computer is equipped with. We recommend starting with reconstructions of small "
                 f"volumes ~1000 x 1000 x 10 and working up to larger volumes while monitoring your RAM usage with "
                 f"Task Manager or htop.",

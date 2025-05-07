@@ -41,7 +41,7 @@ def _check_scale_mismatch(
         show_warning(
             f"Requested reconstruction scale = {recon_scale} "
             f"and OME-Zarr metadata scale = {ngff_scale[2:]} are not equal. "
-            "recOrder's reconstruction uses the GUI's "
+            "waveorder's reconstruction uses the GUI's "
             "Z-step, pixel size, and magnification, "
             "while napari's viewer uses the input array's metadata."
         )
@@ -383,7 +383,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         self.calib = calib
         self.mode = mode
         self.n_slices = None
-        self.prefix = "recOrderPluginSnap"
+        self.prefix = "waveorderPluginSnap"
         self.dm = self.calib_window.mm.displays()
         self.channel_group = self.calib_window.config_group
 
@@ -598,7 +598,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
             transfer_function_dirpath=transfer_function_path,
             config_filepath=self.config_path,
             output_dirpath=reconstruction_path,
-            unique_id="recOrderAcq",
+            unique_id="waveorderAcq",
         )
 
         # Read reconstruction to pass to emitters

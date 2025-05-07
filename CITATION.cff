@@ -43,8 +43,7 @@ identifiers:
   - type: url
     value: 'https://www.napari-hub.org/plugins/recOrder-napari'
     description: >-
-      recOrder-napari plugin for label-free imaging that
-      depends on waveOrder library
+      waveorder plugin for label-free imaging (TODO: update URL)
   - type: doi
     value: 10.1364/BOE.455770
     description: >-

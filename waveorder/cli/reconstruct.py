@@ -45,7 +45,7 @@ def reconstruct(
 
     See /examples for example configuration files.
 
-    >> recorder reconstruct -i ./input.zarr/*/*/* -c ./examples/birefringence.yml -o ./output.zarr
+    >> waveorder reconstruct -i ./input.zarr/*/*/* -c ./examples/birefringence.yml -o ./output.zarr
     """
 
     # Handle transfer function path

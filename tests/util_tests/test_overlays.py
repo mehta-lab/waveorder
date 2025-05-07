@@ -46,7 +46,7 @@ def _birefringence(draw):
 
 @given(briefringence=_birefringence(), jch=st.booleans())
 def test_ret_ori_overlay(briefringence: tuple[NDArray, NDArray], jch: bool):
-    """Test recOrder.io.utils.ret_ori_overlay()"""
+    """Test waveorder.io.utils.ret_ori_overlay()"""
     retardance, orientation = briefringence
     retardance_copy = retardance.copy()
     orientation_copy = orientation.copy()

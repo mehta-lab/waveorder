@@ -14,7 +14,7 @@ from pydantic.v1 import (
 
 # This file defines the configuration settings for the CLI.
 
-# Example settings files in `/examples/settings/` are autmatically generated
+# Example settings files in `/docs/examples/settings/` are autmatically generated
 # by the tests in `/tests/cli_tests/test_settings.py` - `test_generate_example_settings`.
 
 # To keep the example settings up to date, run `pytest` locally when this file changes.

@@ -17,13 +17,13 @@ try:
 except:
     pass
 
-PLUGIN_NAME = "recOrder: Computational Toolkit for Label-Free Imaging"
+PLUGIN_NAME = "waveorder: Computational Toolkit for Label-Free Imaging"
 PLUGIN_ICON = "🔬"
 
 
 @click.command()
 def gui():
-    """GUI for recOrder: Computational Toolkit for Label-Free Imaging"""
+    """GUI for waveorder: Computational Toolkit for Label-Free Imaging"""
 
     app = QApplication(sys.argv)
     app.setStyle(

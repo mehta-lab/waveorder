@@ -168,7 +168,7 @@ def apply_inverse_transfer_function_single_position(
     if settings.birefringence is not None:
         # settings.birefringence has more parameters than waveorder needs,
         # so this section converts the settings to a dict and separates the
-        # waveorder parameters (biref_inverse_dict) from the recorder
+        # waveorder parameters (biref_inverse_dict) from the waveorder
         # parameters (cyx_no_sample_data, and wavelength_illumination)
         biref_inverse_dict = settings.birefringence.apply_inverse.dict()
 
@@ -286,7 +286,7 @@ def apply_inverse_transfer_function_single_position(
     input_dataset.close()
 
     echo_headline(
-        f"Recreate this reconstruction with:\n$ recorder apply-inv-tf {input_position_dirpath} {transfer_function_dirpath} -c {config_filepath} -o {output_position_dirpath}"
+        f"Recreate this reconstruction with:\n$ waveorder apply-inv-tf {input_position_dirpath} {transfer_function_dirpath} -c {config_filepath} -o {output_position_dirpath}"
     )
 
 
@@ -423,7 +423,7 @@ def apply_inv_tf(
 
     See /examples for example configuration files.
 
-    >> recorder apply-inv-tf -i ./input.zarr/*/*/* -t ./transfer-function.zarr -c /examples/birefringence.yml -o ./output.zarr
+    >> waveorder apply-inv-tf -i ./input.zarr/*/*/* -t ./transfer-function.zarr -c /examples/birefringence.yml -o ./output.zarr
     """
     apply_inverse_transfer_function_cli(
         input_position_dirpaths,

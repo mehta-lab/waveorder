@@ -192,16 +192,16 @@ def run_acquire(input_path, waitBetweenT):
 
 # %% #############################################
 # Step 1:
-# Convert an existing ome-tif recOrder acquisition, preferably with all dims (t, p, z, c)
+# Convert an existing ome-tif waveorder acquisition, preferably with all dims (t, p, z, c)
 # This will convert an existing ome-tif to a .zarr storage
 
-# ome_tif_path = "/ome-zarr_data/recOrderAcq/test/snap_6D_ometiff_1"
+# ome_tif_path = "/ome-zarr_data/waveorderAcq/test/snap_6D_ometiff_1"
 # runConvert(ome_tif_path)
 
 # %% #############################################
 # Step 2:
-# run the test to simulate Acquiring a recOrder .zarr store
+# run the test to simulate Acquiring a waveorder .zarr store
 
-input_path = "/ome-zarr_data/recOrderAcq/test/raw_snap_6D_ometiff_1.zarr"
+input_path = "/ome-zarr_data/waveorderAcq/test/raw_snap_6D_ometiff_1.zarr"
 waitBetweenT = 60
 run_acquire(input_path, waitBetweenT)

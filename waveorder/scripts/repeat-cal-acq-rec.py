@@ -22,7 +22,7 @@ def stage_detour(app: MainWidget, dx: float, dy: float, wait=5):
     Parameters
     ----------
     app : MainWidget
-        recOrder main widget instance
+        waveorder main widget instance
     dx : float
         relative x to translate
     dy : float
@@ -33,7 +33,7 @@ def stage_detour(app: MainWidget, dx: float, dy: float, wait=5):
     Yields
     ------
     MainWidget
-        recOrder main widget instance
+        waveorder main widget instance
 
     Usage
     -----
