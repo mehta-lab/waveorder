@@ -5,6 +5,7 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
+from waveorder.filter import apply_filter_bank
 
 
 def generate_test_phantom(
@@ -236,7 +237,7 @@ def apply_inverse_transfer_function(
     absorption_2d_to_3d_transfer_function: Tensor,
     phase_2d_to_3d_transfer_function: Tensor,
     reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
-    regularization_strength: float = 1e-6,
+    regularization_strength: float = 1e-3,
     reg_p: float = 1e-6,  # TODO: use this parameter
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
@@ -291,7 +292,7 @@ def apply_inverse_transfer_function(
             (
                 absorption_2d_to_3d_transfer_function,
                 phase_2d_to_3d_transfer_function,
-        ),
+            ),
             dim=0,
         )
 
