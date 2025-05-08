@@ -202,8 +202,8 @@ def visualize_point_spread_function(
 def apply_transfer_function(
     yx_absorption: Tensor,
     yx_phase: Tensor,
-    phase_2d_to_3d_transfer_function: Tensor,
     absorption_2d_to_3d_transfer_function: Tensor,
+    phase_2d_to_3d_transfer_function: Tensor,
 ) -> Tensor:
     # Very simple simulation, consider adding noise and bkg knobs
 
