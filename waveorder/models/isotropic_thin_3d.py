@@ -240,7 +240,7 @@ def apply_inverse_transfer_function(
     reg_p: float = 1e-6,  # TODO: use this parameter
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
-    bg_filter: bool = True,
+    bg_filter: bool = False,
 ) -> Tuple[Tensor, Tensor]:
     """Reconstructs absorption and phase from zyx_data and a pair of
     3D-to-2D transfer functions named absorption_2d_to_3d_transfer_function and
