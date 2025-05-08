@@ -281,66 +281,39 @@ def apply_inverse_transfer_function(
     NotImplementedError
         TV is not implemented
     """
-    zyx_data_normalized = util.inten_normalization(
-        zyx_data, bg_filter=bg_filter
-    )
+    # Normalize
+    zyx = util.inten_normalization(zyx_data, bg_filter=bg_filter)
 
-    zyx_data_hat = torch.fft.fft2(zyx_data_normalized, dim=(1, 2))
-
-    # TODO AHA and b_vec calculations should be moved into tikhonov/tv calculations
-    # TODO Reformulate to use filter.apply_filter_bank
-    AHA = [
-        torch.sum(torch.abs(absorption_2d_to_3d_transfer_function) ** 2, dim=0)
-        + regularization_strength,
-        torch.sum(
-            torch.conj(absorption_2d_to_3d_transfer_function)
-            * phase_2d_to_3d_transfer_function,
-            dim=0,
-        ),
-        torch.sum(
-            torch.conj(
-                phase_2d_to_3d_transfer_function,
-            )
-            * absorption_2d_to_3d_transfer_function,
-            dim=0,
-        ),
-        torch.sum(
-            torch.abs(
-                phase_2d_to_3d_transfer_function,
-            )
-            ** 2,
-            dim=0,
-        )
-        + reg_p,
-    ]
-
-    b_vec = [
-        torch.sum(
-            torch.conj(absorption_2d_to_3d_transfer_function) * zyx_data_hat,
-            dim=0,
-        ),
-        torch.sum(
-            torch.conj(
-                phase_2d_to_3d_transfer_function,
-            )
-            * zyx_data_hat,
-            dim=0,
-        ),
-    ]
-
-    # Deconvolution with Tikhonov regularization
+    # TODO Consider refactoring with vectorial transfer function SVD
     if reconstruction_algorithm == "Tikhonov":
-        absorption, phase = util.dual_variable_tikhonov_deconvolution_2d(
-            AHA, b_vec
+        # Prepare (2, Z, Y, X) transfer function bank
+        sfYX_transfer_function = torch.stack(
+            (
+                absorption_2d_to_3d_transfer_function,
+                phase_2d_to_3d_transfer_function,
+        ),
+            dim=0,
         )
+
+        YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
+        Up, Sp, Vhp = torch.linalg.svd(
+            YXsf_transfer_function, full_matrices=False
+        )
+        U = Up.permute(2, 3, 0, 1)
+        S = Sp.permute(2, 0, 1)
+        Vh = Vhp.permute(2, 3, 0, 1)
+
+        S_reg = S / (S**2 + regularization_strength)
+        sfyx_inverse_filter = torch.einsum(
+            "sj...,j...,jf...->fs...", U, S_reg, Vh
+        )
+
+        f_yx = apply_filter_bank(sfyx_inverse_filter, zyx)
+        absorption_yx = f_yx[0]
+        phase_yx = f_yx[1]
 
     # ADMM deconvolution with anisotropic TV regularization
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
-        absorption, phase = util.dual_variable_admm_tv_deconv_2d(
-            AHA, b_vec, rho=TV_rho_strength, itr=TV_iterations
-        )
 
-    phase -= torch.mean(phase)
-
-    return absorption, phase
+    return absorption_yx, phase_yx
