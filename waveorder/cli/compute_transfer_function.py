@@ -61,18 +61,23 @@ def generate_and_save_phase_transfer_function(
     echo_headline("Generating phase transfer function with settings:")
     echo_settings(settings.phase.transfer_function)
 
+    settings_dict = settings.phase.transfer_function.dict()
     if settings.reconstruction_dimension == 2:
         # Convert zyx_shape and z_pixel_size into yx_shape and z_position_list
-        settings_dict = settings.phase.transfer_function.dict()
         settings_dict["yx_shape"] = [zyx_shape[1], zyx_shape[2]]
         settings_dict["z_position_list"] = list(
-            -(np.arange(zyx_shape[0]) - zyx_shape[0] // 2)
+            -(
+                np.arange(zyx_shape[0])
+                - settings_dict["z_focus_offset"]
+                - (zyx_shape[0] // 2)
+            )
             * settings_dict["z_pixel_size"]
         )
 
         # Remove unused parameters
         settings_dict.pop("z_pixel_size")
         settings_dict.pop("z_padding")
+        settings_dict.pop("z_focus_offset")
 
         # Calculate transfer functions
         (
@@ -95,13 +100,15 @@ def generate_and_save_phase_transfer_function(
         )
 
     elif settings.reconstruction_dimension == 3:
+        settings_dict.pop("z_focus_offset")  # not used in 3D
+
         # Calculate transfer functions
         (
             real_potential_transfer_function,
             imaginary_potential_transfer_function,
         ) = phase_thick_3d.calculate_transfer_function(
             zyx_shape=zyx_shape,
-            **settings.phase.transfer_function.dict(),
+            **settings_dict,
         )
         # Save
         dataset.create_image(
