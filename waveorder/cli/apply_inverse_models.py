@@ -74,15 +74,16 @@ def phase(
 
         # Apply
         (
-            _,
-            output,
+            absorption_yx,
+            phase_yx,
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             czyx_data[0],
             absorption_transfer_function,
             phase_transfer_function,
             **settings_phase.apply_inverse.dict(),
         )
-        import pdb; pdb.set_trace()
+        # Stack to C1YX
+        output = phase_yx[None, None] #torch.stack((absorption_yx[None], phase_yx[None]))
 
     # [phase only, 3]
     elif recon_dim == 3:
