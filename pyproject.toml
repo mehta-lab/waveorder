@@ -45,21 +45,20 @@ dependencies = [
   "click>=8.0.1",
   "colorspacious>=1.1.2",
   "importlib-metadata",
-  "iohub==0.1.0",
+  "iohub<0.3",
   "ipywidgets>=7.5.1",
   "matplotlib>=3.1.1",
   "natsort>=7.1.1",
   "numpy>=1.24",
-  "ome-zarr==0.8.3", # unpin when resolved: https://github.com/ome/napari-ome-zarr/issues/111
   "psutil",
   "pyqtgraph>=0.12.3",
-  "pydantic==1.10.19",
+  "pydantic",
   "pywavelets>=1.1.1",
   "scipy>=1.3.0",
   "submitit",
   "torch>=2.4.1",
   "qtpy",
-  "wget>=3.2"
+  "wget>=3.2",
 ]
 dynamic = ["version"]
 
@@ -68,7 +67,7 @@ all = [
   "napari[pyqt6]",
   "napari-ome-zarr>=0.3.2", # drag and drop convenience
   "pycromanager==0.27.2",
-  "jupyter"
+  "jupyter",
 ]
 dev = [
   "black==25.1.0",
