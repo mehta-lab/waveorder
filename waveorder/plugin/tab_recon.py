@@ -8,53 +8,28 @@ import time
 import uuid
 import warnings
 from pathlib import Path
-from typing import Annotated, Final, List, Literal, Union
+from typing import TYPE_CHECKING, Annotated, Final, List, Literal, Union
 
 from iohub.ngff import open_ome_zarr
 from magicgui import widgets
 from magicgui.type_map import get_widget_class
+# FIXME avoid star import
 from magicgui.widgets import *
 from qtpy import QtCore
 from qtpy.QtCore import QEvent, Qt, QThread, Signal
+# FIXME avoid star import
 from qtpy.QtWidgets import *
 
-try:
+if TYPE_CHECKING:
     from napari import Viewer
     from napari.utils import notifications
-except:
-    pass
 
 import concurrent.futures
-import importlib.metadata
 
-from pydantic.v1 import BaseModel, NonNegativeInt
+from pydantic.v1 import BaseModel, NonNegativeInt, ValidationError
 
 from waveorder.cli import jobs_mgmt, settings
 from waveorder.io import utils
-
-try:
-    # Use version specific pydantic import for ModelMetaclass
-    # prefer to pin to 1.10.19
-    version = importlib.metadata.version("pydantic")
-    # print("Your Pydantic library ver:{v}.".format(v=version))
-    if version >= "2.0.0":
-        print(
-            "Your Pydantic library ver:{v}. Recommended ver is: 1.10.19".format(
-                v=version
-            )
-        )
-        from pydantic.main import BaseModel, ModelMetaclass, ValidationError
-    elif version >= "1.10.19":
-        from pydantic.main import BaseModel, ModelMetaclass, ValidationError
-    else:
-        print(
-            "Your Pydantic library ver:{v}. Recommended ver is: 1.10.19".format(
-                v=version
-            )
-        )
-        from pydantic.main import BaseModel, ModelMetaclass, ValidationError
-except:
-    print("Pydantic library was not found. Ver 1.10.19 is recommended.")
 
 STATUS_submitted_pool = "Submitted_Pool"
 STATUS_submitted_job = "Submitted_Job"
@@ -2512,7 +2487,7 @@ class Ui_ReconTab_Form(QWidget):
 
     def add_pydantic_to_container(
         self,
-        py_model: Union[BaseModel, ModelMetaclass],
+        py_model: BaseModel,
         container: widgets.Container,
         excludes=[],
         json_dict=None,
@@ -2530,9 +2505,7 @@ class Ui_ReconTab_Form(QWidget):
                         toolTip = f"{toolTip}{f_val} "
                 except Exception as e:
                     pass
-                if isinstance(ftype, BaseModel) or isinstance(
-                    ftype, ModelMetaclass
-                ):
+                if isinstance(ftype, BaseModel):
                     json_val = None
                     if json_dict is not None:
                         json_val = json_dict[field]
@@ -2656,9 +2629,7 @@ class Ui_ReconTab_Form(QWidget):
         for field, field_def in pydantic_model.__fields__.items():
             if field_def is not None and field not in excludes:
                 ftype = field_def.type_
-                if isinstance(ftype, BaseModel) or isinstance(
-                    ftype, ModelMetaclass
-                ):
+                if isinstance(ftype, BaseModel):
                     # go deeper
                     pydantic_kwargs[field] = (
                         {}
