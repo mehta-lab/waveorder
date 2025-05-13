@@ -13,10 +13,12 @@ from typing import TYPE_CHECKING, Annotated, Final, List, Literal, Union
 from iohub.ngff import open_ome_zarr
 from magicgui import widgets
 from magicgui.type_map import get_widget_class
+
 # FIXME avoid star import
 from magicgui.widgets import *
 from qtpy import QtCore
 from qtpy.QtCore import QEvent, Qt, QThread, Signal
+
 # FIXME avoid star import
 from qtpy.QtWidgets import *
 
