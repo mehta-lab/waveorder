@@ -72,11 +72,6 @@ def phase(
             transfer_function_dataset["phase_transfer_function"][0, 0]
         )
 
-        import napari
-        v = napari.Viewer()
-        isotropic_thin_3d.visualize_transfer_function(v, absorption_transfer_function, phase_transfer_function)
-        input("Showing OTFs. Press <enter> to continue...")
-        
         # Apply
         (
             absorption_yx,
