@@ -11,6 +11,7 @@ from waveorder.cli.parsing import (
 )
 from waveorder.cli.printing import echo_headline, echo_settings
 from waveorder.cli.settings import ReconstructionSettings
+from waveorder import focus
 from waveorder.io import utils
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
@@ -200,10 +201,36 @@ def compute_transfer_function_cli(
             f"Each of the input_channel_names = {settings.input_channel_names} in {config_filepath} must appear in the dataset {input_position_dirpaths[0]} which currently contains channel_names = {input_dataset.channel_names}."
         )
 
+    # Find in-focus slices for 2D reconstruction in "auto" mode
+    if (
+        settings.reconstruction_dimension == 2
+        and settings.phase.transfer_function.z_focus_offset == "auto"
+    ):
+        
+        c_idx = input_dataset.get_channel_index(settings.input_channel_names[0])
+        zyx_array = input_dataset["0"][0, c_idx]
+
+        in_focus_index = focus.focus_from_transverse_band(
+            zyx_array,
+            NA_det=settings.phase.transfer_function.numerical_aperture_detection,
+            lambda_ill=settings.phase.transfer_function.wavelength_illumination,
+            pixel_size=settings.phase.transfer_function.yx_pixel_size,
+            mode="polyfit",
+        )
+
+        z_focus_offset = in_focus_index - (zyx_shape[0] // 2)
+        settings.phase.transfer_function.z_focus_offset = z_focus_offset
+        print("Found z_focus_offset:", z_focus_offset)
+    
     # Prepare output dataset
-    num_channels = 2 if settings.reconstruction_dimension == 2 else 1  # space for SVD
+    num_channels = (
+        2 if settings.reconstruction_dimension == 2 else 1
+    )  # space for SVD
     output_dataset = open_ome_zarr(
-        output_dirpath, layout="fov", mode="w", channel_names=num_channels*["None"]
+        output_dirpath,
+        layout="fov",
+        mode="w",
+        channel_names=num_channels * ["None"],
     )
 
     # Pass settings to appropriate calculate_transfer_function and save

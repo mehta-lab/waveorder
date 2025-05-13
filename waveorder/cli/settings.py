@@ -61,7 +61,7 @@ class FourierTransferFunctionSettings(MyBaseModel):
     yx_pixel_size: PositiveFloat = 6.5 / 20
     z_pixel_size: PositiveFloat = 2.0
     z_padding: NonNegativeInt = 0
-    z_focus_offset: int = 0
+    z_focus_offset: Union[int, Literal["auto"]] = "auto"
     index_of_refraction_media: PositiveFloat = 1.3
     numerical_aperture_detection: PositiveFloat = 1.2
 

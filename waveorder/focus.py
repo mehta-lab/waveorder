@@ -14,7 +14,7 @@ def focus_from_transverse_band(
     lambda_ill,
     pixel_size,
     midband_fractions=(0.125, 0.25),
-    mode: Literal["min", "max"] = "max",
+    mode: Literal["min", "max", "polyfit"] = "max",
     plot_path: Optional[str] = None,
     threshold_FWHM: float = 0,
 ):
@@ -36,8 +36,9 @@ def focus_from_transverse_band(
     midband_fractions: Tuple[float, float], optional
         The minimum and maximum fraction of the cutoff frequency that define the midband.
         Requires: 0 <= midband_fractions[0] < midband_fractions[1] <= 1.
-    mode: {'max', 'min'}, optional
-        Option to choose the in-focus slice by minimizing or maximizing the midband frequency.
+    mode: {'min', 'max', 'polyfit'}, optional
+        Option to choose the in-focus slice by minimizing, maximizing,
+        or maximizing a polynomial fit to the midband frequency.
     plot_path: str or None, optional
         File name for a diagnostic plot (supports matplotlib filetypes .png, .pdf, .svg, etc.).
         Use None to skip.
@@ -122,6 +123,13 @@ def _mode_to_minmaxfunc(mode):
         minmaxfunc = np.argmin
     elif mode == "max":
         minmaxfunc = np.argmax
+    elif mode == "polyfit":
+
+        def minmaxfunc(y):
+            x = np.arange(len(y))
+            coeffs = np.polyfit(x, y, 4)  # empircal choice
+            return np.argmax(np.poly1d(coeffs)(x))
+
     else:
         raise ValueError("mode must be either `min` or `max`")
     return minmaxfunc
