@@ -149,6 +149,25 @@ def _calculate_wrap_unsafe_transfer_function(
     )
 
 
+def calculate_singular_system(
+    absorption_2d_to_3d_transfer_function,
+    phase_2d_to_3d_transfer_function,
+):
+    sfYX_transfer_function = torch.stack(
+        (
+            absorption_2d_to_3d_transfer_function,
+            phase_2d_to_3d_transfer_function,
+        ),
+        dim=0,
+    )
+    YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
+    Up, Sp, Vhp = torch.linalg.svd(YXsf_transfer_function, full_matrices=False)
+    U = Up.permute(2, 3, 0, 1)
+    S = Sp.permute(2, 0, 1)
+    Vh = Vhp.permute(2, 3, 0, 1)
+    return U, S, Vh
+
+
 def visualize_transfer_function(
     viewer,
     absorption_2d_to_3d_transfer_function: Tensor,
@@ -234,8 +253,7 @@ def apply_transfer_function(
 
 def apply_inverse_transfer_function(
     zyx_data: Tensor,
-    absorption_2d_to_3d_transfer_function: Tensor,
-    phase_2d_to_3d_transfer_function: Tensor,
+    singular_system: Tuple[Tensor, Tensor, Tensor],
     reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     reg_p: float = 1e-6,  # TODO: use this parameter
@@ -252,11 +270,9 @@ def apply_inverse_transfer_function(
     ----------
     zyx_data : Tensor
         3D raw data, label-free defocus stack
-    absorption_2d_to_3d_transfer_function : Tensor
-        3D-to-2D absorption transfer function, see calculate_transfer_function above
-    phase_2d_to_3d_transfer_function : Tensor
-        3D-to-2D phase transfer function, see calculate_transfer_function above
-    reconstruction_algorithm : Literal[&quot;Tikhonov&quot;, &quot;TV&quot;], optional
+    singular_system : Tuple[Tensor]
+        singular system of the transfer function bank
+    reconstruction_algorithm : Literal["Tikhonov";, "TV";], optional
         "Tikhonov" or "TV", by default "Tikhonov"
         "TV" is not implemented.
     regularization_strength : float, optional
@@ -287,23 +303,8 @@ def apply_inverse_transfer_function(
 
     # TODO Consider refactoring with vectorial transfer function SVD
     if reconstruction_algorithm == "Tikhonov":
-        # Prepare (2, Z, Y, X) transfer function bank
-        sfYX_transfer_function = torch.stack(
-            (
-                absorption_2d_to_3d_transfer_function,
-                phase_2d_to_3d_transfer_function,
-            ),
-            dim=0,
-        )
-
-        YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
-        Up, Sp, Vhp = torch.linalg.svd(
-            YXsf_transfer_function, full_matrices=False
-        )
-        U = Up.permute(2, 3, 0, 1)
-        S = Sp.permute(2, 0, 1)
-        Vh = Vhp.permute(2, 3, 0, 1)
-
+        print("Computing inverse filter")
+        U, S, Vh = singular_system
         S_reg = S / (S**2 + regularization_strength)
         sfyx_inverse_filter = torch.einsum(
             "sj...,j...,jf...->fs...", U, S_reg, Vh

@@ -87,15 +87,26 @@ def generate_and_save_phase_transfer_function(
             **settings_dict,
         )
 
+        # Calculate singular system
+        U, S, Vh = isotropic_thin_3d.calculate_singular_system(
+            absorption_transfer_function,
+            phase_transfer_function,
+        )
+
         # Save
         dataset.create_image(
-            "absorption_transfer_function",
-            absorption_transfer_function.cpu().numpy()[None, None, ...],
+            "singular_system_U",
+            U.cpu().numpy()[None],
             chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
         )
         dataset.create_image(
-            "phase_transfer_function",
-            phase_transfer_function.cpu().numpy()[None, None, ...],
+            "singular_system_S",
+            S.cpu().numpy()[None, None],
+            chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
+        )
+        dataset.create_image(
+            "singular_system_Vh",
+            Vh.cpu().numpy()[None],
             chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
         )
 
@@ -190,8 +201,9 @@ def compute_transfer_function_cli(
         )
 
     # Prepare output dataset
+    num_channels = 2 if settings.reconstruction_dimension == 2 else 1  # space for SVD
     output_dataset = open_ome_zarr(
-        output_dirpath, layout="fov", mode="w", channel_names=["None"]
+        output_dirpath, layout="fov", mode="w", channel_names=num_channels*["None"]
     )
 
     # Pass settings to appropriate calculate_transfer_function and save

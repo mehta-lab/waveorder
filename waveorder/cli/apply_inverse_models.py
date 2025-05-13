@@ -65,25 +65,23 @@ def phase(
     # [phase only, 2]
     if recon_dim == 2:
         # Load transfer functions
-        absorption_transfer_function = torch.tensor(
-            transfer_function_dataset["absorption_transfer_function"][0, 0]
-        )
-        phase_transfer_function = torch.tensor(
-            transfer_function_dataset["phase_transfer_function"][0, 0]
-        )
-
+        U = torch.tensor(transfer_function_dataset["singular_system_U"][0])
+        S = torch.tensor(transfer_function_dataset["singular_system_S"][0, 0])
+        Vh = torch.tensor(transfer_function_dataset["singular_system_Vh"][0])
+        
         # Apply
         (
             absorption_yx,
             phase_yx,
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             czyx_data[0],
-            absorption_transfer_function,
-            phase_transfer_function,
+            (U, S, Vh),
             **settings_phase.apply_inverse.dict(),
         )
         # Stack to C1YX
-        output = phase_yx[None, None] # torch.stack((phase_yx[None], absorption_yx[None]))
+        output = phase_yx[
+            None, None
+        ]  # torch.stack((phase_yx[None], absorption_yx[None]))
 
     # [phase only, 3]
     elif recon_dim == 3:

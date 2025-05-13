@@ -48,6 +48,12 @@ yx_phase[128:] = 0  # half phase
     **simulation_arguments, **transfer_function_arguments
 )
 
+# Calculate singular system
+singular_system = isotropic_thin_3d.calculate_singular_system(
+    absorption_2d_to_3d_transfer_function,
+    phase_2d_to_3d_transfer_function,
+ )
+
 # Display transfer function
 viewer = napari.Viewer()
 zyx_scale = np.array(
@@ -80,8 +86,7 @@ zyx_data = isotropic_thin_3d.apply_transfer_function(
     yx_phase_recon,
 ) = isotropic_thin_3d.apply_inverse_transfer_function(
     zyx_data,
-    absorption_2d_to_3d_transfer_function,
-    phase_2d_to_3d_transfer_function,
+    singular_system,
     regularization_strength=1e-2,
 )
 
