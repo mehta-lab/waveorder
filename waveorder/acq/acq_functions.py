@@ -4,7 +4,7 @@ import os
 import time
 
 import numpy as np
-from iohub import read_micromanager
+from iohub import read_images
 
 try:
     from pycromanager import Studio
@@ -164,8 +164,8 @@ def acquire_from_settings(
         files = glob.glob(path + "*")
         index = max([int(x.split(path + "_")[1]) for x in files])
 
-        reader = read_micromanager(
+        reader = read_images(
             path + f"_{index}", data_type="ometiff", extract_data=True
         )
 
-        return reader.get_array(0)
+        return reader[0].compute()
