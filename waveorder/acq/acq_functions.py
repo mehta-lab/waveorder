@@ -168,4 +168,4 @@ def acquire_from_settings(
             path + f"_{index}", data_type="ometiff", extract_data=True
         )
 
-        return reader[0].compute()
+        return reader[0].xdata.to_numpy()
