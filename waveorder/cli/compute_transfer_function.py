@@ -69,7 +69,7 @@ def generate_and_save_phase_transfer_function(
         settings_dict["z_position_list"] = list(
             -(
                 np.arange(zyx_shape[0])
-                - settings_dict["z_focus_offset"]
+                + settings_dict["z_focus_offset"]
                 - (zyx_shape[0] // 2)
             )
             * settings_dict["z_pixel_size"]
@@ -206,8 +206,10 @@ def compute_transfer_function_cli(
         settings.reconstruction_dimension == 2
         and settings.phase.transfer_function.z_focus_offset == "auto"
     ):
-        
-        c_idx = input_dataset.get_channel_index(settings.input_channel_names[0])
+
+        c_idx = input_dataset.get_channel_index(
+            settings.input_channel_names[0]
+        )
         zyx_array = input_dataset["0"][0, c_idx]
 
         in_focus_index = focus.focus_from_transverse_band(
@@ -222,7 +224,7 @@ def compute_transfer_function_cli(
         z_focus_offset = in_focus_index - (zyx_shape[0] // 2)
         settings.phase.transfer_function.z_focus_offset = z_focus_offset
         print("Found z_focus_offset:", z_focus_offset)
-    
+
     # Prepare output dataset
     num_channels = (
         2 if settings.reconstruction_dimension == 2 else 1
