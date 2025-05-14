@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from importlib_metadata import version
 from iohub import open_ome_zarr
-from iohub.ngff_meta import TransformationMeta
+from iohub.ngff.models import TransformationMeta
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from napari.utils.notifications import show_warning
 from scipy.interpolate import interp1d
