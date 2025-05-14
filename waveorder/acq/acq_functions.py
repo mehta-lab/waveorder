@@ -4,7 +4,7 @@ import os
 import time
 
 import numpy as np
-from iohub import read_images
+from iohub.mmstack import MMStack
 
 try:
     from pycromanager import Studio
@@ -127,7 +127,7 @@ def acquire_from_settings(
     settings: dict,
     grab_images: bool = True,
     restore_settings: bool = True,
-):
+) -> np.typing.NDArray:
     """Function to acquire an MDA acquisition with the native MM MDA Engine.
     Assumes single position acquisition.
 
@@ -163,9 +163,4 @@ def acquire_from_settings(
         path = os.path.join(settings["root"], settings["prefix"])
         files = glob.glob(path + "*")
         index = max([int(x.split(path + "_")[1]) for x in files])
-
-        reader = read_images(
-            path + f"_{index}", data_type="ometiff", extract_data=True
-        )
-
-        return reader[0].xdata.to_numpy()
+        return MMStack(path + f"_{index}")[0].xdata.to_numpy()
