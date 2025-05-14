@@ -4,6 +4,7 @@ import click
 import numpy as np
 from iohub.ngff import Position, open_ome_zarr
 
+from waveorder import focus
 from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
@@ -11,7 +12,6 @@ from waveorder.cli.parsing import (
 )
 from waveorder.cli.printing import echo_headline, echo_settings
 from waveorder.cli.settings import ReconstructionSettings
-from waveorder import focus
 from waveorder.io import utils
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
