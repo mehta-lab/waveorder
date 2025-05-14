@@ -29,6 +29,7 @@ if TYPE_CHECKING:
 import concurrent.futures
 
 from pydantic.v1 import BaseModel, NonNegativeInt, ValidationError
+from pydantic.v1.main import ModelMetaclass
 
 from waveorder.cli import jobs_mgmt, settings
 from waveorder.io import utils
@@ -2489,7 +2490,7 @@ class Ui_ReconTab_Form(QWidget):
 
     def add_pydantic_to_container(
         self,
-        py_model: BaseModel,
+        py_model: Union[BaseModel, ModelMetaclass],
         container: widgets.Container,
         excludes=[],
         json_dict=None,
@@ -2507,7 +2508,9 @@ class Ui_ReconTab_Form(QWidget):
                         toolTip = f"{toolTip}{f_val} "
                 except Exception as e:
                     pass
-                if isinstance(ftype, BaseModel):
+                if isinstance(ftype, BaseModel) or isinstance(
+                    ftype, ModelMetaclass
+                ):
                     json_val = None
                     if json_dict is not None:
                         json_val = json_dict[field]
@@ -2631,7 +2634,9 @@ class Ui_ReconTab_Form(QWidget):
         for field, field_def in pydantic_model.__fields__.items():
             if field_def is not None and field not in excludes:
                 ftype = field_def.type_
-                if isinstance(ftype, BaseModel):
+                if isinstance(ftype, BaseModel) or isinstance(
+                    ftype, ModelMetaclass
+                ):
                     # go deeper
                     pydantic_kwargs[field] = (
                         {}
