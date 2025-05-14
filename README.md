@@ -197,7 +197,7 @@ Please cite this repository, along with the relevant publications and preprints,
 Create a virtual environment:
 
 ```sh
-conda create -y -n waveorder python=3.10
+conda create -y -n waveorder python=3.12
 conda activate waveorder
 ```
 
