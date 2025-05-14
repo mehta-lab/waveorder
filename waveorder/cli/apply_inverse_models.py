@@ -68,7 +68,7 @@ def phase(
         U = torch.tensor(transfer_function_dataset["singular_system_U"][0])
         S = torch.tensor(transfer_function_dataset["singular_system_S"][0, 0])
         Vh = torch.tensor(transfer_function_dataset["singular_system_Vh"][0])
-        
+
         # Apply
         (
             absorption_yx,
