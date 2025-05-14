@@ -215,7 +215,8 @@ def compute_transfer_function_cli(
             NA_det=settings.phase.transfer_function.numerical_aperture_detection,
             lambda_ill=settings.phase.transfer_function.wavelength_illumination,
             pixel_size=settings.phase.transfer_function.yx_pixel_size,
-            mode="polyfit",
+            mode="min",
+            polynomial_fit_order=4,
         )
 
         z_focus_offset = in_focus_index - (zyx_shape[0] // 2)

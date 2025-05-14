@@ -14,7 +14,8 @@ def focus_from_transverse_band(
     lambda_ill,
     pixel_size,
     midband_fractions=(0.125, 0.25),
-    mode: Literal["min", "max", "polyfit"] = "max",
+    mode: Literal["min", "max"] = "max",
+    polynomial_fit_order: Optional[int] = None,
     plot_path: Optional[str] = None,
     threshold_FWHM: float = 0,
 ):
@@ -36,9 +37,10 @@ def focus_from_transverse_band(
     midband_fractions: Tuple[float, float], optional
         The minimum and maximum fraction of the cutoff frequency that define the midband.
         Requires: 0 <= midband_fractions[0] < midband_fractions[1] <= 1.
-    mode: {'min', 'max', 'polyfit'}, optional
-        Option to choose the in-focus slice by minimizing, maximizing,
-        or maximizing a polynomial fit to the midband frequency.
+    mode: {'min', 'max'}, optional
+        Option to choose the in-focus slice by minimizing or maximizing the midband power.
+    polynomial_fit_order: int, optional
+        Default None is no fit. If integer, the in-focus slice is chosen by fitting a polynomial to the midband power.
     plot_path: str or None, optional
         File name for a diagnostic plot (supports matplotlib filetypes .png, .pdf, .svg, etc.).
         Use None to skip.
@@ -94,7 +96,13 @@ def focus_from_transverse_band(
 
     # Find slice index with min/max power in midband
     midband_sum = np.sum(xy_abs_fft[:, midband_mask], axis=1)
-    peak_index = minmaxfunc(midband_sum)
+
+    if polynomial_fit_order is None:
+        peak_index = minmaxfunc(midband_sum)
+    else:
+        x = np.arange(len(midband_sum))
+        coeffs = np.polyfit(x, midband_sum, polynomial_fit_order)
+        peak_index = minmaxfunc(np.poly1d(coeffs)(x))
 
     peak_results = peak_widths(midband_sum, [peak_index])
     peak_FWHM = peak_results[0][0]
@@ -123,13 +131,6 @@ def _mode_to_minmaxfunc(mode):
         minmaxfunc = np.argmin
     elif mode == "max":
         minmaxfunc = np.argmax
-    elif mode == "polyfit":
-
-        def minmaxfunc(y):
-            x = np.arange(len(y))
-            coeffs = np.polyfit(x, y, 4)  # empircal choice
-            return np.argmax(np.poly1d(coeffs)(x))
-
     else:
         raise ValueError("mode must be either `min` or `max`")
     return minmaxfunc
