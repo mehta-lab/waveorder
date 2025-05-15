@@ -206,7 +206,8 @@ def compute_transfer_function_cli(
 
     # Find in-focus slices for 2D reconstruction in "auto" mode
     if (
-        settings.reconstruction_dimension == 2
+        settings.phase is not None
+        and settings.reconstruction_dimension == 2
         and settings.phase.transfer_function.z_focus_offset == "auto"
     ):
 
