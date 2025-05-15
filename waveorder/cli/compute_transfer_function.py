@@ -153,6 +153,10 @@ def generate_and_save_fluorescence_transfer_function(
     echo_headline("Generating fluorescence transfer function with settings:")
     echo_settings(settings.fluorescence.transfer_function)
 
+    # Remove unused parameters
+    settings_dict = settings.fluorescence.transfer_function.dict()
+    settings_dict.pop("z_focus_offset")
+
     if settings.reconstruction_dimension == 2:
         raise NotImplementedError
     elif settings.reconstruction_dimension == 3:
@@ -160,7 +164,7 @@ def generate_and_save_fluorescence_transfer_function(
         optical_transfer_function = (
             isotropic_fluorescent_thick_3d.calculate_transfer_function(
                 zyx_shape=zyx_shape,
-                **settings.fluorescence.transfer_function.dict(),
+                **settings_dict,
             )
         )
         # Save
