@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.11"]
 
     steps:
       - uses: actions/checkout@v3
@@ -27,8 +27,8 @@ jobs:
           pip install black==25.1.0
       - name: Check code styling with Black
         run: |
-          black --diff -S -t py310 waveorder
-          black --check -S -t py310 waveorder
+          black --diff -S -t py311 waveorder
+          black --check -S -t py311 waveorder
 
   # lint:
   #   name: Lint Check
@@ -36,7 +36,7 @@ jobs:
 
   #   strategy:
   #     matrix:
-  #       python-version: ["3.10"]
+  #       python-version: ["3.11"]
 
   #   steps:
   #     - uses: actions/checkout@v3
@@ -59,7 +59,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ["3.10"]
+        python-version: ["3.11"]
 
     steps:
       - uses: actions/checkout@v3
@@ -79,7 +79,7 @@ jobs:
   #   runs-on: ubuntu-latest
   #   strategy:
   #     matrix:
-  #       python-version: ["3.10", "3.11", "3.12"]
+  #       python-version: ["3.11", "3.12", "3.13"]
 
   #   steps:
   #     - uses: actions/checkout@v3

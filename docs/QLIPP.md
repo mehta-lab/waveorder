@@ -24,7 +24,7 @@ The overall structure of `waveorder` is shown in Panel B, highlighting the struc
 (Optional but recommended) install [anaconda](https://www.anaconda.com/products/distribution) and create a virtual environment:
 
 ```sh
-conda create -y -n waveorder python=3.10
+conda create -y -n waveorder python=3.12
 conda activate waveorder
 ```
 

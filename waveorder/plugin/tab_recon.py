@@ -8,53 +8,31 @@ import time
 import uuid
 import warnings
 from pathlib import Path
-from typing import Annotated, Final, List, Literal, Union
+from typing import TYPE_CHECKING, Annotated, Final, List, Literal, Union
 
 from iohub.ngff import open_ome_zarr
 from magicgui import widgets
 from magicgui.type_map import get_widget_class
+
+# FIXME avoid star import
 from magicgui.widgets import *
 from qtpy import QtCore
 from qtpy.QtCore import QEvent, Qt, QThread, Signal
+
+# FIXME avoid star import
 from qtpy.QtWidgets import *
 
-try:
+if TYPE_CHECKING:
     from napari import Viewer
     from napari.utils import notifications
-except:
-    pass
 
 import concurrent.futures
-import importlib.metadata
 
-from pydantic.v1 import BaseModel, NonNegativeInt
+from pydantic.v1 import BaseModel, NonNegativeInt, ValidationError
+from pydantic.v1.main import ModelMetaclass
 
 from waveorder.cli import jobs_mgmt, settings
 from waveorder.io import utils
-
-try:
-    # Use version specific pydantic import for ModelMetaclass
-    # prefer to pin to 1.10.19
-    version = importlib.metadata.version("pydantic")
-    # print("Your Pydantic library ver:{v}.".format(v=version))
-    if version >= "2.0.0":
-        print(
-            "Your Pydantic library ver:{v}. Recommended ver is: 1.10.19".format(
-                v=version
-            )
-        )
-        from pydantic.main import BaseModel, ModelMetaclass, ValidationError
-    elif version >= "1.10.19":
-        from pydantic.main import BaseModel, ModelMetaclass, ValidationError
-    else:
-        print(
-            "Your Pydantic library ver:{v}. Recommended ver is: 1.10.19".format(
-                v=version
-            )
-        )
-        from pydantic.main import BaseModel, ModelMetaclass, ValidationError
-except:
-    print("Pydantic library was not found. Ver 1.10.19 is recommended.")
 
 STATUS_submitted_pool = "Submitted_Pool"
 STATUS_submitted_job = "Submitted_Job"
