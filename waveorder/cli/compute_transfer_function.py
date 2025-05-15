@@ -152,7 +152,6 @@ def generate_and_save_fluorescence_transfer_function(
     """
     echo_headline("Generating fluorescence transfer function with settings:")
     echo_settings(settings.fluorescence.transfer_function)
-
     # Remove unused parameters
     settings_dict = settings.fluorescence.transfer_function.dict()
     settings_dict.pop("z_focus_offset")
