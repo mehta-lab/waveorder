@@ -79,6 +79,7 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
     if recon_phase:
         if recon_dim == 2:
             channel_names.append("Phase2D")
+            # channel_names.append("Absorption2D")
         elif recon_dim == 3:
             channel_names.append("Phase3D")
     if recon_fluo:
@@ -346,7 +347,9 @@ def apply_inverse_transfer_function_cli(
     executor_folder = os.path.join(
         Path(output_dirpath).parent.absolute(), name_without_ext + "_logs"
     )
-    executor = submitit.AutoExecutor(folder=Path(executor_folder))
+    executor = submitit.AutoExecutor(
+        folder=Path(executor_folder), cluster="debug"
+    )
 
     executor.update_parameters(
         slurm_array_parallelism=np.min([50, num_jobs]),

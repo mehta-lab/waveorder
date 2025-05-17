@@ -116,9 +116,10 @@ def test_phase_3dim_write(birefringence_phase_recon_settings_function):
     settings, dataset = birefringence_phase_recon_settings_function
     settings.reconstruction_dimension = 2
     generate_and_save_phase_transfer_function(settings, dataset, (3, 4, 5))
-    assert dataset["absorption_transfer_function"]
-    assert dataset["phase_transfer_function"]
-    assert dataset["phase_transfer_function"].shape == (1, 1, 3, 4, 5)
+    assert dataset["singular_system_U"]
+    assert dataset["singular_system_U"].shape == (1, 2, 2, 4, 5)
+    assert dataset["singular_system_S"]
+    assert dataset["singular_system_Vh"]
     assert "real_potential_transfer_function" not in dataset
     assert "imaginary_potential_transfer_function" not in dataset
 
