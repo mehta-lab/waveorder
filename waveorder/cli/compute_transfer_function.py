@@ -21,6 +21,22 @@ from waveorder.models import (
 )
 
 
+def _position_list_from_shape_scale_offset(
+    shape: int, scale: float, offset: float
+) -> list:
+    """
+    Generates a list of positions based on the given array shape, pixel size (scale), and offset.
+
+    Examples
+    --------
+    >>> _position_list_from_shape_scale_offset(5, 1.0, 0.0)
+    [2.0, 1.0, 0.0, -1.0, -2.0]
+    >>> _position_list_from_shape_scale_offset(4, 0.5, 1.0)
+    [1.5, 1.0, 0.5, 0.0]
+    """
+    return list((-np.arange(shape) + (shape // 2) + offset) * scale)
+
+
 def generate_and_save_birefringence_transfer_function(settings, dataset):
     """Generates and saves the birefringence transfer function to the dataset, based on the settings.
 
@@ -66,13 +82,12 @@ def generate_and_save_phase_transfer_function(
     if settings.reconstruction_dimension == 2:
         # Convert zyx_shape and z_pixel_size into yx_shape and z_position_list
         settings_dict["yx_shape"] = [zyx_shape[1], zyx_shape[2]]
-        settings_dict["z_position_list"] = list(
-            -(
-                np.arange(zyx_shape[0])
-                - settings_dict["z_focus_offset"]
-                - (zyx_shape[0] // 2)
+        settings_dict["z_position_list"] = (
+            _position_list_from_shape_scale_offset(
+                shape=zyx_shape[0],
+                scale=settings_dict["z_pixel_size"],
+                offset=settings_dict["z_focus_offset"],
             )
-            * settings_dict["z_pixel_size"]
         )
 
         # Remove unused parameters
