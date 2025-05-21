@@ -83,9 +83,9 @@ def phase(
             **settings_phase.apply_inverse.dict(),
         )
         # Stack to C1YX
-        output = phase_yx[
-            None, None
-        ]  # torch.stack((phase_yx[None], absorption_yx[None]))
+        output = phase_yx[None, None]
+        # TODO: Write phase and absorption to CZYX
+        # torch.stack((phase_yx[None], absorption_yx[None]))
 
     # [phase only, 3]
     elif recon_dim == 3:
