@@ -270,7 +270,7 @@ def apply_inverse_transfer_function(
     ----------
     zyx_data : Tensor
         3D raw data, label-free defocus stack
-    singular_system : Tuple[Tensor]
+    singular_system : Tuple[Tensor, Tensor, Tensor]
         singular system of the transfer function bank
     reconstruction_algorithm : Literal["Tikhonov";, "TV";], optional
         "Tikhonov" or "TV", by default "Tikhonov"
