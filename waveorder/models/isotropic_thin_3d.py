@@ -295,7 +295,7 @@ def apply_inverse_transfer_function(
         "Tikhonov" or "TV", by default "Tikhonov"
         "TV" is not implemented.
     regularization_strength : float, optional
-        regularization parameter, by default 1e-6
+        regularization parameter, by default 1e-3
     reg_p : float, optional
         TV-specific phase regularization parameter, by default 1e-6
         "TV" is not implemented.
