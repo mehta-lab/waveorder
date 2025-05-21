@@ -113,17 +113,14 @@ def generate_and_save_phase_transfer_function(
         dataset.create_image(
             "singular_system_U",
             U.cpu().numpy()[None],
-            chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
         )
         dataset.create_image(
             "singular_system_S",
             S.cpu().numpy()[None, None],
-            chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
         )
         dataset.create_image(
             "singular_system_Vh",
             Vh.cpu().numpy()[None],
-            chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
         )
 
     elif settings.reconstruction_dimension == 3:
