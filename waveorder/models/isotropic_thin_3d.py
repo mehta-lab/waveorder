@@ -149,9 +149,29 @@ def _calculate_wrap_unsafe_transfer_function(
 
 
 def calculate_singular_system(
-    absorption_2d_to_3d_transfer_function,
-    phase_2d_to_3d_transfer_function,
-):
+    absorption_2d_to_3d_transfer_function: Tensor,
+    phase_2d_to_3d_transfer_function: Tensor,
+) -> Tuple[Tensor, Tensor, Tensor]:
+    """Calculates the singular system of the absoprtion and phase transfer
+    functions.
+
+    Together, the transfer functions form a (2, Z, Vy, Vx) tensor, where
+    (2,) is the object-space dimension (abs, phase), (Z,) is the data-space
+    dimension, and (Vy, Vx) are the spatial frequency dimensions.
+
+    The SVD is computed over the (2, Z) dimensions.
+
+    Parameters
+    ----------
+    absorption_2d_to_3d_transfer_function : Tensor
+        ZYX transfer function for absorption
+    phase_2d_to_3d_transfer_function : Tensor
+        ZYX transfer function for phase
+
+    Returns
+    -------
+    Tuple[Tensor, Tensor, Tensor]
+    """
     sfYX_transfer_function = torch.stack(
         (
             absorption_2d_to_3d_transfer_function,
@@ -269,7 +289,7 @@ def apply_inverse_transfer_function(
     ----------
     zyx_data : Tensor
         3D raw data, label-free defocus stack
-    singular_system : Tuple[Tensor]
+    singular_system : Tuple[Tensor, Tensor, Tensor]
         singular system of the transfer function bank
     reconstruction_algorithm : Literal["Tikhonov";, "TV";], optional
         "Tikhonov" or "TV", by default "Tikhonov"
