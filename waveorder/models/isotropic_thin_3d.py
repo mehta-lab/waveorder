@@ -30,7 +30,7 @@ def generate_test_phantom(
         / wavelength_illumination
     )  # phase in radians
 
-    yx_absorption = 0.02 * sphere[1]
+    yx_absorption = torch.clone(yx_phase)
 
     return yx_absorption, yx_phase
 

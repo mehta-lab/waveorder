@@ -5,7 +5,6 @@
 
 import napari
 import numpy as np
-import torch
 
 from waveorder.models import isotropic_thin_3d
 
@@ -17,7 +16,7 @@ simulation_arguments = {
     "wavelength_illumination": 0.532,
     "index_of_refraction_media": 1.3,
 }
-phantom_arguments = {"index_of_refraction_sample": 1.50, "sphere_radius": 5}
+phantom_arguments = {"index_of_refraction_sample": 1.33, "sphere_radius": 5}
 z_shape = 100
 z_pixel_size = 0.25
 zyx_scale = np.array(
@@ -52,7 +51,7 @@ yx_phase[128:] = 0  # half phase
 singular_system = isotropic_thin_3d.calculate_singular_system(
     absorption_2d_to_3d_transfer_function,
     phase_2d_to_3d_transfer_function,
- )
+)
 
 # Display transfer function
 viewer = napari.Viewer()
