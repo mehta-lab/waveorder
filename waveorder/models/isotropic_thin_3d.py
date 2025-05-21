@@ -304,7 +304,7 @@ def apply_inverse_transfer_function(
         "TV" is not implemented.
     bg_filter : bool, optional
         option for slow-varying 2D background normalization with uniform filter
-        by default True
+        by default False
 
     Returns
     -------
