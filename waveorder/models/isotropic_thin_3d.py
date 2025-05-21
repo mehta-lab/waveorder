@@ -105,8 +105,7 @@ def _calculate_wrap_unsafe_transfer_function(
     invert_phase_contrast: bool = False,
 ) -> Tuple[Tensor, Tensor]:
     if invert_phase_contrast:
-        z_position_list = torch.flip(torch.tensor(z_position_list), dims=(0,))
-
+        z_position_list = [-1 * x for x in z_position_list]
     radial_frequencies = util.generate_radial_frequencies(
         yx_shape, yx_pixel_size
     )

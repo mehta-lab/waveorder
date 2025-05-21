@@ -69,7 +69,7 @@ def generate_and_save_phase_transfer_function(
         settings_dict["z_position_list"] = list(
             -(
                 np.arange(zyx_shape[0])
-                + settings_dict["z_focus_offset"]
+                - settings_dict["z_focus_offset"]
                 - (zyx_shape[0] // 2)
             )
             * settings_dict["z_pixel_size"]
