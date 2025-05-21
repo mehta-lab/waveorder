@@ -329,9 +329,7 @@ def apply_inverse_transfer_function(
             "sj...,j...,jf...->fs...", U, S_reg, Vh
         )
 
-        f_yx = apply_filter_bank(sfyx_inverse_filter, zyx)
-        absorption_yx = f_yx[0]
-        phase_yx = f_yx[1]
+        absorption_yx, phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)
 
     # ADMM deconvolution with anisotropic TV regularization
     elif reconstruction_algorithm == "TV":

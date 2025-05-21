@@ -38,9 +38,9 @@ def focus_from_transverse_band(
         The minimum and maximum fraction of the cutoff frequency that define the midband.
         Requires: 0 <= midband_fractions[0] < midband_fractions[1] <= 1.
     mode: {'min', 'max'}, optional
-        Option to choose the in-focus slice by minimizing or maximizing the midband power.
+        Option to choose the in-focus slice by minimizing or maximizing the midband power. By default 'max'.
     polynomial_fit_order: int, optional
-        Default None is no fit. If integer, the in-focus slice is chosen by fitting a polynomial to the midband power.
+        Default None is no fit. If integer, a polynomial of that degree is fit to the midband power before choosing the extreme point as the in-focus slice.
     plot_path: str or None, optional
         File name for a diagnostic plot (supports matplotlib filetypes .png, .pdf, .svg, etc.).
         Use None to skip.
