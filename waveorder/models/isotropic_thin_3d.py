@@ -104,6 +104,15 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
 ) -> Tuple[Tensor, Tensor]:
+    if numerical_aperture_illumination >= numerical_aperture_detection:
+        print(
+            "Warning: numerical_aperture_illumination is >= "
+            "numerical_aperture_detection. Setting "
+            "numerical_aperture_illumination to 0.9 * "
+            "numerical_aperture_detection to avoid singularities."
+        )
+        numerical_aperture_illumination = 0.9 * numerical_aperture_detection
+
     if invert_phase_contrast:
         z_position_list = [-1 * x for x in z_position_list]
     radial_frequencies = util.generate_radial_frequencies(
