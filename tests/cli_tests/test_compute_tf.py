@@ -1,13 +1,28 @@
+import numpy as np
+import pytest
 from click.testing import CliRunner
 
 from waveorder.cli import settings
 from waveorder.cli.compute_transfer_function import (
+    _position_list_from_shape_scale_offset,
     generate_and_save_birefringence_transfer_function,
     generate_and_save_fluorescence_transfer_function,
     generate_and_save_phase_transfer_function,
 )
 from waveorder.cli.main import cli
 from waveorder.io import utils
+
+
+@pytest.mark.parametrize(
+    "shape, scale, offset, expected",
+    [
+        (5, 1.0, 0.0, [2.0, 1.0, 0.0, -1.0, -2.0]),
+        (4, 0.5, 1.0, [1.5, 1.0, 0.5, 0.0]),
+    ],
+)
+def test_position_list_from_shape_scale_offset(shape, scale, offset, expected):
+    result = _position_list_from_shape_scale_offset(shape, scale, offset)
+    np.testing.assert_allclose(result, expected)
 
 
 def test_compute_transfer(tmp_path, example_plate):
