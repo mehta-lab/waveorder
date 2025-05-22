@@ -43,6 +43,11 @@ def calculate_transfer_function(
     numerical_aperture_illumination: float,
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
+    tilt_angle_degrees: float = 0.0,
+    index_of_refraction_o2: float = 1.0,
+    numerical_aperture_o2: float = 1.0,
+    index_of_refraction_o3: float = 1.0,
+    numerical_aperture_o3: float = 1.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
@@ -75,6 +80,11 @@ def calculate_transfer_function(
         numerical_aperture_illumination,
         numerical_aperture_detection,
         invert_phase_contrast=invert_phase_contrast,
+        tilt_angle_degrees=tilt_angle_degrees,
+        index_of_refraction_o2=index_of_refraction_o2,
+        numerical_aperture_o2=numerical_aperture_o2,
+        index_of_refraction_o3=index_of_refraction_o3,
+        numerical_aperture_o3=numerical_aperture_o3,
     )
 
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
@@ -98,10 +108,17 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_illumination: float,
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
+    tilt_angle_degrees: float = 0.0,
+    index_of_refraction_o2: float = 1.0,
+    numerical_aperture_o2: float = 1.0,
+    index_of_refraction_o3: float = 1.0,
+    numerical_aperture_o3: float = 1.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     radial_frequencies = util.generate_radial_frequencies(
         zyx_shape[1:], yx_pixel_size
     )
+    fyy, fxx = util.generate_frequencies(zyx_shape[1:], yx_pixel_size)
+
     z_total = zyx_shape[0] + 2 * z_padding
     z_position_list = torch.fft.ifftshift(
         (torch.arange(z_total) - z_total // 2) * z_pixel_size
@@ -114,25 +131,48 @@ def _calculate_wrap_unsafe_transfer_function(
         numerical_aperture_illumination,
         wavelength_illumination,
     )
-    det_pupil = optics.generate_pupil(
+    # det_pupil = optics.generate_pupil(
+    #     radial_frequencies,
+    #     numerical_aperture_detection,
+    #     wavelength_illumination,
+    # )
+
+    det_pupil = optics.generate_tilted_pupil(
+        fxx, fyy,
+        wavelength_illumination,
+        tilt_angle_degrees=tilt_angle_degrees,
+        n1=index_of_refraction_media,
+        n2=index_of_refraction_o2,
+        n3=index_of_refraction_o3,
+        na_o1=numerical_aperture_illumination,
+        na_o2=numerical_aperture_o2,
+        na_o3=numerical_aperture_o3,
+    )
+
+    effective_n = (
+        index_of_refraction_media
+        * index_of_refraction_o3
+        / index_of_refraction_o2
+    )
+    outer_detection_pupil = optics.generate_pupil(
         radial_frequencies,
-        numerical_aperture_detection,
+        0.99 * effective_n,
         wavelength_illumination,
     )
+
     propagation_kernel = optics.generate_propagation_kernel(
         radial_frequencies,
-        det_pupil,
-        wavelength_illumination / index_of_refraction_media,
+        outer_detection_pupil,
+        wavelength_illumination / effective_n,
         z_position_list,
     )
     greens_function_z = optics.generate_greens_function_z(
         radial_frequencies,
-        det_pupil,
-        wavelength_illumination / index_of_refraction_media,
+        outer_detection_pupil,
+        wavelength_illumination / effective_n,
         z_position_list,
         axially_even=False,
     )
-
     (
         real_potential_transfer_function,
         imag_potential_transfer_function,
