@@ -1,13 +1,28 @@
+import numpy as np
+import pytest
 from click.testing import CliRunner
 
 from waveorder.cli import settings
 from waveorder.cli.compute_transfer_function import (
+    _position_list_from_shape_scale_offset,
     generate_and_save_birefringence_transfer_function,
     generate_and_save_fluorescence_transfer_function,
     generate_and_save_phase_transfer_function,
 )
 from waveorder.cli.main import cli
 from waveorder.io import utils
+
+
+@pytest.mark.parametrize(
+    "shape, scale, offset, expected",
+    [
+        (5, 1.0, 0.0, [2.0, 1.0, 0.0, -1.0, -2.0]),
+        (4, 0.5, 1.0, [1.5, 1.0, 0.5, 0.0]),
+    ],
+)
+def test_position_list_from_shape_scale_offset(shape, scale, offset, expected):
+    result = _position_list_from_shape_scale_offset(shape, scale, offset)
+    np.testing.assert_allclose(result, expected)
 
 
 def test_compute_transfer(tmp_path, example_plate):
@@ -116,9 +131,10 @@ def test_phase_3dim_write(birefringence_phase_recon_settings_function):
     settings, dataset = birefringence_phase_recon_settings_function
     settings.reconstruction_dimension = 2
     generate_and_save_phase_transfer_function(settings, dataset, (3, 4, 5))
-    assert dataset["absorption_transfer_function"]
-    assert dataset["phase_transfer_function"]
-    assert dataset["phase_transfer_function"].shape == (1, 1, 3, 4, 5)
+    assert dataset["singular_system_U"]
+    assert dataset["singular_system_U"].shape == (1, 2, 2, 4, 5)
+    assert dataset["singular_system_S"]
+    assert dataset["singular_system_Vh"]
     assert "real_potential_transfer_function" not in dataset
     assert "imaginary_potential_transfer_function" not in dataset
 

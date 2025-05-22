@@ -65,23 +65,27 @@ def phase(
     # [phase only, 2]
     if recon_dim == 2:
         # Load transfer functions
-        absorption_transfer_function = torch.tensor(
-            transfer_function_dataset["absorption_transfer_function"][0, 0]
+        U = torch.from_numpy(transfer_function_dataset["singular_system_U"][0])
+        S = torch.from_numpy(
+            transfer_function_dataset["singular_system_S"][0, 0]
         )
-        phase_transfer_function = torch.tensor(
-            transfer_function_dataset["phase_transfer_function"][0, 0]
+        Vh = torch.from_numpy(
+            transfer_function_dataset["singular_system_Vh"][0]
         )
 
         # Apply
         (
-            _,
-            output,
+            absorption_yx,
+            phase_yx,
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             czyx_data[0],
-            absorption_transfer_function,
-            phase_transfer_function,
+            (U, S, Vh),
             **settings_phase.apply_inverse.dict(),
         )
+        # Stack to C1YX
+        output = phase_yx[None, None]
+        # TODO: Write phase and absorption to CZYX
+        # torch.stack((phase_yx[None], absorption_yx[None]))
 
     # [phase only, 3]
     elif recon_dim == 3:
@@ -127,12 +131,13 @@ def birefringence_and_phase(
 
     # [biref and phase, 2]
     if recon_dim == 2:
-        # Load phase transfer functions
-        absorption_transfer_function = torch.tensor(
-            transfer_function_dataset["absorption_transfer_function"][0, 0]
+        # Load transfer functions
+        U = torch.from_numpy(transfer_function_dataset["singular_system_U"][0])
+        S = torch.from_numpy(
+            transfer_function_dataset["singular_system_S"][0, 0]
         )
-        phase_transfer_function = torch.tensor(
-            transfer_function_dataset["phase_transfer_function"][0, 0]
+        Vh = torch.from_numpy(
+            transfer_function_dataset["singular_system_Vh"][0]
         )
 
         # Apply
@@ -163,8 +168,7 @@ def birefringence_and_phase(
             yx_phase,
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             brightfield_3d,
-            absorption_transfer_function,
-            phase_transfer_function,
+            (U, S, Vh),
             **settings_phase.apply_inverse.dict(),
         )
 
