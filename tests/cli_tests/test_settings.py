@@ -69,7 +69,7 @@ def test_phase_tf_settings():
         )
 
     # Inconsistent units
-    with pytest.raises(Warning):
+    with pytest.warns(UserWarning):
         settings.PhaseTransferFunctionSettings(
             yx_pixel_size=650, z_pixel_size=0.3
         )
@@ -84,7 +84,7 @@ def test_fluor_tf_settings():
         wavelength_emission=0.500, yx_pixel_size=0.2
     )
 
-    with pytest.raises(Warning):
+    with pytest.warns(UserWarning):
         settings.FluorescenceTransferFunctionSettings(
             wavelength_emission=0.500, yx_pixel_size=2000
         )
