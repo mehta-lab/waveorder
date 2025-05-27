@@ -1,4 +1,5 @@
 import os
+import warnings
 from pathlib import Path
 from typing import List, Literal, Optional, Union
 
@@ -79,8 +80,9 @@ class FourierTransferFunctionSettings(MyBaseModel):
         yx_pixel_size = values["yx_pixel_size"]
         ratio = yx_pixel_size / v
         if ratio < 1.0 / 20 or ratio > 20:
-            raise Warning(
-                f"yx_pixel_size ({yx_pixel_size}) / z_pixel_size ({v}) = {ratio}. Did you use consistent units?"
+            warnings.warn(
+                f"yx_pixel_size ({yx_pixel_size}) / z_pixel_size ({v}) = {ratio}. Did you use consistent units?",
+                UserWarning,
             )
         return v
 
@@ -117,8 +119,9 @@ class FluorescenceTransferFunctionSettings(FourierTransferFunctionSettings):
         yx_pixel_size = values.get("yx_pixel_size")
         ratio = yx_pixel_size / v
         if ratio < 1.0 / 20 or ratio > 20:
-            raise Warning(
-                f"yx_pixel_size ({yx_pixel_size}) / wavelength_illumination ({v}) = {ratio}. Did you use consistent units?"
+            warnings.warn(
+                f"yx_pixel_size ({yx_pixel_size}) / wavelength_illumination ({v}) = {ratio}. Did you use consistent units?",
+                UserWarning,
             )
         return v
 
