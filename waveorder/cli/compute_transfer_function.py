@@ -186,7 +186,7 @@ def generate_and_save_fluorescence_transfer_function(
         )
 
 
-def compute_transfer_function_single_position(
+def compute_transfer_function_cli(
     input_position_dirpath: Path, config_filepath: Path, output_dirpath: Path
 ) -> None:
     """CLI command to compute the transfer function given a configuration file path
@@ -281,7 +281,7 @@ def compute_transfer_function_single_position(
 @input_position_dirpaths()
 @config_filepath()
 @output_dirpath()
-def compute_transfer_function_cli(
+def _compute_transfer_function_cli(
     input_position_dirpaths: list[Path],
     config_filepath: Path,
     output_dirpath: Path,
@@ -296,6 +296,6 @@ def compute_transfer_function_cli(
 
     >> waveorder compute-tf -i ./input.zarr/0/0/0 -c ./examples/birefringence.yml -o ./transfer_function.zarr
     """
-    compute_transfer_function_single_position(
+    compute_transfer_function_cli(
         input_position_dirpaths[0], config_filepath, output_dirpath
     )

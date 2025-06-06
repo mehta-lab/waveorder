@@ -1,12 +1,12 @@
 import click
 
 from waveorder.cli.apply_inverse_transfer_function import (
-    apply_inverse_transfer_function_cli,
+    _apply_inverse_transfer_function_cli,
 )
 from waveorder.cli.compute_transfer_function import (
-    compute_transfer_function_cli,
+    _compute_transfer_function_cli,
 )
-from waveorder.cli.reconstruct import reconstruct_cli
+from waveorder.cli.reconstruct import _reconstruct_cli
 
 try:
     from waveorder.cli.gui_widget import gui
@@ -27,9 +27,9 @@ def cli():
     """\033[92mwaveorder: Computational Toolkit for Label-Free Imaging\033[0m\n"""
 
 
-cli.add_command(reconstruct_cli)
-cli.add_command(compute_transfer_function_cli)
-cli.add_command(apply_inverse_transfer_function_cli)
+cli.add_command(_reconstruct_cli)
+cli.add_command(_compute_transfer_function_cli)
+cli.add_command(_apply_inverse_transfer_function_cli)
 try:
     cli.add_command(gui)
 except:

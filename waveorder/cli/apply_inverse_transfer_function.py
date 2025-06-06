@@ -286,12 +286,6 @@ def apply_inverse_transfer_function_single_position(
     )
 
 
-@click.command("apply-inv-tf")
-@input_position_dirpaths()
-@transfer_function_dirpath()
-@config_filepath()
-@output_dirpath()
-@processes_option(default=1)
 def apply_inverse_transfer_function_cli(
     input_position_dirpaths: list[Path],
     transfer_function_dirpath: Path,
@@ -299,19 +293,6 @@ def apply_inverse_transfer_function_cli(
     output_dirpath: Path,
     num_processes,
 ) -> None:
-    """
-    Apply an inverse transfer function to a dataset using a configuration file.
-
-    Applies a transfer function to all positions in the list `input-position-dirpaths`,
-    so all positions must have the same TCZYX shape.
-
-    Appends channels to ./output.zarr, so multiple reconstructions can fill a single store.
-
-    See /examples for example configuration files.
-
-    >> waveorder apply-inv-tf -i ./input.zarr/*/*/* -t ./transfer-function.zarr -c /examples/birefringence.yml -o ./output.zarr
-    """
-
     # Prepare output store
     output_metadata = get_reconstruction_output_metadata(
         input_position_dirpaths[0], config_filepath
@@ -338,3 +319,37 @@ def apply_inverse_transfer_function_cli(
             num_processes,
             output_metadata["channel_names"],
         )
+
+
+@click.command("apply-inv-tf")
+@input_position_dirpaths()
+@transfer_function_dirpath()
+@config_filepath()
+@output_dirpath()
+@processes_option(default=1)
+def _apply_inverse_transfer_function_cli(
+    input_position_dirpaths: list[Path],
+    transfer_function_dirpath: Path,
+    config_filepath: Path,
+    output_dirpath: Path,
+    num_processes,
+) -> None:
+    """
+    Apply an inverse transfer function to a dataset using a configuration file.
+
+    Applies a transfer function to all positions in the list `input-position-dirpaths`,
+    so all positions must have the same TCZYX shape.
+
+    Appends channels to ./output.zarr, so multiple reconstructions can fill a single store.
+
+    See /examples for example configuration files.
+
+    >> waveorder apply-inv-tf -i ./input.zarr/*/*/* -t ./transfer-function.zarr -c /examples/birefringence.yml -o ./output.zarr
+    """
+    apply_inverse_transfer_function_cli(
+        input_position_dirpaths,
+        transfer_function_dirpath,
+        config_filepath,
+        output_dirpath,
+        num_processes,
+    )
