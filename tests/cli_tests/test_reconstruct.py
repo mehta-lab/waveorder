@@ -10,7 +10,7 @@ from iohub.ngff.models import TransformationMeta
 
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
-    _apply_inverse_transfer_function_cli,
+    apply_inverse_transfer_function_cli,
 )
 from waveorder.cli.main import cli
 from waveorder.io import utils
@@ -193,7 +193,7 @@ def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
 
     runner = CliRunner()
     with patch(
-        "waveorder.cli.apply_inverse_transfer_function.apply_inverse_transfer_function_single_position"
+        "waveorder.cli.apply_inverse_transfer_function.apply_inverse_transfer_function_cli"
     ) as mock:
         cmd = [
             "apply-inv-tf",
@@ -219,7 +219,6 @@ def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
             Path(tmp_config_yml),
             Path(result_path),
             1,
-            1,
         )
         assert result_inv.exit_code == 0
 
@@ -244,7 +243,7 @@ def test_cli_apply_inv_tf_output(tmp_input_path_zarr, capsys):
         tmp_config_yml = tmp_config_yml.with_name(f"{i}.yml")
 
         # # Check output
-        _apply_inverse_transfer_function_cli(
+        apply_inverse_transfer_function_cli(
             [input_path], tf_path, tmp_config_yml, result_path, 1
         )
 
@@ -254,7 +253,7 @@ def test_cli_apply_inv_tf_output(tmp_input_path_zarr, capsys):
 
         assert result_path.exists()
         captured = capsys.readouterr()
-        assert "submitted" in captured.out
+        assert "Starting reconstruction" in captured.out
 
         # Check scale transformations pass through
         assert input_scale == result_dataset.scale
