@@ -18,14 +18,14 @@ from waveorder.cli.parsing import (
 )
 
 
-@click.command()
+@click.command("reconstruct")
 @input_position_dirpaths()
 @config_filepath()
 @output_dirpath()
 @processes_option(default=1)
 @ram_multiplier()
 @unique_id()
-def reconstruct(
+def reconstruct_cli(
     input_position_dirpaths,
     config_filepath,
     output_dirpath,
