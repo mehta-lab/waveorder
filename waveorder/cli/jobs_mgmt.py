@@ -5,8 +5,6 @@ import threading
 import time
 from pathlib import Path
 
-import submitit
-
 DIR_PATH = os.path.dirname(os.path.realpath(__file__))
 FILE_PATH = os.path.join(DIR_PATH, "main.py")
 
@@ -122,7 +120,7 @@ class JobsManagement:
     def check_all_ExpJobs_completion(self, uID):
         if uID in SERVER_uIDsjobIDs.keys():
             for jobEntry in SERVER_uIDsjobIDs[uID].keys():
-                job: submitit.Job = SERVER_uIDsjobIDs[uID][jobEntry]["job"]
+                job = SERVER_uIDsjobIDs[uID][jobEntry]["job"]
                 jobBool = SERVER_uIDsjobIDs[uID][jobEntry]["bool"]
                 if job is not None and job.done() == False:
                     return False
