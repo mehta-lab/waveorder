@@ -20,10 +20,10 @@ from waveorder.acq.acq_functions import (
 )
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
-    apply_inverse_transfer_function_cli,
+    _apply_inverse_transfer_function_cli,
 )
 from waveorder.cli.compute_transfer_function import (
-    compute_transfer_function_cli,
+    _compute_transfer_function_cli,
 )
 from waveorder.io.utils import add_index_to_path, model_to_yaml, ram_message
 
@@ -306,13 +306,13 @@ class BFAcquisitionWorker(WorkerBase):
         input_data_path = Path(self.latest_out_path) / "0" / "0" / "0"
 
         # TODO: skip if config files match
-        compute_transfer_function_cli(
+        _compute_transfer_function_cli(
             input_position_dirpath=input_data_path,
             config_filepath=self.config_path,
             output_dirpath=transfer_function_path,
         )
 
-        apply_inverse_transfer_function_cli(
+        _apply_inverse_transfer_function_cli(
             input_position_dirpaths=[input_data_path],
             transfer_function_dirpath=transfer_function_path,
             config_filepath=self.config_path,
@@ -587,13 +587,13 @@ class PolarizationAcquisitionWorker(WorkerBase):
         input_data_path = Path(self.latest_out_path) / "0" / "0" / "0"
 
         # TODO: skip if config files match
-        compute_transfer_function_cli(
+        _compute_transfer_function_cli(
             input_position_dirpath=input_data_path,
             config_filepath=self.config_path,
             output_dirpath=transfer_function_path,
         )
 
-        apply_inverse_transfer_function_cli(
+        _apply_inverse_transfer_function_cli(
             input_position_dirpaths=[input_data_path],
             transfer_function_dirpath=transfer_function_path,
             config_filepath=self.config_path,
