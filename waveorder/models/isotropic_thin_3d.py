@@ -1,6 +1,5 @@
 from typing import Literal, Tuple
 
-import numpy as np
 import torch
 from torch import Tensor
 
@@ -38,7 +37,7 @@ def generate_test_phantom(
 def calculate_transfer_function(
     yx_shape: Tuple[int, int],
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: torch.Tensor,
     wavelength_illumination: float,
     index_of_refraction_media: float,
     numerical_aperture_illumination: float,
@@ -50,7 +49,7 @@ def calculate_transfer_function(
         numerical_aperture_illumination,
         numerical_aperture_detection,
     )
-    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
+    yx_factor = int(torch.ceil(yx_pixel_size / transverse_nyquist))
 
     (
         absorption_2d_to_3d_transfer_function,
@@ -97,7 +96,7 @@ def calculate_transfer_function(
 def _calculate_wrap_unsafe_transfer_function(
     yx_shape: Tuple[int, int],
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: torch.Tensor,
     wavelength_illumination: float,
     index_of_refraction_media: float,
     numerical_aperture_illumination: float,
@@ -114,7 +113,7 @@ def _calculate_wrap_unsafe_transfer_function(
         numerical_aperture_illumination = 0.9 * numerical_aperture_detection
 
     if invert_phase_contrast:
-        z_position_list = [-1 * x for x in z_position_list]
+        z_position_list *= -1
     radial_frequencies = util.generate_radial_frequencies(
         yx_shape, yx_pixel_size
     )
@@ -133,7 +132,7 @@ def _calculate_wrap_unsafe_transfer_function(
         radial_frequencies,
         detection_pupil,
         wavelength_illumination / index_of_refraction_media,
-        torch.tensor(z_position_list),
+        z_position_list,
     )
 
     zyx_shape = (len(z_position_list),) + tuple(yx_shape)
