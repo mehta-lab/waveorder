@@ -1,8 +1,8 @@
 from typing import Literal, Tuple
 
+import numpy as np
 import torch
 from torch import Tensor
-import numpy as np
 
 from waveorder import optics, sampling, util
 from waveorder.filter import apply_filter_bank

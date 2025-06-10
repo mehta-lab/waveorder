@@ -1,5 +1,5 @@
-import numpy as np
 import pytest
+import torch
 from click.testing import CliRunner
 
 from waveorder.cli import settings
@@ -22,7 +22,7 @@ from waveorder.io import utils
 )
 def test_position_list_from_shape_scale_offset(shape, scale, offset, expected):
     result = _position_list_from_shape_scale_offset(shape, scale, offset)
-    np.testing.assert_allclose(result, expected)
+    torch.testing.assert_close(result, torch.tensor(expected))
 
 
 def test_compute_transfer(tmp_path, example_plate):
