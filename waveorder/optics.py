@@ -464,7 +464,9 @@ def generate_greens_function_z(
 
     oblique_factor = (
         (1 - wavelength_illumination**2 * radial_frequencies**2)
-        * pupil_support
+        * pupil_support.type(
+            torch.complex64
+        )  # complex to avoid sqrt(-1) -> nan
     ) ** (1 / 2) / wavelength_illumination
 
     if axially_even:
