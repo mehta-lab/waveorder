@@ -2,6 +2,7 @@ from typing import Literal, Tuple
 
 import torch
 from torch import Tensor
+import numpy as np
 
 from waveorder import optics, sampling, util
 from waveorder.filter import apply_filter_bank
@@ -49,7 +50,7 @@ def calculate_transfer_function(
         numerical_aperture_illumination,
         numerical_aperture_detection,
     )
-    yx_factor = int(torch.ceil(yx_pixel_size / transverse_nyquist))
+    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
 
     (
         absorption_2d_to_3d_transfer_function,
