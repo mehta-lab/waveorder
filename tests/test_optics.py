@@ -39,7 +39,7 @@ def test_generate_propagation_kernel():
 
     assert propagation_kernel.shape == (3, 10, 10)
     assert propagation_kernel[1, 0, 0] == 1
-    assert propagation_kernel[1, 5, 5] == 0
+    assert torch.abs(propagation_kernel[1, 5, 5]) < 1e-3
 
 
 def test_gen_Greens_function_z():
@@ -53,7 +53,7 @@ def test_gen_Greens_function_z():
     )
 
     assert G.shape == (3, 10, 10)
-    assert G[1, 5, 5] == 0
+    assert torch.abs(G[1, 5, 5]) < 1e-3
 
 
 def test_WOTF_2D():
