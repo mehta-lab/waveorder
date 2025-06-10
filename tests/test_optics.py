@@ -8,11 +8,23 @@ def test_generate_pupil():
     pupil = optics.generate_pupil(radial_frequencies, 0.5, 0.5)
 
     # Corners are in the pupil
-    assert pupil[0, 0] == 1
-    assert pupil[-1, -1] == 1
+    assert torch.isclose(pupil[0, 0], torch.tensor(1.0), rtol=1e-3)
+    assert torch.isclose(pupil[-1, -1], torch.tensor(1.0), rtol=1e-3)
 
     # Center is outside the pupil
-    assert pupil[5, 5] == 0
+    assert pupil[5, 5] < 1e-3
+
+
+def test_generate_pupil_cutoff():
+    """
+    Test generate_pupil at the cutoff frequency.
+    """
+    frr = torch.tensor([[0.5, 1.0, 1.5]])
+    NA = 1.0
+    lamb_in = 1.0
+    pupil = optics.generate_pupil(frr, NA, lamb_in)
+    # At cutoff, sigmoid should be ~0.5
+    assert torch.isclose(pupil[0, 1], torch.tensor(0.5), atol=1e-3)
 
 
 def test_generate_propagation_kernel():

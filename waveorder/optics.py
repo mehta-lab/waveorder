@@ -118,34 +118,37 @@ def analyzer_output(Ein, alpha, beta):
     return Eout
 
 
-def generate_pupil(frr, NA, lamb_in):
+def generate_pupil(
+    frr: torch.Tensor, NA: float, lamb_in: float, slope: float = 4.0
+) -> torch.Tensor:
     """
-
-    compute pupil function given spatial frequency, NA, wavelength.
+    Generate a soft-edged pupil function using a sigmoid roll-off. The default
+    sigmoid softens the edge within ~1 voxel of the boundary.
 
     Parameters
     ----------
-        frr       : torch.tensor
-                    radial frequency coordinate in units of inverse length
+        frr     : torch.Tensor
+                  radial frequency coordinates (units: 1/length)
 
-        NA        : float
-                    numerical aperture of the pupil function (normalized by the refractive index of the immersion media)
+        NA      : float
+                  numerical aperture (unitless)
 
         lamb_in : float
-                    wavelength of the light in free space
-                    in units of length (inverse of frr's units)
+                  wavelength of light (same length units as frr^-1)
+
+        slope   : float, optional
+                  steepness of the sigmoid roll-off (default 4.0 keeps ~90% of
+                  sigmoid within a single voxel)
 
     Returns
     -------
-        Pupil     : numpy.ndarray
-                    pupil function with the specified parameters with the size of (Ny, Nx)
-
+        pupil   : torch.Tensor
+                  pupil function, pupil.shape == frr.shape, values in [0, 1]
     """
-
-    Pupil = torch.zeros(frr.shape)
-    Pupil[frr < NA / lamb_in] = 1
-
-    return Pupil
+    pixel_slope = slope / torch.abs(frr[0, 1] - frr[0, 0])
+    cutoff = NA / lamb_in
+    pupil = torch.sigmoid(pixel_slope * (cutoff - frr))
+    return pupil
 
 
 def gen_sector_Pupil(fxx, fyy, NA, lamb_in, sector_angle, rotation_angle):
