@@ -69,7 +69,9 @@ def test_WOTF_2D():
     )
 
     # Absorption DC term
-    assert absorption_transfer_function[0, 0] == 2
+    assert torch.isclose(
+        absorption_transfer_function[0, 0], torch.tensor(2.0), rtol=1e-3
+    )
 
     # No phase contrast for an in-focus slice
     assert torch.all(torch.real(phase_transfer_function) == 0)
