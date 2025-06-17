@@ -1,4 +1,5 @@
 import itertools
+import math
 
 import numpy as np
 import torch
@@ -148,6 +149,75 @@ def generate_pupil(
     pixel_slope = slope / torch.abs(frr[0, 1] - frr[0, 0])
     cutoff = NA / lamb_in
     pupil = torch.sigmoid(pixel_slope * (cutoff - frr))
+    return pupil
+
+
+def generate_tilted_pupil(
+    fxx: torch.Tensor,
+    fyy: torch.Tensor,
+    NA: float,
+    lamb_in: float,
+    n: float = 1.0,
+    tilt_angle_zenith: float = 0.0,
+    tilt_angle_azimuth: float = 0.0,
+    slope: float = 4.0,
+) -> torch.Tensor:
+    """
+    Generate a soft-edged 2-D pupil that may be tilted on the Ewald sphere.
+
+    Parameters
+    ----------
+    fxx, fyy  : torch.Tensor
+              Cartesian frequency grids (units: 1/length) with identical shape.
+    NA      : float
+              Numerical aperture of the objective (must satisfy NA ≤ n).
+    lamb_in : float
+              Illumination wavelength (units: length)
+    n       : float, optional
+              Refractive index of the immersion medium (default 1.0).
+    tilt_angle_zenith  : float, optional
+              Polar angle θ (radians) between the pupil axis and +z (0 = untilted).
+    tilt_angle_azimuth : float, optional
+              Azimuth φ (radians) of the tilt in the xy-plane (0 = +x).
+    slope   : float, optional
+              Controls sigmoid roll-off (≈ 90 % change in one pixel when slope=4).
+
+    Returns
+    -------
+    pupil   : torch.Tensor
+              2-D soft mask with values in [0, 1] and shape == fx.shape.
+    """
+    if NA > n:
+        raise ValueError("NA must be ≤ n (otherwise angle would be complex).")
+
+    # constants
+    K = n / lamb_in  # Ewald-sphere radius
+    cos_alpha_max = math.sqrt(1 - (NA / n) ** 2)
+
+    # sampling metrics
+    # Assume fxx, fyy are on a regular grid ⇒ pixel spacing in fx direction:
+    df = torch.abs(fxx[0, 1] - fxx[0, 0])
+    pixel_slope = slope / df
+
+    # sphere coordinates
+    fz_sq = K**2 - fxx**2 - fyy**2
+    inside_sphere = fz_sq >= 0
+    # clamp to avoid negative round-off, but keep gradients
+    fz = torch.sqrt(torch.clamp(fz_sq, min=0.0))
+
+    # tilt unit vector
+    sx = torch.sin(tilt_angle_zenith) * torch.cos(tilt_angle_azimuth)
+    sy = torch.sin(tilt_angle_zenith) * torch.sin(tilt_angle_azimuth)
+    sz = torch.cos(tilt_angle_zenith)
+
+    # dot-product test
+    dot = fxx * sx + fyy * sy + fz * sz  # v · s
+    threshold = K * cos_alpha_max
+    pupil_soft = torch.sigmoid(pixel_slope * (dot - threshold))
+
+    # mask outside sphere
+    pupil = pupil_soft * inside_sphere.to(fxx.dtype)
+
     return pupil
 
 
