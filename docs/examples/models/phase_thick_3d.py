@@ -11,17 +11,22 @@ from waveorder.models import phase_thick_3d
 # Parameters
 # all lengths must use consistent units e.g. um
 simulation_arguments = {
-    "zyx_shape": (100, 256, 256),
-    "yx_pixel_size": 6.5 / 63,
-    "z_pixel_size": 0.25,
-    "index_of_refraction_media": 1.3,
+    "zyx_shape": (256, 256, 256),
+    "yx_pixel_size": 6.5 / 100,
+    "z_pixel_size": 0.1,
+    "index_of_refraction_media": 1.4,
 }
-phantom_arguments = {"index_of_refraction_sample": 1.50, "sphere_radius": 5}
+phantom_arguments = {"index_of_refraction_sample": 1.50, "sphere_radius": 0.5}
 transfer_function_arguments = {
     "z_padding": 0,
-    "wavelength_illumination": 0.532,
-    "numerical_aperture_illumination": 0.9,
-    "numerical_aperture_detection": 1.2,
+    "wavelength_illumination": 0.47,
+    "numerical_aperture_illumination": 0.52,
+    "numerical_aperture_detection": 1.35,
+    "tilt_angle_degrees": 30,
+    "index_of_refraction_o2": 1.0,
+    "numerical_aperture_o2": 0.95,
+    "index_of_refraction_o3": 1.5,
+    "numerical_aperture_o3": 1.0,
 }
 
 # Create a phantom
