@@ -36,7 +36,7 @@ def example_plate(tmp_path):
     plate_dataset = open_ome_zarr(
         plate_path,
         layout="hcs",
-        mode="w",
+        mode="w-",
         channel_names=[f"State{i}" for i in range(4)] + ["BF"],
     )
 
@@ -54,9 +54,9 @@ def birefringence_phase_recon_settings_function(tmp_path):
         phase=settings.PhaseSettings(),
     )
     dataset = open_ome_zarr(
-        tmp_path,
+        tmp_path / "input.zarr",
         layout="fov",
-        mode="w",
+        mode="w-",
         channel_names=[f"State{i}" for i in range(4)],
     )
     yield recon_settings, dataset
@@ -69,9 +69,9 @@ def fluorescence_recon_settings_function(tmp_path):
         fluorescence=settings.FluorescenceSettings(),
     )
     dataset = open_ome_zarr(
-        tmp_path,
+        tmp_path / "input.zarr",
         layout="fov",
-        mode="w",
+        mode="w-",
         channel_names=[f"State{i}" for i in range(4)],
     )
     yield recon_settings, dataset

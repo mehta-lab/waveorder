@@ -26,7 +26,7 @@ and Python with an environment management tool
 If you use Conda, set up an environment with:
 
 ```sh
-conda create -n waveorder-dev python=3.10
+conda create -n waveorder-dev python=3.12
 conda activate waveorder-dev
 ```
 

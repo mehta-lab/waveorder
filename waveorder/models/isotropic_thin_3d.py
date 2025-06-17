@@ -5,6 +5,7 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
+from waveorder.filter import apply_filter_bank
 
 
 def generate_test_phantom(
@@ -29,7 +30,7 @@ def generate_test_phantom(
         / wavelength_illumination
     )  # phase in radians
 
-    yx_absorption = 0.02 * sphere[1]
+    yx_absorption = torch.clone(yx_phase)
 
     return yx_absorption, yx_phase
 
@@ -103,9 +104,17 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
 ) -> Tuple[Tensor, Tensor]:
-    if invert_phase_contrast:
-        z_position_list = torch.flip(torch.tensor(z_position_list), dims=(0,))
+    if numerical_aperture_illumination >= numerical_aperture_detection:
+        print(
+            "Warning: numerical_aperture_illumination is >= "
+            "numerical_aperture_detection. Setting "
+            "numerical_aperture_illumination to 0.9 * "
+            "numerical_aperture_detection to avoid singularities."
+        )
+        numerical_aperture_illumination = 0.9 * numerical_aperture_detection
 
+    if invert_phase_contrast:
+        z_position_list = [-1 * x for x in z_position_list]
     radial_frequencies = util.generate_radial_frequencies(
         yx_shape, yx_pixel_size
     )
@@ -146,6 +155,45 @@ def _calculate_wrap_unsafe_transfer_function(
         absorption_2d_to_3d_transfer_function,
         phase_2d_to_3d_transfer_function,
     )
+
+
+def calculate_singular_system(
+    absorption_2d_to_3d_transfer_function: Tensor,
+    phase_2d_to_3d_transfer_function: Tensor,
+) -> Tuple[Tensor, Tensor, Tensor]:
+    """Calculates the singular system of the absoprtion and phase transfer
+    functions.
+
+    Together, the transfer functions form a (2, Z, Vy, Vx) tensor, where
+    (2,) is the object-space dimension (abs, phase), (Z,) is the data-space
+    dimension, and (Vy, Vx) are the spatial frequency dimensions.
+
+    The SVD is computed over the (2, Z) dimensions.
+
+    Parameters
+    ----------
+    absorption_2d_to_3d_transfer_function : Tensor
+        ZYX transfer function for absorption
+    phase_2d_to_3d_transfer_function : Tensor
+        ZYX transfer function for phase
+
+    Returns
+    -------
+    Tuple[Tensor, Tensor, Tensor]
+    """
+    sfYX_transfer_function = torch.stack(
+        (
+            absorption_2d_to_3d_transfer_function,
+            phase_2d_to_3d_transfer_function,
+        ),
+        dim=0,
+    )
+    YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
+    Up, Sp, Vhp = torch.linalg.svd(YXsf_transfer_function, full_matrices=False)
+    U = Up.permute(2, 3, 0, 1)
+    S = Sp.permute(2, 0, 1)
+    Vh = Vhp.permute(2, 3, 0, 1)
+    return U, S, Vh
 
 
 def visualize_transfer_function(
@@ -202,8 +250,8 @@ def visualize_point_spread_function(
 def apply_transfer_function(
     yx_absorption: Tensor,
     yx_phase: Tensor,
-    phase_2d_to_3d_transfer_function: Tensor,
     absorption_2d_to_3d_transfer_function: Tensor,
+    phase_2d_to_3d_transfer_function: Tensor,
 ) -> Tensor:
     # Very simple simulation, consider adding noise and bkg knobs
 
@@ -233,14 +281,13 @@ def apply_transfer_function(
 
 def apply_inverse_transfer_function(
     zyx_data: Tensor,
-    absorption_2d_to_3d_transfer_function: Tensor,
-    phase_2d_to_3d_transfer_function: Tensor,
+    singular_system: Tuple[Tensor, Tensor, Tensor],
     reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
-    regularization_strength: float = 1e-6,
+    regularization_strength: float = 1e-3,
     reg_p: float = 1e-6,  # TODO: use this parameter
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
-    bg_filter: bool = True,
+    bg_filter: bool = False,
 ) -> Tuple[Tensor, Tensor]:
     """Reconstructs absorption and phase from zyx_data and a pair of
     3D-to-2D transfer functions named absorption_2d_to_3d_transfer_function and
@@ -251,15 +298,13 @@ def apply_inverse_transfer_function(
     ----------
     zyx_data : Tensor
         3D raw data, label-free defocus stack
-    absorption_2d_to_3d_transfer_function : Tensor
-        3D-to-2D absorption transfer function, see calculate_transfer_function above
-    phase_2d_to_3d_transfer_function : Tensor
-        3D-to-2D phase transfer function, see calculate_transfer_function above
-    reconstruction_algorithm : Literal[&quot;Tikhonov&quot;, &quot;TV&quot;], optional
+    singular_system : Tuple[Tensor, Tensor, Tensor]
+        singular system of the transfer function bank
+    reconstruction_algorithm : Literal["Tikhonov";, "TV";], optional
         "Tikhonov" or "TV", by default "Tikhonov"
         "TV" is not implemented.
     regularization_strength : float, optional
-        regularization parameter, by default 1e-6
+        regularization parameter, by default 1e-3
     reg_p : float, optional
         TV-specific phase regularization parameter, by default 1e-6
         "TV" is not implemented.
@@ -268,7 +313,7 @@ def apply_inverse_transfer_function(
         "TV" is not implemented.
     bg_filter : bool, optional
         option for slow-varying 2D background normalization with uniform filter
-        by default True
+        by default False
 
     Returns
     -------
@@ -281,66 +326,22 @@ def apply_inverse_transfer_function(
     NotImplementedError
         TV is not implemented
     """
-    zyx_data_normalized = util.inten_normalization(
-        zyx_data, bg_filter=bg_filter
-    )
+    # Normalize
+    zyx = util.inten_normalization(zyx_data, bg_filter=bg_filter)
 
-    zyx_data_hat = torch.fft.fft2(zyx_data_normalized, dim=(1, 2))
-
-    # TODO AHA and b_vec calculations should be moved into tikhonov/tv calculations
-    # TODO Reformulate to use filter.apply_filter_bank
-    AHA = [
-        torch.sum(torch.abs(absorption_2d_to_3d_transfer_function) ** 2, dim=0)
-        + regularization_strength,
-        torch.sum(
-            torch.conj(absorption_2d_to_3d_transfer_function)
-            * phase_2d_to_3d_transfer_function,
-            dim=0,
-        ),
-        torch.sum(
-            torch.conj(
-                phase_2d_to_3d_transfer_function,
-            )
-            * absorption_2d_to_3d_transfer_function,
-            dim=0,
-        ),
-        torch.sum(
-            torch.abs(
-                phase_2d_to_3d_transfer_function,
-            )
-            ** 2,
-            dim=0,
-        )
-        + reg_p,
-    ]
-
-    b_vec = [
-        torch.sum(
-            torch.conj(absorption_2d_to_3d_transfer_function) * zyx_data_hat,
-            dim=0,
-        ),
-        torch.sum(
-            torch.conj(
-                phase_2d_to_3d_transfer_function,
-            )
-            * zyx_data_hat,
-            dim=0,
-        ),
-    ]
-
-    # Deconvolution with Tikhonov regularization
+    # TODO Consider refactoring with vectorial transfer function SVD
     if reconstruction_algorithm == "Tikhonov":
-        absorption, phase = util.dual_variable_tikhonov_deconvolution_2d(
-            AHA, b_vec
+        print("Computing inverse filter")
+        U, S, Vh = singular_system
+        S_reg = S / (S**2 + regularization_strength)
+        sfyx_inverse_filter = torch.einsum(
+            "sj...,j...,jf...->fs...", U, S_reg, Vh
         )
+
+        absorption_yx, phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)
 
     # ADMM deconvolution with anisotropic TV regularization
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
-        absorption, phase = util.dual_variable_admm_tv_deconv_2d(
-            AHA, b_vec, rho=TV_rho_strength, itr=TV_iterations
-        )
 
-    phase -= torch.mean(phase)
-
-    return absorption, phase
+    return absorption_yx, phase_yx

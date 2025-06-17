@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
-from iohub.ngff_meta import TransformationMeta
+from iohub.ngff.models import TransformationMeta
 
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (

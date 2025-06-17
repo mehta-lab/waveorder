@@ -79,6 +79,7 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
     if recon_phase:
         if recon_dim == 2:
             channel_names.append("Phase2D")
+            # channel_names.append("Absorption2D")
         elif recon_dim == 3:
             channel_names.append("Phase3D")
     if recon_fluo:
