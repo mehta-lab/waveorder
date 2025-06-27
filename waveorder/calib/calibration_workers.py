@@ -15,10 +15,10 @@ from qtpy.QtCore import Signal
 from waveorder.calib.Calibration import LC_DEVICE_NAME
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
-    _apply_inverse_transfer_function_cli,
+    apply_inverse_transfer_function_cli,
 )
 from waveorder.cli.compute_transfer_function import (
-    _compute_transfer_function_cli,
+    compute_transfer_function_cli,
 )
 from waveorder.io.core_functions import set_lc_state, snap_and_average
 from waveorder.io.metadata_reader import MetadataReader
@@ -345,17 +345,18 @@ class BackgroundCaptureWorker(
         transfer_function_path = bg_path / "transfer_function.zarr"
         reconstruction_path = bg_path / "reconstruction.zarr"
 
-        _compute_transfer_function_cli(
+        compute_transfer_function_cli(
             input_position_dirpath=input_data_path,
             config_filepath=reconstruction_config_path,
             output_dirpath=transfer_function_path,
         )
 
-        _apply_inverse_transfer_function_cli(
+        apply_inverse_transfer_function_cli(
             input_position_dirpaths=[input_data_path],
             transfer_function_dirpath=transfer_function_path,
             config_filepath=reconstruction_config_path,
             output_dirpath=reconstruction_path,
+            num_processes=1,
         )
 
         # Load reconstructions from file for layers
