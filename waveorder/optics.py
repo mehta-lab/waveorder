@@ -1,5 +1,4 @@
 import itertools
-import math
 
 import numpy as np
 import torch
@@ -192,7 +191,7 @@ def generate_tilted_pupil(
 
     # constants
     K = n / lamb_in  # Ewald-sphere radius
-    cos_alpha_max = math.sqrt(1 - (NA / n) ** 2)
+    cos_alpha_max = torch.sqrt(1 - (NA / n) ** 2)
 
     # sampling metrics
     # Assume fxx, fyy are on a regular grid ⇒ pixel spacing in fx direction:
