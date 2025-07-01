@@ -201,22 +201,26 @@ def calculate_singular_system(
         ),
         dim=0,
     )
-    # XXX TEMP PHASE ONLY
+
+    # phase only reconstruction
     sfYX_transfer_function = phase_2d_to_3d_transfer_function.unsqueeze(0)
     U = torch.ones_like(sfYX_transfer_function)
     S = torch.linalg.norm(sfYX_transfer_function, dim=1)
     Vh = sfYX_transfer_function / S.unsqueeze(0)
     return U, S, Vh
-    # XXX END TEMP
 
-    YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
-    Up, Sp, Vhp = torch.linalg.svd(YXsf_transfer_function, full_matrices=False)
+    # Absorption and phase reconstruction
+    # Gradients do not work with complex-valued SVD, so only phase reconstructions
+    # are supported for now.
 
-    U = Up.permute(2, 3, 0, 1)
-    S = Sp.permute(2, 0, 1)
-    Vh = Vhp.permute(2, 3, 0, 1)
+    # YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
+    # Up, Sp, Vhp = torch.linalg.svd(YXsf_transfer_function, full_matrices=False)
 
-    return U, S, Vh
+    # U = Up.permute(2, 3, 0, 1)
+    # S = Sp.permute(2, 0, 1)
+    # Vh = Vhp.permute(2, 3, 0, 1)
+
+    # return U, S, Vh
 
 
 def visualize_transfer_function(
@@ -362,9 +366,11 @@ def apply_inverse_transfer_function(
             "sj...,j...,jf...->fs...", U, S_reg, Vh.conj()
         )
 
+        # Phase only reconstruction
         # absorption_yx, phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)
-        phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)[0]
         absorption_yx = torch.zeros_like(phase_yx)
+
+        phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)[0]
 
     # ADMM deconvolution with anisotropic TV regularization
     elif reconstruction_algorithm == "TV":
