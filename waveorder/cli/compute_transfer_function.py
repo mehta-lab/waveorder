@@ -277,11 +277,11 @@ def compute_transfer_function_cli(
     )
 
 
-@click.command()
+@click.command("compute-tf")
 @input_position_dirpaths()
 @config_filepath()
 @output_dirpath()
-def compute_tf(
+def _compute_transfer_function_cli(
     input_position_dirpaths: list[Path],
     config_filepath: Path,
     output_dirpath: Path,
