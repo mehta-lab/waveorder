@@ -368,9 +368,8 @@ def apply_inverse_transfer_function(
 
         # Phase only reconstruction
         # absorption_yx, phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)
-        absorption_yx = torch.zeros_like(phase_yx)
-
         phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)[0]
+        absorption_yx = torch.zeros_like(phase_yx)
 
     # ADMM deconvolution with anisotropic TV regularization
     elif reconstruction_algorithm == "TV":
