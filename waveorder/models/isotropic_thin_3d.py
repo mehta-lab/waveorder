@@ -118,7 +118,11 @@ def _calculate_wrap_unsafe_transfer_function(
             "numerical_aperture_illumination to 0.9 * "
             "numerical_aperture_detection to avoid singularities."
         )
-        numerical_aperture_illumination = 0.9 * numerical_aperture_detection
+    numerical_aperture_illumination = torch.where(
+        numerical_aperture_illumination >= numerical_aperture_detection,
+        numerical_aperture_detection,
+        numerical_aperture_illumination,
+    )
 
     if invert_phase_contrast:
         z_positions = z_position_list * -1
@@ -137,6 +141,7 @@ def _calculate_wrap_unsafe_transfer_function(
         tilt_angle_zenith,
         tilt_angle_azimuth,
     )
+
     detection_pupil = optics.generate_pupil(
         radial_frequencies,
         numerical_aperture_detection,
