@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from numpy.fft import fft2, fftn, fftshift, ifft2, ifftn, ifftshift
 
+from waveorder import zernike
+
 
 def Jones_sample(Ein, t, sa):
     """
@@ -154,12 +156,13 @@ def generate_pupil(
 def generate_tilted_pupil(
     fxx: torch.Tensor,
     fyy: torch.Tensor,
-    NA: float,
+    NA: torch.Tensor,
     lamb_in: float,
     n: float = 1.0,
-    tilt_angle_zenith: float = 0.0,
-    tilt_angle_azimuth: float = 0.0,
+    tilt_angle_zenith: torch.Tensor = torch.Tensor([0.0]),
+    tilt_angle_azimuth: torch.Tensor = torch.Tensor([0.0]),
     slope: float = 4.0,
+    phase_zernike_vector: torch.Tensor = None,
 ) -> torch.Tensor:
     """
     Generate a soft-edged 2-D pupil that may be tilted on the Ewald sphere.
@@ -168,7 +171,7 @@ def generate_tilted_pupil(
     ----------
     fxx, fyy  : torch.Tensor
               Cartesian frequency grids (units: 1/length) with identical shape.
-    NA      : float
+    NA      : torch.Tensor
               Numerical aperture of the objective (must satisfy NA ≤ n).
     lamb_in : float
               Illumination wavelength (units: length)
@@ -180,6 +183,8 @@ def generate_tilted_pupil(
               Azimuth φ (radians) of the tilt in the xy-plane (0 = +x).
     slope   : float, optional
               Controls sigmoid roll-off (≈ 90 % change in one pixel when slope=4).
+    phase_zernike_vector : torch.Tensor, optional
+        Zernike phase coefficients (radians), shape [N].
 
     Returns
     -------
@@ -217,7 +222,20 @@ def generate_tilted_pupil(
     # mask outside sphere
     pupil = pupil_soft * inside_sphere.to(fxx.dtype)
 
-    return pupil
+    if phase_zernike_vector is None or phase_zernike_vector.numel() == 0:
+        return pupil
+
+    norm = NA / lamb_in
+    rho_sq = ((fxx / norm) ** 2 + (fyy / norm) ** 2).clamp(min=1e-6)
+    rho = torch.sqrt(rho_sq).clamp(max=1.0)
+    theta = torch.atan2(fyy, fxx)
+    phase = torch.zeros_like(rho)
+
+    for j, coeff in enumerate(phase_zernike_vector):
+        m, n = zernike.noll_to_zern(j + 1)
+        phase = phase + (coeff * zernike.zernike(m, n, rho, theta))
+
+    return pupil * torch.exp(1j * phase)
 
 
 def gen_sector_Pupil(fxx, fyy, NA, lamb_in, sector_angle, rotation_angle):
