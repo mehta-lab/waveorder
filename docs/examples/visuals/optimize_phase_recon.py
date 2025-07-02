@@ -3,8 +3,10 @@ from datetime import datetime
 import napari
 import numpy as np
 import torch
-from biahub.cli.utils import model_to_yaml
-from biahub.settings import StitchSettings
+
+# Commenting biahub dependency for now
+# from biahub.cli.utils import model_to_yaml
+# from biahub.settings import StitchSettings
 from iohub import open_ome_zarr
 from iohub.ngff import TransformationMeta
 from torch.utils.tensorboard import SummaryWriter
@@ -213,9 +215,10 @@ output_store = open_ome_zarr(
     OUTPUT_PATH, layout="hcs", mode="w", channel_names=[OUTPUT_CHANNEL_NAME]
 )
 tiles, translations = extract_tiles(zyx_data, NUM_TILES, OVERLAP_FRACTION)
-model_to_yaml(
-    StitchSettings(total_translation=translations), STITCH_CONFIG_PATH
-)
+# Commenting biahub dependency for now
+# model_to_yaml(
+#     StitchSettings(total_translation=translations), STITCH_CONFIG_PATH
+# )
 
 if SUBTILES == "all":
     selected_keys = tiles.keys()
