@@ -364,7 +364,6 @@ def apply_inverse_transfer_function(
 
     # TODO Consider refactoring with vectorial transfer function SVD
     if reconstruction_algorithm == "Tikhonov":
-        print("Computing inverse filter")
         U, S, Vh = singular_system
         S_reg = S / (S**2 + regularization_strength)
         sfyx_inverse_filter = torch.einsum(
