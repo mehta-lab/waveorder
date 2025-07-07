@@ -43,8 +43,8 @@ def calculate_transfer_function(
     numerical_aperture_illumination: float,
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
-    tilt_angle_zenith: float = 0.0,
-    tilt_angle_azimuth: float = 0.0,
+    tilt_angle_zenith: torch.Tensor = torch.tensor([0.0]),
+    tilt_angle_azimuth: torch.Tensor = torch.tensor([0.0]),
 ) -> Tuple[Tensor, Tensor]:
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
