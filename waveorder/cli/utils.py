@@ -92,7 +92,9 @@ def apply_inverse_to_zyx_and_save(
 
     # Check if all values in czyx_uint16_numpy are not zeros or Nan
     if _check_nan_n_zeros(czyx_uint16_numpy):
-        click.echo(f"All values at t={t_idx} are zero or Nan, skipping reconstruction.")
+        click.echo(
+            f"All values at t={t_idx} are zero or Nan, skipping reconstruction."
+        )
         return
 
     # convert to np.int32 (torch doesn't accept np.uint16), then convert to tensor float32
