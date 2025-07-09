@@ -201,13 +201,13 @@ conda create -y -n waveorder python=3.12
 conda activate waveorder
 ```
 
-(Option 1) Install a stable version of `waveorder` from PyPI:
+(Option 1) If you are familiar with `waveorder`'s API and want to use it as a library, install a stable version of `waveorder` from PyPI:
 
 ```sh
 pip install waveorder
 ```
 
-(Option 2) Install the latest version of `waveorder` from GitHub with all visualization dependencies (napari, jupyter), clone the repository, and run an example script:
+(Option 2) If you are new to `waveorder` and want to run demos to become familiar with its features, install the latest version of `waveorder` from GitHub with all visualization dependencies (napari, jupyter), clone the repository, and run an example script:
 ```sh
 pip install "git+https://github.com/mehta-lab/waveorder.git@main#egg=waveorder[all]"
 git clone https://github.com/mehta-lab/waveorder.git
