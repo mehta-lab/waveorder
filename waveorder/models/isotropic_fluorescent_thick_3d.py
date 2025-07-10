@@ -1,6 +1,5 @@
 from typing import Literal
 
-import numpy as np
 import torch
 from torch import Tensor
 
@@ -31,6 +30,7 @@ def calculate_transfer_function(
     z_padding: int,
     index_of_refraction_media: float,
     numerical_aperture_detection: float,
+    detection_phase_zernike_vector: Tensor = torch.tensor([0.0]),
 ) -> Tensor:
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_emission,
@@ -43,8 +43,8 @@ def calculate_transfer_function(
         index_of_refraction_media,
     )
 
-    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
-    z_factor = int(np.ceil(z_pixel_size / axial_nyquist))
+    yx_factor = int(torch.ceil(yx_pixel_size / transverse_nyquist))
+    z_factor = int(torch.ceil(z_pixel_size / axial_nyquist))
 
     optical_transfer_function = _calculate_wrap_unsafe_transfer_function(
         (
@@ -58,6 +58,7 @@ def calculate_transfer_function(
         z_padding,
         index_of_refraction_media,
         numerical_aperture_detection,
+        detection_phase_zernike_vector=detection_phase_zernike_vector,
     )
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
     return sampling.nd_fourier_central_cuboid(
@@ -73,20 +74,23 @@ def _calculate_wrap_unsafe_transfer_function(
     z_padding: int,
     index_of_refraction_media: float,
     numerical_aperture_detection: float,
+    detection_phase_zernike_vector: Tensor = torch.tensor([0.0]),
 ) -> Tensor:
-    radial_frequencies = util.generate_radial_frequencies(
-        zyx_shape[1:], yx_pixel_size
-    )
+    fyy, fxx = util.generate_frequencies(zyx_shape[1:], yx_pixel_size)
+    radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
 
     z_total = zyx_shape[0] + 2 * z_padding
     z_position_list = torch.fft.ifftshift(
         (torch.arange(z_total) - z_total // 2) * z_pixel_size
     )
 
-    det_pupil = optics.generate_pupil(
-        radial_frequencies,
+    det_pupil = optics.generate_tilted_pupil(
+        fxx,
+        fyy,
         numerical_aperture_detection,
         wavelength_emission,
+        index_of_refraction_media,
+        phase_zernike_vector=detection_phase_zernike_vector,
     )
 
     propagation_kernel = optics.generate_propagation_kernel(
@@ -95,16 +99,16 @@ def _calculate_wrap_unsafe_transfer_function(
         wavelength_emission / index_of_refraction_media,
         z_position_list,
     )
-
     point_spread_function = (
         torch.abs(torch.fft.ifft2(propagation_kernel, dim=(1, 2))) ** 2
     )
     optical_transfer_function = torch.fft.fftn(
         point_spread_function, dim=(0, 1, 2)
     )
-    optical_transfer_function /= torch.max(
+    optical_transfer_function = optical_transfer_function / torch.max(
         torch.abs(optical_transfer_function)
     )  # normalize
+    # NB: this is a /= operation, but in-place operations do not propagate gradients
 
     return optical_transfer_function
 

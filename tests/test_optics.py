@@ -8,11 +8,23 @@ def test_generate_pupil():
     pupil = optics.generate_pupil(radial_frequencies, 0.5, 0.5)
 
     # Corners are in the pupil
-    assert pupil[0, 0] == 1
-    assert pupil[-1, -1] == 1
+    assert torch.isclose(pupil[0, 0], torch.tensor(1.0), rtol=1e-3)
+    assert torch.isclose(pupil[-1, -1], torch.tensor(1.0), rtol=1e-3)
 
     # Center is outside the pupil
-    assert pupil[5, 5] == 0
+    assert pupil[5, 5] < 1e-3
+
+
+def test_generate_pupil_cutoff():
+    """
+    Test generate_pupil at the cutoff frequency.
+    """
+    frr = torch.tensor([[0.5, 1.0, 1.5]])
+    NA = 1.0
+    lamb_in = 1.0
+    pupil = optics.generate_pupil(frr, NA, lamb_in)
+    # At cutoff, sigmoid should be ~0.5
+    assert torch.isclose(pupil[0, 1], torch.tensor(0.5), atol=1e-3)
 
 
 def test_generate_propagation_kernel():
@@ -27,7 +39,7 @@ def test_generate_propagation_kernel():
 
     assert propagation_kernel.shape == (3, 10, 10)
     assert propagation_kernel[1, 0, 0] == 1
-    assert propagation_kernel[1, 5, 5] == 0
+    assert torch.abs(propagation_kernel[1, 5, 5]) < 1e-3
 
 
 def test_gen_Greens_function_z():
@@ -41,7 +53,7 @@ def test_gen_Greens_function_z():
     )
 
     assert G.shape == (3, 10, 10)
-    assert G[1, 5, 5] == 0
+    assert torch.abs(G[1, 5, 5]) < 1e-3
 
 
 def test_WOTF_2D():
@@ -57,7 +69,12 @@ def test_WOTF_2D():
     )
 
     # Absorption DC term
-    assert absorption_transfer_function[0, 0] == 2
+    assert torch.isclose(
+        torch.real(absorption_transfer_function[0, 0]),
+        torch.tensor(2.0),
+        rtol=1e-3,
+    )
+    assert torch.abs(torch.imag(absorption_transfer_function[0, 0])) < 1e-3
 
     # No phase contrast for an in-focus slice
     assert torch.all(torch.real(phase_transfer_function) == 0)
