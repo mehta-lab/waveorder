@@ -714,7 +714,7 @@ def inten_normalization(img_stack, bg_filter=True):
                 img_stack[i], size=X // 2
             )
         else:
-            img_norm_stack[i] = img_stack[i].copy()
+            img_norm_stack[i] = img_stack[i]
         img_norm_stack[i] /= torch.mean(img_norm_stack[i])
         img_norm_stack[i] -= 1
 

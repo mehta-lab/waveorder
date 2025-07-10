@@ -55,7 +55,6 @@ dependencies = [
   "pydantic",
   "pywavelets>=1.1.1",
   "scipy>=1.3.0",
-  "submitit",
   "torch>=2.4.1",
   "qtpy",
   "wget>=3.2",
@@ -72,6 +71,7 @@ all = [
 ]
 dev = [
   "black==25.1.0",
+  "click>=8.2.0",
   "hypothesis",
   "pre-commit",
   "pytest-cov",
