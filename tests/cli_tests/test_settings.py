@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from pydantic.v1 import ValidationError
 
@@ -67,7 +69,7 @@ def test_phase_tf_settings():
         )
 
     # Inconsistent units
-    with pytest.raises(Warning):
+    with pytest.warns(UserWarning):
         settings.PhaseTransferFunctionSettings(
             yx_pixel_size=650, z_pixel_size=0.3
         )
@@ -82,14 +84,15 @@ def test_fluor_tf_settings():
         wavelength_emission=0.500, yx_pixel_size=0.2
     )
 
-    with pytest.raises(Warning):
+    with pytest.warns(UserWarning):
         settings.FluorescenceTransferFunctionSettings(
             wavelength_emission=0.500, yx_pixel_size=2000
         )
 
 
 def test_generate_example_settings():
-    example_path = "./examples/configs"
+    project_root = Path(__file__).parent.parent.parent
+    example_path = project_root / "docs" / "examples" / "configs"
 
     s0 = settings.ReconstructionSettings(
         birefringence=settings.BirefringenceSettings(),
@@ -116,8 +119,9 @@ def test_generate_example_settings():
 
     # Save to examples folder and test roundtrip
     for file_name, settings_obj in zip(file_names, settings_list):
-        utils.model_to_yaml(settings_obj, example_path + file_name)
+        config_path = example_path / file_name
+        utils.model_to_yaml(settings_obj, config_path)
         settings_roundtrip = utils.yaml_to_model(
-            example_path + file_name, settings.ReconstructionSettings
+            config_path, settings.ReconstructionSettings
         )
         assert settings_obj.dict() == settings_roundtrip.dict()

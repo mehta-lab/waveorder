@@ -1,4 +1,5 @@
 import os
+import warnings
 from pathlib import Path
 from typing import List, Literal, Optional, Union
 
@@ -14,7 +15,7 @@ from pydantic.v1 import (
 
 # This file defines the configuration settings for the CLI.
 
-# Example settings files in `/examples/settings/` are autmatically generated
+# Example settings files in `/docs/examples/settings/` are autmatically generated
 # by the tests in `/tests/cli_tests/test_settings.py` - `test_generate_example_settings`.
 
 # To keep the example settings up to date, run `pytest` locally when this file changes.
@@ -61,6 +62,7 @@ class FourierTransferFunctionSettings(MyBaseModel):
     yx_pixel_size: PositiveFloat = 6.5 / 20
     z_pixel_size: PositiveFloat = 2.0
     z_padding: NonNegativeInt = 0
+    z_focus_offset: Union[int, Literal["auto"]] = 0
     index_of_refraction_media: PositiveFloat = 1.3
     numerical_aperture_detection: PositiveFloat = 1.2
 
@@ -78,8 +80,9 @@ class FourierTransferFunctionSettings(MyBaseModel):
         yx_pixel_size = values["yx_pixel_size"]
         ratio = yx_pixel_size / v
         if ratio < 1.0 / 20 or ratio > 20:
-            raise Warning(
-                f"yx_pixel_size ({yx_pixel_size}) / z_pixel_size ({v}) = {ratio}. Did you use consistent units?"
+            warnings.warn(
+                f"yx_pixel_size ({yx_pixel_size}) / z_pixel_size ({v}) = {ratio}. Did you use consistent units?",
+                UserWarning,
             )
         return v
 
@@ -116,8 +119,9 @@ class FluorescenceTransferFunctionSettings(FourierTransferFunctionSettings):
         yx_pixel_size = values.get("yx_pixel_size")
         ratio = yx_pixel_size / v
         if ratio < 1.0 / 20 or ratio > 20:
-            raise Warning(
-                f"yx_pixel_size ({yx_pixel_size}) / wavelength_illumination ({v}) = {ratio}. Did you use consistent units?"
+            warnings.warn(
+                f"yx_pixel_size ({yx_pixel_size}) / wavelength_illumination ({v}) = {ratio}. Did you use consistent units?",
+                UserWarning,
             )
         return v
 

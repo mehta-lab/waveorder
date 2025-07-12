@@ -20,10 +20,10 @@ from waveorder.acq.acq_functions import (
 )
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
-    apply_inverse_transfer_function_cli,
+    _apply_inverse_transfer_function_cli,
 )
 from waveorder.cli.compute_transfer_function import (
-    compute_transfer_function_cli,
+    _compute_transfer_function_cli,
 )
 from waveorder.io.utils import add_index_to_path, model_to_yaml, ram_message
 
@@ -41,7 +41,7 @@ def _check_scale_mismatch(
         show_warning(
             f"Requested reconstruction scale = {recon_scale} "
             f"and OME-Zarr metadata scale = {ngff_scale[2:]} are not equal. "
-            "recOrder's reconstruction uses the GUI's "
+            "waveorder's reconstruction uses the GUI's "
             "Z-step, pixel size, and magnification, "
             "while napari's viewer uses the input array's metadata."
         )
@@ -306,13 +306,13 @@ class BFAcquisitionWorker(WorkerBase):
         input_data_path = Path(self.latest_out_path) / "0" / "0" / "0"
 
         # TODO: skip if config files match
-        compute_transfer_function_cli(
+        _compute_transfer_function_cli(
             input_position_dirpath=input_data_path,
             config_filepath=self.config_path,
             output_dirpath=transfer_function_path,
         )
 
-        apply_inverse_transfer_function_cli(
+        _apply_inverse_transfer_function_cli(
             input_position_dirpaths=[input_data_path],
             transfer_function_dirpath=transfer_function_path,
             config_filepath=self.config_path,
@@ -383,7 +383,7 @@ class PolarizationAcquisitionWorker(WorkerBase):
         self.calib = calib
         self.mode = mode
         self.n_slices = None
-        self.prefix = "recOrderPluginSnap"
+        self.prefix = "waveorderPluginSnap"
         self.dm = self.calib_window.mm.displays()
         self.channel_group = self.calib_window.config_group
 
@@ -587,18 +587,18 @@ class PolarizationAcquisitionWorker(WorkerBase):
         input_data_path = Path(self.latest_out_path) / "0" / "0" / "0"
 
         # TODO: skip if config files match
-        compute_transfer_function_cli(
+        _compute_transfer_function_cli(
             input_position_dirpath=input_data_path,
             config_filepath=self.config_path,
             output_dirpath=transfer_function_path,
         )
 
-        apply_inverse_transfer_function_cli(
+        _apply_inverse_transfer_function_cli(
             input_position_dirpaths=[input_data_path],
             transfer_function_dirpath=transfer_function_path,
             config_filepath=self.config_path,
             output_dirpath=reconstruction_path,
-            unique_id="recOrderAcq",
+            unique_id="waveorderAcq",
         )
 
         # Read reconstruction to pass to emitters

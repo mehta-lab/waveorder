@@ -110,7 +110,7 @@ def _get_examples(low: float, high: float):
 
 
 def test_suspend_live_sm():
-    """Test `recOrder.io.core_functions.suspend_live_sm`."""
+    """Test `waveorder.io.core_functions.suspend_live_sm`."""
     snap_manager = _get_snap_manager_mock()
     with suspend_live_sm(snap_manager) as sm:
         sm.setSuspended.assert_called_once_with(True)
@@ -118,7 +118,7 @@ def test_suspend_live_sm():
 
 
 def test_snap_and_get_image():
-    """Test `recOrder.io.core_functions.snap_and_get_image`."""
+    """Test `waveorder.io.core_functions.snap_and_get_image`."""
     sm = _get_snap_manager_mock()
     image = snap_and_get_image(sm)
     assert _is_int(image), image.dtype
@@ -126,7 +126,7 @@ def test_snap_and_get_image():
 
 
 def test_snap_and_average():
-    """Test `recOrder.io.core_functions.snap_and_average`."""
+    """Test `waveorder.io.core_functions.snap_and_average`."""
     sm = _get_snap_manager_mock()
     mean = snap_and_average(sm)
     np.testing.assert_almost_equal(mean, SERIAL_IMAGE.mean())
@@ -149,22 +149,22 @@ def _set_lc_test(
 
 
 def test_set_lc_waves():
-    """Test `recOrder.io.core_functions.set_lc_waves`."""
+    """Test `waveorder.io.core_functions.set_lc_waves`."""
     _set_lc_test(set_lc_waves, (0.001, 1.6))
 
 
 def test_set_lc_voltage():
-    """Test `recOrder.io.core_functions.set_lc_voltage`."""
+    """Test `waveorder.io.core_functions.set_lc_voltage`."""
     _set_lc_test(set_lc_voltage, (0.0, 20.0))
 
 
 def test_set_lc_daq():
-    """Test `recOrder.io.core_functions.set_lc_daq`."""
+    """Test `waveorder.io.core_functions.set_lc_daq`."""
     _set_lc_test(set_lc_daq, (0.0, 5.0))
 
 
 def test_get_lc():
-    """Test `recOrder.io.core_functions.get_lc`."""
+    """Test `waveorder.io.core_functions.get_lc`."""
     mmc = _get_mmcore_mock()
     state = get_lc(mmc, DEVICE_PROPERTY)
     mmc.getProperty.assert_called_once_with(*DEVICE_PROPERTY)
@@ -172,7 +172,7 @@ def test_get_lc():
 
 
 def test_define_meadowlark_state():
-    """Test `recOrder.io.core_functions.define_meadowlark_state`."""
+    """Test `waveorder.io.core_functions.define_meadowlark_state`."""
     mmc = _get_mmcore_mock()
     define_meadowlark_state(mmc, DEVICE_PROPERTY)
     mmc.setProperty.assert_called_once_with(*DEVICE_PROPERTY, 0)
@@ -180,7 +180,7 @@ def test_define_meadowlark_state():
 
 
 def test_define_config_state():
-    """Test `recOrder.io.core_functions.define_config_state`."""
+    """Test `waveorder.io.core_functions.define_config_state`."""
     mmc = _get_mmcore_mock()
     device_properties = [DEVICE_PROPERTY] * 4
     values = _get_examples(0, 10)[0].tolist()
@@ -196,7 +196,7 @@ def test_define_config_state():
 
 
 def test_set_lc_state():
-    """Test `recOrder.io.core_functions.set_lc_state`."""
+    """Test `waveorder.io.core_functions.set_lc_state`."""
     mmc = _get_mmcore_mock()
     set_lc_state(mmc, CONFIG_GROUP, CONFIG_NAME)
     mmc.setConfig.assert_called_once_with(CONFIG_GROUP, CONFIG_NAME)

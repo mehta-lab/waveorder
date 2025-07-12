@@ -81,9 +81,9 @@ class CalibrationWorkerBase(WorkerBase):
         Parameters
         ----------
         calib_window : MainWidget
-            The recOrder-napari plugin's main GUI widget object containing metadata input.
+            The waveorder plugin's main GUI widget object containing metadata input.
         calib : QLIPP_Calibration
-            recOrder calibration backend object.
+            waveorder calibration backend object.
         """
         super().__init__(SignalsClass=self.signals)
         self.calib_window = calib_window
@@ -356,6 +356,7 @@ class BackgroundCaptureWorker(
             transfer_function_dirpath=transfer_function_path,
             config_filepath=reconstruction_config_path,
             output_dirpath=reconstruction_path,
+            num_processes=1,
         )
 
         # Load reconstructions from file for layers
@@ -403,17 +404,17 @@ def load_calibration(calib, metadata: MetadataReader):
 
     Parameters
     ----------
-    calib:          (object) recOrder Calibration Class
+    calib:          (object) waveorder Calibration Class
     metadata:       (object) MetadataReader instance
 
     Returns
     -------
-    calib           (object) updated recOrder Calibration Class
+    calib           (object) updated waveorder Calibration Class
     """
     calib.calib_scheme = metadata.Calibration_scheme
 
     def _set_calib_attrs(calib, metadata):
-        """Set the retardance attributes in the recOrder Calibration object"""
+        """Set the retardance attributes in the waveorder Calibration object"""
         if calib.calib_scheme == "4-State":
             lc_states = ["ext", "0", "60", "120"]
         elif calib.calib_scheme == "5-State":

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from importlib_metadata import version
 from iohub import open_ome_zarr
-from iohub.ngff_meta import TransformationMeta
+from iohub.ngff.models import TransformationMeta
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 from napari.utils.notifications import show_warning
 from scipy.interpolate import interp1d
@@ -49,9 +49,9 @@ class QLIPP_Calibration:
             Defined the control mode of the liquid crystals. One of the following:
             * MM-Retardance: The retardance of the LC is set directly through the Micro-Manager LC device adapter. The
             Micro-Manager device adapter determines the corresponding voltage which is sent to the LC.
-            * MM-Voltage: The CalibrationData class in recOrder uses the LC calibration data to determine the correct
+            * MM-Voltage: The CalibrationData class in waveorder uses the LC calibration data to determine the correct
             LC voltage for a given retardance. The LC voltage is set through the Micro-Manager LC device adapter.
-            * DAC: The CalibrationData class in recOrder uses the LC calibration data to determine the correct
+            * DAC: The CalibrationData class in waveorder uses the LC calibration data to determine the correct
             LC voltage for a given retardance. The voltage is applied to the IO port of the LC controller through the
             TriggerScope DAC outputs.
         interp_method : str
@@ -793,9 +793,9 @@ class QLIPP_Calibration:
                 "No shutter found. Please follow the command-line instructions..."
             )
             shutter_warning_msg = """
-            recOrder could not find an automatic shutter configured through Micro-Manager.
+            waveorder could not find an automatic shutter configured through Micro-Manager.
             >>> If you would like manually enter the black level, enter an integer or float and press <Enter>
-            >>> If you would like to estimate the black level, please close the shutter and press <Enter> 
+            >>> If you would like to estimate the black level, please close the shutter and press <Enter>
             """
 
             in_string = input(shutter_warning_msg)
@@ -877,7 +877,6 @@ class QLIPP_Calibration:
         metadata = {
             "Summary": {
                 "Timestamp": str(datetime.now()),
-                "recOrder-napari version": version("recOrder-napari"),
                 "waveorder version": version("waveorder"),
             },
             "Calibration": {

@@ -1,26 +1,26 @@
 """
-This module converts recOrder's reconstructions into waveorder calls
+This module converts GUI-level reconstruction calls into library calls
 """
 
 import numpy as np
 import torch
 
 from waveorder.models import (
-    inplane_oriented_thick_pol3d_vector,
     inplane_oriented_thick_pol3d,
+    inplane_oriented_thick_pol3d_vector,
     isotropic_fluorescent_thick_3d,
     isotropic_thin_3d,
     phase_thick_3d,
 )
-from waveorder.stokes import stokes_after_adr, _s12_to_orientation
+from waveorder.stokes import _s12_to_orientation, stokes_after_adr
 
 
 def radians_to_nanometers(retardance_rad, wavelength_illumination_um):
     """
-    waveorder returns retardance in radians, while recorder displays and saves
+    waveorder returns retardance in radians, while waveorder displays and saves
     retardance in nanometers. This function converts from radians to nanometers
     using the illumination wavelength (which is internally handled in um
-    in recOrder).
+    in waveorder).
     """
     return retardance_rad * wavelength_illumination_um * 1e3 / (2 * np.pi)
 
@@ -67,23 +67,27 @@ def phase(
     # [phase only, 2]
     if recon_dim == 2:
         # Load transfer functions
-        absorption_transfer_function = torch.tensor(
-            transfer_function_dataset["absorption_transfer_function"][0, 0]
+        U = torch.from_numpy(transfer_function_dataset["singular_system_U"][0])
+        S = torch.from_numpy(
+            transfer_function_dataset["singular_system_S"][0, 0]
         )
-        phase_transfer_function = torch.tensor(
-            transfer_function_dataset["phase_transfer_function"][0, 0]
+        Vh = torch.from_numpy(
+            transfer_function_dataset["singular_system_Vh"][0]
         )
 
         # Apply
         (
-            _,
-            output,
+            absorption_yx,
+            phase_yx,
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             czyx_data[0],
-            absorption_transfer_function,
-            phase_transfer_function,
+            (U, S, Vh),
             **settings_phase.apply_inverse.dict(),
         )
+        # Stack to C1YX
+        output = phase_yx[None, None]
+        # TODO: Write phase and absorption to CZYX
+        # torch.stack((phase_yx[None], absorption_yx[None]))
 
     # [phase only, 3]
     elif recon_dim == 3:
@@ -129,12 +133,13 @@ def birefringence_and_phase(
 
     # [biref and phase, 2]
     if recon_dim == 2:
-        # Load phase transfer functions
-        absorption_transfer_function = torch.tensor(
-            transfer_function_dataset["absorption_transfer_function"][0, 0]
+        # Load transfer functions
+        U = torch.from_numpy(transfer_function_dataset["singular_system_U"][0])
+        S = torch.from_numpy(
+            transfer_function_dataset["singular_system_S"][0, 0]
         )
-        phase_transfer_function = torch.tensor(
-            transfer_function_dataset["phase_transfer_function"][0, 0]
+        Vh = torch.from_numpy(
+            transfer_function_dataset["singular_system_Vh"][0]
         )
 
         # Apply
@@ -165,8 +170,7 @@ def birefringence_and_phase(
             yx_phase,
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             brightfield_3d,
-            absorption_transfer_function,
-            phase_transfer_function,
+            (U, S, Vh),
             **settings_phase.apply_inverse.dict(),
         )
 
@@ -237,7 +241,9 @@ def birefringence_and_phase(
         # Convert retardance and orientation to stokes
         stokes = stokes_after_adr(*reconstructed_parameters_3d)
 
-        stokes = torch.nan_to_num_(torch.stack(stokes), nan=0.0)  # very rare nans from previous like
+        stokes = torch.nan_to_num_(
+            torch.stack(stokes), nan=0.0
+        )  # very rare nans from previous like
 
         # Apply reconstruction
         joint_recon_params = inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(

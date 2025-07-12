@@ -13,25 +13,19 @@ from waveorder.cli.parsing import (
     input_position_dirpaths,
     output_dirpath,
     processes_option,
-    ram_multiplier,
-    unique_id,
 )
 
 
-@click.command()
+@click.command("reconstruct")
 @input_position_dirpaths()
 @config_filepath()
 @output_dirpath()
 @processes_option(default=1)
-@ram_multiplier()
-@unique_id()
-def reconstruct(
+def _reconstruct_cli(
     input_position_dirpaths,
     config_filepath,
     output_dirpath,
     num_processes,
-    ram_multiplier,
-    unique_id,
 ):
     """
     Reconstruct a dataset using a configuration file. This is a
@@ -45,7 +39,7 @@ def reconstruct(
 
     See /examples for example configuration files.
 
-    >> recorder reconstruct -i ./input.zarr/*/*/* -c ./examples/birefringence.yml -o ./output.zarr
+    >> waveorder reconstruct -i ./input.zarr/*/*/* -c ./examples/birefringence.yml -o ./output.zarr
     """
 
     # Handle transfer function path
@@ -67,6 +61,4 @@ def reconstruct(
         config_filepath,
         output_dirpath,
         num_processes,
-        ram_multiplier,
-        unique_id,
     )

@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
-from iohub.ngff_meta import TransformationMeta
+from iohub.ngff.models import TransformationMeta
 
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
@@ -219,7 +219,6 @@ def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
             Path(tmp_config_yml),
             Path(result_path),
             1,
-            1,
         )
         assert result_inv.exit_code == 0
 
@@ -254,7 +253,7 @@ def test_cli_apply_inv_tf_output(tmp_input_path_zarr, capsys):
 
         assert result_path.exists()
         captured = capsys.readouterr()
-        assert "submitted" in captured.out
+        assert "Starting reconstruction" in captured.out
 
         # Check scale transformations pass through
         assert input_scale == result_dataset.scale
