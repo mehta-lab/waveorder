@@ -60,8 +60,8 @@ def generate_and_save_vector_birefringence_transfer_function(
 
     num_elements = np.array(zyx_shape).prod()
     max_tf_elements = 1e7  # empirical, based on memory usage
-    transverse_downsample_factor = int(
-        np.ceil(np.sqrt(num_elements / max_tf_elements))
+    transverse_downsample_factor = np.ceil(
+        np.sqrt(num_elements / max_tf_elements)
     )
     echo_headline(
         f"Downsampling transfer function in X and Y by {transverse_downsample_factor}x"
@@ -75,7 +75,7 @@ def generate_and_save_vector_birefringence_transfer_function(
             scheme=str(len(settings.input_channel_names)) + "-State",
             **settings.birefringence.transfer_function.dict(),
             **phase_settings_dict,
-            fourier_oversample_factor=transverse_downsample_factor,
+            fourier_oversample_factor=int(transverse_downsample_factor),
         )
     )
 
