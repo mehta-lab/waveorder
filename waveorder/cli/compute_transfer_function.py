@@ -66,13 +66,15 @@ def generate_and_save_vector_birefringence_transfer_function(
     echo_headline(
         f"Downsampling transfer function in X and Y by {transverse_downsample_factor}x"
     )
+    phase_settings_dict = settings.phase.transfer_function.dict()
+    phase_settings_dict.pop("z_focus_offset")  # not used in 3D
 
     sfZYX_transfer_function, _, singular_system = (
         inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
             zyx_shape=zyx_shape,
             scheme=str(len(settings.input_channel_names)) + "-State",
             **settings.birefringence.transfer_function.dict(),
-            **settings.phase.transfer_function.dict(),
+            **phase_settings_dict,
             transverse_downsample_factor=transverse_downsample_factor,
         )
     )
