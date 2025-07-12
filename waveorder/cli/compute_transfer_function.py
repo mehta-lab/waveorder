@@ -92,17 +92,17 @@ def generate_and_save_vector_birefringence_transfer_function(
         chunks=chunks,
     )
     dataset.create_image(
-        "singular_system_U",
+        "vector_singular_system_U",
         U.cpu().numpy(),
         chunks=chunks,
     )
     dataset.create_image(
-        "singular_system_S",
+        "vector_singular_system_S",
         S[None].cpu().numpy(),
         chunks=chunks,
     )
     dataset.create_image(
-        "singular_system_Vh",
+        "vector_singular_system_Vh",
         Vh.cpu().numpy(),
         chunks=chunks,
     )
