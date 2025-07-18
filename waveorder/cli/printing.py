@@ -37,13 +37,12 @@ def echo_text(text, unique_id=""):
 
 
 def UpdateThread(uID, msg):
-    if uID == "":
-        return
-    msg = "Processing: " + msg.replace("\n", " ").replace("\\", "/")
-    threading.Thread(
-        target=JM.put_Job_in_list,
-        args=(
-            uID,
-            msg,
-        ),
-    ).start()
+    if uID != "":        
+        msg = "Processing: " + msg.replace("\n", " ").replace("\\", "/")
+        threading.Thread(
+            target=JM.put_Job_in_list,
+            args=(
+                uID,
+                msg,
+            ),
+        ).start()

@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+import time
 from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
@@ -154,6 +155,7 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
         ],
         catch_exceptions=False,
     )
+    time.sleep(60)
     assert output_path.exists()
     with open_ome_zarr(output_path) as dataset:
         assert dataset["0/0/0"]["0"].shape[1] == 4
@@ -172,6 +174,7 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
         ],
         catch_exceptions=False,
     )
+    time.sleep(60)
     assert output_path.exists()
     with open_ome_zarr(output_path) as dataset:
         assert dataset["0/0/0"]["0"].shape[1] == 5
