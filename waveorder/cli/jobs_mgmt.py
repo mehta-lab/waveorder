@@ -71,7 +71,7 @@ class JobsManagement:
                                 if cmd == "cancel":
                                     if self.has_submitted_job(u_idx):
                                         try:
-                                            pass # ToDo: Implement cancelling logic
+                                            pass  # ToDo: Implement cancelling logic
                                         except Exception as exc:
                                             pass  # possibility of throwing an exception based on diff. OS
                 forDeletions = []
@@ -80,7 +80,7 @@ class JobsManagement:
                     if jobBool:
                         forDeletions.append(uID)
                 for idx in range(len(forDeletions)):
-                    del self.uIDs[forDeletions[idx]]                
+                    del self.uIDs[forDeletions[idx]]
                 if len(self.uIDs.keys()) == 0:
                     self.clientsocket.close()
                     break
@@ -94,15 +94,13 @@ class JobsManagement:
             return jobBool
         return True
 
-    def put_Job_completion_in_list(
-        self, uID: str, finished, mode="client"
-    ):
+    def put_Job_completion_in_list(self, uID: str, finished, mode="client"):
         if uID in SERVER_uIDs.keys():
             SERVER_uIDs[uID] = finished
         if uID in self.uIDs.keys():
             self.uIDs[uID] = finished
 
-    def isCompleted(self, uID:str):
+    def isCompleted(self, uID: str):
         if uID in SERVER_uIDs.keys():
             return SERVER_uIDs[uID]
         if uID in self.uIDs.keys():
@@ -116,7 +114,7 @@ class JobsManagement:
         thread = threading.Thread(target=self.send_data, args=(data,))
         thread.start()
 
-    def send_data(self, data):        
+    def send_data(self, data):
         # print("Client:" + data)
         self.clientsocket.send(data.encode())
 
@@ -130,9 +128,7 @@ class JobsManagement:
             if mode == "client":
                 if uID not in self.uIDs.keys():
                     self.uIDs[uID] = False
-                json_obj = {
-                    uID: {"msg":msg}
-                }
+                json_obj = {uID: {"msg": msg}}
                 json_str = json.dumps(json_obj) + "\n"
                 self.send_data_thread(json_str)
             else:
@@ -140,7 +136,7 @@ class JobsManagement:
                 # this will be later checked as completion boolean for a ExpID which might
                 # have several Jobs associated with it
                 if uID not in SERVER_uIDs.keys():
-                    SERVER_uIDs[uID] = False                
+                    SERVER_uIDs[uID] = False
         except Exception as exc:
             print(exc.args)
 

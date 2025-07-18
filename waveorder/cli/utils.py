@@ -9,6 +9,7 @@ from iohub.ngff.models import TransformationMeta
 from numpy.typing import DTypeLike
 from waveorder.cli.printing import echo_text
 
+
 def create_empty_hcs_zarr(
     store_path: Path,
     position_keys: list[Tuple[str]],
@@ -82,7 +83,7 @@ def apply_inverse_to_zyx_and_save(
     input_channel_indices: list[int],
     output_channel_indices: list[int],
     t_idx: int = 0,
-    unique_id: str="",
+    unique_id: str = "",
     **kwargs,
 ) -> None:
     """Load a zyx array from a Position object, apply a transformation and save the result to file"""

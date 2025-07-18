@@ -43,7 +43,16 @@ from waveorder.cli.settings import FluorescenceSettings
 from waveorder.cli.settings import FluorescenceTransferFunctionSettings
 from waveorder.cli.settings import FourierApplyInverseSettings
 
-PYDANTIC_CLASSES_DEF = (BirefringenceSettings, BirefringenceTransferFunctionSettings, BirefringenceApplyInverseSettings, PhaseSettings, PhaseTransferFunctionSettings, FluorescenceSettings, FluorescenceTransferFunctionSettings, FourierApplyInverseSettings)
+PYDANTIC_CLASSES_DEF = (
+    BirefringenceSettings,
+    BirefringenceTransferFunctionSettings,
+    BirefringenceApplyInverseSettings,
+    PhaseSettings,
+    PhaseTransferFunctionSettings,
+    FluorescenceSettings,
+    FluorescenceTransferFunctionSettings,
+    FourierApplyInverseSettings,
+)
 
 from waveorder.cli import jobs_mgmt, settings
 from waveorder.io import utils
@@ -1523,7 +1532,7 @@ class Ui_ReconTab_Form(QWidget):
         _show_CheckBox = widgets.CheckBox(
             name="Show after Reconstruction", value=True
         )
-        _show_CheckBox.max_width = 200        
+        _show_CheckBox.max_width = 200
         _validate_button = widgets.PushButton(name="Validate")
 
         # Passing all UI components that would be deleted
@@ -2516,7 +2525,10 @@ class Ui_ReconTab_Form(QWidget):
                         toolTip = f"{toolTip}{f_val} "
                 except Exception as e:
                     pass
-                if isinstance(ftype, BaseModel) or ftype in PYDANTIC_CLASSES_DEF:
+                if (
+                    isinstance(ftype, BaseModel)
+                    or ftype in PYDANTIC_CLASSES_DEF
+                ):
                     json_val = None
                     if json_dict is not None:
                         json_val = json_dict[field]
@@ -2640,7 +2652,10 @@ class Ui_ReconTab_Form(QWidget):
         for field, field_def in pydantic_model.__fields__.items():
             if field_def is not None and field not in excludes:
                 ftype = field_def.type_
-                if isinstance(ftype, BaseModel) or ftype in PYDANTIC_CLASSES_DEF:
+                if (
+                    isinstance(ftype, BaseModel)
+                    or ftype in PYDANTIC_CLASSES_DEF
+                ):
                     # go deeper
                     pydantic_kwargs[field] = (
                         {}
@@ -2730,9 +2745,11 @@ class MyWorker:
         self.formLayout: QFormLayout = formLayout
         self.tab_recon: Ui_ReconTab_Form = tab_recon
         self.ui: QWidget = parentForm
-        self.max_cores = 1 # os.cpu_count() - no multi-threading // parallelization
+        self.max_cores = (
+            1  # os.cpu_count() - no multi-threading // parallelization
+        )
         # In the case of CLI, we just need to submit requests in a non-blocking way
-        self.threadPool = 1 # int(self.max_cores / 2)
+        self.threadPool = 1  # int(self.max_cores / 2)
         self.results = {}
         self.pool = None
         self.futures = []
@@ -2795,7 +2812,9 @@ class MyWorker:
                     break
                 try:
                     # dont block the server thread
-                    thread_handle = threading.Thread(target=self.decode_client_data, args=(client_socket,))
+                    thread_handle = threading.Thread(
+                        target=self.decode_client_data, args=(client_socket,)
+                    )
                     thread_handle.start()
                 except Exception as exc:
                     print(exc.args)
@@ -2843,7 +2862,7 @@ class MyWorker:
                 msg = ""
                 decoded_string = ""
                 try:
-                    buf = client_socket.recv(8192)                
+                    buf = client_socket.recv(8192)
                     if len(buf) > 0:
                         if b"\n" in buf:
                             dataList = buf.split(b"\n")
@@ -2851,7 +2870,7 @@ class MyWorker:
                             dataList = [buf]
                         for data in dataList:
                             if len(data) > 0:
-                                decoded_string = data.decode() 
+                                decoded_string = data.decode()
                                 # print("Server: {msg}".format(msg=decoded_string))
                                 json_str = str(decoded_string)
                                 json_obj = json.loads(json_str)
@@ -2861,8 +2880,13 @@ class MyWorker:
                                     # server_json_str = json.dumps({"uID":k, "command":"test"}) + "\n"
                                     # client_socket.send(server_json_str.encode())
                                     jobs_mgmt.SERVER_uIDs[expIdx] = False
-                                    self.table_update_and_cleaup_thread(expIdx,msg,client_socket)
-                                    if msg == JOB_COMPLETION_STR or msg == JOB_TRIGGERED_EXC:
+                                    self.table_update_and_cleaup_thread(
+                                        expIdx, msg, client_socket
+                                    )
+                                    if (
+                                        msg == JOB_COMPLETION_STR
+                                        or msg == JOB_TRIGGERED_EXC
+                                    ):
                                         time.sleep(3)
                                         client_socket.close()
                                         return
@@ -2937,11 +2961,9 @@ class MyWorker:
 
             _infoBox: ScrollableLabel = params["table_entry_infoBox"]
             _cancelJobBtn: PushButton = params["cancelJobButton"]
-            
+
             try:
-                _cancelJobBtn.text = "Cancel Job {jID}".format(
-                    jID=expIdx
-                )
+                _cancelJobBtn.text = "Cancel Job {jID}".format(jID=expIdx)
                 _cancelJobBtn.enabled = True
             except:
                 # deleted by user - no longer needs updating
@@ -2979,9 +3001,7 @@ class MyWorker:
             except Exception as exc:
                 print(exc.args)
                 params["status"] = STATUS_user_cleared_job
-                self.client_release(
-                    expIdx, client_socket, params, reason=3
-                )
+                self.client_release(expIdx, client_socket, params, reason=3)
                 # break  # deleted by user - no longer needs updating
             if expIdx in jobs_mgmt.SERVER_uIDs.keys():
                 if jobs_mgmt.SERVER_uIDs[expIdx]:
@@ -2994,14 +3014,18 @@ class MyWorker:
                         expIdx, client_socket, params, reason=4
                     )
                     # break
-                elif params["status"] in [STATUS_errored_job]:                    
+                elif params["status"] in [STATUS_errored_job]:
                     self.client_release(
                         expIdx, client_socket, params, reason=5
                     )
                     # break
                 else:
                     try:
-                        if params["status"] == STATUS_finished_job or JOB_COMPLETION_STR in jobTXT or JOB_COMPLETION_STR2 in jobTXT:
+                        if (
+                            params["status"] == STATUS_finished_job
+                            or JOB_COMPLETION_STR in jobTXT
+                            or JOB_COMPLETION_STR2 in jobTXT
+                        ):
                             params["status"] = STATUS_finished_job
                             # this is the only case where row deleting occurs
                             # we cant delete the row directly from this thread
@@ -3031,7 +3055,11 @@ class MyWorker:
                             _infoBox.setText(jobTXT)
                             params["status"] = STATUS_running_job
                         elif JOB_RUNNING_STR in jobTXT:
-                            _infoBox.setText(_infoBox.getText() + "\n" + jobTXT.replace("Processing:", "->"))
+                            _infoBox.setText(
+                                _infoBox.getText()
+                                + "\n"
+                                + jobTXT.replace("Processing:", "->")
+                            )
                             params["status"] = STATUS_running_job
                         elif "Error" in jobTXT:
                             self.client_release(
@@ -3045,9 +3073,7 @@ class MyWorker:
                         print(exc.args)
                 pass
             else:
-                self.client_release(
-                    expIdx, client_socket, params, reason=0
-                )
+                self.client_release(expIdx, client_socket, params, reason=0)
                 # break
         else:
             # this would occur when an exception happens on the pool side before or during job submission
@@ -3080,7 +3106,7 @@ class MyWorker:
 
             # for multi-job expID we need to check completion for all of them
             # while not self.JobsMgmt.check_all_ExpJobs_completion(expIdx):
-                # time.sleep(1)
+            # time.sleep(1)
 
             json_obj = {
                 "uID": expIdx,
@@ -3123,9 +3149,7 @@ class MyWorker:
                 self.futures.append(f)
         except Exception as exc:
             self.results[params["exp_id"]]["status"] = STATUS_errored_pool
-            self.results[params["exp_id"]]["error"] = str(
-                "\n".join(exc.args)
-            )
+            self.results[params["exp_id"]]["error"] = str("\n".join(exc.args))
             self.table_update_and_cleaup_thread()
 
     def run_multi_in_pool(self, multi_params_as_list):
@@ -3140,7 +3164,9 @@ class MyWorker:
         except Exception as exc:
             for params in multi_params_as_list:
                 self.results[params["exp_id"]]["status"] = STATUS_errored_pool
-                self.results[params["exp_id"]]["error"] = str("\n".join(exc.args))
+                self.results[params["exp_id"]]["error"] = str(
+                    "\n".join(exc.args)
+                )
             self.table_update_and_cleaup_thread()
 
     def get_results(self):
@@ -3235,6 +3261,7 @@ class MyWorker:
             self.results[params["exp_id"]]["status"] = STATUS_errored_pool
             self.results[params["exp_id"]]["error"] = str("\n".join(exc.args))
             self.table_update_and_cleaup_thread()
+
 
 class ShowDataWorkerThread(QThread):
     """Worker thread for sending signal for adding component when request comes

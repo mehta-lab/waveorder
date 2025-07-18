@@ -107,6 +107,7 @@ def processes_option(default: int = None) -> Callable:
 
     return decorator
 
+
 def unique_id() -> Callable:
     def decorator(f: Callable) -> Callable:
         return click.option(

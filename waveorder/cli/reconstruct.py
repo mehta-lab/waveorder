@@ -18,6 +18,7 @@ from waveorder.cli.parsing import (
 )
 from waveorder.cli.printing import JM
 
+
 @click.command("reconstruct")
 @input_position_dirpaths()
 @config_filepath()
@@ -45,7 +46,17 @@ def _reconstruct_cli(
 
     >> waveorder reconstruct -i ./input.zarr/*/*/* -c ./examples/birefringence.yml -o ./output.zarr
     """
-    threading.Thread(target=_reconstruct_cli_thread, args=(input_position_dirpaths,config_filepath,output_dirpath,num_processes,unique_id,)).start()
+    threading.Thread(
+        target=_reconstruct_cli_thread,
+        args=(
+            input_position_dirpaths,
+            config_filepath,
+            output_dirpath,
+            num_processes,
+            unique_id,
+        ),
+    ).start()
+
 
 def _reconstruct_cli_thread(
     input_position_dirpaths,
@@ -59,7 +70,7 @@ def _reconstruct_cli_thread(
         JM.start_client()
         JM.do_print = False
         JM.set_shorter_timeout()
-        JM.put_Job_in_list(uID=unique_id, msg="Initialization")        
+        JM.put_Job_in_list(uID=unique_id, msg="Initialization")
 
     # Handle transfer function path
     transfer_function_path = output_dirpath.parent / Path(
@@ -78,7 +89,8 @@ def _reconstruct_cli_thread(
         has_errored = True
         err = "Error: " + str("\n".join(exc.args))
         print(err)
-        JM.put_Job_in_list(uID=unique_id, msg=err)
+        if unique_id != "":
+            JM.put_Job_in_list(uID=unique_id, msg=err)
 
     # Apply inverse transfer function
     try:
@@ -94,11 +106,14 @@ def _reconstruct_cli_thread(
         has_errored = True
         err = "Error: " + str("\n".join(exc.args))
         print(err)
-        JM.put_Job_in_list(uID=unique_id, msg=err)
+        if unique_id != "":
+            JM.put_Job_in_list(uID=unique_id, msg=err)
 
     if unique_id != "":
         if has_errored:
-            JM.put_Job_in_list(uID=unique_id, msg="Submitted job triggered an exception")
+            JM.put_Job_in_list(
+                uID=unique_id, msg="Submitted job triggered an exception"
+            )
         else:
             JM.put_Job_in_list(uID=unique_id, msg="Job completed successfully")
         JM.put_Job_completion_in_list(uID=unique_id, finished=True)

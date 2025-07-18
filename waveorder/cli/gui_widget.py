@@ -13,7 +13,7 @@ except:
     pass
 
 try:
-    import qdarktheme # pip install pyqtdarktheme==2.1.0 --ignore-requires-python
+    import qdarktheme  # pip install pyqtdarktheme==2.1.0 --ignore-requires-python
 except:
     pass
 
