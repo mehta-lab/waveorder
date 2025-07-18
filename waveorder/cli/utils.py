@@ -110,7 +110,7 @@ def apply_inverse_to_zyx_and_save(
         output_dataset[0].oindex[
             t_idx, output_channel_indices
         ] = reconstruction_czyx
-    click.echo(f"Finished Writing.. t={t_idx}")
+    echo_text(f"Finished Writing.. t={t_idx}", unique_id=unique_id)
 
 
 def estimate_resources(shape, settings, num_processes):
