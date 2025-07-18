@@ -320,7 +320,7 @@ def apply_inverse_transfer_function_cli(
             output_dirpath / Path(*input_position_dirpath.parts[-3:]),
             num_processes,
             output_metadata["channel_names"],
-            unique_id=unique_id,
+            unique_id,
         )
 
 @click.command("apply-inv-tf")
