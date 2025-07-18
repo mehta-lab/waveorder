@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import click
+import threading
 
 from waveorder.cli.apply_inverse_transfer_function import (
     apply_inverse_transfer_function_cli,
@@ -13,40 +14,52 @@ from waveorder.cli.parsing import (
     input_position_dirpaths,
     output_dirpath,
     processes_option,
-    ram_multiplier,
     unique_id,
 )
+from waveorder.cli.printing import JM
 
-
-@click.command()
+@click.command("reconstruct")
 @input_position_dirpaths()
 @config_filepath()
 @output_dirpath()
 @processes_option(default=1)
-def reconstruct(
-    input_position_dirpaths: list[Path],
-    config_filepath: Path,
-    output_dirpath: Path,
-    num_processes: int,
+@unique_id()
+def _reconstruct_cli(
+    input_position_dirpaths,
+    config_filepath,
+    output_dirpath,
+    num_processes,
+    unique_id,
 ):
     """
     Reconstruct a dataset using a configuration file. This is a
     convenience function for a `compute-tf` call followed by a `apply-inv-tf`
     call.
 
-    Calculates the transfer function based on the shape of the position
-    in the path `input-position-dirpaths`, then applies that transfer function
-    to the position in the path `input-position-dirpaths`.
+    Calculates the transfer function based on the shape of the first position
+    in the list `input-position-dirpaths`, then applies that transfer function
+    to all positions in the list `input-position-dirpaths`, so all positions
+    must have the same TCZYX shape.
 
     See /examples for example configuration files.
 
-    >> waveorder reconstruct -i ./input.zarr/B/1/000000 -c ./examples/birefringence.yml -o ./output.zarr
+    >> waveorder reconstruct -i ./input.zarr/*/*/* -c ./examples/birefringence.yml -o ./output.zarr
     """
+    threading.Thread(target=_reconstruct_cli_thread, args=(input_position_dirpaths,config_filepath,output_dirpath,num_processes,unique_id,)).start()
 
-    if len(input_position_dirpaths) > 1:
-        raise ValueError(
-            "Reconstruct on waveorder only supports a single input position directory. For parallel reconstruction, use https://github.com/czbiohub-sf/biahub."
-        )
+def _reconstruct_cli_thread(
+    input_position_dirpaths,
+    config_filepath,
+    output_dirpath,
+    num_processes,
+    unique_id,
+):
+    has_errored = False
+    if unique_id != "":
+        JM.start_client()
+        JM.do_print = False
+        JM.set_shorter_timeout()
+        JM.put_Job_in_list(uID=unique_id, msg="Initialization")        
 
     # Handle transfer function path
     transfer_function_path = output_dirpath.parent / Path(
@@ -54,17 +67,38 @@ def reconstruct(
     )
 
     # Compute transfer function
-    compute_transfer_function_cli(
-        input_position_dirpaths[0],
-        config_filepath,
-        transfer_function_path,
-    )
+    try:
+        compute_transfer_function_cli(
+            input_position_dirpaths[0],
+            config_filepath,
+            transfer_function_path,
+            unique_id,
+        )
+    except Exception as exc:
+        has_errored = True
+        err = "Error: " + str("\n".join(exc.args))
+        print(err)
+        JM.put_Job_in_list(uID=unique_id, msg=err)
 
     # Apply inverse transfer function
-    apply_inverse_transfer_function_cli(
-        input_position_dirpaths[0],
-        transfer_function_path,
-        config_filepath,
-        output_dirpath,
-        num_processes,
-    )
+    try:
+        apply_inverse_transfer_function_cli(
+            input_position_dirpaths,
+            transfer_function_path,
+            config_filepath,
+            output_dirpath,
+            num_processes,
+            unique_id,
+        )
+    except Exception as exc:
+        has_errored = True
+        err = "Error: " + str("\n".join(exc.args))
+        print(err)
+        JM.put_Job_in_list(uID=unique_id, msg=err)
+
+    if unique_id != "":
+        if has_errored:
+            JM.put_Job_in_list(uID=unique_id, msg="Submitted job triggered an exception")
+        else:
+            JM.put_Job_in_list(uID=unique_id, msg="Job completed successfully")
+        JM.put_Job_completion_in_list(uID=unique_id, finished=True)

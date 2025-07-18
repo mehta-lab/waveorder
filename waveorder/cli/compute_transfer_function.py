@@ -20,7 +20,6 @@ from waveorder.models import (
     phase_thick_3d,
 )
 
-
 def _position_list_from_shape_scale_offset(
     shape: int, scale: float, offset: float
 ) -> list:
@@ -37,7 +36,7 @@ def _position_list_from_shape_scale_offset(
     return list((-np.arange(shape) + (shape // 2) + offset) * scale)
 
 
-def generate_and_save_birefringence_transfer_function(settings, dataset):
+def generate_and_save_birefringence_transfer_function(settings, dataset, unique_id):
     """Generates and saves the birefringence transfer function to the dataset, based on the settings.
 
     Parameters
@@ -46,8 +45,8 @@ def generate_and_save_birefringence_transfer_function(settings, dataset):
     dataset: NGFF Node
         The dataset that will be updated.
     """
-    echo_headline("Generating birefringence transfer function with settings:")
-    echo_settings(settings.birefringence.transfer_function)
+    echo_headline("Generating birefringence transfer function with settings:", unique_id=unique_id)
+    echo_settings(settings.birefringence.transfer_function, unique_id=unique_id)
 
     # Calculate transfer functions
     intensity_to_stokes_matrix = (
@@ -63,7 +62,7 @@ def generate_and_save_birefringence_transfer_function(settings, dataset):
 
 
 def generate_and_save_phase_transfer_function(
-    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple
+    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple, unique_id:str,
 ):
     """Generates and saves the phase transfer function to the dataset, based on the settings.
 
@@ -75,8 +74,8 @@ def generate_and_save_phase_transfer_function(
     zyx_shape : tuple
         A tuple of integers specifying the input data's shape in (Z, Y, X) order
     """
-    echo_headline("Generating phase transfer function with settings:")
-    echo_settings(settings.phase.transfer_function)
+    echo_headline("Generating phase transfer function with settings:", unique_id=unique_id)
+    echo_settings(settings.phase.transfer_function, unique_id=unique_id)
 
     settings_dict = settings.phase.transfer_function.dict()
     if settings.reconstruction_dimension == 2:
@@ -150,7 +149,7 @@ def generate_and_save_phase_transfer_function(
 
 
 def generate_and_save_fluorescence_transfer_function(
-    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple
+    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple, unique_id:str,
 ):
     """Generates and saves the fluorescence transfer function to the dataset, based on the settings.
 
@@ -162,8 +161,8 @@ def generate_and_save_fluorescence_transfer_function(
     zyx_shape : tuple
         A tuple of integers specifying the input data's shape in (Z, Y, X) order
     """
-    echo_headline("Generating fluorescence transfer function with settings:")
-    echo_settings(settings.fluorescence.transfer_function)
+    echo_headline("Generating fluorescence transfer function with settings:", unique_id=unique_id)
+    echo_settings(settings.fluorescence.transfer_function, unique_id=unique_id)
     # Remove unused parameters
     settings_dict = settings.fluorescence.transfer_function.dict()
     settings_dict.pop("z_focus_offset")
@@ -187,7 +186,7 @@ def generate_and_save_fluorescence_transfer_function(
 
 
 def compute_transfer_function_cli(
-    input_position_dirpath: Path, config_filepath: Path, output_dirpath: Path
+    input_position_dirpath: Path, config_filepath: Path, output_dirpath: Path, unique_id: str = "",
 ) -> None:
     """CLI command to compute the transfer function given a configuration file path
     and a desired output path.
@@ -197,8 +196,8 @@ def compute_transfer_function_cli(
     settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
 
     echo_headline(
-        f"Generating transfer functions and storing in {output_dirpath}\n"
-    )
+        f"Generating transfer functions and storing in {output_dirpath}\n", unique_id=unique_id
+    )    
 
     # Read shape from input dataset
     input_dataset = open_ome_zarr(
@@ -255,36 +254,37 @@ def compute_transfer_function_cli(
     # Pass settings to appropriate calculate_transfer_function and save
     if settings.birefringence is not None:
         generate_and_save_birefringence_transfer_function(
-            settings, output_dataset
+            settings, output_dataset, unique_id
         )
     if settings.phase is not None:
         generate_and_save_phase_transfer_function(
-            settings, output_dataset, zyx_shape
+            settings, output_dataset, zyx_shape, unique_id
         )
     if settings.fluorescence is not None:
         generate_and_save_fluorescence_transfer_function(
-            settings, output_dataset, zyx_shape
+            settings, output_dataset, zyx_shape, unique_id
         )
 
     # Write settings to metadata
     output_dataset.zattrs["settings"] = settings.dict()
 
-    echo_headline(f"Closing {output_dirpath}\n")
+    echo_headline(f"Closing {output_dirpath}\n", unique_id=unique_id)
     output_dataset.close()
 
     echo_headline(
-        f"Recreate this transfer function with:\n$ waveorder compute-tf {input_position_dirpaths} -c {config_filepath} -o {output_dirpath}"
+        f"Recreate this transfer function with:\n$ waveorder compute-tf {input_position_dirpaths} -c {config_filepath} -o {output_dirpath}", unique_id=unique_id
     )
 
 
-@click.command()
+@click.command("compute-tf")
 @input_position_dirpaths()
 @config_filepath()
 @output_dirpath()
-def compute_tf(
+def _compute_transfer_function_cli(
     input_position_dirpaths: list[Path],
     config_filepath: Path,
     output_dirpath: Path,
+    unique_id: str = "",
 ) -> None:
     """
     Compute a transfer function using a dataset and configuration file.
@@ -297,5 +297,5 @@ def compute_tf(
     >> waveorder compute-tf -i ./input.zarr/0/0/0 -c ./examples/birefringence.yml -o ./transfer_function.zarr
     """
     compute_transfer_function_cli(
-        input_position_dirpaths[0], config_filepath, output_dirpath
+        input_position_dirpaths[0], config_filepath, output_dirpath, unique_id
     )
