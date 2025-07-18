@@ -36,7 +36,7 @@ def _position_list_from_shape_scale_offset(
     return list((-np.arange(shape) + (shape // 2) + offset) * scale)
 
 
-def generate_and_save_birefringence_transfer_function(settings, dataset, unique_id):
+def generate_and_save_birefringence_transfer_function(settings, dataset, unique_id:str=""):
     """Generates and saves the birefringence transfer function to the dataset, based on the settings.
 
     Parameters
@@ -62,7 +62,7 @@ def generate_and_save_birefringence_transfer_function(settings, dataset, unique_
 
 
 def generate_and_save_phase_transfer_function(
-    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple, unique_id:str,
+    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple, unique_id:str="",
 ):
     """Generates and saves the phase transfer function to the dataset, based on the settings.
 
@@ -149,7 +149,7 @@ def generate_and_save_phase_transfer_function(
 
 
 def generate_and_save_fluorescence_transfer_function(
-    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple, unique_id:str,
+    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple, unique_id:str="",
 ):
     """Generates and saves the fluorescence transfer function to the dataset, based on the settings.
 
