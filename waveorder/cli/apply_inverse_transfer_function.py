@@ -9,13 +9,14 @@ import torch
 import torch.multiprocessing as mp
 from iohub import open_ome_zarr
 
-from waveorder.cli import apply_inverse_models, jobs_mgmt
+from waveorder.cli import apply_inverse_models
 from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,
     processes_option,
     transfer_function_dirpath,
+    unique_id,
 )
 from waveorder.cli.printing import echo_headline, echo_settings
 from waveorder.cli.settings import ReconstructionSettings
@@ -24,8 +25,6 @@ from waveorder.cli.utils import (
     create_empty_hcs_zarr,
 )
 from waveorder.io import utils
-
-JM = jobs_mgmt.JobsManagement()
 
 
 def _check_background_consistency(
@@ -106,8 +105,10 @@ def apply_inverse_transfer_function_single_position(
     output_position_dirpath: Path,
     num_processes,
     output_channel_names: list[str],
+    unique_id: str = "",
 ) -> None:
-    echo_headline("\nStarting reconstruction...")
+
+    echo_headline("\nStarting reconstruction...", unique_id=unique_id)
 
     # Load datasets
     transfer_function_dataset = open_ome_zarr(transfer_function_dirpath)
@@ -189,8 +190,10 @@ def apply_inverse_transfer_function_single_position(
 
     # [biref only]
     if recon_biref and (not recon_phase):
-        echo_headline("Reconstructing birefringence with settings:")
-        echo_settings(settings.birefringence)
+        echo_headline(
+            "Reconstructing birefringence with settings:", unique_id=unique_id
+        )
+        echo_settings(settings.birefringence, unique_id=unique_id)
 
         # Setup parameters for apply_inverse_to_zyx_and_save
         apply_inverse_model_function = apply_inverse_models.birefringence
@@ -204,8 +207,10 @@ def apply_inverse_transfer_function_single_position(
 
     # [phase only]
     if recon_phase and (not recon_biref):
-        echo_headline("Reconstructing phase with settings:")
-        echo_settings(settings.phase.apply_inverse)
+        echo_headline(
+            "Reconstructing phase with settings:", unique_id=unique_id
+        )
+        echo_settings(settings.phase.apply_inverse, unique_id=unique_id)
 
         # Setup parameters for apply_inverse_to_zyx_and_save
         apply_inverse_model_function = apply_inverse_models.phase
@@ -217,9 +222,14 @@ def apply_inverse_transfer_function_single_position(
 
     # [biref and phase]
     if recon_biref and recon_phase:
-        echo_headline("Reconstructing birefringence and phase with settings:")
-        echo_settings(settings.birefringence.apply_inverse)
-        echo_settings(settings.phase.apply_inverse)
+        echo_headline(
+            "Reconstructing birefringence and phase with settings:",
+            unique_id=unique_id,
+        )
+        echo_settings(
+            settings.birefringence.apply_inverse, unique_id=unique_id
+        )
+        echo_settings(settings.phase.apply_inverse, unique_id=unique_id)
 
         # Setup parameters for apply_inverse_to_zyx_and_save
         apply_inverse_model_function = (
@@ -236,8 +246,10 @@ def apply_inverse_transfer_function_single_position(
 
     # [fluo]
     if recon_fluo:
-        echo_headline("Reconstructing fluorescence with settings:")
-        echo_settings(settings.fluorescence.apply_inverse)
+        echo_headline(
+            "Reconstructing fluorescence with settings:", unique_id=unique_id
+        )
+        echo_settings(settings.fluorescence.apply_inverse, unique_id=unique_id)
 
         # Setup parameters for apply_inverse_to_zyx_and_save
         apply_inverse_model_function = apply_inverse_models.fluorescence
@@ -255,6 +267,7 @@ def apply_inverse_transfer_function_single_position(
         output_position_dirpath,
         input_channel_indices,
         output_channel_indices,
+        unique_id=unique_id,
         **apply_inverse_args,
     )
 
@@ -276,13 +289,15 @@ def apply_inverse_transfer_function_single_position(
     # Save metadata at position level
     output_dataset.zattrs["settings"] = settings.dict()
 
-    echo_headline(f"Closing {output_position_dirpath}\n")
+    echo_headline(f"Closing {output_position_dirpath}\n", unique_id=unique_id)
+
     output_dataset.close()
     transfer_function_dataset.close()
     input_dataset.close()
 
     echo_headline(
-        f"Recreate this reconstruction with:\n$ waveorder apply-inv-tf {input_position_dirpath} {transfer_function_dirpath} -c {config_filepath} -o {output_position_dirpath}"
+        f"Recreate this reconstruction with:\n$ waveorder apply-inv-tf {input_position_dirpath} {transfer_function_dirpath} -c {config_filepath} -o {output_position_dirpath}",
+        unique_id=unique_id,
     )
 
 
@@ -292,6 +307,7 @@ def apply_inverse_transfer_function_cli(
     config_filepath: Path,
     output_dirpath: Path,
     num_processes,
+    unique_id: str = "",
 ) -> None:
     # Prepare output store
     output_metadata = get_reconstruction_output_metadata(
@@ -318,6 +334,7 @@ def apply_inverse_transfer_function_cli(
             output_dirpath / Path(*input_position_dirpath.parts[-3:]),
             num_processes,
             output_metadata["channel_names"],
+            unique_id,
         )
 
 
