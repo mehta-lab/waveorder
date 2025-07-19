@@ -1,7 +1,7 @@
+import threading
 from pathlib import Path
 
 import click
-import threading
 
 from waveorder.cli.apply_inverse_transfer_function import (
     apply_inverse_transfer_function_cli,

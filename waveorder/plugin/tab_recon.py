@@ -14,18 +14,16 @@ from iohub.ngff import open_ome_zarr
 from magicgui import widgets
 from magicgui.type_map import get_widget_class
 
-from napari.utils.notifications import show_error
-from napari.utils.notifications import show_info
-
-from waveorder.cli.reconstruct import _reconstruct_cli
-
 # FIXME avoid star import
 # Since we are instantiating GUI widgets/elements based on pydantic model
 # star import provides that flexibility
 from magicgui.widgets import *
+from napari.utils.notifications import show_error, show_info
 from qtpy import QtCore
 from qtpy.QtCore import QEvent, Qt, QThread, Signal
 from qtpy.QtWidgets import *
+
+from waveorder.cli.reconstruct import _reconstruct_cli
 
 if TYPE_CHECKING:
     from napari import Viewer
@@ -34,14 +32,16 @@ import concurrent.futures
 
 from pydantic.v1 import BaseModel, NonNegativeInt, ValidationError
 
-from waveorder.cli.settings import BirefringenceSettings
-from waveorder.cli.settings import BirefringenceTransferFunctionSettings
-from waveorder.cli.settings import BirefringenceApplyInverseSettings
-from waveorder.cli.settings import PhaseSettings
-from waveorder.cli.settings import PhaseTransferFunctionSettings
-from waveorder.cli.settings import FluorescenceSettings
-from waveorder.cli.settings import FluorescenceTransferFunctionSettings
-from waveorder.cli.settings import FourierApplyInverseSettings
+from waveorder.cli.settings import (
+    BirefringenceApplyInverseSettings,
+    BirefringenceSettings,
+    BirefringenceTransferFunctionSettings,
+    FluorescenceSettings,
+    FluorescenceTransferFunctionSettings,
+    FourierApplyInverseSettings,
+    PhaseSettings,
+    PhaseTransferFunctionSettings,
+)
 
 PYDANTIC_CLASSES_DEF = (
     BirefringenceSettings,

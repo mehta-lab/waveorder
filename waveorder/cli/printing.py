@@ -1,6 +1,8 @@
+import threading
+
 import click
 import yaml
-import threading
+
 from waveorder.cli import jobs_mgmt
 
 JM = jobs_mgmt.JobsManagement()
@@ -37,7 +39,7 @@ def echo_text(text, unique_id=""):
 
 
 def UpdateThread(uID, msg):
-    if uID != "":        
+    if uID != "":
         msg = "Processing: " + msg.replace("\n", " ").replace("\\", "/")
         threading.Thread(
             target=JM.put_Job_in_list,
