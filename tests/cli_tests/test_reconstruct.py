@@ -1,16 +1,19 @@
+import json
+import socket
+import threading
+import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+import click
 import numpy as np
 import pytest
-import socket, json, time, threading
-
 from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
-from waveorder.cli import settings, jobs_mgmt
+from waveorder.cli import jobs_mgmt, settings
 from waveorder.cli.apply_inverse_transfer_function import (
     apply_inverse_transfer_function_cli,
 )
@@ -334,6 +337,10 @@ def start_server_listen(server_socket):
                                         time.sleep(3)
                                         client_socket.close()
                                         return
+                                    else:
+                                        click.echo(
+                                            msg.replace("Processing: ", "")
+                                        )
             except Exception as exc:
                 print(exc.args)
     except Exception as exc:
