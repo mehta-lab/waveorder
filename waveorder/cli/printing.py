@@ -28,6 +28,7 @@ def echo_headline(headline, unique_id=""):
     if JM.do_print:
         click.echo(click.style(headline, fg="green"))
     else:
+        click.echo(click.style(headline, fg="green"))
         UpdateThread(uID=unique_id, msg=headline)
 
 

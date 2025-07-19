@@ -337,10 +337,6 @@ def start_server_listen(server_socket):
                                         time.sleep(3)
                                         client_socket.close()
                                         return
-                                    else:
-                                        click.echo(
-                                            msg.replace("Processing: ", "")
-                                        )
             except Exception as exc:
                 print(exc.args)
     except Exception as exc:
