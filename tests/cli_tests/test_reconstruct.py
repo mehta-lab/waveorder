@@ -1,27 +1,19 @@
-import json
-import socket
-import threading
-import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-import click
 import numpy as np
 import pytest
 from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
-from waveorder.cli import jobs_mgmt, settings
+from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
     apply_inverse_transfer_function_cli,
 )
 from waveorder.cli.main import cli
 from waveorder.io import utils
-
-JOB_COMPLETION_STR = "Job completed successfully"
-JOB_TRIGGERED_EXC = "Submitted job triggered an exception"
 
 input_scale = [1, 2, 3, 4, 5]
 # Setup options
@@ -147,15 +139,8 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
     utils.model_to_yaml(biref_settings, biref_config_path)
     utils.model_to_yaml(fluor_settings, fluor_config_path)
 
-    # Create a socket server which will listen to the client update responses from the CLI
-    server_socket = create_server_socket()
-
-    # Create a non-blocking thread for the server to listen
-    threading.Thread(target=start_server_listen, args=(server_socket,)).start()
-
     # Apply birefringence reconstruction
-    # Set a Unique ID (uid) and set its reference.
-    jobs_mgmt.SERVER_uIDs["birefringence_reconstruction"] = False
+
     runner = CliRunner()
     runner.invoke(
         cli,
@@ -173,16 +158,11 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
         catch_exceptions=False,
     )
 
-    # Wait for the recontruction to finish on the CLI before assert
-    while not jobs_mgmt.SERVER_uIDs["birefringence_reconstruction"]:
-        time.sleep(1)
-
     assert output_path.exists()
     with open_ome_zarr(output_path) as dataset:
         assert dataset["0/0/0"]["0"].shape[1] == 4
 
     # Append fluorescence reconstruction
-    jobs_mgmt.SERVER_uIDs["fluorescence_reconstruction"] = False
     runner.invoke(
         cli,
         [
@@ -199,12 +179,7 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
         catch_exceptions=False,
     )
 
-    while not jobs_mgmt.SERVER_uIDs["fluorescence_reconstruction"]:
-        time.sleep(1)
-
     assert output_path.exists()
-
-    stop_server(server_socket)
 
     with open_ome_zarr(output_path) as dataset:
         assert dataset["0/0/0"]["0"].shape[1] == 5
@@ -290,63 +265,3 @@ def test_cli_apply_inv_tf_output(tmp_input_path_zarr, capsys):
 
         # Check scale transformations pass through
         assert input_scale == result_dataset.scale
-
-
-def create_server_socket():
-    server_socket = None
-    try:
-        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        server_socket.bind(("localhost", jobs_mgmt.SERVER_PORT))
-        server_socket.listen(
-            50
-        )  # become a server socket, maximum 50 connections
-    except Exception as exc:
-        print(exc.args)
-    return server_socket
-
-
-def start_server_listen(server_socket):
-    try:
-        while server_socket is not None:
-            client_socket, address = server_socket.accept()
-            try:
-                while server_socket is not None:
-                    buf = client_socket.recv(8192)
-                    if len(buf) > 0:
-                        if b"\n" in buf:
-                            dataList = buf.split(b"\n")
-                        else:
-                            dataList = [buf]
-                        for data in dataList:
-                            if len(data) > 0:
-                                decoded_string = data.decode()
-                                json_str = str(decoded_string)
-                                json_obj = json.loads(json_str)
-                                for uid in json_obj:
-                                    msg = json_obj[uid]["msg"]
-                                    if (
-                                        msg == JOB_COMPLETION_STR
-                                        or msg == JOB_TRIGGERED_EXC
-                                    ):
-                                        json_obj = {
-                                            "uID": uid,
-                                            "command": "clientRelease",
-                                        }
-                                        json_str = json.dumps(json_obj) + "\n"
-                                        client_socket.send(json_str.encode())
-                                        time.sleep(3)
-                                        client_socket.close()
-                                        return
-            except Exception as exc:
-                print(exc.args)
-    except Exception as exc:
-        print(exc.args)
-
-
-def stop_server(server_socket):
-    try:
-        if server_socket is not None:
-            server_socket.close()
-            server_socket = None
-    except Exception as exc:
-        print(exc.args)

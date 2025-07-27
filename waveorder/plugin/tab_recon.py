@@ -1,8 +1,6 @@
 import datetime
 import json
 import os
-import socket
-import subprocess
 import threading
 import time
 import uuid
@@ -10,6 +8,7 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Final, List, Literal, Union
 
+import job_manager
 from iohub.ngff import open_ome_zarr
 from magicgui import widgets
 from magicgui.type_map import get_widget_class
@@ -23,12 +22,10 @@ from qtpy import QtCore
 from qtpy.QtCore import QEvent, Qt, QThread, Signal
 from qtpy.QtWidgets import *
 
-from waveorder.cli.reconstruct import _reconstruct_cli
-
 if TYPE_CHECKING:
     from napari import Viewer
 
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 from pydantic.v1 import BaseModel, NonNegativeInt, ValidationError
 
@@ -54,27 +51,10 @@ PYDANTIC_CLASSES_DEF = (
     FourierApplyInverseSettings,
 )
 
-from waveorder.cli import jobs_mgmt, settings
+from waveorder.cli import settings
 from waveorder.io import utils
 
-STATUS_submitted_pool = "Submitted_Pool"
-STATUS_submitted_job = "Submitted_Job"
-STATUS_running_pool = "Running_Pool"
-STATUS_running_job = "Running_Job"
-STATUS_finished_pool = "Finished_Pool"
-STATUS_finished_job = "Finished_Job"
-STATUS_errored_pool = "Errored_Pool"
-STATUS_errored_job = "Errored_Job"
-STATUS_user_cleared_job = "User_Cleared_Job"
-STATUS_user_cancelled_job = "User_Cancelled_Job"
-
 MSG_SUCCESS = {"msg": "success"}
-JOB_COMPLETION_STR = "Job completed successfully"
-JOB_COMPLETION_STR2 = "Recreate this reconstruction with"
-JOB_INIT_STR = "Initialization"
-JOB_RUNNING_STR = "Processing:"
-JOB_TRIGGERED_EXC = "Submitted job triggered an exception"
-JOB_OOM_EVENT = "oom_kill event"
 
 _validate_alert = "⚠"
 _validate_ok = "✔️"
@@ -92,7 +72,7 @@ OPTION_TO_MODEL_DICT = {
 
 CONTAINERS_INFO = {}
 
-# This keeps an instance of the MyWorker server that is listening
+# This keeps an instance of the MyWorker class
 # napari will not stop processes and the Hide event is not reliable
 HAS_INSTANCE = {"val": False, "instance": None}
 
@@ -391,7 +371,9 @@ class Ui_ReconTab_Form(QWidget):
         # Stores Model & Components values which cause validation failure - can be highlighted on the model field as Red
         self.modelHighlighterVals = {}
 
-        # handle napari's close widget and avoid starting a second server
+        self.job_manager = job_manager.JobManager()
+
+        # handle napari's close widget and avoid starting a second instance
         if HAS_INSTANCE["val"]:
             self.worker: MyWorker = HAS_INSTANCE["MyWorker"]
             self.worker.set_new_instances(
@@ -418,7 +400,7 @@ class Ui_ReconTab_Form(QWidget):
     # on napari close - cleanup
     def closeEvent(self, event):
         if event.type() == QEvent.Type.Close:
-            self.worker.stop_server()
+            pass
 
     def hideEvent(self, event):
         if event.type() == QEvent.Type.Hide and (
@@ -1061,10 +1043,10 @@ class Ui_ReconTab_Form(QWidget):
         q.setIcon(QMessageBox.Icon.Warning)
         q.exec_()
 
-    def cancel_job(self, btn: PushButton):
-        if self.confirm_dialog():
-            btn.enabled = False
-            btn.text = btn.text + " (cancel called)"
+    # def cancel_job(self, btn: PushButton):
+    #     if self.confirm_dialog():
+    #         btn.enabled = False
+    #         btn.text = btn.text + " (cancel called)"
 
     def add_widget(
         self, parentLayout: QVBoxLayout, expID, jID, table_entry_ID="", pos=""
@@ -1076,9 +1058,6 @@ class Ui_ReconTab_Form(QWidget):
         )
         _cancelJobButton = widgets.PushButton(
             name="JobID", label=_cancelJobBtntext, enabled=True, value=False
-        )
-        _cancelJobButton.clicked.connect(
-            lambda: self.cancel_job(_cancelJobButton)
         )
         _txtForInfoBox = "Updating {id}-{pos}: Please wait... \nJobID assigned: {jID} ".format(
             id=table_entry_ID, jID=jID, pos=pos
@@ -1136,9 +1115,6 @@ class Ui_ReconTab_Form(QWidget):
 
         _cancelJobButton = widgets.PushButton(
             name="JobID", label="Cancel Job", value=False, enabled=False
-        )
-        _cancelJobButton.clicked.connect(
-            lambda: self.cancel_job(_cancelJobButton)
         )
         _txtForInfoBox = "Updating {id}: Please wait...".format(
             id=tableEntryID
@@ -1962,7 +1938,7 @@ class Ui_ReconTab_Form(QWidget):
             )
             pollDataThread.start()
 
-        i = 0
+        i = 0        
         for item in self.pydantic_classes:
             i += 1
             cls = item["class"]
@@ -2751,22 +2727,15 @@ class MyWorker:
         # In the case of CLI, we just need to submit requests in a non-blocking way
         self.threadPool = 1  # int(self.max_cores / 2)
         self.results = {}
-        self.pool = None
-        self.futures = []
+        self.clearResults = True
+        self.executor = None
         # https://click.palletsprojects.com/en/stable/testing/
         # self.runner = CliRunner()
-        # jobs_mgmt.shared_var_jobs = self.JobsManager.shared_var_jobs
-        # self.JobsMgmt = jobs_mgmt.JobsManagement()
-        self.useServer = True
-        self.useSubProcess = True
-        self.serverRunning = True
-        self.server_socket = None
         self.isInitialized = False
+        self.initialize()
 
     def initialize(self):
         if not self.isInitialized:
-            thread = threading.Thread(target=self.start_server)
-            thread.start()
             self.workerThreadRowDeletion = RowDeletionWorkerThread(
                 self.formLayout
             )
@@ -2793,48 +2762,6 @@ class MyWorker:
                 return idx
         return -1
 
-    def start_server(self):
-        try:
-            if not self.useServer:
-                return
-
-            self.server_socket = socket.socket(
-                socket.AF_INET, socket.SOCK_STREAM
-            )
-            self.server_socket.bind(("localhost", jobs_mgmt.SERVER_PORT))
-            self.server_socket.listen(
-                50
-            )  # become a server socket, maximum 50 connections
-
-            while self.serverRunning:
-                client_socket, address = self.server_socket.accept()
-                if self.ui is not None and not self.ui.isVisible():
-                    break
-                try:
-                    # dont block the server thread
-                    thread_handle = threading.Thread(
-                        target=self.decode_client_data, args=(client_socket,)
-                    )
-                    thread_handle.start()
-                except Exception as exc:
-                    print(exc.args)
-                    time.sleep(1)
-
-            self.server_socket.close()
-        except Exception as exc:
-            if not self.serverRunning:
-                self.serverRunning = True
-                return  # ignore - will cause an exception on napari close but that is fine and does the job
-            print(exc.args)
-
-    def stop_server(self):
-        try:
-            if self.server_socket is not None:
-                self.serverRunning = False
-                self.server_socket.close()
-        except Exception as exc:
-            print(exc.args)
-
     def get_max_CPU_cores(self):
         return self.max_cores
 
@@ -2843,331 +2770,91 @@ class MyWorker:
             self.threadPool = t
 
     def start_pool(self):
-        if self.pool is None:
-            self.pool = concurrent.futures.ThreadPoolExecutor(
+        if self.executor is None:
+            self.executor = ThreadPoolExecutor(
                 max_workers=self.threadPool
             )
 
     def shut_down_pool(self):
-        self.pool.shutdown(wait=True)
+        self.executor.shutdown(wait=True, cancel_futures=False)
 
-    # This method handles each client response thread. It parses the information received from the client
-    # and is responsible for parsing each well/pos Job if the case may be and starting individual update threads
-    # using the tableUpdateAndCleaupThread() method
-    # This is also handling an unused "CoNvErTeR" functioning that can be implemented on 3rd party apps
-    def decode_client_data(self, client_socket=None):
-        if client_socket is not None:
-            while True:
-                expIdx = ""
-                msg = ""
-                decoded_string = ""
-                try:
-                    buf = client_socket.recv(8192)
-                    if len(buf) > 0:
-                        if b"\n" in buf:
-                            dataList = buf.split(b"\n")
-                        else:
-                            dataList = [buf]
-                        for data in dataList:
-                            if len(data) > 0:
-                                decoded_string = data.decode()
-                                # print("Server: {msg}".format(msg=decoded_string))
-                                json_str = str(decoded_string)
-                                json_obj = json.loads(json_str)
-                                for k in json_obj:
-                                    expIdx = k
-                                    msg = json_obj[k]["msg"]
-                                    # server_json_str = json.dumps({"uID":k, "command":"test"}) + "\n"
-                                    # client_socket.send(server_json_str.encode())
-                                    jobs_mgmt.SERVER_uIDs[expIdx] = False
-                                    self.table_update_and_cleaup_thread(
-                                        expIdx, msg, client_socket
-                                    )
-                                    if (
-                                        msg == JOB_COMPLETION_STR
-                                        or msg == JOB_TRIGGERED_EXC
-                                    ):
-                                        time.sleep(3)
-                                        client_socket.close()
-                                        return
-                except Exception as exc:
-                    print(decoded_string)
-                    print(exc.args)
-
-    # the table update thread can be called from multiple points/threads
-    # on errors - table row item is updated but there is no row deletion
-    # on successful processing - the row item is expected to be deleted
-    # row is being deleted from a seperate thread for which we need to connect using signal
-
-    # This is handling essentially each job thread. Points of entry are on a failed job submission
-    # which then calls this to update based on the expID (used for .yml naming). On successful job
-    # submissions jobID, the point of entry is via the socket connection the GUI is listening and
-    # then spawns a new thread to avoid blocking of other connections.
-    # If a job submission spawns more jobs then this also calls other methods via signal to create
-    # the required GUI components in the main thread.
-    # Once we have expID and jobID this thread periodically loops and updates each job status and/or
-    # the job error by reading the log files. Using certain keywords
-    # eg JOB_COMPLETION_STR = "Job completed successfully" we determine the progress. We also create
-    # a map for expID which might have multiple jobs to determine when a reconstruction is
-    # finished vs a single job finishing.
-    # The loop ends based on user, time-out, job(s) completion and errors and handles removal of
-    # processing GUI table items (on main thread).
-    # Based on the conditions the loop will end calling clientRelease()
     def table_update_and_cleaup_thread(
         self,
-        expIdx="",
-        msg="",
-        client_socket=None,
+        expIdx:str = "",
+        msg:str = ""
     ):
-
-        # ToDo: Another approach to this could be to implement a status thread on the client side
-        # Since the client is already running till the job is completed, the client could ping status
-        # at regular intervals and also provide results and exceptions we currently read from the file
-        # Currently we only send JobID/UniqueID pair from Client to Server. This would reduce multiple threads
-        # server side.
-
+        # called by the subprocess thread to update GUI
         if expIdx != "":
-            # this request came from server listening so we wait for the Job to finish and update progress
-            if expIdx not in self.results.keys():
-                proc_params = {}
-                tableID = "{exp}".format(exp=expIdx)
-                proc_params["exp_id"] = expIdx
-                proc_params["desc"] = tableID
-                proc_params["config_path"] = ""
-                proc_params["input_path"] = ""
-                proc_params["output_path"] = ""
-                proc_params["output_path_parent"] = ""
-                proc_params["show"] = False
-
-                tableEntryWorker = AddTableEntryWorkerThread(
-                    tableID, tableID, proc_params
-                )
-                tableEntryWorker.add_tableentry_signal.connect(
-                    self.tab_recon.addTableEntry
-                )
-                tableEntryWorker.start()
-
-                while expIdx not in self.results.keys():
-                    time.sleep(1)
-
-                params = self.results[expIdx].copy()
-                params["status"] = STATUS_running_job
-            else:
-                params = self.results[expIdx]
-
-            # this is the first job
-            params["primary"] = True
-            self.results[expIdx] = params
+            params = self.results[expIdx]
 
             _infoBox: ScrollableLabel = params["table_entry_infoBox"]
             _cancelJobBtn: PushButton = params["cancelJobButton"]
 
-            try:
-                _cancelJobBtn.text = "Cancel Job {jID}".format(jID=expIdx)
+            _infoBox.setText(_infoBox.getText() + "\n" + msg)
+
+            if not _cancelJobBtn.enabled:
+                _cancelJobBtn.clicked.connect(
+                    lambda: self.cancel_job(expIdx, _infoBox, _cancelJobBtn)
+                )
                 _cancelJobBtn.enabled = True
-            except:
-                # deleted by user - no longer needs updating
-                params["status"] = STATUS_user_cleared_job
-                return
-            jobTXT = msg
-            if JOB_RUNNING_STR not in jobTXT:
-                _infoBox.setText(_infoBox.getText() + "\n" + jobTXT)
-            # print("Updating Job: {job} expIdx: {expIdx}".format(job=jobIdx, expIdx=expIdx))
-            # while True:
-            # time.sleep(1)  # update every sec and exit on break
-            try:
-                if "cancel called" in _cancelJobBtn.text:
-                    json_obj = {
-                        "uID": expIdx,
-                        "command": "cancel",
-                    }
-                    json_str = json.dumps(json_obj) + "\n"
-                    client_socket.send(json_str.encode())
-                    params["status"] = STATUS_user_cancelled_job
-                    _infoBox.setText(
-                        "User called for Cancel Job Request\n"
-                        + "Please check terminal output for Job status.."
-                    )
-                    self.client_release(
-                        expIdx, client_socket, params, reason=1
-                    )
-                    # break  # cancel called by user
-                if _infoBox == None:
-                    params["status"] = STATUS_user_cleared_job
-                    self.client_release(
-                        expIdx, client_socket, params, reason=2
-                    )
-                    # break  # deleted by user - no longer needs updating
-            except Exception as exc:
-                print(exc.args)
-                params["status"] = STATUS_user_cleared_job
-                self.client_release(expIdx, client_socket, params, reason=3)
-                # break  # deleted by user - no longer needs updating
-            if expIdx in jobs_mgmt.SERVER_uIDs.keys():
-                if jobs_mgmt.SERVER_uIDs[expIdx]:
-                    self.client_release(
-                        expIdx, client_socket, params, reason=4
-                    )
-                    # break
-                elif params["status"] in [STATUS_finished_job]:
-                    self.client_release(
-                        expIdx, client_socket, params, reason=4
-                    )
-                    # break
-                elif params["status"] in [STATUS_errored_job]:
-                    self.client_release(
-                        expIdx, client_socket, params, reason=5
-                    )
-                    # break
-                else:
-                    try:
-                        if (
-                            params["status"] == STATUS_finished_job
-                            or JOB_COMPLETION_STR in jobTXT
-                            or JOB_COMPLETION_STR2 in jobTXT
-                        ):
-                            params["status"] = STATUS_finished_job
-                            # this is the only case where row deleting occurs
-                            # we cant delete the row directly from this thread
-                            # we will use the exp_id to identify and delete the row
-                            # using Signal
-                            # break - based on status
-                            rowIdx = self.find_widget_row_in_layout(expIdx)
-                            # check to ensure row deletion due to shrinking table
-                            # if not deleted try to delete again
-                            if rowIdx < 0:
-                                self.client_release(
-                                    expIdx,
-                                    client_socket,
-                                    params,
-                                    reason=6,
-                                )
-                        elif JOB_TRIGGERED_EXC in jobTXT:
-                            params["status"] = STATUS_errored_job
-                            self.client_release(
-                                expIdx,
-                                client_socket,
-                                params,
-                                reason=0,
-                            )
-                            # break
-                        elif JOB_INIT_STR in jobTXT:
-                            _infoBox.setText(jobTXT)
-                            params["status"] = STATUS_running_job
-                        elif JOB_RUNNING_STR in jobTXT:
-                            _infoBox.setText(
-                                _infoBox.getText()
-                                + "\n"
-                                + jobTXT.replace("Processing:", "->")
-                            )
-                            params["status"] = STATUS_running_job
-                        elif "Error" in jobTXT:
-                            self.client_release(
-                                expIdx,
-                                client_socket,
-                                params,
-                                reason=0,
-                            )
-                            # break
-                    except Exception as exc:
-                        print(exc.args)
-                pass
-            else:
-                self.client_release(expIdx, client_socket, params, reason=0)
-                # break
+
+    def cancel_job(self, expIdx, _infoBox, _cancelJobBtn):
+        # called to cancel a job
+        if self.tab_recon.confirm_dialog():
+            _cancelJobBtn.enabled = False
+            _infoBox.setText(_infoBox.getText() + "\n" + "Cancelled by User")
+            self.tab_recon.job_manager.cancel_job(expIdx)
+
+    def process_ending(self, expIdx, exit_code=0):
+        # called when the subprocess ends - can be success or fail
+        
+        # Read reconstruction data
+        # Can be attemped even when fail return code
+        params = self.results[expIdx]
+        _infoBox: ScrollableLabel = params["table_entry_infoBox"]
+        
+        showData_thread = ShowDataWorkerThread(            
+            params["output_path"]
+        )
+        showData_thread.show_data_signal.connect(
+            self.tab_recon.show_dataset
+        )
+        showData_thread.start()            
+            
+        if (
+            self.clearResults == True and exit_code == 0
+        ):  # remove processing entry when exiting without error
+            ROW_POP_QUEUE.append(expIdx)
         else:
-            # this would occur when an exception happens on the pool side before or during job submission
-            # we dont have a job ID and will update based on exp_ID/uID
-            # if job submission was not successful we can assume the client is not listening
-            # and does not require a clientRelease cmd
-            for uID in self.results.keys():
-                params = self.results[uID]
-                if params["status"] in [STATUS_errored_pool]:
-                    _infoBox = params["table_entry_infoBox"]
-                    poolERR = params["error"]
-                    _infoBox.setText(poolERR)
-
-    def client_release(self, expIdx, client_socket, params, reason=0):
-        # only need to release client from primary job
-        # print("clientRelease Job: {job} expIdx: {expIdx} reason:{reason}".format(job=jobIdx, expIdx=expIdx, reason=reason))
-        # self.JobsMgmt.put_Job_completion_in_list(expIdx,True)
-        showData_thread = None
-        if params["primary"]:
-            if "show" in params:
-                if params["show"]:
-                    # Read reconstruction data
-                    showData_thread = ShowDataWorkerThread(
-                        params["output_path"]
-                    )
-                    showData_thread.show_data_signal.connect(
-                        self.tab_recon.show_dataset
-                    )
-                    showData_thread.start()
-
-            # for multi-job expID we need to check completion for all of them
-            # while not self.JobsMgmt.check_all_ExpJobs_completion(expIdx):
-            # time.sleep(1)
-
-            json_obj = {
-                "uID": expIdx,
-                "command": "clientRelease",
-            }
-            json_str = json.dumps(json_obj) + "\n"
-            client_socket.send(json_str.encode())
-
-            if (
-                reason != 0
-            ):  # remove processing entry when exiting without error
-                ROW_POP_QUEUE.append(expIdx)
-            # print("FINISHED")
-
-        if self.pool is not None:
-            if self.pool._work_queue.qsize() == 0:
-                self.pool.shutdown()
-                self.pool = None
-
+            _infoBox.setText(_infoBox.getText() + "\n" + "Process ended with return code {code}".format(code=exit_code))
+        
+        _infoBox.setText(_infoBox.getText() + "\n" + "Displaying data")
+        # Wait for show thread to finish
         if showData_thread is not None:
             while showData_thread.isRunning():
-                time.sleep(3)
+                time.sleep(1)
 
     def run_in_pool(self, params):
-        if not self.isInitialized:
-            self.initialize()
-
         self.start_pool()
+
         self.results[params["exp_id"]] = {}
         self.results[params["exp_id"]] = params
-        self.results[params["exp_id"]]["status"] = STATUS_running_pool
-        self.results[params["exp_id"]]["error"] = ""
 
         try:
             # when a request on the listening port arrives with an empty path
             # we can assume the processing was initiated outside this application
             # we do not proceed with the processing and will display the results
             if params["input_path"] != "":
-                f = self.pool.submit(self.run, params)
-                self.futures.append(f)
+                self.executor.submit(self.run, params)
         except Exception as exc:
-            self.results[params["exp_id"]]["status"] = STATUS_errored_pool
             self.results[params["exp_id"]]["error"] = str("\n".join(exc.args))
-            self.table_update_and_cleaup_thread()
 
     def run_multi_in_pool(self, multi_params_as_list):
-        self.start_pool()
         for params in multi_params_as_list:
             self.results[params["exp_id"]] = {}
             self.results[params["exp_id"]] = params
-            self.results[params["exp_id"]]["status"] = STATUS_submitted_pool
-            self.results[params["exp_id"]]["error"] = ""
-        try:
-            self.pool.map(self.run, multi_params_as_list)
-        except Exception as exc:
-            for params in multi_params_as_list:
-                self.results[params["exp_id"]]["status"] = STATUS_errored_pool
-                self.results[params["exp_id"]]["error"] = str(
-                    "\n".join(exc.args)
-                )
-            self.table_update_and_cleaup_thread()
+
+        self.executor.map(self.run, multi_params_as_list)
 
     def get_results(self):
         return self.results
@@ -3181,24 +2868,8 @@ class MyWorker:
         if params["exp_id"] not in self.results.keys():
             self.results[params["exp_id"]] = {}
             self.results[params["exp_id"]] = params
-            self.results[params["exp_id"]]["error"] = ""
-            self.results[params["exp_id"]]["status"] = STATUS_running_pool
 
-        try:
-            # does need further threading ? probably not !
-            # thread = threading.Thread(
-            #     target=self.run_in_subprocess, args=(params,)
-            # )
-            # thread.start()
-            if self.useSubProcess:
-                self.run_in_subprocess(params)
-            else:
-                self.run_in_function(params)
-
-        except Exception as exc:
-            self.results[params["exp_id"]]["status"] = STATUS_errored_pool
-            self.results[params["exp_id"]]["error"] = str("\n".join(exc.args))
-            self.table_update_and_cleaup_thread()
+        self.run_in_subprocess(params)
 
     def run_in_subprocess(self, params):
         """function that initiates the processing on the CLI in subprocess"""
@@ -3207,14 +2878,9 @@ class MyWorker:
             config_path = str(params["config_path"])
             output_path = str(params["output_path"])
             uid = str(params["exp_id"])
-            mainfp = str(jobs_mgmt.FILE_PATH)
 
-            self.results[params["exp_id"]]["status"] = STATUS_submitted_job
-
-            proc = subprocess.run(
-                [
-                    "python",
-                    mainfp,
+            cmd = [
+                    "waveorder",
                     "reconstruct",
                     "-i",
                     input_path,
@@ -3225,44 +2891,11 @@ class MyWorker:
                     "-uid",
                     uid,
                 ]
-            )
-            self.results[params["exp_id"]]["proc"] = proc
-            if proc.returncode != 0:
-                raise Exception(
-                    "An error occurred in processing ! Check terminal output."
-                )
 
+            self.tab_recon.job_manager.run_job(params["exp_id"], cmd, self.table_update_and_cleaup_thread, self.process_ending)
+ 
         except Exception as exc:
-            self.results[params["exp_id"]]["status"] = STATUS_errored_pool
-            self.results[params["exp_id"]]["error"] = str("\n".join(exc.args))
-            self.table_update_and_cleaup_thread()
-
-    def run_in_function(self, params):
-        """function that initiates the processing on the CLI in fnc"""
-        try:
-            input_path = str(params["input_path"])
-            config_path = str(params["config_path"])
-            output_path = str(params["output_path"])
-            num_processes = str(self.max_cores)
-            uid = str(params["exp_id"])
-
-            self.results[params["exp_id"]]["status"] = STATUS_submitted_job
-
-            _reconstruct_cli(
-                [input_path],
-                config_path,
-                output_path,
-                num_processes,
-                uid,
-            )
-
-            self.results[params["exp_id"]]["proc"] = None
-        except Exception as exc:
-            self.results[params["exp_id"]]["status"] = STATUS_errored_pool
-            self.results[params["exp_id"]]["error"] = str("\n".join(exc.args))
-            self.table_update_and_cleaup_thread()
-
-
+            self.results[params["exp_id"]]["error"] = str(" ".join(cmd)) +"\n"+ str("\n".join(exc.args))
 class ShowDataWorkerThread(QThread):
     """Worker thread for sending signal for adding component when request comes
     from a different thread"""
