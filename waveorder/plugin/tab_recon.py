@@ -1565,7 +1565,7 @@ class Ui_ReconTab_Form(QWidget):
         _collapsibleBoxWidgetLayout.addWidget(_scrollAreaCollapsibleBox)
 
         _collapsibleBoxWidget = CollapsibleBox(
-            title=c_mode_str, expanded=True if _idx==0 else False
+            title=c_mode_str, expanded=True if _idx == 0 else False
         )  # tableEntryID, tableEntryShortDesc - should update with processing status
 
         _validate_button.clicked.connect(
@@ -3105,7 +3105,9 @@ class MyWidget(QWidget):
 class CollapsibleBox(QWidget):
     """A collapsible widget"""
 
-    def __init__(self, title="", parent=None, hasPydanticModel=False, expanded=False):
+    def __init__(
+        self, title="", parent=None, hasPydanticModel=False, expanded=False
+    ):
         super(CollapsibleBox, self).__init__(parent)
 
         self.hasPydanticModel = hasPydanticModel
