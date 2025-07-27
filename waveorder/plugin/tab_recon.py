@@ -8,7 +8,6 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Final, List, Literal, Union
 
-from waveorder.plugin import job_manager
 from iohub.ngff import open_ome_zarr
 from magicgui import widgets
 from magicgui.type_map import get_widget_class
@@ -21,6 +20,8 @@ from napari.utils.notifications import show_error, show_info
 from qtpy import QtCore
 from qtpy.QtCore import QEvent, Qt, QThread, Signal
 from qtpy.QtWidgets import *
+
+from waveorder.plugin import job_manager
 
 if TYPE_CHECKING:
     from napari import Viewer
@@ -1564,7 +1565,7 @@ class Ui_ReconTab_Form(QWidget):
         _collapsibleBoxWidgetLayout.addWidget(_scrollAreaCollapsibleBox)
 
         _collapsibleBoxWidget = CollapsibleBox(
-            c_mode_str
+            title=c_mode_str, expanded=True if _idx==0 else False
         )  # tableEntryID, tableEntryShortDesc - should update with processing status
 
         _validate_button.clicked.connect(
@@ -3104,7 +3105,7 @@ class MyWidget(QWidget):
 class CollapsibleBox(QWidget):
     """A collapsible widget"""
 
-    def __init__(self, title="", parent=None, hasPydanticModel=False):
+    def __init__(self, title="", parent=None, hasPydanticModel=False, expanded=False):
         super(CollapsibleBox, self).__init__(parent)
 
         self.hasPydanticModel = hasPydanticModel
@@ -3141,6 +3142,8 @@ class CollapsibleBox(QWidget):
         self.toggle_animation.addAnimation(
             QtCore.QPropertyAnimation(self.content_area, b"maximumHeight")
         )
+        if expanded:
+            self.on_pressed()
 
     def setNewName(self, name):
         self.toggle_button.setText(name)
