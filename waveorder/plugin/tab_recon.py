@@ -8,7 +8,7 @@ import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Final, List, Literal, Union
 
-import job_manager
+from waveorder.plugin import job_manager
 from iohub.ngff import open_ome_zarr
 from magicgui import widgets
 from magicgui.type_map import get_widget_class
@@ -1938,7 +1938,7 @@ class Ui_ReconTab_Form(QWidget):
             )
             pollDataThread.start()
 
-        i = 0        
+        i = 0
         for item in self.pydantic_classes:
             i += 1
             cls = item["class"]
@@ -2771,18 +2771,12 @@ class MyWorker:
 
     def start_pool(self):
         if self.executor is None:
-            self.executor = ThreadPoolExecutor(
-                max_workers=self.threadPool
-            )
+            self.executor = ThreadPoolExecutor(max_workers=self.threadPool)
 
     def shut_down_pool(self):
         self.executor.shutdown(wait=True, cancel_futures=False)
 
-    def table_update_and_cleaup_thread(
-        self,
-        expIdx:str = "",
-        msg:str = ""
-    ):
+    def table_update_and_cleaup_thread(self, expIdx: str = "", msg: str = ""):
         # called by the subprocess thread to update GUI
         if expIdx != "":
             params = self.results[expIdx]
@@ -2807,27 +2801,29 @@ class MyWorker:
 
     def process_ending(self, expIdx, exit_code=0):
         # called when the subprocess ends - can be success or fail
-        
+
         # Read reconstruction data
         # Can be attemped even when fail return code
         params = self.results[expIdx]
         _infoBox: ScrollableLabel = params["table_entry_infoBox"]
-        
-        showData_thread = ShowDataWorkerThread(            
-            params["output_path"]
-        )
-        showData_thread.show_data_signal.connect(
-            self.tab_recon.show_dataset
-        )
-        showData_thread.start()            
-            
+
+        showData_thread = ShowDataWorkerThread(params["output_path"])
+        showData_thread.show_data_signal.connect(self.tab_recon.show_dataset)
+        showData_thread.start()
+
         if (
             self.clearResults == True and exit_code == 0
         ):  # remove processing entry when exiting without error
             ROW_POP_QUEUE.append(expIdx)
         else:
-            _infoBox.setText(_infoBox.getText() + "\n" + "Process ended with return code {code}".format(code=exit_code))
-        
+            _infoBox.setText(
+                _infoBox.getText()
+                + "\n"
+                + "Process ended with return code {code}".format(
+                    code=exit_code
+                )
+            )
+
         _infoBox.setText(_infoBox.getText() + "\n" + "Displaying data")
         # Wait for show thread to finish
         if showData_thread is not None:
@@ -2880,22 +2876,31 @@ class MyWorker:
             uid = str(params["exp_id"])
 
             cmd = [
-                    "waveorder",
-                    "reconstruct",
-                    "-i",
-                    input_path,
-                    "-c",
-                    config_path,
-                    "-o",
-                    output_path,
-                    "-uid",
-                    uid,
-                ]
+                "waveorder",
+                "reconstruct",
+                "-i",
+                input_path,
+                "-c",
+                config_path,
+                "-o",
+                output_path,
+                "-uid",
+                uid,
+            ]
 
-            self.tab_recon.job_manager.run_job(params["exp_id"], cmd, self.table_update_and_cleaup_thread, self.process_ending)
- 
+            self.tab_recon.job_manager.run_job(
+                params["exp_id"],
+                cmd,
+                self.table_update_and_cleaup_thread,
+                self.process_ending,
+            )
+
         except Exception as exc:
-            self.results[params["exp_id"]]["error"] = str(" ".join(cmd)) +"\n"+ str("\n".join(exc.args))
+            self.results[params["exp_id"]]["error"] = (
+                str(" ".join(cmd)) + "\n" + str("\n".join(exc.args))
+            )
+
+
 class ShowDataWorkerThread(QThread):
     """Worker thread for sending signal for adding component when request comes
     from a different thread"""
