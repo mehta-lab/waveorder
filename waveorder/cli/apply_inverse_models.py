@@ -8,6 +8,7 @@ import torch
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
     isotropic_fluorescent_thick_3d,
+    isotropic_fluorescent_thin_3d,
     isotropic_thin_3d,
     phase_thick_3d,
 )
@@ -237,7 +238,21 @@ def fluorescence(
 ):
     # [fluo, 2]
     if recon_dim == 2:
-        raise NotImplementedError
+        # Load transfer functions for 2D thin fluorescence reconstruction
+        U = torch.from_numpy(transfer_function_dataset["singular_system_U"][0])
+        S = torch.from_numpy(
+            transfer_function_dataset["singular_system_S"][0, 0]
+        )
+        Vh = torch.from_numpy(
+            transfer_function_dataset["singular_system_Vh"][0]
+        )
+
+        # Apply 2D fluorescence reconstruction
+        output = isotropic_fluorescent_thin_3d.apply_inverse_transfer_function(
+            czyx_data[0],
+            (U, S, Vh),
+            **settings_fluorescence.apply_inverse.dict(),
+        )
     # [fluo, 3]
     elif recon_dim == 3:
         # Load transfer functions

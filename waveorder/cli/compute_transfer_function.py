@@ -16,6 +16,7 @@ from waveorder.io import utils
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
     isotropic_fluorescent_thick_3d,
+    isotropic_fluorescent_thin_3d,
     isotropic_thin_3d,
     phase_thick_3d,
 )
@@ -164,13 +165,60 @@ def generate_and_save_fluorescence_transfer_function(
     """
     echo_headline("Generating fluorescence transfer function with settings:")
     echo_settings(settings.fluorescence.transfer_function)
-    # Remove unused parameters
     settings_dict = settings.fluorescence.transfer_function.dict()
-    settings_dict.pop("z_focus_offset")
 
     if settings.reconstruction_dimension == 2:
-        raise NotImplementedError
+        # Convert zyx_shape and z_pixel_size into yx_shape and z_position_list
+        settings_dict["yx_shape"] = [zyx_shape[1], zyx_shape[2]]
+        settings_dict["z_position_list"] = (
+            _position_list_from_shape_scale_offset(
+                shape=zyx_shape[0],
+                scale=settings_dict["z_pixel_size"],
+                offset=settings_dict["z_focus_offset"],
+            )
+        )
+
+        # Remove unused parameters
+        settings_dict.pop("z_pixel_size")
+        settings_dict.pop("z_padding")
+        settings_dict.pop("z_focus_offset")
+
+        # Calculate 2D fluorescence transfer functions
+        fluorescent_2d_to_3d_transfer_function = (
+            isotropic_fluorescent_thin_3d.calculate_transfer_function(
+                **settings_dict,
+            )
+        )
+
+        # Calculate singular system for 2D reconstruction
+        U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(
+            fluorescent_2d_to_3d_transfer_function
+        )
+
+        # Get yx_shape for chunk sizes
+        yx_shape = zyx_shape[1:]
+
+        # Save singular system components
+        dataset.create_image(
+            "singular_system_U",
+            U.cpu().numpy()[None, ...],
+            chunks=(1, 1, 1, yx_shape[0], yx_shape[1]),
+        )
+        dataset.create_image(
+            "singular_system_S",
+            S.cpu().numpy()[None, None, ...],
+            chunks=(1, 1, 1, yx_shape[0], yx_shape[1]),
+        )
+        dataset.create_image(
+            "singular_system_Vh",
+            Vh.cpu().numpy()[None, ...],
+            chunks=(1, 1, zyx_shape[0], yx_shape[0], yx_shape[1]),
+        )
+
     elif settings.reconstruction_dimension == 3:
+        # Remove unused parameters for 3D
+        settings_dict.pop("z_focus_offset")
+
         # Calculate transfer functions
         optical_transfer_function = (
             isotropic_fluorescent_thick_3d.calculate_transfer_function(
