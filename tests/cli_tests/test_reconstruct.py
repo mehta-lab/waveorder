@@ -185,7 +185,7 @@ def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
     output_path = input_path.with_name(f"fluor_2d_output.zarr")
 
     # Generate input "dataset" with fluorescence channel
-    channel_names = ["GFP"]
+    channel_names = [f"State{x}" for x in range(4)] + ["GFP"]
     dataset = open_ome_zarr(
         input_path,
         layout="hcs",
@@ -195,7 +195,7 @@ def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
     position = dataset.create_position("0", "0", "0")
     position.create_zeros(
         "0",
-        (5, 1, 4, 5, 6),  # T, C, Z, Y, X - one fluorescence channel
+        (5, 5, 4, 5, 6),  # T, C, Z, Y, X - one fluorescence channel
         dtype=np.uint16,
         transform=[TransformationMeta(type="scale", scale=input_scale)],
     )
