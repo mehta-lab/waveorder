@@ -43,6 +43,8 @@ def calculate_transfer_function(
     numerical_aperture_illumination: float,
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
+    tilt_angle_zenith: torch.Tensor = torch.tensor([0.0]),
+    tilt_angle_azimuth: torch.Tensor = torch.tensor([0.0]),
 ) -> tuple[np.ndarray, np.ndarray]:
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
@@ -50,13 +52,13 @@ def calculate_transfer_function(
         numerical_aperture_detection,
     )
     axial_nyquist = sampling.axial_nyquist(
-        wavelength_illumination,
-        numerical_aperture_detection,
-        index_of_refraction_media,
+        torch.tensor(wavelength_illumination),
+        torch.tensor(numerical_aperture_detection),
+        torch.tensor(index_of_refraction_media),
     )
 
     yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
-    z_factor = int(np.ceil(z_pixel_size / axial_nyquist))
+    z_factor = int(np.ceil(z_pixel_size / axial_nyquist.item()))
 
     (
         real_potential_transfer_function,
@@ -75,6 +77,8 @@ def calculate_transfer_function(
         numerical_aperture_illumination,
         numerical_aperture_detection,
         invert_phase_contrast=invert_phase_contrast,
+        tilt_angle_zenith=tilt_angle_zenith,
+        tilt_angle_azimuth=tilt_angle_azimuth,
     )
 
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
@@ -98,10 +102,11 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_illumination: float,
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
+    tilt_angle_zenith: torch.Tensor = torch.tensor([0.0]),
+    tilt_angle_azimuth: torch.Tensor = torch.tensor([0.0]),
 ) -> tuple[np.ndarray, np.ndarray]:
-    radial_frequencies = util.generate_radial_frequencies(
-        zyx_shape[1:], yx_pixel_size
-    )
+    fyy, fxx = util.generate_frequencies(zyx_shape[1:], yx_pixel_size)
+    radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
     z_total = zyx_shape[0] + 2 * z_padding
     z_position_list = torch.fft.ifftshift(
         (torch.arange(z_total) - z_total // 2) * z_pixel_size
@@ -109,10 +114,14 @@ def _calculate_wrap_unsafe_transfer_function(
     if invert_phase_contrast:
         z_position_list = torch.flip(z_position_list, dims=(0,))
 
-    ill_pupil = optics.generate_pupil(
-        radial_frequencies,
-        numerical_aperture_illumination,
+    ill_pupil = optics.generate_tilted_pupil(
+        fxx,
+        fyy,
+        torch.tensor(numerical_aperture_illumination),
         wavelength_illumination,
+        index_of_refraction_media,
+        tilt_angle_zenith,
+        tilt_angle_azimuth,
     )
     det_pupil = optics.generate_pupil(
         radial_frequencies,
