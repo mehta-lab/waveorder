@@ -112,16 +112,30 @@ def plot_5d_ortho(
     for i in range(n_rows):
         for j in range(n_cols):
             # Add labels
-            if (i == 0 and (j - 1) % 2 == 0) or (j == 0 and (i - 1) % 2 == 0):
-                axes[i, j].text(
-                    0.5,
-                    0.5,
-                    index,
-                    horizontalalignment="center",
-                    verticalalignment="center",
-                    fontsize=10 * label_size,
-                    color="black",
-                )
+            if i == 0 and (j - 1) % 2 == 0 and j > 0:
+                col_idx = int((j - 1) / 2)
+                if col_idx < len(column_labels):
+                    axes[i, j].text(
+                        0.5,
+                        0.5,
+                        column_labels[col_idx],
+                        horizontalalignment="center",
+                        verticalalignment="center",
+                        fontsize=10 * label_size,
+                        color="black",
+                    )
+            elif j == 0 and (i - 1) % 2 == 0 and i > 0:
+                row_idx = int((i - 1) / 2)
+                if row_idx < len(row_labels):
+                    axes[i, j].text(
+                        0.5,
+                        0.5,
+                        row_labels[row_idx],
+                        horizontalalignment="center",
+                        verticalalignment="center",
+                        fontsize=10 * label_size,
+                        color="black",
+                    )
 
             # Add data
             if i > 0 and j > 0:
