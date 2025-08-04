@@ -85,8 +85,10 @@ def plot_5d_ortho(
     n_rows = 1 + (2 * R)
     n_cols = 1 + (2 * C)
 
-    width_ratios = [label_size] + C * [1, dZ / dX]
-    height_ratios = [label_size] + R * [dY / dX, dZ / dX]
+    # Use minimum size when label_size is 0 to avoid empty bboxes
+    effective_label_size = max(label_size, 0.01)
+    width_ratios = [effective_label_size] + C * [1, dZ / dX]
+    height_ratios = [effective_label_size] + R * [dY / dX, dZ / dX]
 
     fig_width = np.array(width_ratios).sum() * inches_per_column
     fig_height = np.array(height_ratios).sum() * inches_per_column
@@ -111,31 +113,32 @@ def plot_5d_ortho(
 
     for i in range(n_rows):
         for j in range(n_cols):
-            # Add labels
-            if i == 0 and (j - 1) % 2 == 0 and j > 0:
-                col_idx = int((j - 1) / 2)
-                if col_idx < len(column_labels):
-                    axes[i, j].text(
-                        0.5,
-                        0.5,
-                        column_labels[col_idx],
-                        horizontalalignment="center",
-                        verticalalignment="center",
-                        fontsize=10 * label_size,
-                        color="black",
-                    )
-            elif j == 0 and (i - 1) % 2 == 0 and i > 0:
-                row_idx = int((i - 1) / 2)
-                if row_idx < len(row_labels):
-                    axes[i, j].text(
-                        0.5,
-                        0.5,
-                        row_labels[row_idx],
-                        horizontalalignment="center",
-                        verticalalignment="center",
-                        fontsize=10 * label_size,
-                        color="black",
-                    )
+            # Add labels (only if label_size > 0)
+            if label_size > 0:
+                if i == 0 and (j - 1) % 2 == 0 and j > 0:
+                    col_idx = int((j - 1) / 2)
+                    if col_idx < len(column_labels):
+                        axes[i, j].text(
+                            0.5,
+                            0.5,
+                            column_labels[col_idx],
+                            horizontalalignment="center",
+                            verticalalignment="center",
+                            fontsize=10 * label_size,
+                            color="black",
+                        )
+                elif j == 0 and (i - 1) % 2 == 0 and i > 0:
+                    row_idx = int((i - 1) / 2)
+                    if row_idx < len(row_labels):
+                        axes[i, j].text(
+                            0.5,
+                            0.5,
+                            row_labels[row_idx],
+                            horizontalalignment="center",
+                            verticalalignment="center",
+                            fontsize=10 * label_size,
+                            color="black",
+                        )
 
             # Add data
             if i > 0 and j > 0:
