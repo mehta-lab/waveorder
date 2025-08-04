@@ -53,12 +53,13 @@ def calculate_transfer_function(
     )
     axial_nyquist = sampling.axial_nyquist(
         torch.tensor(wavelength_illumination),
-        torch.tensor(numerical_aperture_detection),
+        numerical_aperture_detection,
         torch.tensor(index_of_refraction_media),
     )
-
-    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
-    z_factor = int(np.ceil(z_pixel_size / axial_nyquist.item()))
+    yx_factor = int(
+        torch.ceil(torch.tensor(yx_pixel_size / transverse_nyquist))
+    )
+    z_factor = int(torch.ceil(torch.tensor(z_pixel_size / axial_nyquist)))
 
     (
         real_potential_transfer_function,
@@ -153,7 +154,6 @@ def _calculate_wrap_unsafe_transfer_function(
         greens_function_z,
         z_pixel_size,
     )
-
     return real_potential_transfer_function, imag_potential_transfer_function
 
 
