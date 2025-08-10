@@ -1044,11 +1044,6 @@ class Ui_ReconTab_Form(QWidget):
         q.setIcon(QMessageBox.Icon.Warning)
         q.exec_()
 
-    # def cancel_job(self, btn: PushButton):
-    #     if self.confirm_dialog():
-    #         btn.enabled = False
-    #         btn.text = btn.text + " (cancel called)"
-
     def add_widget(
         self, parentLayout: QVBoxLayout, expID, jID, table_entry_ID="", pos=""
     ):
@@ -1251,15 +1246,12 @@ class Ui_ReconTab_Form(QWidget):
         proc_params = self.add_table_entry_job(proc_params)
 
         # instead of adding, insert at 0 to keep latest entry on top
-        # self.proc_table_QFormLayout.addRow(_expandingTabEntryWidget)
         self.proc_table_QFormLayout.insertRow(0, _expandingTabEntryWidget)
 
         proc_params["table_layout"] = self.proc_table_QFormLayout
         proc_params["table_entry"] = _expandingTabEntryWidget
 
         self.worker.run_in_pool(proc_params)
-        # result = self.worker.getResult(proc_params["exp_id"])
-        # print(result)
 
     # Builds the model as required
     def build_model(self, selected_modes):
@@ -1760,16 +1752,6 @@ class Ui_ReconTab_Form(QWidget):
         if not self.confirm_dialog():
             return False
 
-        # if wid5 is not None:
-        #     wid5.setParent(None)
-        # if wid4 is not None:
-        #     wid4.setParent(None)
-        # if wid3 is not None:
-        #     wid3.setParent(None)
-        # if wid2 is not None:
-        #     wid2.setParent(None)
-        # if wid1 is not None:
-        #     wid1.setParent(None)
         if wid0 is not None:
             wid0.setParent(None)
 
@@ -2042,8 +2024,6 @@ class Ui_ReconTab_Form(QWidget):
             # Table entries will show an error msg when processing finishes but Result not OK
             # Table fields ID / DateTime, Reconstruction type, Input Location, Output Location, Progress indicator, Stop button
 
-            # addl_txt = "ID:" + unique_id + "-"+ str(i) + "\nInput:" + input_dir + "\nOutput:" + output_dir
-            # self.json_display.value = self.json_display.value + addl_txt + "\n" + json_txt+ "\n\n"
             expID = "{tID}-{idx}".format(tID=unique_id, idx=i)
             tableID = "{tName}: ({tID}-{idx})".format(
                 tName=c_mode_str, tID=unique_id, idx=i
@@ -2432,7 +2412,7 @@ class Ui_ReconTab_Form(QWidget):
         except Exception as exc:
             return None, exc.args
 
-    # test to make sure model coverts to json which should ensure compatibility with yaml export
+    # test to make sure model converts to json which should ensure compatibility with yaml export
     def validate_and_return_json(self, pydantic_model):
         try:
             json_format = pydantic_model.json(indent=4)
@@ -2624,7 +2604,6 @@ class Ui_ReconTab_Form(QWidget):
     ):
         # given a container that was instantiated from a pydantic model, get the arguments
         # needed to instantiate that pydantic model from the container.
-
         # traverse model fields, pull out values from container
         for field, field_def in pydantic_model.__fields__.items():
             if field_def is not None and field not in excludes:
@@ -2716,7 +2695,7 @@ class Ui_ReconTab_Form(QWidget):
 
 
 class MyWorker:
-
+    """This worker class manages the jobs queue arriving from the GUI and passes to job manager, the task and update function"""
     def __init__(self, formLayout, tab_recon: Ui_ReconTab_Form, parentForm):
         super().__init__()
         self.formLayout: QFormLayout = formLayout
@@ -2778,6 +2757,7 @@ class MyWorker:
         self.executor.shutdown(wait=True, cancel_futures=False)
 
     def table_update_and_cleaup_thread(self, expIdx: str = "", msg: str = ""):
+        """This GUI update function is passed to job manager when adding a job and updates based on stdout"""
         # called by the subprocess thread to update GUI
         if expIdx != "":
             params = self.results[expIdx]
@@ -2802,7 +2782,6 @@ class MyWorker:
 
     def process_ending(self, expIdx, exit_code=0):
         # called when the subprocess ends - can be success or fail
-
         # Read reconstruction data
         # Can be attemped even when fail return code
         params = self.results[expIdx]
@@ -3150,7 +3129,6 @@ class CollapsibleBox(QWidget):
     def setNewName(self, name):
         self.toggle_button.setText(name)
 
-    # @QtCore.pyqtSlot()
     def on_pressed(self):
         checked = self.toggle_button.isChecked()
         self.toggle_button.setArrowType(
