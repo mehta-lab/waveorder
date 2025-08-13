@@ -2696,6 +2696,7 @@ class Ui_ReconTab_Form(QWidget):
 
 class MyWorker:
     """This worker class manages the jobs queue arriving from the GUI and passes to job manager, the task and update function"""
+
     def __init__(self, formLayout, tab_recon: Ui_ReconTab_Form, parentForm):
         super().__init__()
         self.formLayout: QFormLayout = formLayout

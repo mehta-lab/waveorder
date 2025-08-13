@@ -2,7 +2,7 @@ import subprocess
 
 
 class JobManager:
-    """This class manages the recontrction jobs that are assigned via the GUI"""
+    """This class manages the reconstruction jobs that are assigned via the GUI"""
 
     def __init__(self):
         self.jobs = {}  # uID -> Popen

@@ -44,22 +44,7 @@ def _reconstruct_cli(
 
     >> waveorder reconstruct -i ./input.zarr/*/*/* -c ./examples/birefringence.yml -o ./output.zarr
     """
-    _reconstruct_cli_thread(
-        input_position_dirpaths,
-        config_filepath,
-        output_dirpath,
-        num_processes,
-        unique_id,
-    )
 
-
-def _reconstruct_cli_thread(
-    input_position_dirpaths,
-    config_filepath,
-    output_dirpath,
-    num_processes,
-    unique_id,
-):
     # Handle transfer function path
     transfer_function_path = output_dirpath.parent / Path(
         "transfer_function_" + config_filepath.stem + ".zarr"

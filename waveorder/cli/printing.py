@@ -10,7 +10,3 @@ def echo_settings(settings):
 
 def echo_headline(headline):
     click.echo(click.style(headline, fg="green"))
-
-
-def echo_text(text):
-    click.echo(text)
