@@ -9,13 +9,14 @@ import torch
 import torch.multiprocessing as mp
 from iohub import open_ome_zarr
 
-from waveorder.cli import apply_inverse_models, jobs_mgmt
+from waveorder.cli import apply_inverse_models
 from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,
     processes_option,
     transfer_function_dirpath,
+    unique_id,
 )
 from waveorder.cli.printing import echo_headline, echo_settings
 from waveorder.cli.settings import ReconstructionSettings
@@ -24,8 +25,6 @@ from waveorder.cli.utils import (
     create_empty_hcs_zarr,
 )
 from waveorder.io import utils
-
-JM = jobs_mgmt.JobsManagement()
 
 
 def _check_background_consistency(
@@ -107,6 +106,7 @@ def apply_inverse_transfer_function_single_position(
     num_processes,
     output_channel_names: list[str],
 ) -> None:
+
     echo_headline("\nStarting reconstruction...")
 
     # Load datasets
@@ -277,6 +277,7 @@ def apply_inverse_transfer_function_single_position(
     output_dataset.zattrs["settings"] = settings.dict()
 
     echo_headline(f"Closing {output_position_dirpath}\n")
+
     output_dataset.close()
     transfer_function_dataset.close()
     input_dataset.close()

@@ -63,7 +63,9 @@ def generate_and_save_birefringence_transfer_function(settings, dataset):
 
 
 def generate_and_save_phase_transfer_function(
-    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple
+    settings: ReconstructionSettings,
+    dataset: Position,
+    zyx_shape: tuple,
 ):
     """Generates and saves the phase transfer function to the dataset, based on the settings.
 
@@ -150,7 +152,9 @@ def generate_and_save_phase_transfer_function(
 
 
 def generate_and_save_fluorescence_transfer_function(
-    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple
+    settings: ReconstructionSettings,
+    dataset: Position,
+    zyx_shape: tuple,
 ):
     """Generates and saves the fluorescence transfer function to the dataset, based on the settings.
 
@@ -187,7 +191,9 @@ def generate_and_save_fluorescence_transfer_function(
 
 
 def compute_transfer_function_cli(
-    input_position_dirpath: Path, config_filepath: Path, output_dirpath: Path
+    input_position_dirpath: Path,
+    config_filepath: Path,
+    output_dirpath: Path,
 ) -> None:
     """CLI command to compute the transfer function given a configuration file path
     and a desired output path.

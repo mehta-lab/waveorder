@@ -1,8 +1,6 @@
 import datetime
 import json
 import os
-import socket
-import subprocess
 import threading
 import time
 import uuid
@@ -15,41 +13,49 @@ from magicgui import widgets
 from magicgui.type_map import get_widget_class
 
 # FIXME avoid star import
+# Since we are instantiating GUI widgets/elements based on pydantic model
+# star import provides that flexibility
 from magicgui.widgets import *
+from napari.utils.notifications import show_error, show_info
 from qtpy import QtCore
 from qtpy.QtCore import QEvent, Qt, QThread, Signal
-
-# FIXME avoid star import
 from qtpy.QtWidgets import *
+
+from waveorder.plugin import job_manager
 
 if TYPE_CHECKING:
     from napari import Viewer
-    from napari.utils import notifications
 
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor
 
 from pydantic.v1 import BaseModel, NonNegativeInt, ValidationError
-from pydantic.v1.main import ModelMetaclass
 
-from waveorder.cli import jobs_mgmt, settings
+from waveorder.cli.settings import (
+    BirefringenceApplyInverseSettings,
+    BirefringenceSettings,
+    BirefringenceTransferFunctionSettings,
+    FluorescenceSettings,
+    FluorescenceTransferFunctionSettings,
+    FourierApplyInverseSettings,
+    PhaseSettings,
+    PhaseTransferFunctionSettings,
+)
+
+PYDANTIC_CLASSES_DEF = (
+    BirefringenceSettings,
+    BirefringenceTransferFunctionSettings,
+    BirefringenceApplyInverseSettings,
+    PhaseSettings,
+    PhaseTransferFunctionSettings,
+    FluorescenceSettings,
+    FluorescenceTransferFunctionSettings,
+    FourierApplyInverseSettings,
+)
+
+from waveorder.cli import settings
 from waveorder.io import utils
 
-STATUS_submitted_pool = "Submitted_Pool"
-STATUS_submitted_job = "Submitted_Job"
-STATUS_running_pool = "Running_Pool"
-STATUS_running_job = "Running_Job"
-STATUS_finished_pool = "Finished_Pool"
-STATUS_finished_job = "Finished_Job"
-STATUS_errored_pool = "Errored_Pool"
-STATUS_errored_job = "Errored_Job"
-STATUS_user_cleared_job = "User_Cleared_Job"
-STATUS_user_cancelled_job = "User_Cancelled_Job"
-
 MSG_SUCCESS = {"msg": "success"}
-JOB_COMPLETION_STR = "Job completed successfully"
-JOB_RUNNING_STR = "Starting with JobEnvironment"
-JOB_TRIGGERED_EXC = "Submitted job triggered an exception"
-JOB_OOM_EVENT = "oom_kill event"
 
 _validate_alert = "⚠"
 _validate_ok = "✔️"
@@ -67,7 +73,7 @@ OPTION_TO_MODEL_DICT = {
 
 CONTAINERS_INFO = {}
 
-# This keeps an instance of the MyWorker server that is listening
+# This keeps an instance of the MyWorker class
 # napari will not stop processes and the Hide event is not reliable
 HAS_INSTANCE = {"val": False, "instance": None}
 
@@ -366,7 +372,9 @@ class Ui_ReconTab_Form(QWidget):
         # Stores Model & Components values which cause validation failure - can be highlighted on the model field as Red
         self.modelHighlighterVals = {}
 
-        # handle napari's close widget and avoid starting a second server
+        self.job_manager = job_manager.JobManager()
+
+        # handle napari's close widget and avoid starting a second instance
         if HAS_INSTANCE["val"]:
             self.worker: MyWorker = HAS_INSTANCE["MyWorker"]
             self.worker.set_new_instances(
@@ -393,7 +401,7 @@ class Ui_ReconTab_Form(QWidget):
     # on napari close - cleanup
     def closeEvent(self, event):
         if event.type() == QEvent.Type.Close:
-            self.worker.stop_server()
+            pass
 
     def hideEvent(self, event):
         if event.type() == QEvent.Type.Hide and (
@@ -1021,9 +1029,9 @@ class Ui_ReconTab_Form(QWidget):
                 self.message_box_stand_alone(json_txt)
             else:
                 if type == "exc":
-                    notifications.show_error(json_txt)
+                    show_error(json_txt)
                 else:
-                    notifications.show_info(json_txt)
+                    show_info(json_txt)
 
     def message_box_stand_alone(self, msg):
         q = QMessageBox(
@@ -1036,11 +1044,6 @@ class Ui_ReconTab_Form(QWidget):
         q.setIcon(QMessageBox.Icon.Warning)
         q.exec_()
 
-    def cancel_job(self, btn: PushButton):
-        if self.confirm_dialog():
-            btn.enabled = False
-            btn.text = btn.text + " (cancel called)"
-
     def add_widget(
         self, parentLayout: QVBoxLayout, expID, jID, table_entry_ID="", pos=""
     ):
@@ -1051,9 +1054,6 @@ class Ui_ReconTab_Form(QWidget):
         )
         _cancelJobButton = widgets.PushButton(
             name="JobID", label=_cancelJobBtntext, enabled=True, value=False
-        )
-        _cancelJobButton.clicked.connect(
-            lambda: self.cancel_job(_cancelJobButton)
         )
         _txtForInfoBox = "Updating {id}-{pos}: Please wait... \nJobID assigned: {jID} ".format(
             id=table_entry_ID, jID=jID, pos=pos
@@ -1111,9 +1111,6 @@ class Ui_ReconTab_Form(QWidget):
 
         _cancelJobButton = widgets.PushButton(
             name="JobID", label="Cancel Job", value=False, enabled=False
-        )
-        _cancelJobButton.clicked.connect(
-            lambda: self.cancel_job(_cancelJobButton)
         )
         _txtForInfoBox = "Updating {id}: Please wait...".format(
             id=tableEntryID
@@ -1249,15 +1246,12 @@ class Ui_ReconTab_Form(QWidget):
         proc_params = self.add_table_entry_job(proc_params)
 
         # instead of adding, insert at 0 to keep latest entry on top
-        # self.proc_table_QFormLayout.addRow(_expandingTabEntryWidget)
         self.proc_table_QFormLayout.insertRow(0, _expandingTabEntryWidget)
 
         proc_params["table_layout"] = self.proc_table_QFormLayout
         proc_params["table_entry"] = _expandingTabEntryWidget
 
         self.worker.run_in_pool(proc_params)
-        # result = self.worker.getResult(proc_params["exp_id"])
-        # print(result)
 
     # Builds the model as required
     def build_model(self, selected_modes):
@@ -1508,9 +1502,6 @@ class Ui_ReconTab_Form(QWidget):
             name="Show after Reconstruction", value=True
         )
         _show_CheckBox.max_width = 200
-        _rx_Label = widgets.Label(value="rx")
-        _rx_LineEdit = widgets.LineEdit(name="rx", value=1)
-        _rx_LineEdit.max_width = 50
         _validate_button = widgets.PushButton(name="Validate")
 
         # Passing all UI components that would be deleted
@@ -1566,7 +1557,7 @@ class Ui_ReconTab_Form(QWidget):
         _collapsibleBoxWidgetLayout.addWidget(_scrollAreaCollapsibleBox)
 
         _collapsibleBoxWidget = CollapsibleBox(
-            c_mode_str
+            title=c_mode_str, expanded=True if _idx == 0 else False
         )  # tableEntryID, tableEntryShortDesc - should update with processing status
 
         _validate_button.clicked.connect(
@@ -1580,8 +1571,6 @@ class Ui_ReconTab_Form(QWidget):
         _hBox_layout2.addWidget(_show_CheckBox.native)
         _hBox_layout2.addWidget(_validate_button.native)
         _hBox_layout2.addWidget(_del_button.native)
-        _hBox_layout2.addWidget(_rx_Label.native)
-        _hBox_layout2.addWidget(_rx_LineEdit.native)
 
         _expandingTabEntryWidgetLayout = QVBoxLayout()
         _expandingTabEntryWidgetLayout.setAlignment(
@@ -1639,7 +1628,6 @@ class Ui_ReconTab_Form(QWidget):
                 "exclude_modes": exclude_modes.copy(),
                 "poll_data": self.pollData,
                 "show": _show_CheckBox,
-                "rx": _rx_LineEdit,
             }
         )
         self.index += 1
@@ -1764,16 +1752,6 @@ class Ui_ReconTab_Form(QWidget):
         if not self.confirm_dialog():
             return False
 
-        # if wid5 is not None:
-        #     wid5.setParent(None)
-        # if wid4 is not None:
-        #     wid4.setParent(None)
-        # if wid3 is not None:
-        #     wid3.setParent(None)
-        # if wid2 is not None:
-        #     wid2.setParent(None)
-        # if wid1 is not None:
-        #     wid1.setParent(None)
         if wid0 is not None:
             wid0.setParent(None)
 
@@ -2046,8 +2024,6 @@ class Ui_ReconTab_Form(QWidget):
             # Table entries will show an error msg when processing finishes but Result not OK
             # Table fields ID / DateTime, Reconstruction type, Input Location, Output Location, Progress indicator, Stop button
 
-            # addl_txt = "ID:" + unique_id + "-"+ str(i) + "\nInput:" + input_dir + "\nOutput:" + output_dir
-            # self.json_display.value = self.json_display.value + addl_txt + "\n" + json_txt+ "\n\n"
             expID = "{tID}-{idx}".format(tID=unique_id, idx=i)
             tableID = "{tName}: ({tID}-{idx})".format(
                 tName=c_mode_str, tID=unique_id, idx=i
@@ -2066,7 +2042,6 @@ class Ui_ReconTab_Form(QWidget):
                 Path(output_dir).parent.absolute()
             )
             proc_params["show"] = item["show"].value
-            proc_params["rx"] = item["rx"].value
 
             self.addTableEntry(tableID, tableDescToolTip, proc_params)
 
@@ -2276,7 +2251,6 @@ class Ui_ReconTab_Form(QWidget):
                                 Path(output_dir).parent.absolute()
                             )
                             proc_params["show"] = False
-                            proc_params["rx"] = 1
 
                             tableEntryWorker1 = AddTableEntryWorkerThread(
                                 tableID, tableDescToolTip, proc_params
@@ -2438,7 +2412,7 @@ class Ui_ReconTab_Form(QWidget):
         except Exception as exc:
             return None, exc.args
 
-    # test to make sure model coverts to json which should ensure compatibility with yaml export
+    # test to make sure model converts to json which should ensure compatibility with yaml export
     def validate_and_return_json(self, pydantic_model):
         try:
             json_format = pydantic_model.json(indent=4)
@@ -2490,7 +2464,7 @@ class Ui_ReconTab_Form(QWidget):
 
     def add_pydantic_to_container(
         self,
-        py_model: Union[BaseModel, ModelMetaclass],
+        py_model: Union[BaseModel, BaseModel],
         container: widgets.Container,
         excludes=[],
         json_dict=None,
@@ -2508,8 +2482,9 @@ class Ui_ReconTab_Form(QWidget):
                         toolTip = f"{toolTip}{f_val} "
                 except Exception as e:
                     pass
-                if isinstance(ftype, BaseModel) or isinstance(
-                    ftype, ModelMetaclass
+                if (
+                    isinstance(ftype, BaseModel)
+                    or ftype in PYDANTIC_CLASSES_DEF
                 ):
                     json_val = None
                     if json_dict is not None:
@@ -2629,13 +2604,13 @@ class Ui_ReconTab_Form(QWidget):
     ):
         # given a container that was instantiated from a pydantic model, get the arguments
         # needed to instantiate that pydantic model from the container.
-
         # traverse model fields, pull out values from container
         for field, field_def in pydantic_model.__fields__.items():
             if field_def is not None and field not in excludes:
                 ftype = field_def.type_
-                if isinstance(ftype, BaseModel) or isinstance(
-                    ftype, ModelMetaclass
+                if (
+                    isinstance(ftype, BaseModel)
+                    or ftype in PYDANTIC_CLASSES_DEF
                 ):
                     # go deeper
                     pydantic_kwargs[field] = (
@@ -2720,31 +2695,28 @@ class Ui_ReconTab_Form(QWidget):
 
 
 class MyWorker:
+    """This worker class manages the jobs queue arriving from the GUI and passes to job manager, the task and update function"""
 
     def __init__(self, formLayout, tab_recon: Ui_ReconTab_Form, parentForm):
         super().__init__()
         self.formLayout: QFormLayout = formLayout
         self.tab_recon: Ui_ReconTab_Form = tab_recon
         self.ui: QWidget = parentForm
-        self.max_cores = os.cpu_count()
+        self.max_cores = (
+            1  # os.cpu_count() - no multi-threading // parallelization
+        )
         # In the case of CLI, we just need to submit requests in a non-blocking way
-        self.threadPool = int(self.max_cores / 2)
+        self.threadPool = 1  # int(self.max_cores / 2)
         self.results = {}
-        self.pool = None
-        self.futures = []
+        self.clearResults = True
+        self.executor = None
         # https://click.palletsprojects.com/en/stable/testing/
         # self.runner = CliRunner()
-        # jobs_mgmt.shared_var_jobs = self.JobsManager.shared_var_jobs
-        self.JobsMgmt = jobs_mgmt.JobsManagement()
-        self.useServer = True
-        self.serverRunning = True
-        self.server_socket = None
         self.isInitialized = False
+        self.initialize()
 
     def initialize(self):
         if not self.isInitialized:
-            thread = threading.Thread(target=self.start_server)
-            thread.start()
             self.workerThreadRowDeletion = RowDeletionWorkerThread(
                 self.formLayout
             )
@@ -2771,49 +2743,6 @@ class MyWorker:
                 return idx
         return -1
 
-    def start_server(self):
-        try:
-            if not self.useServer:
-                return
-
-            self.server_socket = socket.socket(
-                socket.AF_INET, socket.SOCK_STREAM
-            )
-            self.server_socket.bind(("localhost", jobs_mgmt.SERVER_PORT))
-            self.server_socket.listen(
-                50
-            )  # become a server socket, maximum 50 connections
-
-            while self.serverRunning:
-                client_socket, address = self.server_socket.accept()
-                if self.ui is not None and not self.ui.isVisible():
-                    break
-                try:
-                    # dont block the server thread
-                    thread = threading.Thread(
-                        target=self.decode_client_data,
-                        args=("", "", "", "", client_socket),
-                    )
-                    thread.start()
-                except Exception as exc:
-                    print(exc.args)
-                    time.sleep(1)
-
-            self.server_socket.close()
-        except Exception as exc:
-            if not self.serverRunning:
-                self.serverRunning = True
-                return  # ignore - will cause an exception on napari close but that is fine and does the job
-            print(exc.args)
-
-    def stop_server(self):
-        try:
-            if self.server_socket is not None:
-                self.serverRunning = False
-                self.server_socket.close()
-        except Exception as exc:
-            print(exc.args)
-
     def get_max_CPU_cores(self):
         return self.max_cores
 
@@ -2822,727 +2751,87 @@ class MyWorker:
             self.threadPool = t
 
     def start_pool(self):
-        if self.pool is None:
-            self.pool = concurrent.futures.ThreadPoolExecutor(
-                max_workers=self.threadPool
-            )
+        if self.executor is None:
+            self.executor = ThreadPoolExecutor(max_workers=self.threadPool)
 
     def shut_down_pool(self):
-        self.pool.shutdown(wait=True)
+        self.executor.shutdown(wait=True, cancel_futures=False)
 
-    # This method handles each client response thread. It parses the information received from the client
-    # and is responsible for parsing each well/pos Job if the case may be and starting individual update threads
-    # using the tableUpdateAndCleaupThread() method
-    # This is also handling an unused "CoNvErTeR" functioning that can be implemented on 3rd party apps
-    def decode_client_data(
-        self,
-        expIdx="",
-        jobIdx="",
-        wellName="",
-        logs_folder_path="",
-        client_socket=None,
-    ):
-
-        if client_socket is not None and expIdx == "" and jobIdx == "":
-            try:
-                buf = client_socket.recv(10240)
-                if len(buf) > 0:
-                    if b"\n" in buf:
-                        dataList = buf.split(b"\n")
-                    else:
-                        dataList = [buf]
-                    for data in dataList:
-                        if len(data) > 0:
-                            decoded_string = data.decode()
-                            if (
-                                "CoNvErTeR" in decoded_string
-                            ):  # this request came from an agnostic route - requires processing
-                                json_str = str(decoded_string)
-                                json_obj = json.loads(json_str)
-                                converter_params = json_obj["CoNvErTeR"]
-                                input_data = converter_params["input"]
-                                output_data = converter_params["output"]
-                                recon_params = converter_params["params"]
-                                expID = recon_params["expID"]
-                                mode = recon_params["mode"]
-                                if "config_path" in recon_params.keys():
-                                    config_path = recon_params["config_path"]
-                                else:
-                                    config_path = ""
-
-                                proc_params = {}
-                                proc_params["exp_id"] = expID
-                                proc_params["desc"] = expID
-                                proc_params["input_path"] = str(input_data)
-                                proc_params["output_path"] = str(output_data)
-                                proc_params["output_path_parent"] = str(
-                                    Path(output_data).parent.absolute()
-                                )
-                                proc_params["show"] = False
-                                proc_params["rx"] = 1
-
-                                if config_path == "":
-                                    model = None
-                                    if (
-                                        len(self.tab_recon.pydantic_classes)
-                                        > 0
-                                    ):
-                                        for (
-                                            item
-                                        ) in self.tab_recon.pydantic_classes:
-                                            if mode == item["selected_modes"]:
-                                                cls = item["class"]
-                                                cls_container = item[
-                                                    "container"
-                                                ]
-                                                exclude_modes = item[
-                                                    "exclude_modes"
-                                                ]
-                                                output_LineEdit = item[
-                                                    "output_LineEdit"
-                                                ]
-                                                output_parent_dir = item[
-                                                    "output_parent_dir"
-                                                ]
-                                                full_out_path = os.path.join(
-                                                    output_parent_dir,
-                                                    output_LineEdit.value,
-                                                )
-
-                                                # gather input/out locations
-                                                output_dir = full_out_path
-                                                if output_data == "":
-                                                    output_data = output_dir
-                                                    proc_params[
-                                                        "output_path"
-                                                    ] = str(output_data)
-
-                                                # build up the arguments for the pydantic model given the current container
-                                                if cls is None:
-                                                    self.tab_recon.message_box(
-                                                        "No model defined !"
-                                                    )
-                                                    return
-
-                                                pydantic_kwargs = {}
-                                                pydantic_kwargs, ret_msg = (
-                                                    self.tab_recon.get_and_validate_pydantic_args(
-                                                        cls_container,
-                                                        cls,
-                                                        pydantic_kwargs,
-                                                        exclude_modes,
-                                                    )
-                                                )
-                                                if pydantic_kwargs is None:
-                                                    self.tab_recon.message_box(
-                                                        ret_msg
-                                                    )
-                                                    return
-
-                                                (
-                                                    input_channel_names,
-                                                    ret_msg,
-                                                ) = self.tab_recon.clean_string_for_list(
-                                                    "input_channel_names",
-                                                    pydantic_kwargs[
-                                                        "input_channel_names"
-                                                    ],
-                                                )
-                                                if input_channel_names is None:
-                                                    self.tab_recon.message_box(
-                                                        ret_msg
-                                                    )
-                                                    return
-                                                pydantic_kwargs[
-                                                    "input_channel_names"
-                                                ] = input_channel_names
-
-                                                time_indices, ret_msg = (
-                                                    self.tab_recon.clean_string_int_for_list(
-                                                        "time_indices",
-                                                        pydantic_kwargs[
-                                                            "time_indices"
-                                                        ],
-                                                    )
-                                                )
-                                                if time_indices is None:
-                                                    self.tab_recon.message_box(
-                                                        ret_msg
-                                                    )
-                                                    return
-                                                pydantic_kwargs[
-                                                    "time_indices"
-                                                ] = time_indices
-
-                                                time_indices, ret_msg = (
-                                                    self.tab_recon.clean_string_int_for_list(
-                                                        "time_indices",
-                                                        pydantic_kwargs[
-                                                            "time_indices"
-                                                        ],
-                                                    )
-                                                )
-                                                if time_indices is None:
-                                                    self.tab_recon.message_box(
-                                                        ret_msg
-                                                    )
-                                                    return
-                                                pydantic_kwargs[
-                                                    "time_indices"
-                                                ] = time_indices
-
-                                                if (
-                                                    "birefringence"
-                                                    in pydantic_kwargs.keys()
-                                                ):
-                                                    (
-                                                        background_path,
-                                                        ret_msg,
-                                                    ) = self.tab_recon.clean_path_string_when_empty(
-                                                        "background_path",
-                                                        pydantic_kwargs[
-                                                            "birefringence"
-                                                        ]["apply_inverse"][
-                                                            "background_path"
-                                                        ],
-                                                    )
-                                                    if background_path is None:
-                                                        self.tab_recon.message_box(
-                                                            ret_msg
-                                                        )
-                                                        return
-                                                    pydantic_kwargs[
-                                                        "birefringence"
-                                                    ]["apply_inverse"][
-                                                        "background_path"
-                                                    ] = background_path
-
-                                                # validate and return errors if None
-                                                pydantic_model, ret_msg = (
-                                                    self.tab_recon.validate_pydantic_model(
-                                                        cls, pydantic_kwargs
-                                                    )
-                                                )
-                                                if pydantic_model is None:
-                                                    self.tab_recon.message_box(
-                                                        ret_msg
-                                                    )
-                                                    return
-                                                model = pydantic_model
-                                                break
-                                    if model is None:
-                                        model, msg = (
-                                            self.tab_recon.build_model(mode)
-                                        )
-                                    yaml_path = os.path.join(
-                                        str(
-                                            Path(output_data).parent.absolute()
-                                        ),
-                                        expID + ".yml",
-                                    )
-                                    utils.model_to_yaml(model, yaml_path)
-                                proc_params["config_path"] = str(yaml_path)
-
-                                tableEntryWorker = AddTableEntryWorkerThread(
-                                    expID, expID, proc_params
-                                )
-                                tableEntryWorker.add_tableentry_signal.connect(
-                                    self.tab_recon.addTableEntry
-                                )
-                                tableEntryWorker.start()
-                                time.sleep(10)
-                                return
-                            else:
-                                json_str = str(decoded_string)
-                                json_obj = json.loads(json_str)
-                                for k in json_obj:
-                                    expIdx = k
-                                    jobIdx = json_obj[k]["jID"]
-                                    wellName = json_obj[k]["pos"]
-                                    logs_folder_path = json_obj[k]["log"]
-                                if (
-                                    expIdx not in self.results.keys()
-                                ):  # this job came from agnostic CLI route - no processing
-                                    now = datetime.datetime.now()
-                                    ms = now.strftime("%f")[:3]
-                                    unique_id = (
-                                        now.strftime("%Y_%m_%d_%H_%M_%S_") + ms
-                                    )
-                                    expIdx = expIdx + "-" + unique_id
-                                self.JobsMgmt.put_Job_in_list(
-                                    None,
-                                    expIdx,
-                                    str(jobIdx),
-                                    wellName,
-                                    mode="server",
-                                )
-                                # print("Submitting Job: {job} expIdx: {expIdx}".format(job=jobIdx, expIdx=expIdx))
-                                thread = threading.Thread(
-                                    target=self.table_update_and_cleaup_thread,
-                                    args=(
-                                        expIdx,
-                                        jobIdx,
-                                        wellName,
-                                        logs_folder_path,
-                                        client_socket,
-                                    ),
-                                )
-                                thread.start()
-                return
-            except Exception as exc:
-                print(exc.args)
-
-    # the table update thread can be called from multiple points/threads
-    # on errors - table row item is updated but there is no row deletion
-    # on successful processing - the row item is expected to be deleted
-    # row is being deleted from a seperate thread for which we need to connect using signal
-
-    # This is handling essentially each job thread. Points of entry are on a failed job submission
-    # which then calls this to update based on the expID (used for .yml naming). On successful job
-    # submissions jobID, the point of entry is via the socket connection the GUI is listening and
-    # then spawns a new thread to avoid blocking of other connections.
-    # If a job submission spawns more jobs then this also calls other methods via signal to create
-    # the required GUI components in the main thread.
-    # Once we have expID and jobID this thread periodically loops and updates each job status and/or
-    # the job error by reading the log files. Using certain keywords
-    # eg JOB_COMPLETION_STR = "Job completed successfully" we determine the progress. We also create
-    # a map for expID which might have multiple jobs to determine when a reconstruction is
-    # finished vs a single job finishing.
-    # The loop ends based on user, time-out, job(s) completion and errors and handles removal of
-    # processing GUI table items (on main thread).
-    # Based on the conditions the loop will end calling clientRelease()
-    def table_update_and_cleaup_thread(
-        self,
-        expIdx="",
-        jobIdx="",
-        wellName="",
-        logs_folder_path="",
-        client_socket=None,
-    ):
-        jobIdx = str(jobIdx)
-
-        # ToDo: Another approach to this could be to implement a status thread on the client side
-        # Since the client is already running till the job is completed, the client could ping status
-        # at regular intervals and also provide results and exceptions we currently read from the file
-        # Currently we only send JobID/UniqueID pair from Client to Server. This would reduce multiple threads
-        # server side.
-
-        if expIdx != "" and jobIdx != "":
-            # this request came from server listening so we wait for the Job to finish and update progress
-            if expIdx not in self.results.keys():
-                proc_params = {}
-                tableID = "{exp} - {job} ({pos})".format(
-                    exp=expIdx, job=jobIdx, pos=wellName
-                )
-                proc_params["exp_id"] = expIdx
-                proc_params["desc"] = tableID
-                proc_params["config_path"] = ""
-                proc_params["input_path"] = ""
-                proc_params["output_path"] = ""
-                proc_params["output_path_parent"] = ""
-                proc_params["show"] = False
-                proc_params["rx"] = 1
-
-                tableEntryWorker = AddTableEntryWorkerThread(
-                    tableID, tableID, proc_params
-                )
-                tableEntryWorker.add_tableentry_signal.connect(
-                    self.tab_recon.addTableEntry
-                )
-                tableEntryWorker.start()
-
-                while expIdx not in self.results.keys():
-                    time.sleep(1)
-
-                params = self.results[expIdx]["JobUNK"].copy()
-                params["status"] = STATUS_running_job
-            else:
-                params = self.results[expIdx]["JobUNK"].copy()
-
-            if (
-                jobIdx not in self.results[expIdx].keys()
-                and len(self.results[expIdx].keys()) == 1
-            ):
-                # this is the first job
-                params["primary"] = True
-                self.results[expIdx][jobIdx] = params
-            elif (
-                jobIdx not in self.results[expIdx].keys()
-                and len(self.results[expIdx].keys()) > 1
-            ):
-                # this is a new job
-                # we need to create cancel and job status windows and add to parent container
-                params["primary"] = False
-                NEW_WIDGETS_QUEUE.append(expIdx + jobIdx)
-                parentLayout: QVBoxLayout = params["parent_layout"]
-                worker_thread = AddWidgetWorkerThread(
-                    parentLayout, expIdx, jobIdx, params["desc"], wellName
-                )
-                worker_thread.add_widget_signal.connect(
-                    self.tab_recon.add_widget
-                )
-                NEW_WIDGETS_QUEUE_THREADS.append(worker_thread)
-
-                while len(NEW_WIDGETS_QUEUE_THREADS) > 0:
-                    s_worker_thread = NEW_WIDGETS_QUEUE_THREADS.pop(0)
-                    s_worker_thread.start()
-                    time.sleep(1)
-
-                # wait for new components reference
-                while expIdx + jobIdx in NEW_WIDGETS_QUEUE:
-                    time.sleep(1)
-
-                _cancelJobBtn = MULTI_JOBS_REFS[expIdx + jobIdx]["cancelBtn"]
-                _infoBox = MULTI_JOBS_REFS[expIdx + jobIdx]["infobox"]
-                params["table_entry_infoBox"] = _infoBox
-                params["cancelJobButton"] = _cancelJobBtn
-
-                self.results[expIdx][jobIdx] = params
+    def table_update_and_cleaup_thread(self, expIdx: str = "", msg: str = ""):
+        """This GUI update function is passed to job manager when adding a job and updates based on stdout"""
+        # called by the subprocess thread to update GUI
+        if expIdx != "":
+            params = self.results[expIdx]
 
             _infoBox: ScrollableLabel = params["table_entry_infoBox"]
             _cancelJobBtn: PushButton = params["cancelJobButton"]
 
-            _txtForInfoBox = "Updating {id}-{pos}: Please wait... \nJobID assigned: {jID} ".format(
-                id=params["desc"], pos=wellName, jID=jobIdx
-            )
-            try:
-                _cancelJobBtn.text = "Cancel Job {jID} ({posName})".format(
-                    jID=jobIdx, posName=wellName
+            _infoBox.setText(_infoBox.getText() + "\n" + msg)
+
+            if not _cancelJobBtn.enabled:
+                _cancelJobBtn.clicked.connect(
+                    lambda: self.cancel_job(expIdx, _infoBox, _cancelJobBtn)
                 )
                 _cancelJobBtn.enabled = True
-                _infoBox.setText(_txtForInfoBox)
-            except:
-                # deleted by user - no longer needs updating
-                params["status"] = STATUS_user_cleared_job
-                return
-            _tUpdateCount = 0
-            _tUpdateCountTimeout = (
-                jobs_mgmt.JOBS_TIMEOUT * 60
-            )  # 5 mins - match executor time-out
-            _lastUpdate_jobTXT = ""
-            jobTXT = ""
-            # print("Updating Job: {job} expIdx: {expIdx}".format(job=jobIdx, expIdx=expIdx))
-            while True:
-                time.sleep(1)  # update every sec and exit on break
-                try:
-                    if "cancel called" in _cancelJobBtn.text:
-                        json_obj = {
-                            "uID": expIdx,
-                            "jID": jobIdx,
-                            "command": "cancel",
-                        }
-                        json_str = json.dumps(json_obj) + "\n"
-                        client_socket.send(json_str.encode())
-                        params["status"] = STATUS_user_cancelled_job
-                        _infoBox.setText(
-                            "User called for Cancel Job Request\n"
-                            + "Please check terminal output for Job status..\n\n"
-                            + jobTXT
-                        )
-                        self.client_release(
-                            expIdx, jobIdx, client_socket, params, reason=1
-                        )
-                        break  # cancel called by user
-                    if _infoBox == None:
-                        params["status"] = STATUS_user_cleared_job
-                        self.client_release(
-                            expIdx, jobIdx, client_socket, params, reason=2
-                        )
-                        break  # deleted by user - no longer needs updating
-                    if _infoBox:
-                        pass
-                except Exception as exc:
-                    print(exc.args)
-                    params["status"] = STATUS_user_cleared_job
-                    self.client_release(
-                        expIdx, jobIdx, client_socket, params, reason=3
-                    )
-                    break  # deleted by user - no longer needs updating
-                if self.JobsMgmt.has_submitted_job(
-                    expIdx, jobIdx, mode="server"
-                ):
-                    if params["status"] in [STATUS_finished_job]:
-                        self.client_release(
-                            expIdx, jobIdx, client_socket, params, reason=4
-                        )
-                        break
-                    elif params["status"] in [STATUS_errored_job]:
-                        jobERR = self.JobsMgmt.check_for_jobID_File(
-                            jobIdx, logs_folder_path, extension="err"
-                        )
-                        _infoBox.setText(
-                            jobIdx + "\n" + params["desc"] + "\n\n" + jobERR
-                        )
-                        self.client_release(
-                            expIdx, jobIdx, client_socket, params, reason=5
-                        )
-                        break
-                    else:
-                        jobTXT = self.JobsMgmt.check_for_jobID_File(
-                            jobIdx, logs_folder_path, extension="out"
-                        )
-                        try:
-                            if jobTXT == "":  # job file not created yet
-                                # print(jobIdx + " not started yet")
-                                time.sleep(2)
-                                _tUpdateCount += 2
-                                if (
-                                    _tUpdateCount > 10
-                                ):  # if out file is empty for 10s, check the err file to update user
-                                    jobERR = (
-                                        self.JobsMgmt.check_for_jobID_File(
-                                            jobIdx,
-                                            logs_folder_path,
-                                            extension="err",
-                                        )
-                                    )
-                                    if JOB_OOM_EVENT in jobERR:
-                                        params["status"] = STATUS_errored_job
-                                        _infoBox.setText(
-                                            jobERR + "\n\n" + jobTXT
-                                        )
-                                        self.client_release(
-                                            expIdx,
-                                            jobIdx,
-                                            client_socket,
-                                            params,
-                                            reason=0,
-                                        )
-                                        break
-                                    _infoBox.setText(
-                                        jobIdx
-                                        + "\n"
-                                        + params["desc"]
-                                        + "\n\n"
-                                        + jobERR
-                                    )
-                                    if _tUpdateCount > _tUpdateCountTimeout:
-                                        self.client_release(
-                                            expIdx,
-                                            jobIdx,
-                                            client_socket,
-                                            params,
-                                            reason=0,
-                                        )
-                                        break
-                            elif params["status"] == STATUS_finished_job:
-                                rowIdx = self.find_widget_row_in_layout(expIdx)
-                                # check to ensure row deletion due to shrinking table
-                                # if not deleted try to delete again
-                                if rowIdx < 0:
-                                    self.client_release(
-                                        expIdx,
-                                        jobIdx,
-                                        client_socket,
-                                        params,
-                                        reason=6,
-                                    )
-                                    break
-                                else:
-                                    break
-                            elif JOB_COMPLETION_STR in jobTXT:
-                                params["status"] = STATUS_finished_job
-                                _infoBox.setText(jobTXT)
-                                # this is the only case where row deleting occurs
-                                # we cant delete the row directly from this thread
-                                # we will use the exp_id to identify and delete the row
-                                # using Signal
-                                # break - based on status
-                            elif JOB_TRIGGERED_EXC in jobTXT:
-                                params["status"] = STATUS_errored_job
-                                jobERR = self.JobsMgmt.check_for_jobID_File(
-                                    jobIdx, logs_folder_path, extension="err"
-                                )
-                                _infoBox.setText(
-                                    jobIdx
-                                    + "\n"
-                                    + params["desc"]
-                                    + "\n\n"
-                                    + jobTXT
-                                    + "\n\n"
-                                    + jobERR
-                                )
-                                self.client_release(
-                                    expIdx,
-                                    jobIdx,
-                                    client_socket,
-                                    params,
-                                    reason=0,
-                                )
-                                break
-                            elif JOB_RUNNING_STR in jobTXT:
-                                params["status"] = STATUS_running_job
-                                _infoBox.setText(jobTXT)
-                                _tUpdateCount += 1
-                                if _tUpdateCount > 60:
-                                    jobERR = (
-                                        self.JobsMgmt.check_for_jobID_File(
-                                            jobIdx,
-                                            logs_folder_path,
-                                            extension="err",
-                                        )
-                                    )
-                                    if JOB_OOM_EVENT in jobERR:
-                                        params["status"] = STATUS_errored_job
-                                        _infoBox.setText(
-                                            jobERR + "\n\n" + jobTXT
-                                        )
-                                        self.client_release(
-                                            expIdx,
-                                            jobIdx,
-                                            client_socket,
-                                            params,
-                                            reason=0,
-                                        )
-                                        break
-                                    elif _lastUpdate_jobTXT != jobTXT:
-                                        # if there is an update reset counter
-                                        _tUpdateCount = 0
-                                        _lastUpdate_jobTXT = jobTXT
-                                    else:
-                                        _infoBox.setText(
-                                            "Please check terminal output for Job status..\n\n"
-                                            + jobTXT
-                                        )
-                                if _tUpdateCount > _tUpdateCountTimeout:
-                                    self.client_release(
-                                        expIdx,
-                                        jobIdx,
-                                        client_socket,
-                                        params,
-                                        reason=0,
-                                    )
-                                    break
-                            else:
-                                jobERR = self.JobsMgmt.check_for_jobID_File(
-                                    jobIdx, logs_folder_path, extension="err"
-                                )
-                                _infoBox.setText(
-                                    jobIdx
-                                    + "\n"
-                                    + params["desc"]
-                                    + "\n\n"
-                                    + jobERR
-                                )
-                                self.client_release(
-                                    expIdx,
-                                    jobIdx,
-                                    client_socket,
-                                    params,
-                                    reason=0,
-                                )
-                                break
-                        except Exception as exc:
-                            print(exc.args)
-                else:
-                    self.client_release(
-                        expIdx, jobIdx, client_socket, params, reason=0
-                    )
-                    break
+
+    def cancel_job(self, expIdx, _infoBox, _cancelJobBtn):
+        # called to cancel a job
+        if self.tab_recon.confirm_dialog():
+            _cancelJobBtn.enabled = False
+            _infoBox.setText(_infoBox.getText() + "\n" + "Cancelled by User")
+            self.tab_recon.job_manager.cancel_job(expIdx)
+
+    def process_ending(self, expIdx, exit_code=0):
+        # called when the subprocess ends - can be success or fail
+        # Read reconstruction data
+        # Can be attemped even when fail return code
+        params = self.results[expIdx]
+        _infoBox: ScrollableLabel = params["table_entry_infoBox"]
+
+        showData_thread = ShowDataWorkerThread(params["output_path"])
+        showData_thread.show_data_signal.connect(self.tab_recon.show_dataset)
+        showData_thread.start()
+
+        if (
+            self.clearResults == True and exit_code == 0
+        ):  # remove processing entry when exiting without error
+            ROW_POP_QUEUE.append(expIdx)
         else:
-            # this would occur when an exception happens on the pool side before or during job submission
-            # we dont have a job ID and will update based on exp_ID/uID
-            # if job submission was not successful we can assume the client is not listening
-            # and does not require a clientRelease cmd
-            for uID in self.results.keys():
-                params = self.results[uID]["JobUNK"]
-                if params["status"] in [STATUS_errored_pool]:
-                    _infoBox = params["table_entry_infoBox"]
-                    poolERR = params["error"]
-                    _infoBox.setText(poolERR)
+            _infoBox.setText(
+                _infoBox.getText()
+                + "\n"
+                + "Process ended with return code {code}".format(
+                    code=exit_code
+                )
+            )
 
-    def client_release(self, expIdx, jobIdx, client_socket, params, reason=0):
-        # only need to release client from primary job
-        # print("clientRelease Job: {job} expIdx: {expIdx} reason:{reason}".format(job=jobIdx, expIdx=expIdx, reason=reason))
-        self.JobsMgmt.put_Job_completion_in_list(True, expIdx, jobIdx)
-        showData_thread = None
-        if params["primary"]:
-            if "show" in params:
-                if params["show"]:
-                    # Read reconstruction data
-                    showData_thread = ShowDataWorkerThread(
-                        params["output_path"]
-                    )
-                    showData_thread.show_data_signal.connect(
-                        self.tab_recon.show_dataset
-                    )
-                    showData_thread.start()
-
-            # for multi-job expID we need to check completion for all of them
-            while not self.JobsMgmt.check_all_ExpJobs_completion(expIdx):
-                time.sleep(1)
-
-            json_obj = {
-                "uID": expIdx,
-                "jID": jobIdx,
-                "command": "clientRelease",
-            }
-            json_str = json.dumps(json_obj) + "\n"
-            client_socket.send(json_str.encode())
-
-            if (
-                reason != 0
-            ):  # remove processing entry when exiting without error
-                ROW_POP_QUEUE.append(expIdx)
-            # print("FINISHED")
-
-        if self.pool is not None:
-            if self.pool._work_queue.qsize() == 0:
-                self.pool.shutdown()
-                self.pool = None
-
+        _infoBox.setText(_infoBox.getText() + "\n" + "Displaying data")
+        # Wait for show thread to finish
         if showData_thread is not None:
             while showData_thread.isRunning():
-                time.sleep(3)
+                time.sleep(1)
 
     def run_in_pool(self, params):
-        if not self.isInitialized:
-            self.initialize()
-
         self.start_pool()
+
         self.results[params["exp_id"]] = {}
-        self.results[params["exp_id"]]["JobUNK"] = params
-        self.results[params["exp_id"]]["JobUNK"][
-            "status"
-        ] = STATUS_running_pool
-        self.results[params["exp_id"]]["JobUNK"]["error"] = ""
+        self.results[params["exp_id"]] = params
 
         try:
             # when a request on the listening port arrives with an empty path
             # we can assume the processing was initiated outside this application
             # we do not proceed with the processing and will display the results
             if params["input_path"] != "":
-                f = self.pool.submit(self.run, params)
-                self.futures.append(f)
+                self.executor.submit(self.run, params)
         except Exception as exc:
-            self.results[params["exp_id"]]["JobUNK"][
-                "status"
-            ] = STATUS_errored_pool
-            self.results[params["exp_id"]]["JobUNK"]["error"] = str(
-                "\n".join(exc.args)
-            )
-            self.table_update_and_cleaup_thread()
+            self.results[params["exp_id"]]["error"] = str("\n".join(exc.args))
 
     def run_multi_in_pool(self, multi_params_as_list):
-        self.start_pool()
         for params in multi_params_as_list:
             self.results[params["exp_id"]] = {}
-            self.results[params["exp_id"]]["JobUNK"] = params
-            self.results[params["exp_id"]]["JobUNK"][
-                "status"
-            ] = STATUS_submitted_pool
-            self.results[params["exp_id"]]["JobUNK"]["error"] = ""
-        try:
-            self.pool.map(self.run, multi_params_as_list)
-        except Exception as exc:
-            for params in multi_params_as_list:
-                self.results[params["exp_id"]]["JobUNK"][
-                    "status"
-                ] = STATUS_errored_pool
-                self.results[params["exp_id"]]["JobUNK"]["error"] = str(
-                    "\n".join(exc.args)
-                )
-            self.table_update_and_cleaup_thread()
+            self.results[params["exp_id"]] = params
+
+        self.executor.map(self.run, multi_params_as_list)
 
     def get_results(self):
         return self.results
@@ -3555,73 +2844,42 @@ class MyWorker:
         # multi-processing aspects as Jobs
         if params["exp_id"] not in self.results.keys():
             self.results[params["exp_id"]] = {}
-            self.results[params["exp_id"]]["JobUNK"] = params
-            self.results[params["exp_id"]]["JobUNK"]["error"] = ""
-            self.results[params["exp_id"]]["JobUNK"][
-                "status"
-            ] = STATUS_running_pool
+            self.results[params["exp_id"]] = params
 
-        try:
-            # does need further threading ? probably not !
-            thread = threading.Thread(
-                target=self.run_in_subprocess, args=(params,)
-            )
-            thread.start()
-
-        except Exception as exc:
-            self.results[params["exp_id"]]["JobUNK"][
-                "status"
-            ] = STATUS_errored_pool
-            self.results[params["exp_id"]]["JobUNK"]["error"] = str(
-                "\n".join(exc.args)
-            )
-            self.table_update_and_cleaup_thread()
+        self.run_in_subprocess(params)
 
     def run_in_subprocess(self, params):
-        """function that initiates the processing on the CLI"""
+        """function that initiates the processing on the CLI in subprocess"""
         try:
             input_path = str(params["input_path"])
             config_path = str(params["config_path"])
             output_path = str(params["output_path"])
             uid = str(params["exp_id"])
-            rx = str(params["rx"])
-            mainfp = str(jobs_mgmt.FILE_PATH)
 
-            self.results[params["exp_id"]]["JobUNK"][
-                "status"
-            ] = STATUS_submitted_job
+            cmd = [
+                "waveorder",
+                "reconstruct",
+                "-i",
+                input_path,
+                "-c",
+                config_path,
+                "-o",
+                output_path,
+                "-uid",
+                uid,
+            ]
 
-            proc = subprocess.run(
-                [
-                    "python",
-                    mainfp,
-                    "reconstruct",
-                    "-i",
-                    input_path,
-                    "-c",
-                    config_path,
-                    "-o",
-                    output_path,
-                    "-rx",
-                    str(rx),
-                    "-uid",
-                    uid,
-                ]
+            self.tab_recon.job_manager.run_job(
+                params["exp_id"],
+                cmd,
+                self.table_update_and_cleaup_thread,
+                self.process_ending,
             )
-            self.results[params["exp_id"]]["JobUNK"]["proc"] = proc
-            if proc.returncode != 0:
-                raise Exception(
-                    "An error occurred in processing ! Check terminal output."
-                )
 
         except Exception as exc:
-            self.results[params["exp_id"]]["JobUNK"][
-                "status"
-            ] = STATUS_errored_pool
-            self.results[params["exp_id"]]["JobUNK"]["error"] = str(
-                "\n".join(exc.args)
+            self.results[params["exp_id"]]["error"] = (
+                str(" ".join(cmd)) + "\n" + str("\n".join(exc.args))
             )
-            self.table_update_and_cleaup_thread()
 
 
 class ShowDataWorkerThread(QThread):
@@ -3809,6 +3067,9 @@ class ScrollableLabel(QScrollArea):
     def setText(self, text):
         self.label.setText(text)
 
+    def getText(self):
+        return self.label.text()
+
 
 class MyWidget(QWidget):
     resized = Signal()
@@ -3824,7 +3085,9 @@ class MyWidget(QWidget):
 class CollapsibleBox(QWidget):
     """A collapsible widget"""
 
-    def __init__(self, title="", parent=None, hasPydanticModel=False):
+    def __init__(
+        self, title="", parent=None, hasPydanticModel=False, expanded=False
+    ):
         super(CollapsibleBox, self).__init__(parent)
 
         self.hasPydanticModel = hasPydanticModel
@@ -3861,11 +3124,12 @@ class CollapsibleBox(QWidget):
         self.toggle_animation.addAnimation(
             QtCore.QPropertyAnimation(self.content_area, b"maximumHeight")
         )
+        if expanded:
+            self.on_pressed()
 
     def setNewName(self, name):
         self.toggle_button.setText(name)
 
-    # @QtCore.pyqtSlot()
     def on_pressed(self):
         checked = self.toggle_button.isChecked()
         self.toggle_button.setArrowType(
