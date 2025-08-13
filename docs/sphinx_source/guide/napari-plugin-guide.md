@@ -14,14 +14,14 @@ napari -w waveorder
 ## Connect to Micro-Manager
 Click “Connect to MM”. If the connection succeeds, proceed to calibration. If not, revisit the [microscope installation guide](./microscope-installation-guide.md).
 
-![](./images/connect_to_mm.png)
+![](../_static/images/connect_to_mm.png)
 
 For polarization imaging, start with the **Calibration** tab. For phase-from-brightfield imaging, you can skip the calibration and go to the **Aquisition / Reconstruction** tab.
 
 ## Calibration tab
 The first step in the acquisition process is to calibrate the liquid crystals and measure a background. In the `waveorder` plugin you will see the following options for controlling the calibration:
 
-![](./images/run_calib.png)
+![](../_static/images/run_calib.png)
 
 
 ### Prepare for a calibration
@@ -50,7 +50,7 @@ The progress bar will show the progress of calibration, and it should take less 
 
 The plot shows the intensities over time during calibration. One way to diagnose an in-progress calibration is to watch the intensity plot. An ideal plot will look similar to the following:
 
-![](./images/ideal_plot.png)
+![](../_static/images/ideal_plot.png)
 
 Once finished, you will get a calibration assessment and an extinction value. The extinction value gives you a metric for calibration quality: the higher the extinction, the cleaner the light path and the greater the sensitivity of QLIPP.
 
@@ -78,7 +78,7 @@ This feature is useful for checking if a new region of your sample requires a re
 
 The **Capture Background** button will acquire several images under each of the calibrated polarization states, average them (we recommend 5), save them to specified **Background Folder Name** within the main **Directory**, then display the result in napari layers.
 
-![](./images/cap_bg.png)
+![](../_static/images/cap_bg.png)
 
 It is normal to see background retardance and orientation. We will use these background images to correct the data we collect our acquisitions of the sample.
 
@@ -89,14 +89,14 @@ The advanced tab gives the user a log output which can be useful for debugging p
 This acquisition tab is designed to acquire and reconstruct single volumes of both phase and birefringence measurements to allow the user to test their calibration and background. We recommend this tab for quick testing and the Micro-Manager MDA acquisition for high-throughput data collection.
 
 ### Acquire Buttons
-![](./images/acquire_buttons.png)
+![](../_static/images/acquire_buttons.png)
 
 The **Retardance + Orientation**, **Phase From BF**, and **Retardance + Orientation + Phase** buttons set off Micro-Manager acquisitions that use the upcoming acquisition settings. After the acquisition is complete, these routines will set off `waveorder` reconstructions that estimate the named parameters.
 
 The **STOP** button will end the acquisition as soon as possible, though Micro-Manager acquisitions cannot always be interrupted.
 
 ### Acquisition Settings
-![](./images/acquisition_settings.png)
+![](../_static/images/acquisition_settings.png)
 
 The **Acquisition Mode** sets the target dimensions for the reconstruction. Perhaps surprisingly, all 2D reconstructions require 3D data except for **Retardance + Orientation** in **2D Acquisition Mode**. The following table summarizes the data that will be acquired when an acquisition button is pressed in **2D** and **3D** acquisition modes:
 
@@ -117,7 +117,7 @@ For example, to image a 20 um thick cell the user would focus in the middle of t
 For phase reconstruction, the stack should have about two depths-of-focus above and below the edges of the sample because the reconstruction algorithm uses defocus information to more accurately reconstruct phase.
 
 ### General Reconstruction Settings
-![](./images/general_reconstruction_settings.png)
+![](../_static/images/general_reconstruction_settings.png)
 
 The **Save Directory** and **Save Name** are where the acquired data (`<save_dir>/<save_name>_snap_<n>/raw_data.zarr`) and reconstructions (`<save_dir>/<save_name>_snap_<n>/reconstruction.zarr`) will be saved.
 
@@ -141,7 +141,7 @@ The remaining parameters are used by the reconstructions:
 * **Invert Phase Contrast**: inverts the phase reconstruction's contrast by flipping the positive and negative directions of the stage during the reconstruction, and saves the result
 
 ### Phase Reconstruction Settings
-![](./images/phase_reconstruction_settings.png)
+![](../_static/images/phase_reconstruction_settings.png)
 
 These parameters are used only by phase reconstructions
 
@@ -153,7 +153,7 @@ The acquired data will then be displayed in napari layers. Note that phase recon
 
 Examples of acquiring 2D birefringence data (kidney tissue) with this snap method are below:
 
-![](./images/acq_finished.png)
+![](../_static/images/acq_finished.png)
 
 ### Recreating reconstructions
 `waveorder`'s GUI acquires data from Micro-Manager, reads the GUI to generate a configuration file, then uses a CLI to reconstruct the acquired data with the configuration file, which makes all reconstructions exactly reproducible via a CLI. See the terminal that started napari for a log of the exact CLI commands that will reproduce the results in the napari window.
@@ -163,23 +163,23 @@ See the [reconstruction guide](./reconstruction-guide.md) for CLI usage instruct
 ## Reconstruction Tab
 The **Reconstruction** tab is designed to reconstruct `birefriengence, phase, birefrignence with phase, and fluorescence` datasets that have been either acquired or coverted to `.zarr` store as well as acquisitions that are in progress.
 
-![](./images/reconstruction_data.png)
+![](../_static/images/reconstruction_data.png)
 
 The **Input Store** and **Output Directory** point to the input and output `.zarr` data locations. Once an Input Store is selected some metadata parameters can be viewed by hovering the cursor over the `info label` ⓘ.
 
-![](./images/reconstruction_models.png)
+![](../_static/images/reconstruction_models.png)
 
 A `Model` defines the reconstruction parameters. Multiple models can be run against a dataset with varying parameters. The model generates a configuration file `.yml`, then uses the CLI to reconstruct the data with the configuration file, which makes all reconstructions exactly reproducible via a CLI.
 * **New**: Builds a model based on the `Checkbox` selection.
 * **Load**: Allows a model to be imported using a previous reconstruction `.yml` file.
 * **Clear**: This will clear all defined models.
 
-![](./images/reconstruction_birefriengence.png)
+![](../_static/images/reconstruction_birefriengence.png)
 
 Once a `New` model is built, it is pre-populated with default values that can be accessed by clicking on the ► icon and the parameters can be changed as required.
 See the [reconstruction guide](./reconstruction-guide.md) for further information on the parameters.
 
-![](./images/reconstruction_queue.png)
+![](../_static/images/reconstruction_queue.png)
 
 Once the **RUN** button is triggered, the reconstruction will proceed based on the defined model(s) concurrently.
 
@@ -195,10 +195,10 @@ When an **Orientation*** layer appears at the top of the layers list, `waveorder
 
 If the **Orientation*** layer has a matching **Retardance*** layer in the layer list, a **BirefringenceOverlay*** layer that only shows orientation colors in regions with large retardance is generated. This overlay is computed lazily (when the slider moves), and this computation can be turned off by hiding the layer (eyeball in the layer list).
 
-![](./images/overlay.png)
+![](../_static/images/overlay.png)
 
 If the **BirefringenceOverlay*** needs to be regenerated, an **Orientation*** layer can be dragged to the top of the layer list:
-![](./images/no-overlay.png)
+![](../_static/images/no-overlay.png)
 
 The **Visualization** tab shows the mapping between HSV colors and the orientation, and the **Overlay Retardance Maximum** slider controls the mapping between retardance values and saturated colors in the overlay.
-![](./images/overlay-demo.png)
+![](../_static/images/overlay-demo.png)
