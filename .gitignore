@@ -2,7 +2,7 @@
 *.tif[f]
 *.jp[e]g
 *.zar[r]
-# *.json
+*.json
 
 # pycharm IDE
 .idea
@@ -148,7 +148,7 @@ waveorder/_version.py
 
 # images
 *.npz
-# *.png
+*.png
 *.tif[f]
 *.pdf
 
