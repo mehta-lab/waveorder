@@ -1,6 +1,6 @@
 """
-Overview
---------
+Stokes Overview
+================
 
 This module collects Stokes- and Mueller-related calculations.
 
@@ -20,7 +20,7 @@ retardance, orientation, transmittance = estimate_ar_from_stokes012(s0, s1, s2, 
 
 4) A function for recovering Mueller matrices from Stokes vector
 M = mueller_from_stokes(
-    s0, s1, s2, s3, model="ar", direction="forward", input="cpl"
+s0, s1, s2, s3, model="ar", direction="forward", input="cpl"
 )
 
 5) A convenience function for applying Mueller and instrument matrices

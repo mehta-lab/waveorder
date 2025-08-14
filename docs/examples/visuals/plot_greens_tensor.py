@@ -1,3 +1,9 @@
+"""
+Plot green tensors
+==================
+Plot green tensors summary
+"""
+
 import os
 
 import napari

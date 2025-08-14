@@ -57,11 +57,10 @@ myst_enable_extensions = [
 ]
 
 myst_file_suffixes = [".md"]
+# myst_all_links_external = True
 
 # default url is a dummy for local build
-html_baseurl = os.environ.get(
-    "GITHUB_PAGES_URL", f"/build/html/"
-)
+html_baseurl = os.environ.get("GITHUB_PAGES_URL", f"/build/html/")
 sitemap_locales = ["en"]
 sitemap_url_scheme = "{link}"
 
@@ -72,9 +71,10 @@ numpydoc_show_class_members = True
 
 # The suffix of source filenames.
 source_suffix = {
-        '.rst': 'restructuredtext',
-        '.yml': 'yaml',
-    }
+    ".rst": "restructuredtext",
+    ".yml": "yaml",
+    ".md": "markdown",
+}
 
 # The encoding of source files.
 # source_encoding = 'utf-8-sig'
@@ -173,15 +173,15 @@ html_title = "waveorder"
 # pixels large.
 # emoji favicon code adapted from:
 # https://twitter.com/LeaVerou/status/1241619866475474946
-html_favicon = '_static/waveorder.ico'
+html_favicon = "_static/waveorder.ico"
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
 html_css_files = [
-        'css/custom.css',  # Adjust path if your CSS is in a subdirectory
-    ]
+    "css/custom.css",  # Adjust path if your CSS is in a subdirectory
+]
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
 # html_last_updated_fmt = '%b %d, %Y'

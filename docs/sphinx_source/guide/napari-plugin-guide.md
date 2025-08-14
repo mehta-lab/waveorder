@@ -161,7 +161,7 @@ Examples of acquiring 2D birefringence data (kidney tissue) with this snap metho
 See the [reconstruction guide](./reconstruction-guide.md) for CLI usage instructions.
 
 ## Reconstruction Tab
-The **Reconstruction** tab is designed to reconstruct `birefriengence, phase, birefrignence with phase, and fluorescence` datasets that have been either acquired or coverted to `.zarr` store as well as acquisitions that are in progress.
+The **Reconstruction** tab is designed to reconstruct `birefriengence, phase, birefrignence with phase, and flurescenece` datasets that have been either acquired or coverted to `.zarr` store as well as acquisitions that are in progress.
 
 ![](../_static/images/reconstruction_data.png)
 
