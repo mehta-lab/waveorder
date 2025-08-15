@@ -1,5 +1,10 @@
+""" 
+Reconstruction of 3D uPTI
+===========================================================
+Reconstruction of 3D uPTI
+"""
 ####################################################################
-# The reconstruction of 2D uPTI                                    #
+# The reconstruction of 3D uPTI                                    #
 # This reconstruction is based on the uPTI paper                   #
 # (https://www.biorxiv.org/content/10.1101/2020.12.15.422951v1)    #
 #  ```L.-H. Yeh, I. E. Ivanov, B. B. Chhun, S.-M. Guo, E. Hashemi, #

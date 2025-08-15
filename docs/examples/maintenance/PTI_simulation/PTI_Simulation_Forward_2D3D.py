@@ -1,3 +1,8 @@
+""" 
+Forward simulation of uniaxial permittivity tensor imaging
+===========================================================
+Forward simulation of uniaxial permittivity tensor imaging
+"""
 ####################################################################
 # Forward simulation of uniaxial permittivity tensor imaging (uPTI)#
 # This simulation is based on the uPTI paper                       #

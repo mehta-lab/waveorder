@@ -1,0 +1,4 @@
+blockquote {
+	background-color: var(--pst-color-background);
+	border-left: none;
+}
