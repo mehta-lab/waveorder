@@ -1104,6 +1104,7 @@ class MainWidget(QWidget):
                     name=name,
                     rgb=True,
                     scale=scale,
+                    cache=False,
                 )
             else:
                 self.viewer.add_image(
@@ -1111,6 +1112,7 @@ class MainWidget(QWidget):
                     name=name,
                     colormap=cmap,
                     scale=scale,
+                    cache=False,
                 )
 
     @Slot(tuple)

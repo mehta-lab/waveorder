@@ -76,6 +76,10 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
             # channel_names.append("Absorption2D")
         elif recon_dim == 3:
             channel_names.append("Phase3D")
+    if recon_biref and recon_phase:
+        channel_names.append("Retardance_Joint_Decon")
+        channel_names.append("Orientation_Joint_Decon")
+        channel_names.append("Phase_Joint_Decon")
     if recon_fluo:
         fluor_name = settings.input_channel_names[0]
         if recon_dim == 2:
