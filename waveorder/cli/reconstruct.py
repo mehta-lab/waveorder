@@ -13,6 +13,7 @@ from waveorder.cli.parsing import (
     input_position_dirpaths,
     output_dirpath,
     processes_option,
+    unique_id,
 )
 
 
@@ -21,11 +22,13 @@ from waveorder.cli.parsing import (
 @config_filepath()
 @output_dirpath()
 @processes_option(default=1)
+@unique_id()
 def _reconstruct_cli(
     input_position_dirpaths,
     config_filepath,
     output_dirpath,
     num_processes,
+    unique_id,
 ):
     """
     Reconstruct a dataset using a configuration file. This is a

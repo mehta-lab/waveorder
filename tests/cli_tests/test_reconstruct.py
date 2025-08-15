@@ -140,6 +140,7 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
     utils.model_to_yaml(fluor_settings, fluor_config_path)
 
     # Apply birefringence reconstruction
+
     runner = CliRunner()
     runner.invoke(
         cli,
@@ -151,14 +152,17 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
             str(biref_config_path),
             "-o",
             str(output_path),
+            "-uid",
+            str("birefringence_reconstruction"),
         ],
         catch_exceptions=False,
     )
+
     assert output_path.exists()
     with open_ome_zarr(output_path) as dataset:
         assert dataset["0/0/0"]["0"].shape[1] == 4
 
-    # Append fluoresncence reconstruction
+    # Append fluorescence reconstruction
     runner.invoke(
         cli,
         [
@@ -169,10 +173,14 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
             str(fluor_config_path),
             "-o",
             str(output_path),
+            "-uid",
+            str("fluorescence_reconstruction"),
         ],
         catch_exceptions=False,
     )
+
     assert output_path.exists()
+
     with open_ome_zarr(output_path) as dataset:
         assert dataset["0/0/0"]["0"].shape[1] == 5
         assert dataset.channel_names[-1] == "GFP_Density3D"
