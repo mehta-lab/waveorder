@@ -2,6 +2,7 @@
 
 
 import os
+import re
 
 # Add any Sphinx extension module names, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
@@ -57,7 +58,7 @@ myst_enable_extensions = [
 ]
 
 myst_file_suffixes = [".md"]
-# myst_all_links_external = True
+myst_all_links_external = True
 
 # default url is a dummy for local build
 html_baseurl = os.environ.get("GITHUB_PAGES_URL", f"/build/html/")
@@ -237,3 +238,14 @@ sphinx_gallery_conf = {
     "min_reported_time": 2,
     "show_signature": False,
 }
+
+
+def setup(app):
+    app.connect("source-read", transform_md_links)
+
+
+def transform_md_links(app, docname, source):
+    content = source[0]
+    # Transform .md links to .html for Sphinx build
+    content = re.sub(r"\]\(([^)#]+?)\.md(#[^)]+)?\)", r"](\1.html\2)", content)
+    source[0] = content
