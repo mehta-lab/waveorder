@@ -12,7 +12,7 @@ Launch `napari` with `waveorder`
 napari -w waveorder
 ```
 ## Connect to Micro-Manager
-Click “Connect to MM”. If the connection succeeds, proceed to calibration. If not, revisit the [microscope installation guide](./microscope-installation-guide.md).
+Click "Connect to MM". If the connection succeeds, proceed to calibration. If not, revisit the [microscope installation guide](microscope-installation-guide.md).
 
 ![](../_static/images/connect_to_mm.png)
 
@@ -35,7 +35,7 @@ Choose a **Swing** based on the anisotropy of your sample. We recommend
 * ​Tissue Imaging: `swing = 0.1 - 0.05`
 * Live or fixed Cells: `swing = 0.05 – 0.03`
 
-We recommend starting with a swing of **0.1** for tissue samples and **0.05** for cells then reducing the swing to measure smaller structures. See the [calibration guide](./calibration-guide.md) for more information about this parameter and the calibration process.
+We recommend starting with a swing of **0.1** for tissue samples and **0.05** for cells then reducing the swing to measure smaller structures. See the [calibration guide](calibration-guide.md) for more information about this parameter and the calibration process.
 
 Choose an **Illumination Scheme** to decides how many polarization states you will calibrate and use. We recommend starting with the *4-State (Ext, 0, 60, 120)* scheme as it requires one less illumination state than the *5-State* scheme.
 
@@ -62,7 +62,7 @@ Once finished, you will get a calibration assessment and an extinction value. Th
 
 * **Extinction 200+**: Excellent. Indicates a very well-aligned and clean light path and high sensitivity of the system.
 
-For a deeper discussion of the calibration procedure, swing, and the extinction ratio, see the [calibration guide](./calibration-guide.md).
+For a deeper discussion of the calibration procedure, swing, and the extinction ratio, see the [calibration guide](calibration-guide.md).
 
 ### Optional: Load Calibration
 The **Load Calibration** button allows earlier calibrations to be reused. Select a *polarization_calibration.txt* file and Micro-Manager's presets will be updated with these settings. `waveorder` will also collect a few images to update the extinction ratio to reflect the current condition of the light path. Once this short acquisition has finished, the user can acquire data as normal.
@@ -158,7 +158,7 @@ Examples of acquiring 2D birefringence data (kidney tissue) with this snap metho
 ### Recreating reconstructions
 `waveorder`'s GUI acquires data from Micro-Manager, reads the GUI to generate a configuration file, then uses a CLI to reconstruct the acquired data with the configuration file, which makes all reconstructions exactly reproducible via a CLI. See the terminal that started napari for a log of the exact CLI commands that will reproduce the results in the napari window.
 
-See the [reconstruction guide](./reconstruction-guide.md) for CLI usage instructions.
+See the [reconstruction guide](reconstruction-guide.md) for CLI usage instructions.
 
 ## Reconstruction Tab
 The **Reconstruction** tab is designed to reconstruct `birefriengence, phase, birefrignence with phase, and flurescenece` datasets that have been either acquired or coverted to `.zarr` store as well as acquisitions that are in progress.
@@ -177,7 +177,7 @@ A `Model` defines the reconstruction parameters. Multiple models can be run agai
 ![](../_static/images/reconstruction_birefriengence.png)
 
 Once a `New` model is built, it is pre-populated with default values that can be accessed by clicking on the ► icon and the parameters can be changed as required.
-See the [reconstruction guide](./reconstruction-guide.md) for further information on the parameters.
+See the [reconstruction guide](reconstruction-guide.md) for further information on the parameters.
 
 ![](../_static/images/reconstruction_queue.png)
 
