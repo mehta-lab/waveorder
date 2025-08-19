@@ -66,12 +66,15 @@ Documentation infrastructure is built using [Markdown (.md)](https://www.sphinx-
 
 #### Building the HTML version locally
 
-Inside `/docs` folder
+```sh
+cd waveorder/ # or the renamed project root directory
+pip install -e ".[docs]"
+```
 
 ```shell
+cd docs/
 pip install sphinx
-pip install -r ./sphinx_source/requirements.txt
-sphinx-build -M html ./sphinx_source ./build
+sphinx-build -M html ./ ./build
 ```
 
 Generated HTML documentation can be found in the ``build/html`` directory. Open ``build/html/index.html`` to view the home page for the documentation.
