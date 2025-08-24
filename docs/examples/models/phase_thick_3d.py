@@ -1,7 +1,12 @@
+"""
+phase thick 3d
+======================
+
 # 3D partially coherent optical diffraction tomography (ODT) simulation
 # J. M. Soto, J. A. Rodrigo, and T. Alieva, "Label-free quantitative
 # 3D tomographic imaging for partially coherent light microscopy," Opt. Express
 # 25, 15699-15712 (2017)
+"""
 
 import napari
 import numpy as np

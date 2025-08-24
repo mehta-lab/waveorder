@@ -78,6 +78,19 @@ dev = [
   "pytest>=5.0.0",
   "tox",
 ]
+docs = [
+  "sphinx_copybutton",
+  "sphinxcontrib-video",
+  "myst_parser",
+  "sphinx_mdinclude",
+  "linkify-it-py",
+  "numpydoc",
+  "sphinx_sitemap",
+  "sphinx_gallery",
+  "pydata_sphinx_theme",
+  "matplotlib",
+  "importlib_metadata",
+]
 
 [project.urls]
 Homepage = "https://github.com/mehta-lab/waveorder"

@@ -1,3 +1,8 @@
+""" 
+Reconstruction of 2D uPTI
+===========================================================
+Reconstruction of 2D uPTI
+"""
 ####################################################################
 # The reconstruction of 2D uPTI                                    #
 # This reconstruction is based on the uPTI paper                   #

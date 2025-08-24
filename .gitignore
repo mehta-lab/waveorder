@@ -2,7 +2,6 @@
 *.tif[f]
 *.jp[e]g
 *.zar[r]
-*.json
 
 # pycharm IDE
 .idea
@@ -19,6 +18,8 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+docs/build/
+docs/wo_examples/
 develop-eggs/
 dist/
 downloads/
@@ -148,7 +149,6 @@ waveorder/_version.py
 
 # images
 *.npz
-*.png
 *.tif[f]
 *.pdf
 
