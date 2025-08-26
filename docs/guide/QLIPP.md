@@ -17,7 +17,7 @@ For phase-from-defocus or fluorescence deconvolution methods, the universal pola
 
 The overall structure of `waveorder` is shown in Panel B, highlighting the structure of the graphical user interface (GUI) through a napari plugin and the command-line interface (CLI) that allows users to perform reconstructions.
 
-![Flow Chart](./images/waveorder_Fig1_Overview.png)
+![Flow Chart](../_static/images/waveorder_Fig1_Overview.png)
 
 ## Software Quick Start
 
