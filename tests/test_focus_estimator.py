@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import torch
 
 from waveorder import focus
 
@@ -85,3 +86,73 @@ def test_focus_estimator_snr(tmp_path):
         assert plot_path.exists()
         if slice is not None:
             assert np.abs(slice - 10) <= 2
+
+
+def test_compute_midband_power():
+    """Test the compute_midband_power function with torch tensors."""
+    # Test parameters
+    ps = 6.5 / 100
+    lambda_ill = 0.532
+    NA_det = 1.4
+    midband_fractions = (0.125, 0.25)
+
+    # Create test data
+    np.random.seed(42)
+    test_2d_np = np.random.random((64, 64)).astype(np.float32)
+    test_2d_torch = torch.from_numpy(test_2d_np)
+
+    # Test the compute_midband_power function
+    result = focus.compute_midband_power(
+        test_2d_torch, NA_det, lambda_ill, ps, midband_fractions
+    )
+
+    # Check result properties
+    assert isinstance(result, torch.Tensor)
+    assert result.shape == torch.Size([])  # scalar tensor
+    assert result.item() > 0  # should be positive
+
+    # Test with different midband fractions
+    result2 = focus.compute_midband_power(
+        test_2d_torch, NA_det, lambda_ill, ps, (0.1, 0.3)
+    )
+    assert isinstance(result2, torch.Tensor)
+    assert result2.item() > 0
+
+    # Results should be different for different bands
+    assert abs(result.item() - result2.item()) > 1e-6
+
+
+def test_compute_midband_power_consistency():
+    """Test that compute_midband_power is consistent with focus_from_transverse_band."""
+    # Test parameters
+    ps = 6.5 / 100
+    lambda_ill = 0.532
+    NA_det = 1.4
+    midband_fractions = (0.125, 0.25)
+
+    # Create 3D test data
+    np.random.seed(42)
+    test_3d = np.random.random((3, 32, 32)).astype(np.float32)
+
+    # Test focus_from_transverse_band still works
+    focus_slice = focus.focus_from_transverse_band(
+        test_3d, NA_det, lambda_ill, ps, midband_fractions
+    )
+
+    assert isinstance(focus_slice, (int, np.integer))
+    assert 0 <= focus_slice < test_3d.shape[0]
+
+    # Manually compute midband power for each slice
+    manual_powers = []
+    for z in range(test_3d.shape[0]):
+        power = focus.compute_midband_power(
+            torch.from_numpy(test_3d[z]),
+            NA_det,
+            lambda_ill,
+            ps,
+            midband_fractions,
+        )
+        manual_powers.append(power.item())
+
+    expected_focus_slice = np.argmax(manual_powers)
+    assert focus_slice == expected_focus_slice

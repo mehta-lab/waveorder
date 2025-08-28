@@ -3,9 +3,51 @@ from typing import Literal, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from scipy.signal import peak_widths
 
 from waveorder import util
+
+
+def compute_midband_power(
+    yx_array: torch.Tensor,
+    NA_det: float,
+    lambda_ill: float,
+    pixel_size: float,
+    midband_fractions: tuple[float, float] = (0.125, 0.25),
+) -> torch.Tensor:
+    """Compute midband spatial frequency power by summing over a 2D midband donut.
+
+    Parameters
+    ----------
+    yx_array : torch.Tensor
+        2D tensor in (Y, X) order.
+    NA_det : float
+        Detection NA.
+    lambda_ill : float
+        Illumination wavelength.
+        Units are arbitrary, but must match [pixel_size].
+    pixel_size : float
+        Object-space pixel size = camera pixel size / magnification.
+        Units are arbitrary, but must match [lambda_ill].
+    midband_fractions : tuple[float, float], optional
+        The minimum and maximum fraction of the cutoff frequency that define the midband.
+        Default is (0.125, 0.25).
+
+    Returns
+    -------
+    torch.Tensor
+        Sum of absolute FFT values in the midband region.
+    """
+    _, _, fxx, fyy = util.gen_coordinate(yx_array.shape, pixel_size)
+    frr = torch.tensor(np.sqrt(fxx**2 + fyy**2))
+    xy_abs_fft = torch.abs(torch.fft.fftn(yx_array))
+    cutoff = 2 * NA_det / lambda_ill
+    mask = torch.logical_and(
+        frr > cutoff * midband_fractions[0],
+        frr < cutoff * midband_fractions[1],
+    )
+    return torch.sum(xy_abs_fft[mask])
 
 
 def focus_from_transverse_band(
@@ -79,23 +121,19 @@ def focus_from_transverse_band(
         )
         return 0
 
-    # Calculate coordinates
-    _, Y, X = zyx_array.shape
-    _, _, fxx, fyy = util.gen_coordinate((Y, X), pixel_size)
-    frr = np.sqrt(fxx**2 + fyy**2)
-
-    # Calculate fft
-    xy_abs_fft = np.abs(np.fft.fftn(zyx_array, axes=(1, 2)))
-
-    # Calculate midband mask
-    cutoff = 2 * NA_det / lambda_ill
-    midband_mask = np.logical_and(
-        frr > cutoff * midband_fractions[0],
-        frr < cutoff * midband_fractions[1],
+    # Calculate midband power for each slice
+    midband_sum = np.array(
+        [
+            compute_midband_power(
+                torch.from_numpy(zyx_array[z]),
+                NA_det,
+                lambda_ill,
+                pixel_size,
+                midband_fractions,
+            ).numpy()
+            for z in range(zyx_array.shape[0])
+        ]
     )
-
-    # Find slice index with min/max power in midband
-    midband_sum = np.sum(xy_abs_fft[:, midband_mask], axis=1)
 
     if polynomial_fit_order is None:
         peak_index = minmaxfunc(midband_sum)
