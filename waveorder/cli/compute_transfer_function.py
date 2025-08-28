@@ -15,6 +15,7 @@ from waveorder.cli.settings import ReconstructionSettings
 from waveorder.io import utils
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
+    inplane_oriented_thick_pol3d_vector,
     isotropic_fluorescent_thick_3d,
     isotropic_thin_3d,
     phase_thick_3d,
@@ -35,6 +36,76 @@ def _position_list_from_shape_scale_offset(
     [1.5, 1.0, 0.5, 0.0]
     """
     return list((-np.arange(shape) + (shape // 2) + offset) * scale)
+
+
+def generate_and_save_vector_birefringence_transfer_function(
+    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple
+):
+    """Generates and saves the vector birefringence transfer function
+    to the dataset, based on the settings.
+
+    Parameters
+    ----------
+    settings : ReconstructionSettings
+    dataset : NGFF Node
+        The dataset that will be updated.
+    zyx_shape : tuple
+        A tuple of integers specifying the input data's shape in (Z, Y, X) order
+    """
+    echo_headline(
+        "Generating vector birefringence transfer function with settings:"
+    )
+    echo_settings(settings.birefringence.transfer_function)
+    echo_settings(settings.phase.transfer_function)
+
+    num_elements = np.array(zyx_shape).prod()
+    max_tf_elements = 1e7  # empirical, based on memory usage
+    transverse_downsample_factor = np.ceil(
+        np.sqrt(num_elements / max_tf_elements)
+    )
+    echo_headline(
+        f"Downsampling transfer function in X and Y by {transverse_downsample_factor}x"
+    )
+    phase_settings_dict = settings.phase.transfer_function.dict()
+    phase_settings_dict.pop("z_focus_offset")  # not used in 3D
+
+    sfZYX_transfer_function, _, singular_system = (
+        inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
+            zyx_shape=zyx_shape,
+            scheme=str(len(settings.input_channel_names)) + "-State",
+            **settings.birefringence.transfer_function.dict(),
+            **phase_settings_dict,
+            fourier_oversample_factor=int(transverse_downsample_factor),
+        )
+    )
+
+    U, S, Vh = singular_system
+    chunks = (1, 1, 1, zyx_shape[1], zyx_shape[2])
+
+    # Add dummy channels
+    for i in range(3):
+        dataset.append_channel(f"ch{i}")
+
+    dataset.create_image(
+        "vector_transfer_function",
+        sfZYX_transfer_function.cpu().numpy(),
+        chunks=chunks,
+    )
+    dataset.create_image(
+        "vector_singular_system_U",
+        U.cpu().numpy(),
+        chunks=chunks,
+    )
+    dataset.create_image(
+        "vector_singular_system_S",
+        S[None].cpu().numpy(),
+        chunks=chunks,
+    )
+    dataset.create_image(
+        "vector_singular_system_Vh",
+        Vh.cpu().numpy(),
+        chunks=chunks,
+    )
 
 
 def generate_and_save_birefringence_transfer_function(settings, dataset):
@@ -269,6 +340,10 @@ def compute_transfer_function_cli(
         )
     if settings.fluorescence is not None:
         generate_and_save_fluorescence_transfer_function(
+            settings, output_dataset, zyx_shape
+        )
+    if settings.birefringence is not None and settings.phase is not None:
+        generate_and_save_vector_birefringence_transfer_function(
             settings, output_dataset, zyx_shape
         )
 

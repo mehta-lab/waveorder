@@ -3124,6 +3124,17 @@ class CollapsibleBox(QWidget):
         self.toggle_animation.addAnimation(
             QtCore.QPropertyAnimation(self.content_area, b"maximumHeight")
         )
+        collapsed_height = (
+            self.sizeHint().height() - self.content_area.maximumHeight()
+        )
+
+        content_height = lay.sizeHint().height()
+        for i in range(self.toggle_animation.animationCount()):
+            animation = self.toggle_animation.animationAt(i)
+            animation.setDuration(500)
+            animation.setStartValue(collapsed_height)
+            animation.setEndValue(collapsed_height + content_height)
+
         if expanded:
             self.on_pressed()
 
