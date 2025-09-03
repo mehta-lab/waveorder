@@ -74,7 +74,6 @@ def apply_filter_bank(
         )
 
     num_input_channels, num_output_channels = io_filter_bank.shape[:2]
-    spatial_dims = io_filter_bank.shape[2:]
 
     # Pad input_array until each dimension is divisible by transfer_function
     pad_sizes = [
@@ -98,7 +97,7 @@ def apply_filter_bank(
     # Further optimization is likely with a combination of
     # torch.baddbmm, torch.pixel_shuffle, torch.pixel_unshuffle.
     padded_output_spectrum = torch.zeros(
-        (num_output_channels,) + spatial_dims,
+        (num_output_channels,) + padded_input_spectrum.shape[1:],
         dtype=padded_input_spectrum.dtype,
         device=padded_input_spectrum.device,
     )
