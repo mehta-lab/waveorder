@@ -1,6 +1,9 @@
 name: test
 
-on: [push]
+on:
+  push:
+    # branches: [main]  # uncomment if branch-PRs are causing dual triggers
+  pull_request:
 
 jobs:
   test:
