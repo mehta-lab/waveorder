@@ -3,9 +3,17 @@ import os
 import numpy as np
 import pytest
 import torch
+import sys
+
 from iohub.ngff import open_ome_zarr
 
 from waveorder.cli import settings
+
+# conftest.py
+# Workaround for napari bug on macOS GitHub Actions:
+# napari._qt.qt_event_loop.get_qapp() assumes sys.argv[0] is a string,
+# but in CI it can be a pathlib.PosixPath. Coerce everything to str.
+sys.argv = [str(a) for a in sys.argv]
 
 
 def device_params():
