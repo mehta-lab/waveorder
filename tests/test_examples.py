@@ -1,5 +1,6 @@
 import runpy
 from pathlib import Path
+import sys
 from unittest.mock import patch
 
 import matplotlib.pyplot as plt
@@ -33,3 +34,6 @@ def test_examples(example):
         runpy.run_path(example, run_name="__main__")
 
     plt.close("all")
+    if napari := sys.modules.get("napari"):
+        if viewer := napari.current_viewer():
+            viewer.close()
