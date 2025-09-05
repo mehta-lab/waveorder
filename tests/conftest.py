@@ -15,6 +15,13 @@ from waveorder.cli import settings
 # but in CI it can be a pathlib.PosixPath. Coerce everything to str.
 sys.argv = [str(a) for a in sys.argv]
 
+# Additional macOS CI workarounds
+if os.getenv("GITHUB_ACTIONS") == "true" and sys.platform == "darwin":
+    # Set Qt backend to avoid GUI issues on macOS CI
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    # Disable napari viewer if needed
+    os.environ.setdefault("NAPARI_DISABLE_FULLSCREEN", "1")
+
 
 def device_params():
     devices = ["cpu"]
