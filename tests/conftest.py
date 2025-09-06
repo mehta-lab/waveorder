@@ -3,12 +3,9 @@ import os
 import numpy as np
 import pytest
 import torch
-import sys
-
 from iohub.ngff import open_ome_zarr
 
 from waveorder.cli import settings
-
 
 
 def device_params():
