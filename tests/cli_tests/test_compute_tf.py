@@ -148,3 +148,20 @@ def test_fluorescence_write(fluorescence_recon_settings_function):
     assert dataset["optical_transfer_function"].shape == (1, 1, 3, 4, 5)
     assert "real_potential_transfer_function" not in dataset
     assert "imaginary_potential_transfer_function" not in dataset
+
+
+def test_fluorescence_2d_write(fluorescence_recon_settings_function):
+    """Test 2D fluorescence transfer function generation"""
+    settings, dataset = fluorescence_recon_settings_function
+    settings.reconstruction_dimension = 2
+    generate_and_save_fluorescence_transfer_function(
+        settings, dataset, (3, 4, 5)
+    )
+    # Should generate singular system components, not optical transfer function
+    assert dataset["singular_system_U"]
+    assert dataset["singular_system_S"]
+    assert dataset["singular_system_Vh"]
+    assert dataset["singular_system_U"].shape == (1, 1, 1, 4, 5)
+    assert dataset["singular_system_S"].shape == (1, 1, 1, 4, 5)
+    assert dataset["singular_system_Vh"].shape == (1, 1, 3, 4, 5)
+    assert "optical_transfer_function" not in dataset
