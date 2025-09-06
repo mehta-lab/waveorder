@@ -201,17 +201,20 @@ conda create -y -n waveorder python=3.12
 conda activate waveorder
 ```
 
-(Option 1) If you are familiar with `waveorder`'s API and want to use it as a library, install a stable version of `waveorder` from PyPI:
+(Option 1) If you are familiar with `waveorder`'s API, CLI, or GUI, install a stable version of `waveorder` from PyPI:
 
 ```sh
-pip install waveorder
+pip install waveorder          # API, CLI
+pip install waveorder[visual]  # API, CLI, GUI  
+pip install waveorder[all]     # API, CLI, GUI, docs, dev dependencies
 ```
 
-(Option 2) If you are new to `waveorder` and want to run demos to become familiar with its features, install the latest version of `waveorder` from GitHub with all visualization dependencies (napari, jupyter), clone the repository, and run an example script:
+(Option 2) If you are new to `waveorder` and want to run demos to become familiar with its features, clone `waveorder`, install locally, and run an example script:
 ```sh
-pip install "git+https://github.com/mehta-lab/waveorder.git@main#egg=waveorder[all]"
 git clone https://github.com/mehta-lab/waveorder.git
-python waveorder/docs/examples/models/phase_thick_3d.py
+cd waveorder
+pip install .[visual]
+python ./docs/examples/models/phase_thick_3d.py
 ```
 
 (M1 users) `pytorch` has [incomplete GPU support](https://github.com/pytorch/pytorch/issues/77764),
