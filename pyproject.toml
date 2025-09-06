@@ -62,7 +62,7 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-all = [
+visual = [
   "napari[pyqt6]",
   "napari-ome-zarr>=0.3.2", # drag and drop convenience
   "pycromanager==0.27.2",
@@ -72,6 +72,7 @@ dev = [
   "black==25.1.0",
   "click>=8.2.0",
   "hypothesis",
+  "napari[pyqt6]",  # needed for napari plugin tests
   "pre-commit",
   "pytest-cov",
   "pytest-qt",
@@ -89,6 +90,11 @@ docs = [
   "pydata_sphinx_theme",
   "matplotlib",
   "importlib_metadata",
+]
+all = [
+  "waveorder[visual]",
+  "waveorder[dev]", 
+  "waveorder[docs]",
 ]
 
 [project.urls]
