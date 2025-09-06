@@ -73,11 +73,7 @@ Documentation infrastructure is built using [Markdown (.md)](https://www.sphinx-
 ```sh
 cd waveorder/ # or the renamed project root directory
 pip install -e ".[all]"
-```
-
-```shell
 cd docs/
-pip install sphinx
 sphinx-build -M html ./ ./build
 ```
 
