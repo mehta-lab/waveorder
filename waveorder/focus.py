@@ -99,6 +99,8 @@ def focus_from_transverse_band(
             return the index of the in-focus slice
         else:
             return None
+    peak_stats : dict
+        Dictionary with statistics of the detected peaks, currently 'peak_index' and 'peak_FWHM'.
 
     Example
     ------
@@ -109,6 +111,7 @@ def focus_from_transverse_band(
     >>> in_focus_data = data[slice,:,:]
     """
     minmaxfunc = _mode_to_minmaxfunc(mode)
+    peak_stats = {'peak_index': None, 'peak_FWHM': None}
 
     _check_focus_inputs(
         zyx_array, NA_det, lambda_ill, pixel_size, midband_fractions
@@ -119,7 +122,7 @@ def focus_from_transverse_band(
         warnings.warn(
             "The dataset only contained a single slice. Returning trivial slice index = 0."
         )
-        return 0
+        return 0, peak_stats
 
     # Calculate midband power for each slice
     midband_sum = np.array(
@@ -144,9 +147,10 @@ def focus_from_transverse_band(
 
     peak_results = peak_widths(midband_sum, [peak_index])
     peak_FWHM = peak_results[0][0]
+    peak_stats.update({'peak_index': peak_index, 'peak_FWHM': peak_FWHM})
 
     if peak_FWHM >= threshold_FWHM:
-        in_focus_index = peak_index
+        in_focus_index = int(peak_index)
     else:
         in_focus_index = None
 
@@ -161,7 +165,7 @@ def focus_from_transverse_band(
             threshold_FWHM,
         )
 
-    return in_focus_index
+    return in_focus_index, peak_stats
 
 
 def _mode_to_minmaxfunc(mode):
