@@ -112,11 +112,8 @@ line_length = 79
 [tool.setuptools_scm]
 write_to = "waveorder/_version.py"
 
-[tool.setuptools]
-include-package-data = true
-
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["waveorder"]
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml"]
