@@ -764,9 +764,12 @@ class Ui_ReconTab_Form(QWidget):
                     and ret_msg[0]["loc"][2] == "background_path"
                 ):
                     pydantic_model = pruned_pydantic_class  # if only background_path fails validation
-                    json_dict["birefringence"]["apply_inverse"][
-                        "background_path"
-                    ] = ""
+                    if "birefringence" in json_dict.keys():
+                        json_dict["birefringence"]["apply_inverse"][
+                            "background_path"
+                        ] = ""
+                    else:
+                        bg_loc = ""
                     self.message_box(
                         "background_path:\nPath was invalid and will be reset"
                     )
@@ -775,9 +778,12 @@ class Ui_ReconTab_Form(QWidget):
                     return
             else:
                 # make sure "background_path" is valid
-                bg_loc = json_dict["birefringence"]["apply_inverse"][
-                    "background_path"
-                ]
+                if "birefringence" in json_dict.keys():
+                    bg_loc = json_dict["birefringence"]["apply_inverse"][
+                        "background_path"
+                    ]
+                else:
+                    bg_loc = ""
                 if bg_loc != "":
                     extension = os.path.splitext(bg_loc)[1]
                     if len(extension) > 0:
