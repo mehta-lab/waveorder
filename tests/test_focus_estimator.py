@@ -156,3 +156,156 @@ def test_compute_midband_power_consistency():
 
     expected_focus_slice = np.argmax(manual_powers)
     assert focus_slice == expected_focus_slice
+
+
+def test_subpixel_precision():
+    """Test that sub-pixel precision returns float values when enabled."""
+    # Test parameters
+    ps = 6.5 / 100
+    lambda_ill = 0.532
+    NA_det = 1.4
+
+    # Create synthetic test data with a clear peak between slices
+    z_size, y_size, x_size = 11, 64, 64
+    x = np.linspace(-1, 1, x_size)
+    y = np.linspace(-1, 1, y_size)
+    z = np.linspace(-5, 5, z_size)
+
+    # Create a 3D Gaussian that peaks between slice indices
+    test_data = np.zeros((z_size, y_size, x_size))
+    true_peak_z = 5.3  # Peak between slices 5 and 6
+
+    for i, z_val in enumerate(z):
+        # Create Gaussian centered at true_peak_z position in physical space
+        gaussian_2d = np.exp(
+            -(
+                (x[None, :] ** 2 + y[:, None] ** 2)
+                + (z_val - (true_peak_z - 5)) ** 2
+            )
+        )
+        test_data[i] = gaussian_2d
+
+    # Test without sub-pixel precision (should return integer)
+    focus_slice_int = focus.focus_from_transverse_band(
+        test_data,
+        NA_det,
+        lambda_ill,
+        ps,
+        polynomial_fit_order=4,
+        enable_subpixel_precision=False,
+    )
+    assert isinstance(focus_slice_int, (int, np.integer))
+
+    # Test with sub-pixel precision (should return float)
+    focus_slice_float = focus.focus_from_transverse_band(
+        test_data,
+        NA_det,
+        lambda_ill,
+        ps,
+        polynomial_fit_order=4,
+        enable_subpixel_precision=True,
+    )
+
+    # Should return a float
+    assert isinstance(focus_slice_float, float)
+
+    # Should be close to the true peak position
+    assert abs(focus_slice_float - true_peak_z) < 1.0  # Within 1 slice
+
+    # Sub-pixel result should be different from integer result
+    assert focus_slice_float != focus_slice_int
+
+
+def test_subpixel_precision_backward_compatibility():
+    """Test that default behavior (integer results) is preserved."""
+    ps = 6.5 / 100
+    lambda_ill = 0.532
+    NA_det = 1.4
+
+    # Create simple test data
+    test_data = np.random.random((5, 32, 32)).astype(np.float32)
+
+    # Test default behavior (should return integer)
+    focus_slice = focus.focus_from_transverse_band(
+        test_data,
+        NA_det,
+        lambda_ill,
+        ps,
+        polynomial_fit_order=4,
+    )
+
+    assert isinstance(focus_slice, (int, np.integer))
+
+
+def test_subpixel_precision_with_plotting(tmp_path):
+    """Test that sub-pixel precision works with plotting."""
+    ps = 6.5 / 100
+    lambda_ill = 0.532
+    NA_det = 1.4
+
+    # Create test data
+    test_data = np.random.random((7, 32, 32)).astype(np.float32)
+    plot_path = tmp_path / "subpixel_test.pdf"
+
+    # Should work without errors
+    focus_slice = focus.focus_from_transverse_band(
+        test_data,
+        NA_det,
+        lambda_ill,
+        ps,
+        polynomial_fit_order=4,
+        enable_subpixel_precision=True,
+        plot_path=str(plot_path),
+    )
+
+    assert isinstance(focus_slice, float)
+    assert plot_path.exists()
+
+
+def test_z_focus_offset_float_type():
+    """Test that z_focus_offset can accept float values in settings."""
+    from waveorder.cli.settings import FourierTransferFunctionSettings
+
+    # Test that float values are accepted
+    settings = FourierTransferFunctionSettings(z_focus_offset=1.5)
+    assert settings.z_focus_offset == 1.5
+    assert isinstance(settings.z_focus_offset, float)
+
+    # Test that "auto" still works
+    settings_auto = FourierTransferFunctionSettings(z_focus_offset="auto")
+    assert settings_auto.z_focus_offset == "auto"
+
+    # Test that integers are converted to float
+    settings_int = FourierTransferFunctionSettings(z_focus_offset=2)
+    assert settings_int.z_focus_offset == 2
+    assert isinstance(settings_int.z_focus_offset, (int, float))
+
+
+def test_position_list_with_float_offset():
+    """Test that _position_list_from_shape_scale_offset works correctly with float offsets."""
+    from waveorder.cli.compute_transfer_function import (
+        _position_list_from_shape_scale_offset,
+    )
+
+    # Test integer offset
+    pos_int = _position_list_from_shape_scale_offset(5, 1.0, 0)
+    expected_int = [2.0, 1.0, 0.0, -1.0, -2.0]
+    assert pos_int == expected_int
+
+    # Test float offset
+    pos_float = _position_list_from_shape_scale_offset(5, 1.0, 0.5)
+    expected_float = [2.5, 1.5, 0.5, -0.5, -1.5]
+    assert pos_float == expected_float
+
+    # Verify the difference is exactly the offset
+    import numpy as np
+
+    diff = np.array(pos_float) - np.array(pos_int)
+    assert np.allclose(diff, 0.5)
+
+    # Test with different scale and offset
+    pos_scaled = _position_list_from_shape_scale_offset(4, 2.0, 0.3)
+    # shape=4, shape//2=2, so indices are [0,1,2,3],
+    # positions are [(-0+2+0.3)*2, (-1+2+0.3)*2, (-2+2+0.3)*2, (-3+2+0.3)*2] = [4.6, 2.6, 0.6, -1.4]
+    expected_scaled = [4.6, 2.6, 0.6, -1.4]
+    assert np.allclose(pos_scaled, expected_scaled)
