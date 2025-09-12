@@ -100,6 +100,11 @@ class MainWidget(QWidget):
         self.ui.setupUi(self)
         self.ui.tab_reconstruction.set_viewer(napari_viewer)
 
+        # Hide acquisition tab
+        acquisition_index = self.ui.tabWidget.indexOf(self.ui.Acquisition)
+        if acquisition_index != -1:
+            self.ui.tabWidget.removeTab(acquisition_index)
+
         # Override initial tab focus
         self.ui.tabWidget.setCurrentIndex(0)
 
