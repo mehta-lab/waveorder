@@ -334,7 +334,7 @@ class MainWidget(QWidget):
         jch_legend_path = assets_dir / "JCh_legend.png"
         hsv_legend_path = assets_dir / "HSV_legend.png"
         logo_path = assets_dir / "waveorder_plugin_logo.png"
-        
+
         self.jch_pixmap = QPixmap(str(jch_legend_path))
         self.hsv_pixmap = QPixmap(str(hsv_legend_path))
         self.ui.label_orientation_image.setPixmap(self.hsv_pixmap)
