@@ -329,20 +329,16 @@ class MainWidget(QWidget):
         self.plot_sequence = "Coarse"
 
         ## Initialize visuals
-        # Initialiaze GUI Images (plotting legends, waveorder logo)
-        jch_legend_path = os.path.join(
-            waveorder_dir, "docs/images/JCh_legend.png"
-        )
-        hsv_legend_path = os.path.join(
-            waveorder_dir, "docs/images/HSV_legend.png"
-        )
-        self.jch_pixmap = QPixmap(jch_legend_path)
-        self.hsv_pixmap = QPixmap(hsv_legend_path)
+        # Initialize GUI Images (plotting legends, waveorder logo)
+        assets_dir = Path(__file__).parent.parent / "assets"
+        jch_legend_path = assets_dir / "JCh_legend.png"
+        hsv_legend_path = assets_dir / "HSV_legend.png"
+        logo_path = assets_dir / "waveorder_plugin_logo.png"
+
+        self.jch_pixmap = QPixmap(str(jch_legend_path))
+        self.hsv_pixmap = QPixmap(str(hsv_legend_path))
         self.ui.label_orientation_image.setPixmap(self.hsv_pixmap)
-        logo_path = os.path.join(
-            waveorder_dir, "docs/images/waveorder_plugin_logo.png"
-        )
-        logo_pixmap = QPixmap(logo_path)
+        logo_pixmap = QPixmap(str(logo_path))
         self.ui.label_logo.setPixmap(logo_pixmap)
 
         # Hide UI elements for popups

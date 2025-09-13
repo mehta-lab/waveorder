@@ -119,4 +119,4 @@ line_length = 79
 write_to = "waveorder/_version.py"
 
 [tool.setuptools.package-data]
-"*" = ["*.yaml"]
+"*" = ["*.yaml", "assets/*png"]
