@@ -31,6 +31,7 @@ def calculate_transfer_function(
     z_padding: int,
     index_of_refraction_media: float,
     numerical_aperture_detection: float,
+    confocal_pinhole_diameter: float | None = None,
 ) -> Tensor:
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_emission,
@@ -42,6 +43,11 @@ def calculate_transfer_function(
         numerical_aperture_detection,
         index_of_refraction_media,
     )
+
+    # For confocal, double the Nyquist range (half the sampling requirement)
+    if confocal_pinhole_diameter is not None:
+        transverse_nyquist = transverse_nyquist / 2
+        axial_nyquist = axial_nyquist / 2
 
     yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
     z_factor = int(np.ceil(z_pixel_size / axial_nyquist))
@@ -58,11 +64,41 @@ def calculate_transfer_function(
         z_padding,
         index_of_refraction_media,
         numerical_aperture_detection,
+        confocal_pinhole_diameter,
     )
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
     return sampling.nd_fourier_central_cuboid(
         optical_transfer_function, zyx_out_shape
     )
+
+
+def _calculate_pinhole_aperture_otf(
+    radial_frequencies: Tensor,
+    pinhole_diameter: float,
+) -> Tensor:
+    """Calculate the pinhole aperture OTF for confocal microscopy.
+
+    The pinhole acts as a spatial filter in the image plane. A smaller pinhole
+    (approaching a point) gives a broader OTF (approaching flat/ones).
+    A larger pinhole gives a narrower OTF (approaching a delta function).
+
+    Parameters
+    ----------
+    radial_frequencies : Tensor
+        Radial spatial frequencies (units of 1/length)
+    pinhole_diameter : float
+        Diameter (not radius) of the confocal pinhole (units of length, matching
+        radial_frequencies)
+
+    Returns
+    -------
+    Tensor
+        Pinhole aperture OTF (jinc^2 function)
+    """
+    argument = pinhole_diameter * radial_frequencies
+    j1_values = torch.special.bessel_j1(np.pi * argument)
+    jinc = torch.where(argument > 1e-10, j1_values / (2 * argument), 0.5)
+    return jinc**2
 
 
 def _calculate_wrap_unsafe_transfer_function(
@@ -73,6 +109,7 @@ def _calculate_wrap_unsafe_transfer_function(
     z_padding: int,
     index_of_refraction_media: float,
     numerical_aperture_detection: float,
+    confocal_pinhole_diameter: float | None = None,
 ) -> Tensor:
     radial_frequencies = util.generate_radial_frequencies(
         zyx_shape[1:], yx_pixel_size
@@ -102,6 +139,29 @@ def _calculate_wrap_unsafe_transfer_function(
     optical_transfer_function = torch.fft.fftn(
         point_spread_function, dim=(0, 1, 2)
     )
+
+    # Confocal: multiply excitation PSF with detection PSF (downweighted by pinhole)
+    if confocal_pinhole_diameter is not None:
+        pinhole_otf_2d = _calculate_pinhole_aperture_otf(
+            radial_frequencies, confocal_pinhole_diameter
+        )
+        # Detection OTF is downweighted by pinhole
+        otf_detection = optical_transfer_function * pinhole_otf_2d[None, :, :]
+
+        # Convert to PSFs
+        psf_excitation = torch.abs(
+            torch.fft.ifftn(optical_transfer_function, dim=(0, 1, 2))
+        )
+        psf_detection = torch.abs(
+            torch.fft.ifftn(otf_detection, dim=(0, 1, 2))
+        )
+
+        # Confocal PSF = excitation PSF * detection PSF (in real space)
+        psf_confocal = psf_excitation * psf_detection
+
+        # Convert back to OTF
+        optical_transfer_function = torch.fft.fftn(psf_confocal, dim=(0, 1, 2))
+
     optical_transfer_function /= torch.max(
         torch.abs(optical_transfer_function)
     )  # normalize
