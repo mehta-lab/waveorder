@@ -1,3 +1,9 @@
+"""
+Plot vector transfer function support
+=====================================
+Plot vector transfer function support summary
+"""
+
 import os
 
 import napari

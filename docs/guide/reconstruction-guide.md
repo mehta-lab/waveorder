@@ -15,7 +15,7 @@ iohub convert `
 
 ## How can I use `waveorder`'s CLI to perform reconstructions?
 `waveorder`'s CLI is summarized in the following figure:
-<img src="./images/cli_structure.png" align="center">
+<img src="../_static/images/cli_structure.png" align="center">
 
 The main command `waveorder` command is composed of two subcommands: `compute-tf` and `apply-inv-tf`.
 
