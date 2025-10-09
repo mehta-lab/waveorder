@@ -33,6 +33,38 @@ def calculate_transfer_function(
     numerical_aperture_detection: float,
     confocal_pinhole_diameter: float | None = None,
 ) -> Tensor:
+    """Calculate the optical transfer function for fluorescence imaging.
+
+    Supports both widefield and confocal microscopy modes. When
+    confocal_pinhole_diameter is None, computes widefield OTF. When specified,
+    computes confocal OTF by multiplying excitation and detection PSFs, where
+    the detection PSF is downweighted by the pinhole aperture function.
+
+    Parameters
+    ----------
+    zyx_shape : tuple[int, int, int]
+        Shape of the 3D volume
+    yx_pixel_size : float
+        Pixel size in YX plane
+    z_pixel_size : float
+        Pixel size in Z dimension
+    wavelength_emission : float
+        Emission wavelength
+    z_padding : int
+        Padding for axial dimension
+    index_of_refraction_media : float
+        Refractive index of imaging medium
+    numerical_aperture_detection : float
+        Numerical aperture of detection objective
+    confocal_pinhole_diameter : float | None, optional
+        Diameter of confocal pinhole in image space (demagnified). If None,
+        computes widefield OTF. If specified, computes confocal OTF.
+
+    Returns
+    -------
+    Tensor
+        3D optical transfer function
+    """
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_emission,
         numerical_aperture_detection,  # ill = det for fluorescence
