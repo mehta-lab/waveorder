@@ -45,7 +45,7 @@ dependencies = [
   "click>=8.0.1",
   "colorspacious>=1.1.2",
   "importlib-metadata",
-  "iohub>=0.3.0a2",
+  "iohub>=0.2,<0.4",
   "ipywidgets>=7.5.1",
   "matplotlib>=3.1.1",
   "natsort>=7.1.1",
