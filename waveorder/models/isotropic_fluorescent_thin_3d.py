@@ -52,6 +52,7 @@ def calculate_transfer_function(
     wavelength_emission: float,
     index_of_refraction_media: float,
     numerical_aperture_detection: float,
+    confocal_pinhole_diameter: float | None = None,
 ) -> Tensor:
     """Calculate transfer function for fluorescent thin object imaging.
 
@@ -69,12 +70,24 @@ def calculate_transfer_function(
         Refractive index of imaging medium
     numerical_aperture_detection : float
         Numerical aperture of detection objective
+    confocal_pinhole_diameter : float | None, optional
+        Diameter of confocal pinhole. Not implemented for 2D fluorescence.
 
     Returns
     -------
     Tensor
         Fluorescent 2D-to-3D transfer function
+
+    Raises
+    ------
+    NotImplementedError
+        If confocal_pinhole_diameter is not None
     """
+    if confocal_pinhole_diameter is not None:
+        raise NotImplementedError(
+            "Confocal reconstruction is not implemented for 2D fluorescence"
+        )
+
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_emission,
         numerical_aperture_detection,  # ill = det for fluorescence
