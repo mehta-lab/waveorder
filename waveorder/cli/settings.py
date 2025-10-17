@@ -113,6 +113,7 @@ class PhaseTransferFunctionSettings(
 
 class FluorescenceTransferFunctionSettings(FourierTransferFunctionSettings):
     wavelength_emission: PositiveFloat = 0.507
+    confocal_pinhole_diameter: Optional[PositiveFloat] = None
 
     @validator("wavelength_emission")
     def warn_unit_consistency(cls, v, values):

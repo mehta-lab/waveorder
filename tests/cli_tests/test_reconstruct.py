@@ -98,7 +98,7 @@ def test_reconstruct(tmp_input_path_zarr):
 
 def test_append_channel_reconstruction(tmp_input_path_zarr):
     input_path, tmp_config_yml = tmp_input_path_zarr
-    output_path = input_path.with_name(f"output.zarr")
+    output_path = input_path.with_name("output.zarr")
 
     # Generate input "dataset"
     channel_names = [f"State{x}" for x in range(4)] + ["GFP"]
@@ -133,8 +133,8 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
         phase=None,
         fluorescence=settings.FluorescenceSettings(),
     )
-    biref_config_path = tmp_config_yml.with_name(f"biref.yml")
-    fluor_config_path = tmp_config_yml.with_name(f"fluor.yml")
+    biref_config_path = tmp_config_yml.with_name("biref.yml")
+    fluor_config_path = tmp_config_yml.with_name("fluor.yml")
 
     utils.model_to_yaml(biref_settings, biref_config_path)
     utils.model_to_yaml(fluor_settings, fluor_config_path)
@@ -190,7 +190,7 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
 def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
     """Test 2D fluorescence reconstruction through CLI"""
     input_path, tmp_config_yml = tmp_input_path_zarr
-    output_path = input_path.with_name(f"fluor_2d_output.zarr")
+    output_path = input_path.with_name("fluor_2d_output.zarr")
 
     # Generate input "dataset" with fluorescence channel
     channel_names = [f"State{x}" for x in range(4)] + ["GFP"]
@@ -217,7 +217,7 @@ def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
         phase=None,
         fluorescence=settings.FluorescenceSettings(),
     )
-    fluor_2d_config_path = tmp_config_yml.with_name(f"fluor_2d.yml")
+    fluor_2d_config_path = tmp_config_yml.with_name("fluor_2d.yml")
     utils.model_to_yaml(fluor_2d_settings, fluor_2d_config_path)
 
     # Run 2D fluorescence reconstruction
