@@ -13,7 +13,7 @@ def add_transfer_function_to_viewer(
     complex_rgb: bool = False,
 ):
     zyx_shape = transfer_function.shape[-3:]
-    lim = torch.max(torch.abs(transfer_function)) * clim_factor
+    lim = (torch.max(torch.abs(transfer_function)) * clim_factor).item()
     voxel_scale = np.array(
         [
             zyx_shape[0] * zyx_scale[0],

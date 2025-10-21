@@ -356,6 +356,7 @@ class BackgroundCaptureWorker(
             transfer_function_dirpath=transfer_function_path,
             config_filepath=reconstruction_config_path,
             output_dirpath=reconstruction_path,
+            num_processes=1,
         )
 
         # Load reconstructions from file for layers

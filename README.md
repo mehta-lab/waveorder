@@ -201,18 +201,20 @@ conda create -y -n waveorder python=3.12
 conda activate waveorder
 ```
 
-Install `waveorder` from PyPI:
-
+Most users should install `waveorder` with:
 ```sh
-pip install waveorder
+pip install waveorder[visual]
 ```
 
-(Optional) Install all visualization dependencies (napari, jupyter), clone the repository, and run an example script:
+We also maintain three dependency sets for different interfaces:
+
 ```sh
-pip install "waveorder[all]"
-git clone https://github.com/mehta-lab/waveorder.git
-python waveorder/examples/models/phase_thick_3d.py
+pip install waveorder          # API, CLI
+pip install waveorder[visual]  # API, CLI, GUI  
+pip install waveorder[all]     # API, CLI, GUI, docs, dev dependencies
 ```
+
+
 
 (M1 users) `pytorch` has [incomplete GPU support](https://github.com/pytorch/pytorch/issues/77764),
 so please use `export PYTORCH_ENABLE_MPS_FALLBACK=1`
@@ -220,4 +222,11 @@ to allow some operators to fallback to CPU if you plan to use GPU acceleration f
 
 
 ## Examples
-The [examples](https://github.com/mehta-lab/waveorder/tree/main/docs/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D phase from brightfield, and 2D/3D PTI methods.
+The [examples](https://github.com/mehta-lab/waveorder/tree/main/docs/examples) illustrate simulations and reconstruction for 2D QLIPP, 3D phase from brightfield, and 2D/3D PTI methods. To run examples, use
+
+```sh
+git clone https://github.com/mehta-lab/waveorder.git
+cd waveorder
+pip install -e .[all]
+python ./docs/examples/models/phase_thick_3d.py
+```

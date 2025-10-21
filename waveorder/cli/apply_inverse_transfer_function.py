@@ -1,25 +1,20 @@
 import itertools
-import os
 import warnings
 from functools import partial
 from pathlib import Path
-from typing import Final
 
 import click
 import numpy as np
-import submitit
 import torch
 import torch.multiprocessing as mp
 from iohub import open_ome_zarr
 
-from waveorder.cli import apply_inverse_models, jobs_mgmt
-from waveorder.cli.monitor import monitor_jobs
+from waveorder.cli import apply_inverse_models
 from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,
     processes_option,
-    ram_multiplier,
     transfer_function_dirpath,
 )
 from waveorder.cli.printing import echo_headline, echo_settings
@@ -27,10 +22,10 @@ from waveorder.cli.settings import ReconstructionSettings
 from waveorder.cli.utils import (
     apply_inverse_to_zyx_and_save,
     create_empty_hcs_zarr,
+    generate_valid_position_key,
+    is_single_position_store,
 )
 from waveorder.io import utils
-
-JM = jobs_mgmt.JobsManagement()
 
 
 def _check_background_consistency(
@@ -82,6 +77,10 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
             # channel_names.append("Absorption2D")
         elif recon_dim == 3:
             channel_names.append("Phase3D")
+    if recon_biref and recon_phase:
+        channel_names.append("Retardance_Joint_Decon")
+        channel_names.append("Orientation_Joint_Decon")
+        channel_names.append("Phase_Joint_Decon")
     if recon_fluo:
         fluor_name = settings.input_channel_names[0]
         if recon_dim == 2:
@@ -112,6 +111,7 @@ def apply_inverse_transfer_function_single_position(
     num_processes,
     output_channel_names: list[str],
 ) -> None:
+
     echo_headline("\nStarting reconstruction...")
 
     # Load datasets
@@ -282,6 +282,7 @@ def apply_inverse_transfer_function_single_position(
     output_dataset.zattrs["settings"] = settings.dict()
 
     echo_headline(f"Closing {output_position_dirpath}\n")
+
     output_dataset.close()
     transfer_function_dataset.close()
     input_dataset.close()
@@ -296,125 +297,66 @@ def apply_inverse_transfer_function_cli(
     transfer_function_dirpath: Path,
     config_filepath: Path,
     output_dirpath: Path,
-    num_processes: int = 1,
-    ram_multiplier: float = 1.0,
-    unique_id: str = "",
+    num_processes,
 ) -> None:
+    # Prepare output store
     output_metadata = get_reconstruction_output_metadata(
         input_position_dirpaths[0], config_filepath
     )
+
+    # Generate position keys - use valid HCS keys for single-position stores
+    position_keys = []
+    for i, input_path in enumerate(input_position_dirpaths):
+        if is_single_position_store(input_path):
+            position_key = generate_valid_position_key(i)
+        else:
+            # Use original HCS plate structure
+            position_key = input_path.parts[-3:]
+        position_keys.append(position_key)
+
     create_empty_hcs_zarr(
         store_path=output_dirpath,
-        position_keys=[p.parts[-3:] for p in input_position_dirpaths],
+        position_keys=position_keys,
         **output_metadata,
     )
-    # Initialize torch num of threads and interoeration operations
+
+    # Initialize torch threads
     if num_processes > 1:
         torch.set_num_threads(1)
         torch.set_num_interop_threads(1)
 
-    # Estimate resources
-    with open_ome_zarr(input_position_dirpaths[0]) as input_dataset:
-        T, C, Z, Y, X = input_dataset["0"].shape
+    # Loop through positions
+    for i, input_position_dirpath in enumerate(input_position_dirpaths):
+        # Use the same position key generation logic
+        if is_single_position_store(input_position_dirpath):
+            position_key = generate_valid_position_key(i)
+        else:
+            position_key = input_position_dirpath.parts[-3:]
 
-    settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
-    gb_ram_request = 0
-    gb_per_element = 4 / 2**30  # bytes_per_float32 / bytes_per_gb
-    voxel_resource_multiplier = 4
-    fourier_resource_multiplier = 32
-    input_memory = Z * Y * X * gb_per_element
-    if settings.birefringence is not None:
-        gb_ram_request += input_memory * voxel_resource_multiplier
-    if settings.phase is not None:
-        gb_ram_request += input_memory * fourier_resource_multiplier
-    if settings.fluorescence is not None:
-        gb_ram_request += input_memory * fourier_resource_multiplier
+        output_position_path = output_dirpath / Path(*position_key)
 
-    gb_ram_request = np.ceil(
-        np.max([1, ram_multiplier * gb_ram_request])
-    ).astype(int)
-    cpu_request = np.min([32, num_processes])
-    num_jobs = len(input_position_dirpaths)
-
-    # Prepare and submit jobs
-    echo_headline(
-        f"Preparing {num_jobs} job{'s, each with' if num_jobs > 1 else ' with'} "
-        f"{cpu_request} CPU{'s' if cpu_request > 1 else ''} and "
-        f"{gb_ram_request} GB of memory per CPU."
-    )
-
-    name_without_ext = os.path.splitext(Path(output_dirpath).name)[0]
-    executor_folder = os.path.join(
-        Path(output_dirpath).parent.absolute(), name_without_ext + "_logs"
-    )
-    executor = submitit.AutoExecutor(folder=Path(executor_folder))
-
-    executor.update_parameters(
-        slurm_array_parallelism=np.min([50, num_jobs]),
-        slurm_mem_per_cpu=f"{gb_ram_request}G",
-        slurm_cpus_per_task=cpu_request,
-        slurm_time=60,
-        slurm_partition="cpu",
-        timeout_min=jobs_mgmt.JOBS_TIMEOUT,
-        # more slurm_*** resource parameters here
-    )
-
-    jobs = []
-    with executor.batch():
-        for input_position_dirpath in input_position_dirpaths:
-            job: Final = executor.submit(
-                apply_inverse_transfer_function_single_position,
-                input_position_dirpath,
-                transfer_function_dirpath,
-                config_filepath,
-                output_dirpath / Path(*input_position_dirpath.parts[-3:]),
-                num_processes,
-                output_metadata["channel_names"],
-            )
-            jobs.append(job)
-    echo_headline(
-        f"{num_jobs} job{'s' if num_jobs > 1 else ''} submitted {'locally' if executor.cluster == 'local' else 'via ' + executor.cluster}."
-    )
-
-    doPrint = True  # CLI prints Job status when used as cmd line
-    if (
-        unique_id != ""
-    ):  # no unique_id means no job submission info being listened to
-        JM.start_client()
-        i = 0
-        for j in jobs:
-            job: submitit.Job = j
-            job_idx: str = job.job_id
-            position = input_position_dirpaths[i]
-            JM.put_Job_in_list(
-                job,
-                unique_id,
-                str(job_idx),
-                position,
-                str(executor.folder.absolute()),
-            )
-            i += 1
-        JM.send_data_thread()
-        JM.set_shorter_timeout()
-        doPrint = False  # CLI printing disabled when using GUI
-
-    monitor_jobs(jobs, input_position_dirpaths, doPrint)
+        apply_inverse_transfer_function_single_position(
+            input_position_dirpath,
+            transfer_function_dirpath,
+            config_filepath,
+            output_position_path,
+            num_processes,
+            output_metadata["channel_names"],
+        )
 
 
-@click.command()
+@click.command("apply-inv-tf")
 @input_position_dirpaths()
 @transfer_function_dirpath()
 @config_filepath()
 @output_dirpath()
 @processes_option(default=1)
-@ram_multiplier()
-def apply_inv_tf(
+def _apply_inverse_transfer_function_cli(
     input_position_dirpaths: list[Path],
     transfer_function_dirpath: Path,
     config_filepath: Path,
     output_dirpath: Path,
     num_processes,
-    ram_multiplier: float = 1.0,
 ) -> None:
     """
     Apply an inverse transfer function to a dataset using a configuration file.
@@ -434,5 +376,4 @@ def apply_inv_tf(
         config_filepath,
         output_dirpath,
         num_processes,
-        ram_multiplier,
     )

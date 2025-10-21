@@ -117,7 +117,7 @@ def monitor_jobs(
 
     # print all jobs once if terminal is too small
     if shutil.get_terminal_size().lines - NON_JOB_LINES < len(jobs):
-        _print_status(jobs, position_dirpaths, elapsed_list, do_print)
+        _print_status(jobs, position_dirpaths, elapsed_list, do_print=do_print)
 
     # main monitor loop
     try:

@@ -246,7 +246,7 @@ def visualize_transfer_function(
     ]
 
     for array in arrays:
-        lim = 0.5 * torch.max(torch.abs(array[0]))
+        lim = (0.5 * torch.max(torch.abs(array[0]))).item()
         viewer.add_image(
             torch.fft.ifftshift(array[0], dim=(1, 2)).cpu().numpy(),
             name=array[1],
@@ -268,7 +268,7 @@ def visualize_point_spread_function(
     ]
 
     for array in arrays:
-        lim = 0.5 * torch.max(torch.abs(array[0]))
+        lim = (0.5 * torch.max(torch.abs(array[0]))).item()
         viewer.add_image(
             torch.fft.ifftshift(array[0], dim=(1, 2)).cpu().numpy(),
             name=array[1],

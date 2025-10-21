@@ -65,9 +65,9 @@ def calculate_transfer_function(
     print("Z factor:", z_factor)
 
     tf_calculation_shape = (
-        zyx_shape[0] * z_factor * fourier_oversample_factor,
-        int(np.ceil(zyx_shape[1] * yx_factor * fourier_oversample_factor)),
-        int(np.ceil(zyx_shape[2] * yx_factor * fourier_oversample_factor)),
+        int(zyx_shape[0] * z_factor / fourier_oversample_factor),
+        int(np.ceil(zyx_shape[1] * yx_factor / fourier_oversample_factor)),
+        int(np.ceil(zyx_shape[2] * yx_factor / fourier_oversample_factor)),
     )
 
     (
