@@ -52,7 +52,7 @@ def calculate_transfer_function(
         numerical_aperture_detection,
     )
     yx_factor = int(
-        torch.ceil(torch.tensor(yx_pixel_size / transverse_nyquist))
+        torch.ceil(torch.as_tensor(yx_pixel_size / transverse_nyquist))
     )
 
     (
@@ -74,11 +74,14 @@ def calculate_transfer_function(
         tilt_angle_azimuth=tilt_angle_azimuth,
     )
 
+    # Get device from z_position_list
+    device = z_position_list.device if isinstance(z_position_list, torch.Tensor) else torch.device("cpu")
+
     absorption_2d_to_3d_transfer_function_out = torch.zeros(
-        (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64
+        (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64, device=device
     )
     phase_2d_to_3d_transfer_function_out = torch.zeros(
-        (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64
+        (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64, device=device
     )
 
     for z in range(len(z_position_list)):
@@ -129,7 +132,13 @@ def _calculate_wrap_unsafe_transfer_function(
     else:
         z_positions = z_position_list.clone()
 
+    # Get device from z_position_list to ensure all tensors are on same device
+    device = z_position_list.device if isinstance(z_position_list, torch.Tensor) else torch.device("cpu")
+
+    # Generate frequencies and convert to tensors on correct device
     fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size)
+    fyy = torch.as_tensor(fyy, dtype=torch.float32, device=device)
+    fxx = torch.as_tensor(fxx, dtype=torch.float32, device=device)
     radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
 
     illumination_pupil = optics.generate_tilted_pupil(
@@ -156,10 +165,10 @@ def _calculate_wrap_unsafe_transfer_function(
 
     zyx_shape = (len(z_positions),) + tuple(yx_shape)
     absorption_2d_to_3d_transfer_function = torch.zeros(
-        zyx_shape, dtype=torch.complex64
+        zyx_shape, dtype=torch.complex64, device=device
     )
     phase_2d_to_3d_transfer_function = torch.zeros(
-        zyx_shape, dtype=torch.complex64
+        zyx_shape, dtype=torch.complex64, device=device
     )
     for z in range(len(z_positions)):
         (

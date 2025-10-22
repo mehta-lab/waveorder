@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "waveorder"
 description = "Wave-optical simulations and deconvolution of optical properties"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 license = { file = "LICENSE" }
 authors = [{ name = "CZ Biohub SF", email = "compmicro@czbiohub.org" }]
 maintainers = [
@@ -121,3 +121,14 @@ write_to = "waveorder/_version.py"
 
 [tool.setuptools.package-data]
 "*" = ["*.yaml", "assets/*png"]
+
+[tool.uv.sources]
+xarray-ome = { git = "https://github.com/ianhi/xarray-ome" }
+cupy-xarray = { git = "https://github.com/xarray-contrib/cupy-xarray" }
+
+[dependency-groups]
+gradio = [
+    "cupy-cuda12x>=13.6.0",
+    "gradio>=6.0.0.dev0",
+    "xarray-ome",
+]

@@ -57,9 +57,9 @@ def calculate_transfer_function(
         torch.tensor(index_of_refraction_media),
     )
     yx_factor = int(
-        torch.ceil(torch.tensor(yx_pixel_size / transverse_nyquist))
+        torch.ceil(torch.as_tensor(yx_pixel_size / transverse_nyquist))
     )
-    z_factor = int(torch.ceil(torch.tensor(z_pixel_size / axial_nyquist)))
+    z_factor = int(torch.ceil(torch.as_tensor(z_pixel_size / axial_nyquist)))
 
     (
         real_potential_transfer_function,
