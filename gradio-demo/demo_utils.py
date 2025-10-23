@@ -171,8 +171,8 @@ def load_fov_from_plate(
         "T": np.arange(T),
         "C": np.arange(C),
         "Z": np.arange(Z) * 25.0,  # Default Z scale (will try to get from metadata)
-        "Y": np.arange(Y) * 1.3,   # Default Y scale
-        "X": np.arange(X) * 1.3,   # Default X scale
+        "Y": np.arange(Y) * 1.3,  # Default Y scale
+        "X": np.arange(X) * 1.3,  # Default X scale
     }
 
     data_xr = xr.DataArray(
@@ -609,6 +609,68 @@ def prepare_optimizer(
 
     optimizer = torch.optim.Adam(optimizer_config)
     return optimization_params, optimizer
+
+
+def run_reconstruction_single(
+    zyx_stack: np.ndarray,
+    pixel_scales: tuple[float, float, float],
+    fixed_params: dict,
+    param_values: dict,
+    device: Device = None,
+) -> np.ndarray:
+    """
+    Run a single phase reconstruction with specified parameters (no optimization).
+
+    Parameters
+    ----------
+    zyx_stack : np.ndarray
+        Input Z-stack with shape (Z, Y, X)
+    pixel_scales : tuple[float, float, float]
+        (z_scale, y_scale, x_scale) in micrometers
+    fixed_params : dict
+        Fixed reconstruction parameters (wavelength, index, etc.)
+    param_values : dict
+        Parameter values to use (z_offset, numerical_aperture_detection, etc.)
+    device : torch.device | str | None, optional
+        Computing device. If None, auto-selects GPU if available, else CPU.
+
+    Returns
+    -------
+    np.ndarray
+        Normalized uint8 array of reconstructed phase image (for display)
+    """
+    # Resolve device (will print GPU info if available)
+    device = get_device(device)
+
+    # Convert to torch tensor on target device
+    zyx_tile = torch.tensor(zyx_stack, dtype=torch.float32, device=device)
+
+    # Prepare reconstruction arguments
+    z_scale, y_scale, x_scale = pixel_scales
+    recon_args = fixed_params.copy()
+
+    # Remove non-reconstruction parameters from fixed_params
+    recon_args.pop("num_iterations", None)
+    recon_args.pop("use_tiling", None)
+    recon_args.pop("device", None)
+
+    recon_args["yx_shape"] = zyx_tile.shape[1:]
+    recon_args["yx_pixel_size"] = y_scale
+    recon_args["z_scale"] = z_scale
+
+    # Set parameter values (convert to tensors on device)
+    for name, value in param_values.items():
+        recon_args[name] = torch.tensor([value], dtype=torch.float32, device=device)
+
+    # Run reconstruction
+    yx_recon = run_reconstruction(zyx_tile, recon_args)
+
+    # Transfer to CPU and normalize for display
+    recon_numpy = yx_recon.detach().cpu().numpy()
+    # Wrap in xarray for normalize_for_display (expects xr.DataArray)
+    recon_normalized = normalize_for_display(xr.DataArray(recon_numpy))
+
+    return recon_normalized
 
 
 def run_optimization_streaming(

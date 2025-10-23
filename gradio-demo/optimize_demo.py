@@ -51,9 +51,9 @@ OPTIMIZABLE_PARAMS = {
 }
 
 # === Load Plate Metadata (Fast) ===
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("Loading HCS Plate Metadata...")
-print("="*60)
+print("=" * 60)
 plate_metadata = get_plate_metadata(INPUT_PATH)
 
 print(f"Available rows: {plate_metadata['rows']}")
@@ -62,18 +62,14 @@ print(f"Total wells: {len(plate_metadata['wells'])}")
 
 # Get default well fields
 default_well_key = (DEFAULT_ROW, DEFAULT_COLUMN)
-default_fields = plate_metadata['wells'].get(default_well_key, [])
+default_fields = plate_metadata["wells"].get(default_well_key, [])
 print(f"Fields in {DEFAULT_ROW}/{DEFAULT_COLUMN}: {len(default_fields)}")
-print("="*60 + "\n")
+print("=" * 60 + "\n")
 
 # Load default FOV
 print(f"Loading default FOV: {DEFAULT_ROW}/{DEFAULT_COLUMN}/{DEFAULT_FIELD}")
 data_xr = load_fov_from_plate(
-    plate_metadata['plate'],
-    DEFAULT_ROW,
-    DEFAULT_COLUMN,
-    DEFAULT_FIELD,
-    resolution=0
+    plate_metadata["plate"], DEFAULT_ROW, DEFAULT_COLUMN, DEFAULT_FIELD, resolution=0
 )
 print_data_summary(data_xr)
 
@@ -90,54 +86,86 @@ print(f"Pixel scales (Z, Y, X): {pixel_scales} micrometers")
 with gr.Blocks(
     title="Phase Reconstruction Viewer",
     theme=gr.themes.Default(),
+    css="""
+        /* Make ImageSlider fill container and maintain aspect ratio */
+        .image-container img {
+            object-fit: contain !important;
+            max-height: 800px !important;
+        }
+        /* Ensure image slider takes full width */
+        .image-frame {
+            width: 100% !important;
+        }
+    """,
 ) as demo:
     gr.Markdown("# Phase Reconstruction Viewer")
     gr.Markdown(f"**Data Path:** `{INPUT_PATH}`")
-
-    # FOV Selection Controls
-    with gr.Accordion("📂 Select Field of View", open=True):
-        with gr.Row():
-            row_dropdown = gr.Dropdown(
-                choices=plate_metadata['rows'],
-                value=DEFAULT_ROW,
-                label="Row",
-                interactive=True,
-            )
-            column_dropdown = gr.Dropdown(
-                choices=plate_metadata['columns'],
-                value=DEFAULT_COLUMN,
-                label="Column",
-                interactive=True,
-            )
-            field_dropdown = gr.Dropdown(
-                choices=default_fields,
-                value=DEFAULT_FIELD,
-                label="Field",
-                interactive=True,
-            )
-        load_fov_btn = gr.Button("🔄 Load Selected FOV", variant="primary")
-        fov_status = gr.Markdown(
-            f"**Current FOV:** {DEFAULT_ROW}/{DEFAULT_COLUMN}/{DEFAULT_FIELD} | "
-            f"**Shape:** {dict(data_xr.sizes)} | **Dims:** {list(data_xr.dims)}"
-        )
-
     gr.Markdown("---")
 
-    # Side-by-side layout: Raw viewer (left) | Reconstruction viewer (right)
+    # Two-column layout: Image viewer (left) | Controls (right)
     with gr.Row():
-        # LEFT: Raw data viewer
-        with gr.Column(scale=1):
-            gr.Markdown("### Raw Data Viewer")
-            raw_image = gr.Image(
-                label="Raw Microscopy Data",
-                type="numpy",
+        # LEFT COLUMN: Large ImageSlider (60% width)
+        with gr.Column(scale=4):
+            # Section 1: FOV Selection (above image)
+            gr.Markdown("### 📂 Select Field of View")
+            with gr.Row():
+                row_dropdown = gr.Dropdown(
+                    choices=plate_metadata["rows"],
+                    value=DEFAULT_ROW,
+                    label="Row",
+                    interactive=True,
+                    scale=1,
+                )
+                column_dropdown = gr.Dropdown(
+                    choices=plate_metadata["columns"],
+                    value=DEFAULT_COLUMN,
+                    label="Column",
+                    interactive=True,
+                    scale=1,
+                )
+                field_dropdown = gr.Dropdown(
+                    choices=default_fields,
+                    value=DEFAULT_FIELD,
+                    label="Field",
+                    interactive=True,
+                    scale=2,
+                )
+                load_fov_btn = gr.Button(
+                    "🔄 Load", variant="secondary", size="sm", scale=1
+                )
+
+            gr.Markdown("---")
+
+            # Image viewer
+            from demo_utils import extract_2d_slice
+
+            initial_preview = extract_2d_slice(
+                data_xr,
+                t=0,
+                c=0,
+                z=data_xr.sizes["Z"] // 2,
+                normalize=True,
+                verbose=False,
             )
+
+            image_viewer = gr.ImageSlider(
+                label="Raw (left) vs Reconstructed (right) - Drag slider to compare",
+                type="numpy",
+                value=(initial_preview, initial_preview),
+                height=800,  # Large display
+            )
+
+            gr.Markdown("---")
+
+            # Section 2: Navigation (below image)
+            gr.Markdown("### 🎛️ Navigation")
             t_slider = gr.Slider(
                 minimum=0,
                 maximum=data_xr.sizes["T"] - 1,
                 value=0,
                 step=1,
                 label="Timepoint (T)",
+                scale=1,
             )
             z_slider = gr.Slider(
                 minimum=0,
@@ -145,45 +173,100 @@ with gr.Blocks(
                 value=data_xr.sizes["Z"] // 2,
                 step=1,
                 label="Z-slice",
+                scale=1,
             )
 
-        # RIGHT: Reconstruction viewer
-        with gr.Column(scale=1):
-            gr.Markdown("### Phase Reconstruction")
-            comparison_slider = gr.ImageSlider(
-                label="Raw vs Reconstructed",
-                type="numpy",
+        # RIGHT COLUMN: All controls (40% width)
+        with gr.Column(scale=2):
+            # Section 3: Reconstruction Parameters
+            gr.Markdown("### ⚙️ Reconstruction Parameters")
+
+            # Sliders for optimizable parameters
+            z_offset_slider = gr.Slider(
+                minimum=-0.5,
+                maximum=0.5,
+                value=OPTIMIZABLE_PARAMS["z_offset"][1],
+                step=0.01,
+                label="Z Offset (μm)",
+                info="Axial focus offset",
             )
 
-            # Iteration scrubbing controls
-            with gr.Group():
-                iteration_slider = gr.Slider(
-                    minimum=1,
-                    maximum=1,
-                    value=1,
-                    step=1,
-                    label="View Iteration",
-                    info="Scrub through optimization history",
-                    interactive=False,
-                    visible=False,
+            na_det_slider = gr.Slider(
+                minimum=0.05,
+                maximum=0.4,
+                value=OPTIMIZABLE_PARAMS["numerical_aperture_detection"][1],
+                step=0.001,
+                label="NA Detection",
+                info="Numerical aperture of detection objective",
+            )
+
+            na_ill_slider = gr.Slider(
+                minimum=0.05,
+                maximum=0.3,
+                value=OPTIMIZABLE_PARAMS["numerical_aperture_illumination"][1],
+                step=0.001,
+                label="NA Illumination",
+                info="Numerical aperture of illumination",
+            )
+
+            tilt_zenith_slider = gr.Slider(
+                minimum=0.0,
+                maximum=np.pi / 2,
+                value=OPTIMIZABLE_PARAMS["tilt_angle_zenith"][1],
+                step=0.005,
+                label="Tilt Zenith (rad)",
+                info="Zenith angle of illumination tilt",
+            )
+
+            tilt_azimuth_slider = gr.Slider(
+                minimum=0.0,
+                maximum=2 * np.pi,
+                value=OPTIMIZABLE_PARAMS["tilt_angle_azimuth"][1],
+                step=0.001,
+                label="Tilt Azimuth (rad)",
+                info="Azimuthal angle of illumination tilt",
+            )
+
+            gr.Markdown("---")
+
+            # Section 4: Reconstruction Actions
+            gr.Markdown("### 🔬 Phase Reconstruction")
+
+            with gr.Row():
+                optimize_btn = gr.Button(
+                    "⚡ Optimize Parameters", variant="secondary", size="lg"
                 )
-                iteration_info = gr.Markdown(
-                    value="",
-                    visible=False,
+                reconstruct_btn = gr.Button(
+                    "🔬 Run Reconstruction", variant="primary", size="lg"
                 )
+
+            gr.Markdown("---")
+
+            # Section 5: Optimization Results
+            gr.Markdown("### 📊 Optimization Results")
 
             loss_plot = gr.LinePlot(
                 x="iteration",
                 y="loss",
-                title="Optimization Loss",
-                width=400,
+                title="Optimization - Midband Spatial Frequency Loss",
                 height=200,
+                scale=2,
             )
-            reconstruct_btn = gr.Button("🔬 Reconstruct", variant="primary", size="lg")
-            status_text = gr.Textbox(
-                label="Status",
-                value="Ready to reconstruct",
+
+            # Iteration scrubbing controls
+            iteration_slider = gr.Slider(
+                minimum=1,
+                maximum=1,
+                value=1,
+                step=1,
+                label="View Iteration",
+                info="Scrub through optimization history",
                 interactive=False,
+                visible=False,
+            )
+            iteration_info = gr.Markdown(
+                value="",
+                visible=False,
             )
 
     # State storage
@@ -193,28 +276,26 @@ with gr.Blocks(
 
     gr.Markdown("---")
     gr.Markdown(
-        "💡 **Tip:** Select FOV, navigate with T/Z sliders, then click **Reconstruct** to optimize parameters"
+        "💡 **Workflow:** Select FOV → Navigate with sliders → Click Reconstruct → View optimized results"
     )
 
     # === FOV Selection Callbacks ===
     def update_field_dropdown(row: str, column: str):
         """Update available fields when row/column changes."""
         well_key = (row, column)
-        fields = plate_metadata['wells'].get(well_key, [])
+        fields = plate_metadata["wells"].get(well_key, [])
         return gr.Dropdown(choices=fields, value=fields[0] if fields else None)
 
-    def load_selected_fov(row: str, column: str, field: str, current_t: int, current_z: int):
+    def load_selected_fov(
+        row: str, column: str, field: str, current_t: int, current_z: int
+    ):
         """Load selected FOV and update UI components."""
         try:
             print(f"\nLoading FOV: {row}/{column}/{field}")
 
             # Load new data
             new_data_xr = load_fov_from_plate(
-                plate_metadata['plate'],
-                row,
-                column,
-                field,
-                resolution=0
+                plate_metadata["plate"], row, column, field, resolution=0
             )
 
             # Calculate pixel scales
@@ -224,53 +305,53 @@ with gr.Blocks(
                 float(new_data_xr.coords["X"][1] - new_data_xr.coords["X"][0]),
             )
 
-            # Update status
-            status = (
-                f"**Current FOV:** {row}/{column}/{field} | "
-                f"**Shape:** {dict(new_data_xr.sizes)} | **Dims:** {list(new_data_xr.dims)}"
-            )
-
             # Update sliders
             t_max = new_data_xr.sizes["T"] - 1
             z_max = new_data_xr.sizes["Z"] - 1
-            z_mid = new_data_xr.sizes["Z"] // 2
 
             # Clamp current values to new ranges
             new_t = min(current_t, t_max)
             new_z = min(current_z, z_max)
 
-            print(f"✅ Loaded: T={new_data_xr.sizes['T']}, Z={new_data_xr.sizes['Z']}, Y={new_data_xr.sizes['Y']}, X={new_data_xr.sizes['X']}")
+            print(
+                f"✅ Loaded: T={new_data_xr.sizes['T']}, Z={new_data_xr.sizes['Z']}, Y={new_data_xr.sizes['Y']}, X={new_data_xr.sizes['X']}"
+            )
 
-            # Get initial preview image
+            # Get preview image (show same image twice for preview mode)
             from demo_utils import extract_2d_slice
-            preview_image = extract_2d_slice(new_data_xr, t=new_t, c=0, z=new_z, normalize=True, verbose=False)
+
+            preview_image = extract_2d_slice(
+                new_data_xr, t=new_t, c=0, z=new_z, normalize=True, verbose=False
+            )
 
             return (
-                status,
                 gr.Slider(maximum=t_max, value=new_t),  # Updated T slider
                 gr.Slider(maximum=z_max, value=new_z),  # Updated Z slider
+                (preview_image, preview_image),  # ImageSlider in preview mode
                 new_data_xr,  # Update state
                 new_pixel_scales,  # Update state
-                preview_image,  # Update raw image display
             )
 
         except Exception as e:
             error_msg = f"❌ Error loading FOV: {str(e)}"
             print(error_msg)
             return (
-                error_msg,
                 gr.skip(),  # Keep T slider
                 gr.skip(),  # Keep Z slider
+                gr.skip(),  # Keep image viewer
                 gr.skip(),  # Keep data state
                 gr.skip(),  # Keep pixel_scales state
-                gr.skip(),  # Keep raw image
             )
 
     # === Image Display Callbacks ===
-    def get_slice_from_state(t: int, z: int, data_xr_state):
-        """Extract slice from state data."""
+    def get_slice_for_preview(t: int, z: int, data_xr_state):
+        """Extract slice and show in preview mode (same image twice)."""
         from demo_utils import extract_2d_slice
-        return extract_2d_slice(data_xr_state, t=int(t), c=0, z=int(z), normalize=True, verbose=True)
+
+        slice_img = extract_2d_slice(
+            data_xr_state, t=int(t), c=0, z=int(z), normalize=True, verbose=False
+        )
+        return (slice_img, slice_img)  # Preview mode: both sides show same image
 
     # Wire FOV selection
     row_dropdown.change(
@@ -287,32 +368,115 @@ with gr.Blocks(
     load_fov_btn.click(
         fn=load_selected_fov,
         inputs=[row_dropdown, column_dropdown, field_dropdown, t_slider, z_slider],
-        outputs=[fov_status, t_slider, z_slider, current_data_xr, current_pixel_scales, raw_image],
+        outputs=[
+            t_slider,
+            z_slider,
+            image_viewer,
+            current_data_xr,
+            current_pixel_scales,
+        ],
     )
 
-    # Wire raw image viewer (using state)
-    demo.load(fn=get_slice_from_state, inputs=[t_slider, z_slider, current_data_xr], outputs=raw_image)
-    t_slider.change(fn=get_slice_from_state, inputs=[t_slider, z_slider, current_data_xr], outputs=raw_image)
-    z_slider.change(fn=get_slice_from_state, inputs=[t_slider, z_slider, current_data_xr], outputs=raw_image)
+    # Wire image viewer for T/Z navigation (preview mode: same image twice)
+    demo.load(
+        fn=get_slice_for_preview,
+        inputs=[t_slider, z_slider, current_data_xr],
+        outputs=image_viewer,
+    )
+    t_slider.change(
+        fn=get_slice_for_preview,
+        inputs=[t_slider, z_slider, current_data_xr],
+        outputs=image_viewer,
+    )
+    z_slider.change(
+        fn=get_slice_for_preview,
+        inputs=[t_slider, z_slider, current_data_xr],
+        outputs=image_viewer,
+    )
 
     # Wire reconstruction button
-    def run_reconstruction_ui(t: int, z: int, data_xr_state, pixel_scales_state):
+    def run_reconstruction_ui(
+        t: int,
+        z: int,
+        z_offset: float,
+        na_det: float,
+        na_ill: float,
+        tilt_zenith: float,
+        tilt_azimuth: float,
+        data_xr_state,
+        pixel_scales_state,
+    ):
         """
-        Run optimization and stream updates to UI with iteration caching.
+        Run reconstruction with CURRENT slider values (no optimization).
 
+        Uses slider parameters directly for a single fast reconstruction.
+        """
+        from demo_utils import extract_2d_slice, run_reconstruction_single
+
+        # Extract full Z-stack for timepoint t (for reconstruction)
+        zyx_stack = data_xr_state.isel(T=int(t), C=0).values
+
+        # Get current Z-slice for comparison (left side of ImageSlider)
+        original_normalized = extract_2d_slice(
+            data_xr_state, t=int(t), c=0, z=int(z), normalize=True, verbose=False
+        )
+
+        # Build parameter dict from slider values
+        param_values = {
+            "z_offset": z_offset,
+            "numerical_aperture_detection": na_det,
+            "numerical_aperture_illumination": na_ill,
+            "tilt_angle_zenith": tilt_zenith,
+            "tilt_angle_azimuth": tilt_azimuth,
+        }
+
+        # Run single reconstruction with these parameters
+        reconstructed_image = run_reconstruction_single(
+            zyx_stack, pixel_scales_state, RECON_CONFIG, param_values
+        )
+
+        # Return updated image slider (no optimization results)
+        return (original_normalized, reconstructed_image)
+
+    def run_optimization_ui(t: int, z: int, data_xr_state, pixel_scales_state):
+        """
+        Run OPTIMIZATION and stream updates to UI with iteration caching.
+
+        Uses OPTIMIZABLE_PARAMS as initial guesses, runs full optimization loop.
         Yields progressive updates for ImageSlider, loss plot, status,
-        iteration history, and iteration slider.
+        iteration history, iteration slider, and SLIDER UPDATES.
         """
         # Extract full Z-stack for timepoint t (for reconstruction)
         zyx_stack = data_xr_state.isel(T=int(t), C=0).values
 
         # Get current Z-slice for comparison (left side of ImageSlider)
         from demo_utils import extract_2d_slice
-        original_normalized = extract_2d_slice(data_xr_state, t=int(t), c=0, z=int(z), normalize=True, verbose=False)
+
+        original_normalized = extract_2d_slice(
+            data_xr_state, t=int(t), c=0, z=int(z), normalize=True, verbose=False
+        )
 
         # Initialize tracking
         loss_history = []
         iteration_cache = []
+
+        # Set raw image once at the start (pin it)
+        yield (
+            (
+                original_normalized,
+                original_normalized,
+            ),  # Show raw image on both sides initially
+            gr.skip(),  # Don't update loss plot yet
+            [],  # Clear iteration history
+            gr.Slider(visible=False, interactive=False),  # Hide iteration slider
+            gr.Markdown(value="Starting optimization...", visible=True),
+            # Slider updates (11 outputs total):
+            gr.skip(),  # z_offset
+            gr.skip(),  # na_det
+            gr.skip(),  # na_ill
+            gr.skip(),  # tilt_zenith
+            gr.skip(),  # tilt_azimuth
+        )
 
         # Run optimization with streaming
         for result in run_optimization_streaming(
@@ -344,43 +508,49 @@ with gr.Blocks(
                 }
             )
 
-            # Format parameter values for display
-            param_str = ", ".join(f"{k}={v:.4f}" for k, v in result["params"].items())
-
             # Format iteration info
             info_md = f"**Iteration {n}/{RECON_CONFIG['num_iterations']}** | Loss: `{result['loss']:.2e}`"
 
-            # Yield updates for all output components
+            # Yield updates - update ImageSlider AND sliders with latest params
             yield (
-                (original_normalized, result["reconstructed_image"]),  # ImageSlider
+                (
+                    original_normalized,
+                    result["reconstructed_image"],
+                ),  # Update ImageSlider
                 pd.DataFrame(loss_history),  # Loss plot
-                f"Iteration {n}/{RECON_CONFIG['num_iterations']} | "
-                f"Loss: {result['loss']:.2e}\n{param_str}",  # Status text
                 iteration_cache,  # Update iteration history state
                 gr.Slider(  # Update iteration slider (grows from 1-1 to 1-10)
                     minimum=1,
-                    maximum=n,  # Grows with each iteration!
-                    value=n,  # Tracks latest by default
+                    maximum=n,
+                    value=n,
                     step=1,
-                    visible=True,  # Becomes visible on first iteration
-                    interactive=True,  # User can scrub while running
+                    visible=True,
+                    interactive=True,
                 ),
                 gr.Markdown(value=info_md, visible=True),  # Show iteration info
+                # Update parameter sliders with optimized values:
+                result["params"].get("z_offset", gr.skip()),
+                result["params"].get("numerical_aperture_detection", gr.skip()),
+                result["params"].get("numerical_aperture_illumination", gr.skip()),
+                result["params"].get("tilt_angle_zenith", gr.skip()),
+                result["params"].get("tilt_angle_azimuth", gr.skip()),
             )
 
-        # Final status update
-        final_status = (
-            f"✅ Optimization complete! Final loss: {loss_history[-1]['loss']:.2e}\n"
-            f"🎚️ Use iteration slider to explore optimization history (1-{len(iteration_cache)})"
-        )
-
+        # Final yield (keep last state)
         yield (
             gr.skip(),  # Keep last ImageSlider state
             gr.skip(),  # Keep last loss plot
-            final_status,  # Updated status
             gr.skip(),  # Keep iteration history
             gr.skip(),  # Keep iteration slider
-            gr.skip(),  # Keep iteration info
+            gr.Markdown(
+                value=f"**Optimization Complete!** Final Loss: `{result['loss']:.2e}`",
+                visible=True,
+            ),
+            gr.skip(),  # Keep z_offset
+            gr.skip(),  # Keep na_det
+            gr.skip(),  # Keep na_ill
+            gr.skip(),  # Keep tilt_zenith
+            gr.skip(),  # Keep tilt_azimuth
         )
 
     # Iteration scrubbing callback
@@ -412,25 +582,46 @@ with gr.Blocks(
             gr.Markdown(value="", visible=False),  # Hide info
         )
 
-    # Wire reconstruction button with all outputs (now includes state)
-    reconstruct_btn.click(
-        fn=run_reconstruction_ui,
+    # Wire optimize button (runs full optimization loop, updates sliders)
+    optimize_btn.click(
+        fn=run_optimization_ui,
         inputs=[t_slider, z_slider, current_data_xr, current_pixel_scales],
         outputs=[
-            comparison_slider,
+            image_viewer,
             loss_plot,
-            status_text,
             iteration_history,
             iteration_slider,
             iteration_info,
+            z_offset_slider,
+            na_det_slider,
+            na_ill_slider,
+            tilt_zenith_slider,
+            tilt_azimuth_slider,
         ],
+    )
+
+    # Wire reconstruction button (uses current slider values, fast single reconstruction)
+    reconstruct_btn.click(
+        fn=run_reconstruction_ui,
+        inputs=[
+            t_slider,
+            z_slider,
+            z_offset_slider,
+            na_det_slider,
+            na_ill_slider,
+            tilt_zenith_slider,
+            tilt_azimuth_slider,
+            current_data_xr,
+            current_pixel_scales,
+        ],
+        outputs=[image_viewer],
     )
 
     # Wire iteration scrubbing
     iteration_slider.change(
         fn=scrub_iterations,
         inputs=[iteration_slider, iteration_history],
-        outputs=[comparison_slider, iteration_info],
+        outputs=[image_viewer, iteration_info],
     )
 
     # Wire T/Z slider changes to clear iteration state
