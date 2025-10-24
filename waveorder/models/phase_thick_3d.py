@@ -43,7 +43,8 @@ def calculate_transfer_function(
     numerical_aperture_illumination: float,
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
-) -> tuple[np.ndarray, np.ndarray]:
+    illumination_sector_angles: list[tuple[float, float]] = None,
+) -> tuple[Tensor, Tensor]:
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
         numerical_aperture_illumination,
@@ -58,33 +59,51 @@ def calculate_transfer_function(
     yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
     z_factor = int(np.ceil(z_pixel_size / axial_nyquist))
 
-    (
-        real_potential_transfer_function,
-        imag_potential_transfer_function,
-    ) = _calculate_wrap_unsafe_transfer_function(
-        (
-            zyx_shape[0] * z_factor,
-            zyx_shape[1] * yx_factor,
-            zyx_shape[2] * yx_factor,
-        ),
-        yx_pixel_size / yx_factor,
-        z_pixel_size / z_factor,
-        wavelength_illumination,
-        z_padding,
-        index_of_refraction_media,
-        numerical_aperture_illumination,
-        numerical_aperture_detection,
-        invert_phase_contrast=invert_phase_contrast,
-    )
+    # Handle sector illumination case (or single channel with full aperture)
+    if illumination_sector_angles is None:
+        # Single channel with full aperture - wrap as [(0, 360)]
+        illumination_sector_angles = [(0, 360)]
 
-    zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
+    real_tfs = []
+    imag_tfs = []
+
+    for start_angle, end_angle in illumination_sector_angles:
+        (
+            real_potential_transfer_function,
+            imag_potential_transfer_function,
+        ) = _calculate_wrap_unsafe_transfer_function(
+            (
+                zyx_shape[0] * z_factor,
+                zyx_shape[1] * yx_factor,
+                zyx_shape[2] * yx_factor,
+            ),
+            yx_pixel_size / yx_factor,
+            z_pixel_size / z_factor,
+            wavelength_illumination,
+            z_padding,
+            index_of_refraction_media,
+            numerical_aperture_illumination,
+            numerical_aperture_detection,
+            invert_phase_contrast=invert_phase_contrast,
+            sector_angle_start=start_angle,
+            sector_angle_end=end_angle,
+        )
+        zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
+        real_tfs.append(
+            sampling.nd_fourier_central_cuboid(
+                real_potential_transfer_function, zyx_out_shape
+            )
+        )
+        imag_tfs.append(
+            sampling.nd_fourier_central_cuboid(
+                imag_potential_transfer_function, zyx_out_shape
+            )
+        )
+
+    # Always return (C, Z, Y, X) array, even for single channel
     return (
-        sampling.nd_fourier_central_cuboid(
-            real_potential_transfer_function, zyx_out_shape
-        ),
-        sampling.nd_fourier_central_cuboid(
-            imag_potential_transfer_function, zyx_out_shape
-        ),
+        torch.stack(real_tfs, dim=0),
+        torch.stack(imag_tfs, dim=0),
     )
 
 
@@ -98,7 +117,9 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_illumination: float,
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
-) -> tuple[np.ndarray, np.ndarray]:
+    sector_angle_start: float = None,
+    sector_angle_end: float = None,
+) -> tuple[Tensor, Tensor]:
     radial_frequencies = util.generate_radial_frequencies(
         zyx_shape[1:], yx_pixel_size
     )
@@ -109,11 +130,25 @@ def _calculate_wrap_unsafe_transfer_function(
     if invert_phase_contrast:
         z_position_list = torch.flip(z_position_list, dims=(0,))
 
-    ill_pupil = optics.generate_pupil(
-        radial_frequencies,
-        numerical_aperture_illumination,
-        wavelength_illumination,
-    )
+    # Generate illumination pupil (sector or full aperture)
+    if sector_angle_start is not None and sector_angle_end is not None:
+        fyy, fxx = util.generate_frequencies(zyx_shape[1:], yx_pixel_size)
+        ill_pupil = optics.generate_sector_pupil(
+            radial_frequencies,
+            fxx,
+            fyy,
+            numerical_aperture_illumination,
+            wavelength_illumination,
+            sector_angle_start,
+            sector_angle_end,
+        )
+    else:
+        ill_pupil = optics.generate_pupil(
+            radial_frequencies,
+            numerical_aperture_illumination,
+            wavelength_illumination,
+        )
+
     det_pupil = optics.generate_pupil(
         radial_frequencies,
         numerical_aperture_detection,
@@ -150,8 +185,8 @@ def _calculate_wrap_unsafe_transfer_function(
 
 def visualize_transfer_function(
     viewer,
-    real_potential_transfer_function: np.ndarray,
-    imag_potential_transfer_function: np.ndarray,
+    real_potential_transfer_function: Tensor,
+    imag_potential_transfer_function: Tensor,
     zyx_scale: tuple[float, float, float],
 ) -> None:
     add_transfer_function_to_viewer(
@@ -170,11 +205,11 @@ def visualize_transfer_function(
 
 
 def apply_transfer_function(
-    zyx_object: np.ndarray,
-    real_potential_transfer_function: np.ndarray,
+    zyx_object: Tensor,
+    real_potential_transfer_function: Tensor,
     z_padding: int,
     brightness: float,
-) -> np.ndarray:
+) -> Tensor:
     # This simplified forward model only handles phase, so it resuses the fluorescence forward model
     # TODO: extend to absorption
     return (
@@ -200,19 +235,18 @@ def apply_inverse_transfer_function(
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
 ) -> Tensor:
-    """Reconstructs 3D phase from labelfree defocus zyx_data and a pair of
-    complex 3D transfer functions real_potential_transfer_function and
-    imag_potential_transfer_function, providing options for reconstruction
-    algorithms.
+    """Reconstructs 3D phase from labelfree defocus zyx_data and multi-channel
+    transfer functions, combining all illumination channels into a single phase estimate.
 
     Parameters
     ----------
     zyx_data : Tensor
-        3D raw data, label-free defocus stack
+        Multi-channel 3D raw data with shape (C, Z, Y, X).
+        For single channel (full aperture), C=1.
     real_potential_transfer_function : Tensor
-        Real potential transfer function, see calculate_transfer_function abov
+        Real potential transfer function with shape (C, Z, Y, X).
     imaginary_potential_transfer_function : Tensor
-        Imaginary potential transfer function, see calculate_transfer_function abov
+        Imaginary potential transfer function with shape (C, Z, Y, X).
     z_padding : int
         Padding for axial dimension. Use zero for defocus stacks that
         extend ~3 PSF widths beyond the sample. Pad by ~3 PSF widths otherwise.
@@ -234,47 +268,50 @@ def apply_inverse_transfer_function(
     Returns
     -------
     Tensor
-        zyx_phase (radians)
+        zyx_phase (radians) with shape (Z, Y, X)
 
     Raises
     ------
     NotImplementedError
         TV is not implemented
     """
-    # Handle padding
-    zyx_padded = util.pad_zyx_along_z(zyx_data, z_padding)
+    # Multi-channel reconstruction with sector illumination (or single channel)
+    # zyx_data shape: (C, Z, Y, X)
+    # TF shapes: (C, Z, Y, X)
+    num_channels = zyx_data.shape[0]
+    reconstructions = []
 
-    # Normalize
-    zyx = util.inten_normalization_3D(zyx_padded)
+    for c in range(num_channels):
+        # Handle padding
+        zyx_padded = util.pad_zyx_along_z(zyx_data[c], z_padding)
 
-    # Prepare TF
-    effective_transfer_function = (
-        real_potential_transfer_function
-        + absorption_ratio * imaginary_potential_transfer_function
-    )
+        # Normalize
+        zyx = util.inten_normalization_3D(zyx_padded)
 
-    # Reconstruct
-    if reconstruction_algorithm == "Tikhonov":
-        inverse_filter = tikhonov_regularized_inverse_filter(
-            effective_transfer_function, regularization_strength
+        # Prepare TF for this channel
+        effective_transfer_function = (
+            real_potential_transfer_function[c]
+            + absorption_ratio * imaginary_potential_transfer_function[c]
         )
 
-        # [None]s and [0] are for applying a 1x1 "bank" of filters.
-        # For further uniformity, consider returning (1, Z, Y, X)
-        f_real = apply_filter_bank(inverse_filter[None, None], zyx[None])[0]
+        # Reconstruct this channel
+        if reconstruction_algorithm == "Tikhonov":
+            inverse_filter = tikhonov_regularized_inverse_filter(
+                effective_transfer_function, regularization_strength
+            )
+            f_real = apply_filter_bank(inverse_filter[None, None], zyx[None])[
+                0
+            ]
+        elif reconstruction_algorithm == "TV":
+            raise NotImplementedError
 
-    elif reconstruction_algorithm == "TV":
-        raise NotImplementedError
-        f_real = util.single_variable_admm_tv_deconvolution_3D(
-            zyx,
-            effective_transfer_function,
-            reg_re=regularization_strength,
-            rho=TV_rho_strength,
-            itr=TV_iterations,
-        )
+        # Unpad
+        if z_padding != 0:
+            f_real = f_real[z_padding:-z_padding]
 
-    # Unpad
-    if z_padding != 0:
-        f_real = f_real[z_padding:-z_padding]
+        reconstructions.append(f_real)
+
+    # Sum all channel reconstructions
+    f_real = torch.stack(reconstructions, dim=0).sum(dim=0)
 
     return f_real
