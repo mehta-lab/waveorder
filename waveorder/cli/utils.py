@@ -96,6 +96,7 @@ def apply_inverse_to_zyx_and_save(
             f"All values at t={t_idx} are zero or Nan, skipping reconstruction."
         )
         return
+    czyx_uint16_numpy = np.nan_to_num(czyx_uint16_numpy)  
 
     # convert to np.int32 (torch doesn't accept np.uint16), then convert to tensor float32
     czyx_data = torch.tensor(np.int32(czyx_uint16_numpy), dtype=torch.float32)
