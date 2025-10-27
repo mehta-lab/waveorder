@@ -15,7 +15,9 @@ from waveorder.cli.settings import ReconstructionSettings
 from waveorder.io import utils
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
+    inplane_oriented_thick_pol3d_vector,
     isotropic_fluorescent_thick_3d,
+    isotropic_fluorescent_thin_3d,
     isotropic_thin_3d,
     phase_thick_3d,
 )
@@ -35,6 +37,76 @@ def _position_list_from_shape_scale_offset(
     [1.5, 1.0, 0.5, 0.0]
     """
     return list((-np.arange(shape) + (shape // 2) + offset) * scale)
+
+
+def generate_and_save_vector_birefringence_transfer_function(
+    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple
+):
+    """Generates and saves the vector birefringence transfer function
+    to the dataset, based on the settings.
+
+    Parameters
+    ----------
+    settings : ReconstructionSettings
+    dataset : NGFF Node
+        The dataset that will be updated.
+    zyx_shape : tuple
+        A tuple of integers specifying the input data's shape in (Z, Y, X) order
+    """
+    echo_headline(
+        "Generating vector birefringence transfer function with settings:"
+    )
+    echo_settings(settings.birefringence.transfer_function)
+    echo_settings(settings.phase.transfer_function)
+
+    num_elements = np.array(zyx_shape).prod()
+    max_tf_elements = 1e7  # empirical, based on memory usage
+    transverse_downsample_factor = np.ceil(
+        np.sqrt(num_elements / max_tf_elements)
+    )
+    echo_headline(
+        f"Downsampling transfer function in X and Y by {transverse_downsample_factor}x"
+    )
+    phase_settings_dict = settings.phase.transfer_function.dict()
+    phase_settings_dict.pop("z_focus_offset")  # not used in 3D
+
+    sfZYX_transfer_function, _, singular_system = (
+        inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
+            zyx_shape=zyx_shape,
+            scheme=str(len(settings.input_channel_names)) + "-State",
+            **settings.birefringence.transfer_function.dict(),
+            **phase_settings_dict,
+            fourier_oversample_factor=int(transverse_downsample_factor),
+        )
+    )
+
+    U, S, Vh = singular_system
+    chunks = (1, 1, 1, zyx_shape[1], zyx_shape[2])
+
+    # Add dummy channels
+    for i in range(3):
+        dataset.append_channel(f"ch{i}")
+
+    dataset.create_image(
+        "vector_transfer_function",
+        sfZYX_transfer_function.cpu().numpy(),
+        chunks=chunks,
+    )
+    dataset.create_image(
+        "vector_singular_system_U",
+        U.cpu().numpy(),
+        chunks=chunks,
+    )
+    dataset.create_image(
+        "vector_singular_system_S",
+        S[None].cpu().numpy(),
+        chunks=chunks,
+    )
+    dataset.create_image(
+        "vector_singular_system_Vh",
+        Vh.cpu().numpy(),
+        chunks=chunks,
+    )
 
 
 def generate_and_save_birefringence_transfer_function(settings, dataset):
@@ -63,7 +135,9 @@ def generate_and_save_birefringence_transfer_function(settings, dataset):
 
 
 def generate_and_save_phase_transfer_function(
-    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple
+    settings: ReconstructionSettings,
+    dataset: Position,
+    zyx_shape: tuple,
 ):
     """Generates and saves the phase transfer function to the dataset, based on the settings.
 
@@ -150,7 +224,9 @@ def generate_and_save_phase_transfer_function(
 
 
 def generate_and_save_fluorescence_transfer_function(
-    settings: ReconstructionSettings, dataset: Position, zyx_shape: tuple
+    settings: ReconstructionSettings,
+    dataset: Position,
+    zyx_shape: tuple,
 ):
     """Generates and saves the fluorescence transfer function to the dataset, based on the settings.
 
@@ -164,13 +240,60 @@ def generate_and_save_fluorescence_transfer_function(
     """
     echo_headline("Generating fluorescence transfer function with settings:")
     echo_settings(settings.fluorescence.transfer_function)
-    # Remove unused parameters
     settings_dict = settings.fluorescence.transfer_function.dict()
-    settings_dict.pop("z_focus_offset")
 
     if settings.reconstruction_dimension == 2:
-        raise NotImplementedError
+        # Convert zyx_shape and z_pixel_size into yx_shape and z_position_list
+        settings_dict["yx_shape"] = [zyx_shape[1], zyx_shape[2]]
+        settings_dict["z_position_list"] = (
+            _position_list_from_shape_scale_offset(
+                shape=zyx_shape[0],
+                scale=settings_dict["z_pixel_size"],
+                offset=settings_dict["z_focus_offset"],
+            )
+        )
+
+        # Remove unused parameters
+        settings_dict.pop("z_pixel_size")
+        settings_dict.pop("z_padding")
+        settings_dict.pop("z_focus_offset")
+
+        # Calculate 2D fluorescence transfer functions
+        fluorescent_2d_to_3d_transfer_function = (
+            isotropic_fluorescent_thin_3d.calculate_transfer_function(
+                **settings_dict,
+            )
+        )
+
+        # Calculate singular system for 2D reconstruction
+        U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(
+            fluorescent_2d_to_3d_transfer_function
+        )
+
+        # Get yx_shape for chunk sizes
+        yx_shape = zyx_shape[1:]
+
+        # Save singular system components
+        dataset.create_image(
+            "singular_system_U",
+            U.cpu().numpy()[None, ...],
+            chunks=(1, 1, 1, yx_shape[0], yx_shape[1]),
+        )
+        dataset.create_image(
+            "singular_system_S",
+            S.cpu().numpy()[None, None, ...],
+            chunks=(1, 1, 1, yx_shape[0], yx_shape[1]),
+        )
+        dataset.create_image(
+            "singular_system_Vh",
+            Vh.cpu().numpy()[None, ...],
+            chunks=(1, 1, zyx_shape[0], yx_shape[0], yx_shape[1]),
+        )
+
     elif settings.reconstruction_dimension == 3:
+        # Remove unused parameters for 3D
+        settings_dict.pop("z_focus_offset")
+
         # Calculate transfer functions
         optical_transfer_function = (
             isotropic_fluorescent_thick_3d.calculate_transfer_function(
@@ -187,7 +310,9 @@ def generate_and_save_fluorescence_transfer_function(
 
 
 def compute_transfer_function_cli(
-    input_position_dirpath: Path, config_filepath: Path, output_dirpath: Path
+    input_position_dirpath: Path,
+    config_filepath: Path,
+    output_dirpath: Path,
 ) -> None:
     """CLI command to compute the transfer function given a configuration file path
     and a desired output path.
@@ -263,6 +388,10 @@ def compute_transfer_function_cli(
         )
     if settings.fluorescence is not None:
         generate_and_save_fluorescence_transfer_function(
+            settings, output_dataset, zyx_shape
+        )
+    if settings.birefringence is not None and settings.phase is not None:
+        generate_and_save_vector_birefringence_transfer_function(
             settings, output_dataset, zyx_shape
         )
 

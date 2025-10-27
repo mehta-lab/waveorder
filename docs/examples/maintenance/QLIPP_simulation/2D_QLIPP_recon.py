@@ -1,3 +1,9 @@
+""" 
+2D QLIPP reconstruction
+========================
+2D QLIPP reconstruction
+"""
+
 #!/usr/bin/env python
 # coding: utf-8
 

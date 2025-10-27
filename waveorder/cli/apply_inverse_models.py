@@ -7,10 +7,13 @@ import torch
 
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
+    inplane_oriented_thick_pol3d_vector,
     isotropic_fluorescent_thick_3d,
+    isotropic_fluorescent_thin_3d,
     isotropic_thin_3d,
     phase_thick_3d,
 )
+from waveorder.stokes import _s12_to_orientation, stokes_after_adr
 
 
 def radians_to_nanometers(retardance_rad, wavelength_illumination_um):
@@ -132,12 +135,14 @@ def birefringence_and_phase(
     # [biref and phase, 2]
     if recon_dim == 2:
         # Load transfer functions
-        U = torch.from_numpy(transfer_function_dataset["singular_system_U"][0])
+        U = torch.from_numpy(
+            transfer_function_dataset["vector_singular_system_U"][0]
+        )
         S = torch.from_numpy(
-            transfer_function_dataset["singular_system_S"][0, 0]
+            transfer_function_dataset["vector_singular_system_S"][0, 0]
         )
         Vh = torch.from_numpy(
-            transfer_function_dataset["singular_system_Vh"][0]
+            transfer_function_dataset["vector_singular_system_Vh"][0]
         )
 
         # Apply
@@ -224,10 +229,54 @@ def birefringence_and_phase(
         retardance = radians_to_nanometers(
             reconstructed_parameters_3d[0], wavelength_illumination
         )
+        # Load singular system
+        U = torch.tensor(
+            np.array(transfer_function_dataset["vector_singular_system_U"])
+        )
+        S = torch.tensor(
+            np.array(transfer_function_dataset["vector_singular_system_S"][0])
+        )
+        Vh = torch.tensor(
+            np.array(transfer_function_dataset["vector_singular_system_Vh"])
+        )
+        singular_system = (U, S, Vh)
+
+        # Convert retardance and orientation to stokes
+        stokes = stokes_after_adr(*reconstructed_parameters_3d)
+
+        stokes = torch.nan_to_num_(
+            torch.stack(stokes), nan=0.0
+        )  # very rare nans from previous like
+
+        # Apply reconstruction
+        joint_recon_params = inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
+            szyx_data=stokes,
+            singular_system=singular_system,
+            intensity_to_stokes_matrix=None,
+            **settings_phase.apply_inverse.dict(),
+        )
+
+        new_ret = (
+            joint_recon_params[1] ** 2 + joint_recon_params[2] ** 2
+        ) ** (0.5)
+        new_ori = _s12_to_orientation(
+            joint_recon_params[1], -joint_recon_params[2]
+        )
+
+        # Convert stokes to retardance and orientation
+        # new_ret, new_ori, _ = estimate_ar_from_stokes012(*joint_recon_params)
+
+        # Convert retardance
+        new_ret_nm = radians_to_nanometers(new_ret, wavelength_illumination)
 
         # Save
         output = torch.stack(
-            (retardance,) + reconstructed_parameters_3d[1:] + (zyx_phase,)
+            (retardance,)
+            + reconstructed_parameters_3d[1:]
+            + (zyx_phase,)
+            + (new_ret_nm,)
+            + (new_ori,)
+            + (joint_recon_params[0],)
         )
     return output
 
@@ -237,7 +286,21 @@ def fluorescence(
 ):
     # [fluo, 2]
     if recon_dim == 2:
-        raise NotImplementedError
+        # Load transfer functions for 2D thin fluorescence reconstruction
+        U = torch.from_numpy(transfer_function_dataset["singular_system_U"][0])
+        S = torch.from_numpy(
+            transfer_function_dataset["singular_system_S"][0, 0]
+        )
+        Vh = torch.from_numpy(
+            transfer_function_dataset["singular_system_Vh"][0]
+        )
+
+        # Apply 2D fluorescence reconstruction
+        output = isotropic_fluorescent_thin_3d.apply_inverse_transfer_function(
+            czyx_data[0],
+            (U, S, Vh),
+            **settings_fluorescence.apply_inverse.dict(),
+        )
     # [fluo, 3]
     elif recon_dim == 3:
         # Load transfer functions

@@ -1,3 +1,9 @@
+"""
+Forward simulation of uniaxial permittivity tensor imaging
+===========================================================
+Forward simulation of uniaxial permittivity tensor imaging
+"""
+
 ####################################################################
 # Forward simulation of uniaxial permittivity tensor imaging (uPTI)#
 # This simulation is based on the uPTI paper                       #
@@ -46,8 +52,8 @@ from waveorder.visuals import jupyter_visuals
 ### Parameters of sample
 
 sample_type = "2D"  # 2D or 3D
-N = 50  # number of pixel in y dimension
-M = 50  # number of pixel in x dimension
+N = 30  # number of pixel in y dimension
+M = 30  # number of pixel in x dimension
 L = 26  # number of layers in z dimension
 z_layer = L // 2  # default z-slice to display in XY views.
 y_layer = M // 2  # default y-slice to display in XZ views.

@@ -51,18 +51,21 @@ def ret_ori_overlay(
     overlay_final = np.zeros_like(retardance)
 
     if cmap == "JCh":
-        J = ret_
-        C = np.ones_like(J) * 60
+        J_MAX = 65
+        C_MAX = 60
+
+        J = (ret_ / ret_max) * J_MAX
+        C = np.ones_like(J) * C_MAX
         C[ret_ < ret_min] = 0
         h = ori_
 
         JCh = np.stack((J, C, h), axis=-1)
-        JCh_rgb = cspace_convert(JCh, "JCh", "sRGB1")
+        JCh_rgb = cspace_convert(JCh, "JCh", "sRGB255")
 
         JCh_rgb[JCh_rgb < 0] = 0
-        JCh_rgb[JCh_rgb > 1] = 1
+        JCh_rgb[JCh_rgb > 255] = 255
 
-        overlay_final = JCh_rgb
+        overlay_final = JCh_rgb.astype(np.uint8)
     elif cmap == "HSV":
         I_hsv = np.moveaxis(
             np.stack(

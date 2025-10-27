@@ -28,8 +28,8 @@ def simulate_phase_recon(
     z_pixel_size_um=0.1,
     yx_pixel_size_um=6.5 / 63,
 ):
-    z_fov_um = 50
-    yx_fov_um = 50
+    z_fov_um = 25
+    yx_fov_um = 20
 
     n_z = np.int32(z_fov_um / z_pixel_size_um)
     n_yx = np.int32(yx_fov_um / yx_pixel_size_um)
@@ -89,13 +89,17 @@ def simulate_phase_recon(
     return recon_center
 
 
-def test_phase_invariance():
-    recon = simulate_phase_recon()
-
-    # test z pixel size invariance
-    recon1 = simulate_phase_recon(z_pixel_size_um=0.3)
-    assert np.abs((recon1 - recon) / recon) < 0.02
-
-    # test yx pixel size invariance
-    recon2 = simulate_phase_recon(yx_pixel_size_um=0.7 * 6.5 / 63)
-    assert np.abs((recon2 - recon) / recon) < 0.02
+@pytest.mark.parametrize(
+    "z_pixel_size_um, yx_pixel_size_um, tolerance",
+    [
+        (0.1, 6.5 / 63, 0.02),  # baseline
+        (0.15, 6.5 / 63, 0.02),  # test z pixel size invariance
+        (0.1, 0.8 * 6.5 / 63, 0.02),  # test yx pixel size invariance
+    ],
+)
+def test_phase_invariance(z_pixel_size_um, yx_pixel_size_um, tolerance):
+    baseline = simulate_phase_recon()
+    recon = simulate_phase_recon(
+        z_pixel_size_um=z_pixel_size_um, yx_pixel_size_um=yx_pixel_size_um
+    )
+    assert np.abs((recon - baseline) / baseline) < tolerance

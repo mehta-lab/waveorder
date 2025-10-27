@@ -1,0 +1,14 @@
+[
+    {
+        "version": "latest",
+        "url": "/en/latest/index.html"
+    },
+    {
+        "version": "v3.0.0a0",
+        "url": "/en/v3.0.0a0/index.html"
+    },
+    {
+        "version": "v2.2.1",
+        "url": "/en/v2.2.1/index.html"
+    }
+]
