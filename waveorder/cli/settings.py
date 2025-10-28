@@ -126,8 +126,9 @@ class PhaseTransferFunctionSettings(
                     f"Sector start angle {start} must be less than end angle {end}"
                 )
             # Normalize angles to [0, 360) using modulo 360
+            # Special case: preserve 360 for full aperture (don't reduce to 0)
             normalized_start = start % 360
-            normalized_end = end % 360
+            normalized_end = end % 360 if end % 360 != 0 else 360
             normalized.append((normalized_start, normalized_end))
         return normalized
 
