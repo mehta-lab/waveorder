@@ -119,20 +119,17 @@ class PhaseTransferFunctionSettings(
             raise ValueError(
                 "illumination_sector_angles must contain at least one sector"
             )
+        normalized = []
         for start, end in v:
-            if start < 0 or start >= 360:
-                raise ValueError(
-                    f"Sector start angle {start} must be in range [0, 360)"
-                )
-            if end <= 0 or end > 360:
-                raise ValueError(
-                    f"Sector end angle {end} must be in range (0, 360]"
-                )
-            if start >= end and not (start > 0 and end == 360):
+            if start >= end:
                 raise ValueError(
                     f"Sector start angle {start} must be less than end angle {end}"
                 )
-        return v
+            # Normalize angles to [0, 360) using modulo 360
+            normalized_start = start % 360
+            normalized_end = end % 360
+            normalized.append((normalized_start, normalized_end))
+        return normalized
 
 
 class FluorescenceTransferFunctionSettings(FourierTransferFunctionSettings):
