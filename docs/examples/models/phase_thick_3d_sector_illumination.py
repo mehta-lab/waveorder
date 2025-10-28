@@ -32,11 +32,16 @@ transfer_function_arguments = {
 # Define 9 sector illumination angles
 # 8 sectors at 45-degree intervals + 1 full aperture
 sector_angle = 45
+sector_angle_offset = -22.5
 illumination_sector_angles = [
-    (i * sector_angle, (i + 1) * sector_angle) for i in range(8)
+    (
+        (i * sector_angle + sector_angle_offset) % 360,
+        ((i + 1) * sector_angle + sector_angle_offset) % 360,
+    )
+    for i in range(8)
 ] + [(0, 360)]
 
-print(f"Using {len(illumination_sector_angles)} illumination sectors")
+print(f"Using {illumination_sector_angles} illumination sectors")
 
 # Create a phantom
 zyx_phase = phase_thick_3d.generate_test_phantom(
