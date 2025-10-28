@@ -67,7 +67,10 @@ def calculate_transfer_function(
     real_tfs = []
     imag_tfs = []
 
-    for start_angle, end_angle in illumination_sector_angles:
+    for i, (start_angle, end_angle) in enumerate(illumination_sector_angles):
+        print(
+            f"Calculating transfer function {i+1}/{len(illumination_sector_angles)} for sector [{start_angle:.1f}, {end_angle:.1f}] degrees"
+        )
         (
             real_potential_transfer_function,
             imag_potential_transfer_function,
@@ -282,6 +285,7 @@ def apply_inverse_transfer_function(
     reconstructions = []
 
     for c in range(num_channels):
+        print(f"Reconstructing channel {c+1}/{num_channels}")
         # Handle padding
         zyx_padded = util.pad_zyx_along_z(zyx_data[c], z_padding)
 
