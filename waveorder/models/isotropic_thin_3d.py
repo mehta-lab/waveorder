@@ -44,6 +44,7 @@ def calculate_transfer_function(
     numerical_aperture_illumination: float,
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
+    illumination_sector_angles: list[tuple[float, float]] = None,
 ) -> Tuple[Tensor, Tensor]:
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
@@ -52,45 +53,60 @@ def calculate_transfer_function(
     )
     yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
 
-    (
-        absorption_2d_to_3d_transfer_function,
-        phase_2d_to_3d_transfer_function,
-    ) = _calculate_wrap_unsafe_transfer_function(
+    # Handle sector illumination case (or single channel with full aperture)
+    if illumination_sector_angles is None:
+        # Single channel with full aperture - wrap as [(0, 360)]
+        illumination_sector_angles = [(0, 360)]
+
+    absorption_tfs = []
+    phase_tfs = []
+
+    for start_angle, end_angle in illumination_sector_angles:
         (
-            yx_shape[0] * yx_factor,
-            yx_shape[1] * yx_factor,
-        ),
-        yx_pixel_size / yx_factor,
-        z_position_list,
-        wavelength_illumination,
-        index_of_refraction_media,
-        numerical_aperture_illumination,
-        numerical_aperture_detection,
-        invert_phase_contrast=invert_phase_contrast,
-    )
-
-    absorption_2d_to_3d_transfer_function_out = torch.zeros(
-        (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64
-    )
-    phase_2d_to_3d_transfer_function_out = torch.zeros(
-        (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64
-    )
-
-    for z in range(len(z_position_list)):
-        absorption_2d_to_3d_transfer_function_out[z] = (
-            sampling.nd_fourier_central_cuboid(
-                absorption_2d_to_3d_transfer_function[z], yx_shape
-            )
-        )
-        phase_2d_to_3d_transfer_function_out[z] = (
-            sampling.nd_fourier_central_cuboid(
-                phase_2d_to_3d_transfer_function[z], yx_shape
-            )
+            absorption_2d_to_3d_transfer_function,
+            phase_2d_to_3d_transfer_function,
+        ) = _calculate_wrap_unsafe_transfer_function(
+            (
+                yx_shape[0] * yx_factor,
+                yx_shape[1] * yx_factor,
+            ),
+            yx_pixel_size / yx_factor,
+            z_position_list,
+            wavelength_illumination,
+            index_of_refraction_media,
+            numerical_aperture_illumination,
+            numerical_aperture_detection,
+            invert_phase_contrast=invert_phase_contrast,
+            sector_angle_start=start_angle,
+            sector_angle_end=end_angle,
         )
 
+        absorption_2d_to_3d_transfer_function_out = torch.zeros(
+            (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64
+        )
+        phase_2d_to_3d_transfer_function_out = torch.zeros(
+            (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64
+        )
+
+        for z in range(len(z_position_list)):
+            absorption_2d_to_3d_transfer_function_out[z] = (
+                sampling.nd_fourier_central_cuboid(
+                    absorption_2d_to_3d_transfer_function[z], yx_shape
+                )
+            )
+            phase_2d_to_3d_transfer_function_out[z] = (
+                sampling.nd_fourier_central_cuboid(
+                    phase_2d_to_3d_transfer_function[z], yx_shape
+                )
+            )
+
+        absorption_tfs.append(absorption_2d_to_3d_transfer_function_out)
+        phase_tfs.append(phase_2d_to_3d_transfer_function_out)
+
+    # Always return (C, Z, Y, X) arrays, even for single channel
     return (
-        absorption_2d_to_3d_transfer_function_out,
-        phase_2d_to_3d_transfer_function_out,
+        torch.stack(absorption_tfs, dim=0),
+        torch.stack(phase_tfs, dim=0),
     )
 
 
@@ -103,6 +119,8 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_illumination: float,
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
+    sector_angle_start: float = None,
+    sector_angle_end: float = None,
 ) -> Tuple[Tensor, Tensor]:
     if numerical_aperture_illumination >= numerical_aperture_detection:
         print(
@@ -119,11 +137,25 @@ def _calculate_wrap_unsafe_transfer_function(
         yx_shape, yx_pixel_size
     )
 
-    illumination_pupil = optics.generate_pupil(
-        radial_frequencies,
-        numerical_aperture_illumination,
-        wavelength_illumination,
-    )
+    # Generate illumination pupil (sector or full aperture)
+    if sector_angle_start is not None and sector_angle_end is not None:
+        fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size)
+        illumination_pupil = optics.generate_sector_pupil(
+            radial_frequencies,
+            fxx,
+            fyy,
+            numerical_aperture_illumination,
+            wavelength_illumination,
+            sector_angle_start,
+            sector_angle_end,
+        )
+    else:
+        illumination_pupil = optics.generate_pupil(
+            radial_frequencies,
+            numerical_aperture_illumination,
+            wavelength_illumination,
+        )
+
     detection_pupil = optics.generate_pupil(
         radial_frequencies,
         numerical_aperture_detection,
@@ -162,25 +194,30 @@ def calculate_singular_system(
     phase_2d_to_3d_transfer_function: Tensor,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """Calculates the singular system of the absoprtion and phase transfer
-    functions.
+    functions for multi-channel data.
 
-    Together, the transfer functions form a (2, Z, Vy, Vx) tensor, where
-    (2,) is the object-space dimension (abs, phase), (Z,) is the data-space
-    dimension, and (Vy, Vx) are the spatial frequency dimensions.
+    Together, the transfer functions form a (2, C, Z, Vy, Vx) tensor, where
+    (2,) is the object-space dimension (abs, phase), (C,) is the channel dimension,
+    (Z,) is the data-space dimension, and (Vy, Vx) are the spatial frequency dimensions.
 
-    The SVD is computed over the (2, Z) dimensions.
+    The SVD is computed over the (2, C*Z) dimensions, flattening channels and z together.
 
     Parameters
     ----------
     absorption_2d_to_3d_transfer_function : Tensor
-        ZYX transfer function for absorption
+        CZYX transfer function for absorption
     phase_2d_to_3d_transfer_function : Tensor
-        ZYX transfer function for phase
+        CZYX transfer function for phase
 
     Returns
     -------
     Tuple[Tensor, Tensor, Tensor]
+        U, S, Vh for the singular system
     """
+    # absorption_2d_to_3d_transfer_function shape: (C, Z, Y, X)
+    # phase_2d_to_3d_transfer_function shape: (C, Z, Y, X)
+
+    # Stack absorption and phase: (2, C, Z, Y, X)
     sfYX_transfer_function = torch.stack(
         (
             absorption_2d_to_3d_transfer_function,
@@ -188,6 +225,18 @@ def calculate_singular_system(
         ),
         dim=0,
     )
+
+    # Flatten C and Z dimensions: (2, C*Z, Y, X)
+    num_channels = sfYX_transfer_function.shape[1]
+    num_z = sfYX_transfer_function.shape[2]
+    sfYX_transfer_function = sfYX_transfer_function.reshape(
+        2,
+        num_channels * num_z,
+        sfYX_transfer_function.shape[3],
+        sfYX_transfer_function.shape[4],
+    )
+
+    # Permute for SVD: (Y, X, 2, C*Z)
     YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
     Up, Sp, Vhp = torch.linalg.svd(YXsf_transfer_function, full_matrices=False)
     U = Up.permute(2, 3, 0, 1)
@@ -289,17 +338,17 @@ def apply_inverse_transfer_function(
     TV_iterations: int = 10,
     bg_filter: bool = False,
 ) -> Tuple[Tensor, Tensor]:
-    """Reconstructs absorption and phase from zyx_data and a pair of
-    3D-to-2D transfer functions named absorption_2d_to_3d_transfer_function and
-    phase_2d_to_3d_transfer_function, providing options for reconstruction
-    algorithms.
+    """Reconstructs absorption and phase from multi-channel zyx_data and the
+    singular system, combining all illumination channels into single absorption
+    and phase estimates.
 
     Parameters
     ----------
     zyx_data : Tensor
-        3D raw data, label-free defocus stack
+        Multi-channel 3D raw data with shape (C, Z, Y, X).
+        For single channel (full aperture), C=1.
     singular_system : Tuple[Tensor, Tensor, Tensor]
-        singular system of the transfer function bank
+        singular system of the multi-channel transfer function bank
     reconstruction_algorithm : Literal["Tikhonov";, "TV";], optional
         "Tikhonov" or "TV", by default "Tikhonov"
         "TV" is not implemented.
@@ -318,16 +367,25 @@ def apply_inverse_transfer_function(
     Returns
     -------
     Tuple[Tensor]
-        yx_absorption (unitless)
-        yx_phase (radians)
+        yx_absorption (unitless) with shape (Y, X)
+        yx_phase (radians) with shape (Y, X)
 
     Raises
     ------
     NotImplementedError
         TV is not implemented
     """
+    # zyx_data shape: (C, Z, Y, X)
+    num_channels = zyx_data.shape[0]
+    num_z = zyx_data.shape[1]
+
+    # Flatten C and Z dimensions: (C*Z, Y, X)
+    czyx_data = zyx_data.reshape(
+        num_channels * num_z, zyx_data.shape[2], zyx_data.shape[3]
+    )
+
     # Normalize
-    zyx = util.inten_normalization(zyx_data, bg_filter=bg_filter)
+    czyx = util.inten_normalization(czyx_data, bg_filter=bg_filter)
 
     # TODO Consider refactoring with vectorial transfer function SVD
     if reconstruction_algorithm == "Tikhonov":
@@ -338,7 +396,7 @@ def apply_inverse_transfer_function(
             "sj...,j...,jf...->fs...", U, S_reg, Vh
         )
 
-        absorption_yx, phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)
+        absorption_yx, phase_yx = apply_filter_bank(sfyx_inverse_filter, czyx)
 
     # ADMM deconvolution with anisotropic TV regularization
     elif reconstruction_algorithm == "TV":
