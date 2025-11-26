@@ -1,0 +1,9 @@
+# Demo data files (regenerate locally)
+demo_data.b64
+demo_fov.npz
+
+# Generated notebook
+waveorder_quickstart.ipynb
+
+# Temporary test files
+test_decode.npz
