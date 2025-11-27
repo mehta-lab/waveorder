@@ -21,7 +21,7 @@ pip install git+https://github.com/mehta-lab/waveorder.git@variable-recon
 
 1. Upload `waveorder_quickstart.ipynb` to [Google Colab](https://colab.research.google.com/)
 2. Run all cells (~15 minutes)
-3. The notebook includes embedded demo data - no upload needed!
+3. The notebook automatically downloads demo data from CZ Biohub's public server
 
 Or use this direct link (once pushed to GitHub):
 ```
@@ -115,7 +115,7 @@ z_scale, y_scale, x_scale = 0.5, 0.108, 0.108
 
 ## Key Features
 
-✅ **Self-contained** - Demo data embedded in notebook
+✅ **Self-contained** - Demo data downloads automatically from public server
 ✅ **Proper Jupytext format** - Clean cell structure with `# %% [markdown]`
 ✅ **Prints loss every iteration** - Full optimization transparency
 ✅ **Convergence analysis** - Recommends next steps if not converged
@@ -145,11 +145,6 @@ Then:
 
 ## Troubleshooting
 
-### "Kernel crashed" after pip install
-
-**Expected behavior.** The kernel restarts to use newly installed packages.
-Click "Run all" again after restart.
-
 ### Optimization not converging
 
 - Increase `NUM_ITERATIONS` to 50 or 100
@@ -176,94 +171,57 @@ Click "Run all" again after restart.
 This directory contains:
 
 **Files to commit:**
-- `waveorder_quickstart.py` (26.9 KB) - Jupytext source (loads data from demo_data.b64)
-- `create_demo_data.py` - Script to regenerate demo data from HPC
-- `build_notebook.py` - Script to build .ipynb from .py
+- `waveorder_quickstart.py` (~27 KB) - Jupytext source
 - `README.md` - Documentation
-- `.gitignore` - Excludes data files
+- `.gitignore` - Excludes downloaded data
 
 **Files NOT to commit (in .gitignore):**
-- `demo_data.b64` (5.0 MB) - Base64-encoded demo dataset
+- `waveorder-5x-demo.zarr` (~5 MB) - Downloaded demo dataset
 - `waveorder_quickstart.ipynb` - Generated notebook file
-- `demo_fov.npz` - Intermediate data file
-- `test_decode.npz` - Temporary test file
 
 ### Developer Workflow
-
-#### First-time Setup
-
-1. **Generate the demo data** (requires HPC access):
-   ```bash
-   python create_demo_data.py
-   ```
-
-   This will:
-   - Extract FOV `A/1/001007` from the HPC zarr store
-   - Create `demo_fov.npz` (compressed 3D array)
-   - Encode to `demo_data.b64` (base64 text file)
-   - Verify the encoding works
-
-2. **Generate the Jupyter notebook**:
-   ```bash
-   python build_notebook.py
-   # Or manually: jupytext --to ipynb waveorder_quickstart.py
-   ```
-
-3. **Test the notebook** in Colab or locally:
-   - The notebook will automatically load data from `demo_data.b64`
-   - Verify all cells execute without errors
-   - Check that optimizations converge
 
 #### Making Changes
 
 1. **Edit the source file**: `waveorder_quickstart.py` (Jupytext format)
 
-2. **Regenerate the notebook**:
+2. **Generate the notebook**:
    ```bash
-   python build_notebook.py
-   # Or manually: jupytext --to ipynb waveorder_quickstart.py
+   jupytext --to ipynb waveorder_quickstart.py
    ```
 
-3. **Test the notebook** end-to-end
+3. **Test the notebook** end-to-end:
+   ```bash
+   jupyter notebook waveorder_quickstart.ipynb
+   ```
+
+   The notebook will automatically download demo data on first run.
 
 4. **Commit only the source**:
    ```bash
-   git add waveorder_quickstart.py create_demo_data.py build_notebook.py README.md .gitignore
+   git add waveorder_quickstart.py README.md .gitignore
    git commit -m "Update WaveOrder quickstart notebook"
    ```
 
-#### What Gets Committed vs. Generated
+#### What Gets Committed vs. Downloaded
 
 | File | Size | Commit? | Why? |
 |------|------|---------|------|
-| `waveorder_quickstart.py` | 26.9 KB | ✅ Yes | Source code |
-| `create_demo_data.py` | Small | ✅ Yes | Regeneration instructions |
-| `build_notebook.py` | Small | ✅ Yes | Build automation |
-| `demo_data.b64` | 5.0 MB | ❌ No | Binary data, regenerate locally |
+| `waveorder_quickstart.py` | ~27 KB | ✅ Yes | Source code |
+| `README.md` | Small | ✅ Yes | Documentation |
+| `.gitignore` | Small | ✅ Yes | Git configuration |
+| `waveorder-5x-demo.zarr` | ~5 MB | ❌ No | Downloaded from public server |
 | `waveorder_quickstart.ipynb` | Varies | ❌ No | Generated from .py |
-| `demo_fov.npz` | 3.8 MB | ❌ No | Intermediate file |
 
-### Why This Structure?
+### Demo Data
 
-1. **Minimal repository size**: Don't commit 5 MB of binary data
-2. **Reproducibility**: Anyone with HPC access can regenerate the exact data
-3. **Version control**: Track only the source code, not generated files
-4. **Collaboration**: Changes to code are easy to review in PRs
+The demo data is hosted on CZ Biohub's public server:
+- **URL**: https://public.czbiohub.org/comp.micro/neurips_demos/waveorder-5x-demo.zarr
+- **Size**: ~5 MB
+- **Format**: OME-Zarr
+- **Contents**: 3D label-free microscopy z-stack
 
-### Regenerating Data on a New Machine
-
-If you're working on a new machine or the data files are missing:
-
-```bash
-# Step 1: Generate the demo data (requires HPC access)
-python create_demo_data.py
-
-# Step 2: Build the notebook
-python build_notebook.py
-
-# Step 3: Test
-jupyter notebook waveorder_quickstart.ipynb
-```
+The notebook automatically downloads this file using `wget` if not already present.
 
 ## Files
 

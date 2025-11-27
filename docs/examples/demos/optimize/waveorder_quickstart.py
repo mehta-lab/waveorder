@@ -77,6 +77,7 @@ import sys
 # Check if running in Colab
 try:
     import google.colab  # noqa: F401
+
     IN_COLAB = True
 except ImportError:
     IN_COLAB = False
@@ -84,22 +85,22 @@ except ImportError:
 if IN_COLAB:
     # IMPORTANT: This notebook requires the variable-recon branch
     # Once merged to main, update this to: "waveorder>=2.0.0"
-    subprocess.check_call([
-        sys.executable, "-m", "pip", "install", "-q",
-        "git+https://github.com/mehta-lab/waveorder.git@variable-recon",
-        "iohub>=0.2.0", "matplotlib"
-    ])
+    subprocess.check_call(
+        [
+            sys.executable,
+            "-m",
+            "pip",
+            "install",
+            "-q",
+            "git+https://github.com/mehta-lab/waveorder.git@variable-recon",
+            "iohub>=0.2.0",
+            "matplotlib",
+        ]
+    )
     print("✓ Installed waveorder (variable-recon branch) and dependencies")
 
-# %%
-# Restart kernel if running in Google Colab
-# This is required to use the packages installed above
-# The 'kernel crashed' message is expected here
-if IN_COLAB:
-    if "get_ipython" in globals():
-        session = get_ipython()  # noqa: F821
-        print("Restarting Colab kernel...")
-        session.kernel.do_shutdown(restart=True)
+    # Ensure wget is available (comes pre-installed on Colab)
+    # On other systems, install via: apt-get install wget (Linux) or brew install wget (Mac)
 
 # %% [markdown]
 """
@@ -118,55 +119,89 @@ from waveorder import util
 from waveorder.models import isotropic_thin_3d
 
 # Set style
-plt.style.use('default')
+plt.style.use("default")
 np.random.seed(42)
 torch.manual_seed(42)
 
 # === Helper Functions ===
 
 
-def load_embedded_demo_data():
-    """Extract embedded demo dataset"""
-    import base64
+def download_demo_data():
+    """Download demo dataset from CZ Biohub public server"""
+    import subprocess
+    import shutil
 
-    demo_file = Path("demo_fov.npz")
+    zarr_path = Path("waveorder-5x-demo.zarr")
 
-    if demo_file.exists():
-        print(f"✓ Demo data already exists: {demo_file}")
-        return demo_file
+    if zarr_path.exists() and zarr_path.is_dir():
+        print(f"✓ Demo data already exists: {zarr_path}")
+        return zarr_path
 
-    print("Extracting embedded demo data...")
+    print("Downloading demo data from CZ Biohub...")
+    print(
+        "  URL: https://public.czbiohub.org/comp.micro/neurips_demos/waveorder-5x-demo.zarr/"
+    )
+    print("  This will download ~4 MB of data (may take 1-2 minutes)")
 
-    # Embedded demo dataset (3.8 MB compressed)
-    # This is real microscopy data from label-free imaging
-    EMBEDDED_DATA = None
-    
-    # Load embedded data from file
-    data_file = Path(__file__).parent / "demo_data.b64"
-    if data_file.exists():
-        EMBEDDED_DATA = data_file.read_text().strip()
-    else:
-        raise FileNotFoundError(
-            "demo_data.b64 not found. "
-            "Run: python create_demo_data.py to generate it."
+    url = "https://public.czbiohub.org/comp.micro/neurips_demos/waveorder-5x-demo.zarr/"
+
+    # Check if wget is available
+    if shutil.which("wget") is None:
+        raise RuntimeError(
+            "wget not found. Please install wget:\n"
+            "  Linux: apt-get install wget\n"
+            "  Mac: brew install wget\n"
+            "  Colab: wget is pre-installed"
         )
 
-    # Decode and write to file
-    data_bytes = base64.b64decode(EMBEDDED_DATA)
-    demo_file.write_bytes(data_bytes)
-    
-    print(f"✓ Extracted demo data: {demo_file}")
-    print(f"  Size: {demo_file.stat().st_size / 1024 / 1024:.1f} MB")
-    
-    return demo_file
+    # Download the zarr directory recursively using wget
+    # -r: recursive, -nH: no host directories, -np: no parent
+    # -l inf: infinite recursion depth, --cut-dirs=2: skip 2 directory levels
+    # -R: reject index.html files
+    subprocess.check_call(
+        [
+            "wget",
+            "-r",
+            "-nH",
+            "-np",
+            "-l",
+            "inf",
+            "--cut-dirs=2",
+            "-R",
+            "index.html*",
+            url,
+        ]
+    )
+
+    if zarr_path.exists() and zarr_path.is_dir():
+        print(f"✓ Downloaded demo data: {zarr_path}")
+    else:
+        raise FileNotFoundError(f"Failed to download data to {zarr_path}")
+
+    return zarr_path
 
 
-def load_demo_data(npz_file):
-    """Load demo data from .npz file"""
-    data = np.load(npz_file)
-    zyx_data = data['data']
-    scale = data['scale']
+def load_demo_data(zarr_path):
+    """Load demo data from zarr file"""
+    from iohub import open_ome_zarr
+
+    print(f"Opening zarr store: {zarr_path}")
+    store = open_ome_zarr(zarr_path, mode="r")
+
+    # Get the position - the zarr has structure A/1/001007
+    position_path = "A/1/001007"
+
+    print(f"Loading position: {position_path}")
+    position = store[position_path]
+
+    # Extract data (T=0, C=0, all Z, Y, X)
+    zyx_data = position.data[0, 0]  # Shape: (Z, Y, X)
+    scale = position.scale  # [T, C, Z, Y, X]
     z_scale, y_scale, x_scale = scale[-3:]
+
+    # Convert to numpy array if needed
+    if hasattr(zyx_data, "compute"):
+        zyx_data = np.array(zyx_data)
 
     print("✓ Loaded data")
     print(f"  Shape: {zyx_data.shape}")
@@ -206,9 +241,7 @@ def run_reconstruction(zyx_tile, recon_args):
     tf_args.pop("z_scale")
 
     # Core reconstruction: calculate transfer functions
-    tf_abs, tf_phase = isotropic_thin_3d.calculate_transfer_function(
-        **tf_args
-    )
+    tf_abs, tf_phase = isotropic_thin_3d.calculate_transfer_function(**tf_args)
 
     # Calculate singular value decomposition
     system = isotropic_thin_3d.calculate_singular_system(tf_abs, tf_phase)
@@ -235,9 +268,7 @@ def compute_midband_power(
     frr = torch.tensor(np.sqrt(fxx**2 + fyy**2))
     xy_abs_fft = torch.abs(torch.fft.fftn(yx_array))
     cutoff = 2 * NA_det / lambda_ill
-    mask = torch.logical_and(
-        frr > cutoff * band[0], frr < cutoff * band[1]
-    )
+    mask = torch.logical_and(frr > cutoff * band[0], frr < cutoff * band[1])
     return torch.sum(xy_abs_fft[mask])
 
 
@@ -273,9 +304,7 @@ def optimize_reconstruction(
     history : list
         List of (loss, params) at each iteration
     """
-    optimization_params, optimizer = prepare_optimizer(
-        optimizable_params
-    )
+    optimization_params, optimizer = prepare_optimizer(optimizable_params)
     history = []
 
     print(f"Optimizing for {num_iterations} iterations...")
@@ -326,7 +355,7 @@ def get_central_crop(image, crop_fraction=0.5):
     h, w = image.shape[-2:]
     ch, cw = int(h * crop_fraction), int(w * crop_fraction)
     y0, x0 = (h - ch) // 2, (w - cw) // 2
-    return image[..., y0:y0 + ch, x0:x0 + cw]
+    return image[..., y0 : y0 + ch, x0 : x0 + cw]
 
 
 print("✓ Setup complete")
@@ -338,14 +367,14 @@ print("✓ Setup complete")
 We'll load a 3D z-stack from label-free microscopy and visualize it.
 The dataset contains images acquired at multiple focal planes.
 
-The demo uses real microscopy data that is embedded in this notebook.
+The demo downloads real microscopy data from CZ Biohub's public server (~5 MB).
 To use your own data, replace the data loading section below with your own array.
 """
 
 # %%
-# Load embedded demo data
-demo_file = load_embedded_demo_data()
-zyx_data, z_scale, y_scale, x_scale = load_demo_data(demo_file)
+# Download and load demo data
+zarr_path = download_demo_data()
+zyx_data, z_scale, y_scale, x_scale = load_demo_data(zarr_path)
 
 # To use your own data, comment out the above lines and load your data here:
 # zyx_data = your_data_array  # Shape: (Z, Y, X)
@@ -357,25 +386,23 @@ Z, Y, X = zyx_data.shape
 fig, axes = plt.subplots(1, 3, figsize=(15, 4))
 
 # Z-projection (maximum intensity)
-axes[0].imshow(np.max(zyx_data, axis=0), cmap='gray')
-axes[0].set_title('Max Projection (Z)', fontweight='bold')
-axes[0].axis('off')
+axes[0].imshow(np.max(zyx_data, axis=0), cmap="gray")
+axes[0].set_title("Max Projection (Z)", fontweight="bold")
+axes[0].axis("off")
 
 # Middle slice
 mid_z = Z // 2
-axes[1].imshow(zyx_data[mid_z], cmap='gray')
-axes[1].set_title(
-    f'Middle Slice (z={mid_z*z_scale:.1f}µm)', fontweight='bold'
-)
-axes[1].axis('off')
+axes[1].imshow(zyx_data[mid_z], cmap="gray")
+axes[1].set_title(f"Middle Slice (z={mid_z*z_scale:.1f}µm)", fontweight="bold")
+axes[1].axis("off")
 
 # Z-profile through center
 center_y, center_x = Y // 2, X // 2
 z_positions = np.arange(Z) * z_scale
-axes[2].plot(z_positions, zyx_data[:, center_y, center_x], 'k-', linewidth=2)
-axes[2].set_xlabel('Z position (µm)')
-axes[2].set_ylabel('Intensity (a.u.)')
-axes[2].set_title('Intensity Profile (center)', fontweight='bold')
+axes[2].plot(z_positions, zyx_data[:, center_y, center_x], "k-", linewidth=2)
+axes[2].set_xlabel("Z position (µm)")
+axes[2].set_ylabel("Intensity (a.u.)")
+axes[2].set_title("Intensity Profile (center)", fontweight="bold")
 axes[2].grid(True, alpha=0.3)
 
 plt.tight_layout()
@@ -412,7 +439,7 @@ INITIAL_PARAMS = {
     "z_offset": 0.0,  # No defocus offset (assumed)
     "numerical_aperture_detection": 0.15,  # Detection NA (from spec)
     "numerical_aperture_illumination": 0.1,  # Illumination NA (estimated)
-    "tilt_angle_zenith": 0.1,  # Tilt from vertical (radians)
+    "tilt_angle_zenith": 0.03,  # Tilt from vertical (radians)
     "tilt_angle_azimuth": 260 * np.pi / 180,  # Tilt direction (radians)
 }
 
@@ -463,9 +490,7 @@ zyx_tensor = torch.tensor(zyx_data, dtype=torch.float32, device="cpu")
 # Prepare reconstruction arguments
 recon_args = FIXED_PARAMS.copy()
 for name, value in INITIAL_PARAMS.items():
-    recon_args[name] = torch.tensor(
-        [value], dtype=torch.float32, device="cpu"
-    )
+    recon_args[name] = torch.tensor([value], dtype=torch.float32, device="cpu")
 
 recon_args["yx_shape"] = zyx_tensor.shape[1:]
 recon_args["yx_pixel_size"] = y_scale
@@ -481,25 +506,25 @@ initial_crop = get_central_crop(initial_recon, crop_fraction=0.5)
 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
 # Real space (central 50% crop)
-im0 = axes[0].imshow(initial_crop.detach().numpy(), cmap='gray')
-axes[0].set_title('Phase (Real Space)', fontweight='bold')
-axes[0].axis('off')
-plt.colorbar(im0, ax=axes[0], label='Phase (radians)', fraction=0.046)
+im0 = axes[0].imshow(initial_crop.detach().numpy(), cmap="gray")
+axes[0].set_title("Phase (Real Space)", fontweight="bold")
+axes[0].axis("off")
+plt.colorbar(im0, ax=axes[0], label="Phase (radians)", fraction=0.046)
 
 # Fourier space (power spectrum)
 fft_recon = torch.fft.fftshift(torch.fft.fftn(initial_recon))
-power_spectrum = torch.log10(torch.abs(fft_recon)**2 + 1e-10)
+power_spectrum = torch.log10(torch.abs(fft_recon) ** 2 + 1e-10)
 
-im1 = axes[1].imshow(power_spectrum.detach().numpy(), cmap='gray')
-axes[1].set_title('Power Spectrum (Fourier Space)', fontweight='bold')
-axes[1].axis('off')
-plt.colorbar(im1, ax=axes[1], label='log₁₀(Power)', fraction=0.046)
+im1 = axes[1].imshow(power_spectrum.detach().numpy(), cmap="gray")
+axes[1].set_title("Power Spectrum (Fourier Space)", fontweight="bold")
+axes[1].axis("off")
+plt.colorbar(im1, ax=axes[1], label="log₁₀(Power)", fraction=0.046)
 
 plt.suptitle(
-    'Initial Reconstruction (Nominal Parameters)',
+    "Initial Reconstruction (Nominal Parameters)",
     fontsize=14,
-    fontweight='bold',
-    y=1.02
+    fontweight="bold",
+    y=1.02,
 )
 plt.tight_layout()
 plt.show()
@@ -543,20 +568,18 @@ well-focused (not defocused), and properly aligned with illumination geometry.
 # Define which parameters to optimize and their learning rates
 OPTIMIZABLE_PARAMS = {
     # (optimize?, initial_value, learning_rate)
-    "z_offset": (True, 0.0, 0.01),
-    "numerical_aperture_detection": (True, 0.15, 0.001),
-    "numerical_aperture_illumination": (True, 0.1, 0.001),
-    "tilt_angle_zenith": (True, 0.1, 0.005),
-    "tilt_angle_azimuth": (True, 260 * np.pi / 180, 0.001),
+    "z_offset": (True, 0.0, 0.03),
+    "numerical_aperture_detection": (True, 0.15, 0.003),
+    "numerical_aperture_illumination": (True, 0.1, 0.003),
+    "tilt_angle_zenith": (True, 0.03, 0.015),
+    "tilt_angle_azimuth": (True, 260 * np.pi / 180, 0.003),
 }
 
 NUM_ITERATIONS = 20
 
 print("Optimization Configuration")
 print("=" * 70)
-print(
-    f"{'Parameter':<40} {'Optimize?':<12} {'Initial':<12} {'LR':<10}"
-)
+print(f"{'Parameter':<40} {'Optimize?':<12} {'Initial':<12} {'LR':<10}")
 print("-" * 70)
 for name, (optimize, initial, lr) in OPTIMIZABLE_PARAMS.items():
     print(
@@ -590,10 +613,10 @@ fig, axes = plt.subplots(2, 3, figsize=(15, 8))
 axes = axes.flatten()
 
 # Plot loss
-axes[0].plot(losses, 'k-', linewidth=2)
-axes[0].set_xlabel('Iteration')
-axes[0].set_ylabel('Loss')
-axes[0].set_title('Optimization Loss', fontweight='bold')
+axes[0].plot(losses, "k-", linewidth=2)
+axes[0].set_xlabel("Iteration")
+axes[0].set_ylabel("Loss")
+axes[0].set_title("Optimization Loss", fontweight="bold")
 axes[0].grid(True, alpha=0.3)
 
 # Plot each parameter
@@ -606,16 +629,14 @@ for idx, param_name in enumerate(param_names):
     initial_val = initial_param_values[param_name]
     final_val = final_params[param_name]
 
-    axes[idx + 1].plot(
-        param_history, 'b-', linewidth=2, label='Optimized'
-    )
+    axes[idx + 1].plot(param_history, "b-", linewidth=2, label="Optimized")
     axes[idx + 1].axhline(
-        initial_val, color='gray', linestyle='--', label='Initial'
+        initial_val, color="gray", linestyle="--", label="Initial"
     )
-    axes[idx + 1].set_xlabel('Iteration')
-    axes[idx + 1].set_ylabel(param_name.replace('_', ' '))
+    axes[idx + 1].set_xlabel("Iteration")
+    axes[idx + 1].set_ylabel(param_name.replace("_", " "))
     axes[idx + 1].set_title(
-        param_name.replace('_', ' '), fontsize=10, fontweight='bold'
+        param_name.replace("_", " "), fontsize=10, fontweight="bold"
     )
     axes[idx + 1].grid(True, alpha=0.3)
     axes[idx + 1].legend(fontsize=8)
@@ -623,18 +644,18 @@ for idx, param_name in enumerate(param_names):
     # Add change annotation
     change = final_val - initial_val
     change_pct = 100 * change / initial_val if initial_val != 0 else 0
-    textstr = f'Δ={change:+.4f}\n({change_pct:+.1f}%)'
+    textstr = f"Δ={change:+.4f}\n({change_pct:+.1f}%)"
     axes[idx + 1].text(
         0.05,
         0.95,
         textstr,
         transform=axes[idx + 1].transAxes,
-        verticalalignment='top',
+        verticalalignment="top",
         fontsize=8,
-        bbox={'boxstyle': 'round', 'facecolor': 'wheat', 'alpha': 0.5},
+        bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.5},
     )
 
-plt.suptitle('Optimization Progress', fontsize=14, fontweight='bold')
+plt.suptitle("Optimization Progress", fontsize=14, fontweight="bold")
 plt.tight_layout()
 plt.show()
 
@@ -665,9 +686,7 @@ loss_changes = [
 ]
 avg_recent_change = np.mean(loss_changes) if loss_changes else 0
 relative_change = (
-    avg_recent_change / abs(recent_losses[-1])
-    if recent_losses[-1] != 0
-    else 0
+    avg_recent_change / abs(recent_losses[-1]) if recent_losses[-1] != 0 else 0
 )
 
 print("\nConvergence Analysis:")
@@ -677,8 +696,7 @@ print(f"Relative change: {relative_change*100:.3f}%")
 
 if relative_change > 0.01:  # Still changing by more than 1%
     print(
-        "\n⚠ Note: Parameters have not fully converged "
-        "after 20 iterations."
+        "\n⚠ Note: Parameters have not fully converged " "after 20 iterations."
     )
     print(
         "   The loss is still decreasing, suggesting further "
@@ -710,22 +728,22 @@ optimized_crop = get_central_crop(optimized_recon, crop_fraction=0.5)
 fig, axes = plt.subplots(1, 2, figsize=(12, 5))
 
 # Real space (central 50% crop)
-im0 = axes[0].imshow(optimized_crop.detach().numpy(), cmap='gray')
-axes[0].set_title('Phase (Real Space)', fontweight='bold')
-axes[0].axis('off')
-plt.colorbar(im0, ax=axes[0], label='Phase (radians)', fraction=0.046)
+im0 = axes[0].imshow(optimized_crop.detach().numpy(), cmap="gray")
+axes[0].set_title("Phase (Real Space)", fontweight="bold")
+axes[0].axis("off")
+plt.colorbar(im0, ax=axes[0], label="Phase (radians)", fraction=0.046)
 
 # Fourier space (power spectrum)
 fft_optimized = torch.fft.fftshift(torch.fft.fftn(optimized_recon))
-power_optimized = torch.log10(torch.abs(fft_optimized)**2 + 1e-10)
+power_optimized = torch.log10(torch.abs(fft_optimized) ** 2 + 1e-10)
 
-im1 = axes[1].imshow(power_optimized.detach().numpy(), cmap='gray')
-axes[1].set_title('Power Spectrum (Fourier Space)', fontweight='bold')
-axes[1].axis('off')
-plt.colorbar(im1, ax=axes[1], label='log₁₀(Power)', fraction=0.046)
+im1 = axes[1].imshow(power_optimized.detach().numpy(), cmap="gray")
+axes[1].set_title("Power Spectrum (Fourier Space)", fontweight="bold")
+axes[1].axis("off")
+plt.colorbar(im1, ax=axes[1], label="log₁₀(Power)", fraction=0.046)
 
 plt.suptitle(
-    'Optimized Reconstruction', fontsize=14, fontweight='bold', y=1.02
+    "Optimized Reconstruction", fontsize=14, fontweight="bold", y=1.02
 )
 plt.tight_layout()
 plt.show()
@@ -755,34 +773,34 @@ fig, axes = plt.subplots(1, 3, figsize=(15, 5))
 
 # Initial
 im0 = axes[0].imshow(
-    initial_crop.detach().numpy(), cmap='gray', vmin=vmin, vmax=vmax
+    initial_crop.detach().numpy(), cmap="gray", vmin=vmin, vmax=vmax
 )
-axes[0].set_title('Initial', fontweight='bold')
-axes[0].axis('off')
+axes[0].set_title("Initial", fontweight="bold")
+axes[0].axis("off")
 
 # Optimized
 im1 = axes[1].imshow(
-    optimized_crop.detach().numpy(), cmap='gray', vmin=vmin, vmax=vmax
+    optimized_crop.detach().numpy(), cmap="gray", vmin=vmin, vmax=vmax
 )
-axes[1].set_title('Optimized', fontweight='bold')
-axes[1].axis('off')
+axes[1].set_title("Optimized", fontweight="bold")
+axes[1].axis("off")
 
 # Difference
 diff_crop = optimized_crop - initial_crop
-im2 = axes[2].imshow(diff_crop.detach().numpy(), cmap='gray')
-axes[2].set_title('Difference (Optimized - Initial)', fontweight='bold')
-axes[2].axis('off')
+im2 = axes[2].imshow(diff_crop.detach().numpy(), cmap="gray")
+axes[2].set_title("Difference (Optimized - Initial)", fontweight="bold")
+axes[2].axis("off")
 
 # Add colorbars
-plt.colorbar(im0, ax=axes[0], label='Phase (rad)', fraction=0.046)
-plt.colorbar(im1, ax=axes[1], label='Phase (rad)', fraction=0.046)
-plt.colorbar(im2, ax=axes[2], label='Δ Phase (rad)', fraction=0.046)
+plt.colorbar(im0, ax=axes[0], label="Phase (rad)", fraction=0.046)
+plt.colorbar(im1, ax=axes[1], label="Phase (rad)", fraction=0.046)
+plt.colorbar(im2, ax=axes[2], label="Δ Phase (rad)", fraction=0.046)
 
 plt.suptitle(
-    'Reconstruction Comparison (Central 50% Crop)',
+    "Reconstruction Comparison (Central 50% Crop)",
     fontsize=14,
-    fontweight='bold',
-    y=0.98
+    fontweight="bold",
+    y=0.98,
 )
 plt.tight_layout()
 plt.show()
@@ -790,22 +808,20 @@ plt.show()
 # Compute comparison metrics
 initial_midband = compute_midband_power(
     initial_recon,
-    final_params['numerical_aperture_detection'],
-    FIXED_PARAMS['wavelength_illumination'],
+    final_params["numerical_aperture_detection"],
+    FIXED_PARAMS["wavelength_illumination"],
     y_scale,
-    band=(0.1, 0.2)
+    band=(0.1, 0.2),
 )
 optimized_midband = compute_midband_power(
     optimized_recon,
-    final_params['numerical_aperture_detection'],
-    FIXED_PARAMS['wavelength_illumination'],
+    final_params["numerical_aperture_detection"],
+    FIXED_PARAMS["wavelength_illumination"],
     y_scale,
-    band=(0.1, 0.2)
+    band=(0.1, 0.2),
 )
 
-improvement = (
-    (optimized_midband - initial_midband) / initial_midband * 100
-)
+improvement = (optimized_midband - initial_midband) / initial_midband * 100
 
 print("\nComparison Metrics:")
 print("=" * 70)
@@ -813,21 +829,15 @@ print(f"Mid-band power (initial):    {initial_midband.item():.2e}")
 print(f"Mid-band power (optimized):  {optimized_midband.item():.2e}")
 print(f"Improvement:                 {improvement.item():+.1f}%")
 print()
-print(
-    f"Phase std (initial):         {initial_recon.std().item():.4f} rad"
-)
-print(
-    f"Phase std (optimized):       {optimized_recon.std().item():.4f} rad"
-)
+print(f"Phase std (initial):         {initial_recon.std().item():.4f} rad")
+print(f"Phase std (optimized):       {optimized_recon.std().item():.4f} rad")
 print()
 diff = optimized_recon - initial_recon
 print(
-    f"Max absolute difference:     "
-    f"{torch.abs(diff).max().item():.4f} rad"
+    f"Max absolute difference:     " f"{torch.abs(diff).max().item():.4f} rad"
 )
 print(
-    f"Mean absolute difference:    "
-    f"{torch.abs(diff).mean().item():.4f} rad"
+    f"Mean absolute difference:    " f"{torch.abs(diff).mean().item():.4f} rad"
 )
 print("=" * 70)
 
