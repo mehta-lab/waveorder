@@ -131,7 +131,7 @@ def download_demo_data():
     import subprocess
     import shutil
 
-    zarr_path = Path("waveorder-5x-demo.zarr")
+    zarr_path = Path("waveorder/20x.zarr")
 
     if zarr_path.exists() and zarr_path.is_dir():
         print(f"✓ Demo data already exists: {zarr_path}")
@@ -464,7 +464,7 @@ These parameters describe the optical system:
 # Fixed optical parameters (from microscope specifications)
 FIXED_PARAMS = {
     "wavelength_illumination": 0.450,  # 450 nm (blue LED)
-    "index_of_refraction_media": 1.0,  # Air
+    "index_of_refraction_media": 1.3,  # Air
     "invert_phase_contrast": True,  # Invert for proper phase sign
 }
 
@@ -603,8 +603,8 @@ well-focused (not defocused), and properly aligned with illumination geometry.
 OPTIMIZABLE_PARAMS = {
     # (optimize?, initial_value, learning_rate)
     "z_offset": (True, 0.0, 0.03),
-    "numerical_aperture_detection": (True, 0.15, 0.003),
-    "numerical_aperture_illumination": (True, 0.1, 0.003),
+    "numerical_aperture_detection": (True, 0.55, 0.003),
+    "numerical_aperture_illumination": (True, 0.54, 0.003),
     "tilt_angle_zenith": (True, 0.03, 0.015),
     "tilt_angle_azimuth": (True, 260 * np.pi / 180, 0.003),
 }
@@ -627,7 +627,7 @@ print("=" * 70)
 """
 ## Run Optimization
 
-**Expected time:** 1-2 minutes
+**Expected time:** 2-5 minutes
 """
 
 # %%
