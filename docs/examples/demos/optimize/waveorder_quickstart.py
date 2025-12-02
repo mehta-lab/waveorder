@@ -18,7 +18,7 @@
 """
 # Prerequisites
 
-Python>=3.10
+Python>=3.11
 """
 
 # %% [markdown]
@@ -93,7 +93,7 @@ if IN_COLAB:
             "install",
             "-q",
             "git+https://github.com/mehta-lab/waveorder.git@variable-recon",
-            "iohub>=0.2.0",
+            "iohub==0.3.0a2",
             "matplotlib",
         ]
     )
@@ -137,13 +137,12 @@ def download_demo_data():
         print(f"✓ Demo data already exists: {zarr_path}")
         return zarr_path
 
-    print("Downloading demo data from CZ Biohub...")
+    print("Downloading demo data from Biohub Public Server...")
+    url = "https://public.czbiohub.org/comp.micro/neurips_demos/waveorder/20x.zarr/"
     print(
-        "  URL: https://public.czbiohub.org/comp.micro/neurips_demos/waveorder-5x-demo.zarr/"
+        f"  URL: {url}"
     )
-    print("  This will download ~4 MB of data (may take 1-2 minutes)")
-
-    url = "https://public.czbiohub.org/comp.micro/neurips_demos/waveorder-5x-demo.zarr/"
+    print("  This will download ~123M MB of data (may take 1-2 minutes)")
 
     # Check if wget is available
     if shutil.which("wget") is None:
@@ -181,15 +180,42 @@ def download_demo_data():
     return zarr_path
 
 
-def load_demo_data(zarr_path):
-    """Load demo data from zarr file"""
+def load_demo_data(zarr_path, position_path="A/1/002026"):
+    """Load demo data from zarr file
+    
+    Parameters
+    ----------
+    zarr_path : Path or str
+        Path to the zarr store
+    position_path : str, optional
+        Full position path. Must be one of: "A/1/002026", "A/1/002027", "A/1/002028"
+        Defaults to "A/1/002026"
+    
+    Returns
+    -------
+    zyx_data : np.ndarray
+        3D image stack (Z, Y, X)
+    z_scale : float
+        Z pixel size in µm
+    y_scale : float
+        Y pixel size in µm
+    x_scale : float
+        X pixel size in µm
+    """
     from iohub import open_ome_zarr
+
+    # Available FOVs in this dataset
+    AVAILABLE_FOVS = ["A/1/002026", "A/1/002027", "A/1/002028"]
+    
+    # Validate position_path
+    if position_path not in AVAILABLE_FOVS:
+        raise ValueError(
+            f"Invalid position_path: '{position_path}'. "
+            f"Must be one of: {AVAILABLE_FOVS}"
+        )
 
     print(f"Opening zarr store: {zarr_path}")
     store = open_ome_zarr(zarr_path, mode="r")
-
-    # Get the position - the zarr has structure A/1/001007
-    position_path = "A/1/001007"
 
     print(f"Loading position: {position_path}")
     position = store[position_path]
@@ -374,7 +400,15 @@ To use your own data, replace the data loading section below with your own array
 # %%
 # Download and load demo data
 zarr_path = download_demo_data()
-zyx_data, z_scale, y_scale, x_scale = load_demo_data(zarr_path)
+
+# Available FOVs in this dataset
+AVAILABLE_FOVS = ["A/1/002026", "A/1/002027", "A/1/002028"]
+print(f"Available FOVs: {AVAILABLE_FOVS}")
+
+# Select FOV to use (change this to use a different FOV)
+SELECTED_FOV = "A/1/002026"  # Options: "A/1/002026", "A/1/002027", "A/1/002028"
+
+zyx_data, z_scale, y_scale, x_scale = load_demo_data(zarr_path, position_path=SELECTED_FOV)
 
 # To use your own data, comment out the above lines and load your data here:
 # zyx_data = your_data_array  # Shape: (Z, Y, X)

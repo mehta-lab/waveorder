@@ -176,7 +176,7 @@ This directory contains:
 - `.gitignore` - Excludes downloaded data
 
 **Files NOT to commit (in .gitignore):**
-- `waveorder-5x-demo.zarr` (~5 MB) - Downloaded demo dataset
+- `waveorder/20x.zarr` (~123 MB) - Downloaded demo dataset
 - `waveorder_quickstart.ipynb` - Generated notebook file
 
 ### Developer Workflow
@@ -210,14 +210,14 @@ This directory contains:
 | `waveorder_quickstart.py` | ~27 KB | ✅ Yes | Source code |
 | `README.md` | Small | ✅ Yes | Documentation |
 | `.gitignore` | Small | ✅ Yes | Git configuration |
-| `waveorder-5x-demo.zarr` | ~5 MB | ❌ No | Downloaded from public server |
+| `waveorder/20x.zarr` | ~123 MB | ❌ No | Downloaded from public server |
 | `waveorder_quickstart.ipynb` | Varies | ❌ No | Generated from .py |
 
 ### Demo Data
 
 The demo data is hosted on CZ Biohub's public server:
-- **URL**: https://public.czbiohub.org/comp.micro/neurips_demos/waveorder-5x-demo.zarr
-- **Size**: ~5 MB
+- **URL**: https://public.czbiohub.org/comp.micro/neurips_demos/waveorder/20x.zarr
+- **Size**: ~123 MB
 - **Format**: OME-Zarr
 - **Contents**: 3D label-free microscopy z-stack
 
