@@ -142,7 +142,7 @@ def download_demo_data():
     print(
         f"  URL: {url}"
     )
-    print("  This will download ~123M MB of data (may take 1-2 minutes)")
+    print("  This will download ~31 MB of data (may take 1-2 minutes)")
 
     # Check if wget is available
     if shutil.which("wget") is None:
@@ -393,7 +393,7 @@ print("✓ Setup complete")
 We'll load a 3D z-stack from label-free microscopy and visualize it.
 The dataset contains images acquired at multiple focal planes.
 
-The demo downloads real microscopy data from CZ Biohub's public server (~5 MB).
+The demo downloads real microscopy data from CZ Biohub's public server (~31 MB).
 To use your own data, replace the data loading section below with your own array.
 """
 
