@@ -142,7 +142,7 @@ def download_demo_data():
     print(
         f"  URL: {url}"
     )
-    print("  This will download ~31 MB of data (may take 1-2 minutes)")
+    print("  This will download ~8 MB of data (may take 1-2 minutes)")
 
     # Check if wget is available
     if shutil.which("wget") is None:
@@ -180,7 +180,7 @@ def download_demo_data():
     return zarr_path
 
 
-def load_demo_data(zarr_path, position_path="A/1/002026"):
+def load_demo_data(zarr_path, position_path="A/1/005028"):
     """Load demo data from zarr file
     
     Parameters
@@ -188,8 +188,8 @@ def load_demo_data(zarr_path, position_path="A/1/002026"):
     zarr_path : Path or str
         Path to the zarr store
     position_path : str, optional
-        Full position path. Must be one of: "A/1/002026", "A/1/002027", "A/1/002028"
-        Defaults to "A/1/002026"
+        Full position path. Must be one of: "A/1/005028", "A/1/005029", "A/1/005030"
+        Defaults to "A/1/005028"
     
     Returns
     -------
@@ -205,7 +205,7 @@ def load_demo_data(zarr_path, position_path="A/1/002026"):
     from iohub import open_ome_zarr
 
     # Available FOVs in this dataset
-    AVAILABLE_FOVS = ["A/1/002026", "A/1/002027", "A/1/002028"]
+    AVAILABLE_FOVS = ["A/1/005028", "A/1/005029", "A/1/005030"]
     
     # Validate position_path
     if position_path not in AVAILABLE_FOVS:
@@ -393,7 +393,7 @@ print("✓ Setup complete")
 We'll load a 3D z-stack from label-free microscopy and visualize it.
 The dataset contains images acquired at multiple focal planes.
 
-The demo downloads real microscopy data from CZ Biohub's public server (~31 MB).
+The demo downloads real microscopy data from CZ Biohub's public server (~8 MB).
 To use your own data, replace the data loading section below with your own array.
 """
 
@@ -402,11 +402,11 @@ To use your own data, replace the data loading section below with your own array
 zarr_path = download_demo_data()
 
 # Available FOVs in this dataset
-AVAILABLE_FOVS = ["A/1/002026", "A/1/002027", "A/1/002028"]
+AVAILABLE_FOVS = ["A/1/005028", "A/1/005029", "A/1/005030"]
 print(f"Available FOVs: {AVAILABLE_FOVS}")
 
 # Select FOV to use (change this to use a different FOV)
-SELECTED_FOV = "A/1/002026"  # Options: "A/1/002026", "A/1/002027", "A/1/002028"
+SELECTED_FOV = "A/1/005028"  # Options: "A/1/005028", "A/1/005029", "A/1/005030"
 
 zyx_data, z_scale, y_scale, x_scale = load_demo_data(zarr_path, position_path=SELECTED_FOV)
 
