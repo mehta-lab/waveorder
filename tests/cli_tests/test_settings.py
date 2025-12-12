@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from pydantic.v1 import ValidationError
+from pydantic import ValidationError
 
 from waveorder.cli import settings
 from waveorder.io import utils
@@ -124,4 +124,4 @@ def test_generate_example_settings():
         settings_roundtrip = utils.yaml_to_model(
             config_path, settings.ReconstructionSettings
         )
-        assert settings_obj.dict() == settings_roundtrip.dict()
+        assert settings_obj.model_dump() == settings_roundtrip.model_dump()

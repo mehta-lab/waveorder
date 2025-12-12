@@ -15,6 +15,7 @@ from waveorder.models import (
 )
 from waveorder.stokes import _s12_to_orientation, stokes_after_adr
 
+from waveorder.cli.settings import PhaseSettings, FluorescenceSettings
 
 def radians_to_nanometers(retardance_rad, wavelength_illumination_um):
     """
@@ -62,7 +63,7 @@ def birefringence(
 def phase(
     czyx_data,
     recon_dim,
-    settings_phase,
+    settings_phase: PhaseSettings,
     transfer_function_dataset,
 ):
     # [phase only, 2]
@@ -83,7 +84,7 @@ def phase(
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             czyx_data[0],
             (U, S, Vh),
-            **settings_phase.apply_inverse.dict(),
+            **settings_phase.apply_inverse.model_dump(),
         )
         # Stack to C1YX
         output = phase_yx[None, None]
@@ -108,7 +109,7 @@ def phase(
             real_potential_transfer_function,
             imaginary_potential_transfer_function,
             z_padding=settings_phase.transfer_function.z_padding,
-            **settings_phase.apply_inverse.dict(),
+            **settings_phase.apply_inverse.model_dump(),
         )
 
     # Pad to CZYX
@@ -124,7 +125,7 @@ def birefringence_and_phase(
     wavelength_illumination,
     recon_dim,
     biref_inverse_dict,
-    settings_phase,
+    settings_phase: PhaseSettings,
     transfer_function_dataset,
 ):
     # Load birefringence transfer function
@@ -174,7 +175,7 @@ def birefringence_and_phase(
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             brightfield_3d,
             (U, S, Vh),
-            **settings_phase.apply_inverse.dict(),
+            **settings_phase.apply_inverse.model_dump(),
         )
 
         # Convert retardance
@@ -222,7 +223,7 @@ def birefringence_and_phase(
             real_potential_transfer_function,
             imaginary_potential_transfer_function,
             z_padding=settings_phase.transfer_function.z_padding,
-            **settings_phase.apply_inverse.dict(),
+            **settings_phase.apply_inverse.model_dump(),
         )
 
         # Convert retardance
@@ -253,7 +254,7 @@ def birefringence_and_phase(
             szyx_data=stokes,
             singular_system=singular_system,
             intensity_to_stokes_matrix=None,
-            **settings_phase.apply_inverse.dict(),
+            **settings_phase.apply_inverse.model_dump(),
         )
 
         new_ret = (
@@ -282,7 +283,7 @@ def birefringence_and_phase(
 
 
 def fluorescence(
-    czyx_data, recon_dim, settings_fluorescence, transfer_function_dataset
+    czyx_data, recon_dim, settings_fluorescence: FluorescenceSettings, transfer_function_dataset
 ):
     # [fluo, 2]
     if recon_dim == 2:
@@ -299,7 +300,7 @@ def fluorescence(
         output = isotropic_fluorescent_thin_3d.apply_inverse_transfer_function(
             czyx_data[0],
             (U, S, Vh),
-            **settings_fluorescence.apply_inverse.dict(),
+            **settings_fluorescence.apply_inverse.model_dump(),
         )
     # [fluo, 3]
     elif recon_dim == 3:
@@ -314,7 +315,7 @@ def fluorescence(
                 czyx_data[0],
                 optical_transfer_function,
                 settings_fluorescence.transfer_function.z_padding,
-                **settings_fluorescence.apply_inverse.dict(),
+                **settings_fluorescence.apply_inverse.model_dump(),
             )
         )
         # Pad to CZYX

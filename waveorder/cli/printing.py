@@ -1,10 +1,11 @@
 import click
 import yaml
 
+from waveorder.cli.settings import MyBaseModel
 
-def echo_settings(settings):
+def echo_settings(settings: MyBaseModel):
     click.echo(
-        yaml.dump(settings.dict(), default_flow_style=False, sort_keys=False)
+        yaml.dump(settings.model_dump(), default_flow_style=False, sort_keys=False)
     )
 
 

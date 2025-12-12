@@ -8,6 +8,9 @@ import yaml
 from iohub import open_ome_zarr
 
 
+from waveorder.cli.settings import MyBaseModel
+
+
 def add_index_to_path(path: Path):
     """Takes a path to a file or folder and appends the smallest index that does
     not already exist in that folder.
@@ -76,13 +79,13 @@ def ram_message():
     return (is_warning, message)
 
 
-def model_to_yaml(model, yaml_path: Path) -> None:
+def model_to_yaml(model: MyBaseModel, yaml_path: Path) -> None:
     """
     Save a model's dictionary representation to a YAML file.
 
     Parameters
     ----------
-    model : object
+    model : MyBaseModel
         The model object to convert to YAML.
     yaml_path : Path
         The path to the output YAML file.
@@ -110,7 +113,7 @@ def model_to_yaml(model, yaml_path: Path) -> None:
     if not hasattr(model, "dict"):
         raise TypeError("The 'model' object does not have a 'dict()' method.")
 
-    model_dict = model.dict()
+    model_dict = model.model_dump()
 
     # Remove None-valued fields
     clean_model_dict = {
