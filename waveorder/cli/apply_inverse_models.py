@@ -283,7 +283,10 @@ def birefringence_and_phase(
 
 
 def fluorescence(
-    czyx_data, recon_dim, settings_fluorescence: FluorescenceSettings, transfer_function_dataset
+    czyx_data,
+    recon_dim,
+    settings_fluorescence: FluorescenceSettings,
+    transfer_function_dataset,
 ):
     # [fluo, 2]
     if recon_dim == 2:

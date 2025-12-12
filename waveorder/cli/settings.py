@@ -105,7 +105,10 @@ class PhaseTransferFunctionSettings(
 
     @model_validator(mode="after")
     def validate_numerical_aperture_illumination(self):
-        if self.numerical_aperture_illumination > self.index_of_refraction_media:
+        if (
+            self.numerical_aperture_illumination
+            > self.index_of_refraction_media
+        ):
             raise ValueError(
                 f"numerical_aperture_illumination = {self.numerical_aperture_illumination} must be less than or equal to index_of_refraction_media = {self.index_of_refraction_media}"
             )
@@ -164,16 +167,15 @@ class ReconstructionSettings(MyBaseModel):
 
     @model_validator(mode="after")
     def validate_reconstruction_types(self):
-        if (self.birefringence or self.phase) and self.fluorescence is not None:
+        if (
+            self.birefringence or self.phase
+        ) and self.fluorescence is not None:
             raise ValueError(
                 '"fluorescence" cannot be present alongside "birefringence" or "phase". Please use one configuration file for a "fluorescence" reconstruction and another configuration file for a "birefringence" and/or "phase" reconstructions.'
             )
         num_channel_names = len(self.input_channel_names)
         if self.birefringence is None:
-            if (
-                self.phase is None
-                and self.fluorescence is None
-            ):
+            if self.phase is None and self.fluorescence is None:
                 raise ValueError(
                     "Provide settings for either birefringence, phase, birefringence + phase, or fluorescence."
                 )

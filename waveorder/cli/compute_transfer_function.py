@@ -109,7 +109,9 @@ def generate_and_save_vector_birefringence_transfer_function(
     )
 
 
-def generate_and_save_birefringence_transfer_function(settings: ReconstructionSettings, dataset):
+def generate_and_save_birefringence_transfer_function(
+    settings: ReconstructionSettings, dataset
+):
     """Generates and saves the birefringence transfer function to the dataset, based on the settings.
 
     Parameters
