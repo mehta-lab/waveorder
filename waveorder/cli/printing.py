@@ -3,6 +3,7 @@ import yaml
 
 from waveorder.cli.settings import MyBaseModel
 
+
 def echo_settings(settings: MyBaseModel):
     click.echo(
         yaml.dump(settings.model_dump(), default_flow_style=False, sort_keys=False)

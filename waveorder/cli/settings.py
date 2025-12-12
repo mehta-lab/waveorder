@@ -4,12 +4,14 @@ from pathlib import Path
 from typing import List, Literal, Optional, Union
 
 from pydantic import (
-    field_validator, model_validator, BaseModel,
+    BaseModel,
+    ConfigDict,
     Extra,
     NonNegativeFloat,
     NonNegativeInt,
     PositiveFloat,
-    ConfigDict,
+    field_validator,
+    model_validator,
 )
 
 # This file defines the configuration settings for the CLI.

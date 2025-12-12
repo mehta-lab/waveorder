@@ -5,6 +5,7 @@ This module converts GUI-level reconstruction calls into library calls
 import numpy as np
 import torch
 
+from waveorder.cli.settings import FluorescenceSettings, PhaseSettings
 from waveorder.models import (
     inplane_oriented_thick_pol3d,
     inplane_oriented_thick_pol3d_vector,
@@ -15,7 +16,6 @@ from waveorder.models import (
 )
 from waveorder.stokes import _s12_to_orientation, stokes_after_adr
 
-from waveorder.cli.settings import PhaseSettings, FluorescenceSettings
 
 def radians_to_nanometers(retardance_rad, wavelength_illumination_um):
     """
