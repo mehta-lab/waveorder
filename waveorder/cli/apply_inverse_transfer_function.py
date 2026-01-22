@@ -171,7 +171,7 @@ def apply_inverse_transfer_function_single_position(
         # so this section converts the settings to a dict and separates the
         # waveorder parameters (biref_inverse_dict) from the waveorder
         # parameters (cyx_no_sample_data, and wavelength_illumination)
-        biref_inverse_dict = settings.birefringence.apply_inverse.dict()
+        biref_inverse_dict = settings.birefringence.apply_inverse.model_dump()
 
         # Resolve background path into array
         background_path = biref_inverse_dict.pop("background_path")
@@ -279,7 +279,7 @@ def apply_inverse_transfer_function_single_position(
             partial_apply_inverse_to_zyx_and_save(t_idx)
 
     # Save metadata at position level
-    output_dataset.zattrs["settings"] = settings.dict()
+    output_dataset.zattrs["settings"] = settings.model_dump()
 
     echo_headline(f"Closing {output_position_dirpath}\n")
 
