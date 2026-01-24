@@ -47,7 +47,7 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
         )
         plate_metadata = dict(input_plate.zattrs)
         plate_metadata.pop("plate")
-    except RuntimeError:
+    except (RuntimeError, FileNotFoundError):
         warnings.warn(
             "Position is not part of a plate...no plate metadata will be copied."
         )
