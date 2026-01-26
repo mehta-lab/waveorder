@@ -40,6 +40,7 @@ def simulate_phase_recon(
         "zyx_shape": (n_z, n_yx, n_yx),
         "yx_pixel_size": yx_pixel_size_um,
         "z_pixel_size": z_pixel_size_um,
+        "wavelength_illumination": 0.532,
         "index_of_refraction_media": 1.3,
     }
     phantom_arguments = {
@@ -48,7 +49,6 @@ def simulate_phase_recon(
     }
     transfer_function_arguments = {
         "z_padding": 0,
-        "wavelength_illumination": 0.532,
         "numerical_aperture_illumination": 0.9,
         "numerical_aperture_detection": 1.3,
     }
@@ -98,8 +98,27 @@ def simulate_phase_recon(
     ],
 )
 def test_phase_invariance(z_pixel_size_um, yx_pixel_size_um, tolerance):
-    baseline = simulate_phase_recon()
+    """Test that the reconstructed physical property (Δn) is invariant to voxel size.
+
+    Reconstruction returns phase in cycles per voxel, which correctly scales with
+    voxel size. This test converts back to Δn (the material property) to verify
+    that the physical property is recovered invariant to discretization.
+    """
+    # Baseline with default parameters
+    baseline_z_pixel_size_um = 0.1
+    baseline = simulate_phase_recon(z_pixel_size_um=baseline_z_pixel_size_um)
     recon = simulate_phase_recon(
         z_pixel_size_um=z_pixel_size_um, yx_pixel_size_um=yx_pixel_size_um
     )
-    assert np.abs((recon - baseline) / baseline) < tolerance
+
+    # Convert from cycles per voxel to Δn (refractive index difference)
+    # Δn = (cycles/voxel) × λ_medium / z_pixel_size
+    wavelength_medium = 0.532 / 1.3  # λ_vacuum / n_media
+    baseline_delta_n = baseline * wavelength_medium / baseline_z_pixel_size_um
+    recon_delta_n = recon * wavelength_medium / z_pixel_size_um
+
+    # The physical property Δn should be invariant to voxel size
+    assert (
+        np.abs((recon_delta_n - baseline_delta_n) / baseline_delta_n)
+        < tolerance
+    )

@@ -19,12 +19,15 @@ simulation_arguments = {
     "zyx_shape": (100, 256, 256),
     "yx_pixel_size": 6.5 / 63,
     "z_pixel_size": 0.25,
+    "wavelength_illumination": 0.532,
     "index_of_refraction_media": 1.3,
 }
-phantom_arguments = {"index_of_refraction_sample": 1.50, "sphere_radius": 5}
+phantom_arguments = {
+    "index_of_refraction_sample": 1.50,
+    "sphere_radius": 5,
+}
 transfer_function_arguments = {
     "z_padding": 0,
-    "wavelength_illumination": 0.532,
     "numerical_aperture_illumination": 0.9,
     "numerical_aperture_detection": 1.2,
 }

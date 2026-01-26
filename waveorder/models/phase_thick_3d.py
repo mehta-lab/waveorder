@@ -15,10 +15,41 @@ def generate_test_phantom(
     zyx_shape: tuple[int, int, int],
     yx_pixel_size: float,
     z_pixel_size: float,
+    wavelength_illumination: float,
     index_of_refraction_media: float,
     index_of_refraction_sample: float,
     sphere_radius: float,
 ) -> np.ndarray:
+    """
+    Generate a spherical phantom with phase in cycles per voxel.
+
+    Parameters
+    ----------
+    zyx_shape : tuple[int, int, int]
+        Shape of the 3D volume (Z, Y, X)
+    yx_pixel_size : float
+        Pixel size in transverse (Y, X) dimensions (length)
+    z_pixel_size : float
+        Pixel size in axial (Z) dimension (length)
+    wavelength_illumination : float
+        Wavelength of illumination light (length, same units as pixel sizes)
+    index_of_refraction_media : float
+        Refractive index of the surrounding medium
+    index_of_refraction_sample : float
+        Refractive index of the sphere
+    sphere_radius : float
+        Radius of the sphere (length, same units as pixel sizes)
+
+    Returns
+    -------
+    np.ndarray
+        3D array of phase in cycles per voxel.
+        Units: (n_sample - n_media) × z_pixel_size / λ_medium [cycles/voxel]
+
+        Each voxel value represents the phase shift (in cycles) that light
+        acquires when passing through that voxel. This matches the units
+        returned by apply_inverse_transfer_function().
+    """
     sphere, _, _ = util.generate_sphere_target(
         zyx_shape,
         yx_pixel_size,
@@ -26,9 +57,15 @@ def generate_test_phantom(
         radius=sphere_radius,
         blur_size=2 * yx_pixel_size,
     )
-    zyx_phase = sphere * (
+
+    # Compute refractive index difference
+    delta_n = sphere * (
         index_of_refraction_sample - index_of_refraction_media
-    )  # refractive index increment
+    )
+
+    # Convert to phase in cycles per voxel
+    wavelength_medium = wavelength_illumination / index_of_refraction_media
+    zyx_phase = delta_n * z_pixel_size / wavelength_medium
 
     return zyx_phase
 
