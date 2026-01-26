@@ -2,10 +2,21 @@
 phase thick 3d
 ======================
 
-# 3D partially coherent optical diffraction tomography (ODT) simulation
-# J. M. Soto, J. A. Rodrigo, and T. Alieva, "Label-free quantitative
-# 3D tomographic imaging for partially coherent light microscopy," Opt. Express
-# 25, 15699-15712 (2017)
+3D partially coherent optical diffraction tomography (ODT) simulation
+
+This example demonstrates:
+1. Creating a phantom with phase in cycles per voxel
+2. Computing the 3D weak object transfer function
+3. Forward simulation (phantom -> synthetic data)
+4. Inverse reconstruction (data -> recovered phase)
+
+Units: Phase is in cycles (1 cycle = 2π radians = 1 wavelength OPD)
+
+Reference
+---------
+J. M. Soto, J. A. Rodrigo, and T. Alieva, "Label-free quantitative
+3D tomographic imaging for partially coherent light microscopy," Opt. Express
+25, 15699-15712 (2017)
 """
 
 import napari
