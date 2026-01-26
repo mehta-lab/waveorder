@@ -67,14 +67,14 @@ def generate_and_save_vector_birefringence_transfer_function(
     echo_headline(
         f"Downsampling transfer function in X and Y by {transverse_downsample_factor}x"
     )
-    phase_settings_dict = settings.phase.transfer_function.dict()
+    phase_settings_dict = settings.phase.transfer_function.model_dump()
     phase_settings_dict.pop("z_focus_offset")  # not used in 3D
 
     sfZYX_transfer_function, _, singular_system = (
         inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
             zyx_shape=zyx_shape,
             scheme=str(len(settings.input_channel_names)) + "-State",
-            **settings.birefringence.transfer_function.dict(),
+            **settings.birefringence.transfer_function.model_dump(),
             **phase_settings_dict,
             fourier_oversample_factor=int(transverse_downsample_factor),
         )
@@ -109,7 +109,9 @@ def generate_and_save_vector_birefringence_transfer_function(
     )
 
 
-def generate_and_save_birefringence_transfer_function(settings, dataset):
+def generate_and_save_birefringence_transfer_function(
+    settings: ReconstructionSettings, dataset
+):
     """Generates and saves the birefringence transfer function to the dataset, based on the settings.
 
     Parameters
@@ -125,7 +127,7 @@ def generate_and_save_birefringence_transfer_function(settings, dataset):
     intensity_to_stokes_matrix = (
         inplane_oriented_thick_pol3d.calculate_transfer_function(
             scheme=str(len(settings.input_channel_names)) + "-State",
-            **settings.birefringence.transfer_function.dict(),
+            **settings.birefringence.transfer_function.model_dump(),
         )
     )
     # Save
@@ -152,7 +154,7 @@ def generate_and_save_phase_transfer_function(
     echo_headline("Generating phase transfer function with settings:")
     echo_settings(settings.phase.transfer_function)
 
-    settings_dict = settings.phase.transfer_function.dict()
+    settings_dict = settings.phase.transfer_function.model_dump()
     if settings.reconstruction_dimension == 2:
         # Convert zyx_shape and z_pixel_size into yx_shape and z_position_list
         settings_dict["yx_shape"] = [zyx_shape[1], zyx_shape[2]]
@@ -238,7 +240,7 @@ def generate_and_save_fluorescence_transfer_function(
     """
     echo_headline("Generating fluorescence transfer function with settings:")
     echo_settings(settings.fluorescence.transfer_function)
-    settings_dict = settings.fluorescence.transfer_function.dict()
+    settings_dict = settings.fluorescence.transfer_function.model_dump()
 
     if settings.reconstruction_dimension == 2:
         # Convert zyx_shape and z_pixel_size into yx_shape and z_position_list
@@ -395,7 +397,7 @@ def compute_transfer_function_cli(
         )
 
     # Write settings to metadata
-    output_dataset.zattrs["settings"] = settings.dict()
+    output_dataset.zattrs["settings"] = settings.model_dump()
 
     echo_headline(f"Closing {output_dirpath}\n")
     output_dataset.close()

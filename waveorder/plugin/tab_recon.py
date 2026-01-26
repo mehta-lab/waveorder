@@ -28,7 +28,7 @@ if TYPE_CHECKING:
 
 from concurrent.futures import ThreadPoolExecutor
 
-from pydantic.v1 import BaseModel, NonNegativeInt, ValidationError
+from pydantic import BaseModel, NonNegativeInt, ValidationError
 
 from waveorder.cli.settings import (
     BirefringenceApplyInverseSettings,

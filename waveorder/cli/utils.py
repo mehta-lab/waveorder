@@ -37,7 +37,7 @@ def is_single_position_store(position_path: Path) -> bool:
         # Try to open as HCS plate 3 levels up
         open_ome_zarr(position_path.parent.parent.parent, mode="r")
         return False  # Successfully opened as plate
-    except RuntimeError:
+    except (RuntimeError, FileNotFoundError):
         return True  # Not a plate structure
 
 

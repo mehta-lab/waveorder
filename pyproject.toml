@@ -67,6 +67,7 @@ visual = [
   "napari-ome-zarr>=0.3.2", # drag and drop convenience
   "pycromanager==0.27.2",
   "jupyter",
+  "jupytext",
 ]
 dev = [
   "black==25.1.0",

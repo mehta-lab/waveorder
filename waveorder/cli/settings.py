@@ -3,14 +3,15 @@ import warnings
 from pathlib import Path
 from typing import List, Literal, Optional, Tuple, Union
 
-from pydantic.v1 import (
+from pydantic import (
     BaseModel,
+    ConfigDict,
     Extra,
     NonNegativeFloat,
     NonNegativeInt,
     PositiveFloat,
-    root_validator,
-    validator,
+    field_validator,
+    model_validator,
 )
 
 # This file defines the configuration settings for the CLI.
@@ -22,8 +23,8 @@ from pydantic.v1 import (
 
 
 # All settings classes inherit from MyBaseModel, which forbids extra parameters to guard against typos
-class MyBaseModel(BaseModel, extra=Extra.forbid):
-    pass
+class MyBaseModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
 
 
 # Bottom level settings
@@ -34,7 +35,8 @@ class WavelengthIllumination(MyBaseModel):
 class BirefringenceTransferFunctionSettings(MyBaseModel):
     swing: float = 0.1
 
-    @validator("swing")
+    @field_validator("swing")
+    @classmethod
     def swing_range(cls, v):
         if v <= 0 or v >= 1.0:
             raise ValueError(f"swing = {v} should be between 0 and 1.")
@@ -43,11 +45,9 @@ class BirefringenceTransferFunctionSettings(MyBaseModel):
 
 class BirefringenceApplyInverseSettings(WavelengthIllumination):
     background_path: Union[str, Path] = ""
-    remove_estimated_background: bool = False
-    flip_orientation: bool = False
-    rotate_orientation: bool = False
 
-    @validator("background_path")
+    @field_validator("background_path")
+    @classmethod
     def check_background_path(cls, v):
         if v == "":
             return v
@@ -56,6 +56,10 @@ class BirefringenceApplyInverseSettings(WavelengthIllumination):
         if not os.path.isdir(raw_dir):
             raise ValueError(f"{v} is not a existing directory")
         return raw_dir
+
+    remove_estimated_background: bool = False
+    flip_orientation: bool = False
+    rotate_orientation: bool = False
 
 
 class FourierTransferFunctionSettings(MyBaseModel):
@@ -66,25 +70,23 @@ class FourierTransferFunctionSettings(MyBaseModel):
     index_of_refraction_media: PositiveFloat = 1.3
     numerical_aperture_detection: PositiveFloat = 1.2
 
-    @validator("numerical_aperture_detection")
-    def na_det(cls, v, values):
-        n = values["index_of_refraction_media"]
-        if v > n:
+    @model_validator(mode="after")
+    def validate_numerical_aperture_detection(self):
+        if self.numerical_aperture_detection > self.index_of_refraction_media:
             raise ValueError(
-                f"numerical_aperture_detection = {v} must be less than or equal to index_of_refraction_media = {n}"
+                f"numerical_aperture_detection = {self.numerical_aperture_detection} must be less than or equal to index_of_refraction_media = {self.index_of_refraction_media}"
             )
-        return v
+        return self
 
-    @validator("z_pixel_size")
-    def warn_unit_consistency(cls, v, values):
-        yx_pixel_size = values["yx_pixel_size"]
-        ratio = yx_pixel_size / v
+    @model_validator(mode="after")
+    def warn_unit_consistency(self):
+        ratio = self.yx_pixel_size / self.z_pixel_size
         if ratio < 1.0 / 20 or ratio > 20:
             warnings.warn(
-                f"yx_pixel_size ({yx_pixel_size}) / z_pixel_size ({v}) = {ratio}. Did you use consistent units?",
+                f"yx_pixel_size ({self.yx_pixel_size}) / z_pixel_size ({self.z_pixel_size}) = {ratio}. Did you use consistent units?",
                 UserWarning,
             )
-        return v
+        return self
 
 
 class FourierApplyInverseSettings(MyBaseModel):
@@ -102,14 +104,16 @@ class PhaseTransferFunctionSettings(
     invert_phase_contrast: bool = False
     illumination_sector_angles: Optional[List[Tuple[float, float]]] = None
 
-    @validator("numerical_aperture_illumination")
-    def na_ill(cls, v, values):
-        n = values.get("index_of_refraction_media")
-        if v > n:
+    @model_validator(mode="after")
+    def validate_numerical_aperture_illumination(self):
+        if (
+            self.numerical_aperture_illumination
+            > self.index_of_refraction_media
+        ):
             raise ValueError(
-                f"numerical_aperture_illumination = {v} must be less than or equal to index_of_refraction_media = {n}"
+                f"numerical_aperture_illumination = {self.numerical_aperture_illumination} must be less than or equal to index_of_refraction_media = {self.index_of_refraction_media}"
             )
-        return v
+        return self
 
     @validator("illumination_sector_angles")
     def validate_sector_angles(cls, v):
@@ -137,16 +141,15 @@ class FluorescenceTransferFunctionSettings(FourierTransferFunctionSettings):
     wavelength_emission: PositiveFloat = 0.507
     confocal_pinhole_diameter: Optional[PositiveFloat] = None
 
-    @validator("wavelength_emission")
-    def warn_unit_consistency(cls, v, values):
-        yx_pixel_size = values.get("yx_pixel_size")
-        ratio = yx_pixel_size / v
+    @model_validator(mode="after")
+    def warn_unit_consistency(self):
+        ratio = self.yx_pixel_size / self.wavelength_emission
         if ratio < 1.0 / 20 or ratio > 20:
             warnings.warn(
-                f"yx_pixel_size ({yx_pixel_size}) / wavelength_illumination ({v}) = {ratio}. Did you use consistent units?",
+                f"yx_pixel_size ({self.yx_pixel_size}) / wavelength_illumination ({self.wavelength_emission}) = {ratio}. Did you use consistent units?",
                 UserWarning,
             )
-        return v
+        return self
 
 
 # Second level settings
@@ -180,15 +183,15 @@ class ReconstructionSettings(MyBaseModel):
         NonNegativeInt, List[NonNegativeInt], Literal["all"]
     ] = "all"
     reconstruction_dimension: Literal[2, 3] = 3
-    birefringence: Optional[BirefringenceSettings]
-    phase: Optional[PhaseSettings]
-    fluorescence: Optional[FluorescenceSettings]
+    birefringence: Optional[BirefringenceSettings] = None
+    phase: Optional[PhaseSettings] = None
+    fluorescence: Optional[FluorescenceSettings] = None
 
-    @root_validator(pre=False)
-    def validate_reconstruction_types(cls, values):
-        if (values.get("birefringence") or values.get("phase")) and values.get(
-            "fluorescence"
-        ) is not None:
+    @model_validator(mode="after")
+    def validate_reconstruction_types(self):
+        if (
+            self.birefringence or self.phase
+        ) and self.fluorescence is not None:
             raise ValueError(
                 '"fluorescence" cannot be present alongside "birefringence" or "phase". Please use one configuration file for a "fluorescence" reconstruction and another configuration file for a "birefringence" and/or "phase" reconstructions.'
             )
@@ -226,4 +229,4 @@ class ReconstructionSettings(MyBaseModel):
                         f"{num_channel_names} channels names provided. Please provide a single channel for fluorescence reconstructions."
                     )
 
-        return values
+        return self
