@@ -10,6 +10,55 @@ from waveorder.models import isotropic_fluorescent_thick_3d
 from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
+"""
+Phase Thick 3D Model - Units and Conventions
+=============================================
+
+This module implements phase-from-defocus optical diffraction tomography (ODT) 
+for thick phase objects using the weak object transfer function (first Born 
+approximation).
+
+Units Convention
+----------------
+This model uses "cycles" as the fundamental unit for phase:
+    - 1 cycle = 2π radians = 1 wavelength of optical path difference
+
+Phantom (input):
+    Phase in cycles per voxel = (Δn × z_pixel_size) / λ_medium
+    where:
+        - Δn = n_sample - n_media (refractive index difference)
+        - z_pixel_size = voxel thickness
+        - λ_medium = λ_vacuum / n_media (wavelength in medium)
+
+Reconstruction (output):
+    Phase in cycles per voxel (same units as phantom)
+
+Converting Between Units
+------------------------
+From cycles to radians:
+    phase_radians = 2 * np.pi * phase_cycles
+
+From cycles to refractive index difference:
+    wavelength_medium = wavelength_vacuum / n_media
+    delta_n = phase_cycles * wavelength_medium / z_pixel_size
+
+From cycles to optical path length:
+    optical_path_length = phase_cycles * wavelength_medium
+
+Physics Background
+------------------
+The weak object approximation (first Born approximation) assumes:
+1. Small refractive index variations: |Δn| << n_media
+2. Weak scattering: no multiple scattering
+3. Linear relationship between object and measured intensity
+
+Reference
+---------
+J. M. Soto, J. A. Rodrigo, and T. Alieva, "Label-free quantitative 3D
+tomographic imaging for partially coherent light microscopy,"
+Opt. Express 25, 15699-15712 (2017)
+"""
+
 
 def generate_test_phantom(
     zyx_shape: tuple[int, int, int],
@@ -59,9 +108,7 @@ def generate_test_phantom(
     )
 
     # Compute refractive index difference
-    delta_n = sphere * (
-        index_of_refraction_sample - index_of_refraction_media
-    )
+    delta_n = sphere * (index_of_refraction_sample - index_of_refraction_media)
 
     # Convert to phase in cycles per voxel
     wavelength_medium = wavelength_illumination / index_of_refraction_media
