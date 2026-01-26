@@ -212,10 +212,7 @@ class ReconstructionSettings(MyBaseModel):
                     )
             else:
                 # Single channel phase reconstruction without sector illumination
-                if (
-                    self.birefringence is None
-                    and num_channel_names != 1
-                ):
+                if self.birefringence is None and num_channel_names != 1:
                     raise ValueError(
                         f"{num_channel_names} channels names provided. Please provide a single channel for phase reconstructions without sector illumination."
                     )

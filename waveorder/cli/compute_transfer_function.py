@@ -69,7 +69,9 @@ def generate_and_save_vector_birefringence_transfer_function(
     )
     phase_settings_dict = settings.phase.transfer_function.model_dump()
     phase_settings_dict.pop("z_focus_offset")  # not used in 3D
-    phase_settings_dict.pop("illumination_sector_angles")  # not used in vector birefringence
+    phase_settings_dict.pop(
+        "illumination_sector_angles"
+    )  # not used in vector birefringence
 
     sfZYX_transfer_function, _, singular_system = (
         inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
