@@ -318,7 +318,22 @@ def apply_inverse_transfer_function(
     Returns
     -------
     Tensor
-        zyx_phase (radians)
+        zyx_phase : Phase in cycles per voxel
+            Units: (Δn × z_pixel_size) / λ_medium [cycles/voxel]
+
+            Each voxel represents the phase shift (in cycles) that light acquires
+            when passing through that voxel. This matches the units of the input
+            phantom from generate_test_phantom().
+
+            To convert to phase in radians:
+                phase_radians = 2 * np.pi * zyx_phase
+
+            To convert to refractive index difference:
+                wavelength_medium = wavelength_illumination / index_of_refraction_media
+                delta_n = zyx_phase * wavelength_medium / z_pixel_size
+
+            Note: One cycle corresponds to 2π radians of phase shift, or one
+            wavelength of optical path length difference.
 
     Raises
     ------
