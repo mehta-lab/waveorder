@@ -11,6 +11,7 @@ fluorescence:
     index_of_refraction_media: 1.3
     numerical_aperture_detection: 1.2
     wavelength_emission: 0.507
+    confocal_pinhole_diameter: null
   apply_inverse:
     reconstruction_algorithm: Tikhonov
     regularization_strength: 0.001

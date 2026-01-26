@@ -41,14 +41,18 @@ git clone https://github.com/mehta-lab/waveorder.git
 Otherwise, you can follow [these instructions](https://docs.github.com/en/get-started/quickstart/fork-a-repo)
 to [fork](https://github.com/mehta-lab/waveorder/fork) the repository.
 
-Then install the package in editable mode with the development dependencies:
+Next, install the package in editable mode with all dependencies
 
 ```sh
 cd waveorder/ # or the renamed project root directory
-pip install -e ".[dev]"
+pip install -e ".[all]"
+```
+and check that the tests pass with
+```sh
+pytest
 ```
 
-Then make the changes and [track them with Git](https://docs.github.com/en/get-started/using-git/about-git#example-contribute-to-an-existing-repository).
+Finally, make the changes and [track them with Git](https://docs.github.com/en/get-started/using-git/about-git#example-contribute-to-an-existing-repository).
 
 ### Code style
 
@@ -68,12 +72,8 @@ Documentation infrastructure is built using [Markdown (.md)](https://www.sphinx-
 
 ```sh
 cd waveorder/ # or the renamed project root directory
-pip install -e ".[docs]"
-```
-
-```shell
+pip install -e ".[all]"
 cd docs/
-pip install sphinx
 sphinx-build -M html ./ ./build
 ```
 

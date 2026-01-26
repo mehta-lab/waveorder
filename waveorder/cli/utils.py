@@ -9,6 +9,38 @@ from iohub.ngff.models import TransformationMeta
 from numpy.typing import DTypeLike
 
 
+def generate_valid_position_key(index: int) -> tuple[str, str, str]:
+    """Generate a valid HCS position key for single-position stores.
+
+    Args:
+        index: Position index (0-based)
+
+    Returns:
+        Tuple of (row, column, field) with alphanumeric characters only
+    """
+    row = chr(65 + (index // 10))  # A, B, C, etc.
+    column = str((index % 10) + 1)  # 1, 2, 3, etc.
+    field = "0"  # Always 0 for single positions
+    return (row, column, field)
+
+
+def is_single_position_store(position_path: Path) -> bool:
+    """Check if a position path is from a single-position store (not HCS plate).
+
+    Args:
+        position_path: Path to the position directory
+
+    Returns:
+        True if it's a single-position store, False if it's part of an HCS plate
+    """
+    try:
+        # Try to open as HCS plate 3 levels up
+        open_ome_zarr(position_path.parent.parent.parent, mode="r")
+        return False  # Successfully opened as plate
+    except (RuntimeError, FileNotFoundError):
+        return True  # Not a plate structure
+
+
 def create_empty_hcs_zarr(
     store_path: Path,
     position_keys: list[Tuple[str]],

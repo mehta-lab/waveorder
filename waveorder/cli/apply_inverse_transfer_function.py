@@ -16,13 +16,14 @@ from waveorder.cli.parsing import (
     output_dirpath,
     processes_option,
     transfer_function_dirpath,
-    unique_id,
 )
 from waveorder.cli.printing import echo_headline, echo_settings
 from waveorder.cli.settings import ReconstructionSettings
 from waveorder.cli.utils import (
     apply_inverse_to_zyx_and_save,
     create_empty_hcs_zarr,
+    generate_valid_position_key,
+    is_single_position_store,
 )
 from waveorder.io import utils
 
@@ -46,7 +47,7 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
         )
         plate_metadata = dict(input_plate.zattrs)
         plate_metadata.pop("plate")
-    except RuntimeError:
+    except (RuntimeError, FileNotFoundError):
         warnings.warn(
             "Position is not part of a plate...no plate metadata will be copied."
         )
@@ -170,7 +171,7 @@ def apply_inverse_transfer_function_single_position(
         # so this section converts the settings to a dict and separates the
         # waveorder parameters (biref_inverse_dict) from the waveorder
         # parameters (cyx_no_sample_data, and wavelength_illumination)
-        biref_inverse_dict = settings.birefringence.apply_inverse.dict()
+        biref_inverse_dict = settings.birefringence.apply_inverse.model_dump()
 
         # Resolve background path into array
         background_path = biref_inverse_dict.pop("background_path")
@@ -278,7 +279,7 @@ def apply_inverse_transfer_function_single_position(
             partial_apply_inverse_to_zyx_and_save(t_idx)
 
     # Save metadata at position level
-    output_dataset.zattrs["settings"] = settings.dict()
+    output_dataset.zattrs["settings"] = settings.model_dump()
 
     echo_headline(f"Closing {output_position_dirpath}\n")
 
@@ -303,9 +304,19 @@ def apply_inverse_transfer_function_cli(
         input_position_dirpaths[0], config_filepath
     )
 
+    # Generate position keys - use valid HCS keys for single-position stores
+    position_keys = []
+    for i, input_path in enumerate(input_position_dirpaths):
+        if is_single_position_store(input_path):
+            position_key = generate_valid_position_key(i)
+        else:
+            # Use original HCS plate structure
+            position_key = input_path.parts[-3:]
+        position_keys.append(position_key)
+
     create_empty_hcs_zarr(
         store_path=output_dirpath,
-        position_keys=[p.parts[-3:] for p in input_position_dirpaths],
+        position_keys=position_keys,
         **output_metadata,
     )
 
@@ -315,12 +326,20 @@ def apply_inverse_transfer_function_cli(
         torch.set_num_interop_threads(1)
 
     # Loop through positions
-    for input_position_dirpath in input_position_dirpaths:
+    for i, input_position_dirpath in enumerate(input_position_dirpaths):
+        # Use the same position key generation logic
+        if is_single_position_store(input_position_dirpath):
+            position_key = generate_valid_position_key(i)
+        else:
+            position_key = input_position_dirpath.parts[-3:]
+
+        output_position_path = output_dirpath / Path(*position_key)
+
         apply_inverse_transfer_function_single_position(
             input_position_dirpath,
             transfer_function_dirpath,
             config_filepath,
-            output_dirpath / Path(*input_position_dirpath.parts[-3:]),
+            output_position_path,
             num_processes,
             output_metadata["channel_names"],
         )

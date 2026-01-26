@@ -98,7 +98,7 @@ def test_reconstruct(tmp_input_path_zarr):
 
 def test_append_channel_reconstruction(tmp_input_path_zarr):
     input_path, tmp_config_yml = tmp_input_path_zarr
-    output_path = input_path.with_name(f"output.zarr")
+    output_path = input_path.with_name("output.zarr")
 
     # Generate input "dataset"
     channel_names = [f"State{x}" for x in range(4)] + ["GFP"]
@@ -133,8 +133,8 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
         phase=None,
         fluorescence=settings.FluorescenceSettings(),
     )
-    biref_config_path = tmp_config_yml.with_name(f"biref.yml")
-    fluor_config_path = tmp_config_yml.with_name(f"fluor.yml")
+    biref_config_path = tmp_config_yml.with_name("biref.yml")
+    fluor_config_path = tmp_config_yml.with_name("fluor.yml")
 
     utils.model_to_yaml(biref_settings, biref_config_path)
     utils.model_to_yaml(fluor_settings, fluor_config_path)
@@ -185,6 +185,67 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
         assert dataset["0/0/0"]["0"].shape[1] == 5
         assert dataset.channel_names[-1] == "GFP_Density3D"
         assert dataset.channel_names[-2] == "Pol"
+
+
+def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
+    """Test 2D fluorescence reconstruction through CLI"""
+    input_path, tmp_config_yml = tmp_input_path_zarr
+    output_path = input_path.with_name("fluor_2d_output.zarr")
+
+    # Generate input "dataset" with fluorescence channel
+    channel_names = [f"State{x}" for x in range(4)] + ["GFP"]
+    dataset = open_ome_zarr(
+        input_path,
+        layout="hcs",
+        mode="w",
+        channel_names=channel_names,
+    )
+    position = dataset.create_position("0", "0", "0")
+    position.create_zeros(
+        "0",
+        (5, 5, 4, 5, 6),  # T, C, Z, Y, X - one fluorescence channel
+        dtype=np.uint16,
+        transform=[TransformationMeta(type="scale", scale=input_scale)],
+    )
+
+    # Generate 2D fluorescence reconstruction settings
+    fluor_2d_settings = settings.ReconstructionSettings(
+        input_channel_names=["GFP"],
+        time_indices="all",
+        reconstruction_dimension=2,  # 2D reconstruction
+        birefringence=None,
+        phase=None,
+        fluorescence=settings.FluorescenceSettings(),
+    )
+    fluor_2d_config_path = tmp_config_yml.with_name("fluor_2d.yml")
+    utils.model_to_yaml(fluor_2d_settings, fluor_2d_config_path)
+
+    # Run 2D fluorescence reconstruction
+    runner = CliRunner()
+    runner.invoke(
+        cli,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(fluor_2d_config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
+    assert output_path.exists()
+
+    # Verify output structure
+    with open_ome_zarr(output_path) as dataset:
+        # Should have 1 channel for 2D fluorescence density
+        assert dataset["0/0/0"]["0"].shape[1] == 1
+        # Should have Z=1 for 2D reconstruction
+        assert dataset["0/0/0"]["0"].shape[2] == 1
+        # YX dimensions should match input
+        assert dataset["0/0/0"]["0"].shape[3:] == (5, 6)
+        assert dataset.channel_names[-1] == "GFP_Density2D"
 
 
 def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
