@@ -69,6 +69,9 @@ def generate_and_save_vector_birefringence_transfer_function(
     )
     phase_settings_dict = settings.phase.transfer_function.model_dump()
     phase_settings_dict.pop("z_focus_offset")  # not used in 3D
+    phase_settings_dict.pop(
+        "illumination_sector_angles"
+    )  # not used in vector birefringence
 
     sfZYX_transfer_function, _, singular_system = (
         inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
@@ -213,14 +216,12 @@ def generate_and_save_phase_transfer_function(
         # Save
         dataset.create_image(
             "real_potential_transfer_function",
-            real_potential_transfer_function.cpu().numpy()[None, None, ...],
+            real_potential_transfer_function.cpu().numpy()[None, ...],
             chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
         )
         dataset.create_image(
             "imaginary_potential_transfer_function",
-            imaginary_potential_transfer_function.cpu().numpy()[
-                None, None, ...
-            ],
+            imaginary_potential_transfer_function.cpu().numpy()[None, ...],
             chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
         )
 
@@ -369,14 +370,15 @@ def compute_transfer_function_cli(
         print("Found z_focus_offset:", z_focus_offset)
 
     # Prepare output dataset
-    num_channels = (
+    num_input_channel = len(settings.input_channel_names)
+    num_output_channels = (
         2 if settings.reconstruction_dimension == 2 else 1
     )  # space for SVD
     output_dataset = open_ome_zarr(
         output_dirpath,
         layout="fov",
         mode="w",
-        channel_names=num_channels * ["None"],
+        channel_names=num_input_channel * num_output_channels * ["None"],
     )
 
     # Pass settings to appropriate calculate_transfer_function and save

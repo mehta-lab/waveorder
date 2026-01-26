@@ -19,8 +19,9 @@ def test_calculate_transfer_function(invert_phase_contrast):
         invert_phase_contrast=invert_phase_contrast,
     )
 
-    assert H_re.shape == (20 + 2 * z_padding, 100, 101)
-    assert H_im.shape == (20 + 2 * z_padding, 100, 101)
+    # Transfer functions now have shape (C, Z, Y, X) where C is number of channels
+    assert H_re.shape == (1, 20 + 2 * z_padding, 100, 101)
+    assert H_im.shape == (1, 20 + 2 * z_padding, 100, 101)
 
 
 # Helper function for testing reconstruction invariances
@@ -58,7 +59,7 @@ def simulate_phase_recon(
         **simulation_arguments, **phantom_arguments
     )
 
-    # Calculate transfer function
+    # Calculate transfer function (returns shape (C, Z, Y, X))
     (
         real_potential_transfer_function,
         imag_potential_transfer_function,
@@ -66,17 +67,17 @@ def simulate_phase_recon(
         **simulation_arguments, **transfer_function_arguments
     )
 
-    # Simulate
+    # Simulate (extract single channel for forward model)
     zyx_data = phase_thick_3d.apply_transfer_function(
         zyx_phase,
-        real_potential_transfer_function,
+        real_potential_transfer_function[0],
         transfer_function_arguments["z_padding"],
         brightness=1000,
     )
 
-    # Reconstruct
+    # Reconstruct (wrap data in channel dimension for inverse)
     zyx_recon = phase_thick_3d.apply_inverse_transfer_function(
-        zyx_data,
+        zyx_data[None],  # Add channel dimension: (Z, Y, X) -> (1, Z, Y, X)
         real_potential_transfer_function,
         imag_potential_transfer_function,
         transfer_function_arguments["z_padding"],

@@ -148,6 +148,64 @@ def generate_pupil(frr, NA, lamb_in):
     return Pupil
 
 
+def generate_sector_pupil(
+    radial_frequencies,
+    x_frequencies,
+    y_frequencies,
+    NA,
+    wavelength,
+    start_angle,
+    end_angle,
+):
+    """
+    Generate a sector pupil for a given angular range.
+
+    Parameters
+    ----------
+    radial_frequencies : torch.tensor
+        radial frequency coordinate in units of inverse length
+    x_frequencies : torch.tensor
+        x component of 2D spatial frequency array
+    y_frequencies : torch.tensor
+        y component of 2D spatial frequency array
+    NA : float
+        numerical aperture of the pupil function (normalized by the refractive index)
+    wavelength : float
+        wavelength of the light in units of length
+    start_angle : float
+        start angle of sector in degrees (0-360)
+    end_angle : float
+        end angle of sector in degrees (0-360)
+
+    Returns
+    -------
+    torch.tensor
+        sector pupil function
+    """
+    # Start with circular pupil
+    pupil = torch.zeros(radial_frequencies.shape)
+    pupil[radial_frequencies < NA / wavelength] = 1
+
+    # If full aperture (0 to 360), return full pupil
+    if start_angle == 0 and end_angle == 360:
+        return pupil
+
+    # Calculate angles in frequency space
+    # Note: atan2 returns angles in radians from -pi to pi
+    angles = torch.atan2(y_frequencies, x_frequencies)  # radians, -pi to pi
+    angles_deg = torch.rad2deg(angles) % 360  # convert to degrees, 0 to 360
+
+    # Create sector mask
+    if end_angle > start_angle:
+        # Normal case: sector doesn't wrap around 0
+        sector_mask = (angles_deg >= start_angle) & (angles_deg < end_angle)
+    else:
+        # Sector wraps around 0 degrees (e.g., 315 to 45)
+        sector_mask = (angles_deg >= start_angle) | (angles_deg < end_angle)
+
+    return pupil * sector_mask.float()
+
+
 def gen_sector_Pupil(fxx, fyy, NA, lamb_in, sector_angle, rotation_angle):
     """
 

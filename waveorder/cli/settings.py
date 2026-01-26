@@ -1,7 +1,7 @@
 import os
 import warnings
 from pathlib import Path
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Optional, Tuple, Union
 
 from pydantic import (
     BaseModel,
@@ -102,6 +102,7 @@ class PhaseTransferFunctionSettings(
 ):
     numerical_aperture_illumination: NonNegativeFloat = 0.5
     invert_phase_contrast: bool = False
+    illumination_sector_angles: Optional[List[Tuple[float, float]]] = None
 
     @model_validator(mode="after")
     def validate_numerical_aperture_illumination(self):
@@ -113,6 +114,28 @@ class PhaseTransferFunctionSettings(
                 f"numerical_aperture_illumination = {self.numerical_aperture_illumination} must be less than or equal to index_of_refraction_media = {self.index_of_refraction_media}"
             )
         return self
+
+    @field_validator("illumination_sector_angles")
+    @classmethod
+    def validate_sector_angles(cls, v):
+        if v is None:
+            return v
+        if len(v) == 0:
+            raise ValueError(
+                "illumination_sector_angles must contain at least one sector"
+            )
+        normalized = []
+        for start, end in v:
+            if start >= end:
+                raise ValueError(
+                    f"Sector start angle {start} must be less than end angle {end}"
+                )
+            # Normalize angles to [0, 360) using modulo 360
+            # Special case: preserve 360 for full aperture (don't reduce to 0)
+            normalized_start = start % 360
+            normalized_end = end % 360 if end % 360 != 0 else 360
+            normalized.append((normalized_start, normalized_end))
+        return normalized
 
 
 class FluorescenceTransferFunctionSettings(FourierTransferFunctionSettings):
@@ -174,14 +197,34 @@ class ReconstructionSettings(MyBaseModel):
                 '"fluorescence" cannot be present alongside "birefringence" or "phase". Please use one configuration file for a "fluorescence" reconstruction and another configuration file for a "birefringence" and/or "phase" reconstructions.'
             )
         num_channel_names = len(self.input_channel_names)
-        if self.birefringence is None:
-            if self.phase is None and self.fluorescence is None:
-                raise ValueError(
-                    "Provide settings for either birefringence, phase, birefringence + phase, or fluorescence."
-                )
-            if num_channel_names != 1:
-                raise ValueError(
-                    f"{num_channel_names} channels names provided. Please provide a single channel for fluorescence/phase reconstructions."
-                )
+
+        # Check for sector illumination in phase reconstruction
+        phase_settings = self.phase
+        if phase_settings is not None:
+            sector_angles = (
+                phase_settings.transfer_function.illumination_sector_angles
+            )
+            if sector_angles is not None:
+                # Multi-channel reconstruction with sector illumination
+                if len(sector_angles) != num_channel_names:
+                    raise ValueError(
+                        f"Number of illumination_sector_angles ({len(sector_angles)}) must match number of input_channel_names ({num_channel_names})"
+                    )
+            else:
+                # Single channel phase reconstruction without sector illumination
+                if self.birefringence is None and num_channel_names != 1:
+                    raise ValueError(
+                        f"{num_channel_names} channels names provided. Please provide a single channel for phase reconstructions without sector illumination."
+                    )
+        else:
+            if self.birefringence is None:
+                if self.fluorescence is None:
+                    raise ValueError(
+                        "Provide settings for either birefringence, phase, birefringence + phase, or fluorescence."
+                    )
+                if num_channel_names != 1:
+                    raise ValueError(
+                        f"{num_channel_names} channels names provided. Please provide a single channel for fluorescence reconstructions."
+                    )
 
         return self

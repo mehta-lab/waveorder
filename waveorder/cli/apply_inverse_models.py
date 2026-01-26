@@ -93,19 +93,19 @@ def phase(
 
     # [phase only, 3]
     elif recon_dim == 3:
-        # Load transfer functions
+        # Load transfer functions (keep channel dimension)
         real_potential_transfer_function = torch.tensor(
-            transfer_function_dataset["real_potential_transfer_function"][0, 0]
+            transfer_function_dataset["real_potential_transfer_function"][0]
         )
         imaginary_potential_transfer_function = torch.tensor(
             transfer_function_dataset["imaginary_potential_transfer_function"][
-                0, 0
+                0
             ]
         )
 
-        # Apply
+        # Apply (pass full CZYX data)
         output = phase_thick_3d.apply_inverse_transfer_function(
-            czyx_data[0],
+            czyx_data,
             real_potential_transfer_function,
             imaginary_potential_transfer_function,
             z_padding=settings_phase.transfer_function.z_padding,

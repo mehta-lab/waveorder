@@ -13,6 +13,7 @@ phase:
     numerical_aperture_detection: 1.2
     numerical_aperture_illumination: 0.5
     invert_phase_contrast: false
+    illumination_sector_angles: null
   apply_inverse:
     reconstruction_algorithm: Tikhonov
     regularization_strength: 0.001
