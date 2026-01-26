@@ -115,7 +115,8 @@ class PhaseTransferFunctionSettings(
             )
         return self
 
-    @validator("illumination_sector_angles")
+    @field_validator("illumination_sector_angles")
+    @classmethod
     def validate_sector_angles(cls, v):
         if v is None:
             return v
@@ -195,10 +196,10 @@ class ReconstructionSettings(MyBaseModel):
             raise ValueError(
                 '"fluorescence" cannot be present alongside "birefringence" or "phase". Please use one configuration file for a "fluorescence" reconstruction and another configuration file for a "birefringence" and/or "phase" reconstructions.'
             )
-        num_channel_names = len(values.get("input_channel_names"))
+        num_channel_names = len(self.input_channel_names)
 
         # Check for sector illumination in phase reconstruction
-        phase_settings = values.get("phase")
+        phase_settings = self.phase
         if phase_settings is not None:
             sector_angles = (
                 phase_settings.transfer_function.illumination_sector_angles
@@ -212,15 +213,15 @@ class ReconstructionSettings(MyBaseModel):
             else:
                 # Single channel phase reconstruction without sector illumination
                 if (
-                    values.get("birefringence") is None
+                    self.birefringence is None
                     and num_channel_names != 1
                 ):
                     raise ValueError(
                         f"{num_channel_names} channels names provided. Please provide a single channel for phase reconstructions without sector illumination."
                     )
         else:
-            if values.get("birefringence") is None:
-                if values.get("fluorescence") is None:
+            if self.birefringence is None:
+                if self.fluorescence is None:
                     raise ValueError(
                         "Provide settings for either birefringence, phase, birefringence + phase, or fluorescence."
                     )

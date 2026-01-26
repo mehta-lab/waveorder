@@ -17,5 +17,6 @@ def test_calculate_transfer_function(invert_phase_contrast):
         invert_phase_contrast=invert_phase_contrast,
     )
 
-    assert Hu.shape == (3, 100, 101)
-    assert Hp.shape == (3, 100, 101)
+    # Transfer functions now have shape (C, Z, Y, X) where C is number of channels
+    assert Hu.shape == (1, 3, 100, 101)
+    assert Hp.shape == (1, 3, 100, 101)

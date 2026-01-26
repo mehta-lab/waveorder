@@ -34,7 +34,7 @@ zyx_phase = phase_thick_3d.generate_test_phantom(
     **simulation_arguments, **phantom_arguments
 )
 
-# Calculate transfer function
+# Calculate transfer function (returns shape (C, Z, Y, X))
 (
     real_potential_transfer_function,
     imag_potential_transfer_function,
@@ -42,7 +42,7 @@ zyx_phase = phase_thick_3d.generate_test_phantom(
     **simulation_arguments, **transfer_function_arguments
 )
 
-# Display transfer function
+# Display transfer function (extract single channel for visualization)
 viewer = napari.Viewer()
 zyx_scale = np.array(
     [
@@ -53,25 +53,25 @@ zyx_scale = np.array(
 )
 phase_thick_3d.visualize_transfer_function(
     viewer,
-    real_potential_transfer_function,
-    imag_potential_transfer_function,
+    real_potential_transfer_function[0],
+    imag_potential_transfer_function[0],
     zyx_scale,
 )
 input("Showing OTFs. Press <enter> to continue...")
 viewer.layers.select_all()
 viewer.layers.remove_selected()
 
-# Simulate
+# Simulate (extract single channel for forward model)
 zyx_data = phase_thick_3d.apply_transfer_function(
     zyx_phase,
-    real_potential_transfer_function,
+    real_potential_transfer_function[0],
     transfer_function_arguments["z_padding"],
     brightness=1e3,
 )
 
-# Reconstruct
+# Reconstruct (wrap data in channel dimension for inverse)
 zyx_recon = phase_thick_3d.apply_inverse_transfer_function(
-    zyx_data,
+    zyx_data[None],  # Add channel dimension: (Z, Y, X) -> (1, Z, Y, X)
     real_potential_transfer_function,
     imag_potential_transfer_function,
     transfer_function_arguments["z_padding"],
