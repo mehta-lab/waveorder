@@ -97,3 +97,4 @@ viewer.grid.shape = (2, 5)
 viewer.dims.axis_labels = ["COMPONENT", "Z", "Y", "X"]
 
 input("Showing object, data, and recon. Press <enter> to quit...")
+viewer.close()

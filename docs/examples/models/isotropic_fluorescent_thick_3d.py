@@ -79,3 +79,4 @@ viewer.add_image(
 viewer.add_image(zyx_data.numpy(), name="Data", scale=zyx_scale)
 viewer.add_image(zyx_recon.numpy(), name="Reconstruction", scale=zyx_scale)
 input("Showing object, data, and recon. Press <enter> to quit...")
+viewer.close()
