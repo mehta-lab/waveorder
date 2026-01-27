@@ -114,7 +114,7 @@ def focus_from_transverse_band(
     >>> in_focus_data = data[slice,:,:]
     """
     minmaxfunc = _mode_to_minmaxfunc(mode)
-    peak_stats = {'peak_index': None, 'peak_FWHM': None}
+    peak_stats = {"peak_index": None, "peak_FWHM": None}
 
     _check_focus_inputs(
         zyx_array, NA_det, lambda_ill, pixel_size, midband_fractions
@@ -152,7 +152,9 @@ def focus_from_transverse_band(
 
     peak_results = peak_widths(midband_sum, [peak_index])
     peak_FWHM = peak_results[0][0]
-    peak_stats.update({'peak_index': int(peak_index), 'peak_FWHM': float(peak_FWHM)})
+    peak_stats.update(
+        {"peak_index": int(peak_index), "peak_FWHM": float(peak_FWHM)}
+    )
 
     if peak_FWHM >= threshold_FWHM:
         in_focus_index = peak_index
