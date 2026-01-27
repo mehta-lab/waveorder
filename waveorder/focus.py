@@ -61,6 +61,7 @@ def focus_from_transverse_band(
     plot_path: Optional[str] = None,
     threshold_FWHM: float = 0,
     return_statistics: bool = False,
+    enable_subpixel_precision: bool = False,
 ):
     """Estimates the in-focus slice from a 3D stack by optimizing a transverse spatial frequency band.
 
@@ -95,12 +96,16 @@ def focus_from_transverse_band(
     return_statistics: bool, optional
         If True, returns a tuple (in_focus_index, peak_stats) instead of just in_focus_index.
         Default is False for backward compatibility.
+    enable_subpixel_precision: bool, optional
+        If True and polynomial_fit_order is provided, enables sub-pixel precision focus detection
+        by finding the continuous extremum of the polynomial fit. Default is False for backward compatibility.
 
     Returns
-    ------
-    slice : int or None, or tuple
+    -------
+    slice : int, float, None, or tuple
         If return_statistics is False (default):
-            Returns in_focus_index (int or None).
+            Returns in_focus_index (int if enable_subpixel_precision=False,
+            float if enable_subpixel_precision=True and polynomial_fit_order is not None, or None).
         If return_statistics is True:
             Returns tuple (in_focus_index, peak_stats) where peak_stats is a dict
             containing 'peak_index' and 'peak_FWHM'.
@@ -148,9 +153,44 @@ def focus_from_transverse_band(
     else:
         x = np.arange(len(midband_sum))
         coeffs = np.polyfit(x, midband_sum, polynomial_fit_order)
-        peak_index = minmaxfunc(np.poly1d(coeffs)(x))
+        poly_func = np.poly1d(coeffs)
 
-    peak_results = peak_widths(midband_sum, [peak_index])
+        if enable_subpixel_precision:
+            # Find the continuous extremum using derivative
+            poly_deriv = np.polyder(coeffs)
+            # Find roots of the derivative (critical points)
+            critical_points = np.roots(poly_deriv)
+
+            # Filter for real roots within the data range
+            real_critical_points = []
+            for cp in critical_points:
+                if np.isreal(cp) and 0 <= cp.real < len(midband_sum):
+                    real_critical_points.append(cp.real)
+
+            if real_critical_points:
+                # Evaluate the polynomial at critical points to find extremum
+                critical_values = [
+                    poly_func(cp) for cp in real_critical_points
+                ]
+                if mode == "max":
+                    best_idx = np.argmax(critical_values)
+                else:  # mode == "min"
+                    best_idx = np.argmin(critical_values)
+                peak_index = real_critical_points[best_idx]
+            else:
+                # Fall back to discrete maximum if no valid critical points
+                peak_index = float(minmaxfunc(poly_func(x)))
+        else:
+            peak_index = minmaxfunc(poly_func(x))
+
+    # For peak width calculation, use integer peak index
+    if enable_subpixel_precision and polynomial_fit_order is not None:
+        # Use the closest integer index for peak width calculation
+        integer_peak_index = int(np.round(peak_index))
+    else:
+        integer_peak_index = int(peak_index)
+
+    peak_results = peak_widths(midband_sum, [integer_peak_index])
     peak_FWHM = peak_results[0][0]
     peak_stats.update(
         {"peak_index": int(peak_index), "peak_FWHM": float(peak_FWHM)}
@@ -229,9 +269,19 @@ def _plot_focus_metric(
 ):
     _, ax = plt.subplots(1, 1, figsize=(4, 4))
     ax.plot(midband_sum, "-k")
+
+    # Handle floating-point peak_index for plotting
+    if isinstance(peak_index, float) and not peak_index.is_integer():
+        # Use interpolation to get the y-value at the floating-point x-position
+        peak_y_value = np.interp(
+            peak_index, np.arange(len(midband_sum)), midband_sum
+        )
+    else:
+        peak_y_value = midband_sum[int(peak_index)]
+
     ax.plot(
         peak_index,
-        midband_sum[peak_index],
+        peak_y_value,
         "go" if in_focus_index is not None else "ro",
     )
     ax.hlines(*peak_results[1:], color="k", linestyles="dashed")
