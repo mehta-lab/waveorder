@@ -111,11 +111,18 @@ def _calculate_wrap_unsafe_transfer_function(
     tilt_angle_zenith: float = 0.0,
     tilt_angle_azimuth: float = 0.0,
 ) -> Tuple[Tensor, Tensor]:
+    # Convert to tensors for differentiable conditional
+    numerical_aperture_illumination = torch.as_tensor(
+        numerical_aperture_illumination
+    )
+    numerical_aperture_detection = torch.as_tensor(
+        numerical_aperture_detection
+    )
     if numerical_aperture_illumination >= numerical_aperture_detection:
         print(
             "Warning: numerical_aperture_illumination is >= "
-            "numerical_aperture_detection. Setting "
-            "numerical_aperture_illumination to 0.9 * "
+            "numerical_aperture_detection. Clamping "
+            "numerical_aperture_illumination to "
             "numerical_aperture_detection to avoid singularities."
         )
     numerical_aperture_illumination = torch.where(

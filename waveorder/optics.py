@@ -147,6 +147,9 @@ def generate_pupil(
         pupil   : torch.Tensor
                   pupil function, pupil.shape == frr.shape, values in [0, 1]
     """
+    # Convert to tensor if numpy array is passed
+    if not isinstance(frr, torch.Tensor):
+        frr = torch.as_tensor(frr)
     pixel_slope = slope / torch.abs(frr[0, 1] - frr[0, 0])
     cutoff = NA / lamb_in
     pupil = torch.sigmoid(pixel_slope * (cutoff - frr))
@@ -191,6 +194,9 @@ def generate_tilted_pupil(
     pupil   : torch.Tensor
               2-D soft mask with values in [0, 1] and shape == fx.shape.
     """
+    # Convert NA to tensor if it's a scalar (allows gradients and ensures torch ops work)
+    if not isinstance(NA, torch.Tensor):
+        NA = torch.tensor(NA)
     if NA > n:
         raise ValueError("NA must be ≤ n (otherwise angle would be complex).")
 

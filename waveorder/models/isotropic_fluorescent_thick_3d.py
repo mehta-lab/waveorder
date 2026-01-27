@@ -84,8 +84,10 @@ def calculate_transfer_function(
         transverse_nyquist = transverse_nyquist / 2
         axial_nyquist = axial_nyquist / 2
 
-    yx_factor = int(torch.ceil(yx_pixel_size / transverse_nyquist))
-    z_factor = int(torch.ceil(z_pixel_size / axial_nyquist))
+    yx_factor = int(
+        torch.ceil(torch.as_tensor(yx_pixel_size / transverse_nyquist))
+    )
+    z_factor = int(torch.ceil(torch.as_tensor(z_pixel_size / axial_nyquist)))
 
     optical_transfer_function = _calculate_wrap_unsafe_transfer_function(
         (
@@ -132,7 +134,7 @@ def _calculate_pinhole_aperture_otf(
         Pinhole aperture OTF (jinc^2 function)
     """
     argument = pinhole_diameter * radial_frequencies
-    j1_values = torch.special.bessel_j1(np.pi * argument)
+    j1_values = torch.special.bessel_j1(torch.pi * argument)
     jinc = torch.where(argument > 1e-10, j1_values / (2 * argument), 0.5)
     return jinc**2
 

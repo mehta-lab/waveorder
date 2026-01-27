@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import click
+import numpy as np
 import torch
 from iohub.ngff import Position, open_ome_zarr
 
