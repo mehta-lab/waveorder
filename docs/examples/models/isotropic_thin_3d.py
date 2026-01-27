@@ -10,6 +10,7 @@ Isotropic thin 3d
 
 import napari
 import numpy as np
+import torch
 
 from waveorder.models import isotropic_thin_3d
 
@@ -32,9 +33,9 @@ zyx_scale = np.array(
     ]
 )
 transfer_function_arguments = {
-    "z_position_list": (np.arange(z_shape) - z_shape // 2) * z_pixel_size,
-    "numerical_aperture_illumination": 0.9,
-    "numerical_aperture_detection": 1.2,
+    "z_position_list": (torch.arange(z_shape) - z_shape // 2) * z_pixel_size,
+    "numerical_aperture_illumination": torch.tensor([0.9]),
+    "numerical_aperture_detection": torch.tensor([1.2]),
 }
 
 # Create a disk phantom

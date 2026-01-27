@@ -67,6 +67,7 @@ visual = [
   "napari-ome-zarr>=0.3.2", # drag and drop convenience
   "pycromanager==0.27.2",
   "jupyter",
+  "tensorboard",
   "jupytext",
 ]
 dev = [
@@ -94,7 +95,7 @@ docs = [
 ]
 all = [
   "waveorder[visual]",
-  "waveorder[dev]", 
+  "waveorder[dev]",
   "waveorder[docs]",
 ]
 

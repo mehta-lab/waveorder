@@ -1,6 +1,5 @@
 from typing import Literal, Tuple
 
-import numpy as np
 import torch
 from torch import Tensor
 
@@ -38,19 +37,23 @@ def generate_test_phantom(
 def calculate_transfer_function(
     yx_shape: Tuple[int, int],
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: torch.Tensor,
     wavelength_illumination: float,
     index_of_refraction_media: float,
     numerical_aperture_illumination: float,
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
+    tilt_angle_zenith: torch.Tensor = torch.tensor([0.0]),
+    tilt_angle_azimuth: torch.Tensor = torch.tensor([0.0]),
 ) -> Tuple[Tensor, Tensor]:
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
         numerical_aperture_illumination,
         numerical_aperture_detection,
     )
-    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
+    yx_factor = int(
+        torch.ceil(torch.tensor(yx_pixel_size / transverse_nyquist))
+    )
 
     (
         absorption_2d_to_3d_transfer_function,
@@ -67,6 +70,8 @@ def calculate_transfer_function(
         numerical_aperture_illumination,
         numerical_aperture_detection,
         invert_phase_contrast=invert_phase_contrast,
+        tilt_angle_zenith=tilt_angle_zenith,
+        tilt_angle_azimuth=tilt_angle_azimuth,
     )
 
     absorption_2d_to_3d_transfer_function_out = torch.zeros(
@@ -97,33 +102,53 @@ def calculate_transfer_function(
 def _calculate_wrap_unsafe_transfer_function(
     yx_shape: Tuple[int, int],
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: torch.Tensor,
     wavelength_illumination: float,
     index_of_refraction_media: float,
     numerical_aperture_illumination: float,
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
+    tilt_angle_zenith: float = 0.0,
+    tilt_angle_azimuth: float = 0.0,
 ) -> Tuple[Tensor, Tensor]:
+    # Convert to tensors for differentiable conditional
+    numerical_aperture_illumination = torch.as_tensor(
+        numerical_aperture_illumination
+    )
+    numerical_aperture_detection = torch.as_tensor(
+        numerical_aperture_detection
+    )
     if numerical_aperture_illumination >= numerical_aperture_detection:
         print(
             "Warning: numerical_aperture_illumination is >= "
-            "numerical_aperture_detection. Setting "
-            "numerical_aperture_illumination to 0.9 * "
+            "numerical_aperture_detection. Clamping "
+            "numerical_aperture_illumination to "
             "numerical_aperture_detection to avoid singularities."
         )
-        numerical_aperture_illumination = 0.9 * numerical_aperture_detection
+    numerical_aperture_illumination = torch.where(
+        numerical_aperture_illumination >= numerical_aperture_detection,
+        numerical_aperture_detection,
+        numerical_aperture_illumination,
+    )
 
     if invert_phase_contrast:
-        z_position_list = [-1 * x for x in z_position_list]
-    radial_frequencies = util.generate_radial_frequencies(
-        yx_shape, yx_pixel_size
-    )
+        z_positions = z_position_list * -1
+    else:
+        z_positions = z_position_list.clone()
 
-    illumination_pupil = optics.generate_pupil(
-        radial_frequencies,
+    fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size)
+    radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
+
+    illumination_pupil = optics.generate_tilted_pupil(
+        fxx,
+        fyy,
         numerical_aperture_illumination,
         wavelength_illumination,
+        index_of_refraction_media,
+        tilt_angle_zenith,
+        tilt_angle_azimuth,
     )
+
     detection_pupil = optics.generate_pupil(
         radial_frequencies,
         numerical_aperture_detection,
@@ -133,17 +158,17 @@ def _calculate_wrap_unsafe_transfer_function(
         radial_frequencies,
         detection_pupil,
         wavelength_illumination / index_of_refraction_media,
-        torch.tensor(z_position_list),
+        z_positions,
     )
 
-    zyx_shape = (len(z_position_list),) + tuple(yx_shape)
+    zyx_shape = (len(z_positions),) + tuple(yx_shape)
     absorption_2d_to_3d_transfer_function = torch.zeros(
         zyx_shape, dtype=torch.complex64
     )
     phase_2d_to_3d_transfer_function = torch.zeros(
         zyx_shape, dtype=torch.complex64
     )
-    for z in range(len(z_position_list)):
+    for z in range(len(z_positions)):
         (
             absorption_2d_to_3d_transfer_function[z],
             phase_2d_to_3d_transfer_function[z],
@@ -188,12 +213,26 @@ def calculate_singular_system(
         ),
         dim=0,
     )
-    YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
-    Up, Sp, Vhp = torch.linalg.svd(YXsf_transfer_function, full_matrices=False)
-    U = Up.permute(2, 3, 0, 1)
-    S = Sp.permute(2, 0, 1)
-    Vh = Vhp.permute(2, 3, 0, 1)
+
+    # phase only reconstruction
+    sfYX_transfer_function = phase_2d_to_3d_transfer_function.unsqueeze(0)
+    U = torch.ones_like(sfYX_transfer_function)
+    S = torch.linalg.norm(sfYX_transfer_function, dim=1)
+    Vh = sfYX_transfer_function / S.unsqueeze(0)
     return U, S, Vh
+
+    # Absorption and phase reconstruction
+    # Gradients do not work with complex-valued SVD, so only phase reconstructions
+    # are supported for now.
+
+    # YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
+    # Up, Sp, Vhp = torch.linalg.svd(YXsf_transfer_function, full_matrices=False)
+
+    # U = Up.permute(2, 3, 0, 1)
+    # S = Sp.permute(2, 0, 1)
+    # Vh = Vhp.permute(2, 3, 0, 1)
+
+    # return U, S, Vh
 
 
 def visualize_transfer_function(
@@ -257,17 +296,18 @@ def apply_transfer_function(
 
     # simulate absorbing object
     yx_absorption_hat = torch.fft.fftn(yx_absorption)
-    zyx_absorption_data_hat = yx_absorption_hat[None, ...] * torch.real(
-        absorption_2d_to_3d_transfer_function
+    zyx_absorption_data_hat = (
+        yx_absorption_hat[None, ...] * absorption_2d_to_3d_transfer_function
     )
+
     zyx_absorption_data = torch.real(
         torch.fft.ifftn(zyx_absorption_data_hat, dim=(1, 2))
     )
 
     # simulate phase object
     yx_phase_hat = torch.fft.fftn(yx_phase)
-    zyx_phase_data_hat = yx_phase_hat[None, ...] * torch.real(
-        phase_2d_to_3d_transfer_function
+    zyx_phase_data_hat = (
+        yx_phase_hat[None, ...] * phase_2d_to_3d_transfer_function
     )
     zyx_phase_data = torch.real(
         torch.fft.ifftn(zyx_phase_data_hat, dim=(1, 2))
@@ -331,14 +371,16 @@ def apply_inverse_transfer_function(
 
     # TODO Consider refactoring with vectorial transfer function SVD
     if reconstruction_algorithm == "Tikhonov":
-        print("Computing inverse filter")
         U, S, Vh = singular_system
         S_reg = S / (S**2 + regularization_strength)
         sfyx_inverse_filter = torch.einsum(
-            "sj...,j...,jf...->fs...", U, S_reg, Vh
+            "sj...,j...,jf...->fs...", U, S_reg, Vh.conj()
         )
 
-        absorption_yx, phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)
+        # Phase only reconstruction
+        # absorption_yx, phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)
+        phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)[0]
+        absorption_yx = torch.zeros_like(phase_yx)
 
     # ADMM deconvolution with anisotropic TV regularization
     elif reconstruction_algorithm == "TV":

@@ -4,6 +4,8 @@ import numpy as np
 import torch
 from numpy.fft import fft2, fftn, fftshift, ifft2, ifftn, ifftshift
 
+from waveorder import zernike
+
 
 def Jones_sample(Ein, t, sa):
     """
@@ -118,34 +120,128 @@ def analyzer_output(Ein, alpha, beta):
     return Eout
 
 
-def generate_pupil(frr, NA, lamb_in):
+def generate_pupil(
+    frr: torch.Tensor, NA: float, lamb_in: float, slope: float = 4.0
+) -> torch.Tensor:
     """
-
-    compute pupil function given spatial frequency, NA, wavelength.
+    Generate a soft-edged pupil function using a sigmoid roll-off. The default
+    sigmoid softens the edge within ~1 voxel of the boundary.
 
     Parameters
     ----------
-        frr       : torch.tensor
-                    radial frequency coordinate in units of inverse length
+        frr     : torch.Tensor
+                  radial frequency coordinates (units: 1/length)
 
-        NA        : float
-                    numerical aperture of the pupil function (normalized by the refractive index of the immersion media)
+        NA      : float
+                  numerical aperture (unitless)
 
         lamb_in : float
-                    wavelength of the light in free space
-                    in units of length (inverse of frr's units)
+                  wavelength of light (same length units as frr^-1)
+
+        slope   : float, optional
+                  steepness of the sigmoid roll-off (default 4.0 keeps ~90% of
+                  sigmoid within a single voxel)
 
     Returns
     -------
-        Pupil     : numpy.ndarray
-                    pupil function with the specified parameters with the size of (Ny, Nx)
-
+        pupil   : torch.Tensor
+                  pupil function, pupil.shape == frr.shape, values in [0, 1]
     """
+    # Convert to tensor if numpy array is passed
+    if not isinstance(frr, torch.Tensor):
+        frr = torch.as_tensor(frr)
+    pixel_slope = slope / torch.abs(frr[0, 1] - frr[0, 0])
+    cutoff = NA / lamb_in
+    pupil = torch.sigmoid(pixel_slope * (cutoff - frr))
+    return pupil
 
-    Pupil = torch.zeros(frr.shape)
-    Pupil[frr < NA / lamb_in] = 1
 
-    return Pupil
+def generate_tilted_pupil(
+    fxx: torch.Tensor,
+    fyy: torch.Tensor,
+    NA: torch.Tensor,
+    lamb_in: float,
+    n: float = 1.0,
+    tilt_angle_zenith: torch.Tensor = torch.Tensor([0.0]),
+    tilt_angle_azimuth: torch.Tensor = torch.Tensor([0.0]),
+    slope: float = 4.0,
+    phase_zernike_vector: torch.Tensor = None,
+) -> torch.Tensor:
+    """
+    Generate a soft-edged 2-D pupil that may be tilted on the Ewald sphere.
+
+    Parameters
+    ----------
+    fxx, fyy  : torch.Tensor
+              Cartesian frequency grids (units: 1/length) with identical shape.
+    NA      : torch.Tensor
+              Numerical aperture of the objective (must satisfy NA ≤ n).
+    lamb_in : float
+              Illumination wavelength (units: length)
+    n       : float, optional
+              Refractive index of the immersion medium (default 1.0).
+    tilt_angle_zenith  : float, optional
+              Polar angle θ (radians) between the pupil axis and +z (0 = untilted).
+    tilt_angle_azimuth : float, optional
+              Azimuth φ (radians) of the tilt in the xy-plane (0 = +x).
+    slope   : float, optional
+              Controls sigmoid roll-off (≈ 90 % change in one pixel when slope=4).
+    phase_zernike_vector : torch.Tensor, optional
+        Zernike phase coefficients (radians), shape [N].
+
+    Returns
+    -------
+    pupil   : torch.Tensor
+              2-D soft mask with values in [0, 1] and shape == fx.shape.
+    """
+    # Convert NA to tensor if it's a scalar (allows gradients and ensures torch ops work)
+    if not isinstance(NA, torch.Tensor):
+        NA = torch.tensor(NA)
+    if NA > n:
+        raise ValueError("NA must be ≤ n (otherwise angle would be complex).")
+
+    # constants
+    K = n / lamb_in  # Ewald-sphere radius
+    cos_alpha_max = torch.sqrt(1 - (NA / n) ** 2)
+
+    # sampling metrics
+    # Assume fxx, fyy are on a regular grid ⇒ pixel spacing in fx direction:
+    df = torch.abs(fxx[0, 1] - fxx[0, 0])
+    pixel_slope = slope / df
+
+    # sphere coordinates
+    fz_sq = K**2 - fxx**2 - fyy**2
+    inside_sphere = fz_sq >= 0
+    # clamp to avoid negative round-off, but keep gradients
+    fz = torch.sqrt(torch.clamp(fz_sq, min=0.0))
+
+    # tilt unit vector
+    sx = torch.sin(tilt_angle_zenith) * torch.cos(tilt_angle_azimuth)
+    sy = torch.sin(tilt_angle_zenith) * torch.sin(tilt_angle_azimuth)
+    sz = torch.cos(tilt_angle_zenith)
+
+    # dot-product test
+    dot = fxx * sx + fyy * sy + fz * sz  # v · s
+    threshold = K * cos_alpha_max
+    pupil_soft = torch.sigmoid(pixel_slope * (dot - threshold))
+
+    # mask outside sphere
+    pupil = pupil_soft * inside_sphere.to(fxx.dtype)
+
+    if phase_zernike_vector is None or phase_zernike_vector.numel() == 0:
+        return pupil
+
+    norm = NA / lamb_in
+    rho_sq = ((fxx / norm) ** 2 + (fyy / norm) ** 2).clamp(min=1e-6)
+    rho = torch.sqrt(rho_sq).clamp(max=1.0)
+    theta = torch.atan2(fyy, fxx)
+    phase = torch.zeros_like(rho)
+
+    for j, coeff in enumerate(phase_zernike_vector):
+        m, n = zernike.noll_to_zern(j + 1)
+        phase = phase + (coeff * zernike.zernike(m, n, rho, theta))
+
+    return pupil * torch.exp(1j * phase)
 
 
 def gen_sector_Pupil(fxx, fyy, NA, lamb_in, sector_angle, rotation_angle):
@@ -461,7 +557,9 @@ def generate_greens_function_z(
 
     oblique_factor = (
         (1 - wavelength_illumination**2 * radial_frequencies**2)
-        * pupil_support
+        * pupil_support.type(
+            torch.complex64
+        )  # complex to avoid sqrt(-1) -> nan
     ) ** (1 / 2) / wavelength_illumination
 
     if axially_even:

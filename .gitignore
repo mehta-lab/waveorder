@@ -155,3 +155,4 @@ waveorder/_version.py
 # example data
 /examples/data_temp/*
 /logs/*
+runs/*

@@ -1,6 +1,5 @@
 from typing import Literal
 
-import numpy as np
 import torch
 from torch import Tensor
 
@@ -31,6 +30,7 @@ def calculate_transfer_function(
     z_padding: int,
     index_of_refraction_media: float,
     numerical_aperture_detection: float,
+    detection_phase_zernike_vector: Tensor = torch.tensor([0.0]),
     confocal_pinhole_diameter: float | None = None,
 ) -> Tensor:
     """Calculate the optical transfer function for fluorescence imaging.
@@ -56,6 +56,9 @@ def calculate_transfer_function(
         Refractive index of imaging medium
     numerical_aperture_detection : float
         Numerical aperture of detection objective
+    detection_phase_zernike_vector : Tensor, optional
+        Zernike phase vector for detection objective. If None, no phase correction
+        is applied.
     confocal_pinhole_diameter : float | None, optional
         Diameter of confocal pinhole in image space (demagnified). If None,
         computes widefield OTF. If specified, computes confocal OTF.
@@ -81,8 +84,10 @@ def calculate_transfer_function(
         transverse_nyquist = transverse_nyquist / 2
         axial_nyquist = axial_nyquist / 2
 
-    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
-    z_factor = int(np.ceil(z_pixel_size / axial_nyquist))
+    yx_factor = int(
+        torch.ceil(torch.as_tensor(yx_pixel_size / transverse_nyquist))
+    )
+    z_factor = int(torch.ceil(torch.as_tensor(z_pixel_size / axial_nyquist)))
 
     optical_transfer_function = _calculate_wrap_unsafe_transfer_function(
         (
@@ -96,6 +101,7 @@ def calculate_transfer_function(
         z_padding,
         index_of_refraction_media,
         numerical_aperture_detection,
+        detection_phase_zernike_vector,
         confocal_pinhole_diameter,
     )
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
@@ -128,7 +134,7 @@ def _calculate_pinhole_aperture_otf(
         Pinhole aperture OTF (jinc^2 function)
     """
     argument = pinhole_diameter * radial_frequencies
-    j1_values = torch.special.bessel_j1(np.pi * argument)
+    j1_values = torch.special.bessel_j1(torch.pi * argument)
     jinc = torch.where(argument > 1e-10, j1_values / (2 * argument), 0.5)
     return jinc**2
 
@@ -141,21 +147,24 @@ def _calculate_wrap_unsafe_transfer_function(
     z_padding: int,
     index_of_refraction_media: float,
     numerical_aperture_detection: float,
+    detection_phase_zernike_vector: Tensor = torch.tensor([0.0]),
     confocal_pinhole_diameter: float | None = None,
 ) -> Tensor:
-    radial_frequencies = util.generate_radial_frequencies(
-        zyx_shape[1:], yx_pixel_size
-    )
+    fyy, fxx = util.generate_frequencies(zyx_shape[1:], yx_pixel_size)
+    radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
 
     z_total = zyx_shape[0] + 2 * z_padding
     z_position_list = torch.fft.ifftshift(
         (torch.arange(z_total) - z_total // 2) * z_pixel_size
     )
 
-    det_pupil = optics.generate_pupil(
-        radial_frequencies,
+    det_pupil = optics.generate_tilted_pupil(
+        fxx,
+        fyy,
         numerical_aperture_detection,
         wavelength_emission,
+        index_of_refraction_media,
+        phase_zernike_vector=detection_phase_zernike_vector,
     )
 
     propagation_kernel = optics.generate_propagation_kernel(
@@ -164,14 +173,12 @@ def _calculate_wrap_unsafe_transfer_function(
         wavelength_emission / index_of_refraction_media,
         z_position_list,
     )
-
     point_spread_function = (
         torch.abs(torch.fft.ifft2(propagation_kernel, dim=(1, 2))) ** 2
     )
     optical_transfer_function = torch.fft.fftn(
         point_spread_function, dim=(0, 1, 2)
     )
-
     # Confocal: multiply excitation PSF with detection PSF (downweighted by pinhole)
     if confocal_pinhole_diameter is not None:
         pinhole_otf_2d = _calculate_pinhole_aperture_otf(
@@ -197,6 +204,7 @@ def _calculate_wrap_unsafe_transfer_function(
     optical_transfer_function /= torch.max(
         torch.abs(optical_transfer_function)
     )  # normalize
+    # NB: this is a /= operation, but in-place operations do not propagate gradients
 
     return optical_transfer_function
 

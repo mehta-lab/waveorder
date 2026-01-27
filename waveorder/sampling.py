@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 
 
@@ -65,9 +64,11 @@ def axial_nyquist(
 
     """
     n_on_lambda = index_of_refraction_media / wavelength_emission
-    cutoff_frequency = n_on_lambda - np.sqrt(
-        n_on_lambda**2
-        - (numerical_aperture_detection / wavelength_emission) ** 2
+    cutoff_frequency = n_on_lambda - torch.sqrt(
+        torch.as_tensor(
+            n_on_lambda**2
+            - (numerical_aperture_detection / wavelength_emission) ** 2
+        )
     )
     return 1 / (2 * cutoff_frequency)
 

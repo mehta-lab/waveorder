@@ -2,6 +2,7 @@ from pathlib import Path
 
 import click
 import numpy as np
+import torch
 from iohub.ngff import Position, open_ome_zarr
 
 from waveorder import focus
@@ -25,18 +26,20 @@ from waveorder.models import (
 
 def _position_list_from_shape_scale_offset(
     shape: int, scale: float, offset: float
-) -> list:
+) -> torch.Tensor:
     """
-    Generates a list of positions based on the given array shape, pixel size (scale), and offset.
+    Generates a 1D tensor of positions based on the given array shape, pixel size (scale), and offset.
 
     Examples
     --------
     >>> _position_list_from_shape_scale_offset(5, 1.0, 0.0)
-    [2.0, 1.0, 0.0, -1.0, -2.0]
+    tensor([ 2.,  1.,  0., -1., -2.])
     >>> _position_list_from_shape_scale_offset(4, 0.5, 1.0)
-    [1.5, 1.0, 0.5, 0.0]
+    tensor([1.5, 1.0, 0.5, 0.0])
     """
-    return list((-np.arange(shape) + (shape // 2) + offset) * scale)
+    return (
+        -torch.arange(shape, dtype=torch.float32) + (shape // 2) + offset
+    ) * scale
 
 
 def generate_and_save_vector_birefringence_transfer_function(
