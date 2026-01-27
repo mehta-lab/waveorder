@@ -156,3 +156,56 @@ def test_compute_midband_power_consistency():
 
     expected_focus_slice = np.argmax(manual_powers)
     assert focus_slice == expected_focus_slice
+
+
+def test_focus_from_transverse_band_with_statistics():
+    """Test focus_from_transverse_band with return_statistics=True."""
+    ps = 6.5 / 100
+    lambda_ill = 0.532
+    NA_det = 1.4
+
+    # Create test data
+    np.random.seed(42)
+    test_3d = np.random.random((5, 32, 32)).astype(np.float32)
+
+    # Test without statistics (backward compatibility)
+    focus_slice = focus.focus_from_transverse_band(
+        test_3d, NA_det, lambda_ill, ps
+    )
+    assert isinstance(focus_slice, (int, np.integer, type(None)))
+
+    # Test with statistics
+    focus_slice_stats, stats = focus.focus_from_transverse_band(
+        test_3d, NA_det, lambda_ill, ps, return_statistics=True
+    )
+
+    # Check that both return the same index
+    assert focus_slice == focus_slice_stats
+
+    # Check statistics structure
+    assert isinstance(stats, dict)
+    assert "peak_index" in stats
+    assert "peak_FWHM" in stats
+    assert isinstance(stats["peak_index"], int)
+    assert isinstance(stats["peak_FWHM"], float)
+
+    # Test with threshold
+    idx_thresh, stats_thresh = focus.focus_from_transverse_band(
+        test_3d,
+        NA_det,
+        lambda_ill,
+        ps,
+        threshold_FWHM=100.0,
+        return_statistics=True,
+    )
+    # High threshold should result in None
+    assert idx_thresh is None
+
+    # Test single slice case with statistics
+    single_slice = np.random.random((1, 32, 32)).astype(np.float32)
+    idx_single, stats_single = focus.focus_from_transverse_band(
+        single_slice, NA_det, lambda_ill, ps, return_statistics=True
+    )
+    assert idx_single == 0
+    assert stats_single["peak_index"] is None
+    assert stats_single["peak_FWHM"] is None

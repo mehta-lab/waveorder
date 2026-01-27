@@ -60,6 +60,7 @@ def focus_from_transverse_band(
     polynomial_fit_order: Optional[int] = None,
     plot_path: Optional[str] = None,
     threshold_FWHM: float = 0,
+    return_statistics: bool = False,
 ):
     """Estimates the in-focus slice from a 3D stack by optimizing a transverse spatial frequency band.
 
@@ -91,14 +92,18 @@ def focus_from_transverse_band(
         The default value, 0, applies no threshold, and the maximum midband power is always considered in focus.
         For values > 0, the peak's FWHM must be greater than the threshold for the slice to be considered in focus.
         If the peak does not meet this threshold, the function returns None.
+    return_statistics: bool, optional
+        If True, returns a tuple (in_focus_index, peak_stats) instead of just in_focus_index.
+        Default is False for backward compatibility.
 
     Returns
     ------
-    slice : int or None
-        If peak's FWHM > peak_width_threshold:
-            return the index of the in-focus slice
-        else:
-            return None
+    slice : int or None, or tuple
+        If return_statistics is False (default):
+            Returns in_focus_index (int or None).
+        If return_statistics is True:
+            Returns tuple (in_focus_index, peak_stats) where peak_stats is a dict
+            containing 'peak_index' and 'peak_FWHM'.
 
     Example
     ------
@@ -109,6 +114,7 @@ def focus_from_transverse_band(
     >>> in_focus_data = data[slice,:,:]
     """
     minmaxfunc = _mode_to_minmaxfunc(mode)
+    peak_stats = {'peak_index': None, 'peak_FWHM': None}
 
     _check_focus_inputs(
         zyx_array, NA_det, lambda_ill, pixel_size, midband_fractions
@@ -119,6 +125,8 @@ def focus_from_transverse_band(
         warnings.warn(
             "The dataset only contained a single slice. Returning trivial slice index = 0."
         )
+        if return_statistics:
+            return 0, peak_stats
         return 0
 
     # Calculate midband power for each slice
@@ -144,6 +152,7 @@ def focus_from_transverse_band(
 
     peak_results = peak_widths(midband_sum, [peak_index])
     peak_FWHM = peak_results[0][0]
+    peak_stats.update({'peak_index': int(peak_index), 'peak_FWHM': float(peak_FWHM)})
 
     if peak_FWHM >= threshold_FWHM:
         in_focus_index = peak_index
@@ -160,6 +169,9 @@ def focus_from_transverse_band(
             peak_results,
             threshold_FWHM,
         )
+
+    if return_statistics:
+        return in_focus_index, peak_stats
 
     return in_focus_index
 
