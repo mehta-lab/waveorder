@@ -68,6 +68,7 @@ visual = [
   "pycromanager==0.27.2",
   "jupyter",
   "tensorboard",
+  "jupytext",
 ]
 dev = [
   "black==25.1.0",
@@ -94,7 +95,7 @@ docs = [
 ]
 all = [
   "waveorder[visual]",
-  "waveorder[dev]", 
+  "waveorder[dev]",
   "waveorder[docs]",
 ]
 
