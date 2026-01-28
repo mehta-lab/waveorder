@@ -6,7 +6,16 @@ import time
 import uuid
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Final, List, Literal, Union
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Final,
+    List,
+    Literal,
+    Union,
+    get_args,
+    get_origin,
+)
 
 from iohub.ngff import open_ome_zarr
 from magicgui import widgets
@@ -57,11 +66,11 @@ from waveorder.io import utils
 
 MSG_SUCCESS = {"msg": "success"}
 
-_validate_alert = "⚠"
-_validate_ok = "✔️"
+_validate_alert = "⚠️"
+_validate_ok = "✅"
 _green_dot = "🟢"
 _red_dot = "🔴"
-_info_icon = "ⓘ"
+_info_icon = "ℹ️"
 
 # For now replicate CLI processing modes - these could reside in the CLI settings file as well
 # for consistency
@@ -82,6 +91,88 @@ NEW_WIDGETS_QUEUE = []
 NEW_WIDGETS_QUEUE_THREADS = []
 MULTI_JOBS_REFS = {}
 ROW_POP_QUEUE = []
+
+
+def is_pydantic_model_type(ftype):
+    """Check if a type annotation is a Pydantic BaseModel subclass.
+
+    Handles Optional[Model] and Union[Model, None] by unwrapping them.
+
+    Args:
+        ftype: A type annotation from a Pydantic field's .annotation attribute
+
+    Returns:
+        bool: True if ftype is a BaseModel subclass (possibly wrapped in Optional)
+    """
+    from pydantic import BaseModel
+
+    # Direct check: is it a BaseModel subclass?
+    if isinstance(ftype, type) and issubclass(ftype, BaseModel):
+        return True
+
+    # Handle Optional[X] which is Union[X, None]
+    # get_origin returns Union for Optional types
+    origin = get_origin(ftype)
+    if origin is Union:
+        # Get the args of the Union
+        args = get_args(ftype)
+        # Filter out None
+        non_none_args = [arg for arg in args if arg is not type(None)]
+        # If there's exactly one non-None arg and it's a BaseModel, return True
+        if len(non_none_args) == 1:
+            arg = non_none_args[0]
+            if isinstance(arg, type) and issubclass(arg, BaseModel):
+                return True
+
+    return False
+
+
+def unwrap_optional(ftype):
+    """Unwrap Optional[X] to get X.
+
+    If ftype is Optional[X] (i.e., Union[X, None]), return X.
+    Otherwise, return ftype unchanged.
+
+    Args:
+        ftype: A type annotation
+
+    Returns:
+        The unwrapped type
+    """
+    origin = get_origin(ftype)
+    if origin is Union:
+        args = get_args(ftype)
+        non_none_args = [arg for arg in args if arg is not type(None)]
+        if len(non_none_args) == 1:
+            return non_none_args[0]
+    return ftype
+
+
+def is_optional_numeric_type(ftype):
+    """Check if a type is Optional[int], Optional[float], or similar.
+
+    Args:
+        ftype: A type annotation
+
+    Returns:
+        bool: True if it's Optional[numeric_type]
+    """
+    origin = get_origin(ftype)
+    if origin is Union:
+        args = get_args(ftype)
+        non_none_args = [arg for arg in args if arg is not type(None)]
+        if len(non_none_args) == 1:
+            inner_type = non_none_args[0]
+            # Check if inner type is float, int, or Annotated[float/int, ...]
+            if inner_type in (int, float):
+                return True
+            # Handle Annotated[float, ...] etc
+            inner_origin = get_origin(inner_type)
+            if inner_origin is not None:
+                inner_args = get_args(inner_type)
+                if inner_args and inner_args[0] in (int, float):
+                    return True
+    return False
 
 
 # Main class for the Reconstruction tab
@@ -1309,19 +1400,18 @@ class Ui_ReconTab_Form(QWidget):
     # Needs revisitation
     def fix_model(self, model, exclude_modes, attr_key, attr_val):
         try:
+            # Pydantic v2: model_copy() doesn't support exclude parameter
+            # Use model_dump() with exclude, then model_validate() to recreate
             for mode in exclude_modes:
-                model = settings.ReconstructionSettings.copy(
-                    model,
-                    exclude={mode},
-                    deep=True,
-                    update={attr_key: attr_val},
-                )
-            settings.ReconstructionSettings.__setattr__(
-                model, attr_key, attr_val
-            )
-            if hasattr(model, attr_key):
-                model.__fields__[attr_key].default = attr_val
-                model.__fields__[attr_key].field_info.default = attr_val
+                # Dump to dict, excluding the mode
+                data = model.model_dump(exclude={mode})
+                # Update the field
+                data[attr_key] = attr_val
+                # Recreate model from dict
+                model = settings.ReconstructionSettings.model_validate(data)
+
+            # Update the attribute directly
+            setattr(model, attr_key, attr_val)
         except Exception as exc:
             return print(exc.args)
         return model
@@ -2409,8 +2499,11 @@ class Ui_ReconTab_Form(QWidget):
         # instantiate the pydantic model form the kwargs we just pulled
         try:
             try:
-                pydantic_model = settings.ReconstructionSettings.parse_obj(
-                    pydantic_kwargs
+                # Pydantic v2: use model_validate() instead of parse_obj()
+                pydantic_model = (
+                    settings.ReconstructionSettings.model_validate(
+                        pydantic_kwargs
+                    )
                 )
                 return pydantic_model, MSG_SUCCESS
             except ValidationError as exc:
@@ -2421,7 +2514,8 @@ class Ui_ReconTab_Form(QWidget):
     # test to make sure model converts to json which should ensure compatibility with yaml export
     def validate_and_return_json(self, pydantic_model):
         try:
-            json_format = pydantic_model.json(indent=4)
+            # Pydantic v2: use model_dump_json() instead of json()
+            json_format = pydantic_model.model_dump_json(indent=4)
             return json_format, MSG_SUCCESS
         except Exception as exc:
             return None, exc.args
@@ -2465,7 +2559,7 @@ class Ui_ReconTab_Form(QWidget):
     # Ignoring NoneType since those should be Optional but maybe needs displaying ??
     # ToDo: Needs revisitation, Union check
     # Displaying Union field "time_indices" as LineEdit component
-    # excludes handles fields that are not supposed to show up from __fields__
+    # excludes handles fields that are not supposed to show up from model_fields (Pydantic v2)
     # json_dict adds ability to provide new set of default values at time of container creation
 
     def add_pydantic_to_container(
@@ -2478,18 +2572,37 @@ class Ui_ReconTab_Form(QWidget):
         # recursively traverse a pydantic model adding widgets to a container. When a nested
         # pydantic model is encountered, add a new nested container
 
-        for field, field_def in py_model.__fields__.items():
+        # Pydantic v2: use model_fields instead of __fields__
+        # Access model_fields from the class, not the instance
+        model_class = (
+            py_model if isinstance(py_model, type) else type(py_model)
+        )
+        is_instance = not isinstance(py_model, type)
+        for field, field_def in model_class.model_fields.items():
             if field_def is not None and field not in excludes:
-                def_val = field_def.default
-                ftype = field_def.type_
+                # Get actual instance value if py_model is an instance, otherwise use class default
+                if is_instance:
+                    def_val = getattr(py_model, field)
+                else:
+                    def_val = field_def.default
+                # Pydantic v2: use annotation instead of type_
+                ftype = field_def.annotation
                 toolTip = ""
+                # Pydantic v2: class_validators is not available in FieldInfo
+                # Validators are now stored differently in v2
+                # For now, skip this since it's just for tooltips
+                # TODO: Update to use py_model.model_fields[field].metadata if needed
                 try:
-                    for f_val in field_def.class_validators.keys():
-                        toolTip = f"{toolTip}{f_val} "
+                    # This will gracefully fail in v2, which is acceptable for tooltips
+                    if hasattr(field_def, "class_validators"):
+                        for f_val in field_def.class_validators.keys():
+                            toolTip = f"{toolTip}{f_val} "
                 except Exception as e:
                     pass
+                # Pydantic v2: ftype is now a class (annotation), not an instance
+                # Handle Optional[Model] by unwrapping it
                 if (
-                    isinstance(ftype, BaseModel)
+                    is_pydantic_model_type(ftype)
                     or ftype in PYDANTIC_CLASSES_DEF
                 ):
                     json_val = None
@@ -2497,10 +2610,13 @@ class Ui_ReconTab_Form(QWidget):
                         json_val = json_dict[field]
                     # the field is a pydantic class, add a container for it and fill it
                     new_widget_cls = widgets.Container
-                    new_widget = new_widget_cls(name=field_def.name)
+                    # Pydantic v2: field name is the dict key, not field_def.name
+                    new_widget = new_widget_cls(name=field)
                     new_widget.tooltip = toolTip
+                    # Unwrap Optional[Model] to get Model before recursing
+                    unwrapped_ftype = unwrap_optional(ftype)
                     self.add_pydantic_to_container(
-                        ftype, new_widget, excludes, json_val
+                        unwrapped_ftype, new_widget, excludes, json_val
                     )
                 # ToDo: Implement Union check, tried:
                 # pydantic.typing.is_union(ftype)
@@ -2534,39 +2650,59 @@ class Ui_ReconTab_Form(QWidget):
                         warnings.warn(
                             message=f"magicgui could not identify a widget for {py_model}.{field}, which has type {ftype}"
                         )
-                elif isinstance(def_val, float):
-                    # parse the field, add appropriate widget
-                    def_step_size = 0.001
-                    if field_def.name == "regularization_strength":
-                        def_step_size = 0.00001
-                    if def_val > -1 and def_val < 1:
+                elif isinstance(def_val, float) or (
+                    def_val is None and is_optional_numeric_type(ftype)
+                ):
+                    # Handle float fields, including Optional[float] with None value
+
+                    # For Optional numeric types with None, use LineEdit instead of FloatSpinBox
+                    # This allows empty string to represent None
+                    if def_val is None and is_optional_numeric_type(ftype):
                         new_widget_cls, ops = get_widget_class(
                             None,
-                            ftype,
-                            dict(
-                                name=field_def.name,
-                                value=def_val,
-                                step=float(def_step_size),
-                            ),
+                            str,
+                            dict(name=field, value=""),
                         )
                         new_widget = new_widget_cls(**ops)
-                        new_widget.tooltip = toolTip
+                        new_widget.tooltip = (
+                            toolTip + " (Optional - leave empty for None)"
+                        )
                     else:
-                        new_widget_cls, ops = get_widget_class(
-                            None,
-                            ftype,
-                            dict(name=field_def.name, value=def_val),
-                        )
-                        new_widget = new_widget_cls(**ops)
-                        new_widget.tooltip = toolTip
+                        # Regular float field
+                        def_step_size = 0.001
+                        # Pydantic v2: field name is the dict key, not field_def.name
+                        if field == "regularization_strength":
+                            def_step_size = 0.00001
+
+                        if def_val > -1 and def_val < 1:
+                            new_widget_cls, ops = get_widget_class(
+                                None,
+                                ftype,
+                                dict(
+                                    name=field,
+                                    value=def_val,
+                                    step=float(def_step_size),
+                                ),
+                            )
+                            new_widget = new_widget_cls(**ops)
+                            new_widget.tooltip = toolTip
+                        else:
+                            new_widget_cls, ops = get_widget_class(
+                                None,
+                                ftype,
+                                dict(name=field, value=def_val),
+                            )
+                            new_widget = new_widget_cls(**ops)
+                            new_widget.tooltip = toolTip
                     if isinstance(new_widget, widgets.EmptyWidget):
                         warnings.warn(
                             message=f"magicgui could not identify a widget for {py_model}.{field}, which has type {ftype}"
                         )
                 else:
                     # parse the field, add appropriate widget
+                    # Pydantic v2: field name is the dict key, not field_def.name
                     new_widget_cls, ops = get_widget_class(
-                        None, ftype, dict(name=field_def.name, value=def_val)
+                        None, ftype, dict(name=field, value=def_val)
                     )
                     new_widget = new_widget_cls(**ops)
                     if isinstance(new_widget, widgets.EmptyWidget):
@@ -2611,11 +2747,20 @@ class Ui_ReconTab_Form(QWidget):
         # given a container that was instantiated from a pydantic model, get the arguments
         # needed to instantiate that pydantic model from the container.
         # traverse model fields, pull out values from container
-        for field, field_def in pydantic_model.__fields__.items():
+        # Pydantic v2: use model_fields instead of __fields__
+        # Access model_fields from the class, not the instance
+        model_class = (
+            pydantic_model
+            if isinstance(pydantic_model, type)
+            else type(pydantic_model)
+        )
+        for field, field_def in model_class.model_fields.items():
             if field_def is not None and field not in excludes:
-                ftype = field_def.type_
+                # Pydantic v2: use annotation instead of type_
+                ftype = field_def.annotation
+                # Pydantic v2: Handle Optional[Model] by unwrapping it
                 if (
-                    isinstance(ftype, BaseModel)
+                    is_pydantic_model_type(ftype)
                     or ftype in PYDANTIC_CLASSES_DEF
                 ):
                     # go deeper
@@ -2624,18 +2769,38 @@ class Ui_ReconTab_Form(QWidget):
                     )  # new dictionary for the new nest level
                     # any pydantic class will be a container, so pull that out to pass
                     # to the recursive call
-                    sub_container = getattr(container, field_def.name)
+                    # Pydantic v2: field name is the dict key, not field_def.name
+                    sub_container = getattr(container, field)
+                    # Unwrap Optional[Model] to get Model before recursing
+                    unwrapped_ftype = unwrap_optional(ftype)
                     self.get_pydantic_kwargs(
                         sub_container,
-                        ftype,
+                        unwrapped_ftype,
                         pydantic_kwargs[field],
                         excludes,
                         json_dict,
                     )
                 else:
                     # not a pydantic class, just pull the field value from the container
-                    if hasattr(container, field_def.name):
-                        value = getattr(container, field_def.name).value
+                    # Pydantic v2: field name is the dict key, not field_def.name
+                    if hasattr(container, field):
+                        value = getattr(container, field).value
+                        # Handle Optional numeric types: convert empty string to None, parse numeric strings
+                        if is_optional_numeric_type(ftype) and isinstance(
+                            value, str
+                        ):
+                            if value == "" or value.lower() in (
+                                "none",
+                                "null",
+                            ):
+                                value = None
+                            else:
+                                # Try to parse as float
+                                try:
+                                    value = float(value)
+                                except (ValueError, TypeError):
+                                    # Leave as string, let Pydantic validation handle the error
+                                    pass
                         pydantic_kwargs[field] = value
 
     # copied from main_widget
