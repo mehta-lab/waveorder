@@ -156,3 +156,24 @@ def test_compute_midband_power_consistency():
 
     expected_focus_slice = np.argmax(manual_powers)
     assert focus_slice == expected_focus_slice
+
+
+def test_position_list_with_float_offset():
+    """Test that _position_list_from_shape_scale_offset works correctly with float offsets."""
+    from waveorder.cli.compute_transfer_function import (
+        _position_list_from_shape_scale_offset,
+    )
+
+    # Test integer offset - function returns tensor in variable-recon branch
+    pos_int = _position_list_from_shape_scale_offset(5, 1.0, 0)
+    expected_int = torch.tensor([2.0, 1.0, 0.0, -1.0, -2.0])
+    torch.testing.assert_close(pos_int, expected_int)
+
+    # Test float offset
+    pos_float = _position_list_from_shape_scale_offset(5, 1.0, 0.5)
+    expected_float = torch.tensor([2.5, 1.5, 0.5, -0.5, -1.5])
+    torch.testing.assert_close(pos_float, expected_float)
+
+    # Verify the difference is exactly the offset
+    diff = pos_float - pos_int
+    torch.testing.assert_close(diff, torch.full_like(diff, 0.5))
