@@ -6,7 +6,11 @@ import pytest
 @pytest.fixture
 def widget_with_temp_dirs(make_napari_viewer, tmp_path):
     """Create widget with temporary input/output directories."""
+    from waveorder.plugin import tab_recon
     from waveorder.plugin.main_widget import MainWidget
+
+    # Reset HAS_INSTANCE to avoid state leakage between tests
+    tab_recon.HAS_INSTANCE = {"val": False, "instance": None}
 
     viewer = make_napari_viewer()
     widget = MainWidget(viewer)
@@ -23,7 +27,10 @@ def widget_with_temp_dirs(make_napari_viewer, tmp_path):
     recon_tab.output_directory = str(output_dir)
     recon_tab.data_input_LineEdit.value = str(input_dir)
 
-    return viewer, widget, recon_tab
+    yield viewer, widget, recon_tab
+
+    # Cleanup: Reset HAS_INSTANCE after test
+    tab_recon.HAS_INSTANCE = {"val": False, "instance": None}
 
 
 def test_click_new_button_birefringence(widget_with_temp_dirs):

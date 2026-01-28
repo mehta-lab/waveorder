@@ -496,7 +496,9 @@ class Ui_ReconTab_Form(QWidget):
 
     def hideEvent(self, event):
         if event.type() == QEvent.Type.Hide and (
-            self._ui is not None and self._ui.isVisible()
+            hasattr(self, "_ui")
+            and self._ui is not None
+            and self._ui.isVisible()
         ):
             pass
 
