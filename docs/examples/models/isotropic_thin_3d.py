@@ -111,3 +111,4 @@ viewer.grid.enabled = True
 viewer.dims.current_step = (z_shape // 2, 0, 0)
 
 input("Showing object, data, and recon. Press <enter> to quit...")
+viewer.close()

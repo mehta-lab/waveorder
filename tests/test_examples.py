@@ -1,8 +1,8 @@
-import runpy
-from pathlib import Path
-import sys
 import os
+import runpy
 import subprocess
+import sys
+from pathlib import Path
 from unittest.mock import patch
 
 import matplotlib.pyplot as plt
@@ -17,7 +17,9 @@ EXAMPLES = DOCS / "examples"
     [
         EXAMPLES / "maintenance" / "QLIPP_simulation/2D_QLIPP_forward.py",
         EXAMPLES / "maintenance" / "QLIPP_simulation/2D_QLIPP_recon.py",
-        EXAMPLES / "maintenance" / "PTI_simulation/PTI_Simulation_Forward_2D3D.py",
+        EXAMPLES
+        / "maintenance"
+        / "PTI_simulation/PTI_Simulation_Forward_2D3D.py",
         EXAMPLES / "maintenance" / "PTI_simulation/PTI_Simulation_Recon2D.py",
         EXAMPLES / "maintenance" / "PTI_simulation/PTI_Simulation_Recon3D.py",
     ],
@@ -40,8 +42,8 @@ def test_maintenance_examples(example):
 
 
 @pytest.mark.skipif(
-    os.getenv("GITHUB_ACTIONS") == "true",
-    reason="Skip on GitHub Actions, requires napari",
+    os.getenv("GITHUB_ACTIONS") == "true" and sys.platform != "linux",
+    reason="Skip on GitHub Actions non-Linux platforms, napari requires headless display",
 )
 @pytest.mark.parametrize(
     "script",
@@ -52,7 +54,7 @@ def test_maintenance_examples(example):
     ],
 )
 def test_phase_examples(script):
-    """Test phase model examples - need user input so skip on CI"""
+    """Test phase model examples"""
     path = EXAMPLES / "models" / script
     # examples needs two <enters>s so send input="e\ne"
     completed_process = subprocess.run(

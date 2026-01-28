@@ -4,6 +4,7 @@ Isotropic fluorescent thick 3d
 
 Isotropic fluorescent thick 3d summary
 """
+
 import napari
 import numpy as np
 
@@ -22,6 +23,7 @@ transfer_function_arguments = {
     "z_padding": 0,
     "index_of_refraction_media": 1.3,
     "numerical_aperture_detection": 1.2,
+    "confocal_pinhole_diameter": None,  # Set to a value (e.g., 1.0) for confocal
 }
 
 # Create a phantom
@@ -77,3 +79,4 @@ viewer.add_image(
 viewer.add_image(zyx_data.numpy(), name="Data", scale=zyx_scale)
 viewer.add_image(zyx_recon.numpy(), name="Reconstruction", scale=zyx_scale)
 input("Showing object, data, and recon. Press <enter> to quit...")
+viewer.close()

@@ -4,6 +4,7 @@ In plane oriented thick pol3d
 
 In plane oriented thick pol3d summary
 """
+
 import napari
 
 from waveorder.models import inplane_oriented_thick_pol3d
@@ -66,3 +67,4 @@ for array in arrays:
 viewer.grid.enabled = True
 viewer.grid.shape = (2, 5)
 input("Showing object, data, and recon. Press <enter> to quit...")
+viewer.close()

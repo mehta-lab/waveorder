@@ -250,3 +250,4 @@ plot_otf_support(
 )
 
 input("Press Enter to close...")
+viewer.close()

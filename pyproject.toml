@@ -45,7 +45,7 @@ dependencies = [
   "click>=8.0.1",
   "colorspacious>=1.1.2",
   "importlib-metadata",
-  "iohub>=0.2,<0.3",
+  "iohub>=0.2,<0.4",
   "ipywidgets>=7.5.1",
   "matplotlib>=3.1.1",
   "natsort>=7.1.1",
@@ -67,6 +67,7 @@ visual = [
   "napari-ome-zarr>=0.3.2", # drag and drop convenience
   "pycromanager==0.27.2",
   "jupyter",
+  "jupytext",
 ]
 dev = [
   "black==25.1.0",
@@ -119,4 +120,4 @@ line_length = 79
 write_to = "waveorder/_version.py"
 
 [tool.setuptools.package-data]
-"*" = ["*.yaml"]
+"*" = ["*.yaml", "assets/*png"]
