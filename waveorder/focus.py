@@ -39,8 +39,15 @@ def compute_midband_power(
     torch.Tensor
         Sum of absolute FFT values in the midband region.
     """
+    # Get device from input array to ensure all operations happen on same device (CPU or GPU)
+    device = yx_array.device
+
     _, _, fxx, fyy = util.gen_coordinate(yx_array.shape, pixel_size)
-    frr = torch.tensor(np.sqrt(fxx**2 + fyy**2))
+    # BUG FIX: Avoid creating numpy array first - convert directly to tensors on device
+    fxx_t = torch.tensor(fxx, device=device)
+    fyy_t = torch.tensor(fyy, device=device)
+    frr = torch.sqrt(fxx_t**2 + fyy_t**2)
+
     xy_abs_fft = torch.abs(torch.fft.fftn(yx_array))
     cutoff = 2 * NA_det / lambda_ill
     mask = torch.logical_and(
@@ -61,6 +68,7 @@ def focus_from_transverse_band(
     plot_path: Optional[str] = None,
     threshold_FWHM: float = 0,
     enable_subpixel_precision: bool = False,
+    device: str = "cpu",
 ):
     """Estimates the in-focus slice from a 3D stack by optimizing a transverse spatial frequency band.
 
@@ -95,6 +103,8 @@ def focus_from_transverse_band(
     enable_subpixel_precision: bool, optional
         If True and polynomial_fit_order is provided, enables sub-pixel precision focus detection
         by finding the continuous extremum of the polynomial fit. Default is False for backward compatibility.
+    device: str, optional
+        Device to use for computation ('cpu' or 'cuda'). Default is 'cpu'.
 
     Returns
     -------
@@ -126,19 +136,25 @@ def focus_from_transverse_band(
         )
         return 0
 
+    # Debug: Print device being used for autofocus
+    print(f"[FOCUS DEBUG] Autofocus using device: {device}")
+
     # Calculate midband power for each slice
+    # BUG FIX: Move tensors to specified device (was defaulting to CPU)
     midband_sum = np.array(
         [
             compute_midband_power(
-                torch.from_numpy(zyx_array[z]),
+                torch.from_numpy(zyx_array[z]).to(device),
                 NA_det,
                 lambda_ill,
                 pixel_size,
                 midband_fractions,
-            ).numpy()
+            ).cpu().numpy()
             for z in range(zyx_array.shape[0])
         ]
     )
+
+    print(f"[FOCUS DEBUG] Computed midband power for {len(midband_sum)} slices")
 
     if polynomial_fit_order is None:
         peak_index = minmaxfunc(midband_sum)
