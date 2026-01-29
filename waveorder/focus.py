@@ -199,9 +199,6 @@ def focus_from_transverse_band(
         )
         return 0
 
-    # Debug: Print device being used for autofocus
-    print(f"[FOCUS DEBUG] Autofocus using device: {device}")
-
     # Calculate midband power for all slices in one batch
     # Transfer entire ZYX stack to GPU once, compute, transfer result back once
     # This eliminates 7x round-trip CPU↔GPU transfer overhead
@@ -214,8 +211,6 @@ def focus_from_transverse_band(
         midband_fractions,
     )
     midband_sum = midband_powers.cpu().numpy()
-
-    print(f"[FOCUS DEBUG] Computed midband power for {len(midband_sum)} slices (batched)")
 
     if polynomial_fit_order is None:
         peak_index = minmaxfunc(midband_sum)

@@ -98,10 +98,17 @@ def apply_inverse_to_zyx_and_save(
         return
 
     # convert to np.int32 (torch doesn't accept np.uint16), then convert to tensor float32
-    czyx_data = torch.tensor(np.int32(czyx_uint16_numpy), dtype=torch.float32)
+    # BUG FIX: Move data to device if specified in kwargs
+    device = kwargs.get('device', 'cpu')
+    czyx_data = torch.tensor(np.int32(czyx_uint16_numpy), dtype=torch.float32, device=device)
 
     # Apply transformation
     reconstruction_czyx = func(czyx_data, **kwargs)
+
+    # BUG FIX: Move result back to CPU before writing to zarr
+    # If reconstruction_czyx is a tensor on GPU, convert to numpy on CPU
+    if isinstance(reconstruction_czyx, torch.Tensor) and reconstruction_czyx.is_cuda:
+        reconstruction_czyx = reconstruction_czyx.cpu().numpy()
 
     # Write to file
     # for c, recon_zyx in enumerate(reconstruction_zyx):

@@ -61,17 +61,18 @@ def phase(
     recon_dim,
     settings_phase,
     transfer_function_dataset,
+    device="cpu",
 ):
     # [phase only, 2]
     if recon_dim == 2:
-        # Load transfer functions
-        U = torch.from_numpy(transfer_function_dataset["singular_system_U"][0])
+        # Load transfer functions and move to device (BUG FIX: was missing .to(device))
+        U = torch.from_numpy(transfer_function_dataset["singular_system_U"][0]).to(device)
         S = torch.from_numpy(
             transfer_function_dataset["singular_system_S"][0, 0]
-        )
+        ).to(device)
         Vh = torch.from_numpy(
             transfer_function_dataset["singular_system_Vh"][0]
-        )
+        ).to(device)
 
         # Apply
         (
@@ -82,6 +83,7 @@ def phase(
             (U, S, Vh),
             **settings_phase.apply_inverse.dict(),
         )
+
         # Stack to C1YX
         output = phase_yx[None, None]
         # TODO: Write phase and absorption to CZYX
@@ -105,6 +107,7 @@ def phase(
             real_potential_transfer_function,
             imaginary_potential_transfer_function,
             z_padding=settings_phase.transfer_function.z_padding,
+            device=device,
             **settings_phase.apply_inverse.dict(),
         )
 

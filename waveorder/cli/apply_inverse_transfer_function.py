@@ -107,7 +107,8 @@ def apply_inverse_transfer_function_single_position(
     output_channel_names: list[str],
 ) -> None:
 
-    echo_headline("\nStarting reconstruction...")
+    # Detect and configure GPU device
+    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     # Load datasets
     transfer_function_dataset = open_ome_zarr(transfer_function_dirpath)
@@ -204,15 +205,13 @@ def apply_inverse_transfer_function_single_position(
 
     # [phase only]
     if recon_phase and (not recon_biref):
-        echo_headline("Reconstructing phase with settings:")
-        echo_settings(settings.phase.apply_inverse)
-
         # Setup parameters for apply_inverse_to_zyx_and_save
         apply_inverse_model_function = apply_inverse_models.phase
         apply_inverse_args = {
             "recon_dim": recon_dim,
             "settings_phase": settings.phase,
             "transfer_function_dataset": transfer_function_dataset,
+            "device": device,
         }
 
     # [biref and phase]
@@ -276,15 +275,9 @@ def apply_inverse_transfer_function_single_position(
     # Save metadata at position level
     output_dataset.zattrs["settings"] = settings.dict()
 
-    echo_headline(f"Closing {output_position_dirpath}\n")
-
     output_dataset.close()
     transfer_function_dataset.close()
     input_dataset.close()
-
-    echo_headline(
-        f"Recreate this reconstruction with:\n$ waveorder apply-inv-tf {input_position_dirpath} {transfer_function_dirpath} -c {config_filepath} -o {output_position_dirpath}"
-    )
 
 
 def apply_inverse_transfer_function_cli(
