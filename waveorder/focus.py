@@ -57,6 +57,69 @@ def compute_midband_power(
     return torch.sum(xy_abs_fft[mask])
 
 
+def compute_midband_power_batch(
+    zyx_array: torch.Tensor,
+    NA_det: float,
+    lambda_ill: float,
+    pixel_size: float,
+    midband_fractions: tuple[float, float] = (0.125, 0.25),
+) -> torch.Tensor:
+    """Compute midband spatial frequency power for all Z-slices in one batch.
+
+    This is an optimized version that transfers the entire ZYX stack to GPU once,
+    computes midband power for all slices, and transfers the result back once.
+    This eliminates the 7x round-trip CPU↔GPU transfer overhead of the per-slice approach.
+
+    Parameters
+    ----------
+    zyx_array : torch.Tensor
+        3D tensor in (Z, Y, X) order, already on target device (GPU).
+    NA_det : float
+        Detection NA.
+    lambda_ill : float
+        Illumination wavelength.
+        Units are arbitrary, but must match [pixel_size].
+    pixel_size : float
+        Object-space pixel size = camera pixel size / magnification.
+        Units are arbitrary, but must match [lambda_ill].
+    midband_fractions : tuple[float, float], optional
+        The minimum and maximum fraction of the cutoff frequency that define the midband.
+        Default is (0.125, 0.25).
+
+    Returns
+    -------
+    torch.Tensor
+        1D tensor of shape (Z,) with midband power for each slice.
+    """
+    device = zyx_array.device
+    Z, Y, X = zyx_array.shape
+
+    # Generate coordinate grids ONCE (shared across all Z-slices)
+    _, _, fxx, fyy = util.gen_coordinate((Y, X), pixel_size)
+    fxx_t = torch.tensor(fxx, device=device)
+    fyy_t = torch.tensor(fyy, device=device)
+    frr = torch.sqrt(fxx_t**2 + fyy_t**2)
+
+    # Compute mask ONCE (shared across all Z-slices)
+    cutoff = 2 * NA_det / lambda_ill
+    mask = torch.logical_and(
+        frr > cutoff * midband_fractions[0],
+        frr < cutoff * midband_fractions[1],
+    )
+
+    # Batched FFT: compute FFT for all Z-slices at once
+    # torch.fft.fft2 operates on last 2 dims when applied to 3D array
+    zyx_fft = torch.fft.fft2(zyx_array)
+    zyx_abs_fft = torch.abs(zyx_fft)
+
+    # Sum masked values for each Z (vectorized operation on GPU)
+    # Broadcasting: mask is (Y, X), zyx_abs_fft is (Z, Y, X)
+    # This sums over Y and X dimensions for each Z
+    midband_powers = torch.sum(zyx_abs_fft[:, mask], dim=1)
+
+    return midband_powers
+
+
 def focus_from_transverse_band(
     zyx_array,
     NA_det,
@@ -139,22 +202,20 @@ def focus_from_transverse_band(
     # Debug: Print device being used for autofocus
     print(f"[FOCUS DEBUG] Autofocus using device: {device}")
 
-    # Calculate midband power for each slice
-    # BUG FIX: Move tensors to specified device (was defaulting to CPU)
-    midband_sum = np.array(
-        [
-            compute_midband_power(
-                torch.from_numpy(zyx_array[z]).to(device),
-                NA_det,
-                lambda_ill,
-                pixel_size,
-                midband_fractions,
-            ).cpu().numpy()
-            for z in range(zyx_array.shape[0])
-        ]
+    # Calculate midband power for all slices in one batch
+    # Transfer entire ZYX stack to GPU once, compute, transfer result back once
+    # This eliminates 7x round-trip CPU↔GPU transfer overhead
+    zyx_tensor = torch.from_numpy(zyx_array).to(device)
+    midband_powers = compute_midband_power_batch(
+        zyx_tensor,
+        NA_det,
+        lambda_ill,
+        pixel_size,
+        midband_fractions,
     )
+    midband_sum = midband_powers.cpu().numpy()
 
-    print(f"[FOCUS DEBUG] Computed midband power for {len(midband_sum)} slices")
+    print(f"[FOCUS DEBUG] Computed midband power for {len(midband_sum)} slices (batched)")
 
     if polynomial_fit_order is None:
         peak_index = minmaxfunc(midband_sum)
