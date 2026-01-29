@@ -2570,10 +2570,6 @@ class Ui_ReconTab_Form(QWidget):
                     self.add_pydantic_to_container(
                         unwrapped_ftype, new_widget, excludes, json_val
                     )
-                # ToDo: Implement Union check, tried:
-                # pydantic.typing.is_union(ftype)
-                # isinstance(ftype, types.UnionType)
-                # https://stackoverflow.com/questions/45957615/how-to-check-a-variable-against-union-type-during-runtime
                 elif isinstance(ftype, type(Union[NonNegativeInt, List, str])):
                     if (
                         field == "background_path"
