@@ -11,10 +11,10 @@ from pathlib import Path
 from typing import (
     TYPE_CHECKING,
     Annotated,
+    Any,
     Final,
     List,
     Literal,
-    TypeVar,
     Union,
     get_args,
     get_origin,
@@ -32,7 +32,6 @@ from napari.utils.notifications import show_error, show_info
 from qtpy import QtCore
 from qtpy.QtCore import QEvent, Qt, QThread, Signal
 from qtpy.QtWidgets import *
-from typing_extensions import TypeIs
 
 from waveorder.plugin import job_manager
 
@@ -98,10 +97,7 @@ MULTI_JOBS_REFS = {}
 ROW_POP_QUEUE = []
 
 
-T = TypeVar("T")
-
-
-def unwrap_optional(ftype: type[T]) -> type[T]:
+def unwrap_optional(ftype: Any) -> Any:
     """Unwrap Optional[X] to get X. Handles both Optional[X] and X | None syntax.
 
     Args:
@@ -119,8 +115,11 @@ def unwrap_optional(ftype: type[T]) -> type[T]:
 
 
 def is_subclass_of(
-    ftype: type[T], base: type[T], *, require_optional: bool = False
-) -> TypeIs[type[T]]:
+    ftype: Any,
+    base: type | tuple[type, ...],
+    *,
+    require_optional: bool = False,
+) -> bool:
     """Check if ftype (possibly Optional-wrapped) is a subclass of base.
 
     Args:
