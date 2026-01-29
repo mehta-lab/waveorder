@@ -2457,7 +2457,6 @@ class Ui_ReconTab_Form(QWidget):
         # instantiate the pydantic model form the kwargs we just pulled
         try:
             try:
-                # Pydantic v2: use model_validate() instead of parse_obj()
                 pydantic_model = (
                     settings.ReconstructionSettings.model_validate(
                         pydantic_kwargs
@@ -2472,7 +2471,6 @@ class Ui_ReconTab_Form(QWidget):
     # test to make sure model converts to json which should ensure compatibility with yaml export
     def validate_and_return_json(self, pydantic_model):
         try:
-            # Pydantic v2: use model_dump_json() instead of json()
             json_format = pydantic_model.model_dump_json(indent=4)
             return json_format, MSG_SUCCESS
         except Exception as exc:
@@ -2517,7 +2515,7 @@ class Ui_ReconTab_Form(QWidget):
     # Ignoring NoneType since those should be Optional but maybe needs displaying ??
     # ToDo: Needs revisitation, Union check
     # Displaying Union field "time_indices" as LineEdit component
-    # excludes handles fields that are not supposed to show up from model_fields (Pydantic v2)
+    # excludes handles fields that are not supposed to show up from model_fields
     # json_dict adds ability to provide new set of default values at time of container creation
 
     def add_pydantic_to_container(
@@ -2532,7 +2530,6 @@ class Ui_ReconTab_Form(QWidget):
         if excludes is None:
             excludes = []
 
-        # Pydantic v2: use model_fields instead of __fields__
         # Access model_fields from the class, not the instance
         model_class = (
             py_model if isinstance(py_model, type) else type(py_model)
@@ -2545,13 +2542,11 @@ class Ui_ReconTab_Form(QWidget):
                     def_val = getattr(py_model, field)
                 else:
                     def_val = field_def.default
-                    # Handle Pydantic v2 undefined sentinel for required fields
                     if isinstance(def_val, PydanticUndefinedType):
                         def_val = None
-                # Pydantic v2: use annotation instead of type_
                 ftype = field_def.annotation
 
-                # Build tooltip from Pydantic v2 field metadata
+                # Build tooltip from field metadata
                 tooltip_parts = []
                 if field_def.description:
                     tooltip_parts.append(field_def.description)
@@ -2569,7 +2564,6 @@ class Ui_ReconTab_Form(QWidget):
                         json_val = json_dict[field]
                     # the field is a pydantic class, add a container for it and fill it
                     new_widget_cls = widgets.Container
-                    # Pydantic v2: field name is the dict key, not field_def.name
                     new_widget = new_widget_cls(name=field)
                     new_widget.tooltip = toolTip
                     # Unwrap Optional[Model] to get Model before recursing
@@ -2633,7 +2627,6 @@ class Ui_ReconTab_Form(QWidget):
                     else:
                         # Regular float field
                         def_step_size = 0.001
-                        # Pydantic v2: field name is the dict key, not field_def.name
                         if field == "regularization_strength":
                             def_step_size = 0.00001
 
@@ -2663,7 +2656,6 @@ class Ui_ReconTab_Form(QWidget):
                         )
                 else:
                     # parse the field, add appropriate widget
-                    # Pydantic v2: field name is the dict key, not field_def.name
                     new_widget_cls, ops = get_widget_class(
                         None, ftype, dict(name=field, value=def_val)
                     )
@@ -2713,7 +2705,6 @@ class Ui_ReconTab_Form(QWidget):
         if excludes is None:
             excludes = []
 
-        # Pydantic v2: use model_fields instead of __fields__
         # Access model_fields from the class, not the instance
         model_class = (
             pydantic_model
