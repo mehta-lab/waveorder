@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/1b4fabd4-2ead-40fa-ae88-99642a1589f1" alt="Image" width="50%">
+  <img src="https://github.com/user-attachments/assets/00367e51-0e0a-445e-8d12-2a273f9014aa" alt="Image" width="50%">
 </p>
 
 [![Python package index](https://img.shields.io/pypi/v/waveorder.svg)](https://pypi.org/project/waveorder)
@@ -210,7 +210,7 @@ We also maintain three dependency sets for different interfaces:
 
 ```sh
 pip install waveorder          # API, CLI
-pip install waveorder[visual]  # API, CLI, GUI  
+pip install waveorder[visual]  # API, CLI, GUI
 pip install waveorder[all]     # API, CLI, GUI, docs, dev dependencies
 ```
 
