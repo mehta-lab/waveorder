@@ -64,6 +64,7 @@ dynamic = ["version"]
 [project.optional-dependencies]
 visual = [
   "napari[pyqt6]",
+  "PyQt6>=6.5,<6.8",  # Constrain to versions with manylinux_2_28 support for older Linux systems
   "napari-ome-zarr>=0.3.2", # drag and drop convenience
   "pycromanager==0.27.2",
   "jupyter",
@@ -74,6 +75,7 @@ dev = [
   "click>=8.2.0",
   "hypothesis",
   "napari[pyqt6]",  # needed for napari plugin tests
+  "PyQt6>=6.5,<6.8",  # Constrain to versions with manylinux_2_28 support for older Linux systems
   "pre-commit",
   "pytest-cov",
   "pytest-qt",
@@ -94,7 +96,7 @@ docs = [
 ]
 all = [
   "waveorder[visual]",
-  "waveorder[dev]", 
+  "waveorder[dev]",
   "waveorder[docs]",
 ]
 
