@@ -74,11 +74,6 @@ class MainWidget(QWidget):
         self.ui.setupUi(self)
         self.ui.tab_reconstruction.set_viewer(napari_viewer)
 
-        # Hide acquisition tab
-        acquisition_index = self.ui.tabWidget.indexOf(self.ui.Acquisition)
-        if acquisition_index != -1:
-            self.ui.tabWidget.removeTab(acquisition_index)
-
         # Override initial tab focus
         self.ui.tabWidget.setCurrentIndex(0)
 
@@ -134,65 +129,6 @@ class MainWidget(QWidget):
         )
         self.ui.qbutton_push_note.clicked[bool].connect(self.push_note)
 
-        # Acquisition tab
-        self.ui.qbutton_browse_save_dir.clicked[bool].connect(
-            self.browse_save_path
-        )
-        self.ui.le_save_dir.editingFinished.connect(self.enter_save_path)
-        self.ui.le_save_dir.setText(str(Path.cwd()))
-        self.ui.le_data_save_name.editingFinished.connect(self.enter_save_name)
-
-        self.ui.chb_use_gpu.stateChanged[int].connect(self.enter_use_gpu)
-        self.ui.le_gpu_id.editingFinished.connect(self.enter_gpu_id)
-
-        self.ui.cb_rotate_orientation.stateChanged[int].connect(
-            self.enter_rotate_orientation
-        )
-        self.ui.cb_flip_orientation.stateChanged[int].connect(
-            self.enter_flip_orientation
-        )
-        self.ui.cb_invert_phase_contrast.stateChanged[int].connect(
-            self.enter_invert_phase_contrast
-        )
-
-        # This parameter seems to be wired differently than others...investigate later
-        self.ui.le_recon_wavelength.editingFinished.connect(
-            self.enter_recon_wavelength
-        )
-        self.ui.le_recon_wavelength.setText("532")
-        self.enter_recon_wavelength()
-
-        self.ui.le_obj_na.editingFinished.connect(self.enter_obj_na)
-        self.ui.le_obj_na.setText("1.3")
-        self.enter_obj_na()
-
-        self.ui.le_cond_na.editingFinished.connect(self.enter_cond_na)
-        self.ui.le_cond_na.setText("0.5")
-        self.enter_cond_na()
-
-        self.ui.le_mag.editingFinished.connect(self.enter_mag)
-        self.ui.le_mag.setText("60")
-        self.enter_mag()
-
-        self.ui.le_ps.editingFinished.connect(self.enter_ps)
-        self.ui.le_ps.setText("6.9")
-        self.enter_ps()
-
-        self.ui.le_n_media.editingFinished.connect(self.enter_n_media)
-        self.ui.le_n_media.setText("1.3")
-        self.enter_n_media()
-
-        self.ui.le_pad_z.editingFinished.connect(self.enter_pad_z)
-
-        self.ui.cb_bg_method.currentIndexChanged[int].connect(
-            self.enter_bg_correction
-        )
-
-        self.ui.le_bg_path.editingFinished.connect(self.enter_acq_bg_path)
-        self.ui.qbutton_browse_bg_path.clicked[bool].connect(
-            self.browse_acq_bg_path
-        )
-
         # hook to render overlay
         # acquistion updates existing layers and moves them to the top which triggers this event
         self.viewer.layers.events.moved.connect(self.handle_layers_updated)
@@ -202,12 +138,6 @@ class MainWidget(QWidget):
         self.ui.retMaxSlider.sliderMoved[int].connect(
             self.handle_ret_max_slider_move
         )
-
-        # Reconstruction tab
-        self.ui.cb_phase_denoiser.currentIndexChanged[int].connect(
-            self.enter_phase_denoiser
-        )
-        self.enter_phase_denoiser()
 
         ## Initialize logging
         log_box = QtLogger(self.ui.te_log)
@@ -222,8 +152,6 @@ class MainWidget(QWidget):
         self.mmc = None
         self.calib = None
         self.current_dir_path = str(Path.cwd())
-        self.current_save_path = str(Path.cwd())
-        self.current_bg_path = str(Path.cwd())
         self.directory = str(Path.cwd())
         self.calib_scheme = "4-State"
         self.calib_mode = "MM-Retardance"
@@ -241,17 +169,6 @@ class MainWidget(QWidget):
         self.bg_folder_name = "bg"
         self.n_avg = 5
         self.intensity_monitor = []
-        self.save_directory = str(Path.cwd())
-        self.save_name = None
-        self.bg_option = "None"
-        self.gpu_id = 0
-        self.use_gpu = False
-        self.rotate_orientation = False
-        self.flip_orientation = False
-        self.invert_phase_contrast = False
-        self.pad_z = 0
-        self.phase_reconstructor = None
-        self.acq_bg_directory = ""
         self.auto_shutter = True
         self.lca_dac = None
         self.lcb_dac = None
@@ -300,17 +217,6 @@ class MainWidget(QWidget):
         self.ui.cb_lca.hide()
         self.ui.cb_lcb.hide()
 
-        # Background correction popups
-        self.ui.label_bg_path.setHidden(True)
-        self.ui.le_bg_path.setHidden(True)
-        self.ui.qbutton_browse_bg_path.setHidden(True)
-
-        # Reconstruction parameter popups
-        self.ui.le_rho.setHidden(True)
-        self.ui.label_phase_rho.setHidden(True)
-        self.ui.le_itr.setHidden(True)
-        self.ui.label_itr.setHidden(True)
-
         # Hide temporarily unsupported "Overlay" functions
         self.ui.tabWidget.setTabText(
             self.ui.tabWidget.indexOf(self.ui.Display), "Visualization"
@@ -330,23 +236,6 @@ class MainWidget(QWidget):
         self.ui.le_val_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.setStyleSheet("QTabWidget::tab-bar {alignment: center;}")
         self.red_text = QColor(200, 0, 0, 255)
-
-        # Populate background correction GUI element
-        for i in range(3):
-            self.ui.cb_bg_method.removeItem(0)
-        bg_options = ["None", "Measured", "Estimated", "Measured + Estimated"]
-        tooltips = [
-            "No background correction.",
-            'Correct sample images with a background image acquired at an empty field of view, loaded from "Background Path".',
-            "Estimate sample background by fitting a 2D surface to the sample images. Works well when structures are spatially distributed across the field of view and a clear background is unavailable.",
-            'Apply "Measured" background correction and then "Estimated" background correction. Use to remove residual background after the sample retardance is corrected with measured background.',
-        ]
-        for i, bg_option in enumerate(bg_options):
-            wrapped_tooltip = "\n".join(textwrap.wrap(tooltips[i], width=70))
-            self.ui.cb_bg_method.addItem(bg_option)
-            self.ui.cb_bg_method.setItemData(
-                i, wrapped_tooltip, Qt.ToolTipRole
-            )
 
         # Populate calibration modes from docstring
         cal_docs = NumpyDocString(
@@ -640,75 +529,6 @@ class MainWidget(QWidget):
         else:
             le.setStyleSheet("")
             return True
-
-    def _check_requirements_for_acq(self, mode):
-        """
-        This function will loop through the parameters from a specific acquisition and make sure the user has
-        specified the necessary parameters.  If it finds an empty or missing parameters, it will set missing fields red
-        and stop the acquisition process.
-
-        Parameters
-        ----------
-        mode:           (str) 'birefringence' or 'phase' which denotes the type of acquisition
-
-        Returns
-        -------
-
-        """
-        # check if a QLIPP_Calibration object has been initialized
-        if mode != "phase" and not self.calib:
-            raise RuntimeError("Please run or load calibration first.")
-
-        # initialize the variable to keep track of the success of the requirement check
-        raise_error = False
-
-        # define the fields required for the specific acquisition modes.  Matches LineEdit object names
-        phase_required = {
-            "recon_wavelength",
-            "wavelength",
-            "mag",
-            "cond_na",
-            "obj_na",
-            "n_media",
-            "phase_strength",
-            "ps",
-            "zstep",
-        }
-
-        # Initalize all fields in their default style (not red).
-        for field in phase_required:
-            le = getattr(self.ui, f"le_{field}")
-            le.setStyleSheet("")
-
-        # Check generally required fields
-        if mode == "birefringence" or mode == "phase":
-            success = self._check_line_edit("save_dir")
-            if not success:
-                raise_error = True
-
-            # check background path if 'Measured' or 'Measured + Estimated' is selected
-            if (
-                self.bg_option == "Measured"
-                or self.bg_option == "Measured + Estimated"
-            ):
-                success = self._check_line_edit("bg_path")
-                if not success:
-                    raise_error = True
-
-        # Check phase specific fields
-        if mode == "phase":
-            for field in phase_required:
-                cont = self._check_line_edit(field)
-                if not cont:
-                    raise_error = True
-                else:
-                    continue
-
-        # Alert the user to check and enter in the missing parameters
-        if raise_error:
-            raise ValueError(
-                "Please enter in all of the parameters necessary for the acquisition"
-            )
 
     @Slot(bool)
     def toggle_mm_connection(self):
@@ -1194,15 +1014,6 @@ class MainWidget(QWidget):
         self.directory = result
         self.current_dir_path = result
         self.ui.le_directory.setText(result)
-        self.ui.le_save_dir.setText(result)
-        self.save_directory = result
-
-    @Slot(bool)
-    def browse_save_path(self):
-        result = self._open_file_dialog(self.current_save_path, "dir")
-        self.save_directory = result
-        self.current_save_path = result
-        self.ui.le_save_dir.setText(result)
 
     @Slot(bool)
     def browse_data_dir(self):
@@ -1221,8 +1032,6 @@ class MainWidget(QWidget):
         path = self.ui.le_directory.text()
         if os.path.exists(path):
             self.directory = path
-            self.save_directory = path
-            self.ui.le_save_dir.setText(path)
         else:
             self.ui.le_directory.setText("Path Does Not Exist")
 
@@ -1354,165 +1163,6 @@ class MainWidget(QWidget):
             logging.getLogger().setLevel(logging.INFO)
         else:
             logging.getLogger().setLevel(logging.DEBUG)
-
-    @Slot()
-    def enter_save_path(self):
-        path = self.ui.le_save_dir.text()
-        if os.path.exists(path):
-            self.save_directory = path
-            self.current_save_path = path
-        else:
-            self.ui.le_save_dir.setText("Path Does Not Exist")
-
-    @Slot()
-    def enter_save_name(self):
-        name = self.ui.le_data_save_name.text()
-        self.save_name = name
-
-    @Slot()
-    @Slot()
-    def enter_phase_denoiser(self):
-        state = self.ui.cb_phase_denoiser.currentIndex()
-        if state == 0:
-            self.phase_regularizer = "Tikhonov"
-            self.ui.label_itr.setHidden(True)
-            self.ui.label_phase_rho.setHidden(True)
-            self.ui.le_rho.setHidden(True)
-            self.ui.le_itr.setHidden(True)
-
-        elif state == 1:
-            self.phase_regularizer = "TV"
-            self.ui.label_itr.setHidden(False)
-            self.ui.label_phase_rho.setHidden(False)
-            self.ui.le_rho.setHidden(False)
-            self.ui.le_itr.setHidden(False)
-
-    @Slot()
-    def enter_acq_bg_path(self):
-        path = self.ui.le_bg_path.text()
-        if os.path.exists(path):
-            self.acq_bg_directory = path
-            self.current_bg_path = path
-        else:
-            self.ui.le_bg_path.setText("Path Does Not Exist")
-
-    @Slot(Path)
-    def handle_bg_path_update(self, value: Path):
-        """
-        Handles the update of the most recent background folderpath from
-        BackgroundWorker to display in the reconstruction texbox.
-
-        Parameters
-        ----------
-        value : str
-            most recent captured background folderpath
-        """
-        path = value
-        if path.exists():
-            self.acq_bg_directory = path
-            self.current_bg_path = path
-            self.ui.le_bg_path.setText(str(path))
-        else:
-            msg = """
-                Background acquisition was not successful.
-                Check latest background capture saving directory!
-                """
-            raise RuntimeError(msg)
-
-    @Slot(bool)
-    def browse_acq_bg_path(self):
-        result = self._open_file_dialog(self.current_bg_path, "dir")
-        self.acq_bg_directory = result
-        self.current_bg_path = result
-        self.ui.le_bg_path.setText(result)
-
-    @Slot()
-    def enter_bg_correction(self):
-        state = self.ui.cb_bg_method.currentIndex()
-        if state == 0:
-            self.ui.label_bg_path.setHidden(True)
-            self.ui.le_bg_path.setHidden(True)
-            self.ui.qbutton_browse_bg_path.setHidden(True)
-            self.bg_option = "None"
-        elif state == 1:
-            self.ui.label_bg_path.setHidden(False)
-            self.ui.le_bg_path.setHidden(False)
-            self.ui.qbutton_browse_bg_path.setHidden(False)
-            self.bg_option = "Measured"
-        elif state == 2:
-            self.ui.label_bg_path.setHidden(True)
-            self.ui.le_bg_path.setHidden(True)
-            self.ui.qbutton_browse_bg_path.setHidden(True)
-            self.bg_option = "Estimated"
-        elif state == 3:
-            self.ui.label_bg_path.setHidden(False)
-            self.ui.le_bg_path.setHidden(False)
-            self.ui.qbutton_browse_bg_path.setHidden(False)
-            self.bg_option = "Measured + Estimated"
-
-    @Slot()
-    def enter_gpu_id(self):
-        self.gpu_id = int(self.ui.le_gpu_id.text())
-
-    @Slot()
-    def enter_use_gpu(self):
-        state = self.ui.chb_use_gpu.checkState().value
-        if state == 2:
-            self.use_gpu = True
-        elif state == 0:
-            self.use_gpu = False
-
-    @Slot()
-    def enter_rotate_orientation(self):
-        state = self.ui.cb_rotate_orientation.checkState().value
-        if state == 2:
-            self.rotate_orientation = True
-        elif state == 0:
-            self.rotate_orientation = False
-
-    @Slot()
-    def enter_flip_orientation(self):
-        state = self.ui.cb_flip_orientation.checkState().value
-        if state == 2:
-            self.flip_orientation = True
-        elif state == 0:
-            self.flip_orientation = False
-
-    @Slot()
-    def enter_invert_phase_contrast(self):
-        state = self.ui.cb_invert_phase_contrast.checkState().value
-        if state == 2:
-            self.invert_phase_contrast = True
-        elif state == 0:
-            self.invert_phase_contrast = False
-
-    @Slot()
-    def enter_recon_wavelength(self):
-        self.recon_wavelength = int(self.ui.le_recon_wavelength.text())
-
-    @Slot()
-    def enter_obj_na(self):
-        self.obj_na = float(self.ui.le_obj_na.text())
-
-    @Slot()
-    def enter_cond_na(self):
-        self.cond_na = float(self.ui.le_cond_na.text())
-
-    @Slot()
-    def enter_mag(self):
-        self.mag = float(self.ui.le_mag.text())
-
-    @Slot()
-    def enter_ps(self):
-        self.ps = float(self.ui.le_ps.text())
-
-    @Slot()
-    def enter_n_media(self):
-        self.n_media = float(self.ui.le_n_media.text())
-
-    @Slot()
-    def enter_pad_z(self):
-        self.pad_z = int(self.ui.le_pad_z.text())
 
     @Slot()
     def enter_pause_updates(self):
@@ -1866,9 +1516,6 @@ class MainWidget(QWidget):
         self.worker.errored.connect(self._handle_error)
         self.ui.qbutton_stop_calib.clicked.connect(self.worker.quit)
         self.worker.aborted.connect(self._handle_calib_abort)
-
-        # Connect to BG Correction Path
-        self.worker.bg_path_update_emitter.connect(self.handle_bg_path_update)
 
         # Start Capture Background Thread
         self.worker.start()
