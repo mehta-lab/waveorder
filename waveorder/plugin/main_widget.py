@@ -1188,42 +1188,6 @@ class MainWidget(QWidget):
     def handle_reconstruction_store_update(self, value):
         self.reconstruction_data_path = value
 
-    # This seems to be unused
-    # @Slot(tuple)
-    # def handle_reconstruction_dim_update(self, value):
-    #     p, t, c = value
-    #     layer_name = self.worker.manager.config.data_save_name
-
-    #     if p == 0 and t == 0 and c == 0:
-    #         self.reconstruction_data = WaveorderReader(
-    #             self.reconstruction_data_path, "zarr"
-    #         )
-    #         self.viewer.add_image(
-    #             self.reconstruction_data.get_zarr(p),
-    #             name=layer_name + f"_Pos_{p:03d}",
-    #         )
-
-    #         self.viewer.dims.set_axis_label(0, "T")
-    #         self.viewer.dims.set_axis_label(1, "C")
-    #         self.viewer.dims.set_axis_label(2, "Z")
-
-    #     # Add each new position as a new layer in napari
-    #     name = layer_name + f"_Pos_{p:03d}"
-    #     if name not in self.viewer.layers:
-    #         self.reconstruction_data = WaveorderReader(
-    #             self.reconstruction_data_path, "zarr"
-    #         )
-    #         self.viewer.add_image(
-    #             self.reconstruction_data.get_zarr(p), name=name
-    #         )
-
-    #     # update the napari dimension slider position if the user hasn't specified to pause updates
-    #     if not self.pause_updates:
-    #         self.viewer.dims.set_current_step(0, t)
-    #         self.viewer.dims.set_current_step(1, c)
-
-    #     self.last_p = p
-
     @Slot(bool)
     def browse_dir_path(self):
         result = self._open_file_dialog(self.current_dir_path, "dir")
