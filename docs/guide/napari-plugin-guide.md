@@ -85,81 +85,6 @@ It is normal to see background retardance and orientation. We will use these bac
 ### Advanced Tab
 The advanced tab gives the user a log output which can be useful for debugging purposes. There is a log level “debugging” which serves as a verbose output. Look here for any hints as to what may have gone wrong during calibration or acquisition.
 
-## Acquisition / Reconstruction Tab
-This acquisition tab is designed to acquire and reconstruct single volumes of both phase and birefringence measurements to allow the user to test their calibration and background. We recommend this tab for quick testing and the Micro-Manager MDA acquisition for high-throughput data collection.
-
-### Acquire Buttons
-![](../_static/images/acquire_buttons.png)
-
-The **Retardance + Orientation**, **Phase From BF**, and **Retardance + Orientation + Phase** buttons set off Micro-Manager acquisitions that use the upcoming acquisition settings. After the acquisition is complete, these routines will set off `waveorder` reconstructions that estimate the named parameters.
-
-The **STOP** button will end the acquisition as soon as possible, though Micro-Manager acquisitions cannot always be interrupted.
-
-### Acquisition Settings
-![](../_static/images/acquisition_settings.png)
-
-The **Acquisition Mode** sets the target dimensions for the reconstruction. Perhaps surprisingly, all 2D reconstructions require 3D data except for **Retardance + Orientation** in **2D Acquisition Mode**. The following table summarizes the data that will be acquired when an acquisition button is pressed in **2D** and **3D** acquisition modes:
-
-| **Acquisition** \ Acquisition Mode | 2D mode | 3D mode |
-| :--- | :--- | :--- |
-| **Retardance + Orientation** | CYX data | CZYX data |
-| **Phase From BF** | ZYX data | ZYX data |
-| **Retardance + Orientation + Phase** | CZYX data | CZYX data |
-
-Unless a **Retardance + Orientation** reconstruction in **2D Acquisition Mode** is requested, `waveorder` uses Micro-Manager's z-stage to acquire 3D data. **Z Start**, **Z End**, and **Z Step** are stage settings for acquiring an image volume, relative to the current position of the stage. Values are in the stage's default units, typically in micrometers.
-
-For example, to image a 20 um thick cell the user would focus in the middle of the cell then choose
-
-* **Z Start** = -12
-* **Z End** = 12
-* **Z Step** =  0.25
-
-For phase reconstruction, the stack should have about two depths-of-focus above and below the edges of the sample because the reconstruction algorithm uses defocus information to more accurately reconstruct phase.
-
-### General Reconstruction Settings
-![](../_static/images/general_reconstruction_settings.png)
-
-The **Save Directory** and **Save Name** are where the acquired data (`<save_dir>/<save_name>_snap_<n>/raw_data.zarr`) and reconstructions (`<save_dir>/<save_name>_snap_<n>/reconstruction.zarr`) will be saved.
-
-The **Background Correction** menu has several options (each with mouseover explanations):
-* **None**: No background correction is performed.
-* **Measured**: Corrects sample images with a background image acquired at an empty field of view, loaded from **Background Path**, by default the most recent background acquisition.
-* **Estimated**: Estimates the sample background by fitting a 2D surface to the sample images. Works well when structures are spatially distributed across the field of view and a clear background is unavailable.
-* **Measured + Estimated**: Applies a **Measured** background correction then an **Estimated** background correction. Use to remove residual background after the sample retardance is corrected with measured background.
-
-The remaining parameters are used by the reconstructions:
-
-* **GPU ID**: Not implemented
-* **Wavelength (nm)**: illumination wavelength
-* **Objective NA**: numerical aperture of the objective, typically found next to magnification
-* **Condenser NA**: numerical aperture of the condenser
-* **Camera Pixel Size (um)**: pixel size of the camera in micrometers (e.g. 6.5 μm)
-* **RI of Obj. Media**: refractive index of the objective media, typical values are 1.0 (air), 1.3 (water), 1.473 (glycerol), or 1.512 (oil)
-* **Magnification**: magnification of the objective
-* **Rotate Orientation (90 deg)**: rotates "Orientation" reconstructions by +90 degrees clockwise and saves the result, most useful when a known-orientation sample is available
-* **Flip Orientation**: flips "Orientation" reconstructions about napari's horizontal axis before saving the result
-* **Invert Phase Contrast**: inverts the phase reconstruction's contrast by flipping the positive and negative directions of the stage during the reconstruction, and saves the result
-
-### Phase Reconstruction Settings
-![](../_static/images/phase_reconstruction_settings.png)
-
-These parameters are used only by phase reconstructions
-
-* **Z Padding**: The number of slices to pad on either end of the stack, necessary if the sample is not fully out of focus on either end of the stack
-* **Regularizer**: Choose "Tikhonov", the "TV" regularizer is not implemented
-* **Strength**: The Tikhonov regularization strength, too small/large will result in reconstructions that are too noisy/smooth
-
-The acquired data will then be displayed in napari layers. Note that phase reconstruction is more computationally expensive and may take several minutes depending on your system.
-
-Examples of acquiring 2D birefringence data (kidney tissue) with this snap method are below:
-
-![](../_static/images/acq_finished.png)
-
-### Recreating reconstructions
-`waveorder`'s GUI acquires data from Micro-Manager, reads the GUI to generate a configuration file, then uses a CLI to reconstruct the acquired data with the configuration file, which makes all reconstructions exactly reproducible via a CLI. See the terminal that started napari for a log of the exact CLI commands that will reproduce the results in the napari window.
-
-See the [reconstruction guide](reconstruction-guide.md) for CLI usage instructions.
-
 ## Reconstruction Tab
 The **Reconstruction** tab is designed to reconstruct `birefriengence, phase, birefrignence with phase, and flurescenece` datasets that have been either acquired or coverted to `.zarr` store as well as acquisitions that are in progress.
 
@@ -189,6 +114,11 @@ Once the **RUN** button is triggered, the reconstruction will proceed based on t
 The `Reconstruction Queue` section will display the progress of the reconstruction in the form of text output. Once a reconstruction finishes the queue will self clear. Only in the case of any issues or error that are encountered the entry will remain.
 
 Once the reconstruction processing finishes, based on the option `Show after Reconstruction` the reconstructed images will show up in the napari viewer.
+
+### Recreating reconstructions
+`waveorder`'s GUI acquires data from Micro-Manager, reads the GUI to generate a configuration file, then uses a CLI to reconstruct the acquired data with the configuration file, which makes all reconstructions exactly reproducible via a CLI. See the terminal that started napari for a log of the exact CLI commands that will reproduce the results in the napari window.
+
+See the [reconstruction guide](reconstruction-guide.md) for CLI usage instructions.
 
 ## Visualizations
 When an **Orientation*** layer appears at the top of the layers list, `waveorder` will automatically color it with an HSV color map that indicates the orientation.
