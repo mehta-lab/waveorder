@@ -35,13 +35,6 @@ try:
 except:
     pass
 
-try:
-    from waveorder.acq.acquisition_workers import (
-        BFAcquisitionWorker,
-        PolarizationAcquisitionWorker,
-    )
-except:
-    pass
 from waveorder.calib import Calibration
 from waveorder.calib.Calibration import LC_DEVICE_NAME, QLIPP_Calibration
 from waveorder.calib.calibration_workers import (
@@ -71,25 +64,6 @@ class MainWidget(QWidget):
 
     # Initialize class attributes
     disabled_button_style = "border: 1px solid rgb(65,72,81);"
-    bf_keywords = [
-        "bf",
-        "brightfield",
-        "bright",
-        "labelfree",
-        "label-free",
-        "lf",
-        "label",
-        "phase",
-        "ph",
-    ]
-    no_bf_msg = "\n".join(
-        textwrap.wrap(
-            f"No brightfield channel found. If you would like to acquire phase from brightfield,"
-            " please restart waveorder after adding a new channel to Micro-Manager with one of the"
-            " following case-insensitive keywords: " + ", ".join(bf_keywords),
-            width=70,
-        )
-    )
 
     def __init__(self, napari_viewer: Viewer):
         super().__init__()
@@ -107,9 +81,6 @@ class MainWidget(QWidget):
 
         # Override initial tab focus
         self.ui.tabWidget.setCurrentIndex(0)
-
-        # Set attributes need for enabling/disabling buttons
-        self.bf_channel_found = False
 
         # Disable buttons until connected to MM
         self._set_buttons_enabled(False)
@@ -171,18 +142,6 @@ class MainWidget(QWidget):
         self.ui.le_save_dir.setText(str(Path.cwd()))
         self.ui.le_data_save_name.editingFinished.connect(self.enter_save_name)
 
-        self.ui.le_zstart.editingFinished.connect(self.enter_zstart)
-        self.ui.le_zstart.setText("-10")
-        self.enter_zstart()
-
-        self.ui.le_zend.editingFinished.connect(self.enter_zend)
-        self.ui.le_zend.setText("10")
-        self.enter_zend()
-
-        self.ui.le_zstep.editingFinished.connect(self.enter_zstep)
-        self.ui.le_zstep.setText("1")
-        self.enter_zstep()
-
         self.ui.chb_use_gpu.stateChanged[int].connect(self.enter_use_gpu)
         self.ui.le_gpu_id.editingFinished.connect(self.enter_gpu_id)
 
@@ -224,9 +183,6 @@ class MainWidget(QWidget):
         self.enter_n_media()
 
         self.ui.le_pad_z.editingFinished.connect(self.enter_pad_z)
-        self.ui.cb_acq_mode.currentIndexChanged[int].connect(
-            self.enter_acq_mode
-        )
 
         self.ui.cb_bg_method.currentIndexChanged[int].connect(
             self.enter_bg_correction
@@ -235,14 +191,6 @@ class MainWidget(QWidget):
         self.ui.le_bg_path.editingFinished.connect(self.enter_acq_bg_path)
         self.ui.qbutton_browse_bg_path.clicked[bool].connect(
             self.browse_acq_bg_path
-        )
-        self.ui.qbutton_acq_ret_ori.clicked[bool].connect(self.acq_ret_ori)
-        self.ui.qbutton_acq_phase_from_bf.clicked[bool].connect(
-            self.acq_phase_from_bf
-        )
-
-        self.ui.qbutton_acq_ret_ori_phase.clicked[bool].connect(
-            self.acq_ret_ori_phase
         )
 
         # hook to render overlay
@@ -296,7 +244,6 @@ class MainWidget(QWidget):
         self.save_directory = str(Path.cwd())
         self.save_name = None
         self.bg_option = "None"
-        self.acq_mode = "2D"
         self.gpu_id = 0
         self.use_gpu = False
         self.rotate_orientation = False
@@ -413,15 +360,6 @@ class MainWidget(QWidget):
             self.ui.cb_calib_mode.setItemData(
                 i, wrapped_tooltip, Qt.ToolTipRole
             )
-
-        # Populate acquisition mode tooltips
-        acq_tooltips = [
-            "Acquires data to estimate parameters in a 2D plane. For birefringence acquisitions, this mode will acquire 2D data. For phase acquisitions, this mode will acquire 3D data.",
-            "Acquires 3D data to estimate parameters in a 3D volume.",
-        ]
-        for i, tooltip in enumerate(acq_tooltips):
-            wrapped_tooltip = "\n".join(textwrap.wrap(tooltip, width=70))
-            self.ui.cb_acq_mode.setItemData(i, wrapped_tooltip, Qt.ToolTipRole)
 
         # make sure the top says waveorder and not 'Form'
         self.ui.tabWidget.parent().setObjectName("waveorder")
@@ -603,9 +541,6 @@ class MainWidget(QWidget):
             self.ui.qbutton_calibrate,
             self.ui.qbutton_capture_bg,
             self.ui.qbutton_calc_extinction,
-            self.ui.qbutton_acq_ret_ori,
-            self.ui.qbutton_acq_phase_from_bf,
-            self.ui.qbutton_acq_ret_ori_phase,
             self.ui.qbutton_load_calib,
             self.ui.qbutton_create_overlay,
         ]
@@ -620,13 +555,6 @@ class MainWidget(QWidget):
                     "Action temporarily disabled. Connect to MM or wait for acquisition to finish."
                 )
                 action_button.setStyleSheet(self.disabled_button_style)
-
-        if not self.bf_channel_found:
-            self.ui.qbutton_acq_phase_from_bf.setEnabled(False)
-            self.ui.qbutton_acq_phase_from_bf.setStyleSheet(
-                self.disabled_button_style
-            )
-            self.ui.qbutton_acq_phase_from_bf.setToolTip(self.no_bf_msg)
 
     def _enable_buttons(self):
         self._set_buttons_enabled(True)
@@ -905,17 +833,6 @@ class MainWidget(QWidget):
                     config_group_found = True
                 self.ui.cb_config_group.addItem(group)
 
-            # Populate the acquisition "BF channel" list with presets that contain any of these keywords
-            for ch in config_list:
-                if any(
-                    [
-                        keyword.lower() in ch.lower()
-                        for keyword in self.bf_keywords
-                    ]
-                ):
-                    self.ui.cb_acq_channel.addItem(ch)
-                    self.bf_channel_found = True
-
         logging.debug("Checked configs.")
         if not config_group_found:
             msg = (
@@ -926,18 +843,6 @@ class MainWidget(QWidget):
                 "border: 1px solid rgb(200,0,0);"
             )
             raise KeyError(msg)
-
-        if not self.bf_channel_found:
-            try:
-                self.ui.qbutton_acq_phase_from_bf.disconnect()
-            except Exception as exc:
-                print(exc.args)
-                logging.debug(exc.args)
-            self.ui.qbutton_acq_phase_from_bf.setStyleSheet(
-                self.disabled_button_style
-            )
-            self.ui.qbutton_acq_phase_from_bf.setToolTip(self.no_bf_msg)
-            self.ui.cb_acq_channel.setToolTip(self.no_bf_msg)
 
         # set startup LC control mode
         logging.debug("Setting startup LC control mode...")
@@ -1234,7 +1139,12 @@ class MainWidget(QWidget):
     @Slot(tuple)
     def handle_phase_image_update(self, value):
         phase, scale = value
-        name = "Phase2D" if self.acq_mode == "2D" else "Phase3D"
+        # Determine name based on data dimensionality
+        name = (
+            "Phase2D"
+            if phase.ndim == 2 or (phase.ndim > 2 and phase.shape[0] == 1)
+            else "Phase3D"
+        )
 
         # Add new layer if none exists, otherwise update layer data
         self._add_or_update_image_layer(phase, name, scale=scale)
@@ -1496,25 +1406,6 @@ class MainWidget(QWidget):
         self.save_name = name
 
     @Slot()
-    def enter_zstart(self):
-        self.z_start = float(self.ui.le_zstart.text())
-
-    @Slot()
-    def enter_zend(self):
-        self.z_end = float(self.ui.le_zend.text())
-
-    @Slot()
-    def enter_zstep(self):
-        self.z_step = float(self.ui.le_zstep.text())
-
-    @Slot()
-    def enter_acq_mode(self):
-        state = self.ui.cb_acq_mode.currentIndex()
-        if state == 0:
-            self.acq_mode = "2D"
-        elif state == 1:
-            self.acq_mode = "3D"
-
     @Slot()
     def enter_phase_denoiser(self):
         state = self.ui.cb_phase_denoiser.currentIndex()
@@ -2016,79 +1907,6 @@ class MainWidget(QWidget):
         self.worker.bg_path_update_emitter.connect(self.handle_bg_path_update)
 
         # Start Capture Background Thread
-        self.worker.start()
-
-    @Slot(bool)
-    def acq_ret_ori(self):
-        """
-        Wrapper function to acquire birefringence stack/image and plot in napari
-        Returns
-        -------
-
-        """
-
-        self._check_requirements_for_acq("birefringence")
-
-        # Init Worker and thread
-        self.worker = PolarizationAcquisitionWorker(
-            self, self.calib, "birefringence"
-        )
-
-        # Connect Handlers
-        self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
-        self.worker.started.connect(self._disable_buttons)
-        self.worker.finished.connect(self._enable_buttons)
-        self.worker.errored.connect(self._handle_acq_error)
-
-        # Start Thread
-        self.worker.start()
-
-    @Slot(bool)
-    def acq_phase_from_bf(self):
-        """
-        Wrapper function to acquire phase stack and plot in napari
-        """
-
-        self._check_requirements_for_acq("phase")
-
-        # Init worker and thread
-        self.worker = BFAcquisitionWorker(self)
-
-        # Connect Handlers
-        self.worker.phase_image_emitter.connect(self.handle_phase_image_update)
-        self.worker.phase_reconstructor_emitter.connect(
-            self.handle_qlipp_reconstructor_update
-        )
-        self.worker.started.connect(self._disable_buttons)
-        self.worker.finished.connect(self._enable_buttons)
-        self.worker.errored.connect(self._handle_acq_error)
-
-        # Start thread
-        self.worker.start()
-
-    @Slot(bool)
-    def acq_ret_ori_phase(self):
-        """
-        Wrapper function to acquire both birefringence and phase stack and plot in napari
-        """
-
-        self._check_requirements_for_acq("phase")
-
-        # Init worker and thread
-        self.worker = PolarizationAcquisitionWorker(self, self.calib, "all")
-
-        # connect handlers
-        self.worker.phase_image_emitter.connect(self.handle_phase_image_update)
-        self.worker.phase_reconstructor_emitter.connect(
-            self.handle_qlipp_reconstructor_update
-        )
-        self.worker.bire_image_emitter.connect(self.handle_bire_image_update)
-        self.worker.started.connect(self._disable_buttons)
-        self.worker.finished.connect(self._enable_buttons)
-        self.worker.errored.connect(self._handle_acq_error)
-        self.ui.qbutton_stop_acq.clicked.connect(self.worker.quit)
-
-        # Start Thread
         self.worker.start()
 
     @Slot(bool)
