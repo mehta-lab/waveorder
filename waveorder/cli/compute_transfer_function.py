@@ -331,6 +331,7 @@ def compute_transfer_function_cli(
     input_dataset = open_ome_zarr(
         input_position_dirpath, layout="fov", mode="r"
     )
+    input_version = input_dataset.version
     zyx_shape = input_dataset.data.shape[
         2:
     ]  # only loads a single position "0"
@@ -377,6 +378,7 @@ def compute_transfer_function_cli(
         layout="fov",
         mode="w",
         channel_names=num_channels * ["None"],
+        version=input_version,
     )
 
     # Pass settings to appropriate calculate_transfer_function and save
