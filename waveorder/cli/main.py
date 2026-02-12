@@ -6,7 +6,6 @@ from waveorder.cli.apply_inverse_transfer_function import (
 from waveorder.cli.compute_transfer_function import (
     _compute_transfer_function_cli,
 )
-from waveorder.cli.download import _download_examples_cli
 from waveorder.cli.reconstruct import _reconstruct_cli
 from waveorder.cli.simulate import _simulate_cli
 from waveorder.cli.view import _view_cli
@@ -91,7 +90,6 @@ cli.add_command(
 cli.add_command(_view_cli, "view")
 if _interactive_cli is not None:
     cli.add_command(_interactive_cli, "interactive")
-cli.add_command(_download_examples_cli, "download-examples")
 
 # Display order: (command_name, indent)
 cli._display_order = [
@@ -101,13 +99,11 @@ cli._display_order = [
     ("view", 0),
     ("interactive", 0),
     ("simulate", 0),
-    ("download-examples", 0),
 ]
 
 # Aliases
 cli.add_alias("rec", "reconstruct")
 cli.add_alias("sim", "simulate")
-cli.add_alias("dle", "download-examples")
 cli.add_alias("compute-tf", "compute-transfer-function")
 cli.add_alias("apply-inv-tf", "apply-inverse-transfer-function")
 if _interactive_cli is not None:

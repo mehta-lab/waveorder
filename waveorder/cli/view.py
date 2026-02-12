@@ -96,7 +96,6 @@ def _view_cli(paths):
     \b
     >> wo view ./input.zarr ./reconstruction.zarr
     >> wo view ./transfer_function.zarr
-    >> wo download-examples | wo view
     """
     import sys
 
