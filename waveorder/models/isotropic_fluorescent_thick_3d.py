@@ -329,3 +329,74 @@ def apply_inverse_transfer_function(
         f_real = f_real[z_padding:-z_padding]
 
     return f_real
+
+
+def reconstruct(
+    zyx_data: Tensor,
+    yx_pixel_size: float,
+    z_pixel_size: float,
+    wavelength_emission: float,
+    z_padding: int,
+    index_of_refraction_media: float,
+    numerical_aperture_detection: float,
+    confocal_pinhole_diameter: float | None = None,
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    regularization_strength: float = 1e-3,
+    TV_rho_strength: float = 1e-3,
+    TV_iterations: int = 10,
+) -> Tensor:
+    """Reconstruct 3D fluorescence density from a defocus stack.
+
+    Chains calculate_transfer_function and apply_inverse_transfer_function.
+
+    Parameters
+    ----------
+    zyx_data : Tensor
+        3D raw data, fluorescence defocus stack
+    yx_pixel_size : float
+        Pixel size in the transverse (Y, X) dimensions
+    z_pixel_size : float
+        Pixel size in the axial (Z) dimension
+    wavelength_emission : float
+        Emission wavelength
+    z_padding : int
+        Padding for axial dimension
+    index_of_refraction_media : float
+        Refractive index of the surrounding medium
+    numerical_aperture_detection : float
+        Detection numerical aperture
+    confocal_pinhole_diameter : float | None, optional
+        Confocal pinhole diameter, by default None (widefield)
+    reconstruction_algorithm : str, optional
+        "Tikhonov" or "TV", by default "Tikhonov"
+    regularization_strength : float, optional
+        Regularization parameter, by default 1e-3
+    TV_rho_strength : float, optional
+        TV-specific regularization parameter, by default 1e-3
+    TV_iterations : int, optional
+        TV-specific number of iterations, by default 10
+
+    Returns
+    -------
+    Tensor
+        zyx_fluorescence_density
+    """
+    optical_transfer_function = calculate_transfer_function(
+        zyx_data.shape,
+        yx_pixel_size,
+        z_pixel_size,
+        wavelength_emission,
+        z_padding,
+        index_of_refraction_media,
+        numerical_aperture_detection,
+        confocal_pinhole_diameter=confocal_pinhole_diameter,
+    )
+    return apply_inverse_transfer_function(
+        zyx_data,
+        optical_transfer_function,
+        z_padding,
+        reconstruction_algorithm=reconstruction_algorithm,
+        regularization_strength=regularization_strength,
+        TV_rho_strength=TV_rho_strength,
+        TV_iterations=TV_iterations,
+    )

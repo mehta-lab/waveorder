@@ -161,3 +161,53 @@ def apply_inverse_transfer_function(
 
     # Return (retardance, orientation, transmittance, depolarization)
     return adr_parameters[0], orientation, adr_parameters[2], adr_parameters[3]
+
+
+def reconstruct(
+    czyx_data: Tensor,
+    swing: float,
+    scheme: str,
+    cyx_no_sample_data: Optional[Tensor] = None,
+    remove_estimated_background: bool = False,
+    project_stokes_to_2d: bool = False,
+    flip_orientation: bool = False,
+    rotate_orientation: bool = False,
+) -> Tuple[Tensor, Tensor, Tensor, Tensor]:
+    """Reconstruct birefringence from polarization data.
+
+    Chains calculate_transfer_function and apply_inverse_transfer_function.
+
+    Parameters
+    ----------
+    czyx_data : Tensor
+        4D raw data (C, Z, Y, X), first dimension is polarization
+    swing : float
+        Swing of the polarization modulation
+    scheme : str
+        Polarization scheme (e.g. "5-State", "4-State")
+    cyx_no_sample_data : Tensor, optional
+        Background data for correction, by default None
+    remove_estimated_background : bool, optional
+        Estimate and remove background, by default False
+    project_stokes_to_2d : bool, optional
+        Project stokes to 2D, by default False
+    flip_orientation : bool, optional
+        Flip orientation about x axis, by default False
+    rotate_orientation : bool, optional
+        Add 90 degrees to orientation, by default False
+
+    Returns
+    -------
+    Tuple[Tensor, Tensor, Tensor, Tensor]
+        retardance, orientation, transmittance, depolarization
+    """
+    intensity_to_stokes_matrix = calculate_transfer_function(swing, scheme)
+    return apply_inverse_transfer_function(
+        czyx_data,
+        intensity_to_stokes_matrix,
+        cyx_no_sample_data=cyx_no_sample_data,
+        remove_estimated_background=remove_estimated_background,
+        project_stokes_to_2d=project_stokes_to_2d,
+        flip_orientation=flip_orientation,
+        rotate_orientation=rotate_orientation,
+    )

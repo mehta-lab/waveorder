@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 
 from waveorder import util
@@ -107,3 +108,21 @@ def test_apply_inverse_transfer_function():
     #    itr=10,
     # )
     # assert result_tv.shape == (10, 5, 5)
+
+
+def test_reconstruct():
+    zyx_shape = (10, 32, 32)
+    zyx_data = torch.rand(zyx_shape)
+
+    result = isotropic_fluorescent_thick_3d.reconstruct(
+        zyx_data,
+        yx_pixel_size=6.5 / 40,
+        z_pixel_size=0.5,
+        wavelength_emission=0.507,
+        z_padding=0,
+        index_of_refraction_media=1.3,
+        numerical_aperture_detection=1.2,
+    )
+
+    assert result.shape == zyx_shape
+    assert np.all(np.isfinite(result.numpy()))

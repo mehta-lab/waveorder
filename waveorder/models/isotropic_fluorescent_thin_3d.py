@@ -329,3 +329,67 @@ def apply_inverse_transfer_function(
         raise NotImplementedError("TV reconstruction is not implemented")
 
     return yx_fluorescence_density
+
+
+def reconstruct(
+    zyx_data: Tensor,
+    yx_pixel_size: float,
+    z_position_list: list,
+    wavelength_emission: float,
+    index_of_refraction_media: float,
+    numerical_aperture_detection: float,
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    regularization_strength: float = 1e-3,
+    TV_rho_strength: float = 1e-3,
+    TV_iterations: int = 10,
+) -> Tensor:
+    """Reconstruct 2D fluorescence density from a defocus stack.
+
+    Chains calculate_transfer_function, calculate_singular_system,
+    and apply_inverse_transfer_function.
+
+    Parameters
+    ----------
+    zyx_data : Tensor
+        3D raw data, fluorescence defocus stack
+    yx_pixel_size : float
+        Pixel size in the transverse (Y, X) dimensions
+    z_position_list : list
+        List of Z positions for defocus stack
+    wavelength_emission : float
+        Emission wavelength
+    index_of_refraction_media : float
+        Refractive index of the surrounding medium
+    numerical_aperture_detection : float
+        Detection numerical aperture
+    reconstruction_algorithm : str, optional
+        "Tikhonov" or "TV", by default "Tikhonov"
+    regularization_strength : float, optional
+        Regularization parameter, by default 1e-3
+    TV_rho_strength : float, optional
+        TV-specific regularization parameter, by default 1e-3
+    TV_iterations : int, optional
+        TV-specific number of iterations, by default 10
+
+    Returns
+    -------
+    Tensor
+        yx_fluorescence_density
+    """
+    fluorescent_tf = calculate_transfer_function(
+        zyx_data.shape[-2:],
+        yx_pixel_size,
+        z_position_list,
+        wavelength_emission,
+        index_of_refraction_media,
+        numerical_aperture_detection,
+    )
+    singular_system = calculate_singular_system(fluorescent_tf)
+    return apply_inverse_transfer_function(
+        zyx_data,
+        singular_system,
+        reconstruction_algorithm=reconstruction_algorithm,
+        regularization_strength=regularization_strength,
+        TV_rho_strength=TV_rho_strength,
+        TV_iterations=TV_iterations,
+    )

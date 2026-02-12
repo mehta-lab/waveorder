@@ -345,3 +345,83 @@ def apply_inverse_transfer_function(
         raise NotImplementedError
 
     return absorption_yx, phase_yx
+
+
+def reconstruct(
+    zyx_data: Tensor,
+    yx_pixel_size: float,
+    z_position_list: list,
+    wavelength_illumination: float,
+    index_of_refraction_media: float,
+    numerical_aperture_illumination: float,
+    numerical_aperture_detection: float,
+    invert_phase_contrast: bool = False,
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    regularization_strength: float = 1e-3,
+    reg_p: float = 1e-6,
+    TV_rho_strength: float = 1e-3,
+    TV_iterations: int = 10,
+    bg_filter: bool = False,
+) -> Tuple[Tensor, Tensor]:
+    """Reconstruct 2D absorption and phase from a brightfield defocus stack.
+
+    Chains calculate_transfer_function, calculate_singular_system,
+    and apply_inverse_transfer_function.
+
+    Parameters
+    ----------
+    zyx_data : Tensor
+        3D raw data, label-free defocus stack
+    yx_pixel_size : float
+        Pixel size in the transverse (Y, X) dimensions
+    z_position_list : list
+        List of Z positions for defocus stack
+    wavelength_illumination : float
+        Wavelength of illumination light
+    index_of_refraction_media : float
+        Refractive index of the surrounding medium
+    numerical_aperture_illumination : float
+        Illumination numerical aperture
+    numerical_aperture_detection : float
+        Detection numerical aperture
+    invert_phase_contrast : bool, optional
+        Invert phase contrast, by default False
+    reconstruction_algorithm : str, optional
+        "Tikhonov" or "TV", by default "Tikhonov"
+    regularization_strength : float, optional
+        Regularization parameter, by default 1e-3
+    reg_p : float, optional
+        TV-specific phase regularization parameter, by default 1e-6
+    TV_rho_strength : float, optional
+        TV-specific regularization parameter, by default 1e-3
+    TV_iterations : int, optional
+        TV-specific number of iterations, by default 10
+    bg_filter : bool, optional
+        Slow-varying 2D background normalization, by default False
+
+    Returns
+    -------
+    Tuple[Tensor, Tensor]
+        yx_absorption, yx_phase
+    """
+    absorption_tf, phase_tf = calculate_transfer_function(
+        zyx_data.shape[-2:],
+        yx_pixel_size,
+        z_position_list,
+        wavelength_illumination,
+        index_of_refraction_media,
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+        invert_phase_contrast=invert_phase_contrast,
+    )
+    singular_system = calculate_singular_system(absorption_tf, phase_tf)
+    return apply_inverse_transfer_function(
+        zyx_data,
+        singular_system,
+        reconstruction_algorithm=reconstruction_algorithm,
+        regularization_strength=regularization_strength,
+        reg_p=reg_p,
+        TV_rho_strength=TV_rho_strength,
+        TV_iterations=TV_iterations,
+        bg_filter=bg_filter,
+    )

@@ -14,8 +14,8 @@ from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 Phase Thick 3D Model - Units and Conventions
 =============================================
 
-This module implements phase-from-defocus optical diffraction tomography (ODT) 
-for thick phase objects using the weak object transfer function (first Born 
+This module implements phase-from-defocus optical diffraction tomography (ODT)
+for thick phase objects using the weak object transfer function (first Born
 approximation).
 
 Units Convention
@@ -377,3 +377,83 @@ def apply_inverse_transfer_function(
         f_real = f_real[z_padding:-z_padding]
 
     return f_real
+
+
+def reconstruct(
+    zyx_data: Tensor,
+    yx_pixel_size: float,
+    z_pixel_size: float,
+    wavelength_illumination: float,
+    z_padding: int,
+    index_of_refraction_media: float,
+    numerical_aperture_illumination: float,
+    numerical_aperture_detection: float,
+    invert_phase_contrast: bool = False,
+    absorption_ratio: float = 0.0,
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    regularization_strength: float = 1e-3,
+    TV_rho_strength: float = 1e-3,
+    TV_iterations: int = 10,
+) -> Tensor:
+    """Reconstruct 3D phase from a brightfield defocus stack.
+
+    Chains calculate_transfer_function and apply_inverse_transfer_function.
+
+    Parameters
+    ----------
+    zyx_data : Tensor
+        3D raw data, label-free defocus stack
+    yx_pixel_size : float
+        Pixel size in the transverse (Y, X) dimensions
+    z_pixel_size : float
+        Pixel size in the axial (Z) dimension
+    wavelength_illumination : float
+        Wavelength of illumination light
+    z_padding : int
+        Padding for axial dimension
+    index_of_refraction_media : float
+        Refractive index of the surrounding medium
+    numerical_aperture_illumination : float
+        Illumination numerical aperture
+    numerical_aperture_detection : float
+        Detection numerical aperture
+    invert_phase_contrast : bool, optional
+        Invert phase contrast, by default False
+    absorption_ratio : float, optional
+        Absorption-to-phase ratio, by default 0.0
+    reconstruction_algorithm : str, optional
+        "Tikhonov" or "TV", by default "Tikhonov"
+    regularization_strength : float, optional
+        Regularization parameter, by default 1e-3
+    TV_rho_strength : float, optional
+        TV-specific regularization parameter, by default 1e-3
+    TV_iterations : int, optional
+        TV-specific number of iterations, by default 10
+
+    Returns
+    -------
+    Tensor
+        zyx_phase in cycles per voxel
+    """
+    real_tf, imag_tf = calculate_transfer_function(
+        zyx_data.shape,
+        yx_pixel_size,
+        z_pixel_size,
+        wavelength_illumination,
+        z_padding,
+        index_of_refraction_media,
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+        invert_phase_contrast=invert_phase_contrast,
+    )
+    return apply_inverse_transfer_function(
+        zyx_data,
+        torch.tensor(real_tf),
+        torch.tensor(imag_tf),
+        z_padding,
+        absorption_ratio=absorption_ratio,
+        reconstruction_algorithm=reconstruction_algorithm,
+        regularization_strength=regularization_strength,
+        TV_rho_strength=TV_rho_strength,
+        TV_iterations=TV_iterations,
+    )
