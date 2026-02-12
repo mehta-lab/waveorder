@@ -1,4 +1,4 @@
-""" 
+"""
 2D QLIPP reconstruction
 ========================
 2D QLIPP reconstruction
@@ -60,9 +60,7 @@ setup = waveorder_reconstructor.waveorder_microscopy(
 
 S_image_recon = setup.Stokes_recon(I_meas)
 S_image_tm = setup.Stokes_transform(S_image_recon)
-Recon_para = setup.Polarization_recon(
-    S_image_tm
-)  # Without accounting for diffraction
+Recon_para = setup.Polarization_recon(S_image_tm)  # Without accounting for diffraction
 
 jupyter_visuals.plot_multicolumn(
     np.array(
@@ -93,9 +91,7 @@ plt.show()
 S1_stack = S_image_recon[1].copy() / S_image_recon[0].mean()
 S2_stack = S_image_recon[2].copy() / S_image_recon[0].mean()
 
-retardance, azimuth = setup.Birefringence_recon_2D(
-    S1_stack, S2_stack, method="Tikhonov", reg_br=1e-3
-)
+retardance, azimuth = setup.Birefringence_recon_2D(S1_stack, S2_stack, method="Tikhonov", reg_br=1e-3)
 
 jupyter_visuals.plot_multicolumn(
     np.array([retardance, azimuth]),

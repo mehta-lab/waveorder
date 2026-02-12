@@ -107,9 +107,7 @@ def create_empty_hcs_zarr(
         # Check if channel_names are already in the store, if not append them
         for channel_name in channel_names:
             # Read channel names directly from metadata to avoid race conditions
-            metadata_channel_names = [
-                channel.label for channel in position.metadata.omero.channels
-            ]
+            metadata_channel_names = [channel.label for channel in position.metadata.omero.channels]
             if channel_name not in metadata_channel_names:
                 position.append_channel(channel_name, resize_arrays=True)
 
@@ -146,9 +144,7 @@ def apply_inverse_to_zyx_and_save(
 
     # Check if all values are zeros or NaN
     if _check_nan_n_zeros(czyx_slice.values):
-        click.echo(
-            f"All values at t={t_idx} are zero or Nan, skipping reconstruction."
-        )
+        click.echo(f"All values at t={t_idx} are zero or Nan, skipping reconstruction.")
         return
 
     # Apply transformation (returns xr.DataArray CZYX)
@@ -183,9 +179,7 @@ def estimate_resources(shape, settings, num_processes):
     if settings.fluorescence is not None:
         gb_ram_per_cpu += input_memory * fourier_resource_multiplier
     ram_multiplier = 1
-    gb_ram_per_cpu = np.ceil(
-        np.max([1, ram_multiplier * gb_ram_per_cpu])
-    ).astype(int)
+    gb_ram_per_cpu = np.ceil(np.max([1, ram_multiplier * gb_ram_per_cpu])).astype(int)
     num_cpus = np.min([32, num_processes])
 
     return num_cpus, gb_ram_per_cpu

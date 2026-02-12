@@ -10,9 +10,7 @@ from waveorder.io import utils
 
 def test_reconstruction_settings():
     # Test defaults
-    s = settings.ReconstructionSettings(
-        birefringence=settings.BirefringenceSettings()
-    )
+    s = settings.ReconstructionSettings(birefringence=settings.BirefringenceSettings())
     assert len(s.input_channel_names) == 4
     assert s.birefringence.apply_inverse.background_path == ""
     assert s.phase == None
@@ -44,9 +42,7 @@ def test_reconstruction_settings():
 
     # Test typo
     with pytest.raises(ValidationError):
-        settings.ReconstructionSettings(
-            flurescence=settings.FluorescenceSettings()
-        )
+        settings.ReconstructionSettings(flurescence=settings.FluorescenceSettings())
 
 
 def test_biref_tf_settings():
@@ -60,14 +56,10 @@ def test_biref_tf_settings():
 
 
 def test_phase_tf_settings():
-    phase.TransferFunctionSettings(
-        index_of_refraction_media=1.0, numerical_aperture_detection=0.8
-    )
+    phase.TransferFunctionSettings(index_of_refraction_media=1.0, numerical_aperture_detection=0.8)
 
     with pytest.raises(ValidationError):
-        phase.TransferFunctionSettings(
-            index_of_refraction_media=1.0, numerical_aperture_detection=1.1
-        )
+        phase.TransferFunctionSettings(index_of_refraction_media=1.0, numerical_aperture_detection=1.1)
 
     # Inconsistent units
     with pytest.warns(UserWarning):
@@ -79,14 +71,10 @@ def test_phase_tf_settings():
 
 
 def test_fluor_tf_settings():
-    fluorescence.TransferFunctionSettings(
-        wavelength_emission=0.500, yx_pixel_size=0.2
-    )
+    fluorescence.TransferFunctionSettings(wavelength_emission=0.500, yx_pixel_size=0.2)
 
     with pytest.warns(UserWarning):
-        fluorescence.TransferFunctionSettings(
-            wavelength_emission=0.500, yx_pixel_size=2000
-        )
+        fluorescence.TransferFunctionSettings(wavelength_emission=0.500, yx_pixel_size=2000)
 
 
 def test_generate_example_settings():
@@ -94,12 +82,8 @@ def test_generate_example_settings():
     example_path = project_root / "docs" / "examples" / "cli" / "configs"
 
     # 2D configs override regularization_strength for better 2D defaults
-    phase_2d_apply_inverse = phase.ApplyInverseSettings(
-        regularization_strength=1e-2
-    )
-    fluor_2d_apply_inverse = fluorescence.ApplyInverseSettings(
-        regularization_strength=1e-2
-    )
+    phase_2d_apply_inverse = phase.ApplyInverseSettings(regularization_strength=1e-2)
+    fluor_2d_apply_inverse = fluorescence.ApplyInverseSettings(regularization_strength=1e-2)
 
     configs = {
         "birefringence_3d.yml": settings.ReconstructionSettings(
@@ -121,9 +105,7 @@ def test_generate_example_settings():
         "fluorescence_2d.yml": settings.ReconstructionSettings(
             input_channel_names=["GFP"],
             reconstruction_dimension=2,
-            fluorescence=fluorescence.Settings(
-                apply_inverse=fluor_2d_apply_inverse
-            ),
+            fluorescence=fluorescence.Settings(apply_inverse=fluor_2d_apply_inverse),
         ),
         "birefringence-and-phase_3d.yml": settings.ReconstructionSettings(
             birefringence=settings.BirefringenceSettings(),
@@ -134,7 +116,5 @@ def test_generate_example_settings():
     for file_name, settings_obj in configs.items():
         config_path = example_path / file_name
         utils.model_to_commented_yaml(settings_obj, config_path)
-        settings_roundtrip = utils.yaml_to_model(
-            config_path, settings.ReconstructionSettings
-        )
+        settings_roundtrip = utils.yaml_to_model(config_path, settings.ReconstructionSettings)
         assert settings_obj.model_dump() == settings_roundtrip.model_dump()

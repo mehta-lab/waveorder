@@ -12,8 +12,6 @@ from .optics import scattering_potential_tensor_to_3D_orientation_PN
 
 numbers = re.compile(r"(\d+)")
 
-import torch
-
 
 def pad_zyx_along_z(zyx_data, z_padding):
     """
@@ -57,9 +55,7 @@ def pad_zyx_along_z(zyx_data, z_padding):
         )
         if z_padding < zyx_data.shape[0]:
             zyx_padded[:z_padding] = torch.flip(zyx_data[:z_padding], dims=[0])
-            zyx_padded[-z_padding:] = torch.flip(
-                zyx_data[-z_padding:], dims=[0]
-            )
+            zyx_padded[-z_padding:] = torch.flip(zyx_data[-z_padding:], dims=[0])
         else:
             warning_msg = "Warning: z_padding is larger than the number of z-slices. Using zero padding instead of reflection padding (less effective)."
             zyx_padded = torch.nn.functional.pad(
@@ -120,9 +116,7 @@ def generate_star_target(yx_shape, blur_px=2, margin=60):
     # star = (1 + np.cos(40*theta))
     # star = np.pad(star[10:-10,10:-10],(10,),mode='constant')
     star = 1 + torch.cos(16 * theta)
-    star = torch.nn.functional.pad(
-        star[margin:-margin, margin:-margin], 4 * (margin,), mode="constant"
-    )
+    star = torch.nn.functional.pad(star[margin:-margin, margin:-margin], 4 * (margin,), mode="constant")
     star[star < 1] = 0
 
     # Filter to prevent aliasing
@@ -130,12 +124,7 @@ def generate_star_target(yx_shape, blur_px=2, margin=60):
     Gaussian = torch.exp(-(rho**2) / (2 * blur_px**2))
 
     star = torch.clip(
-        torch.real(
-            torch.fft.ifft2(
-                torch.fft.fft2(star)
-                * torch.fft.fft2(torch.fft.ifftshift(Gaussian))
-            )
-        ),
+        torch.real(torch.fft.ifft2(torch.fft.fft2(star) * torch.fft.fft2(torch.fft.ifftshift(Gaussian)))),
         min=0,
     )
     # star = np.maximum(0, np.real(ifft2(fft2(star) * fft2(ifftshift(Gaussian)))))*(2+np.sin(2*np.pi*(1/5)*rho))
@@ -203,9 +192,7 @@ def genStarTarget_3D(
 
     star = 1 + np.cos(16 * azimuth)
 
-    star = np.pad(
-        star[20:-20, 20:-20, 20:-20], ((20,), (20,), (20,)), mode="constant"
-    )
+    star = np.pad(star[20:-20, 20:-20, 20:-20], ((20,), (20,), (20,)), mode="constant")
     star[star < 1] = 0
     star[np.abs(inc_angle - np.pi / 2) > inc_upper_bound] = 0
     star[np.abs(inc_angle - np.pi / 2) < inc_upper_bound - inc_range] = 0
@@ -214,17 +201,13 @@ def genStarTarget_3D(
 
     Gaussian = np.exp(-(rho**2) / (2 * blur_size**2))
 
-    star = np.maximum(
-        0, np.real(ifftn(fftn(star) * fftn(ifftshift(Gaussian))))
-    )
+    star = np.maximum(0, np.real(ifftn(fftn(star) * fftn(ifftshift(Gaussian)))))
     star /= np.max(star)
 
     return star, azimuth, inc_angle
 
 
-def generate_sphere_target(
-    zyx_shape, yx_pixel_size, z_pixel_size, radius, blur_size=0.1
-):
+def generate_sphere_target(zyx_shape, yx_pixel_size, z_pixel_size, radius, blur_size=0.1):
     """
 
     generate 3D sphere target for simulation
@@ -278,12 +261,7 @@ def generate_sphere_target(
 
     sphere = np.maximum(
         0,
-        torch.real(
-            torch.fft.ifftn(
-                torch.fft.fftn(sphere)
-                * torch.fft.fftn(torch.fft.ifftshift(Gaussian))
-            )
-        ),
+        torch.real(torch.fft.ifftn(torch.fft.fftn(sphere) * torch.fft.fftn(torch.fft.ifftshift(Gaussian)))),
     )
     sphere /= torch.max(sphere)
 
@@ -710,9 +688,7 @@ def inten_normalization(img_stack, bg_filter=True):
 
     for i in range(Z):
         if bg_filter:
-            img_norm_stack[i] = img_stack[i] / uniform_filter(
-                img_stack[i], size=X // 2
-            )
+            img_norm_stack[i] = img_stack[i] / uniform_filter(img_stack[i], size=X // 2)
         else:
             img_norm_stack[i] = img_stack[i]
         img_norm_stack[i] /= torch.mean(img_norm_stack[i])
@@ -868,15 +844,11 @@ def dual_variable_admm_tv_deconv_2d(
     for i in range(itr):
         v_para = fft2(z_para - u_para)
         b_vec_new = [
-            b_vec[0]
-            + rho * (np.conj(Dx) * v_para[0] + np.conj(Dy) * v_para[1]),
-            b_vec[1]
-            + rho * (np.conj(Dx) * v_para[2] + np.conj(Dy) * v_para[3]),
+            b_vec[0] + rho * (np.conj(Dx) * v_para[0] + np.conj(Dy) * v_para[1]),
+            b_vec[1] + rho * (np.conj(Dx) * v_para[2] + np.conj(Dy) * v_para[3]),
         ]
 
-        mu_sample, phi_sample = dual_variable_tikhonov_deconvolution_2d(
-            AHA, b_vec_new, determinant=determinant
-        )
+        mu_sample, phi_sample = dual_variable_tikhonov_deconvolution_2d(AHA, b_vec_new, determinant=determinant)
 
         D_vec[0] = mu_sample - np.roll(mu_sample, -1, axis=1)
         D_vec[1] = mu_sample - np.roll(mu_sample, -1, axis=0)
@@ -949,9 +921,7 @@ def single_variable_tikhonov_deconvolution_3D(
 
     # a "named tuple" representing a point on the L curve
     # allows for dot notation to access attributes
-    Point_L_curve = namedtuple(
-        "Point_L_curve", "reg_x reg data_norm reg_norm f_real_f"
-    )
+    Point_L_curve = namedtuple("Point_L_curve", "reg_x reg data_norm reg_norm f_real_f")
 
     def menger_curvature(points):
         # x is data norm, y is reg norm
@@ -963,9 +933,7 @@ def single_variable_tikhonov_deconvolution_3D(
         d1 = ((x[2] - x[1]) ** 2 + (y[2] - y[1]) ** 2) ** (1 / 2)
         d2 = ((x[2] - x[0]) ** 2 + (y[2] - y[0]) ** 2) ** (1 / 2)
 
-        signed_area = 0.5 * (
-            (x[1] - x[2]) * (y[1] - y[0]) - (x[1] - x[0]) * (y[1] - y[2])
-        )
+        signed_area = 0.5 * ((x[1] - x[2]) * (y[1] - y[0]) - (x[1] - x[0]) * (y[1] - y[2]))
 
         return 4 * signed_area / (d0 * d1 * d2)
 
@@ -984,23 +952,15 @@ def single_variable_tikhonov_deconvolution_3D(
     # this function is the only place where new points are instantiated
     def eval_L_curve(reg_x, keep_f_real_f=False):
         f_real_f = compute_f_real_f(reg_x)
-        S0_est_stack_f = (
-            H_eff * f_real_f
-        )  # Ax (put estimate through forward model)
+        S0_est_stack_f = H_eff * f_real_f  # Ax (put estimate through forward model)
 
-        data_norm_eval = torch.log(
-            torch.linalg.norm(S0_est_stack_f - S0_stack_f) ** 2 / (Z * Y * X)
-        )
-        reg_norm_eval = torch.log(
-            torch.linalg.norm(f_real_f) ** 2 / (Z * Y * X)
-        )
+        data_norm_eval = torch.log(torch.linalg.norm(S0_est_stack_f - S0_stack_f) ** 2 / (Z * Y * X))
+        reg_norm_eval = torch.log(torch.linalg.norm(f_real_f) ** 2 / (Z * Y * X))
 
         if not keep_f_real_f:
             f_real_f = None
 
-        return Point_L_curve(
-            reg_x, 10**reg_x, data_norm_eval, reg_norm_eval, f_real_f
-        )
+        return Point_L_curve(reg_x, 10**reg_x, data_norm_eval, reg_norm_eval, f_real_f)
 
     # creates return value of the whole function
     # (scaled) phase = real part of inverse FT {scattering potential}
@@ -1014,13 +974,9 @@ def single_variable_tikhonov_deconvolution_3D(
 
     if autotune:
         # initialize golden section search
-        reg_x_cent = torch.log10(
-            reg_re
-        )  # reg_re becomes middle of search range
+        reg_x_cent = torch.log10(reg_re)  # reg_re becomes middle of search range
         reg_x = torch.zeros(4)
-        reg_x[0] = (
-            reg_x_cent - search_range_auto
-        )  # search range = reg_x_cent +/- search_range_auto
+        reg_x[0] = reg_x_cent - search_range_auto  # search range = reg_x_cent +/- search_range_auto
         reg_x[3] = reg_x_cent + search_range_auto
         reg_x[1] = calc_golden_x(reg_x[0], reg_x[3])
         reg_x[2] = reg_x[0] + (reg_x[3] - reg_x[1])
@@ -1060,9 +1016,7 @@ def single_variable_tikhonov_deconvolution_3D(
             # [a, b, c, d] --> [b, c, b+d-c, d]
             else:
                 last_opt = curr_pts[2]
-                new_reg_x = (
-                    curr_pts[1].reg_x + curr_pts[3].reg_x - curr_pts[2].reg_x
-                )
+                new_reg_x = curr_pts[1].reg_x + curr_pts[3].reg_x - curr_pts[2].reg_x
                 curr_pts[0] = curr_pts[1]
                 curr_pts[1] = curr_pts[2]
                 curr_pts[2] = eval_L_curve(new_reg_x)
@@ -1070,10 +1024,7 @@ def single_variable_tikhonov_deconvolution_3D(
             itr += 1
             search_range = curr_pts[3].reg_x - curr_pts[0].reg_x
             if verbose:
-                print(
-                    "Iteration: %d, deviation of the regularization interval: %.2e"
-                    % (itr, search_range)
-                )
+                print("Iteration: %d, deviation of the regularization interval: %.2e" % (itr, search_range))
 
         if verbose:
             print("Final regularization parameter chosen: %.2e" % last_opt.reg)
@@ -1081,13 +1032,9 @@ def single_variable_tikhonov_deconvolution_3D(
         # Return 3 solutions: the parameter chosen by the L-curve +/- epsilon
         # try to not keep intermediate values in memory
         f_real = []
-        f_real.append(
-            ifft_f_real(compute_f_real_f(last_opt.reg_x - epsilon_auto))
-        )
+        f_real.append(ifft_f_real(compute_f_real_f(last_opt.reg_x - epsilon_auto)))
         f_real.append(ifft_f_real(compute_f_real_f(last_opt.reg_x)))
-        f_real.append(
-            ifft_f_real(compute_f_real_f(last_opt.reg_x + epsilon_auto))
-        )
+        f_real.append(ifft_f_real(compute_f_real_f(last_opt.reg_x + epsilon_auto)))
 
         if output_lambda:
             return np.array(f_real), 10 ** (last_opt.reg_x)
@@ -1103,9 +1050,7 @@ def single_variable_tikhonov_deconvolution_3D(
 #     return f_real, opt_list # if wanted some kind of plotting option, could save all points visited
 
 
-def Dual_variable_Tikhonov_deconv_3D(
-    AHA, b_vec, determinant=None, use_gpu=False, gpu_id=0, move_cpu=True
-):
+def Dual_variable_Tikhonov_deconv_3D(AHA, b_vec, determinant=None, use_gpu=False, gpu_id=0, move_cpu=True):
     """
 
     3D Tikhonov deconvolution to solve for phase and absorption with weak object transfer function
@@ -1237,19 +1182,14 @@ def single_variable_admm_tv_deconvolution_3D(
         globals()["cp"] = __import__("cupy")
         cp.cuda.Device(gpu_id).use()
 
-        S0_stack_f = cp.fft.fftn(
-            cp.array(S0_stack.astype("float32")), axes=(0, 1, 2)
-        )
+        S0_stack_f = cp.fft.fftn(cp.array(S0_stack.astype("float32")), axes=(0, 1, 2))
         H_eff = cp.array(H_eff.astype("complex64"))
 
         Dx = cp.fft.fftn(cp.array(Dx), axes=(0, 1, 2))
         Dy = cp.fft.fftn(cp.array(Dy), axes=(0, 1, 2))
         Dz = cp.fft.fftn(cp.array(Dz), axes=(0, 1, 2))
 
-        rho_term = (
-            rho * (cp.conj(Dx) * Dx + cp.conj(Dy) * Dy + cp.conj(Dz) * Dz)
-            + reg_re
-        )
+        rho_term = rho * (cp.conj(Dx) * Dx + cp.conj(Dy) * Dy + cp.conj(Dz) * Dz) + reg_re
         AHA = cp.abs(H_eff) ** 2 + rho_term
         b_vec = S0_stack_f * cp.conj(H_eff)
 
@@ -1259,11 +1199,7 @@ def single_variable_admm_tv_deconvolution_3D(
 
         for i in range(itr):
             v_para = cp.fft.fftn(z_para - u_para, axes=(1, 2, 3))
-            b_vec_new = b_vec + rho * (
-                cp.conj(Dx) * v_para[0]
-                + cp.conj(Dy) * v_para[1]
-                + cp.conj(Dz) * v_para[2]
-            )
+            b_vec_new = b_vec + rho * (cp.conj(Dx) * v_para[0] + cp.conj(Dy) * v_para[1] + cp.conj(Dz) * v_para[2])
 
             f_real = cp.real(cp.fft.ifftn(b_vec_new / AHA, axes=(0, 1, 2)))
 
@@ -1273,9 +1209,7 @@ def single_variable_admm_tv_deconvolution_3D(
 
             z_para = D_vec + u_para
 
-            z_para = softTreshold(
-                z_para, lambda_re / rho, use_gpu=True, gpu_id=gpu_id
-            )
+            z_para = softTreshold(z_para, lambda_re / rho, use_gpu=True, gpu_id=gpu_id)
 
             u_para += D_vec - z_para
 
@@ -1292,10 +1226,7 @@ def single_variable_admm_tv_deconvolution_3D(
         Dy = fftn(Dy, axes=(0, 1, 2))
         Dz = fftn(Dz, axes=(0, 1, 2))
 
-        rho_term = (
-            rho * (np.conj(Dx) * Dx + np.conj(Dy) * Dy + np.conj(Dz) * Dz)
-            + reg_re
-        )
+        rho_term = rho * (np.conj(Dx) * Dx + np.conj(Dy) * Dy + np.conj(Dz) * Dz) + reg_re
         AHA = np.abs(H_eff) ** 2 + rho_term
         b_vec = S0_stack_f * np.conj(H_eff)
 
@@ -1305,11 +1236,7 @@ def single_variable_admm_tv_deconvolution_3D(
 
         for i in range(itr):
             v_para = fftn(z_para - u_para, axes=(1, 2, 3))
-            b_vec_new = b_vec + rho * (
-                np.conj(Dx) * v_para[0]
-                + np.conj(Dy) * v_para[1]
-                + np.conj(Dz) * v_para[2]
-            )
+            b_vec_new = b_vec + rho * (np.conj(Dx) * v_para[0] + np.conj(Dy) * v_para[1] + np.conj(Dz) * v_para[2])
 
             f_real = np.real(ifftn(b_vec_new / AHA, axes=(0, 1, 2)))
 
@@ -1411,9 +1338,7 @@ def Dual_variable_ADMM_TV_deconv_3D(
         Dy = cp.fft.fftn(cp.array(Dy))
         Dz = cp.fft.fftn(cp.array(Dz))
 
-        rho_term = rho * (
-            cp.conj(Dx) * Dx + cp.conj(Dy) * Dy + cp.conj(Dz) * Dz
-        )
+        rho_term = rho * (cp.conj(Dx) * Dx + cp.conj(Dy) * Dy + cp.conj(Dz) * Dz)
 
         z_para = cp.zeros((6, N, M, L))
         u_para = cp.zeros((6, N, M, L))
@@ -1424,9 +1349,7 @@ def Dual_variable_ADMM_TV_deconv_3D(
         Dy = fftn(Dy)
         Dz = fftn(Dz)
 
-        rho_term = rho * (
-            np.conj(Dx) * Dx + np.conj(Dy) * Dy + np.conj(Dz) * Dz
-        )
+        rho_term = rho * (np.conj(Dx) * Dx + np.conj(Dy) * Dy + np.conj(Dz) * Dz)
 
         z_para = np.zeros((6, N, M, L))
         u_para = np.zeros((6, N, M, L))
@@ -1441,20 +1364,8 @@ def Dual_variable_ADMM_TV_deconv_3D(
         if use_gpu:
             v_para = cp.fft.fftn(z_para - u_para, axes=(1, 2, 3))
             b_vec_new = [
-                b_vec[0]
-                + rho
-                * (
-                    cp.conj(Dx) * v_para[0]
-                    + cp.conj(Dy) * v_para[1]
-                    + cp.conj(Dz) * v_para[2]
-                ),
-                b_vec[1]
-                + rho
-                * (
-                    cp.conj(Dx) * v_para[3]
-                    + cp.conj(Dy) * v_para[4]
-                    + cp.conj(Dz) * v_para[5]
-                ),
+                b_vec[0] + rho * (cp.conj(Dx) * v_para[0] + cp.conj(Dy) * v_para[1] + cp.conj(Dz) * v_para[2]),
+                b_vec[1] + rho * (cp.conj(Dx) * v_para[3] + cp.conj(Dy) * v_para[4] + cp.conj(Dz) * v_para[5]),
             ]
 
             f_real, f_imag = Dual_variable_Tikhonov_deconv_3D(
@@ -1475,12 +1386,8 @@ def Dual_variable_ADMM_TV_deconv_3D(
 
             z_para = D_vec + u_para
 
-            z_para[:3, :, :] = softTreshold(
-                z_para[:3, :, :], lambda_re / rho, use_gpu=True, gpu_id=gpu_id
-            )
-            z_para[3:, :, :] = softTreshold(
-                z_para[3:, :, :], lambda_im / rho, use_gpu=True, gpu_id=gpu_id
-            )
+            z_para[:3, :, :] = softTreshold(z_para[:3, :, :], lambda_re / rho, use_gpu=True, gpu_id=gpu_id)
+            z_para[3:, :, :] = softTreshold(z_para[3:, :, :], lambda_im / rho, use_gpu=True, gpu_id=gpu_id)
 
             u_para += D_vec - z_para
 
@@ -1491,25 +1398,11 @@ def Dual_variable_ADMM_TV_deconv_3D(
         else:
             v_para = fftn(z_para - u_para, axes=(1, 2, 3))
             b_vec_new = [
-                b_vec[0]
-                + rho
-                * (
-                    np.conj(Dx) * v_para[0]
-                    + np.conj(Dy) * v_para[1]
-                    + np.conj(Dz) * v_para[2]
-                ),
-                b_vec[1]
-                + rho
-                * (
-                    np.conj(Dx) * v_para[3]
-                    + np.conj(Dy) * v_para[4]
-                    + np.conj(Dz) * v_para[5]
-                ),
+                b_vec[0] + rho * (np.conj(Dx) * v_para[0] + np.conj(Dy) * v_para[1] + np.conj(Dz) * v_para[2]),
+                b_vec[1] + rho * (np.conj(Dx) * v_para[3] + np.conj(Dy) * v_para[4] + np.conj(Dz) * v_para[5]),
             ]
 
-            f_real, f_imag = Dual_variable_Tikhonov_deconv_3D(
-                AHA, b_vec_new, determinant=determinant
-            )
+            f_real, f_imag = Dual_variable_Tikhonov_deconv_3D(AHA, b_vec_new, determinant=determinant)
 
             D_vec[0] = f_real - np.roll(f_real, -1, axis=1)
             D_vec[1] = f_real - np.roll(f_real, -1, axis=0)
@@ -1531,9 +1424,7 @@ def Dual_variable_ADMM_TV_deconv_3D(
     return f_real, f_imag
 
 
-def cylindrical_shell_local_orientation(
-    VOI, ps, psz, scale, beta=0.5, c_para=0.5, evec_idx=0
-):
+def cylindrical_shell_local_orientation(VOI, ps, psz, scale, beta=0.5, c_para=0.5, evec_idx=0):
     """
 
     segmentation of 3D cylindrical shell structure and the estimation of local orientation of the geometry
@@ -1608,53 +1499,34 @@ def cylindrical_shell_local_orientation(
     t0 = time.time()
 
     for i, s in enumerate(scale):
-        kernel[i] = np.exp(
-            -(xx_r**2 + yy_r**2 + zz_r**2) / 2 / s**2
-        ) / (2 * np.pi * s**2) ** (3 / 2)
+        kernel[i] = np.exp(-(xx_r**2 + yy_r**2 + zz_r**2) / 2 / s**2) / (2 * np.pi * s**2) ** (3 / 2)
         Gaussian_3D_f = fftn(ifftshift(kernel[i])) * (ps * ps * psz)
 
         VOI_filtered = np.zeros((3, 3, N, M, L))
 
         for p in range(3):
             for q in range(3):
-                Hessian_filter = (
-                    ((s) ** 2)
-                    * Gaussian_3D_f
-                    * diff_filter[p]
-                    * diff_filter[q]
-                )
-                VOI_filtered[p, q] = np.real(
-                    ifftn(fftn(VOI) * Hessian_filter) / (ps * ps * psz)
-                )
+                Hessian_filter = ((s) ** 2) * Gaussian_3D_f * diff_filter[p] * diff_filter[q]
+                VOI_filtered[p, q] = np.real(ifftn(fftn(VOI) * Hessian_filter) / (ps * ps * psz))
 
-        eigen_val, eigen_vec = np.linalg.eig(
-            np.transpose(VOI_filtered, (2, 3, 4, 0, 1))
-        )
+        eigen_val, eigen_vec = np.linalg.eig(np.transpose(VOI_filtered, (2, 3, 4, 0, 1)))
 
         eig_val_idx = np.zeros((3, N, M, L))
         for p in range(3):
-            eig_val_idx[p] = np.argpartition(np.abs(eigen_val), p, axis=3)[
-                :, :, :, p
-            ]
+            eig_val_idx[p] = np.argpartition(np.abs(eigen_val), p, axis=3)[:, :, :, p]
 
         eig_val_sort = np.zeros((3, N, M, L), complex)
 
         for p in range(3):
             for q in range(3):
-                eig_val_sort[q, eig_val_idx[q] == p] = eigen_val[
-                    eig_val_idx[q] == p, p
-                ]
+                eig_val_sort[q, eig_val_idx[q] == p] = eigen_val[eig_val_idx[q] == p, p]
 
-        RB = np.abs(eig_val_sort[2]) / np.sqrt(
-            np.abs(eig_val_sort[0]) * np.abs(eig_val_sort[1])
-        )
+        RB = np.abs(eig_val_sort[2]) / np.sqrt(np.abs(eig_val_sort[0]) * np.abs(eig_val_sort[1]))
         S = np.sqrt(np.sum(np.abs(eig_val_sort) ** 2, axis=0))
 
         c = c_para * np.max(S)
 
-        V_func_temp = (1 - np.exp(-(RB**2) / 2 / beta**2)) * (
-            1 - np.exp(-(S**2) / 2 / c**2)
-        )
+        V_func_temp = (1 - np.exp(-(RB**2) / 2 / beta**2)) * (1 - np.exp(-(S**2) / 2 / c**2))
         V_func_temp[np.real(eig_val_sort[2]) > 0] = 0
 
         if i == 0:
@@ -1662,30 +1534,21 @@ def cylindrical_shell_local_orientation(
             orientation_vec = np.zeros((N, M, L, 3))
 
             for p in range(3):
-                orientation_vec[eig_val_idx[evec_idx] == p] = np.real(
-                    eigen_vec[eig_val_idx[evec_idx] == p, :, p]
-                )
+                orientation_vec[eig_val_idx[evec_idx] == p] = np.real(eigen_vec[eig_val_idx[evec_idx] == p, :, p])
         else:
             larger_V_idx = V_func_temp > V_func
             V_func[larger_V_idx] = V_func_temp[larger_V_idx]
 
             for p in range(3):
-                orientation_vec[
-                    np.logical_and(larger_V_idx, eig_val_idx[evec_idx] == p)
-                ] = np.real(
+                orientation_vec[np.logical_and(larger_V_idx, eig_val_idx[evec_idx] == p)] = np.real(
                     eigen_vec[
-                        np.logical_and(
-                            larger_V_idx, eig_val_idx[evec_idx] == p
-                        ),
+                        np.logical_and(larger_V_idx, eig_val_idx[evec_idx] == p),
                         :,
                         p,
                     ]
                 )
 
-        print(
-            "Finish V_map computation for scale = %.2f, elapsed time: %.2f"
-            % (s, time.time() - t0)
-        )
+        print("Finish V_map computation for scale = %.2f, elapsed time: %.2f" % (s, time.time() - t0))
 
     orientation_vec = np.transpose(orientation_vec, (3, 0, 1, 2))
 
@@ -1700,10 +1563,7 @@ def cylindrical_shell_local_orientation(
     theta[azimuth > np.pi] = np.pi - theta[azimuth > np.pi]
     azimuth[azimuth > np.pi] = azimuth[azimuth > np.pi] - np.pi
 
-    print(
-        "Finish local orientation extraction, elapsed time:"
-        + str(time.time() - t0)
-    )
+    print("Finish local orientation extraction, elapsed time:" + str(time.time() - t0))
 
     return azimuth, theta, V_func, kernel
 
@@ -1739,9 +1599,7 @@ def integer_factoring(integer):
     return factors
 
 
-def generate_FOV_splitting_parameters(
-    img_size, overlapping_range, max_image_size
-):
+def generate_FOV_splitting_parameters(img_size, overlapping_range, max_image_size):
     """
 
     calculate the overlap and pixels of increment for sub-FOV processing
@@ -1776,20 +1634,8 @@ def generate_FOV_splitting_parameters(
     M_space = 0
 
     for i in range(overlapping_range[0], overlapping_range[1]):
-        pre_N_space = np.max(
-            [
-                x
-                for x in integer_factoring(img_size[0] - i)
-                if x <= max_image_size[0] - i
-            ]
-        )
-        pre_M_space = np.max(
-            [
-                x
-                for x in integer_factoring(img_size[1] - i)
-                if x <= max_image_size[1] - i
-            ]
-        )
+        pre_N_space = np.max([x for x in integer_factoring(img_size[0] - i) if x <= max_image_size[0] - i])
+        pre_M_space = np.max([x for x in integer_factoring(img_size[1] - i) if x <= max_image_size[1] - i])
 
         if (
             pre_N_space > N_space
@@ -1861,9 +1707,7 @@ def generate_sub_FOV_coordinates(img_size, img_space, overlap):
         num_M -= 1
         end_M = (num_M - 1) * M_space + Ms
 
-    print(
-        "Last pixel in (y,x) dimension processed is (%d, %d)" % (end_N, end_M)
-    )
+    print("Last pixel in (y,x) dimension processed is (%d, %d)" % (end_N, end_M))
 
     ms, ns = np.meshgrid(ms, ns)
     ms = ms.flatten()
@@ -1872,9 +1716,7 @@ def generate_sub_FOV_coordinates(img_size, img_space, overlap):
     return ns, ms
 
 
-def image_stitching(
-    coord_list, overlap, file_loading_func, gen_ref_map=True, ref_stitch=None
-):
+def image_stitching(coord_list, overlap, file_loading_func, gen_ref_map=True, ref_stitch=None):
     """
 
     stitch images (with size (Ny, Nx, ...)) with alpha blending algorithm given the image coordinate, overlap, and file_loading_functions
@@ -1947,19 +1789,13 @@ def image_stitching(
                 ref_stitch = np.zeros((N_full, M_full))
             else:
                 if ref_stitch is None:
-                    raise ValueError(
-                        "Make gen_ref_map True if ref_stitch is None"
-                    )
+                    raise ValueError("Make gen_ref_map True if ref_stitch is None")
 
         if gen_ref_map:
             ref_i = np.ones(img_i.shape[:2])
 
         # center
-        if (
-            np.sum(row_idx == np.r_[1 : num_row - 1])
-            * np.sum(column_idx == np.r_[1 : num_column - 1])
-            == 1
-        ):
+        if np.sum(row_idx == np.r_[1 : num_row - 1]) * np.sum(column_idx == np.r_[1 : num_column - 1]) == 1:
             for p in range(overlap_y):
                 img_i[-1 - p, :] = img_i[-1 - p, :] * p / overlap_y
                 img_i[p, :] = img_i[p, :] * p / overlap_y
@@ -1975,11 +1811,7 @@ def image_stitching(
                     ref_i[:, -1 - p] = ref_i[:, -1 - p] * p / overlap_x
 
         # top
-        if (
-            np.sum(row_idx == 0)
-            * np.sum(column_idx == np.r_[1 : num_column - 1])
-            == 1
-        ):
+        if np.sum(row_idx == 0) * np.sum(column_idx == np.r_[1 : num_column - 1]) == 1:
             for p in range(overlap_y):
                 img_i[-1 - p, :] = img_i[-1 - p, :] * p / overlap_y
                 #             img_i[p,:] = img_i[p,:]*p/overlap_y
@@ -1995,11 +1827,7 @@ def image_stitching(
                     ref_i[:, -1 - p] = ref_i[:, -1 - p] * p / overlap_x
 
         # bottom
-        if (
-            np.sum(row_idx == num_row - 1)
-            * np.sum(column_idx == np.r_[1 : num_column - 1])
-            == 1
-        ):
+        if np.sum(row_idx == num_row - 1) * np.sum(column_idx == np.r_[1 : num_column - 1]) == 1:
             for p in range(overlap_y):
                 #             img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
                 img_i[p, :] = img_i[p, :] * p / overlap_y
@@ -2015,10 +1843,7 @@ def image_stitching(
                     ref_i[:, -1 - p] = ref_i[:, -1 - p] * p / overlap_x
 
         # left
-        if (
-            np.sum(row_idx == np.r_[1 : num_row - 1]) * np.sum(column_idx == 0)
-            == 1
-        ):
+        if np.sum(row_idx == np.r_[1 : num_row - 1]) * np.sum(column_idx == 0) == 1:
             for p in range(overlap_y):
                 img_i[-1 - p, :] = img_i[-1 - p, :] * p / overlap_y
                 img_i[p, :] = img_i[p, :] * p / overlap_y
@@ -2034,11 +1859,7 @@ def image_stitching(
                     ref_i[:, -1 - p] = ref_i[:, -1 - p] * p / overlap_x
 
         # right
-        if (
-            np.sum(row_idx == np.r_[1 : num_row - 1])
-            * np.sum(column_idx == num_column - 1)
-            == 1
-        ):
+        if np.sum(row_idx == np.r_[1 : num_row - 1]) * np.sum(column_idx == num_column - 1) == 1:
             for p in range(overlap_y):
                 img_i[-1 - p, :] = img_i[-1 - p, :] * p / overlap_y
                 img_i[p, :] = img_i[p, :] * p / overlap_y
@@ -2102,11 +1923,7 @@ def image_stitching(
                     ref_i[:, -1 - p] = ref_i[:, -1 - p] * p / overlap_x
 
         # bottom right
-        if (
-            np.sum(row_idx == num_row - 1)
-            * np.sum(column_idx == num_column - 1)
-            == 1
-        ):
+        if np.sum(row_idx == num_row - 1) * np.sum(column_idx == num_column - 1) == 1:
             for p in range(overlap_y):
                 #             img_i[-1-p,:] = img_i[-1-p,:]*p/overlap_y
                 img_i[p, :] = img_i[p, :] * p / overlap_y
@@ -2145,19 +1962,14 @@ def image_stitching(
             ref_stitch += ref_temp
 
         if np.mod(i + 1, 1) == 0:
-            print(
-                "Processed positions (%d / %d), elapsed time: %.2f"
-                % (i + 1, num_row * num_column, time.time() - t0)
-            )
+            print("Processed positions (%d / %d), elapsed time: %.2f" % (i + 1, num_row * num_column, time.time() - t0))
 
     ref_stitch_extend = ref_stitch.copy()
     if img_stitch.ndim > ref_stitch.ndim:
         for extend_idx in range(img_stitch.ndim - ref_stitch.ndim):
             ref_stitch_extend = ref_stitch_extend[..., np.newaxis]
 
-    img_normalized = (
-        img_stitch * ref_stitch_extend / (ref_stitch_extend + 1e-6)
-    )
+    img_normalized = img_stitch * ref_stitch_extend / (ref_stitch_extend + 1e-6)
 
     if gen_ref_map:
         return img_normalized, ref_stitch
@@ -2165,9 +1977,7 @@ def image_stitching(
         return img_normalized
 
 
-def orientation_3D_continuity_map(
-    azimuth, theta, psz_ps_ratio=None, avg_px_size=10, reg_ret_pr=1e-1
-):
+def orientation_3D_continuity_map(azimuth, theta, psz_ps_ratio=None, avg_px_size=10, reg_ret_pr=1e-1):
     """
 
     calculate the 3D orientation continuity map that is used to suppress noisy retardance measurements
@@ -2202,18 +2012,10 @@ def orientation_3D_continuity_map(
     img_dim = azimuth.ndim
 
     f_tensor_unit_ret = np.zeros((7,) + img_size)
-    f_tensor_unit_ret[2] = (
-        -np.ones(img_size) * (np.sin(theta) ** 2) * np.cos(2 * azimuth)
-    )
-    f_tensor_unit_ret[3] = (
-        -np.ones(img_size) * (np.sin(theta) ** 2) * np.sin(2 * azimuth)
-    )
-    f_tensor_unit_ret[4] = (
-        -np.ones(img_size) * (np.sin(2 * theta)) * np.cos(azimuth)
-    )
-    f_tensor_unit_ret[5] = (
-        -np.ones(img_size) * (np.sin(2 * theta)) * np.sin(azimuth)
-    )
+    f_tensor_unit_ret[2] = -np.ones(img_size) * (np.sin(theta) ** 2) * np.cos(2 * azimuth)
+    f_tensor_unit_ret[3] = -np.ones(img_size) * (np.sin(theta) ** 2) * np.sin(2 * azimuth)
+    f_tensor_unit_ret[4] = -np.ones(img_size) * (np.sin(2 * theta)) * np.cos(azimuth)
+    f_tensor_unit_ret[5] = -np.ones(img_size) * (np.sin(2 * theta)) * np.sin(azimuth)
 
     f_tensor_blur = np.zeros_like(f_tensor_unit_ret)
     for i in range(4):
@@ -2227,13 +2029,9 @@ def orientation_3D_continuity_map(
                 ),
             )
         elif img_dim == 2:
-            f_tensor_blur[2 + i] = uniform_filter(
-                f_tensor_unit_ret[2 + i], (avg_px_size, avg_px_size)
-            )
+            f_tensor_blur[2 + i] = uniform_filter(f_tensor_unit_ret[2 + i], (avg_px_size, avg_px_size))
         else:
-            raise ValueError(
-                "azimuth and theta are either 2D or 3D, psz_ps_ratio should not be None for 3D images"
-            )
+            raise ValueError("azimuth and theta are either 2D or 3D, psz_ps_ratio should not be None for 3D images")
 
     retardance_pr_avg, _, _ = scattering_potential_tensor_to_3D_orientation_PN(
         f_tensor_blur, material_type="positive", reg_ret_pr=reg_ret_pr

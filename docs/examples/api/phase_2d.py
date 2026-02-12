@@ -27,9 +27,7 @@ phantom, data = phase.simulate(
 
 # Reconstruct (detailed)
 tf = phase.compute_transfer_function(data, recon_dim=2, settings=settings)
-result = phase.apply_inverse_transfer_function(
-    data, tf, recon_dim=2, settings=settings
-)
+result = phase.apply_inverse_transfer_function(data, tf, recon_dim=2, settings=settings)
 
 # Reconstruct (one-liner)
 result = phase.reconstruct(data, recon_dim=2, settings=settings)

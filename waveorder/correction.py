@@ -44,31 +44,19 @@ def _grid_coordinates(image: Tensor, block_size: int) -> Tensor:
     return torch.stack(coords, dim=-1).reshape(-1, 2)
 
 
-def _fit_2d_polynomial_surface(
-    coords: Tensor, values: Tensor, order: int, surface_shape: Size
-) -> Tensor:
+def _fit_2d_polynomial_surface(coords: Tensor, values: Tensor, order: int, surface_shape: Size) -> Tensor:
     """Fit a 2D polynomial to a set of coordinates and their values,
     and return the surface evaluated at every point."""
     n_coeffs = int((order + 1) * (order + 2) / 2)
     if n_coeffs >= len(values):
-        raise ValueError(
-            f"Cannot fit a {order} degree 2D polynomial "
-            f"with {len(values)} sampled values"
-        )
+        raise ValueError(f"Cannot fit a {order} degree 2D polynomial with {len(values)} sampled values")
     orders = torch.arange(order + 1, device=coords.device)
     order_pairs = torch.stack(torch.meshgrid(orders, orders), -1)
     order_pairs = order_pairs[order_pairs.sum(-1) <= order].reshape(-1, 2)
-    terms = torch.stack(
-        [coords[:, 0] ** i * coords[:, 1] ** j for i, j in order_pairs], -1
-    )
+    terms = torch.stack([coords[:, 0] ** i * coords[:, 1] ** j for i, j in order_pairs], -1)
     # use "gels" driver for precision and GPU consistency
     coeffs = torch.linalg.lstsq(terms, values, driver="gels").solution
-    dense_coords = torch.meshgrid(
-        [
-            torch.arange(s, dtype=values.dtype, device=values.device)
-            for s in surface_shape
-        ]
-    )
+    dense_coords = torch.meshgrid([torch.arange(s, dtype=values.dtype, device=values.device) for s in surface_shape])
     dense_terms = torch.stack(
         [dense_coords[0] ** i * dense_coords[1] ** j for i, j in order_pairs],
         -1,

@@ -163,12 +163,8 @@ def calculate_transfer_function(
 
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
     return (
-        sampling.nd_fourier_central_cuboid(
-            real_potential_transfer_function, zyx_out_shape
-        ),
-        sampling.nd_fourier_central_cuboid(
-            imag_potential_transfer_function, zyx_out_shape
-        ),
+        sampling.nd_fourier_central_cuboid(real_potential_transfer_function, zyx_out_shape),
+        sampling.nd_fourier_central_cuboid(imag_potential_transfer_function, zyx_out_shape),
     )
 
 
@@ -183,13 +179,9 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
-    radial_frequencies = util.generate_radial_frequencies(
-        zyx_shape[1:], yx_pixel_size
-    )
+    radial_frequencies = util.generate_radial_frequencies(zyx_shape[1:], yx_pixel_size)
     z_total = zyx_shape[0] + 2 * z_padding
-    z_position_list = torch.fft.ifftshift(
-        (torch.arange(z_total) - z_total // 2) * z_pixel_size
-    )
+    z_position_list = torch.fft.ifftshift((torch.arange(z_total) - z_total // 2) * z_pixel_size)
     if invert_phase_contrast:
         z_position_list = torch.flip(z_position_list, dims=(0,))
 
@@ -348,15 +340,12 @@ def apply_inverse_transfer_function(
 
     # Prepare TF
     effective_transfer_function = (
-        real_potential_transfer_function
-        + absorption_ratio * imaginary_potential_transfer_function
+        real_potential_transfer_function + absorption_ratio * imaginary_potential_transfer_function
     )
 
     # Reconstruct
     if reconstruction_algorithm == "Tikhonov":
-        inverse_filter = tikhonov_regularized_inverse_filter(
-            effective_transfer_function, regularization_strength
-        )
+        inverse_filter = tikhonov_regularized_inverse_filter(effective_transfer_function, regularization_strength)
 
         # [None]s and [0] are for applying a 1x1 "bank" of filters.
         # For further uniformity, consider returning (1, Z, Y, X)

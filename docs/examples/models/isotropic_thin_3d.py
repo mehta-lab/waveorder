@@ -32,17 +32,13 @@ zyx_scale = np.array(
     ]
 )
 transfer_function_arguments = {
-    "z_position_list": list(
-        (-np.arange(z_shape) + z_shape // 2) * z_pixel_size
-    ),
+    "z_position_list": list((-np.arange(z_shape) + z_shape // 2) * z_pixel_size),
     "numerical_aperture_illumination": 0.9,
     "numerical_aperture_detection": 1.2,
 }
 
 # Create a disk phantom
-yx_absorption, yx_phase = isotropic_thin_3d.generate_test_phantom(
-    **simulation_arguments, **phantom_arguments
-)
+yx_absorption, yx_phase = isotropic_thin_3d.generate_test_phantom(**simulation_arguments, **phantom_arguments)
 yx_absorption[:, 128:] = 0  # half absorbing
 yx_phase[128:] = 0  # half phase
 
@@ -50,9 +46,7 @@ yx_phase[128:] = 0  # half phase
 (
     absorption_2d_to_3d_transfer_function,
     phase_2d_to_3d_transfer_function,
-) = isotropic_thin_3d.calculate_transfer_function(
-    **simulation_arguments, **transfer_function_arguments
-)
+) = isotropic_thin_3d.calculate_transfer_function(**simulation_arguments, **transfer_function_arguments)
 
 # Calculate singular system
 singular_system = isotropic_thin_3d.calculate_singular_system(

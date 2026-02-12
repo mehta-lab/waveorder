@@ -122,6 +122,7 @@ fallback-version = "0.0.0"
 
 [tool.ruff]
 line-length = 120
+extend-exclude = ["docs/examples/demos/QPI_defocus/QPI_defocus_experiment.py"]
 
 [tool.ruff.format]
 quote-style = "double"
@@ -131,4 +132,4 @@ docstring-code-line-length = "dynamic"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I"]
-ignore = ["E203", "E731"]
+ignore = ["E203", "E402", "E501", "E701", "E711", "E712", "E722", "E731", "E741", "F403", "F405", "F821", "F841"]

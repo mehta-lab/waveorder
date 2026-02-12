@@ -23,21 +23,17 @@ class ReconstructionSettings(MyBaseModel):
         default=[f"State{i}" for i in range(4)],
         description="names of input channels in the dataset",
     )
-    time_indices: Union[
-        NonNegativeInt, List[NonNegativeInt], Literal["all"]
-    ] = Field(default="all", description="time points to reconstruct")
-    reconstruction_dimension: Literal[2, 3] = Field(
-        default=3, description="2 for thin samples, 3 for thick"
+    time_indices: Union[NonNegativeInt, List[NonNegativeInt], Literal["all"]] = Field(
+        default="all", description="time points to reconstruct"
     )
+    reconstruction_dimension: Literal[2, 3] = Field(default=3, description="2 for thin samples, 3 for thick")
     birefringence: Optional[BirefringenceSettings] = None
     phase: Optional[PhaseSettings] = None
     fluorescence: Optional[FluorescenceSettings] = None
 
     @model_validator(mode="after")
     def validate_reconstruction_types(self):
-        if (
-            self.birefringence or self.phase
-        ) and self.fluorescence is not None:
+        if (self.birefringence or self.phase) and self.fluorescence is not None:
             raise ValueError(
                 '"fluorescence" cannot be present alongside "birefringence" or "phase". Please use one configuration file for a "fluorescence" reconstruction and another configuration file for a "birefringence" and/or "phase" reconstructions.'
             )

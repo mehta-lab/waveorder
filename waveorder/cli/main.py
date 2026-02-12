@@ -47,10 +47,7 @@ class AliasGroup(click.Group):
     def format_help(self, ctx, formatter):
         self.format_usage(ctx, formatter)
         formatter.write("\n")
-        formatter.write(
-            "  \033[92mwaveorder\033[0m [\033[92mwo\033[0m]: "
-            "Wave-optical simulation and reconstruction\n"
-        )
+        formatter.write("  \033[92mwaveorder\033[0m [\033[92mwo\033[0m]: Wave-optical simulation and reconstruction\n")
         formatter.write("\n")
 
         # Options
@@ -84,9 +81,7 @@ def cli():
 cli.add_command(_simulate_cli, "simulate")
 cli.add_command(_reconstruct_cli, "reconstruct")
 cli.add_command(_compute_transfer_function_cli, "compute-transfer-function")
-cli.add_command(
-    _apply_inverse_transfer_function_cli, "apply-inverse-transfer-function"
-)
+cli.add_command(_apply_inverse_transfer_function_cli, "apply-inverse-transfer-function")
 cli.add_command(_view_cli, "view")
 if _interactive_cli is not None:
     cli.add_command(_interactive_cli, "interactive")

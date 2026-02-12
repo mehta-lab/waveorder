@@ -101,9 +101,7 @@ class CalibrationWorkerBase(WorkerBase):
 
     def _write_meta_file(self, meta_file: str):
         self.calib.meta_file = meta_file
-        self.calib.write_metadata(
-            notes=self.calib_window.ui.le_notes_field.text()
-        )
+        self.calib.write_metadata(notes=self.calib_window.ui.le_notes_field.text())
 
 
 class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
@@ -142,18 +140,12 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
         # Set LC Wavelength:
         self.calib.set_wavelength(int(self.calib_window.wavelength))
         if self.calib_window.calib_mode == "MM-Retardance":
-            self.calib_window.mmc.setProperty(
-                LC_DEVICE_NAME, "Wavelength", self.calib_window.wavelength
-            )
+            self.calib_window.mmc.setProperty(LC_DEVICE_NAME, "Wavelength", self.calib_window.wavelength)
 
         self._check_abort()
 
         # Optimize States
-        (
-            self._calibrate_4state()
-            if self.calib_window.calib_scheme == "4-State"
-            else self._calibrate_5state()
-        )
+        (self._calibrate_4state() if self.calib_window.calib_scheme == "4-State" else self._calibrate_5state())
 
         # Reset shutter autoshutter
         self.calib.reset_shutter()
@@ -172,9 +164,7 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
         self.extinction_update.emit(str(extinction_ratio))
 
         # determine metadata filename
-        meta_file = (
-            Path(self.calib_window.directory) / "calibration_metadata.txt"
-        )
+        meta_file = Path(self.calib_window.directory) / "calibration_metadata.txt"
         meta_file = add_index_to_path(meta_file)
 
         # Write Metadata
@@ -278,9 +268,7 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
             self.calib_assessment_msg.emit("Successful Calibration")
         elif 80 <= self.calib.extinction_ratio < 100:
             self.calib_assessment.emit("okay")
-            self.calib_assessment_msg.emit(
-                "Successful Calibration, Okay Extinction Ratio"
-            )
+            self.calib_assessment_msg.emit("Successful Calibration, Okay Extinction Ratio")
         else:
             self.calib_assessment.emit("bad")
             message = (
@@ -293,9 +281,7 @@ class CalibrationWorker(CalibrationWorkerBase, signals=CalibrationSignals):
             self.calib_assessment_msg.emit("Poor Extinction. " + message)
 
 
-class BackgroundCaptureWorker(
-    CalibrationWorkerBase, signals=BackgroundSignals
-):
+class BackgroundCaptureWorker(CalibrationWorkerBase, signals=BackgroundSignals):
     """
     Class to execute background capture.
     """
@@ -305,10 +291,7 @@ class BackgroundCaptureWorker(
 
     def work(self):
         # Make the background folder
-        bg_path = (
-            Path(self.calib_window.directory)
-            / self.calib_window.ui.le_bg_folder.text()
-        )
+        bg_path = Path(self.calib_window.directory) / self.calib_window.ui.le_bg_folder.text()
         bg_path = add_index_to_path(bg_path)
         bg_path.mkdir()
 
@@ -319,18 +302,12 @@ class BackgroundCaptureWorker(
 
         # build background-specific reconstruction settings
         reconstruction_settings = settings.ReconstructionSettings(
-            input_channel_names=[
-                f"State{i}"
-                for i in range(int(self.calib_window.calib_scheme[0]))
-            ],
+            input_channel_names=[f"State{i}" for i in range(int(self.calib_window.calib_scheme[0]))],
             reconstruction_dimension=2,
             birefringence=settings.BirefringenceSettings(
-                transfer_function=birefringence.TransferFunctionSettings(
-                    swing=self.calib_window.swing
-                ),
+                transfer_function=birefringence.TransferFunctionSettings(swing=self.calib_window.swing),
                 apply_inverse=settings.BirefringenceApplyInverseSettings(
-                    wavelength_illumination=self.calib_window.recon_wavelength
-                    / 1000,
+                    wavelength_illumination=self.calib_window.recon_wavelength / 1000,
                     background_path="",
                     remove_estimated_background=False,
                     flip_orientation=False,
@@ -389,9 +366,7 @@ class BackgroundCaptureWorker(
 
         # Emit background images + background birefringence
         self.bg_image_emitter.emit((imgs, scale))
-        self.bire_image_emitter.emit(
-            ((self.retardance, self.birefringence[1]), scale)
-        )
+        self.bire_image_emitter.emit(((self.retardance, self.birefringence[1]), scale))
 
         # Emit bg path
         self.bg_path_update_emitter.emit(bg_path)
@@ -421,13 +396,9 @@ def load_calibration(calib, metadata: MetadataReader):
         elif calib.calib_scheme == "5-State":
             lc_states = ["ext", "0", "45", "90", "135"]
         else:
-            raise ValueError(
-                "Invalid calibration scheme in metadata: {calib.calib_scheme}"
-            )
+            raise ValueError("Invalid calibration scheme in metadata: {calib.calib_scheme}")
         for side in ("A", "B"):
-            retardance_values = metadata.__getattribute__(
-                "LC" + side + "_retardance"
-            )
+            retardance_values = metadata.__getattribute__("LC" + side + "_retardance")
             for i, state in enumerate(lc_states):
                 # set the retardance value attribute (e.g. 'lca_0')
                 retardance_name = "lc" + side.lower() + "_" + state
@@ -456,10 +427,6 @@ def load_calibration(calib, metadata: MetadataReader):
     calib.I_Elliptical = snap_and_average(calib.snap_manager)
     calib.reset_shutter()
 
-    yield str(
-        calib.calculate_extinction(
-            calib.swing, calib.I_Black, calib.I_Ext, calib.I_Elliptical
-        )
-    )
+    yield str(calib.calculate_extinction(calib.swing, calib.I_Black, calib.I_Ext, calib.I_Elliptical))
 
     return calib

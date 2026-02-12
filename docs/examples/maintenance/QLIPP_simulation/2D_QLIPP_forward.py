@@ -1,4 +1,4 @@
-""" 
+"""
 2D QLIPP forward simulation
 ===========================
 2D QLIPP forward simulation
@@ -14,7 +14,6 @@
 # "Revealing architectural order with quantitative label-free imaging and deep learning,"           #
 #  eLife 9:e55502 (2020).```                                                                        #
 #####################################################################################################
-
 
 from pathlib import Path
 
@@ -72,12 +71,8 @@ plt.show()
 
 xx, yy, fxx, fyy = util.gen_coordinate((N, M), ps)
 radial_frequencies = np.sqrt(fxx**2 + fyy**2)
-Source_cont = optics.generate_pupil(
-    radial_frequencies, NA_illu, lambda_illu
-).numpy()
-Source_discrete = optics.Source_subsample(
-    Source_cont, lambda_illu * fxx, lambda_illu * fyy, subsampled_NA=0.1
-)
+Source_cont = optics.generate_pupil(radial_frequencies, NA_illu, lambda_illu).numpy()
+Source_discrete = optics.Source_subsample(Source_cont, lambda_illu * fxx, lambda_illu * fyy, subsampled_NA=0.1)
 plt.figure(figsize=(10, 10))
 plt.imshow(fftshift(Source_discrete), cmap="gray")
 plt.show()
@@ -99,17 +94,13 @@ simulator = waveorder_simulator.waveorder_microscopy_simulator(
 )
 
 # Compute image volumes and Stokes volumes
-I_meas, Stokes_out = simulator.simulate_waveorder_measurements(
-    t_eigen, sa, multiprocess=False
-)
+I_meas, Stokes_out = simulator.simulate_waveorder_measurements(t_eigen, sa, multiprocess=False)
 
 # Add noise to the measurement
 photon_count = 14000
 ext_ratio = 10000
 const_bg = photon_count / (0.5 * (1 - np.cos(chi))) / ext_ratio
-I_meas_noise = (
-    np.random.poisson(I_meas / np.max(I_meas) * photon_count + const_bg)
-).astype("float64")
+I_meas_noise = (np.random.poisson(I_meas / np.max(I_meas) * photon_count + const_bg)).astype("float64")
 
 # Save simulation
 temp_dirpath = Path(user_data_dir("QLIPP_simulation"))

@@ -25,9 +25,7 @@ numerical_aperture_detection = 1.2
 fourier_oversample_factor = 1
 
 # Create a phantom
-fzyx_object = inplane_oriented_thick_pol3d_vector.generate_test_phantom(
-    zyx_shape
-)
+fzyx_object = inplane_oriented_thick_pol3d_vector.generate_test_phantom(zyx_shape)
 
 # Calculate transfer function
 (
@@ -79,13 +77,11 @@ for array in arrays:
 
 # Reconstruct
 for reg_strength in [0.005, 0.008, 0.01, 0.05, 0.1]:
-    fzyx_object_recon = (
-        inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
-            szyx_data,
-            singular_system,
-            intensity_to_stokes_matrix,
-            regularization_strength=reg_strength,
-        )
+    fzyx_object_recon = inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
+        szyx_data,
+        singular_system,
+        intensity_to_stokes_matrix,
+        regularization_strength=reg_strength,
     )
     viewer.add_image(
         torch.real(fzyx_object_recon).cpu().numpy(),

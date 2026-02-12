@@ -25,9 +25,7 @@ def calculate_transfer_function(
     return stokes.calculate_intensity_to_stokes_matrix(swing, scheme=scheme)
 
 
-def visualize_transfer_function(
-    viewer, intensity_to_stokes_matrix: Tensor
-) -> None:
+def visualize_transfer_function(viewer, intensity_to_stokes_matrix: Tensor) -> None:
     viewer.add_image(
         intensity_to_stokes_matrix.cpu().numpy(),
         name="Intensity to stokes matrix",
@@ -41,14 +39,10 @@ def apply_transfer_function(
     depolarization: Tensor,
     intensity_to_stokes_matrix: Tensor,
 ) -> Tensor:
-    stokes_params = stokes.stokes_after_adr(
-        retardance, orientation, transmittance, depolarization
-    )
+    stokes_params = stokes.stokes_after_adr(retardance, orientation, transmittance, depolarization)
     stokes_to_intensity_matrix = torch.linalg.pinv(intensity_to_stokes_matrix)
 
-    cyx_intensities = stokes.mmul(
-        stokes_to_intensity_matrix, torch.stack(stokes_params)
-    )
+    cyx_intensities = stokes.mmul(stokes_to_intensity_matrix, torch.stack(stokes_params))
 
     # Return in czyx shape
     # TODO: make this simulation more realistic with defocussed data
@@ -113,9 +107,7 @@ def apply_inverse_transfer_function(
         background_corrected_stokes = data_stokes
     else:
         # Find the no-sample Stokes parameters from the background data
-        measured_no_sample_stokes = stokes.mmul(
-            intensity_to_stokes_matrix, cyx_no_sample_data
-        )
+        measured_no_sample_stokes = stokes.mmul(intensity_to_stokes_matrix, cyx_no_sample_data)
         # Estimate the attenuating, depolarizing, retarder's inverse Mueller
         # matrix that caused this background data
         inverse_background_mueller = stokes.mueller_from_stokes(
@@ -123,41 +115,29 @@ def apply_inverse_transfer_function(
         )
         # Apply this background-correction Mueller matrix to the data to remove
         # the background contribution
-        background_corrected_stokes = stokes.mmul(
-            inverse_background_mueller, data_stokes
-        )
+        background_corrected_stokes = stokes.mmul(inverse_background_mueller, data_stokes)
 
     # Apply an "Estimated" background correction
     if remove_estimated_background:
         for stokes_index in range(background_corrected_stokes.shape[0]):
             # Project to 2D
-            z_projection = torch.mean(
-                background_corrected_stokes[stokes_index], dim=0
-            )
+            z_projection = torch.mean(background_corrected_stokes[stokes_index], dim=0)
             # Estimate the background and subtract
-            background_corrected_stokes[
-                stokes_index
-            ] -= correction.estimate_background(
+            background_corrected_stokes[stokes_index] -= correction.estimate_background(
                 z_projection, order=2, block_size=32
             )
 
     # Project to 2D (typically for SNR reasons)
     if project_stokes_to_2d:
-        background_corrected_stokes = torch.mean(
-            background_corrected_stokes, dim=1
-        )[:, None, ...]
+        background_corrected_stokes = torch.mean(background_corrected_stokes, dim=1)[:, None, ...]
 
     # Estimate an attenuating, depolarizing, retarder's parameters,
     # i.e. (retardance, orientation, transmittance, depolarization)
     # from the background-corrected Stokes values
-    adr_parameters = stokes.estimate_adr_from_stokes(
-        *background_corrected_stokes
-    )
+    adr_parameters = stokes.estimate_adr_from_stokes(*background_corrected_stokes)
 
     # Apply orientation transformations
-    orientation = stokes.apply_orientation_offset(
-        adr_parameters[1], rotate=rotate_orientation, flip=flip_orientation
-    )
+    orientation = stokes.apply_orientation_offset(adr_parameters[1], rotate=rotate_orientation, flip=flip_orientation)
 
     # Return (retardance, orientation, transmittance, depolarization)
     return adr_parameters[0], orientation, adr_parameters[2], adr_parameters[3]

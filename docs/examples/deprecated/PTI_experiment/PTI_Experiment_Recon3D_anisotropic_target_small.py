@@ -28,9 +28,7 @@ N_channel = 4  # number of Polscope channels
 N_pattern = 9  # number of illumination patterns
 z_step = 0.25  # z_step of the stack
 z_defocus = (np.r_[:N_defocus] - 0) * z_step  # z positions of the stack
-ps = (
-    3.45 * 2 / mag
-)  # effective pixel size at the sample plane (cam pix/mag in um)
+ps = 3.45 * 2 / mag  # effective pixel size at the sample plane (cam pix/mag in um)
 cali = False  # correction for S1/S2 Polscope reconstruction (does not affect phase)
 bg_option = "global"  # background correction method for Polscope recon (does not affect phase)
 use_gpu = False  # option to use gpu or not (required cupy)
@@ -46,12 +44,8 @@ gpu_id = 0  # id of gpu to use
 data_folder = Path("/path/to/Anisotropic_target_small/")
 PTI_file_name = data_folder / "Anisotropic_target_small_raw.zarr"
 reader = zarr.open(PTI_file_name, mode="r")
-I_meas = np.transpose(
-    np.array(reader["Row_0/Col_0/I_meas/array"]), (0, 1, 3, 4, 2)
-)
-I_bg = np.squeeze(
-    np.transpose(np.array(reader["Row_0/Col_1/I_bg/array"]), (0, 1, 3, 4, 2))
-)
+I_meas = np.transpose(np.array(reader["Row_0/Col_0/I_meas/array"]), (0, 1, 3, 4, 2))
+I_bg = np.squeeze(np.transpose(np.array(reader["Row_0/Col_1/I_bg/array"]), (0, 1, 3, 4, 2)))
 
 # Crop the data so that it fits in the GPU memory
 I_meas = I_meas[:, :, 50:250, 50:250, :]
@@ -66,9 +60,7 @@ I_cali_mean = np.array(PTI_file.I_cali_mean)
     E_in,
     A_matrix,
     I_cali_mean,
-) = wo.waveorder_reconstructor.instrument_matrix_and_source_calibration(
-    I_cali_mean, handedness="RCP"
-)
+) = wo.waveorder_reconstructor.instrument_matrix_and_source_calibration(I_cali_mean, handedness="RCP")
 
 # %%
 # Initiate the reconstruction
@@ -91,9 +83,7 @@ rotation_angle = [
 ]
 sector_angle = 45
 
-Source_BF = np.array(
-    optics.generate_pupil(frr, NA_obj / n_media / 2, lambda_illu / n_media)
-)
+Source_BF = np.array(optics.generate_pupil(frr, NA_obj / n_media / 2, lambda_illu / n_media))
 Source = optics.gen_sector_Pupil(
     fxx,
     fyy,
@@ -113,9 +103,7 @@ for i in range(len(Source)):
     Source_PolState[i, 1] = E_in[1]
 
 
-jupyter_visuals.plot_multicolumn(
-    fftshift(Source, axes=(1, 2)), origin="lower", num_col=5
-)
+jupyter_visuals.plot_multicolumn(fftshift(Source, axes=(1, 2)), origin="lower", num_col=5)
 
 # %%
 # Initiate reconstruction with experimental parameters
@@ -151,15 +139,11 @@ S_image_tm = np.zeros_like(S_image_recon)
 S_image_tm[0] = S_image_recon[0] / S_bg_recon[0, :, :, :, np.newaxis] - 1
 S_image_tm[1] = (
     S_image_recon[1] / S_bg_recon[0, :, :, :, np.newaxis]
-    - S_bg_recon[1, :, :, :, np.newaxis]
-    * S_image_recon[0]
-    / S_bg_recon[0, :, :, :, np.newaxis] ** 2
+    - S_bg_recon[1, :, :, :, np.newaxis] * S_image_recon[0] / S_bg_recon[0, :, :, :, np.newaxis] ** 2
 )
 S_image_tm[2] = (
     S_image_recon[2] / S_bg_recon[0, :, :, :, np.newaxis]
-    - S_bg_recon[2, :, :, :, np.newaxis]
-    * S_image_recon[0]
-    / S_bg_recon[0, :, :, :, np.newaxis] ** 2
+    - S_bg_recon[2, :, :, :, np.newaxis] * S_image_recon[0] / S_bg_recon[0, :, :, :, np.newaxis] ** 2
 )
 
 
@@ -210,9 +194,7 @@ reg_inc = np.array([2.5, 5, 1, 1, 3, 3, 3]) * 1
 reg_differential_permittivity = 1e-2
 
 # reconstruct components of scattering potential tensor
-f_tensor = setup.scattering_potential_tensor_recon_3D_vec(
-    S_image_tm, reg_inc=reg_inc, cupy_det=True
-)
+f_tensor = setup.scattering_potential_tensor_recon_3D_vec(S_image_tm, reg_inc=reg_inc, cupy_det=True)
 
 # %%
 # browse the z-stack of components of scattering potential tensor
@@ -256,9 +238,7 @@ jupyter_visuals.parallel_4D_viewer(
 
 # %%
 p_mat_map = optics.optic_sign_probability(mat_map, mat_map_thres=0.2)
-phase = optics.phase_inc_correction(
-    f_tensor[0], differential_permittivity[1], theta[1]
-)
+phase = optics.phase_inc_correction(f_tensor[0], differential_permittivity[1], theta[1])
 phase_PT, absorption_PT, differential_permittivity_PT = [
     optics.unit_conversion_from_scattering_potential_to_permittivity(
         SP_array, lambda_illu, n_media=n_media, imaging_mode="3D"
@@ -324,9 +304,7 @@ jupyter_visuals.parallel_4D_viewer(
 # > pip install napari[all]
 # > pip install napari-ome-zarr
 # > napari Anisotropic_target_small_processed_OME.zarr
-PTI_output_OME_file = (
-    data_folder / "Anisotropic_target_small_processed_OME.zarr"
-)
+PTI_output_OME_file = data_folder / "Anisotropic_target_small_processed_OME.zarr"
 output_channel_names = [
     "f_0r",
     "f_0i",
@@ -400,16 +378,12 @@ mat_map = PTI_array[7:]
     material_type="negative",
     reg_ret_pr=reg_differential_permittivity,
 )
-differential_permittivity = np.array(
-    [differential_permittivity_p, differential_permittivity_n]
-)
+differential_permittivity = np.array([differential_permittivity_p, differential_permittivity_n])
 azimuth = np.array([azimuth_p, azimuth_n])
 theta = np.array([theta_p, theta_n])
 
 p_mat_map = optics.optic_sign_probability(mat_map, mat_map_thres=0.09)
-phase = optics.phase_inc_correction(
-    f_tensor[0], differential_permittivity[1], theta[1]
-)
+phase = optics.phase_inc_correction(f_tensor[0], differential_permittivity[1], theta[1])
 phase_PT, absorption_PT, differential_permittivity_PT = [
     optics.unit_conversion_from_scattering_potential_to_permittivity(
         SP_array, lambda_illu, n_media=n_media, imaging_mode="3D"
@@ -535,9 +509,7 @@ sub_ax = ax[3, 1].imshow(
 ax[3, 1].set_title("optic sign probability (xz)")
 plt.colorbar(sub_ax, ax=ax[3, 1])
 
-sub_ax = ax[4, 0].imshow(
-    azimuth[0, :, :, z_layer], cmap="gray", origin="lower", vmin=0, vmax=np.pi
-)
+sub_ax = ax[4, 0].imshow(azimuth[0, :, :, z_layer], cmap="gray", origin="lower", vmin=0, vmax=np.pi)
 ax[4, 0].set_title("in-plane orientation (+) (xy)")
 
 sub_ax = ax[4, 1].imshow(
@@ -550,9 +522,7 @@ sub_ax = ax[4, 1].imshow(
 )
 ax[4, 1].set_title("in-plane orientation (+) (xz)")
 
-sub_ax = ax[5, 0].imshow(
-    theta[0, :, :, z_layer], cmap="gray", origin="lower", vmin=0, vmax=np.pi
-)
+sub_ax = ax[5, 0].imshow(theta[0, :, :, z_layer], cmap="gray", origin="lower", vmin=0, vmax=np.pi)
 ax[5, 0].set_title("inclination (+) (xy)")
 
 sub_ax = ax[5, 1].imshow(
@@ -616,15 +586,11 @@ orientation_3D_image_RGB = jupyter_visuals.orientation_3D_to_rgb(
 plt.figure(figsize=(10, 10))
 plt.imshow(orientation_3D_image_RGB[z_layer], origin="lower")
 plt.figure(figsize=(10, 10))
-plt.imshow(
-    orientation_3D_image_RGB[:, y_layer], origin="lower", aspect=z_step / ps
-)
+plt.imshow(orientation_3D_image_RGB[:, y_layer], origin="lower", aspect=z_step / ps)
 
 # plot the top view of 3D orientation colorsphere
 plt.figure(figsize=(3, 3))
-jupyter_visuals.orientation_3D_colorwheel(
-    wheelsize=256, circ_size=50, interp_belt=20 / 180 * np.pi, sat_factor=1
-)
+jupyter_visuals.orientation_3D_colorwheel(wheelsize=256, circ_size=50, interp_belt=20 / 180 * np.pi, sat_factor=1)
 
 # %%
 # Render 3D orientation with 2 channels (in-plane orientation and out-of-plane tilt)
@@ -657,9 +623,7 @@ in_plane_orientation = hsv_to_rgb(I_hsv.copy())
 plt.figure(figsize=(10, 10))
 plt.imshow(in_plane_orientation[z_layer], origin="lower")
 plt.figure(figsize=(10, 10))
-plt.imshow(
-    in_plane_orientation[:, y_layer], origin="lower", aspect=z_step / ps
-)
+plt.imshow(in_plane_orientation[:, y_layer], origin="lower", aspect=z_step / ps)
 plt.figure(figsize=(3, 3))
 jupyter_visuals.orientation_2D_colorwheel()
 
@@ -671,12 +635,7 @@ threshold_inc = np.pi / 90
 I_hsv = np.transpose(
     np.array(
         [
-            (
-                -np.maximum(0, np.abs(theta[1] - np.pi / 2) - threshold_inc)
-                + np.pi / 2
-                + threshold_inc
-            )
-            / np.pi,
+            (-np.maximum(0, np.abs(theta[1] - np.pi / 2) - threshold_inc) + np.pi / 2 + threshold_inc) / np.pi,
             np.ones_like(differential_permittivity_PT[1]),
             (
                 np.clip(

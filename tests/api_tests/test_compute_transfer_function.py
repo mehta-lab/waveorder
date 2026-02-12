@@ -109,27 +109,21 @@ def test_phase_2d_no_real_imag(make_czyx):
 
 def test_fluorescence_3d_returns_dataset(make_czyx):
     czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
-    tf_ds = fluorescence.compute_transfer_function(
-        czyx, 3, fluorescence.Settings()
-    )
+    tf_ds = fluorescence.compute_transfer_function(czyx, 3, fluorescence.Settings())
     assert isinstance(tf_ds, xr.Dataset)
     assert "optical_transfer_function" in tf_ds
 
 
 def test_fluorescence_3d_shape(make_czyx):
     czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
-    tf_ds = fluorescence.compute_transfer_function(
-        czyx, 3, fluorescence.Settings()
-    )
+    tf_ds = fluorescence.compute_transfer_function(czyx, 3, fluorescence.Settings())
     otf = tf_ds["optical_transfer_function"].values
     assert otf.shape == ZYX_SHAPE
 
 
 def test_fluorescence_3d_no_singular_system(make_czyx):
     czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
-    tf_ds = fluorescence.compute_transfer_function(
-        czyx, 3, fluorescence.Settings()
-    )
+    tf_ds = fluorescence.compute_transfer_function(czyx, 3, fluorescence.Settings())
     assert "singular_system_U" not in tf_ds
 
 
@@ -138,9 +132,7 @@ def test_fluorescence_3d_no_singular_system(make_czyx):
 
 def test_fluorescence_2d_returns_singular_system(make_czyx):
     czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
-    tf_ds = fluorescence.compute_transfer_function(
-        czyx, 2, fluorescence.Settings()
-    )
+    tf_ds = fluorescence.compute_transfer_function(czyx, 2, fluorescence.Settings())
     assert isinstance(tf_ds, xr.Dataset)
     assert "singular_system_U" in tf_ds
     assert "singular_system_S" in tf_ds
@@ -149,9 +141,7 @@ def test_fluorescence_2d_returns_singular_system(make_czyx):
 
 def test_fluorescence_2d_no_otf(make_czyx):
     czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
-    tf_ds = fluorescence.compute_transfer_function(
-        czyx, 2, fluorescence.Settings()
-    )
+    tf_ds = fluorescence.compute_transfer_function(czyx, 2, fluorescence.Settings())
     assert "optical_transfer_function" not in tf_ds
 
 
@@ -201,17 +191,11 @@ def test_birefringence_and_phase_2d(make_czyx):
 def test_phase_3d_tensors_are_finite(make_czyx):
     czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = phase.compute_transfer_function(czyx, 3, phase.Settings())
-    assert np.all(
-        np.isfinite(tf_ds["real_potential_transfer_function"].values)
-    )
-    assert np.all(
-        np.isfinite(tf_ds["imaginary_potential_transfer_function"].values)
-    )
+    assert np.all(np.isfinite(tf_ds["real_potential_transfer_function"].values))
+    assert np.all(np.isfinite(tf_ds["imaginary_potential_transfer_function"].values))
 
 
 def test_fluorescence_3d_otf_is_finite(make_czyx):
     czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
-    tf_ds = fluorescence.compute_transfer_function(
-        czyx, 3, fluorescence.Settings()
-    )
+    tf_ds = fluorescence.compute_transfer_function(czyx, 3, fluorescence.Settings())
     assert np.all(np.isfinite(tf_ds["optical_transfer_function"].values))

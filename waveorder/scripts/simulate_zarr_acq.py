@@ -23,9 +23,7 @@ from waveorder.cli.utils import create_empty_hcs_zarr
 
 
 # %% #############################################
-def convert_data(
-    tif_path, latest_out_path, prefix="", data_type_str="ometiff"
-):
+def convert_data(tif_path, latest_out_path, prefix="", data_type_str="ometiff"):
     converter = TIFFConverter(
         os.path.join(tif_path, prefix),
         latest_out_path,
@@ -127,10 +125,7 @@ def run_acq(input_path="", waitBetweenT=30):
 
         required_order = ["time", "position", "z", "channel"]
         my_dict = output_dataset.zattrs["CurrentDimensions"]
-        sorted_dict_acq = {
-            k: my_dict[k]
-            for k in sorted(my_dict, key=lambda x: required_order.index(x))
-        }
+        sorted_dict_acq = {k: my_dict[k] for k in sorted(my_dict, key=lambda x: required_order.index(x))}
         print("Writer thread - Acquisition Dim:", sorted_dict_acq)
 
         # reconThread = threading.Thread(target=doReconstruct, args=(output_store_path, t))
@@ -143,18 +138,10 @@ def run_acq(input_path="", waitBetweenT=30):
 
 def do_reconstruct(input_path, time_point):
 
-    config_path = os.path.join(
-        Path(input_path).parent.absolute(), "Bire-" + str(time_point) + ".yml"
-    )
-    output_path = os.path.join(
-        Path(input_path).parent.absolute(), "Recon_" + Path(input_path).name
-    )
+    config_path = os.path.join(Path(input_path).parent.absolute(), "Bire-" + str(time_point) + ".yml")
+    output_path = os.path.join(Path(input_path).parent.absolute(), "Recon_" + Path(input_path).name)
 
-    print(
-        "Processing {input} time_point={tp}".format(
-            input=input_path, tp=time_point
-        )
-    )
+    print("Processing {input} time_point={tp}".format(input=input_path, tp=time_point))
 
     try:
         proc = subprocess.run(
@@ -172,18 +159,14 @@ def do_reconstruct(input_path, time_point):
             ]
         )
         if proc.returncode != 0:
-            raise Exception(
-                "An error occurred in processing ! Check terminal output."
-            )
+            raise Exception("An error occurred in processing ! Check terminal output.")
     except Exception as exc:
         print(exc.args)
 
 
 # %% #############################################
 def run_acquire(input_path, waitBetweenT):
-    runThread1Acq = threading.Thread(
-        target=run_acq, args=(input_path, waitBetweenT)
-    )
+    runThread1Acq = threading.Thread(target=run_acq, args=(input_path, waitBetweenT))
     runThread1Acq.start()
 
 

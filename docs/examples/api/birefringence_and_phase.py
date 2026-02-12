@@ -36,9 +36,7 @@ phantom, data = birefringence_and_phase.simulate(
 )
 
 # Reconstruct (detailed)
-tf = birefringence_and_phase.compute_transfer_function(
-    data, biref_settings, phase_settings, channel_names, recon_dim=3
-)
+tf = birefringence_and_phase.compute_transfer_function(data, biref_settings, phase_settings, channel_names, recon_dim=3)
 result = birefringence_and_phase.apply_inverse_transfer_function(
     data,
     tf,
@@ -48,9 +46,7 @@ result = birefringence_and_phase.apply_inverse_transfer_function(
 )
 
 # Reconstruct (one-liner)
-result = birefringence_and_phase.reconstruct(
-    data, biref_settings, phase_settings, channel_names, recon_dim=3
-)
+result = birefringence_and_phase.reconstruct(data, biref_settings, phase_settings, channel_names, recon_dim=3)
 
 print(f"Output shape: {result.shape}")
 print(f"Channels: {list(result.coords['c'].values)}")

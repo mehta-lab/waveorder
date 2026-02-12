@@ -21,9 +21,7 @@ from waveorder.io import utils
 def _write_czyx(czyx: xr.DataArray, path: Path):
     """Write a CZYX xr.DataArray to an HCS OME-Zarr."""
     channel_names = list(czyx.coords["c"].values)
-    dataset = open_ome_zarr(
-        path, layout="hcs", mode="w", channel_names=channel_names
-    )
+    dataset = open_ome_zarr(path, layout="hcs", mode="w", channel_names=channel_names)
     position = dataset.create_position("0", "0", "0")
     position.create_zeros(
         "0",
@@ -92,9 +90,7 @@ def _simulate_cli(config_filepath: Path, output_dirpath: Path):
             channel_name=settings.input_channel_names[0],
         )
     else:
-        raise click.UsageError(
-            "Config must contain birefringence, phase, or fluorescence settings"
-        )
+        raise click.UsageError("Config must contain birefringence, phase, or fluorescence settings")
 
     czyx = xr.concat([phantom, data], dim="c")
     _write_czyx(czyx, output_dirpath)

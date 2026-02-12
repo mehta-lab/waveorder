@@ -91,9 +91,7 @@ def test_compute_transfer_output_file(tmp_path, example_plate):
             assert output_path.exists()
 
 
-def test_stokes_matrix_write(
-    birefringence_phase_recon_settings_function, make_czyx
-):
+def test_stokes_matrix_write(birefringence_phase_recon_settings_function, make_czyx):
     recon_settings, dataset = birefringence_phase_recon_settings_function
     czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     tf_ds = birefringence.compute_transfer_function(
@@ -105,9 +103,7 @@ def test_stokes_matrix_write(
     assert dataset["intensity_to_stokes_matrix"]
 
 
-def test_absorption_and_phase_write(
-    birefringence_phase_recon_settings_function, make_czyx
-):
+def test_absorption_and_phase_write(birefringence_phase_recon_settings_function, make_czyx):
     recon_settings, dataset = birefringence_phase_recon_settings_function
     czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     tf_ds = phase.compute_transfer_function(czyx_data, 3, recon_settings.phase)
@@ -125,9 +121,7 @@ def test_absorption_and_phase_write(
     assert "phase_transfer_function" not in dataset
 
 
-def test_phase_3dim_write(
-    birefringence_phase_recon_settings_function, make_czyx
-):
+def test_phase_3dim_write(birefringence_phase_recon_settings_function, make_czyx):
     recon_settings, dataset = birefringence_phase_recon_settings_function
     recon_settings.reconstruction_dimension = 2
     czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
@@ -144,9 +138,7 @@ def test_phase_3dim_write(
 def test_fluorescence_write(fluorescence_recon_settings_function, make_czyx):
     recon_settings, dataset = fluorescence_recon_settings_function
     czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
-    tf_ds = fluorescence.compute_transfer_function(
-        czyx_data, 3, recon_settings.fluorescence
-    )
+    tf_ds = fluorescence.compute_transfer_function(czyx_data, 3, recon_settings.fluorescence)
     _write_fluorescence_tf(dataset, tf_ds, (3, 4, 5), 3)
     assert dataset["optical_transfer_function"]
     assert dataset["optical_transfer_function"].shape == (1, 1, 3, 4, 5)
@@ -154,16 +146,12 @@ def test_fluorescence_write(fluorescence_recon_settings_function, make_czyx):
     assert "imaginary_potential_transfer_function" not in dataset
 
 
-def test_fluorescence_2d_write(
-    fluorescence_recon_settings_function, make_czyx
-):
+def test_fluorescence_2d_write(fluorescence_recon_settings_function, make_czyx):
     """Test 2D fluorescence transfer function generation"""
     recon_settings, dataset = fluorescence_recon_settings_function
     recon_settings.reconstruction_dimension = 2
     czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
-    tf_ds = fluorescence.compute_transfer_function(
-        czyx_data, 2, recon_settings.fluorescence
-    )
+    tf_ds = fluorescence.compute_transfer_function(czyx_data, 2, recon_settings.fluorescence)
     _write_fluorescence_tf(dataset, tf_ds, (3, 4, 5), 2)
     # Should generate singular system components, not optical transfer function
     assert dataset["singular_system_U"]
