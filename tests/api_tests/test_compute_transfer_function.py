@@ -13,11 +13,6 @@ from waveorder.api._utils import _position_list_from_shape_scale_offset
 ZYX_SHAPE = (3, 4, 5)
 
 
-def _make_czyx_data(zyx_shape=ZYX_SHAPE, n_channels=4):
-    data = np.zeros((n_channels,) + zyx_shape, dtype=np.float32)
-    return xr.DataArray(data, dims=("c", "z", "y", "x"))
-
-
 # --- _position_list_from_shape_scale_offset ---
 
 
@@ -38,8 +33,8 @@ def test_position_list_from_shape_scale_offset(shape, scale, offset, expected):
 # --- birefringence ---
 
 
-def test_birefringence_returns_dataset():
-    czyx = _make_czyx_data()
+def test_birefringence_returns_dataset(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     tf_ds = birefringence.compute_transfer_function(
         czyx,
         birefringence.Settings(),
@@ -49,8 +44,8 @@ def test_birefringence_returns_dataset():
     assert "intensity_to_stokes_matrix" in tf_ds
 
 
-def test_birefringence_stokes_matrix_shape():
-    czyx = _make_czyx_data()
+def test_birefringence_stokes_matrix_shape(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     tf_ds = birefringence.compute_transfer_function(
         czyx,
         birefringence.Settings(),
@@ -65,16 +60,16 @@ def test_birefringence_stokes_matrix_shape():
 # --- phase 3D ---
 
 
-def test_phase_3d_returns_dataset():
-    czyx = _make_czyx_data(n_channels=1)
+def test_phase_3d_returns_dataset(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = phase.compute_transfer_function(czyx, 3, phase.Settings())
     assert isinstance(tf_ds, xr.Dataset)
     assert "real_potential_transfer_function" in tf_ds
     assert "imaginary_potential_transfer_function" in tf_ds
 
 
-def test_phase_3d_shapes():
-    czyx = _make_czyx_data(n_channels=1)
+def test_phase_3d_shapes(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = phase.compute_transfer_function(czyx, 3, phase.Settings())
     real_tf = tf_ds["real_potential_transfer_function"].values
     imag_tf = tf_ds["imaginary_potential_transfer_function"].values
@@ -82,8 +77,8 @@ def test_phase_3d_shapes():
     assert imag_tf.shape == ZYX_SHAPE
 
 
-def test_phase_3d_no_singular_system():
-    czyx = _make_czyx_data(n_channels=1)
+def test_phase_3d_no_singular_system(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = phase.compute_transfer_function(czyx, 3, phase.Settings())
     assert "singular_system_U" not in tf_ds
     assert "singular_system_S" not in tf_ds
@@ -93,8 +88,8 @@ def test_phase_3d_no_singular_system():
 # --- phase 2D ---
 
 
-def test_phase_2d_returns_singular_system():
-    czyx = _make_czyx_data(n_channels=1)
+def test_phase_2d_returns_singular_system(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = phase.compute_transfer_function(czyx, 2, phase.Settings())
     assert isinstance(tf_ds, xr.Dataset)
     assert "singular_system_U" in tf_ds
@@ -102,8 +97,8 @@ def test_phase_2d_returns_singular_system():
     assert "singular_system_Vh" in tf_ds
 
 
-def test_phase_2d_no_real_imag():
-    czyx = _make_czyx_data(n_channels=1)
+def test_phase_2d_no_real_imag(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = phase.compute_transfer_function(czyx, 2, phase.Settings())
     assert "real_potential_transfer_function" not in tf_ds
     assert "imaginary_potential_transfer_function" not in tf_ds
@@ -112,8 +107,8 @@ def test_phase_2d_no_real_imag():
 # --- fluorescence 3D ---
 
 
-def test_fluorescence_3d_returns_dataset():
-    czyx = _make_czyx_data(n_channels=1)
+def test_fluorescence_3d_returns_dataset(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = fluorescence.compute_transfer_function(
         czyx, 3, fluorescence.Settings()
     )
@@ -121,8 +116,8 @@ def test_fluorescence_3d_returns_dataset():
     assert "optical_transfer_function" in tf_ds
 
 
-def test_fluorescence_3d_shape():
-    czyx = _make_czyx_data(n_channels=1)
+def test_fluorescence_3d_shape(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = fluorescence.compute_transfer_function(
         czyx, 3, fluorescence.Settings()
     )
@@ -130,8 +125,8 @@ def test_fluorescence_3d_shape():
     assert otf.shape == ZYX_SHAPE
 
 
-def test_fluorescence_3d_no_singular_system():
-    czyx = _make_czyx_data(n_channels=1)
+def test_fluorescence_3d_no_singular_system(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = fluorescence.compute_transfer_function(
         czyx, 3, fluorescence.Settings()
     )
@@ -141,8 +136,8 @@ def test_fluorescence_3d_no_singular_system():
 # --- fluorescence 2D ---
 
 
-def test_fluorescence_2d_returns_singular_system():
-    czyx = _make_czyx_data(n_channels=1)
+def test_fluorescence_2d_returns_singular_system(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = fluorescence.compute_transfer_function(
         czyx, 2, fluorescence.Settings()
     )
@@ -152,8 +147,8 @@ def test_fluorescence_2d_returns_singular_system():
     assert "singular_system_Vh" in tf_ds
 
 
-def test_fluorescence_2d_no_otf():
-    czyx = _make_czyx_data(n_channels=1)
+def test_fluorescence_2d_no_otf(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = fluorescence.compute_transfer_function(
         czyx, 2, fluorescence.Settings()
     )
@@ -163,8 +158,8 @@ def test_fluorescence_2d_no_otf():
 # --- birefringence_and_phase ---
 
 
-def test_birefringence_and_phase_3d():
-    czyx = _make_czyx_data()
+def test_birefringence_and_phase_3d(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     tf_ds = birefringence_and_phase.compute_transfer_function(
         czyx,
         birefringence.Settings(),
@@ -182,8 +177,8 @@ def test_birefringence_and_phase_3d():
     assert "imaginary_potential_transfer_function" in tf_ds
 
 
-def test_birefringence_and_phase_2d():
-    czyx = _make_czyx_data()
+def test_birefringence_and_phase_2d(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     tf_ds = birefringence_and_phase.compute_transfer_function(
         czyx,
         birefringence.Settings(),
@@ -203,8 +198,8 @@ def test_birefringence_and_phase_2d():
 # --- roundtrip: compute TF then extract tensors ---
 
 
-def test_phase_3d_tensors_are_finite():
-    czyx = _make_czyx_data(n_channels=1)
+def test_phase_3d_tensors_are_finite(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = phase.compute_transfer_function(czyx, 3, phase.Settings())
     assert np.all(
         np.isfinite(tf_ds["real_potential_transfer_function"].values)
@@ -214,8 +209,8 @@ def test_phase_3d_tensors_are_finite():
     )
 
 
-def test_fluorescence_3d_otf_is_finite():
-    czyx = _make_czyx_data(n_channels=1)
+def test_fluorescence_3d_otf_is_finite(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = fluorescence.compute_transfer_function(
         czyx, 3, fluorescence.Settings()
     )

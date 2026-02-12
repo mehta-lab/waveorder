@@ -2,7 +2,6 @@
 
 import numpy as np
 import pytest
-import xarray as xr
 
 from waveorder.api import (
     birefringence,
@@ -11,31 +10,10 @@ from waveorder.api import (
     phase,
 )
 
-ZYX_SHAPE = (5, 32, 32)
-
-
-def _make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1):
-    rng = np.random.default_rng(42)
-    data = rng.random((n_channels,) + zyx_shape, dtype=np.float32)
-    z_pixel_size = 2.0
-    yx_pixel_size = 6.5 / 20
-
-    return xr.DataArray(
-        data,
-        dims=("c", "z", "y", "x"),
-        coords={
-            "c": [f"ch{i}" for i in range(n_channels)],
-            "z": np.arange(zyx_shape[0]) * z_pixel_size,
-            "y": np.arange(zyx_shape[1]) * yx_pixel_size,
-            "x": np.arange(zyx_shape[2]) * yx_pixel_size,
-        },
-    )
-
-
 # --- Phase ---
 
 
-def test_phase_3d():
+def test_phase_3d(make_czyx):
     settings = phase.Settings(
         transfer_function=phase.TransferFunctionSettings(
             wavelength_illumination=0.532,
@@ -50,7 +28,7 @@ def test_phase_3d():
         ),
     )
 
-    result = phase.reconstruct(_make_czyx(), recon_dim=3, settings=settings)
+    result = phase.reconstruct(make_czyx(), recon_dim=3, settings=settings)
 
     assert result.dims == ("c", "z", "y", "x")
     assert list(result.coords["c"].values) == ["Phase3D"]
@@ -58,7 +36,7 @@ def test_phase_3d():
     assert np.all(np.isfinite(result.values))
 
 
-def test_phase_2d():
+def test_phase_2d(make_czyx):
     settings = phase.Settings(
         transfer_function=phase.TransferFunctionSettings(
             wavelength_illumination=0.532,
@@ -74,7 +52,7 @@ def test_phase_2d():
         ),
     )
 
-    result = phase.reconstruct(_make_czyx(), recon_dim=2, settings=settings)
+    result = phase.reconstruct(make_czyx(), recon_dim=2, settings=settings)
 
     assert list(result.coords["c"].values) == ["Phase2D"]
     assert result.sizes["z"] == 1
@@ -83,7 +61,7 @@ def test_phase_2d():
 # --- Fluorescence ---
 
 
-def test_fluorescence_3d():
+def test_fluorescence_3d(make_czyx):
     settings = fluorescence.Settings(
         transfer_function=fluorescence.TransferFunctionSettings(
             yx_pixel_size=6.5 / 20,
@@ -98,7 +76,7 @@ def test_fluorescence_3d():
     )
 
     result = fluorescence.reconstruct(
-        _make_czyx(),
+        make_czyx(),
         recon_dim=3,
         settings=settings,
         fluor_channel_name="GFP",
@@ -109,7 +87,7 @@ def test_fluorescence_3d():
     assert np.all(np.isfinite(result.values))
 
 
-def test_fluorescence_2d():
+def test_fluorescence_2d(make_czyx):
     settings = fluorescence.Settings(
         transfer_function=fluorescence.TransferFunctionSettings(
             yx_pixel_size=6.5 / 20,
@@ -125,7 +103,7 @@ def test_fluorescence_2d():
     )
 
     result = fluorescence.reconstruct(
-        _make_czyx(),
+        make_czyx(),
         recon_dim=2,
         settings=settings,
         fluor_channel_name="GFP",
@@ -138,7 +116,7 @@ def test_fluorescence_2d():
 # --- Birefringence ---
 
 
-def test_birefringence_3d():
+def test_birefringence_3d(make_czyx):
     settings = birefringence.Settings(
         transfer_function=birefringence.TransferFunctionSettings(swing=0.1),
         apply_inverse=birefringence.ApplyInverseSettings(
@@ -146,7 +124,7 @@ def test_birefringence_3d():
         ),
     )
 
-    czyx = _make_czyx(n_channels=4)
+    czyx = make_czyx(n_channels=4)
     channel_names = [f"ch{i}" for i in range(4)]
 
     result = birefringence.reconstruct(czyx, settings, channel_names)
@@ -163,7 +141,7 @@ def test_birefringence_3d():
 # --- Birefringence + Phase ---
 
 
-def test_birefringence_and_phase_3d():
+def test_birefringence_and_phase_3d(make_czyx):
     biref_settings = birefringence.Settings(
         transfer_function=birefringence.TransferFunctionSettings(swing=0.1),
         apply_inverse=birefringence.ApplyInverseSettings(
@@ -184,7 +162,7 @@ def test_birefringence_and_phase_3d():
         ),
     )
 
-    czyx = _make_czyx(n_channels=4)
+    czyx = make_czyx(n_channels=4)
     channel_names = [f"ch{i}" for i in range(4)]
 
     result = birefringence_and_phase.reconstruct(
@@ -210,7 +188,7 @@ def test_birefringence_and_phase_3d():
     "are incompatible with isotropic_thin_3d.apply_inverse_transfer_function",
     strict=True,
 )
-def test_birefringence_and_phase_2d():
+def test_birefringence_and_phase_2d(make_czyx):
     biref_settings = birefringence.Settings(
         transfer_function=birefringence.TransferFunctionSettings(swing=0.1),
         apply_inverse=birefringence.ApplyInverseSettings(
@@ -232,7 +210,7 @@ def test_birefringence_and_phase_2d():
         ),
     )
 
-    czyx = _make_czyx(n_channels=4)
+    czyx = make_czyx(n_channels=4)
     channel_names = [f"ch{i}" for i in range(4)]
 
     result = birefringence_and_phase.reconstruct(

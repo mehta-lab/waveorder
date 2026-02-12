@@ -1,10 +1,6 @@
-import numpy as np
-import pytest
-import xarray as xr
 from click.testing import CliRunner
 
 from waveorder.api import birefringence, fluorescence, phase
-from waveorder.api._utils import _position_list_from_shape_scale_offset
 from waveorder.cli import settings
 from waveorder.cli.compute_transfer_function import (
     _write_birefringence_tf,
@@ -14,23 +10,7 @@ from waveorder.cli.compute_transfer_function import (
 from waveorder.cli.main import cli
 from waveorder.io import utils
 
-
-def _make_czyx_data(zyx_shape=(3, 4, 5), n_channels=4):
-    """Create a dummy CZYX xr.DataArray for TF computation."""
-    data = np.zeros((n_channels,) + zyx_shape, dtype=np.float32)
-    return xr.DataArray(data, dims=("c", "z", "y", "x"))
-
-
-@pytest.mark.parametrize(
-    "shape, scale, offset, expected",
-    [
-        (5, 1.0, 0.0, [2.0, 1.0, 0.0, -1.0, -2.0]),
-        (4, 0.5, 1.0, [1.5, 1.0, 0.5, 0.0]),
-    ],
-)
-def test_position_list_from_shape_scale_offset(shape, scale, offset, expected):
-    result = _position_list_from_shape_scale_offset(shape, scale, offset)
-    np.testing.assert_allclose(result, expected)
+ZYX_SHAPE = (3, 4, 5)
 
 
 def test_compute_transfer(tmp_path, example_plate):
@@ -111,9 +91,11 @@ def test_compute_transfer_output_file(tmp_path, example_plate):
             assert output_path.exists()
 
 
-def test_stokes_matrix_write(birefringence_phase_recon_settings_function):
+def test_stokes_matrix_write(
+    birefringence_phase_recon_settings_function, make_czyx
+):
     recon_settings, dataset = birefringence_phase_recon_settings_function
-    czyx_data = _make_czyx_data()
+    czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     tf_ds = birefringence.compute_transfer_function(
         czyx_data,
         recon_settings.birefringence,
@@ -124,10 +106,10 @@ def test_stokes_matrix_write(birefringence_phase_recon_settings_function):
 
 
 def test_absorption_and_phase_write(
-    birefringence_phase_recon_settings_function,
+    birefringence_phase_recon_settings_function, make_czyx
 ):
     recon_settings, dataset = birefringence_phase_recon_settings_function
-    czyx_data = _make_czyx_data()
+    czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     tf_ds = phase.compute_transfer_function(czyx_data, 3, recon_settings.phase)
     _write_phase_tf(dataset, tf_ds, (3, 4, 5), 3)
     assert dataset["real_potential_transfer_function"]
@@ -143,10 +125,12 @@ def test_absorption_and_phase_write(
     assert "phase_transfer_function" not in dataset
 
 
-def test_phase_3dim_write(birefringence_phase_recon_settings_function):
+def test_phase_3dim_write(
+    birefringence_phase_recon_settings_function, make_czyx
+):
     recon_settings, dataset = birefringence_phase_recon_settings_function
     recon_settings.reconstruction_dimension = 2
-    czyx_data = _make_czyx_data()
+    czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     tf_ds = phase.compute_transfer_function(czyx_data, 2, recon_settings.phase)
     _write_phase_tf(dataset, tf_ds, (3, 4, 5), 2)
     assert dataset["singular_system_U"]
@@ -157,9 +141,9 @@ def test_phase_3dim_write(birefringence_phase_recon_settings_function):
     assert "imaginary_potential_transfer_function" not in dataset
 
 
-def test_fluorescence_write(fluorescence_recon_settings_function):
+def test_fluorescence_write(fluorescence_recon_settings_function, make_czyx):
     recon_settings, dataset = fluorescence_recon_settings_function
-    czyx_data = _make_czyx_data(n_channels=1)
+    czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = fluorescence.compute_transfer_function(
         czyx_data, 3, recon_settings.fluorescence
     )
@@ -170,11 +154,13 @@ def test_fluorescence_write(fluorescence_recon_settings_function):
     assert "imaginary_potential_transfer_function" not in dataset
 
 
-def test_fluorescence_2d_write(fluorescence_recon_settings_function):
+def test_fluorescence_2d_write(
+    fluorescence_recon_settings_function, make_czyx
+):
     """Test 2D fluorescence transfer function generation"""
     recon_settings, dataset = fluorescence_recon_settings_function
     recon_settings.reconstruction_dimension = 2
-    czyx_data = _make_czyx_data(n_channels=1)
+    czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = fluorescence.compute_transfer_function(
         czyx_data, 2, recon_settings.fluorescence
     )

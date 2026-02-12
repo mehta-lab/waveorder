@@ -7,23 +7,6 @@ from waveorder.api._utils import _output_channel_names
 ZYX_SHAPE = (3, 4, 5)
 
 
-def _make_czyx_xarray(zyx_shape=ZYX_SHAPE, n_channels=4):
-    """Create a CZYX xr.DataArray with named coords."""
-    data = np.random.default_rng(42).random(
-        (n_channels,) + zyx_shape, dtype=np.float32
-    )
-    return xr.DataArray(
-        data,
-        dims=("c", "z", "y", "x"),
-        coords={
-            "c": [f"ch{i}" for i in range(n_channels)],
-            "z": np.arange(zyx_shape[0], dtype=float),
-            "y": np.arange(zyx_shape[1], dtype=float),
-            "x": np.arange(zyx_shape[2], dtype=float),
-        },
-    )
-
-
 # --- _output_channel_names ---
 
 
@@ -93,8 +76,8 @@ class TestOutputChannelNames:
 # --- birefringence reconstruction ---
 
 
-def test_birefringence_returns_xarray():
-    czyx = _make_czyx_xarray()
+def test_birefringence_returns_xarray(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     settings = birefringence.Settings()
 
     tf_ds = birefringence.compute_transfer_function(
@@ -119,8 +102,8 @@ def test_birefringence_returns_xarray():
     assert result.shape[1:] == ZYX_SHAPE
 
 
-def test_birefringence_2d_singleton_z():
-    czyx = _make_czyx_xarray()
+def test_birefringence_2d_singleton_z(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     settings = birefringence.Settings()
 
     tf_ds = birefringence.compute_transfer_function(
@@ -137,8 +120,8 @@ def test_birefringence_2d_singleton_z():
     assert result.sizes["z"] == 1
 
 
-def test_birefringence_inherits_yx_coords():
-    czyx = _make_czyx_xarray()
+def test_birefringence_inherits_yx_coords(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     settings = birefringence.Settings()
 
     tf_ds = birefringence.compute_transfer_function(
@@ -163,8 +146,8 @@ def test_birefringence_inherits_yx_coords():
 # --- phase reconstruction ---
 
 
-def test_phase_3d_returns_xarray():
-    czyx = _make_czyx_xarray(n_channels=1)
+def test_phase_3d_returns_xarray(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     settings = phase.Settings()
 
     tf_ds = phase.compute_transfer_function(czyx, 3, settings)
@@ -179,8 +162,8 @@ def test_phase_3d_returns_xarray():
     assert result.shape == (1, *ZYX_SHAPE)
 
 
-def test_phase_2d_returns_xarray():
-    czyx = _make_czyx_xarray(n_channels=1)
+def test_phase_2d_returns_xarray(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     settings = phase.Settings()
 
     tf_ds = phase.compute_transfer_function(czyx, 2, settings)
@@ -198,8 +181,8 @@ def test_phase_2d_returns_xarray():
 # --- fluorescence reconstruction ---
 
 
-def test_fluorescence_3d_returns_xarray():
-    czyx = _make_czyx_xarray(n_channels=1)
+def test_fluorescence_3d_returns_xarray(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     settings = fluorescence.Settings()
 
     tf_ds = fluorescence.compute_transfer_function(czyx, 3, settings)
@@ -218,8 +201,8 @@ def test_fluorescence_3d_returns_xarray():
     assert result.shape == (1, *ZYX_SHAPE)
 
 
-def test_fluorescence_2d_returns_xarray():
-    czyx = _make_czyx_xarray(n_channels=1)
+def test_fluorescence_2d_returns_xarray(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     settings = fluorescence.Settings()
 
     tf_ds = fluorescence.compute_transfer_function(czyx, 2, settings)
@@ -241,8 +224,8 @@ def test_fluorescence_2d_returns_xarray():
 # --- roundtrip: compute TF -> apply inverse ---
 
 
-def test_phase_3d_roundtrip_finite():
-    czyx = _make_czyx_xarray(n_channels=1)
+def test_phase_3d_roundtrip_finite(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     settings = phase.Settings()
 
     tf_ds = phase.compute_transfer_function(czyx, 3, settings)
@@ -253,8 +236,8 @@ def test_phase_3d_roundtrip_finite():
     assert np.all(np.isfinite(result.values))
 
 
-def test_fluorescence_3d_roundtrip_finite():
-    czyx = _make_czyx_xarray(n_channels=1)
+def test_fluorescence_3d_roundtrip_finite(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     settings = fluorescence.Settings()
 
     tf_ds = fluorescence.compute_transfer_function(czyx, 3, settings)
