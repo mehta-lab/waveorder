@@ -11,7 +11,6 @@ import torch.multiprocessing as mp
 import xarray as xr
 from iohub import open_ome_zarr
 from iohub.ngff import Position
-from iohub.ngff.models import WindowDict
 
 from waveorder.api import (
     birefringence,
@@ -328,18 +327,6 @@ def apply_inverse_transfer_function_single_position(
     else:
         for t_idx in time_indices:
             partial_apply_inverse_to_zyx_and_save(t_idx)
-
-    # Set contrast limits from actual data
-    data = np.array(output_dataset["0"])
-    for i, ch_name in enumerate(settings.output_channel_names):
-        ch_data = data[:, i]
-        lo = float(np.nanpercentile(ch_data, 1))
-        hi = float(np.nanpercentile(ch_data, 99))
-        if lo == hi:
-            hi = lo + 1.0
-        output_dataset.set_contrast_limits(
-            ch_name, WindowDict(start=lo, end=hi, min=lo, max=hi)
-        )
 
     # Save metadata at position level
     output_dataset.zattrs["settings"] = settings.model_dump()

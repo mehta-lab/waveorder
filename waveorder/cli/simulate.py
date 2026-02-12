@@ -4,7 +4,7 @@ import click
 import numpy as np
 import xarray as xr
 from iohub.ngff import open_ome_zarr
-from iohub.ngff.models import TransformationMeta, WindowDict
+from iohub.ngff.models import TransformationMeta
 
 from waveorder.api import (
     birefringence,
@@ -43,17 +43,6 @@ def _write_czyx(czyx: xr.DataArray, path: Path):
         ],
     )
     position["0"][0] = czyx.values
-
-    # Set contrast limits from actual data
-    for i, ch_name in enumerate(channel_names):
-        ch_data = czyx.values[i]
-        lo = float(np.nanpercentile(ch_data, 1))
-        hi = float(np.nanpercentile(ch_data, 99))
-        if lo == hi:
-            hi = lo + 1.0
-        position.set_contrast_limits(
-            ch_name, WindowDict(start=lo, end=hi, min=lo, max=hi)
-        )
 
     dataset.close()
 
