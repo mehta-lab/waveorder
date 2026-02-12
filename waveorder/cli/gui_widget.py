@@ -17,13 +17,13 @@ try:
 except:
     pass
 
-PLUGIN_NAME = "waveorder: Computational Toolkit for Label-Free Imaging"
+PLUGIN_NAME = "waveorder: Wave-optical simulation and reconstruction"
 PLUGIN_ICON = "🔬"
 
 
 @click.command()
 def gui():
-    """GUI for waveorder: Computational Toolkit for Label-Free Imaging"""
+    """GUI for waveorder: Wave-optical simulation and reconstruction"""
 
     app = QApplication(sys.argv)
     app.setStyle(
@@ -33,7 +33,6 @@ def gui():
         qdarktheme.setup_theme("dark")
     except Exception as e:
         print(e.args)
-        pass
     window = MainWindow()
     window.setWindowTitle(PLUGIN_ICON + " " + PLUGIN_NAME + " " + PLUGIN_ICON)
 

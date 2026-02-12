@@ -1,10 +1,10 @@
 import shutil
+import sys
 from pathlib import Path
 from typing import Literal
 
 from iohub import open_ome_zarr
 from iohub.ngff import Plate
-from napari.utils.notifications import show_warning
 from platformdirs import user_data_dir
 from wget import download
 
@@ -49,8 +49,9 @@ def download_and_unzip(data_type: Literal["target", "embryo"]) -> tuple[Path]:
         data_url = "https://zenodo.org/record/8386856/files/sample_contribution_embryo.zip?download=1"
 
     if not data_dirpath.with_suffix(".zip").exists():
-        show_warning(
-            f"Downloading {data_size} sample contribution. This might take a moment..."
+        print(
+            f"Downloading {data_size} sample contribution. This might take a moment...",
+            file=sys.stderr,
         )
         download(data_url, out=str(temp_dirpath))
 
