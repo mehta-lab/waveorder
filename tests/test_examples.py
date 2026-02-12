@@ -68,14 +68,7 @@ def test_phase_examples(script):
 
 @pytest.mark.parametrize(
     "example",
-    [
-        EXAMPLES / "api" / "phase_3d.py",
-        EXAMPLES / "api" / "phase_2d.py",
-        EXAMPLES / "api" / "fluorescence_3d.py",
-        EXAMPLES / "api" / "fluorescence_2d.py",
-        EXAMPLES / "api" / "birefringence.py",
-        EXAMPLES / "api" / "birefringence_and_phase.py",
-    ],
+    sorted((EXAMPLES / "api").glob("*.py")),
     ids=lambda p: p.name,
 )
 def test_api_examples(example):
@@ -85,14 +78,7 @@ def test_api_examples(example):
 
 @pytest.mark.parametrize(
     "example",
-    [
-        EXAMPLES / "cli" / "phase_3d.sh",
-        EXAMPLES / "cli" / "phase_2d.sh",
-        EXAMPLES / "cli" / "fluorescence_3d.sh",
-        EXAMPLES / "cli" / "fluorescence_2d.sh",
-        EXAMPLES / "cli" / "birefringence_3d.sh",
-        EXAMPLES / "cli" / "birefringence_and_phase_3d.sh",
-    ],
+    sorted((EXAMPLES / "cli").glob("*.sh")),
     ids=lambda p: p.name,
 )
 def test_cli_examples(example, tmp_path, monkeypatch):
