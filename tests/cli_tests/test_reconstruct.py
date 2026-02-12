@@ -17,9 +17,7 @@ from waveorder.io import utils
 
 input_scale = [1, 2, 3, 4, 5]
 # Setup options
-birefringence_settings = settings.BirefringenceSettings(
-    transfer_function=settings.BirefringenceTransferFunctionSettings()
-)
+birefringence_settings = settings.BirefringenceSettings()
 
 # birefringence_option, time_indices, phase_option, dimension_option, time_length_target
 all_options = [

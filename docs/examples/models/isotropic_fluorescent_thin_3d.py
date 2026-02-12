@@ -9,7 +9,7 @@ from waveorder.models import isotropic_fluorescent_thin_3d
 # all lengths must use consistent units e.g. um
 simulation_arguments = {
     "yx_shape": (256, 256),
-    "yx_pixel_size": 6.5 / 63,
+    "yx_pixel_size": 0.1,
 }
 phantom_arguments = {"sphere_radius": 5}
 z_shape = 100
@@ -22,7 +22,9 @@ zyx_scale = np.array(
     ]
 )
 transfer_function_arguments = {
-    "z_position_list": (np.arange(z_shape) - z_shape // 2) * z_pixel_size,
+    "z_position_list": list(
+        (-np.arange(z_shape) + z_shape // 2) * z_pixel_size
+    ),
     "wavelength_emission": 0.532,
     "index_of_refraction_media": 1.3,
     "numerical_aperture_detection": 1.2,

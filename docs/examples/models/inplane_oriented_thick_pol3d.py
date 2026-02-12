@@ -12,7 +12,7 @@ from waveorder.models import inplane_oriented_thick_pol3d
 # Parameters
 # all lengths must use consistent units e.g. um
 simulation_arguments = {"yx_shape": (256, 256)}
-transfer_function_arguments = {"swing": 0.1, "scheme": "5-State"}
+transfer_function_arguments = {"swing": 0.1, "scheme": "4-State"}
 
 # Create a phantom
 inplane_oriented_parameters = (

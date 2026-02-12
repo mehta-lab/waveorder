@@ -18,7 +18,7 @@ waveorder
 ```
 in a shell. If `waveorder` is installed correctly, you will see a usage string and
 ```
-waveorder: Computational Toolkit for Label-Free Imaging
+waveorder: Wave-optical simulation and reconstruction
 ```
 
 ### 2. Download and convert a test dataset

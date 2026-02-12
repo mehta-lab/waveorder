@@ -28,7 +28,7 @@ from waveorder.models import phase_thick_3d
 # all lengths must use consistent units e.g. um
 simulation_arguments = {
     "zyx_shape": (100, 256, 256),
-    "yx_pixel_size": 6.5 / 63,
+    "yx_pixel_size": 0.1,
     "z_pixel_size": 0.25,
     "wavelength_illumination": 0.532,
     "index_of_refraction_media": 1.3,
