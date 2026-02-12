@@ -324,9 +324,7 @@ def test_compute_focus_slice_batch_3d():
     np.random.seed(42)
     data_3d = np.random.random((11, 64, 64)).astype(np.float32)
 
-    result = focus.compute_focus_slice_batch(
-        data_3d, NA_det, lambda_ill, ps
-    )
+    result = focus.compute_focus_slice_batch(data_3d, NA_det, lambda_ill, ps)
     assert isinstance(result, int)
     assert 0 <= result < data_3d.shape[0]
 
@@ -340,9 +338,7 @@ def test_compute_focus_slice_batch_4d():
     np.random.seed(42)
     data_4d = np.random.random((3, 11, 64, 64)).astype(np.float32)
 
-    result = focus.compute_focus_slice_batch(
-        data_4d, NA_det, lambda_ill, ps
-    )
+    result = focus.compute_focus_slice_batch(data_4d, NA_det, lambda_ill, ps)
     assert isinstance(result, np.ndarray)
     assert result.shape == (3,)
     assert all(0 <= idx < 11 for idx in result)
@@ -371,9 +367,7 @@ def test_compute_focus_slice_batch_matches_sequential():
         )
 
 
-@pytest.mark.skipif(
-    not torch.cuda.is_available(), reason="CUDA not available"
-)
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
 def test_compute_focus_slice_batch_gpu():
     """Test batch focus on GPU produces same results as CPU."""
     ps = 6.5 / 100
