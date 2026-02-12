@@ -50,6 +50,95 @@ def compute_midband_power(
     return torch.sum(xy_abs_fft[mask])
 
 
+def compute_focus_slice_batch(
+    array: np.ndarray | torch.Tensor,
+    NA_det: float,
+    lambda_ill: float,
+    pixel_size: float,
+    midband_fractions: tuple[float, float] = (0.125, 0.25),
+    device: torch.device | str = "cpu",
+    batch_size: int | None = None,
+) -> int | np.ndarray:
+    """Find in-focus z-slice(s) using GPU-batched midband FFT power.
+
+    Precomputes the frequency mask once, then applies a batched 2D FFT
+    across all (T, Z) slices simultaneously for efficiency.
+
+    Parameters
+    ----------
+    array : np.ndarray or torch.Tensor
+        3D (Z, Y, X) or 4D (T, Z, Y, X) stack.
+    NA_det : float
+        Detection numerical aperture.
+    lambda_ill : float
+        Illumination wavelength (same units as pixel_size).
+    pixel_size : float
+        Object-space pixel size.
+    midband_fractions : tuple[float, float]
+        Inner and outer fractions of cutoff frequency.
+    device : torch.device or str
+        Torch device for computation.
+    batch_size : int or None
+        Max timepoints to process at once (controls GPU memory).
+        None = process all at once.
+
+    Returns
+    -------
+    int or np.ndarray
+        3D input: int (focus slice index).
+        4D input: np.ndarray of shape (T,) with per-timepoint focus indices.
+    """
+    if isinstance(array, np.ndarray):
+        tensor = torch.from_numpy(array).float()
+    else:
+        tensor = array.float()
+
+    ndim = tensor.ndim
+    if ndim == 3:
+        tensor = tensor.unsqueeze(0)  # (1, Z, Y, X)
+    elif ndim != 4:
+        raise ValueError(
+            f"{ndim}D array supplied. "
+            "`compute_focus_slice_batch` only accepts 3D or 4D arrays."
+        )
+
+    T, Z, Y, X = tensor.shape
+
+    # Precompute frequency mask once for (Y, X) shape
+    _, _, fxx, fyy = util.gen_coordinate((Y, X), pixel_size)
+    frr = torch.tensor(np.sqrt(fxx**2 + fyy**2), device=device)
+    cutoff = 2 * NA_det / lambda_ill
+    mask = torch.logical_and(
+        frr > cutoff * midband_fractions[0],
+        frr < cutoff * midband_fractions[1],
+    )
+    num_masked = mask.sum().item()
+
+    if batch_size is None or batch_size >= T:
+        chunks = [tensor]
+    else:
+        chunks = list(tensor.split(batch_size, dim=0))
+
+    all_focus_indices = []
+    for chunk in chunks:
+        chunk_t = chunk.shape[0]
+        # Reshape to (chunk_t * Z, Y, X) for batched FFT
+        flat = chunk.reshape(chunk_t * Z, Y, X).to(device)
+        abs_fft = torch.abs(torch.fft.fftn(flat, dim=(-2, -1)))
+        # Apply mask: (chunk_t * Z, num_masked) -> sum -> (chunk_t * Z,)
+        midband_power = abs_fft[:, mask].sum(dim=-1)
+        # Reshape to (chunk_t, Z) and find argmax per timepoint
+        midband_power = midband_power.reshape(chunk_t, Z)
+        focus_indices = torch.argmax(midband_power, dim=-1)
+        all_focus_indices.append(focus_indices.cpu())
+
+    result = torch.cat(all_focus_indices).numpy()
+
+    if ndim == 3:
+        return int(result[0])
+    return result
+
+
 def focus_from_transverse_band(
     zyx_array,
     NA_det,
