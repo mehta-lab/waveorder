@@ -14,6 +14,8 @@ def _validate_and_process_paths(
 ) -> list[Path]:
     # Sort and validate the input paths, expanding plates into lists of positions
     input_paths = [Path(path) for path in natsorted(value)]
+    # Filter out non-directories (e.g., zarr.json files from glob expansion)
+    input_paths = [path for path in input_paths if path.is_dir()]
     for path in input_paths:
         with open_ome_zarr(path, mode="r") as dataset:
             if isinstance(dataset, Plate):

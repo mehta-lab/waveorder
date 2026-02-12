@@ -131,12 +131,18 @@ def _load_transfer_function_dataset(
 def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
     # Get non-OME-Zarr plate-level metadata if it's available
     plate_metadata = {}
+    input_version = "0.4"
     try:
         input_plate = open_ome_zarr(
             position_path.parent.parent.parent, mode="r"
         )
+        input_version = input_plate.version
         plate_metadata = dict(input_plate.zattrs)
-        plate_metadata.pop("plate")
+        # In v0.5 (zarr v3), OME metadata is nested inside an "ome" key
+        if "ome" in plate_metadata:
+            plate_metadata.pop("ome")
+        else:
+            plate_metadata.pop("plate")
     except (RuntimeError, FileNotFoundError):
         warnings.warn(
             "Position is not part of a plate...no plate metadata will be copied."
@@ -158,6 +164,7 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
         "channel_names": channel_names,
         "dtype": np.float32,
         "plate_metadata": plate_metadata,
+        "version": input_version,
     }
 
 
