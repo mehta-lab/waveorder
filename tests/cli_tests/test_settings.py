@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from waveorder.api import birefringence, fluorescence, phase
 from waveorder.cli import settings
 from waveorder.io import utils
 
@@ -49,43 +50,41 @@ def test_reconstruction_settings():
 
 
 def test_biref_tf_settings():
-    settings.BirefringenceTransferFunctionSettings(swing=0.1)
+    birefringence.TransferFunctionSettings(swing=0.1)
 
     with pytest.raises(ValidationError):
-        settings.BirefringenceTransferFunctionSettings(swing=1.1)
+        birefringence.TransferFunctionSettings(swing=1.1)
 
     with pytest.raises(ValidationError):
-        settings.BirefringenceTransferFunctionSettings(scheme="Test")
+        birefringence.TransferFunctionSettings(scheme="Test")
 
 
 def test_phase_tf_settings():
-    settings.PhaseTransferFunctionSettings(
+    phase.TransferFunctionSettings(
         index_of_refraction_media=1.0, numerical_aperture_detection=0.8
     )
 
     with pytest.raises(ValidationError):
-        settings.PhaseTransferFunctionSettings(
+        phase.TransferFunctionSettings(
             index_of_refraction_media=1.0, numerical_aperture_detection=1.1
         )
 
     # Inconsistent units
     with pytest.warns(UserWarning):
-        settings.PhaseTransferFunctionSettings(
-            yx_pixel_size=650, z_pixel_size=0.3
-        )
+        phase.TransferFunctionSettings(yx_pixel_size=650, z_pixel_size=0.3)
 
     # Extra parameter
     with pytest.raises(ValidationError):
-        settings.PhaseTransferFunctionSettings(zyx_pixel_size=650)
+        phase.TransferFunctionSettings(zyx_pixel_size=650)
 
 
 def test_fluor_tf_settings():
-    settings.FluorescenceTransferFunctionSettings(
+    fluorescence.TransferFunctionSettings(
         wavelength_emission=0.500, yx_pixel_size=0.2
     )
 
     with pytest.warns(UserWarning):
-        settings.FluorescenceTransferFunctionSettings(
+        fluorescence.TransferFunctionSettings(
             wavelength_emission=0.500, yx_pixel_size=2000
         )
 

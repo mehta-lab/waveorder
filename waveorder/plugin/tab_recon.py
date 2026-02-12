@@ -43,25 +43,23 @@ from concurrent.futures import ThreadPoolExecutor
 from pydantic import BaseModel, NonNegativeInt, ValidationError
 from pydantic_core import PydanticUndefinedType
 
+from waveorder.api import birefringence, fluorescence, phase
+from waveorder.api._settings import FourierApplyInverseSettings
 from waveorder.cli.settings import (
     BirefringenceApplyInverseSettings,
     BirefringenceSettings,
-    BirefringenceTransferFunctionSettings,
     FluorescenceSettings,
-    FluorescenceTransferFunctionSettings,
-    FourierApplyInverseSettings,
     PhaseSettings,
-    PhaseTransferFunctionSettings,
 )
 
 PYDANTIC_CLASSES_DEF = (
     BirefringenceSettings,
-    BirefringenceTransferFunctionSettings,
+    birefringence.TransferFunctionSettings,
     BirefringenceApplyInverseSettings,
     PhaseSettings,
-    PhaseTransferFunctionSettings,
+    phase.TransferFunctionSettings,
     FluorescenceSettings,
-    FluorescenceTransferFunctionSettings,
+    fluorescence.TransferFunctionSettings,
     FourierApplyInverseSettings,
 )
 

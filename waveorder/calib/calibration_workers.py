@@ -12,6 +12,7 @@ from iohub import open_ome_zarr
 from napari.qt.threading import WorkerBase, WorkerBaseSignals, thread_worker
 from qtpy.QtCore import Signal
 
+from waveorder.api import birefringence
 from waveorder.calib.Calibration import LC_DEVICE_NAME
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
@@ -324,7 +325,7 @@ class BackgroundCaptureWorker(
             ],
             reconstruction_dimension=2,
             birefringence=settings.BirefringenceSettings(
-                transfer_function=settings.BirefringenceTransferFunctionSettings(
+                transfer_function=birefringence.TransferFunctionSettings(
                     swing=self.calib_window.swing
                 ),
                 apply_inverse=settings.BirefringenceApplyInverseSettings(
