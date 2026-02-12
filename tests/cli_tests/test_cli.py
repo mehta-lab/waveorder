@@ -8,4 +8,4 @@ def test_main():
     result = runner.invoke(cli)
 
     assert result.exit_code == 2
-    assert "Toolkit" in result.output
+    assert "waveorder" in result.output

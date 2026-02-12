@@ -336,9 +336,7 @@ def test_z_focus_offset_float_type():
 
 def test_position_list_with_float_offset():
     """Test that _position_list_from_shape_scale_offset works correctly with float offsets."""
-    from waveorder.cli.compute_transfer_function import (
-        _position_list_from_shape_scale_offset,
-    )
+    from waveorder.api._utils import _position_list_from_shape_scale_offset
 
     # Test integer offset
     pos_int = _position_list_from_shape_scale_offset(5, 1.0, 0)

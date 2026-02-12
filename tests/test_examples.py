@@ -64,3 +64,70 @@ def test_phase_examples(script):
         env=os.environ,
     )
     assert completed_process.returncode == 0
+
+
+@pytest.mark.parametrize(
+    "example",
+    [
+        EXAMPLES / "api" / "phase_3d.py",
+        EXAMPLES / "api" / "phase_2d.py",
+        EXAMPLES / "api" / "fluorescence_3d.py",
+        EXAMPLES / "api" / "fluorescence_2d.py",
+        EXAMPLES / "api" / "birefringence.py",
+        EXAMPLES / "api" / "birefringence_and_phase.py",
+    ],
+    ids=lambda p: p.name,
+)
+def test_api_examples(example):
+    """Test API-level examples (no napari, no matplotlib)"""
+    runpy.run_path(str(example), run_name="__main__")
+
+
+@pytest.mark.parametrize(
+    "example",
+    [
+        EXAMPLES / "cli" / "phase_3d.sh",
+        EXAMPLES / "cli" / "phase_2d.sh",
+        EXAMPLES / "cli" / "fluorescence_3d.sh",
+        EXAMPLES / "cli" / "fluorescence_2d.sh",
+        EXAMPLES / "cli" / "birefringence_3d.sh",
+        EXAMPLES / "cli" / "birefringence_and_phase_3d.sh",
+    ],
+    ids=lambda p: p.name,
+)
+def test_cli_examples(example, tmp_path, monkeypatch):
+    """Test CLI-level shell script examples (skip 'wo view' lines)."""
+    import shlex
+    import shutil
+
+    from click.testing import CliRunner
+
+    from waveorder.cli.main import cli
+
+    shutil.copytree(example.parent / "configs", tmp_path / "configs")
+    monkeypatch.chdir(tmp_path)
+
+    # Parse shell script into commands (join continuation lines)
+    lines = example.read_text().splitlines()
+    commands = []
+    current = ""
+    for line in lines:
+        if line.startswith("#") or not line.strip():
+            continue
+        if line.rstrip().endswith("\\"):
+            current += line.rstrip()[:-1] + " "
+        else:
+            current += line
+            commands.append(current.strip())
+            current = ""
+
+    runner = CliRunner()
+    for cmd in commands:
+        if cmd.startswith("wo view"):
+            continue
+        # Strip leading "wo " and split into args
+        args = shlex.split(cmd.removeprefix("wo "))
+        result = runner.invoke(cli, args)
+        assert (
+            result.exit_code == 0
+        ), f"Command '{cmd}' failed:\n{result.output}"

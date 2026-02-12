@@ -184,7 +184,7 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
     with open_ome_zarr(output_path) as dataset:
         assert dataset["0/0/0"]["0"].shape[1] == 5
         assert dataset.channel_names[-1] == "GFP_Density3D"
-        assert dataset.channel_names[-2] == "Pol"
+        assert dataset.channel_names[-2] == "Depolarization"
 
 
 def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
