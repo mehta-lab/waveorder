@@ -1,7 +1,7 @@
 import click
 import yaml
 
-from waveorder.cli.settings import MyBaseModel
+from waveorder.api._settings import MyBaseModel
 
 
 def echo_settings(settings: MyBaseModel):
