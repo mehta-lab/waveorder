@@ -180,8 +180,13 @@ def compute_focus_slice_batch(
         )
 
     power = _compute_midband_power_batch(
-        array, NA_det, lambda_ill, pixel_size, midband_fractions,
-        device=device, batch_size=batch_size,
+        array,
+        NA_det,
+        lambda_ill,
+        pixel_size,
+        midband_fractions,
+        device=device,
+        batch_size=batch_size,
     )
 
     if ndim == 3:
