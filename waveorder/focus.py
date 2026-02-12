@@ -9,64 +9,55 @@ from scipy.signal import peak_widths
 from waveorder import util
 
 
-def _compute_midband_power_batch(
-    array: np.ndarray | torch.Tensor,
+def compute_midband_power(
+    input_tensor: torch.Tensor,
     NA_det: float,
     lambda_ill: float,
     pixel_size: float,
     midband_fractions: tuple[float, float] = (0.125, 0.25),
-    device: torch.device | str = "cpu",
-    batch_size: int | None = None,
-) -> np.ndarray:
-    """Compute midband FFT power for all slices in a batched manner.
+) -> torch.Tensor:
+    """Compute midband spatial frequency power by summing over a 2D midband donut.
 
-    Precomputes the frequency mask once, then applies a batched 2D FFT
-    across all slices simultaneously.
+    Accepts a 2D ``(Y, X)`` or 3D ``(Z, Y, X)`` tensor.  For 3D input the
+    frequency mask is computed once and a batched 2D FFT is applied across all
+    Z slices, which is significantly faster than looping.
 
     Parameters
     ----------
-    array : np.ndarray or torch.Tensor
-        2D (Y, X), 3D (Z, Y, X), or 4D (T, Z, Y, X) stack.
+    input_tensor : torch.Tensor
+        2D ``(Y, X)`` or 3D ``(Z, Y, X)`` tensor.
     NA_det : float
-        Detection numerical aperture.
+        Detection NA.
     lambda_ill : float
-        Illumination wavelength (same units as pixel_size).
+        Illumination wavelength.
+        Units are arbitrary, but must match ``pixel_size``.
     pixel_size : float
-        Object-space pixel size.
-    midband_fractions : tuple[float, float]
-        Inner and outer fractions of cutoff frequency.
-    device : torch.device or str
-        Torch device for computation.
-    batch_size : int or None
-        Max timepoints to process at once (controls GPU memory).
-        None = process all at once. Only applies to 4D input.
+        Object-space pixel size = camera pixel size / magnification.
+        Units are arbitrary, but must match ``lambda_ill``.
+    midband_fractions : tuple[float, float], optional
+        The minimum and maximum fraction of the cutoff frequency that define the midband.
+        Default is (0.125, 0.25).
 
     Returns
     -------
-    np.ndarray
-        2D input: scalar array (shape ()).
-        3D input: array of shape (Z,) with per-slice midband power.
-        4D input: array of shape (T, Z) with per-timepoint, per-slice power.
+    torch.Tensor
+        2D input: scalar tensor.
+        3D input: tensor of shape ``(Z,)`` with per-slice midband power.
     """
-    if isinstance(array, np.ndarray):
-        tensor = torch.from_numpy(array).float()
+    if input_tensor.ndim == 2:
+        input_tensor = input_tensor.unsqueeze(0)  # (1, Y, X)
+        squeeze = True
+    elif input_tensor.ndim == 3:
+        squeeze = False
     else:
-        tensor = array.float()
-
-    orig_ndim = tensor.ndim
-    if orig_ndim == 2:
-        tensor = tensor.unsqueeze(0).unsqueeze(0)  # (1, 1, Y, X)
-    elif orig_ndim == 3:
-        tensor = tensor.unsqueeze(0)  # (1, Z, Y, X)
-    elif orig_ndim != 4:
         raise ValueError(
-            f"{orig_ndim}D array supplied. "
-            "Only 2D, 3D, or 4D arrays are accepted."
+            f"{input_tensor.ndim}D tensor supplied. "
+            "`compute_midband_power` only accepts 2D or 3D tensors."
         )
 
-    T, Z, Y, X = tensor.shape
+    Z, Y, X = input_tensor.shape
+    device = input_tensor.device
 
-    # Precompute frequency mask once for (Y, X) shape
     _, _, fxx, fyy = util.gen_coordinate((Y, X), pixel_size)
     frr = torch.tensor(np.sqrt(fxx**2 + fyy**2), device=device)
     cutoff = 2 * NA_det / lambda_ill
@@ -75,125 +66,12 @@ def _compute_midband_power_batch(
         frr < cutoff * midband_fractions[1],
     )
 
-    if batch_size is None or batch_size >= T:
-        chunks = [tensor]
-    else:
-        chunks = list(tensor.split(batch_size, dim=0))
+    abs_fft = torch.abs(torch.fft.fftn(input_tensor.float(), dim=(-2, -1)))
+    result = abs_fft[:, mask].sum(dim=-1)  # (Z,)
 
-    all_powers = []
-    for chunk in chunks:
-        chunk_t = chunk.shape[0]
-        flat = chunk.reshape(chunk_t * Z, Y, X).to(device)
-        abs_fft = torch.abs(torch.fft.fftn(flat, dim=(-2, -1)))
-        midband_power = abs_fft[:, mask].sum(dim=-1)
-        midband_power = midband_power.reshape(chunk_t, Z)
-        all_powers.append(midband_power.cpu())
-
-    result = torch.cat(all_powers).numpy()  # (T, Z)
-
-    if orig_ndim == 2:
-        return result[0, 0]
-    elif orig_ndim == 3:
-        return result[0]  # (Z,)
-    return result  # (T, Z)
-
-
-def compute_midband_power(
-    yx_array: torch.Tensor,
-    NA_det: float,
-    lambda_ill: float,
-    pixel_size: float,
-    midband_fractions: tuple[float, float] = (0.125, 0.25),
-) -> torch.Tensor:
-    """Compute midband spatial frequency power by summing over a 2D midband donut.
-
-    Parameters
-    ----------
-    yx_array : torch.Tensor
-        2D tensor in (Y, X) order.
-    NA_det : float
-        Detection NA.
-    lambda_ill : float
-        Illumination wavelength.
-        Units are arbitrary, but must match [pixel_size].
-    pixel_size : float
-        Object-space pixel size = camera pixel size / magnification.
-        Units are arbitrary, but must match [lambda_ill].
-    midband_fractions : tuple[float, float], optional
-        The minimum and maximum fraction of the cutoff frequency that define the midband.
-        Default is (0.125, 0.25).
-
-    Returns
-    -------
-    torch.Tensor
-        Sum of absolute FFT values in the midband region.
-    """
-    result = _compute_midband_power_batch(
-        yx_array, NA_det, lambda_ill, pixel_size, midband_fractions
-    )
-    return torch.tensor(result)
-
-
-def compute_focus_slice_batch(
-    array: np.ndarray | torch.Tensor,
-    NA_det: float,
-    lambda_ill: float,
-    pixel_size: float,
-    midband_fractions: tuple[float, float] = (0.125, 0.25),
-    device: torch.device | str = "cpu",
-    batch_size: int | None = None,
-) -> int | np.ndarray:
-    """Find in-focus z-slice(s) using GPU-batched midband FFT power.
-
-    Precomputes the frequency mask once, then applies a batched 2D FFT
-    across all (T, Z) slices simultaneously for efficiency.
-
-    Parameters
-    ----------
-    array : np.ndarray or torch.Tensor
-        3D (Z, Y, X) or 4D (T, Z, Y, X) stack.
-    NA_det : float
-        Detection numerical aperture.
-    lambda_ill : float
-        Illumination wavelength (same units as pixel_size).
-    pixel_size : float
-        Object-space pixel size.
-    midband_fractions : tuple[float, float]
-        Inner and outer fractions of cutoff frequency.
-    device : torch.device or str
-        Torch device for computation.
-    batch_size : int or None
-        Max timepoints to process at once (controls GPU memory).
-        None = process all at once.
-
-    Returns
-    -------
-    int or np.ndarray
-        3D input: int (focus slice index).
-        4D input: np.ndarray of shape (T,) with per-timepoint focus indices.
-    """
-    ndim = array.ndim if isinstance(array, np.ndarray) else array.ndim
-    if ndim not in (3, 4):
-        raise ValueError(
-            f"{ndim}D array supplied. "
-            "`compute_focus_slice_batch` only accepts 3D or 4D arrays."
-        )
-
-    power = _compute_midband_power_batch(
-        array,
-        NA_det,
-        lambda_ill,
-        pixel_size,
-        midband_fractions,
-        device=device,
-        batch_size=batch_size,
-    )
-
-    if ndim == 3:
-        # power is (Z,), return int
-        return int(np.argmax(power))
-    # power is (T, Z), return (T,) array
-    return np.argmax(power, axis=-1)
+    if squeeze:
+        return result.squeeze(0)
+    return result
 
 
 def focus_from_transverse_band(
@@ -213,7 +91,7 @@ def focus_from_transverse_band(
 
     Parameters
     ----------
-    zyx_array: np.array
+    zyx_array: np.ndarray or torch.Tensor
         Data stack in (Z, Y, X) order.
         Requires len(zyx_array.shape) == 3.
     NA_det: float
@@ -280,9 +158,19 @@ def focus_from_transverse_band(
             return 0, peak_stats
         return 0
 
-    # Calculate midband power for each slice using batched engine
-    midband_sum = _compute_midband_power_batch(
-        zyx_array, NA_det, lambda_ill, pixel_size, midband_fractions
+    # Convert to tensor if needed for vectorized midband power
+    if isinstance(zyx_array, np.ndarray):
+        zyx_tensor = torch.from_numpy(zyx_array).float()
+    else:
+        zyx_tensor = zyx_array.float()
+
+    # Calculate midband power for each slice (vectorized over Z)
+    midband_sum = (
+        compute_midband_power(
+            zyx_tensor, NA_det, lambda_ill, pixel_size, midband_fractions
+        )
+        .cpu()
+        .numpy()
     )  # (Z,)
 
     if polynomial_fit_order is None:

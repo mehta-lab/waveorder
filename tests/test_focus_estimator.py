@@ -315,93 +315,59 @@ def test_subpixel_precision_with_plotting(tmp_path):
     assert plot_path.exists()
 
 
-def test_compute_focus_slice_batch_3d():
-    """Test batch focus on 3D input returns int in [0, Z)."""
+def test_compute_midband_power_3d():
+    """Test that compute_midband_power handles (Z, Y, X) input."""
     ps = 6.5 / 100
     lambda_ill = 0.532
     NA_det = 1.4
 
     np.random.seed(42)
-    data_3d = np.random.random((11, 64, 64)).astype(np.float32)
-
-    result = focus.compute_focus_slice_batch(data_3d, NA_det, lambda_ill, ps)
-    assert isinstance(result, int)
-    assert 0 <= result < data_3d.shape[0]
-
-
-def test_compute_focus_slice_batch_4d():
-    """Test batch focus on 4D input returns ndarray of shape (T,)."""
-    ps = 6.5 / 100
-    lambda_ill = 0.532
-    NA_det = 1.4
-
-    np.random.seed(42)
-    data_4d = np.random.random((3, 11, 64, 64)).astype(np.float32)
-
-    result = focus.compute_focus_slice_batch(data_4d, NA_det, lambda_ill, ps)
-    assert isinstance(result, np.ndarray)
-    assert result.shape == (3,)
-    assert all(0 <= idx < 11 for idx in result)
-
-
-def test_compute_focus_slice_batch_matches_sequential():
-    """Test that batch result matches sequential focus_from_transverse_band."""
-    ps = 6.5 / 100
-    lambda_ill = 0.532
-    NA_det = 1.4
-
-    np.random.seed(42)
-    data_4d = np.random.random((4, 7, 64, 64)).astype(np.float32)
-
-    batch_result = focus.compute_focus_slice_batch(
-        data_4d, NA_det, lambda_ill, ps
+    data_3d = torch.from_numpy(
+        np.random.random((7, 64, 64)).astype(np.float32)
     )
 
-    for t in range(data_4d.shape[0]):
-        sequential_result = focus.focus_from_transverse_band(
-            data_4d[t], NA_det, lambda_ill, ps
-        )
-        assert batch_result[t] == sequential_result, (
-            f"Mismatch at t={t}: batch={batch_result[t]}, "
-            f"sequential={sequential_result}"
-        )
+    result = focus.compute_midband_power(data_3d, NA_det, lambda_ill, ps)
+    assert isinstance(result, torch.Tensor)
+    assert result.shape == (7,)
+    assert (result > 0).all()
+
+
+def test_focus_from_transverse_band_tensor():
+    """Test that focus_from_transverse_band accepts a torch Tensor."""
+    ps = 6.5 / 100
+    lambda_ill = 0.532
+    NA_det = 1.4
+
+    np.random.seed(42)
+    data_np = np.random.random((11, 64, 64)).astype(np.float32)
+    data_tensor = torch.from_numpy(data_np)
+
+    result_np = focus.focus_from_transverse_band(
+        data_np, NA_det, lambda_ill, ps
+    )
+    result_tensor = focus.focus_from_transverse_band(
+        data_tensor, NA_det, lambda_ill, ps
+    )
+    assert result_np == result_tensor
 
 
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-def test_compute_focus_slice_batch_gpu():
-    """Test batch focus on GPU produces same results as CPU."""
+def test_focus_from_transverse_band_gpu():
+    """Test focus_from_transverse_band with a GPU tensor."""
     ps = 6.5 / 100
     lambda_ill = 0.532
     NA_det = 1.4
 
     np.random.seed(42)
-    data_4d = np.random.random((3, 7, 64, 64)).astype(np.float32)
+    data_np = np.random.random((7, 64, 64)).astype(np.float32)
 
-    cpu_result = focus.compute_focus_slice_batch(
-        data_4d, NA_det, lambda_ill, ps, device="cpu"
+    cpu_result = focus.focus_from_transverse_band(
+        data_np, NA_det, lambda_ill, ps
     )
-    gpu_result = focus.compute_focus_slice_batch(
-        data_4d, NA_det, lambda_ill, ps, device="cuda"
+    gpu_result = focus.focus_from_transverse_band(
+        torch.from_numpy(data_np).cuda(), NA_det, lambda_ill, ps
     )
-    np.testing.assert_array_equal(cpu_result, gpu_result)
-
-
-def test_compute_focus_slice_batch_chunked():
-    """Test that batch_size chunking produces same results as no chunking."""
-    ps = 6.5 / 100
-    lambda_ill = 0.532
-    NA_det = 1.4
-
-    np.random.seed(42)
-    data_4d = np.random.random((6, 7, 64, 64)).astype(np.float32)
-
-    full_result = focus.compute_focus_slice_batch(
-        data_4d, NA_det, lambda_ill, ps, batch_size=None
-    )
-    chunked_result = focus.compute_focus_slice_batch(
-        data_4d, NA_det, lambda_ill, ps, batch_size=2
-    )
-    np.testing.assert_array_equal(full_result, chunked_result)
+    assert cpu_result == gpu_result
 
 
 def test_z_focus_offset_float_type():
