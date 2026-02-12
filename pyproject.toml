@@ -111,6 +111,9 @@ wo = "waveorder.cli.main:cli"
 [project.entry-points."napari.manifest"]
 waveorder = "waveorder:napari.yaml"
 
+[tool.hatch.metadata]
+allow-direct-references = true
+
 [tool.hatch.version]
 source = "uv-dynamic-versioning"
 
