@@ -96,14 +96,15 @@ cli._display_order = [
     ("reconstruct", 0),
     ("compute-transfer-function", 2),
     ("apply-inverse-transfer-function", 2),
+    ("simulate", 0),
     ("view", 0),
     ("interactive", 0),
-    ("simulate", 0),
 ]
 
 # Aliases
 cli.add_alias("rec", "reconstruct")
 cli.add_alias("sim", "simulate")
+cli.add_alias("v", "view")
 cli.add_alias("compute-tf", "compute-transfer-function")
 cli.add_alias("apply-inv-tf", "apply-inverse-transfer-function")
 if _interactive_cli is not None:
