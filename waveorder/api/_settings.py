@@ -6,6 +6,7 @@ from typing import Literal, Union
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Field,
     NonNegativeFloat,
     NonNegativeInt,
     PositiveFloat,
@@ -18,16 +19,31 @@ class MyBaseModel(BaseModel):
 
 
 class WavelengthIllumination(MyBaseModel):
-    wavelength_illumination: PositiveFloat = 0.532
+    wavelength_illumination: PositiveFloat = Field(
+        default=0.532, description="illumination wavelength in micrometers"
+    )
 
 
 class FourierTransferFunctionSettings(MyBaseModel):
-    yx_pixel_size: PositiveFloat = 6.5 / 20
-    z_pixel_size: PositiveFloat = 2.0
-    z_padding: NonNegativeInt = 0
-    z_focus_offset: Union[float, Literal["auto"]] = 0
-    index_of_refraction_media: PositiveFloat = 1.3
-    numerical_aperture_detection: PositiveFloat = 1.2
+    yx_pixel_size: PositiveFloat = Field(
+        default=0.1, description="lateral pixel size in micrometers"
+    )
+    z_pixel_size: PositiveFloat = Field(
+        default=0.25, description="axial pixel size in micrometers"
+    )
+    z_padding: NonNegativeInt = Field(
+        default=0, description="z slices to pad for axial boundary effects"
+    )
+    z_focus_offset: Union[float, Literal["auto"]] = Field(
+        default=0,
+        description="offset from center slice in slice units (or 'auto')",
+    )
+    index_of_refraction_media: PositiveFloat = Field(
+        default=1.3, description="refractive index of imaging media"
+    )
+    numerical_aperture_detection: PositiveFloat = Field(
+        default=1.2, description="detection objective numerical aperture"
+    )
 
     @model_validator(mode="after")
     def validate_numerical_aperture_detection(self):
@@ -49,7 +65,16 @@ class FourierTransferFunctionSettings(MyBaseModel):
 
 
 class FourierApplyInverseSettings(MyBaseModel):
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov"
-    regularization_strength: NonNegativeFloat = 1e-3
-    TV_rho_strength: PositiveFloat = 1e-3
-    TV_iterations: NonNegativeInt = 1
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = Field(
+        default="Tikhonov",
+        description="'Tikhonov' or 'TV' regularization",
+    )
+    regularization_strength: NonNegativeFloat = Field(
+        default=1e-3, description="strength of regularization"
+    )
+    TV_rho_strength: PositiveFloat = Field(
+        default=1e-3, description="ADMM rho parameter for TV regularization"
+    )
+    TV_iterations: NonNegativeInt = Field(
+        default=1, description="ADMM iterations for TV regularization"
+    )

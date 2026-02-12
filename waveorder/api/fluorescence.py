@@ -6,7 +6,7 @@ from typing import Literal, Optional
 import numpy as np
 import torch
 import xarray as xr
-from pydantic import PositiveFloat, model_validator
+from pydantic import Field, PositiveFloat, model_validator
 
 from waveorder.api._settings import (
     FourierApplyInverseSettings,
@@ -30,8 +30,13 @@ from waveorder.models import (
 
 
 class TransferFunctionSettings(FourierTransferFunctionSettings):
-    wavelength_emission: PositiveFloat = 0.507
-    confocal_pinhole_diameter: Optional[PositiveFloat] = None
+    wavelength_emission: PositiveFloat = Field(
+        default=0.532, description="emission wavelength in micrometers"
+    )
+    confocal_pinhole_diameter: Optional[PositiveFloat] = Field(
+        default=None,
+        description="confocal pinhole diameter (null = widefield)",
+    )
 
     @model_validator(mode="after")
     def warn_unit_consistency(self):

@@ -91,35 +91,49 @@ def test_fluor_tf_settings():
 
 def test_generate_example_settings():
     project_root = Path(__file__).parent.parent.parent
-    example_path = project_root / "docs" / "examples" / "configs"
+    example_path = project_root / "docs" / "examples" / "cli" / "configs"
 
-    s0 = settings.ReconstructionSettings(
-        birefringence=settings.BirefringenceSettings(),
-        phase=settings.PhaseSettings(),
+    # 2D configs override regularization_strength for better 2D defaults
+    phase_2d_apply_inverse = phase.ApplyInverseSettings(
+        regularization_strength=1e-2
     )
-    s1 = settings.ReconstructionSettings(
-        input_channel_names=["BF"],
-        phase=settings.PhaseSettings(),
+    fluor_2d_apply_inverse = fluorescence.ApplyInverseSettings(
+        regularization_strength=1e-2
     )
-    s2 = settings.ReconstructionSettings(
-        birefringence=settings.BirefringenceSettings(),
-    )
-    s3 = settings.ReconstructionSettings(
-        input_channel_names=["GFP"],
-        fluorescence=settings.FluorescenceSettings(),
-    )
-    file_names = [
-        "birefringence-and-phase.yml",
-        "phase.yml",
-        "birefringence.yml",
-        "fluorescence.yml",
-    ]
-    settings_list = [s0, s1, s2, s3]
 
-    # Save to examples folder and test roundtrip
-    for file_name, settings_obj in zip(file_names, settings_list):
+    configs = {
+        "birefringence_3d.yml": settings.ReconstructionSettings(
+            birefringence=settings.BirefringenceSettings(),
+        ),
+        "phase_3d.yml": settings.ReconstructionSettings(
+            input_channel_names=["Brightfield"],
+            phase=settings.PhaseSettings(),
+        ),
+        "phase_2d.yml": settings.ReconstructionSettings(
+            input_channel_names=["Brightfield"],
+            reconstruction_dimension=2,
+            phase=phase.Settings(apply_inverse=phase_2d_apply_inverse),
+        ),
+        "fluorescence_3d.yml": settings.ReconstructionSettings(
+            input_channel_names=["GFP"],
+            fluorescence=settings.FluorescenceSettings(),
+        ),
+        "fluorescence_2d.yml": settings.ReconstructionSettings(
+            input_channel_names=["GFP"],
+            reconstruction_dimension=2,
+            fluorescence=fluorescence.Settings(
+                apply_inverse=fluor_2d_apply_inverse
+            ),
+        ),
+        "birefringence-and-phase_3d.yml": settings.ReconstructionSettings(
+            birefringence=settings.BirefringenceSettings(),
+            phase=settings.PhaseSettings(),
+        ),
+    }
+
+    for file_name, settings_obj in configs.items():
         config_path = example_path / file_name
-        utils.model_to_yaml(settings_obj, config_path)
+        utils.model_to_commented_yaml(settings_obj, config_path)
         settings_roundtrip = utils.yaml_to_model(
             config_path, settings.ReconstructionSettings
         )

@@ -5,7 +5,7 @@ from typing import Literal
 import numpy as np
 import torch
 import xarray as xr
-from pydantic import NonNegativeFloat, model_validator
+from pydantic import Field, NonNegativeFloat, model_validator
 
 from waveorder.api._settings import (
     FourierApplyInverseSettings,
@@ -30,8 +30,13 @@ class TransferFunctionSettings(
     FourierTransferFunctionSettings,
     WavelengthIllumination,
 ):
-    numerical_aperture_illumination: NonNegativeFloat = 0.5
-    invert_phase_contrast: bool = False
+    numerical_aperture_illumination: NonNegativeFloat = Field(
+        default=0.9, description="condenser numerical aperture"
+    )
+    invert_phase_contrast: bool = Field(
+        default=False,
+        description="invert contrast for positive/negative phase",
+    )
 
     @model_validator(mode="after")
     def validate_numerical_aperture_illumination(self):

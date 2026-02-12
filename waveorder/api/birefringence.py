@@ -7,7 +7,7 @@ from typing import Literal, Optional, Union
 import numpy as np
 import torch
 import xarray as xr
-from pydantic import field_validator
+from pydantic import Field, field_validator
 
 from waveorder.api._settings import MyBaseModel, WavelengthIllumination
 from waveorder.api._utils import (
@@ -24,7 +24,9 @@ from waveorder.models import inplane_oriented_thick_pol3d
 
 
 class TransferFunctionSettings(MyBaseModel):
-    swing: float = 0.1
+    swing: float = Field(
+        default=0.1, description="swing of the liquid crystal (0 to 1)"
+    )
 
     @field_validator("swing")
     @classmethod
@@ -35,7 +37,10 @@ class TransferFunctionSettings(MyBaseModel):
 
 
 class ApplyInverseSettings(WavelengthIllumination):
-    background_path: Union[str, Path] = ""
+    background_path: Union[str, Path] = Field(
+        default="",
+        description="path to background zarr (empty = no background)",
+    )
 
     @field_validator("background_path")
     @classmethod
@@ -48,9 +53,15 @@ class ApplyInverseSettings(WavelengthIllumination):
             raise ValueError(f"{v} is not an existing directory")
         return raw_dir
 
-    remove_estimated_background: bool = False
-    flip_orientation: bool = False
-    rotate_orientation: bool = False
+    remove_estimated_background: bool = Field(
+        default=False, description="estimate and remove background"
+    )
+    flip_orientation: bool = Field(
+        default=False, description="flip the orientation angle"
+    )
+    rotate_orientation: bool = Field(
+        default=False, description="rotate orientation by 90 degrees"
+    )
 
 
 class Settings(MyBaseModel):

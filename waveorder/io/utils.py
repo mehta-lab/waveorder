@@ -125,6 +125,83 @@ def model_to_yaml(model: MyBaseModel, yaml_path: Path) -> None:
         )
 
 
+def _collect_field_descriptions(model, prefix=""):
+    """Build {dotted.path: description} from a pydantic model instance."""
+    from pydantic import BaseModel
+
+    descriptions = {}
+    for name, field_info in model.__class__.model_fields.items():
+        path = f"{prefix}.{name}" if prefix else name
+        if field_info.description:
+            descriptions[path] = field_info.description
+        value = getattr(model, name)
+        if isinstance(value, BaseModel):
+            descriptions.update(_collect_field_descriptions(value, path))
+    return descriptions
+
+
+def _add_yaml_comments(yaml_str, descriptions, comment_column=44):
+    """Add inline comments to YAML lines from a {dotted.path: description} map."""
+    lines = yaml_str.splitlines()
+    result = []
+    path_stack = []  # [(indent_level, key)]
+
+    for line in lines:
+        stripped = line.lstrip()
+        if (
+            not stripped
+            or stripped.startswith("#")
+            or stripped.startswith("- ")
+        ):
+            result.append(line)
+            continue
+
+        indent = len(line) - len(stripped)
+
+        if ":" in stripped:
+            key = stripped.split(":")[0].strip()
+
+            # Pop entries at same or deeper indent
+            while path_stack and path_stack[-1][0] >= indent:
+                path_stack.pop()
+
+            path_stack.append((indent, key))
+            field_path = ".".join(item[1] for item in path_stack)
+
+            desc = descriptions.get(field_path)
+            if desc:
+                padding = max(1, comment_column - len(line))
+                line = line + " " * padding + "# " + desc
+
+        result.append(line)
+
+    return "\n".join(result) + "\n"
+
+
+def model_to_commented_yaml(
+    model: MyBaseModel, yaml_path: Path, comment_column: int = 44
+) -> None:
+    """Save a model to YAML with inline comments from Field descriptions."""
+    yaml_path = Path(yaml_path)
+
+    model_dict = model.model_dump()
+
+    # Remove top-level None-valued fields
+    clean_model_dict = {
+        key: value for key, value in model_dict.items() if value is not None
+    }
+
+    yaml_str = yaml.dump(
+        clean_model_dict, default_flow_style=False, sort_keys=False
+    )
+
+    descriptions = _collect_field_descriptions(model)
+    commented_yaml = _add_yaml_comments(yaml_str, descriptions, comment_column)
+
+    with open(yaml_path, "w") as f:
+        f.write(commented_yaml)
+
+
 def yaml_to_model(yaml_path: Path, model):
     """
     Load model settings from a YAML file and create a model instance.

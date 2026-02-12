@@ -1,6 +1,6 @@
 from typing import List, Literal, Optional, Union
 
-from pydantic import NonNegativeInt, model_validator
+from pydantic import Field, NonNegativeInt, model_validator
 
 from waveorder.api._settings import (  # noqa: F401
     FourierApplyInverseSettings,
@@ -19,11 +19,16 @@ from waveorder.api.phase import Settings as PhaseSettings  # noqa: F401
 
 # Top level settings (CLI-specific)
 class ReconstructionSettings(MyBaseModel):
-    input_channel_names: List[str] = [f"State{i}" for i in range(4)]
+    input_channel_names: List[str] = Field(
+        default=[f"State{i}" for i in range(4)],
+        description="names of input channels in the dataset",
+    )
     time_indices: Union[
         NonNegativeInt, List[NonNegativeInt], Literal["all"]
-    ] = "all"
-    reconstruction_dimension: Literal[2, 3] = 3
+    ] = Field(default="all", description="time points to reconstruct")
+    reconstruction_dimension: Literal[2, 3] = Field(
+        default=3, description="2 for thin samples, 3 for thick"
+    )
     birefringence: Optional[BirefringenceSettings] = None
     phase: Optional[PhaseSettings] = None
     fluorescence: Optional[FluorescenceSettings] = None
