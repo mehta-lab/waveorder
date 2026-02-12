@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools", "wheel", "setuptools_scm"]
-build-backend = "setuptools.build_meta"
+build-backend = "hatchling.build"
+requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
 
 [project]
 name = "waveorder"
@@ -15,16 +15,16 @@ maintainers = [
 ]
 keywords = [
   "simulation",
-  'optics',
-  'phase',
-  'scattering',
-  'polarization',
-  'label-free',
-  'permittivity',
+  "optics",
+  "phase",
+  "scattering",
+  "polarization",
+  "label-free",
+  "permittivity",
   "reconstruction-algorithm",
-  'qlipp',
-  'mipolscope',
-  'permittivity-tensor-imaging',
+  "qlipp",
+  "mipolscope",
+  "permittivity-tensor-imaging",
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -70,13 +70,13 @@ visual = [
   "jupyter",
   "jupytext",
 ]
-dev = [
-  "black==25.1.0",
+
+[dependency-groups]
+test = [
   "click>=8.2.0",
   "hypothesis",
-  "napari[pyqt6]",  # needed for napari plugin tests
-  "PyQt6>=6.5,<6.8",  # Constrain to versions with manylinux_2_28 support for older Linux systems
-  "pre-commit",
+  "napari[pyqt6]",
+  "PyQt6>=6.5,<6.8",
   "pytest-cov",
   "pytest-qt",
   "pytest>=5.0.0",
@@ -94,10 +94,9 @@ docs = [
   "matplotlib",
   "importlib_metadata",
 ]
-all = [
-  "waveorder[visual]",
-  "waveorder[dev]",
-  "waveorder[docs]",
+dev = [
+  { include-group = "test" },
+  { include-group = "docs" },
 ]
 
 [project.urls]
@@ -112,15 +111,11 @@ wo = "waveorder.cli.main:cli"
 [project.entry-points."napari.manifest"]
 waveorder = "waveorder:napari.yaml"
 
-[tool.black]
-line-length = 79
+[tool.hatch.version]
+source = "uv-dynamic-versioning"
 
-[tool.isort]
-profile = "black"
-line_length = 79
-
-[tool.setuptools_scm]
-write_to = "waveorder/_version.py"
-
-[tool.setuptools.package-data]
-"*" = ["*.yaml", "assets/*png"]
+[tool.uv-dynamic-versioning]
+vcs = "git"
+style = "pep440"
+bump = true
+fallback-version = "0.0.0"
