@@ -29,9 +29,7 @@ class TestOutputChannelNames:
         assert names == ["Phase3D"]
 
     def test_biref_and_phase_2d(self):
-        names = _output_channel_names(
-            recon_biref=True, recon_phase=True, recon_dim=2
-        )
+        names = _output_channel_names(recon_biref=True, recon_phase=True, recon_dim=2)
         assert names == [
             "Retardance",
             "Orientation",
@@ -43,9 +41,7 @@ class TestOutputChannelNames:
         assert "Retardance_Joint_Decon" not in names
 
     def test_biref_and_phase_3d(self):
-        names = _output_channel_names(
-            recon_biref=True, recon_phase=True, recon_dim=3
-        )
+        names = _output_channel_names(recon_biref=True, recon_phase=True, recon_dim=3)
         assert names == [
             "Retardance",
             "Orientation",
@@ -58,15 +54,11 @@ class TestOutputChannelNames:
         ]
 
     def test_fluorescence_2d(self):
-        names = _output_channel_names(
-            recon_fluo=True, recon_dim=2, fluor_channel_name="GFP"
-        )
+        names = _output_channel_names(recon_fluo=True, recon_dim=2, fluor_channel_name="GFP")
         assert names == ["GFP_Density2D"]
 
     def test_fluorescence_3d(self):
-        names = _output_channel_names(
-            recon_fluo=True, recon_dim=3, fluor_channel_name="GFP"
-        )
+        names = _output_channel_names(recon_fluo=True, recon_dim=3, fluor_channel_name="GFP")
         assert names == ["GFP_Density3D"]
 
     def test_no_recon(self):
@@ -80,9 +72,7 @@ def test_birefringence_returns_xarray(make_czyx):
     czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     settings = birefringence.Settings()
 
-    tf_ds = birefringence.compute_transfer_function(
-        czyx, settings, [f"ch{i}" for i in range(4)]
-    )
+    tf_ds = birefringence.compute_transfer_function(czyx, settings, [f"ch{i}" for i in range(4)])
 
     result = birefringence.apply_inverse_transfer_function(
         czyx,
@@ -106,9 +96,7 @@ def test_birefringence_2d_singleton_z(make_czyx):
     czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     settings = birefringence.Settings()
 
-    tf_ds = birefringence.compute_transfer_function(
-        czyx, settings, [f"ch{i}" for i in range(4)]
-    )
+    tf_ds = birefringence.compute_transfer_function(czyx, settings, [f"ch{i}" for i in range(4)])
 
     result = birefringence.apply_inverse_transfer_function(
         czyx,
@@ -124,9 +112,7 @@ def test_birefringence_inherits_yx_coords(make_czyx):
     czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     settings = birefringence.Settings()
 
-    tf_ds = birefringence.compute_transfer_function(
-        czyx, settings, [f"ch{i}" for i in range(4)]
-    )
+    tf_ds = birefringence.compute_transfer_function(czyx, settings, [f"ch{i}" for i in range(4)])
 
     result = birefringence.apply_inverse_transfer_function(
         czyx,
@@ -135,12 +121,8 @@ def test_birefringence_inherits_yx_coords(make_czyx):
         settings=settings,
     )
 
-    np.testing.assert_array_equal(
-        result.coords["y"].values, czyx.coords["y"].values
-    )
-    np.testing.assert_array_equal(
-        result.coords["x"].values, czyx.coords["x"].values
-    )
+    np.testing.assert_array_equal(result.coords["y"].values, czyx.coords["y"].values)
+    np.testing.assert_array_equal(result.coords["x"].values, czyx.coords["x"].values)
 
 
 # --- phase reconstruction ---
@@ -152,9 +134,7 @@ def test_phase_3d_returns_xarray(make_czyx):
 
     tf_ds = phase.compute_transfer_function(czyx, 3, settings)
 
-    result = phase.apply_inverse_transfer_function(
-        czyx, tf_ds, recon_dim=3, settings=settings
-    )
+    result = phase.apply_inverse_transfer_function(czyx, tf_ds, recon_dim=3, settings=settings)
 
     assert isinstance(result, xr.DataArray)
     assert result.dims == ("c", "z", "y", "x")
@@ -168,9 +148,7 @@ def test_phase_2d_returns_xarray(make_czyx):
 
     tf_ds = phase.compute_transfer_function(czyx, 2, settings)
 
-    result = phase.apply_inverse_transfer_function(
-        czyx, tf_ds, recon_dim=2, settings=settings
-    )
+    result = phase.apply_inverse_transfer_function(czyx, tf_ds, recon_dim=2, settings=settings)
 
     assert isinstance(result, xr.DataArray)
     assert result.dims == ("c", "z", "y", "x")
@@ -229,9 +207,7 @@ def test_phase_3d_roundtrip_finite(make_czyx):
     settings = phase.Settings()
 
     tf_ds = phase.compute_transfer_function(czyx, 3, settings)
-    result = phase.apply_inverse_transfer_function(
-        czyx, tf_ds, recon_dim=3, settings=settings
-    )
+    result = phase.apply_inverse_transfer_function(czyx, tf_ds, recon_dim=3, settings=settings)
 
     assert np.all(np.isfinite(result.values))
 

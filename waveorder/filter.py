@@ -53,35 +53,21 @@ def apply_filter_bank(
     """
 
     # Ensure all dimensions of transfer_function are smaller than or equal to input_array
-    if any(
-        t > i
-        for t, i in zip(io_filter_bank.shape[2:], i_input_array.shape[1:])
-    ):
-        raise ValueError(
-            "All spatial dimensions of io_filter_bank must be <= i_input_array."
-        )
+    if any(t > i for t, i in zip(io_filter_bank.shape[2:], i_input_array.shape[1:])):
+        raise ValueError("All spatial dimensions of io_filter_bank must be <= i_input_array.")
 
     # Ensure the number of spatial dimensions match
     if io_filter_bank.ndim - i_input_array.ndim != 1:
-        raise ValueError(
-            "io_filter_bank and i_input_array must have the same number of spatial dimensions."
-        )
+        raise ValueError("io_filter_bank and i_input_array must have the same number of spatial dimensions.")
 
     # Ensure the input dimensions match
     if io_filter_bank.shape[0] != i_input_array.shape[0]:
-        raise ValueError(
-            "io_filter_bank.shape[0] and i_input_array.shape[0] must be the same."
-        )
+        raise ValueError("io_filter_bank.shape[0] and i_input_array.shape[0] must be the same.")
 
     num_input_channels, num_output_channels = io_filter_bank.shape[:2]
 
     # Pad input_array until each dimension is divisible by transfer_function
-    pad_sizes = [
-        (0, (t - (i % t)) % t)
-        for t, i in zip(
-            io_filter_bank.shape[2:][::-1], i_input_array.shape[1:][::-1]
-        )
-    ]
+    pad_sizes = [(0, (t - (i % t)) % t) for t, i in zip(io_filter_bank.shape[2:][::-1], i_input_array.shape[1:][::-1])]
     flat_pad_sizes = list(itertools.chain(*pad_sizes))
     padded_input_array = torch.nn.functional.pad(i_input_array, flat_pad_sizes)
 
@@ -109,18 +95,14 @@ def apply_filter_bank(
             )
 
     # Cast to real, ignoring imaginary part
-    padded_result = torch.real(
-        torch.fft.ifftn(padded_output_spectrum, dim=fft_dims)
-    )
+    padded_result = torch.real(torch.fft.ifftn(padded_output_spectrum, dim=fft_dims))
 
     # Remove padding and return
     slices = tuple(slice(0, i) for i in i_input_array.shape)
     return padded_result[slices]
 
 
-def stretched_multiply(
-    small_array: torch.Tensor, large_array: torch.Tensor
-) -> torch.Tensor:
+def stretched_multiply(small_array: torch.Tensor, large_array: torch.Tensor) -> torch.Tensor:
     """
     Effectively "stretches" small_array onto large_array before multiplying.
 
@@ -173,15 +155,11 @@ def stretched_multiply(
 
     # Ensure each dimension of large_array is divisible by each dimension of small_array
     if any(l % s != 0 for s, l in zip(small_array.shape, large_array.shape)):
-        raise ValueError(
-            "Each dimension of large_array must be divisible by each dimension of small_array"
-        )
+        raise ValueError("Each dimension of large_array must be divisible by each dimension of small_array")
 
     # Ensure the number of dimensions match
     if small_array.ndim != large_array.ndim:
-        raise ValueError(
-            "small_array and large_array must have the same number of dimensions"
-        )
+        raise ValueError("small_array and large_array must have the same number of dimensions")
 
     # Get shapes
     s_shape = small_array.shape
@@ -190,9 +168,7 @@ def stretched_multiply(
     # Reshape both array into blocks
     block_shape = tuple(p // s for p, s in zip(l_shape, s_shape))
     new_large_shape = tuple(itertools.chain(*zip(s_shape, block_shape)))
-    new_small_shape = tuple(
-        itertools.chain(*zip(s_shape, small_array.ndim * (1,)))
-    )
+    new_small_shape = tuple(itertools.chain(*zip(s_shape, small_array.ndim * (1,))))
     reshaped_large_array = large_array.reshape(new_large_shape)
     reshaped_small_array = small_array.reshape(new_small_shape)
 

@@ -31,17 +31,11 @@ def instrument_matrix_and_source_calibration(I_cali_mean, handedness="RCP"):
 
     # Calibration matrix
     theta = np.r_[0:N_cali] / N_cali * 2 * np.pi
-    C_matrix = np.array(
-        [np.ones((N_cali,)), np.cos(2 * theta), np.sin(2 * theta)]
-    )
+    C_matrix = np.array([np.ones((N_cali,)), np.cos(2 * theta), np.sin(2 * theta)])
 
     # offset calibration
     I_cali_norm = I_cali_mean / I_tot
-    offset_est = np.transpose(
-        np.linalg.pinv(C_matrix.transpose()).dot(
-            np.transpose(I_cali_norm[0, :])
-        )
-    )
+    offset_est = np.transpose(np.linalg.pinv(C_matrix.transpose()).dot(np.transpose(I_cali_norm[0, :])))
     alpha = np.arctan2(-offset_est[2], offset_est[1]) / 2
 
     # Source calibration
@@ -53,9 +47,7 @@ def instrument_matrix_and_source_calibration(I_cali_mean, handedness="RCP"):
         ]
     )
 
-    S_source = np.linalg.pinv(C_matrix_offset.transpose()).dot(
-        I_tot[:, np.newaxis]
-    )
+    S_source = np.linalg.pinv(C_matrix_offset.transpose()).dot(I_tot[:, np.newaxis])
     S_source_norm = S_source / S_source[0]
 
     Ax = np.sqrt((S_source_norm[0] + S_source_norm[1]) / 2)
@@ -70,11 +62,7 @@ def instrument_matrix_and_source_calibration(I_cali_mean, handedness="RCP"):
         raise TypeError("handedness type must be 'LCP' or 'RCP'")
 
     # Instrument matrix calibration
-    A_matrix = np.transpose(
-        np.linalg.pinv(C_matrix_offset.transpose()).dot(
-            np.transpose(I_cali_norm)
-        )
-    )
+    A_matrix = np.transpose(np.linalg.pinv(C_matrix_offset.transpose()).dot(np.transpose(I_cali_norm)))
 
     theta_fine = np.r_[0:360] / 360 * 2 * np.pi
     C_matrix_offset_fine = np.array(
@@ -128,12 +116,8 @@ def instrument_matrix_calibration(I_cali_norm, I_meas):
     _, N_cali = I_cali_norm.shape
 
     theta = np.r_[0:N_cali] / N_cali * 2 * np.pi
-    S_matrix = np.array(
-        [np.ones((N_cali,)), np.cos(2 * theta), np.sin(2 * theta)]
-    )
-    A_matrix = np.transpose(
-        np.linalg.pinv(S_matrix.transpose()).dot(np.transpose(I_cali_norm))
-    )
+    S_matrix = np.array([np.ones((N_cali,)), np.cos(2 * theta), np.sin(2 * theta)])
+    A_matrix = np.transpose(np.linalg.pinv(S_matrix.transpose()).dot(np.transpose(I_cali_norm)))
 
     if I_meas.ndim == 3:
         I_mean = np.mean(I_meas, axis=(1, 2))
@@ -145,10 +129,7 @@ def instrument_matrix_calibration(I_cali_norm, I_meas):
     I_corr = (I_tot / 4) * (A_matrix_S3) / np.mean(A_matrix[:, 0])
 
     print("Calibrated instrument matrix:\n" + str(np.round(A_matrix, 4)))
-    print(
-        "Last column of instrument matrix:\n"
-        + str(np.round(A_matrix_S3.reshape((4, 1)), 4))
-    )
+    print("Last column of instrument matrix:\n" + str(np.round(A_matrix_S3.reshape((4, 1)), 4)))
 
     plt.plot(np.transpose(I_cali_norm))
     plt.plot(np.transpose(A_matrix.dot(S_matrix)))
@@ -393,9 +374,7 @@ class waveorder_microscopy:
         self.z_defocus = z_defocus.copy()
         if len(z_defocus) >= 2:
             self.psz = np.abs(z_defocus[0] - z_defocus[1])
-            self.G_tensor_z_upsampling = np.ceil(
-                self.psz / (self.lambda_illu / 2)
-            )
+            self.G_tensor_z_upsampling = np.ceil(self.psz / (self.lambda_illu / 2))
         self.pad_z = pad_z
         self.NA_obj = NA_obj / n_media
         self.NA_illu = NA_illu / n_media
@@ -408,20 +387,14 @@ class waveorder_microscopy:
 
         if QLIPP_birefringence_only == False:
             # setup microscocpe variables
-            self.xx, self.yy, self.fxx, self.fyy = gen_coordinate(
-                (self.N, self.M), ps
-            )
+            self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
             self.frr = np.sqrt(self.fxx**2 + self.fyy**2)
-            self.Pupil_obj = generate_pupil(
-                self.frr, self.NA_obj, self.lambda_illu
-            ).numpy()
+            self.Pupil_obj = generate_pupil(self.frr, self.NA_obj, self.lambda_illu).numpy()
             self.Pupil_support = self.Pupil_obj.copy()
 
             # illumination setup
 
-            self.illumination_setup(
-                illu_mode, NA_illu_in, Source, Source_PolState
-            )
+            self.illumination_setup(illu_mode, NA_illu_in, Source, Source_PolState)
 
             # Defocus kernel initialization
 
@@ -454,9 +427,7 @@ class waveorder_microscopy:
 
     ##############   constructor function group   ##############
 
-    def illumination_setup(
-        self, illu_mode, NA_illu_in, Source, Source_PolState
-    ):
+    def illumination_setup(self, illu_mode, NA_illu_in, Source, Source_PolState):
         """
 
         setup illumination source function for transfer function computing
@@ -482,9 +453,7 @@ class waveorder_microscopy:
         """
 
         if illu_mode == "BF":
-            self.Source = generate_pupil(
-                self.frr, self.NA_illu, self.lambda_illu
-            )
+            self.Source = generate_pupil(self.frr, self.NA_illu, self.lambda_illu)
             self.N_pattern = 1
 
         elif illu_mode == "PH":
@@ -498,9 +467,7 @@ class waveorder_microscopy:
                     self.NA_illu_in / self.n_media,
                     self.lambda_illu,
                 )
-                self.Source = gen_Pupil(
-                    self.fxx, self.fyy, self.NA_illu, self.lambda_illu
-                )
+                self.Source = gen_Pupil(self.fxx, self.fyy, self.NA_illu, self.lambda_illu)
                 self.Source -= inner_pupil
 
                 Pupil_ring_out = gen_Pupil(
@@ -517,8 +484,7 @@ class waveorder_microscopy:
                 )
 
                 self.Pupil_obj = self.Pupil_obj * np.exp(
-                    (Pupil_ring_out - Pupil_ring_in)
-                    * (np.log(0.7) - 1j * (np.pi / 2 - 0.0 * np.pi))
+                    (Pupil_ring_out - Pupil_ring_in) * (np.log(0.7) - 1j * (np.pi / 2 - 0.0 * np.pi))
                 )
                 self.N_pattern = 1
 
@@ -533,22 +499,14 @@ class waveorder_microscopy:
 
         if Source_PolState.ndim == 1:
             for i in range(self.N_pattern):
-                self.Source_PolState[i] = Source_PolState / (
-                    np.sum(np.abs(Source_PolState) ** 2)
-                ) ** (1 / 2)
+                self.Source_PolState[i] = Source_PolState / (np.sum(np.abs(Source_PolState) ** 2)) ** (1 / 2)
         else:
             if len(Source_PolState) != self.N_pattern:
-                raise (
-                    "The length of Source_PolState needs to be either 1 or the same as N_pattern"
-                )
+                raise ("The length of Source_PolState needs to be either 1 or the same as N_pattern")
             for i in range(self.N_pattern):
-                self.Source_PolState[i] = Source_PolState[i] / (
-                    np.sum(np.abs(Source_PolState[i]) ** 2)
-                ) ** (1 / 2)
+                self.Source_PolState[i] = Source_PolState[i] / (np.sum(np.abs(Source_PolState[i]) ** 2)) ** (1 / 2)
 
-    def Hz_det_setup(
-        self, phase_deconv, ph_deconv_layer, bire_in_plane_deconv, inc_recon
-    ):
+    def Hz_det_setup(self, phase_deconv, ph_deconv_layer, bire_in_plane_deconv, inc_recon):
         """
 
         setup defocus kernels for deconvolution with the corresponding dimensions
@@ -576,11 +534,7 @@ class waveorder_microscopy:
 
         """
 
-        if (
-            phase_deconv == "2D"
-            or bire_in_plane_deconv == "2D"
-            or inc_recon == "2D-vec-WOTF"
-        ):
+        if phase_deconv == "2D" or bire_in_plane_deconv == "2D" or inc_recon == "2D-vec-WOTF":
             # generate defocus kernel based on Pupil function and z_defocus
             self.Hz_det_2D = (
                 generate_propagation_kernel(
@@ -597,17 +551,9 @@ class waveorder_microscopy:
             self.ph_deconv_layer = ph_deconv_layer
 
             if self.z_defocus[0] - self.z_defocus[1] > 0:
-                z_deconv = (
-                    -(
-                        np.r_[: self.ph_deconv_layer]
-                        - self.ph_deconv_layer // 2
-                    )
-                    * self.psz
-                )
+                z_deconv = -(np.r_[: self.ph_deconv_layer] - self.ph_deconv_layer // 2) * self.psz
             else:
-                z_deconv = (
-                    np.r_[: self.ph_deconv_layer] - self.ph_deconv_layer // 2
-                ) * self.psz
+                z_deconv = (np.r_[: self.ph_deconv_layer] - self.ph_deconv_layer // 2) * self.psz
 
             self.Hz_det_semi_3D = generate_propagation_kernel(
                 self.fxx,
@@ -624,22 +570,12 @@ class waveorder_microscopy:
                 z_deconv,
             )
 
-        if (
-            phase_deconv == "3D"
-            or bire_in_plane_deconv == "3D"
-            or inc_recon == "3D"
-        ):
+        if phase_deconv == "3D" or bire_in_plane_deconv == "3D" or inc_recon == "3D":
             # generate defocus kernel and Green's function
             if self.z_defocus[0] - self.z_defocus[1] > 0:
-                z = -ifftshift(
-                    (np.r_[0 : self.N_defocus_3D] - self.N_defocus_3D // 2)
-                    * self.psz
-                )
+                z = -ifftshift((np.r_[0 : self.N_defocus_3D] - self.N_defocus_3D // 2) * self.psz)
             else:
-                z = ifftshift(
-                    (np.r_[0 : self.N_defocus_3D] - self.N_defocus_3D // 2)
-                    * self.psz
-                )
+                z = ifftshift((np.r_[0 : self.N_defocus_3D] - self.N_defocus_3D // 2) * self.psz)
             self.Hz_det_3D = (
                 generate_propagation_kernel(
                     torch.tensor(self.frr),
@@ -736,9 +672,7 @@ class waveorder_microscopy:
             if inc_recon == "2D-geometric":
                 wave_vec_norm_x = self.lambda_illu * self.fxx
                 wave_vec_norm_y = self.lambda_illu * self.fyy
-                wave_vec_norm_z = (
-                    np.maximum(0, 1 - wave_vec_norm_x**2 - wave_vec_norm_y**2)
-                ) ** (0.5)
+                wave_vec_norm_z = (np.maximum(0, 1 - wave_vec_norm_x**2 - wave_vec_norm_y**2)) ** (0.5)
 
                 incident_theta = np.arctan2(
                     (wave_vec_norm_x**2 + wave_vec_norm_y**2) ** (0.5),
@@ -749,9 +683,7 @@ class waveorder_microscopy:
                 (
                     self.geometric_inc_matrix,
                     self.geometric_inc_matrix_inv,
-                ) = gen_geometric_inc_matrix(
-                    incident_theta, incident_phi, self.Source
-                )
+                ) = gen_geometric_inc_matrix(incident_theta, incident_phi, self.Source)
 
             elif inc_recon == "2D-vec-WOTF":
                 # generate 2D vectorial transfer function for 2D PTI
@@ -759,26 +691,19 @@ class waveorder_microscopy:
 
                 # compute the AHA matrix for later 2D inversion
                 self.inc_AHA_2D_vec = np.zeros((7, 7, self.N, self.M), complex)
-                for i, j, p in itertools.product(
-                    range(7), range(7), range(self.N_Stokes)
-                ):
+                for i, j, p in itertools.product(range(7), range(7), range(self.N_Stokes)):
                     self.inc_AHA_2D_vec[i, j] += np.sum(
-                        np.conj(self.H_dyadic_2D_OTF[p, i])
-                        * self.H_dyadic_2D_OTF[p, j],
+                        np.conj(self.H_dyadic_2D_OTF[p, i]) * self.H_dyadic_2D_OTF[p, j],
                         axis=2,
                     )
 
         elif inc_recon == "3D":
             # generate 3D vectorial transfer function for 3D PTI
             self.gen_3D_vec_WOTF(True)
-            self.inc_AHA_3D_vec = np.zeros(
-                (7, 7, self.N, self.M, self.N_defocus_3D), dtype="complex64"
-            )
+            self.inc_AHA_3D_vec = np.zeros((7, 7, self.N, self.M, self.N_defocus_3D), dtype="complex64")
 
             # compute the AHA matrix for later 3D inversion
-            for i, j, p in itertools.product(
-                range(7), range(7), range(self.N_Stokes)
-            ):
+            for i, j, p in itertools.product(range(7), range(7), range(self.N_Stokes)):
                 self.inc_AHA_3D_vec[i, j] += np.sum(
                     np.conj(self.H_dyadic_OTF[p, i]) * self.H_dyadic_OTF[p, j],
                     axis=0,
@@ -821,9 +746,7 @@ class waveorder_microscopy:
                 self.N,
                 self.M,
             ):
-                raise ValueError(
-                    "Instrument tensor must have shape (N, M, N_channel, N_Stokes)"
-                )
+                raise ValueError("Instrument tensor must have shape (N, M, N_channel, N_Stokes)")
 
             self.N_channel = A_matrix_shape[-2]
             self.N_Stokes = A_matrix_shape[-1]
@@ -841,12 +764,8 @@ class waveorder_microscopy:
 
         """
 
-        self.Hu = np.zeros(
-            (self.N, self.M, self.N_defocus * self.N_pattern), complex
-        )
-        self.Hp = np.zeros(
-            (self.N, self.M, self.N_defocus * self.N_pattern), complex
-        )
+        self.Hu = np.zeros((self.N, self.M, self.N_defocus * self.N_pattern), complex)
+        self.Hp = np.zeros((self.N, self.M, self.N_defocus * self.N_pattern), complex)
 
         if self.N_pattern == 1:
             for i in range(self.N_defocus):
@@ -857,9 +776,7 @@ class waveorder_microscopy:
                 self.Hu[:, :, i] = Hu_temp.numpy()
                 self.Hp[:, :, i] = Hp_temp.numpy()
         else:
-            for i, j in itertools.product(
-                range(self.N_defocus), range(self.N_pattern)
-            ):
+            for i, j in itertools.product(range(self.N_defocus), range(self.N_pattern)):
                 idx = i * self.N_pattern + j
                 Hu_temp, Hp_temp = compute_weak_object_transfer_function_2d(
                     torch.tensor(self.Source[j]),
@@ -876,16 +793,10 @@ class waveorder_microscopy:
 
         """
 
-        self.Hu = np.zeros(
-            (self.N, self.M, self.ph_deconv_layer * self.N_pattern), complex
-        )
-        self.Hp = np.zeros(
-            (self.N, self.M, self.ph_deconv_layer * self.N_pattern), complex
-        )
+        self.Hu = np.zeros((self.N, self.M, self.ph_deconv_layer * self.N_pattern), complex)
+        self.Hp = np.zeros((self.N, self.M, self.ph_deconv_layer * self.N_pattern), complex)
 
-        for i, j in itertools.product(
-            range(self.ph_deconv_layer), range(self.N_pattern)
-        ):
+        for i, j in itertools.product(range(self.ph_deconv_layer), range(self.N_pattern)):
             if self.N_pattern == 1:
                 Source_current = self.Source.copy()
             else:
@@ -897,11 +808,7 @@ class waveorder_microscopy:
                 Source_current,
                 self.Pupil_obj,
                 self.Hz_det_semi_3D[:, :, i],
-                self.G_fun_z_semi_3D[:, :, i]
-                * 4
-                * np.pi
-                * 1j
-                / self.lambda_illu,
+                self.G_fun_z_semi_3D[:, :, i] * 4 * np.pi * 1j / self.lambda_illu,
                 use_gpu=self.use_gpu,
                 gpu_id=self.gpu_id,
             )
@@ -972,26 +879,20 @@ class waveorder_microscopy:
 
         # angle-dependent electric field components due to focusing effect
         fr = (self.fxx**2 + self.fyy**2) ** (0.5)
-        cos_factor = (
-            1 - (self.lambda_illu**2) * (fr**2) * self.Pupil_support
-        ) ** (0.5) * self.Pupil_support
+        cos_factor = (1 - (self.lambda_illu**2) * (fr**2) * self.Pupil_support) ** (0.5) * self.Pupil_support
         dc_idx = fr == 0
         nondc_idx = fr != 0
         E_field_factor = np.zeros((5, self.N, self.M))
 
         E_field_factor[0, nondc_idx] = (
-            (self.fxx[nondc_idx] ** 2) * cos_factor[nondc_idx]
-            + self.fyy[nondc_idx] ** 2
+            (self.fxx[nondc_idx] ** 2) * cos_factor[nondc_idx] + self.fyy[nondc_idx] ** 2
         ) / fr[nondc_idx] ** 2
         E_field_factor[0, dc_idx] = 1
-        E_field_factor[1, nondc_idx] = (
-            self.fxx[nondc_idx]
-            * self.fyy[nondc_idx]
-            * (cos_factor[nondc_idx] - 1)
-        ) / fr[nondc_idx] ** 2
+        E_field_factor[1, nondc_idx] = (self.fxx[nondc_idx] * self.fyy[nondc_idx] * (cos_factor[nondc_idx] - 1)) / fr[
+            nondc_idx
+        ] ** 2
         E_field_factor[2, nondc_idx] = (
-            (self.fyy[nondc_idx] ** 2) * cos_factor[nondc_idx]
-            + self.fxx[nondc_idx] ** 2
+            (self.fyy[nondc_idx] ** 2) * cos_factor[nondc_idx] + self.fxx[nondc_idx] ** 2
         ) / fr[nondc_idx] ** 2
         E_field_factor[2, dc_idx] = 1
         E_field_factor[3, nondc_idx] = -self.lambda_illu * self.fxx[nondc_idx]
@@ -1008,9 +909,7 @@ class waveorder_microscopy:
             .numpy()
             .transpose((1, 2, 0))
         )
-        G_tensor_z = gen_dyadic_Greens_tensor_z(
-            self.fxx, self.fyy, G_fun_z, self.Pupil_support, self.lambda_illu
-        )
+        G_tensor_z = gen_dyadic_Greens_tensor_z(self.fxx, self.fyy, G_fun_z, self.Pupil_support, self.lambda_illu)
 
         # compute transfer functions
         OTF_compute = lambda x, y, z, w: WOTF_semi_3D_compute(
@@ -1023,9 +922,7 @@ class waveorder_microscopy:
             gpu_id=self.gpu_id,
         )
 
-        for i, j in itertools.product(
-            range(self.N_defocus), range(self.N_pattern)
-        ):
+        for i, j in itertools.product(range(self.N_defocus), range(self.N_pattern)):
             if self.N_pattern == 1:
                 Source_current = self.Source.numpy().copy()
             else:
@@ -1034,18 +931,9 @@ class waveorder_microscopy:
             idx = i * self.N_pattern + j
 
             # focusing electric field components
-            Ex_field = (
-                self.Source_PolState[j, 0] * E_field_factor[0]
-                + self.Source_PolState[j, 1] * E_field_factor[1]
-            )
-            Ey_field = (
-                self.Source_PolState[j, 0] * E_field_factor[1]
-                + self.Source_PolState[j, 1] * E_field_factor[2]
-            )
-            Ez_field = (
-                self.Source_PolState[j, 0] * E_field_factor[3]
-                + self.Source_PolState[j, 1] * E_field_factor[4]
-            )
+            Ex_field = self.Source_PolState[j, 0] * E_field_factor[0] + self.Source_PolState[j, 1] * E_field_factor[1]
+            Ey_field = self.Source_PolState[j, 0] * E_field_factor[1] + self.Source_PolState[j, 1] * E_field_factor[2]
+            Ez_field = self.Source_PolState[j, 0] * E_field_factor[3] + self.Source_PolState[j, 1] * E_field_factor[4]
 
             IF_ExEx = np.abs(Ex_field) ** 2
             IF_ExEy = Ex_field * np.conj(Ey_field)
@@ -1241,147 +1129,59 @@ class waveorder_microscopy:
 
                 # 2D vectorial transfer functions
                 self.H_dyadic_2D_OTF[0, 0, :, :, idx] = (
-                    ExEx_Gxx_re
-                    + ExEy_Gxy_re
-                    + ExEz_Gxz_re
-                    + EyEx_Gyx_re
-                    + EyEy_Gyy_re
-                    + EyEz_Gyz_re
+                    ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re + EyEx_Gyx_re + EyEy_Gyy_re + EyEz_Gyz_re
                 )
                 self.H_dyadic_2D_OTF[0, 1, :, :, idx] = (
-                    ExEx_Gxx_im
-                    + ExEy_Gxy_im
-                    + ExEz_Gxz_im
-                    + EyEx_Gyx_im
-                    + EyEy_Gyy_im
-                    + EyEz_Gyz_im
+                    ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im + EyEx_Gyx_im + EyEy_Gyy_im + EyEz_Gyz_im
                 )
-                self.H_dyadic_2D_OTF[0, 2, :, :, idx] = (
-                    ExEx_Gxx_re - ExEy_Gxy_re + EyEx_Gyx_re - EyEy_Gyy_re
-                )
-                self.H_dyadic_2D_OTF[0, 3, :, :, idx] = (
-                    ExEx_Gxy_re + ExEy_Gxx_re + EyEx_Gyy_re + EyEy_Gyx_re
-                )
-                self.H_dyadic_2D_OTF[0, 4, :, :, idx] = (
-                    ExEx_Gxz_re + ExEz_Gxx_re + EyEx_Gyz_re + EyEz_Gyx_re
-                )
-                self.H_dyadic_2D_OTF[0, 5, :, :, idx] = (
-                    ExEy_Gxz_re + ExEz_Gxy_re + EyEy_Gyz_re + EyEz_Gyy_re
-                )
-                self.H_dyadic_2D_OTF[0, 6, :, :, idx] = (
-                    ExEz_Gxz_re + EyEz_Gyz_re
-                )
+                self.H_dyadic_2D_OTF[0, 2, :, :, idx] = ExEx_Gxx_re - ExEy_Gxy_re + EyEx_Gyx_re - EyEy_Gyy_re
+                self.H_dyadic_2D_OTF[0, 3, :, :, idx] = ExEx_Gxy_re + ExEy_Gxx_re + EyEx_Gyy_re + EyEy_Gyx_re
+                self.H_dyadic_2D_OTF[0, 4, :, :, idx] = ExEx_Gxz_re + ExEz_Gxx_re + EyEx_Gyz_re + EyEz_Gyx_re
+                self.H_dyadic_2D_OTF[0, 5, :, :, idx] = ExEy_Gxz_re + ExEz_Gxy_re + EyEy_Gyz_re + EyEz_Gyy_re
+                self.H_dyadic_2D_OTF[0, 6, :, :, idx] = ExEz_Gxz_re + EyEz_Gyz_re
 
                 self.H_dyadic_2D_OTF[1, 0, :, :, idx] = (
-                    ExEx_Gxx_re
-                    + ExEy_Gxy_re
-                    + ExEz_Gxz_re
-                    - EyEx_Gyx_re
-                    - EyEy_Gyy_re
-                    - EyEz_Gyz_re
+                    ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re - EyEx_Gyx_re - EyEy_Gyy_re - EyEz_Gyz_re
                 )
                 self.H_dyadic_2D_OTF[1, 1, :, :, idx] = (
-                    ExEx_Gxx_im
-                    + ExEy_Gxy_im
-                    + ExEz_Gxz_im
-                    - EyEx_Gyx_im
-                    - EyEy_Gyy_im
-                    - EyEz_Gyz_im
+                    ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im - EyEx_Gyx_im - EyEy_Gyy_im - EyEz_Gyz_im
                 )
-                self.H_dyadic_2D_OTF[1, 2, :, :, idx] = (
-                    ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
-                )
-                self.H_dyadic_2D_OTF[1, 3, :, :, idx] = (
-                    ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
-                )
-                self.H_dyadic_2D_OTF[1, 4, :, :, idx] = (
-                    ExEx_Gxz_re + ExEz_Gxx_re - EyEx_Gyz_re - EyEz_Gyx_re
-                )
-                self.H_dyadic_2D_OTF[1, 5, :, :, idx] = (
-                    ExEy_Gxz_re + ExEz_Gxy_re - EyEy_Gyz_re - EyEz_Gyy_re
-                )
-                self.H_dyadic_2D_OTF[1, 6, :, :, idx] = (
-                    ExEz_Gxz_re - EyEz_Gyz_re
-                )
+                self.H_dyadic_2D_OTF[1, 2, :, :, idx] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
+                self.H_dyadic_2D_OTF[1, 3, :, :, idx] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
+                self.H_dyadic_2D_OTF[1, 4, :, :, idx] = ExEx_Gxz_re + ExEz_Gxx_re - EyEx_Gyz_re - EyEz_Gyx_re
+                self.H_dyadic_2D_OTF[1, 5, :, :, idx] = ExEy_Gxz_re + ExEz_Gxy_re - EyEy_Gyz_re - EyEz_Gyy_re
+                self.H_dyadic_2D_OTF[1, 6, :, :, idx] = ExEz_Gxz_re - EyEz_Gyz_re
 
                 self.H_dyadic_2D_OTF[2, 0, :, :, idx] = (
-                    ExEx_Gxy_re
-                    + ExEy_Gyy_re
-                    + ExEz_Gyz_re
-                    + EyEx_Gxx_re
-                    + EyEy_Gyx_re
-                    + EyEz_Gxz_re
+                    ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re + EyEx_Gxx_re + EyEy_Gyx_re + EyEz_Gxz_re
                 )
                 self.H_dyadic_2D_OTF[2, 1, :, :, idx] = (
-                    ExEx_Gxy_im
-                    + ExEy_Gyy_im
-                    + ExEz_Gyz_im
-                    + EyEx_Gxx_im
-                    + EyEy_Gyx_im
-                    + EyEz_Gxz_im
+                    ExEx_Gxy_im + ExEy_Gyy_im + ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
                 )
-                self.H_dyadic_2D_OTF[2, 2, :, :, idx] = (
-                    ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
-                )
-                self.H_dyadic_2D_OTF[2, 3, :, :, idx] = (
-                    ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
-                )
-                self.H_dyadic_2D_OTF[2, 4, :, :, idx] = (
-                    ExEx_Gyz_re + ExEz_Gxy_re + EyEx_Gxz_re + EyEz_Gxx_re
-                )
-                self.H_dyadic_2D_OTF[2, 5, :, :, idx] = (
-                    ExEy_Gyz_re + ExEz_Gyy_re + EyEy_Gxz_re + EyEz_Gyx_re
-                )
-                self.H_dyadic_2D_OTF[2, 6, :, :, idx] = (
-                    ExEz_Gyz_re + EyEz_Gxz_re
-                )
+                self.H_dyadic_2D_OTF[2, 2, :, :, idx] = ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
+                self.H_dyadic_2D_OTF[2, 3, :, :, idx] = ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
+                self.H_dyadic_2D_OTF[2, 4, :, :, idx] = ExEx_Gyz_re + ExEz_Gxy_re + EyEx_Gxz_re + EyEz_Gxx_re
+                self.H_dyadic_2D_OTF[2, 5, :, :, idx] = ExEy_Gyz_re + ExEz_Gyy_re + EyEy_Gxz_re + EyEz_Gyx_re
+                self.H_dyadic_2D_OTF[2, 6, :, :, idx] = ExEz_Gyz_re + EyEz_Gxz_re
 
                 # transfer functions for S3
                 if self.N_Stokes == 4:  # full Stokes polarimeter
                     self.H_dyadic_2D_OTF[3, 0, :, :, idx] = (
-                        -ExEx_Gxy_im
-                        - ExEy_Gyy_im
-                        - ExEz_Gyz_im
-                        + EyEx_Gxx_im
-                        + EyEy_Gyx_im
-                        + EyEz_Gxz_im
+                        -ExEx_Gxy_im - ExEy_Gyy_im - ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
                     )
                     self.H_dyadic_2D_OTF[3, 1, :, :, idx] = (
-                        ExEx_Gxy_re
-                        + ExEy_Gyy_re
-                        + ExEz_Gyz_re
-                        - EyEx_Gxx_re
-                        - EyEy_Gyx_re
-                        - EyEz_Gxz_re
+                        ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re - EyEx_Gxx_re - EyEy_Gyx_re - EyEz_Gxz_re
                     )
-                    self.H_dyadic_2D_OTF[3, 2, :, :, idx] = (
-                        -ExEx_Gxy_im + ExEy_Gyy_im + EyEx_Gxx_im - EyEy_Gyx_im
-                    )
-                    self.H_dyadic_2D_OTF[3, 3, :, :, idx] = (
-                        -ExEx_Gyy_im - ExEy_Gxy_im + EyEx_Gyx_im + EyEy_Gxx_im
-                    )
-                    self.H_dyadic_2D_OTF[3, 4, :, :, idx] = (
-                        -ExEx_Gyz_im - ExEz_Gxy_im + EyEx_Gxz_im + EyEz_Gxx_im
-                    )
-                    self.H_dyadic_2D_OTF[3, 5, :, :, idx] = (
-                        -ExEy_Gyz_im - ExEz_Gyy_im + EyEy_Gxz_im + EyEz_Gyx_im
-                    )
-                    self.H_dyadic_2D_OTF[3, 6, :, :, idx] = (
-                        -ExEz_Gyz_im + EyEz_Gxz_im
-                    )
+                    self.H_dyadic_2D_OTF[3, 2, :, :, idx] = -ExEx_Gxy_im + ExEy_Gyy_im + EyEx_Gxx_im - EyEy_Gyx_im
+                    self.H_dyadic_2D_OTF[3, 3, :, :, idx] = -ExEx_Gyy_im - ExEy_Gxy_im + EyEx_Gyx_im + EyEy_Gxx_im
+                    self.H_dyadic_2D_OTF[3, 4, :, :, idx] = -ExEx_Gyz_im - ExEz_Gxy_im + EyEx_Gxz_im + EyEz_Gxx_im
+                    self.H_dyadic_2D_OTF[3, 5, :, :, idx] = -ExEy_Gyz_im - ExEz_Gyy_im + EyEy_Gxz_im + EyEz_Gyx_im
+                    self.H_dyadic_2D_OTF[3, 6, :, :, idx] = -ExEz_Gyz_im + EyEz_Gxz_im
             else:  # linear Stokes polarimeter
-                self.H_dyadic_2D_OTF_in_plane[0, 0, :, :, idx] = (
-                    ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
-                )
-                self.H_dyadic_2D_OTF_in_plane[0, 1, :, :, idx] = (
-                    ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
-                )
-                self.H_dyadic_2D_OTF_in_plane[1, 0, :, :, idx] = (
-                    ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
-                )
-                self.H_dyadic_2D_OTF_in_plane[1, 1, :, :, idx] = (
-                    ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
-                )
+                self.H_dyadic_2D_OTF_in_plane[0, 0, :, :, idx] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
+                self.H_dyadic_2D_OTF_in_plane[0, 1, :, :, idx] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
+                self.H_dyadic_2D_OTF_in_plane[1, 0, :, :, idx] = ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
+                self.H_dyadic_2D_OTF_in_plane[1, 1, :, :, idx] = ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
 
     def gen_3D_vec_WOTF(self, inc_option):
         """
@@ -1411,26 +1211,20 @@ class waveorder_microscopy:
 
         # angle-dependent electric field components due to focusing effect
         fr = (self.fxx**2 + self.fyy**2) ** (0.5)
-        cos_factor = (
-            1 - (self.lambda_illu**2) * (fr**2) * self.Pupil_support
-        ) ** (0.5) * self.Pupil_support
+        cos_factor = (1 - (self.lambda_illu**2) * (fr**2) * self.Pupil_support) ** (0.5) * self.Pupil_support
         dc_idx = fr == 0
         nondc_idx = fr != 0
         E_field_factor = np.zeros((5, self.N, self.M))
 
         E_field_factor[0, nondc_idx] = (
-            (self.fxx[nondc_idx] ** 2) * cos_factor[nondc_idx]
-            + self.fyy[nondc_idx] ** 2
+            (self.fxx[nondc_idx] ** 2) * cos_factor[nondc_idx] + self.fyy[nondc_idx] ** 2
         ) / fr[nondc_idx] ** 2
         E_field_factor[0, dc_idx] = 1
-        E_field_factor[1, nondc_idx] = (
-            self.fxx[nondc_idx]
-            * self.fyy[nondc_idx]
-            * (cos_factor[nondc_idx] - 1)
-        ) / fr[nondc_idx] ** 2
+        E_field_factor[1, nondc_idx] = (self.fxx[nondc_idx] * self.fyy[nondc_idx] * (cos_factor[nondc_idx] - 1)) / fr[
+            nondc_idx
+        ] ** 2
         E_field_factor[2, nondc_idx] = (
-            (self.fyy[nondc_idx] ** 2) * cos_factor[nondc_idx]
-            + self.fxx[nondc_idx] ** 2
+            (self.fyy[nondc_idx] ** 2) * cos_factor[nondc_idx] + self.fxx[nondc_idx] ** 2
         ) / fr[nondc_idx] ** 2
         E_field_factor[2, dc_idx] = 1
         E_field_factor[3, nondc_idx] = -self.lambda_illu * self.fxx[nondc_idx]
@@ -1455,12 +1249,8 @@ class waveorder_microscopy:
         )
 
         G_real = fftshift(ifft2(G_fun_z, axes=(0, 1)) / self.ps**2)
-        G_tensor = gen_dyadic_Greens_tensor(
-            G_real, self.ps, psz, self.lambda_illu, space="Fourier"
-        )
-        G_tensor_z = (ifft(G_tensor, axis=4) / psz)[
-            ..., :: int(self.G_tensor_z_upsampling)
-        ]
+        G_tensor = gen_dyadic_Greens_tensor(G_real, self.ps, psz, self.lambda_illu, space="Fourier")
+        G_tensor_z = (ifft(G_tensor, axis=4) / psz)[..., :: int(self.G_tensor_z_upsampling)]
 
         # compute transfer functions
         def OTF_compute(x, y, z):
@@ -1468,9 +1258,7 @@ class waveorder_microscopy:
                 torch.tensor(x.astype("float32")),
                 torch.tensor(y.astype("complex64")),
                 torch.tensor(self.Pupil_obj.astype("complex64")),
-                torch.tensor(
-                    self.Hz_det_3D.astype("complex64").transpose((2, 1, 0))
-                ),
+                torch.tensor(self.Hz_det_3D.astype("complex64").transpose((2, 1, 0))),
                 torch.tensor(z.astype("complex64").transpose((2, 1, 0))),
                 torch.tensor(self.psz),
             )
@@ -1486,18 +1274,9 @@ class waveorder_microscopy:
                 Source_current = self.Source[i].copy()
 
             # focusing electric field components
-            Ex_field = (
-                self.Source_PolState[i, 0] * E_field_factor[0]
-                + self.Source_PolState[i, 1] * E_field_factor[1]
-            )
-            Ey_field = (
-                self.Source_PolState[i, 0] * E_field_factor[1]
-                + self.Source_PolState[i, 1] * E_field_factor[2]
-            )
-            Ez_field = (
-                self.Source_PolState[i, 0] * E_field_factor[3]
-                + self.Source_PolState[i, 1] * E_field_factor[4]
-            )
+            Ex_field = self.Source_PolState[i, 0] * E_field_factor[0] + self.Source_PolState[i, 1] * E_field_factor[1]
+            Ey_field = self.Source_PolState[i, 0] * E_field_factor[1] + self.Source_PolState[i, 1] * E_field_factor[2]
+            Ez_field = self.Source_PolState[i, 0] * E_field_factor[3] + self.Source_PolState[i, 1] * E_field_factor[4]
 
             IF_ExEx = np.abs(Ex_field) ** 2
             IF_ExEy = Ex_field * np.conj(Ey_field)
@@ -1508,238 +1287,102 @@ class waveorder_microscopy:
             Source_norm = Source_current * (IF_ExEx + IF_EyEy)
 
             # intermediate transfer functions
-            ExEx_Gxx_re, ExEx_Gxx_im = OTF_compute(
-                Source_norm, Source_current * IF_ExEx, G_tensor_z[0, 0]
-            )  #
-            ExEy_Gxy_re, ExEy_Gxy_im = OTF_compute(
-                Source_norm, Source_current * IF_ExEy, G_tensor_z[0, 1]
-            )  #
-            EyEx_Gyx_re, EyEx_Gyx_im = OTF_compute(
-                Source_norm, Source_current * IF_ExEy.conj(), G_tensor_z[0, 1]
-            )  #
-            EyEy_Gyy_re, EyEy_Gyy_im = OTF_compute(
-                Source_norm, Source_current * IF_EyEy, G_tensor_z[1, 1]
-            )  #
-            ExEx_Gxy_re, ExEx_Gxy_im = OTF_compute(
-                Source_norm, Source_current * IF_ExEx, G_tensor_z[0, 1]
-            )  #
-            ExEy_Gxx_re, ExEy_Gxx_im = OTF_compute(
-                Source_norm, Source_current * IF_ExEy, G_tensor_z[0, 0]
-            )  #
-            EyEx_Gyy_re, EyEx_Gyy_im = OTF_compute(
-                Source_norm, Source_current * IF_ExEy.conj(), G_tensor_z[1, 1]
-            )  #
-            EyEy_Gyx_re, EyEy_Gyx_im = OTF_compute(
-                Source_norm, Source_current * IF_EyEy, G_tensor_z[0, 1]
-            )  #
-            ExEy_Gyy_re, ExEy_Gyy_im = OTF_compute(
-                Source_norm, Source_current * IF_ExEy, G_tensor_z[1, 1]
-            )  #
-            EyEx_Gxx_re, EyEx_Gxx_im = OTF_compute(
-                Source_norm, Source_current * IF_ExEy.conj(), G_tensor_z[0, 0]
-            )  #
-            ExEx_Gyy_re, ExEx_Gyy_im = OTF_compute(
-                Source_norm, Source_current * IF_ExEx, G_tensor_z[1, 1]
-            )  #
-            EyEy_Gxx_re, EyEy_Gxx_im = OTF_compute(
-                Source_norm, Source_current * IF_EyEy, G_tensor_z[0, 0]
-            )  #
+            ExEx_Gxx_re, ExEx_Gxx_im = OTF_compute(Source_norm, Source_current * IF_ExEx, G_tensor_z[0, 0])  #
+            ExEy_Gxy_re, ExEy_Gxy_im = OTF_compute(Source_norm, Source_current * IF_ExEy, G_tensor_z[0, 1])  #
+            EyEx_Gyx_re, EyEx_Gyx_im = OTF_compute(Source_norm, Source_current * IF_ExEy.conj(), G_tensor_z[0, 1])  #
+            EyEy_Gyy_re, EyEy_Gyy_im = OTF_compute(Source_norm, Source_current * IF_EyEy, G_tensor_z[1, 1])  #
+            ExEx_Gxy_re, ExEx_Gxy_im = OTF_compute(Source_norm, Source_current * IF_ExEx, G_tensor_z[0, 1])  #
+            ExEy_Gxx_re, ExEy_Gxx_im = OTF_compute(Source_norm, Source_current * IF_ExEy, G_tensor_z[0, 0])  #
+            EyEx_Gyy_re, EyEx_Gyy_im = OTF_compute(Source_norm, Source_current * IF_ExEy.conj(), G_tensor_z[1, 1])  #
+            EyEy_Gyx_re, EyEy_Gyx_im = OTF_compute(Source_norm, Source_current * IF_EyEy, G_tensor_z[0, 1])  #
+            ExEy_Gyy_re, ExEy_Gyy_im = OTF_compute(Source_norm, Source_current * IF_ExEy, G_tensor_z[1, 1])  #
+            EyEx_Gxx_re, EyEx_Gxx_im = OTF_compute(Source_norm, Source_current * IF_ExEy.conj(), G_tensor_z[0, 0])  #
+            ExEx_Gyy_re, ExEx_Gyy_im = OTF_compute(Source_norm, Source_current * IF_ExEx, G_tensor_z[1, 1])  #
+            EyEy_Gxx_re, EyEy_Gxx_im = OTF_compute(Source_norm, Source_current * IF_EyEy, G_tensor_z[0, 0])  #
 
             if inc_option == True:
-                ExEz_Gxz_re, ExEz_Gxz_im = OTF_compute(
-                    Source_norm, Source_current * IF_ExEz, G_tensor_z[0, 2]
-                )
-                EyEz_Gyz_re, EyEz_Gyz_im = OTF_compute(
-                    Source_norm, Source_current * IF_EyEz, G_tensor_z[1, 2]
-                )
-                ExEx_Gxz_re, ExEx_Gxz_im = OTF_compute(
-                    Source_norm, Source_current * IF_ExEx, G_tensor_z[0, 2]
-                )
-                ExEz_Gxx_re, ExEz_Gxx_im = OTF_compute(
-                    Source_norm, Source_current * IF_ExEz, G_tensor_z[0, 0]
-                )
+                ExEz_Gxz_re, ExEz_Gxz_im = OTF_compute(Source_norm, Source_current * IF_ExEz, G_tensor_z[0, 2])
+                EyEz_Gyz_re, EyEz_Gyz_im = OTF_compute(Source_norm, Source_current * IF_EyEz, G_tensor_z[1, 2])
+                ExEx_Gxz_re, ExEx_Gxz_im = OTF_compute(Source_norm, Source_current * IF_ExEx, G_tensor_z[0, 2])
+                ExEz_Gxx_re, ExEz_Gxx_im = OTF_compute(Source_norm, Source_current * IF_ExEz, G_tensor_z[0, 0])
                 EyEx_Gyz_re, EyEx_Gyz_im = OTF_compute(
                     Source_norm,
                     Source_current * IF_ExEy.conj(),
                     G_tensor_z[1, 2],
                 )
-                EyEz_Gyx_re, EyEz_Gyx_im = OTF_compute(
-                    Source_norm, Source_current * IF_EyEz, G_tensor_z[0, 1]
-                )
-                ExEy_Gxz_re, ExEy_Gxz_im = OTF_compute(
-                    Source_norm, Source_current * IF_ExEy, G_tensor_z[0, 2]
-                )
-                ExEz_Gxy_re, ExEz_Gxy_im = OTF_compute(
-                    Source_norm, Source_current * IF_ExEz, G_tensor_z[0, 1]
-                )
-                EyEy_Gyz_re, EyEy_Gyz_im = OTF_compute(
-                    Source_norm, Source_current * IF_EyEy, G_tensor_z[1, 2]
-                )
-                EyEz_Gyy_re, EyEz_Gyy_im = OTF_compute(
-                    Source_norm, Source_current * IF_EyEz, G_tensor_z[1, 1]
-                )
-                ExEz_Gyz_re, ExEz_Gyz_im = OTF_compute(
-                    Source_norm, Source_current * IF_ExEz, G_tensor_z[1, 2]
-                )
-                EyEz_Gxz_re, EyEz_Gxz_im = OTF_compute(
-                    Source_norm, Source_current * IF_EyEz, G_tensor_z[0, 2]
-                )
+                EyEz_Gyx_re, EyEz_Gyx_im = OTF_compute(Source_norm, Source_current * IF_EyEz, G_tensor_z[0, 1])
+                ExEy_Gxz_re, ExEy_Gxz_im = OTF_compute(Source_norm, Source_current * IF_ExEy, G_tensor_z[0, 2])
+                ExEz_Gxy_re, ExEz_Gxy_im = OTF_compute(Source_norm, Source_current * IF_ExEz, G_tensor_z[0, 1])
+                EyEy_Gyz_re, EyEy_Gyz_im = OTF_compute(Source_norm, Source_current * IF_EyEy, G_tensor_z[1, 2])
+                EyEz_Gyy_re, EyEz_Gyy_im = OTF_compute(Source_norm, Source_current * IF_EyEz, G_tensor_z[1, 1])
+                ExEz_Gyz_re, ExEz_Gyz_im = OTF_compute(Source_norm, Source_current * IF_ExEz, G_tensor_z[1, 2])
+                EyEz_Gxz_re, EyEz_Gxz_im = OTF_compute(Source_norm, Source_current * IF_EyEz, G_tensor_z[0, 2])
                 EyEx_Gxz_re, EyEx_Gxz_im = OTF_compute(
                     Source_norm,
                     Source_current * IF_ExEy.conj(),
                     G_tensor_z[0, 2],
                 )
-                EyEz_Gxx_re, EyEz_Gxx_im = OTF_compute(
-                    Source_norm, Source_current * IF_EyEz, G_tensor_z[0, 0]
-                )
-                ExEy_Gyz_re, ExEy_Gyz_im = OTF_compute(
-                    Source_norm, Source_current * IF_ExEy, G_tensor_z[1, 2]
-                )
-                ExEz_Gyy_re, ExEz_Gyy_im = OTF_compute(
-                    Source_norm, Source_current * IF_ExEz, G_tensor_z[1, 1]
-                )
-                EyEy_Gxz_re, EyEy_Gxz_im = OTF_compute(
-                    Source_norm, Source_current * IF_EyEy, G_tensor_z[0, 2]
-                )
-                ExEx_Gyz_re, ExEx_Gyz_im = OTF_compute(
-                    Source_norm, Source_current * IF_ExEx, G_tensor_z[1, 2]
-                )
+                EyEz_Gxx_re, EyEz_Gxx_im = OTF_compute(Source_norm, Source_current * IF_EyEz, G_tensor_z[0, 0])
+                ExEy_Gyz_re, ExEy_Gyz_im = OTF_compute(Source_norm, Source_current * IF_ExEy, G_tensor_z[1, 2])
+                ExEz_Gyy_re, ExEz_Gyy_im = OTF_compute(Source_norm, Source_current * IF_ExEz, G_tensor_z[1, 1])
+                EyEy_Gxz_re, EyEy_Gxz_im = OTF_compute(Source_norm, Source_current * IF_EyEy, G_tensor_z[0, 2])
+                ExEx_Gyz_re, ExEx_Gyz_im = OTF_compute(Source_norm, Source_current * IF_ExEx, G_tensor_z[1, 2])
 
                 # 3D vectorial transfer functions
                 self.H_dyadic_OTF[0, 0, i] = (
-                    ExEx_Gxx_re
-                    + ExEy_Gxy_re
-                    + ExEz_Gxz_re
-                    + EyEx_Gyx_re
-                    + EyEy_Gyy_re
-                    + EyEz_Gyz_re
+                    ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re + EyEx_Gyx_re + EyEy_Gyy_re + EyEz_Gyz_re
                 )
                 self.H_dyadic_OTF[0, 1, i] = (
-                    ExEx_Gxx_im
-                    + ExEy_Gxy_im
-                    + ExEz_Gxz_im
-                    + EyEx_Gyx_im
-                    + EyEy_Gyy_im
-                    + EyEz_Gyz_im
+                    ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im + EyEx_Gyx_im + EyEy_Gyy_im + EyEz_Gyz_im
                 )
-                self.H_dyadic_OTF[0, 2, i] = (
-                    ExEx_Gxx_re - ExEy_Gxy_re + EyEx_Gyx_re - EyEy_Gyy_re
-                )
-                self.H_dyadic_OTF[0, 3, i] = (
-                    ExEx_Gxy_re + ExEy_Gxx_re + EyEx_Gyy_re + EyEy_Gyx_re
-                )
-                self.H_dyadic_OTF[0, 4, i] = (
-                    ExEx_Gxz_re + ExEz_Gxx_re + EyEx_Gyz_re + EyEz_Gyx_re
-                )
-                self.H_dyadic_OTF[0, 5, i] = (
-                    ExEy_Gxz_re + ExEz_Gxy_re + EyEy_Gyz_re + EyEz_Gyy_re
-                )
+                self.H_dyadic_OTF[0, 2, i] = ExEx_Gxx_re - ExEy_Gxy_re + EyEx_Gyx_re - EyEy_Gyy_re
+                self.H_dyadic_OTF[0, 3, i] = ExEx_Gxy_re + ExEy_Gxx_re + EyEx_Gyy_re + EyEy_Gyx_re
+                self.H_dyadic_OTF[0, 4, i] = ExEx_Gxz_re + ExEz_Gxx_re + EyEx_Gyz_re + EyEz_Gyx_re
+                self.H_dyadic_OTF[0, 5, i] = ExEy_Gxz_re + ExEz_Gxy_re + EyEy_Gyz_re + EyEz_Gyy_re
                 self.H_dyadic_OTF[0, 6, i] = ExEz_Gxz_re + EyEz_Gyz_re
 
                 self.H_dyadic_OTF[1, 0, i] = (
-                    ExEx_Gxx_re
-                    + ExEy_Gxy_re
-                    + ExEz_Gxz_re
-                    - EyEx_Gyx_re
-                    - EyEy_Gyy_re
-                    - EyEz_Gyz_re
+                    ExEx_Gxx_re + ExEy_Gxy_re + ExEz_Gxz_re - EyEx_Gyx_re - EyEy_Gyy_re - EyEz_Gyz_re
                 )
                 self.H_dyadic_OTF[1, 1, i] = (
-                    ExEx_Gxx_im
-                    + ExEy_Gxy_im
-                    + ExEz_Gxz_im
-                    - EyEx_Gyx_im
-                    - EyEy_Gyy_im
-                    - EyEz_Gyz_im
+                    ExEx_Gxx_im + ExEy_Gxy_im + ExEz_Gxz_im - EyEx_Gyx_im - EyEy_Gyy_im - EyEz_Gyz_im
                 )
-                self.H_dyadic_OTF[1, 2, i] = (
-                    ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
-                )
-                self.H_dyadic_OTF[1, 3, i] = (
-                    ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
-                )
-                self.H_dyadic_OTF[1, 4, i] = (
-                    ExEx_Gxz_re + ExEz_Gxx_re - EyEx_Gyz_re - EyEz_Gyx_re
-                )
-                self.H_dyadic_OTF[1, 5, i] = (
-                    ExEy_Gxz_re + ExEz_Gxy_re - EyEy_Gyz_re - EyEz_Gyy_re
-                )
+                self.H_dyadic_OTF[1, 2, i] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
+                self.H_dyadic_OTF[1, 3, i] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
+                self.H_dyadic_OTF[1, 4, i] = ExEx_Gxz_re + ExEz_Gxx_re - EyEx_Gyz_re - EyEz_Gyx_re
+                self.H_dyadic_OTF[1, 5, i] = ExEy_Gxz_re + ExEz_Gxy_re - EyEy_Gyz_re - EyEz_Gyy_re
                 self.H_dyadic_OTF[1, 6, i] = ExEz_Gxz_re - EyEz_Gyz_re
 
                 self.H_dyadic_OTF[2, 0, i] = (
-                    ExEx_Gxy_re
-                    + ExEy_Gyy_re
-                    + ExEz_Gyz_re
-                    + EyEx_Gxx_re
-                    + EyEy_Gyx_re
-                    + EyEz_Gxz_re
+                    ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re + EyEx_Gxx_re + EyEy_Gyx_re + EyEz_Gxz_re
                 )
                 self.H_dyadic_OTF[2, 1, i] = (
-                    ExEx_Gxy_im
-                    + ExEy_Gyy_im
-                    + ExEz_Gyz_im
-                    + EyEx_Gxx_im
-                    + EyEy_Gyx_im
-                    + EyEz_Gxz_im
+                    ExEx_Gxy_im + ExEy_Gyy_im + ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
                 )
-                self.H_dyadic_OTF[2, 2, i] = (
-                    ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
-                )
-                self.H_dyadic_OTF[2, 3, i] = (
-                    ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
-                )
-                self.H_dyadic_OTF[2, 4, i] = (
-                    ExEx_Gyz_re + ExEz_Gxy_re + EyEx_Gxz_re + EyEz_Gxx_re
-                )
-                self.H_dyadic_OTF[2, 5, i] = (
-                    ExEy_Gyz_re + ExEz_Gyy_re + EyEy_Gxz_re + EyEz_Gyx_re
-                )
+                self.H_dyadic_OTF[2, 2, i] = ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
+                self.H_dyadic_OTF[2, 3, i] = ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
+                self.H_dyadic_OTF[2, 4, i] = ExEx_Gyz_re + ExEz_Gxy_re + EyEx_Gxz_re + EyEz_Gxx_re
+                self.H_dyadic_OTF[2, 5, i] = ExEy_Gyz_re + ExEz_Gyy_re + EyEy_Gxz_re + EyEz_Gyx_re
                 self.H_dyadic_OTF[2, 6, i] = ExEz_Gyz_re + EyEz_Gxz_re
 
                 # transfer functions for S3
                 if self.N_Stokes == 4:  # full Stokes polarimeter
                     self.H_dyadic_OTF[3, 0, i] = (
-                        -ExEx_Gxy_im
-                        - ExEy_Gyy_im
-                        - ExEz_Gyz_im
-                        + EyEx_Gxx_im
-                        + EyEy_Gyx_im
-                        + EyEz_Gxz_im
+                        -ExEx_Gxy_im - ExEy_Gyy_im - ExEz_Gyz_im + EyEx_Gxx_im + EyEy_Gyx_im + EyEz_Gxz_im
                     )
                     self.H_dyadic_OTF[3, 1, i] = (
-                        ExEx_Gxy_re
-                        + ExEy_Gyy_re
-                        + ExEz_Gyz_re
-                        - EyEx_Gxx_re
-                        - EyEy_Gyx_re
-                        - EyEz_Gxz_re
+                        ExEx_Gxy_re + ExEy_Gyy_re + ExEz_Gyz_re - EyEx_Gxx_re - EyEy_Gyx_re - EyEz_Gxz_re
                     )
-                    self.H_dyadic_OTF[3, 2, i] = (
-                        -ExEx_Gxy_im + ExEy_Gyy_im + EyEx_Gxx_im - EyEy_Gyx_im
-                    )
-                    self.H_dyadic_OTF[3, 3, i] = (
-                        -ExEx_Gyy_im - ExEy_Gxy_im + EyEx_Gyx_im + EyEy_Gxx_im
-                    )
-                    self.H_dyadic_OTF[3, 4, i] = (
-                        -ExEx_Gyz_im - ExEz_Gxy_im + EyEx_Gxz_im + EyEz_Gxx_im
-                    )
-                    self.H_dyadic_OTF[3, 5, i] = (
-                        -ExEy_Gyz_im - ExEz_Gyy_im + EyEy_Gxz_im + EyEz_Gyx_im
-                    )
+                    self.H_dyadic_OTF[3, 2, i] = -ExEx_Gxy_im + ExEy_Gyy_im + EyEx_Gxx_im - EyEy_Gyx_im
+                    self.H_dyadic_OTF[3, 3, i] = -ExEx_Gyy_im - ExEy_Gxy_im + EyEx_Gyx_im + EyEy_Gxx_im
+                    self.H_dyadic_OTF[3, 4, i] = -ExEx_Gyz_im - ExEz_Gxy_im + EyEx_Gxz_im + EyEz_Gxx_im
+                    self.H_dyadic_OTF[3, 5, i] = -ExEy_Gyz_im - ExEz_Gyy_im + EyEy_Gxz_im + EyEz_Gyx_im
                     self.H_dyadic_OTF[3, 6, i] = -ExEz_Gyz_im + EyEz_Gxz_im
             else:  # linear Stokes polarimeter
-                self.H_dyadic_OTF_in_plane[0, 0, i] = (
-                    ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
-                )
-                self.H_dyadic_OTF_in_plane[0, 1, i] = (
-                    ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
-                )
-                self.H_dyadic_OTF_in_plane[1, 0, i] = (
-                    ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
-                )
-                self.H_dyadic_OTF_in_plane[1, 1, i] = (
-                    ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
-                )
+                self.H_dyadic_OTF_in_plane[0, 0, i] = ExEx_Gxx_re - ExEy_Gxy_re - EyEx_Gyx_re + EyEy_Gyy_re
+                self.H_dyadic_OTF_in_plane[0, 1, i] = ExEx_Gxy_re + ExEy_Gxx_re - EyEx_Gyy_re - EyEy_Gyx_re
+                self.H_dyadic_OTF_in_plane[1, 0, i] = ExEx_Gxy_re - ExEy_Gyy_re + EyEx_Gxx_re - EyEy_Gyx_re
+                self.H_dyadic_OTF_in_plane[1, 1, i] = ExEx_Gyy_re + ExEy_Gxy_re + EyEx_Gyx_re + EyEy_Gxx_re
 
     ##############   polarization computing function group   ##############
 
@@ -1769,10 +1412,7 @@ class waveorder_microscopy:
                 f"Unsupported image data size. Provide image data is of size: {data_dims}. "
                 f"Image data must be of size (N_channel, ..., N, M) or (N_channel, ..., N, M, N_defocus)"
             )
-        if not (
-            data_dims[-2:] != (self.N, self.M)
-            or data_dims[-3:] != (self.N, self.M, self.N_defocus)
-        ):
+        if not (data_dims[-2:] != (self.N, self.M) or data_dims[-3:] != (self.N, self.M, self.N_defocus)):
             raise ValueError(
                 f"Unsupported image data size. Provide image data is of size: {data_dims}. "
                 f"Image data must be of size (N_channel, ..., N, M) or (N_channel, ..., N, M, N_defocus)"
@@ -1798,16 +1438,12 @@ class waveorder_microscopy:
             if self._A_matrix_inv_gpu_array is None:
                 self._A_matrix_inv_gpu_array = cp.array(self.A_matrix_inv)
             img_gpu_array = cp.array(img_data)
-            S_image_recon = cp.asnumpy(
-                cp.matmul(self._A_matrix_inv_gpu_array, img_gpu_array)
-            )
+            S_image_recon = cp.asnumpy(cp.matmul(self._A_matrix_inv_gpu_array, img_gpu_array))
         else:
             S_image_recon = np.matmul(self.A_matrix_inv, img_data)
 
         # reshape Stokes parameters into (N_Stokes, ..., N, M, N_defocus)
-        S_image_recon = np.reshape(
-            S_image_recon, (self.N, self.M, self.N_Stokes) + data_dims2[3:]
-        )
+        S_image_recon = np.reshape(S_image_recon, (self.N, self.M, self.N_Stokes) + data_dims2[3:])
         S_image_recon = np.moveaxis(S_image_recon, (0, 1), (-3, -2))
 
         # if input data was 2D, remove dummy z dimension
@@ -1852,13 +1488,9 @@ class waveorder_microscopy:
             S_transformed[1] = S_image_recon[1] / S_image_recon[3]
             S_transformed[2] = S_image_recon[2] / S_image_recon[3]
             S_transformed[3] = S_image_recon[3]
-            S_transformed[4] = (
-                S_image_recon[1] ** 2
-                + S_image_recon[2] ** 2
-                + S_image_recon[3] ** 2
-            ) ** (1 / 2) / S_image_recon[
-                0
-            ]  # DoP
+            S_transformed[4] = (S_image_recon[1] ** 2 + S_image_recon[2] ** 2 + S_image_recon[3] ** 2) ** (
+                1 / 2
+            ) / S_image_recon[0]  # DoP
         elif self.N_Stokes == 3:  # linear Stokes polarimeter
             S_transformed[1] = S_image_recon[1] / S_image_recon[0]
             S_transformed[2] = S_image_recon[2] / S_image_recon[0]
@@ -1868,9 +1500,7 @@ class waveorder_microscopy:
 
         return S_transformed
 
-    def Polscope_bg_correction(
-        self, S_image_tm, S_bg_tm, kernel_size=400, poly_order=2
-    ):
+    def Polscope_bg_correction(self, S_image_tm, S_bg_tm, kernel_size=400, poly_order=2):
         """
 
         QLIPP background correction algorithm
@@ -1990,12 +1620,8 @@ class waveorder_microscopy:
                     )
 
             if dim == 3:
-                S_image_tm[1] -= bg_estimator.get_background(
-                    S_image_tm[1], order=poly_order, normalize=False
-                )
-                S_image_tm[2] -= bg_estimator.get_background(
-                    S_image_tm[2], order=poly_order, normalize=False
-                )
+                S_image_tm[1] -= bg_estimator.get_background(S_image_tm[1], order=poly_order, normalize=False)
+                S_image_tm[2] -= bg_estimator.get_background(S_image_tm[2], order=poly_order, normalize=False)
             else:
                 for i in range(self.N_defocus):
                     S_image_tm[1, :, :, i] -= S1_bg
@@ -2037,60 +1663,40 @@ class waveorder_microscopy:
         if self.use_gpu:
             if self.N_Stokes == 4:  # full Stokes polarimeter
                 ret_wrapped = cp.arctan2(
-                    (S_image_recon[1] ** 2 + S_image_recon[2] ** 2) ** (1 / 2)
-                    * S_image_recon[3],
+                    (S_image_recon[1] ** 2 + S_image_recon[2] ** 2) ** (1 / 2) * S_image_recon[3],
                     S_image_recon[3],
                 )  # retardance
             elif self.N_Stokes == 3:  # linear Stokes polarimeters
                 ret_wrapped = cp.arcsin(
                     cp.minimum(
-                        (S_image_recon[1] ** 2 + S_image_recon[2] ** 2)
-                        ** (0.5),
+                        (S_image_recon[1] ** 2 + S_image_recon[2] ** 2) ** (0.5),
                         1,
                     )
                 )
 
             if self.cali == True:
-                sa_wrapped = (
-                    0.5
-                    * cp.arctan2(-S_image_recon[1], -S_image_recon[2])
-                    % np.pi
-                )  # slow-axis
+                sa_wrapped = 0.5 * cp.arctan2(-S_image_recon[1], -S_image_recon[2]) % np.pi  # slow-axis
             else:
-                sa_wrapped = (
-                    0.5
-                    * cp.arctan2(-S_image_recon[1], S_image_recon[2])
-                    % np.pi
-                )  # slow-axis
+                sa_wrapped = 0.5 * cp.arctan2(-S_image_recon[1], S_image_recon[2]) % np.pi  # slow-axis
 
         else:
             if self.N_Stokes == 4:  # full Stokes polarimeter
                 ret_wrapped = np.arctan2(
-                    (S_image_recon[1] ** 2 + S_image_recon[2] ** 2) ** (1 / 2)
-                    * S_image_recon[3],
+                    (S_image_recon[1] ** 2 + S_image_recon[2] ** 2) ** (1 / 2) * S_image_recon[3],
                     S_image_recon[3],
                 )  # retardance
             elif self.N_Stokes == 3:  # linear Stokes polarimeters
                 ret_wrapped = np.arcsin(
                     np.minimum(
-                        (S_image_recon[1] ** 2 + S_image_recon[2] ** 2)
-                        ** (0.5),
+                        (S_image_recon[1] ** 2 + S_image_recon[2] ** 2) ** (0.5),
                         1,
                     )
                 )
 
             if self.cali == True:
-                sa_wrapped = (
-                    0.5
-                    * np.arctan2(-S_image_recon[1], -S_image_recon[2])
-                    % np.pi
-                )  # slow-axis
+                sa_wrapped = 0.5 * np.arctan2(-S_image_recon[1], -S_image_recon[2]) % np.pi  # slow-axis
             else:
-                sa_wrapped = (
-                    0.5
-                    * np.arctan2(-S_image_recon[1], S_image_recon[2])
-                    % np.pi
-                )  # slow-axis
+                sa_wrapped = 0.5 * np.arctan2(-S_image_recon[1], S_image_recon[2]) % np.pi  # slow-axis
 
         sa_wrapped[ret_wrapped < 0] += np.pi / 2
         ret_wrapped[ret_wrapped < 0] += np.pi
@@ -2131,15 +1737,12 @@ class waveorder_microscopy:
                     -cp.conj(Hu) * S1_stack_f + cp.conj(Hp) * S2_stack_f,
                     axis=2,
                 ),
-                cp.sum(
-                    cp.conj(Hp) * S1_stack_f + cp.conj(Hu) * S2_stack_f, axis=2
-                ),
+                cp.sum(cp.conj(Hp) * S1_stack_f + cp.conj(Hu) * S2_stack_f, axis=2),
             ]
 
         else:
             AHA = [
-                np.sum(np.abs(self.Hu) ** 2 + np.abs(self.Hp) ** 2, axis=2)
-                + reg,
+                np.sum(np.abs(self.Hu) ** 2 + np.abs(self.Hp) ** 2, axis=2) + reg,
                 np.sum(
                     self.Hu * np.conj(self.Hp) - np.conj(self.Hu) * self.Hp,
                     axis=2,
@@ -2148,8 +1751,7 @@ class waveorder_microscopy:
                     self.Hu * np.conj(self.Hp) - np.conj(self.Hu) * self.Hp,
                     axis=2,
                 ),
-                np.sum(np.abs(self.Hu) ** 2 + np.abs(self.Hp) ** 2, axis=2)
-                + reg,
+                np.sum(np.abs(self.Hu) ** 2 + np.abs(self.Hp) ** 2, axis=2) + reg,
             ]
 
             S1_stack_f = fft2(S1_stack, axes=(0, 1))
@@ -2160,13 +1762,11 @@ class waveorder_microscopy:
 
             b_vec = [
                 np.sum(
-                    -np.conj(self.Hu) * S1_stack_f
-                    + np.conj(self.Hp) * S2_stack_f,
+                    -np.conj(self.Hu) * S1_stack_f + np.conj(self.Hp) * S2_stack_f,
                     axis=2,
                 ),
                 np.sum(
-                    np.conj(self.Hp) * S1_stack_f
-                    + np.conj(self.Hu) * S2_stack_f,
+                    np.conj(self.Hp) * S1_stack_f + np.conj(self.Hu) * S2_stack_f,
                     axis=2,
                 ),
             ]
@@ -2247,9 +1847,7 @@ class waveorder_microscopy:
         S1_stack_f = fft2(S1_stack, axes=(0, 1))
         S2_stack_f = fft2(S2_stack, axes=(0, 1))
 
-        cross_term = np.sum(
-            np.conj(H_1_1c) * H_1_1s + np.conj(H_2_1c) * H_2_1s, axis=2
-        )
+        cross_term = np.sum(np.conj(H_1_1c) * H_1_1s + np.conj(H_2_1c) * H_2_1s, axis=2)
 
         AHA = [
             np.sum(np.abs(H_1_1c) ** 2 + np.abs(H_2_1c) ** 2, axis=2),
@@ -2279,9 +1877,7 @@ class waveorder_microscopy:
 
         if method == "Tikhonov":
             # Deconvolution with Tikhonov regularization
-            g_1c_temp, g_1s_temp = dual_variable_tikhonov_deconvolution_2d(
-                AHA, b_vec
-            )
+            g_1c_temp, g_1s_temp = dual_variable_tikhonov_deconvolution_2d(AHA, b_vec)
 
         elif method == "TV":
             # ADMM deconvolution with anisotropic TV regularization
@@ -2300,9 +1896,7 @@ class waveorder_microscopy:
         g_1s = g_1s_temp.numpy()
 
         azimuth = (np.arctan2(-g_1s, -g_1c) / 2) % np.pi
-        retardance = ((np.abs(g_1s) ** 2 + np.abs(g_1c) ** 2) ** (1 / 2)) / (
-            2 * np.pi / self.lambda_illu
-        )
+        retardance = ((np.abs(g_1s) ** 2 + np.abs(g_1c) ** 2) ** (1 / 2)) / (2 * np.pi / self.lambda_illu)
 
         return retardance, azimuth
 
@@ -2376,18 +1970,10 @@ class waveorder_microscopy:
                 constant_values=S2_stack.mean(),
             )
             if self.pad_z < self.N_defocus:
-                S1_pad[:, :, : self.pad_z] = (S1_stack[:, :, : self.pad_z])[
-                    :, :, ::-1
-                ]
-                S1_pad[:, :, -self.pad_z :] = (S1_stack[:, :, -self.pad_z :])[
-                    :, :, ::-1
-                ]
-                S2_pad[:, :, : self.pad_z] = (S2_stack[:, :, : self.pad_z])[
-                    :, :, ::-1
-                ]
-                S2_pad[:, :, -self.pad_z :] = (S2_stack[:, :, -self.pad_z :])[
-                    :, :, ::-1
-                ]
+                S1_pad[:, :, : self.pad_z] = (S1_stack[:, :, : self.pad_z])[:, :, ::-1]
+                S1_pad[:, :, -self.pad_z :] = (S1_stack[:, :, -self.pad_z :])[:, :, ::-1]
+                S2_pad[:, :, : self.pad_z] = (S2_stack[:, :, : self.pad_z])[:, :, ::-1]
+                S2_pad[:, :, -self.pad_z :] = (S2_stack[:, :, -self.pad_z :])[:, :, ::-1]
             else:
                 print(
                     "pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
@@ -2428,9 +2014,7 @@ class waveorder_microscopy:
         if method == "Tikhonov":
             # Deconvolution with Tikhonov regularization
 
-            f_1c, f_1s = Dual_variable_Tikhonov_deconv_3D(
-                AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id
-            )
+            f_1c, f_1s = Dual_variable_Tikhonov_deconv_3D(AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
 
         elif method == "TV":
             # ADMM deconvolution with anisotropic TV regularization
@@ -2448,11 +2032,7 @@ class waveorder_microscopy:
             )
 
         azimuth = (np.arctan2(-f_1s, -f_1c) / 2) % np.pi
-        retardance = (
-            ((np.abs(f_1s) ** 2 + np.abs(f_1c) ** 2) ** (1 / 2))
-            / (2 * np.pi / self.lambda_illu)
-            * self.psz
-        )
+        retardance = ((np.abs(f_1s) ** 2 + np.abs(f_1c) ** 2) ** (1 / 2)) / (2 * np.pi / self.lambda_illu) * self.psz
 
         if self.pad_z != 0:
             azimuth = azimuth[:, :, self.pad_z : -(self.pad_z)]
@@ -2460,9 +2040,7 @@ class waveorder_microscopy:
 
         return retardance, azimuth
 
-    def Inclination_recon_geometric(
-        self, retardance, orientation, on_axis_idx, reg_ret_pr=1e-2
-    ):
+    def Inclination_recon_geometric(self, retardance, orientation, on_axis_idx, reg_ret_pr=1e-2):
         """
 
         estimating 2D principal retardance and 3D orientation from off-axis retardance and orientation using geometric model
@@ -2504,29 +2082,20 @@ class waveorder_microscopy:
         N_meas = self.N_pattern * self.N_defocus
 
         inc_coeff = np.reshape(
-            self.geometric_inc_matrix_inv.dot(
-                retardance.reshape((N_meas, self.N * self.M))
-            ),
+            self.geometric_inc_matrix_inv.dot(retardance.reshape((N_meas, self.N * self.M))),
             (6, self.N, self.M),
         )
         inc_coeff_sin_2theta = (inc_coeff[2] ** 2 + inc_coeff[3] ** 2) ** (0.5)
         inclination = np.arctan2(retardance_on_axis * 2, inc_coeff_sin_2theta)
         inclination = np.pi / 2 - (np.pi / 2 - inclination) * np.sign(
-            inc_coeff[2] * np.cos(orientation_on_axis)
-            + inc_coeff[3] * np.sin(orientation_on_axis)
+            inc_coeff[2] * np.cos(orientation_on_axis) + inc_coeff[3] * np.sin(orientation_on_axis)
         )
 
-        retardance_pr = (
-            retardance_on_axis
-            * np.sin(inclination) ** 2
-            / (np.sin(inclination) ** 4 + reg_ret_pr)
-        )
+        retardance_pr = retardance_on_axis * np.sin(inclination) ** 2 / (np.sin(inclination) ** 4 + reg_ret_pr)
 
         return inclination, retardance_pr, inc_coeff
 
-    def scattering_potential_tensor_recon_2D_vec(
-        self, S_image_recon, reg_inc=1e-1 * np.ones((7,)), cupy_det=False
-    ):
+    def scattering_potential_tensor_recon_2D_vec(self, S_image_recon, reg_inc=1e-1 * np.ones((7,)), cupy_det=False):
         """
 
         Tikhonov reconstruction of 2D scattering potential tensor components with vectorial model in PTI
@@ -2562,14 +2131,9 @@ class waveorder_microscopy:
         b_vec = np.zeros((7, self.N, self.M), complex)
 
         for i, j in itertools.product(range(7), range(self.N_Stokes)):
-            b_vec[i] += np.sum(
-                np.conj(self.H_dyadic_2D_OTF[j, i]) * S_stack_f[j], axis=2
-            )
+            b_vec[i] += np.sum(np.conj(self.H_dyadic_2D_OTF[j, i]) * S_stack_f[j], axis=2)
 
-        print(
-            "Finished preprocess, elapsed time: %.2f"
-            % (time.time() - start_time)
-        )
+        print("Finished preprocess, elapsed time: %.2f" % (time.time() - start_time))
 
         if self.use_gpu:
             if cupy_det:
@@ -2582,9 +2146,7 @@ class waveorder_microscopy:
                 for i in range(7):
                     AHA_b_vec = AHA.copy()
                     AHA_b_vec[:, :, :, i] = b_vec.copy()
-                    f_tensor[i] = cp.real(
-                        cp.fft.ifftn(cp.linalg.det(AHA_b_vec) / determinant)
-                    )
+                    f_tensor[i] = cp.real(cp.fft.ifftn(cp.linalg.det(AHA_b_vec) / determinant))
 
             else:
                 AHA = cp.array(AHA)
@@ -2597,11 +2159,7 @@ class waveorder_microscopy:
                 for i in range(7):
                     AHA_b_vec = AHA.copy()
                     AHA_b_vec[:, i] = b_vec.copy()
-                    f_tensor[i] = cp.real(
-                        cp.fft.ifft2(
-                            array_based_7x7_det(AHA_b_vec) / determinant
-                        )
-                    )
+                    f_tensor[i] = cp.real(cp.fft.ifft2(array_based_7x7_det(AHA_b_vec) / determinant))
 
             f_tensor = cp.asnumpy(f_tensor)
 
@@ -2613,9 +2171,7 @@ class waveorder_microscopy:
                         np.squeeze(
                             np.matmul(
                                 AHA_pinv,
-                                np.transpose(b_vec, (1, 2, 0))[
-                                    ..., np.newaxis
-                                ],
+                                np.transpose(b_vec, (1, 2, 0))[..., np.newaxis],
                             )
                         ),
                         (2, 0, 1),
@@ -2624,16 +2180,11 @@ class waveorder_microscopy:
                 )
             )
 
-        print(
-            "Finished reconstruction, elapsed time: %.2f"
-            % (time.time() - start_time)
-        )
+        print("Finished reconstruction, elapsed time: %.2f" % (time.time() - start_time))
 
         return f_tensor
 
-    def scattering_potential_tensor_recon_3D_vec(
-        self, S_image_recon, reg_inc=1e-1 * np.ones((7,)), cupy_det=False
-    ):
+    def scattering_potential_tensor_recon_3D_vec(self, S_image_recon, reg_inc=1e-1 * np.ones((7,)), cupy_det=False):
         """
 
         Tikhonov reconstruction of 3D scattering potential tensor components with vectorial model in PTI
@@ -2667,12 +2218,8 @@ class waveorder_microscopy:
                 constant_values=0,
             )
             if self.pad_z < self.N_defocus:
-                S_pad[..., : self.pad_z] = (S_image_recon[..., : self.pad_z])[
-                    :, :, ::-1
-                ]
-                S_pad[..., -self.pad_z :] = (
-                    S_image_recon[..., -self.pad_z :]
-                )[:, :, ::-1]
+                S_pad[..., : self.pad_z] = (S_image_recon[..., : self.pad_z])[:, :, ::-1]
+                S_pad[..., -self.pad_z :] = (S_image_recon[..., -self.pad_z :])[:, :, ::-1]
 
             else:
                 print(
@@ -2688,19 +2235,12 @@ class waveorder_microscopy:
         for i in range(7):
             AHA[i, i] += np.mean(np.abs(AHA[i, i])) * reg_inc[i]
 
-        b_vec = np.zeros(
-            (7, self.N, self.M, self.N_defocus_3D), dtype="complex64"
-        )
+        b_vec = np.zeros((7, self.N, self.M, self.N_defocus_3D), dtype="complex64")
 
         for i, j in itertools.product(range(7), range(self.N_Stokes)):
-            b_vec[i] += np.sum(
-                np.conj(self.H_dyadic_OTF[j, i]) * S_stack_f[j], axis=0
-            )
+            b_vec[i] += np.sum(np.conj(self.H_dyadic_OTF[j, i]) * S_stack_f[j], axis=0)
 
-        print(
-            "Finished preprocess, elapsed time: %.2f"
-            % (time.time() - start_time)
-        )
+        print("Finished preprocess, elapsed time: %.2f" % (time.time() - start_time))
 
         if self.use_gpu:
             if cupy_det:
@@ -2708,34 +2248,24 @@ class waveorder_microscopy:
                 b_vec = cp.transpose(cp.array(b_vec), (1, 2, 3, 0))
 
                 determinant = cp.linalg.det(AHA)
-                f_tensor = cp.zeros(
-                    (7, self.N, self.M, self.N_defocus_3D), dtype="float32"
-                )
+                f_tensor = cp.zeros((7, self.N, self.M, self.N_defocus_3D), dtype="float32")
 
                 for i in range(7):
                     AHA_b_vec = AHA.copy()
                     AHA_b_vec[:, :, :, :, i] = b_vec.copy()
-                    f_tensor[i] = cp.real(
-                        cp.fft.ifftn(cp.linalg.det(AHA_b_vec) / determinant)
-                    )
+                    f_tensor[i] = cp.real(cp.fft.ifftn(cp.linalg.det(AHA_b_vec) / determinant))
             else:
                 AHA = cp.array(AHA)
                 b_vec = cp.array(b_vec)
 
                 determinant = array_based_7x7_det(AHA)
 
-                f_tensor = cp.zeros(
-                    (7, self.N, self.M, self.N_defocus_3D), dtype="float32"
-                )
+                f_tensor = cp.zeros((7, self.N, self.M, self.N_defocus_3D), dtype="float32")
 
                 for i in range(7):
                     AHA_b_vec = AHA.copy()
                     AHA_b_vec[:, i] = b_vec.copy()
-                    f_tensor[i] = cp.real(
-                        cp.fft.ifftn(
-                            array_based_7x7_det(AHA_b_vec) / determinant
-                        )
-                    )
+                    f_tensor[i] = cp.real(cp.fft.ifftn(array_based_7x7_det(AHA_b_vec) / determinant))
 
             f_tensor = cp.asnumpy(f_tensor)
 
@@ -2747,9 +2277,7 @@ class waveorder_microscopy:
                         np.squeeze(
                             np.matmul(
                                 AHA_pinv,
-                                np.transpose(b_vec, (1, 2, 3, 0))[
-                                    ..., np.newaxis
-                                ],
+                                np.transpose(b_vec, (1, 2, 3, 0))[..., np.newaxis],
                             )
                         ),
                         (3, 0, 1, 2),
@@ -2761,10 +2289,7 @@ class waveorder_microscopy:
         if self.pad_z != 0:
             f_tensor = f_tensor[..., self.pad_z : -(self.pad_z)]
 
-        print(
-            "Finished reconstruction, elapsed time: %.2f"
-            % (time.time() - start_time)
-        )
+        print("Finished reconstruction, elapsed time: %.2f" % (time.time() - start_time))
 
         return f_tensor
 
@@ -2850,18 +2375,10 @@ class waveorder_microscopy:
                 constant_values=0,
             )
             if self.pad_z < self.N_defocus:
-                S_pad[..., : self.pad_z] = (S_image_recon[..., : self.pad_z])[
-                    :, :, ::-1
-                ]
-                S_pad[..., -self.pad_z :] = (
-                    S_image_recon[..., -self.pad_z :]
-                )[:, :, ::-1]
-                f_tensor_pad[..., : self.pad_z] = (
-                    f_tensor[..., : self.pad_z]
-                )[:, :, ::-1]
-                f_tensor_pad[..., -self.pad_z :] = (
-                    f_tensor[..., -self.pad_z :]
-                )[:, :, ::-1]
+                S_pad[..., : self.pad_z] = (S_image_recon[..., : self.pad_z])[:, :, ::-1]
+                S_pad[..., -self.pad_z :] = (S_image_recon[..., -self.pad_z :])[:, :, ::-1]
+                f_tensor_pad[..., : self.pad_z] = (f_tensor[..., : self.pad_z])[:, :, ::-1]
+                f_tensor_pad[..., -self.pad_z :] = (f_tensor[..., -self.pad_z :])[:, :, ::-1]
 
             else:
                 print(
@@ -2907,46 +2424,18 @@ class waveorder_microscopy:
                 S_stack_f = fft2(S_image_recon, axes=(1, 2))
 
             f_tensor_p = np.zeros((5,) + f_tensor.shape[1:])
-            f_tensor_p[0] = (
-                -retardance_pr_p
-                * (np.sin(theta_p) ** 2)
-                * np.cos(2 * azimuth_p)
-            )
-            f_tensor_p[1] = (
-                -retardance_pr_p
-                * (np.sin(theta_p) ** 2)
-                * np.sin(2 * azimuth_p)
-            )
-            f_tensor_p[2] = (
-                -retardance_pr_p * (np.sin(2 * theta_p)) * np.cos(azimuth_p)
-            )
-            f_tensor_p[3] = (
-                -retardance_pr_p * (np.sin(2 * theta_p)) * np.sin(azimuth_p)
-            )
-            f_tensor_p[4] = retardance_pr_p * (
-                np.sin(theta_p) ** 2 - 2 * np.cos(theta_p) ** 2
-            )
+            f_tensor_p[0] = -retardance_pr_p * (np.sin(theta_p) ** 2) * np.cos(2 * azimuth_p)
+            f_tensor_p[1] = -retardance_pr_p * (np.sin(theta_p) ** 2) * np.sin(2 * azimuth_p)
+            f_tensor_p[2] = -retardance_pr_p * (np.sin(2 * theta_p)) * np.cos(azimuth_p)
+            f_tensor_p[3] = -retardance_pr_p * (np.sin(2 * theta_p)) * np.sin(azimuth_p)
+            f_tensor_p[4] = retardance_pr_p * (np.sin(theta_p) ** 2 - 2 * np.cos(theta_p) ** 2)
 
             f_tensor_n = np.zeros((5,) + f_tensor.shape[1:])
-            f_tensor_n[0] = (
-                -retardance_pr_n
-                * (np.sin(theta_n) ** 2)
-                * np.cos(2 * azimuth_n)
-            )
-            f_tensor_n[1] = (
-                -retardance_pr_n
-                * (np.sin(theta_n) ** 2)
-                * np.sin(2 * azimuth_n)
-            )
-            f_tensor_n[2] = (
-                -retardance_pr_n * (np.sin(2 * theta_n)) * np.cos(azimuth_n)
-            )
-            f_tensor_n[3] = (
-                -retardance_pr_n * (np.sin(2 * theta_n)) * np.sin(azimuth_n)
-            )
-            f_tensor_n[4] = retardance_pr_n * (
-                np.sin(theta_n) ** 2 - 2 * np.cos(theta_n) ** 2
-            )
+            f_tensor_n[0] = -retardance_pr_n * (np.sin(theta_n) ** 2) * np.cos(2 * azimuth_n)
+            f_tensor_n[1] = -retardance_pr_n * (np.sin(theta_n) ** 2) * np.sin(2 * azimuth_n)
+            f_tensor_n[2] = -retardance_pr_n * (np.sin(2 * theta_n)) * np.cos(azimuth_n)
+            f_tensor_n[3] = -retardance_pr_n * (np.sin(2 * theta_n)) * np.sin(azimuth_n)
+            f_tensor_n[4] = retardance_pr_n * (np.sin(theta_n) ** 2 - 2 * np.cos(theta_n) ** 2)
 
             f_vec = f_tensor.copy()
 
@@ -2967,9 +2456,7 @@ class waveorder_microscopy:
                 )
 
                 for p, q in itertools.product(range(self.N_Stokes), range(2)):
-                    S_est_vec[p] += (
-                        self.H_dyadic_OTF[p, q] * f_vec_f[np.newaxis, q]
-                    )
+                    S_est_vec[p] += self.H_dyadic_OTF[p, q] * f_vec_f[np.newaxis, q]
 
             elif f_tensor.ndim == 3:
                 f_vec_f = fft2(f_vec, axes=(1, 2))
@@ -2984,10 +2471,7 @@ class waveorder_microscopy:
                 )
 
                 for p, q in itertools.product(range(self.N_Stokes), range(2)):
-                    S_est_vec[p] += (
-                        self.H_dyadic_2D_OTF[p, q]
-                        * f_vec_f[q, :, :, np.newaxis]
-                    )
+                    S_est_vec[p] += self.H_dyadic_2D_OTF[p, q] * f_vec_f[q, :, :, np.newaxis]
 
             if self.use_gpu:
                 f_tensor_p = cp.array(f_tensor_p)
@@ -3011,9 +2495,7 @@ class waveorder_microscopy:
                     y_map = cp.array(y_map)
 
                 for j in range(5):
-                    f_vec[j + 2] = (
-                        x_map * f_tensor_p[j] + y_map * f_tensor_n[j]
-                    )
+                    f_vec[j + 2] = x_map * f_tensor_p[j] + y_map * f_tensor_n[j]
 
                 S_est_vec_update = S_est_vec.copy()
 
@@ -3024,70 +2506,48 @@ class waveorder_microscopy:
                         if f_tensor.ndim == 4:
                             f_vec_f = cp.fft.fftn(f_vec, axes=(1, 2, 3))
 
-                            for p, q in itertools.product(
-                                range(self.N_Stokes), range(5)
-                            ):
+                            for p, q in itertools.product(range(self.N_Stokes), range(5)):
                                 S_est_vec_update[p] += (
-                                    cp.array(self.H_dyadic_OTF[p, q + 2])
-                                    * f_vec_f[np.newaxis, q + 2]
+                                    cp.array(self.H_dyadic_OTF[p, q + 2]) * f_vec_f[np.newaxis, q + 2]
                                 )
 
                         elif f_tensor.ndim == 3:
                             f_vec_f = cp.fft.fft2(f_vec, axes=(1, 2))
 
-                            for p, q in itertools.product(
-                                range(self.N_Stokes), range(5)
-                            ):
+                            for p, q in itertools.product(range(self.N_Stokes), range(5)):
                                 S_est_vec_update[p] += (
-                                    cp.array(self.H_dyadic_2D_OTF[p, q + 2])
-                                    * f_vec_f[q + 2, :, :, np.newaxis]
+                                    cp.array(self.H_dyadic_2D_OTF[p, q + 2]) * f_vec_f[q + 2, :, :, np.newaxis]
                                 )
 
                     else:
                         if f_tensor.ndim == 4:
                             f_vec_f = cp.fft.fftn(f_vec, axes=(1, 2, 3))
 
-                            for p, q in itertools.product(
-                                range(self.N_Stokes), range(5)
-                            ):
+                            for p, q in itertools.product(range(self.N_Stokes), range(5)):
                                 S_est_vec_update[p] += cp.asnumpy(
-                                    cp.array(self.H_dyadic_OTF[p, q + 2])
-                                    * f_vec_f[np.newaxis, q + 2]
+                                    cp.array(self.H_dyadic_OTF[p, q + 2]) * f_vec_f[np.newaxis, q + 2]
                                 )
 
                         elif f_tensor.ndim == 3:
                             f_vec_f = cp.fft.fft2(f_vec, axes=(1, 2))
 
-                            for p, q in itertools.product(
-                                range(self.N_Stokes), range(5)
-                            ):
+                            for p, q in itertools.product(range(self.N_Stokes), range(5)):
                                 S_est_vec_update[p] += cp.asnumpy(
-                                    cp.array(self.H_dyadic_2D_OTF[p, q + 2])
-                                    * f_vec_f[q + 2, :, :, np.newaxis]
+                                    cp.array(self.H_dyadic_2D_OTF[p, q + 2]) * f_vec_f[q + 2, :, :, np.newaxis]
                                 )
 
                 else:
                     if f_tensor.ndim == 4:
                         f_vec_f = fftn(f_vec, axes=(1, 2, 3))
 
-                        for p, q in itertools.product(
-                            range(self.N_Stokes), range(5)
-                        ):
-                            S_est_vec_update[p] += (
-                                self.H_dyadic_OTF[p, q + 2]
-                                * f_vec_f[np.newaxis, q + 2]
-                            )
+                        for p, q in itertools.product(range(self.N_Stokes), range(5)):
+                            S_est_vec_update[p] += self.H_dyadic_OTF[p, q + 2] * f_vec_f[np.newaxis, q + 2]
 
                     elif f_tensor.ndim == 3:
                         f_vec_f = fft2(f_vec, axes=(1, 2))
 
-                        for p, q in itertools.product(
-                            range(self.N_Stokes), range(5)
-                        ):
-                            S_est_vec_update[p] += (
-                                self.H_dyadic_2D_OTF[p, q + 2]
-                                * f_vec_f[q + 2, :, :, np.newaxis]
-                            )
+                        for p, q in itertools.product(range(self.N_Stokes), range(5)):
+                            S_est_vec_update[p] += self.H_dyadic_2D_OTF[p, q + 2] * f_vec_f[q + 2, :, :, np.newaxis]
 
                 S_diff = S_stack_f - S_est_vec_update
 
@@ -3106,87 +2566,59 @@ class waveorder_microscopy:
                     AH_S_diff = cp.zeros((5,) + f_tensor.shape[1:], complex)
 
                     if f_tensor.ndim == 4:
-                        for p, q in itertools.product(
-                            range(5), range(self.N_Stokes)
-                        ):
+                        for p, q in itertools.product(range(5), range(self.N_Stokes)):
                             if fast_gpu_mode:
                                 AH_S_diff[p] += cp.sum(
-                                    cp.conj(
-                                        cp.array(self.H_dyadic_OTF[q, p + 2])
-                                    )
-                                    * S_diff[q],
+                                    cp.conj(cp.array(self.H_dyadic_OTF[q, p + 2])) * S_diff[q],
                                     axis=0,
                                 )
                             else:
                                 AH_S_diff[p] += cp.sum(
-                                    cp.conj(
-                                        cp.array(self.H_dyadic_OTF[q, p + 2])
-                                    )
-                                    * cp.array(S_diff[q]),
+                                    cp.conj(cp.array(self.H_dyadic_OTF[q, p + 2])) * cp.array(S_diff[q]),
                                     axis=0,
                                 )
 
                         grad_x_map = -cp.real(
                             cp.sum(
-                                f_tensor_p
-                                * cp.fft.ifftn(AH_S_diff, axes=(1, 2, 3)),
+                                f_tensor_p * cp.fft.ifftn(AH_S_diff, axes=(1, 2, 3)),
                                 axis=0,
                             )
                         )
                         grad_y_map = -cp.real(
                             cp.sum(
-                                f_tensor_n
-                                * cp.fft.ifftn(AH_S_diff, axes=(1, 2, 3)),
+                                f_tensor_n * cp.fft.ifftn(AH_S_diff, axes=(1, 2, 3)),
                                 axis=0,
                             )
                         )
 
                     elif f_tensor.ndim == 3:
-                        for p, q in itertools.product(
-                            range(5), range(self.N_Stokes)
-                        ):
+                        for p, q in itertools.product(range(5), range(self.N_Stokes)):
                             if fast_gpu_mode:
                                 AH_S_diff[p] += cp.sum(
-                                    cp.conj(
-                                        cp.array(
-                                            self.H_dyadic_2D_OTF[q, p + 2]
-                                        )
-                                    )
-                                    * S_diff[q],
+                                    cp.conj(cp.array(self.H_dyadic_2D_OTF[q, p + 2])) * S_diff[q],
                                     axis=2,
                                 )
                             else:
                                 AH_S_diff[p] += cp.sum(
-                                    cp.conj(
-                                        cp.array(
-                                            self.H_dyadic_2D_OTF[q, p + 2]
-                                        )
-                                    )
-                                    * cp.array(S_diff[q]),
+                                    cp.conj(cp.array(self.H_dyadic_2D_OTF[q, p + 2])) * cp.array(S_diff[q]),
                                     axis=2,
                                 )
 
                         grad_x_map = -cp.real(
                             cp.sum(
-                                f_tensor_p
-                                * cp.fft.ifft2(AH_S_diff, axes=(1, 2)),
+                                f_tensor_p * cp.fft.ifft2(AH_S_diff, axes=(1, 2)),
                                 axis=0,
                             )
                         )
                         grad_y_map = -cp.real(
                             cp.sum(
-                                f_tensor_n
-                                * cp.fft.ifft2(AH_S_diff, axes=(1, 2)),
+                                f_tensor_n * cp.fft.ifft2(AH_S_diff, axes=(1, 2)),
                                 axis=0,
                             )
                         )
 
-                    x_map -= (
-                        grad_x_map / cp.max(cp.abs(grad_x_map)) * step_size
-                    )
-                    y_map -= (
-                        grad_y_map / cp.max(cp.abs(grad_y_map)) * step_size
-                    )
+                    x_map -= grad_x_map / cp.max(cp.abs(grad_x_map)) * step_size
+                    y_map -= grad_y_map / cp.max(cp.abs(grad_y_map)) * step_size
 
                     x_map = cp.asnumpy(x_map)
                     y_map = cp.asnumpy(y_map)
@@ -3195,12 +2627,9 @@ class waveorder_microscopy:
                     AH_S_diff = np.zeros((5,) + f_tensor.shape[1:], complex)
 
                     if f_tensor.ndim == 4:
-                        for p, q in itertools.product(
-                            range(5), range(self.N_Stokes)
-                        ):
+                        for p, q in itertools.product(range(5), range(self.N_Stokes)):
                             AH_S_diff[p] += np.sum(
-                                np.conj(self.H_dyadic_OTF[q, p + 2])
-                                * S_diff[q],
+                                np.conj(self.H_dyadic_OTF[q, p + 2]) * S_diff[q],
                                 axis=0,
                             )
 
@@ -3218,12 +2647,9 @@ class waveorder_microscopy:
                         )
 
                     elif f_tensor.ndim == 3:
-                        for p, q in itertools.product(
-                            range(5), range(self.N_Stokes)
-                        ):
+                        for p, q in itertools.product(range(5), range(self.N_Stokes)):
                             AH_S_diff[p] += np.sum(
-                                np.conj(self.H_dyadic_2D_OTF[q, p + 2])
-                                * S_diff[q],
+                                np.conj(self.H_dyadic_2D_OTF[q, p + 2]) * S_diff[q],
                                 axis=2,
                             )
 
@@ -3244,10 +2670,7 @@ class waveorder_microscopy:
                     y_map -= grad_y_map / np.max(np.abs(grad_y_map)) * 0.3
 
                 if verbose:
-                    print(
-                        "|  %d  |  %.2e  |   %.2f   |"
-                        % (i + 1, err[i + 1], time.time() - tic_time)
-                    )
+                    print("|  %d  |  %.2e  |   %.2f   |" % (i + 1, err[i + 1], time.time() - tic_time))
 
                     if i != 0:
                         ax[0, 0].cla()
@@ -3292,10 +2715,7 @@ class waveorder_microscopy:
             azimuth = np.stack([azimuth_p, azimuth_n])
             theta = np.stack([theta_p, theta_n])
             mat_map = np.stack([x_map, y_map])
-            print(
-                "Finish optic sign estimation, elapsed time: %.2f"
-                % (time.time() - tic_time)
-            )
+            print("Finish optic sign estimation, elapsed time: %.2f" % (time.time() - tic_time))
 
             if self.pad_z != 0:
                 retardance_pr = retardance_pr[..., self.pad_z : -(self.pad_z)]
@@ -3347,21 +2767,14 @@ class waveorder_microscopy:
                     tf_end_idx,
                     obj_start_idx,
                     obj_end_idx,
-                    (obj_end_idx - obj_start_idx)
-                    == (tf_end_idx - tf_start_idx),
+                    (obj_end_idx - obj_start_idx) == (tf_end_idx - tf_start_idx),
                 )
             )
 
             if self.use_gpu:
-                S0_stack_sub = self.inten_normalization(
-                    cp.array(S0_stack[:, :, obj_start_idx:obj_end_idx])
-                )
-                Hu = cp.array(
-                    self.Hu[:, :, tf_start_idx:tf_end_idx], copy=True
-                )
-                Hp = cp.array(
-                    self.Hp[:, :, tf_start_idx:tf_end_idx], copy=True
-                )
+                S0_stack_sub = self.inten_normalization(cp.array(S0_stack[:, :, obj_start_idx:obj_end_idx]))
+                Hu = cp.array(self.Hu[:, :, tf_start_idx:tf_end_idx], copy=True)
+                Hp = cp.array(self.Hp[:, :, tf_start_idx:tf_end_idx], copy=True)
 
                 S0_stack_f = cp.fft.fft2(S0_stack_sub, axes=(0, 1))
 
@@ -3378,9 +2791,7 @@ class waveorder_microscopy:
                 ]
 
             else:
-                S0_stack_sub = self.inten_normalization(
-                    S0_stack[:, :, obj_start_idx:obj_end_idx]
-                )
+                S0_stack_sub = self.inten_normalization(S0_stack[:, :, obj_start_idx:obj_end_idx])
                 S0_stack_f = fft2(S0_stack_sub, axes=(0, 1))
 
                 Hu = self.Hu[:, :, tf_start_idx:tf_end_idx]
@@ -3404,9 +2815,7 @@ class waveorder_microscopy:
                 (
                     mu_sample_temp,
                     phi_sample_temp,
-                ) = dual_variable_tikhonov_deconvolution_2d(
-                    AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id
-                )
+                ) = dual_variable_tikhonov_deconvolution_2d(AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
 
             elif method == "TV":
                 # ADMM deconvolution with anisotropic TV regularization
@@ -3510,12 +2919,8 @@ class waveorder_microscopy:
                     constant_values=0,
                 )
                 if self.pad_z < self.N_defocus:
-                    S0_pad[:, :, : self.pad_z] = (
-                        S0_stack[:, :, : self.pad_z]
-                    )[:, :, ::-1]
-                    S0_pad[:, :, -self.pad_z :] = (
-                        S0_stack[:, :, -self.pad_z :]
-                    )[:, :, ::-1]
+                    S0_pad[:, :, : self.pad_z] = (S0_stack[:, :, : self.pad_z])[:, :, ::-1]
+                    S0_pad[:, :, -self.pad_z :] = (S0_stack[:, :, -self.pad_z :])[:, :, ::-1]
                 else:
                     print(
                         "pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
@@ -3565,12 +2970,8 @@ class waveorder_microscopy:
                     constant_values=0,
                 )
                 if self.pad_z < self.N_defocus:
-                    S0_pad[..., : self.pad_z] = (S0_stack[..., : self.pad_z])[
-                        ..., ::-1
-                    ]
-                    S0_pad[..., -self.pad_z :] = (
-                        S0_stack[..., -self.pad_z :]
-                    )[..., ::-1]
+                    S0_pad[..., : self.pad_z] = (S0_stack[..., : self.pad_z])[..., ::-1]
+                    S0_pad[..., -self.pad_z :] = (S0_stack[..., -self.pad_z :])[..., ::-1]
                 else:
                     print(
                         "pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
@@ -3582,9 +2983,7 @@ class waveorder_microscopy:
                 H_re = cp.array(self.H_re)
                 H_im = cp.array(self.H_im)
 
-                S0_stack_f = cp.fft.fftn(
-                    cp.array(S0_stack).astype("float32"), axes=(-3, -2, -1)
-                )
+                S0_stack_f = cp.fft.fftn(cp.array(S0_stack).astype("float32"), axes=(-3, -2, -1))
 
                 AHA = [
                     cp.sum(cp.abs(H_re) ** 2, axis=0) + reg_re,
@@ -3616,9 +3015,7 @@ class waveorder_microscopy:
             if method == "Tikhonov":
                 # Deconvolution with Tikhonov regularization
 
-                f_real, f_imag = Dual_variable_Tikhonov_deconv_3D(
-                    AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id
-                )
+                f_real, f_imag = Dual_variable_Tikhonov_deconv_3D(AHA, b_vec, use_gpu=self.use_gpu, gpu_id=self.gpu_id)
 
             elif method == "TV":
                 # ADMM deconvolution with anisotropic TV regularization
@@ -3733,9 +3130,7 @@ class fluorescence_microscopy:
         self.deconv_mode = deconv_mode
 
         # setup microscocpe variables
-        self.xx, self.yy, self.fxx, self.fyy = gen_coordinate(
-            (self.N, self.M), ps
-        )
+        self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
 
         # Setup defocus kernel
         self.Hz_det_setup(deconv_mode)
@@ -3757,21 +3152,14 @@ class fluorescence_microscopy:
         self.Pupil_obj = np.zeros((self.N_wavelength, self.N, self.M))
 
         for i in range(self.N_wavelength):
-            self.Pupil_obj[i] = gen_Pupil(
-                self.fxx, self.fyy, self.NA_obj, self.lambda_emiss[i]
-            )
+            self.Pupil_obj[i] = gen_Pupil(self.fxx, self.fyy, self.NA_obj, self.lambda_emiss[i])
         self.Pupil_support = self.Pupil_obj.copy()
 
         if deconv_mode == "3D-WF":
             self.N_defocus_3D = self.N_defocus + 2 * self.pad_z
-            self.z = ifftshift(
-                (np.r_[0 : self.N_defocus_3D] - self.N_defocus_3D // 2)
-                * self.psz
-            )
+            self.z = ifftshift((np.r_[0 : self.N_defocus_3D] - self.N_defocus_3D // 2) * self.psz)
 
-            self.Hz_det = np.zeros(
-                (self.N_wavelength, self.N, self.M, self.N_defocus_3D), complex
-            )
+            self.Hz_det = np.zeros((self.N_wavelength, self.N, self.M, self.N_defocus_3D), complex)
 
             for i in range(self.N_wavelength):
                 self.Hz_det[i] = generate_propagation_kernel(
@@ -3798,16 +3186,12 @@ class fluorescence_microscopy:
         if deconv_mode == "2D-WF":
             self.PSF_WF_2D = np.abs(ifft2(self.Pupil_obj, axes=(1, 2))) ** 2
             self.OTF_WF_2D = fft2(self.PSF_WF_2D, axes=(1, 2))
-            self.OTF_WF_2D /= (np.max(np.abs(self.OTF_WF_2D), axis=(1, 2)))[
-                :, np.newaxis, np.newaxis
-            ]
+            self.OTF_WF_2D /= (np.max(np.abs(self.OTF_WF_2D), axis=(1, 2)))[:, np.newaxis, np.newaxis]
 
         if deconv_mode == "3D-WF":
             self.PSF_WF_3D = np.abs(ifft2(self.Hz_det, axes=(1, 2))) ** 2
             self.OTF_WF_3D = fftn(self.PSF_WF_3D, axes=(1, 2, 3))
-            self.OTF_WF_3D /= (np.max(np.abs(self.OTF_WF_3D), axis=(1, 2, 3)))[
-                :, np.newaxis, np.newaxis, np.newaxis
-            ]
+            self.OTF_WF_3D /= (np.max(np.abs(self.OTF_WF_3D), axis=(1, 2, 3)))[:, np.newaxis, np.newaxis, np.newaxis]
 
     def deconvolve_fluor_2D(self, I_fluor, bg_level, reg):
         """
@@ -3848,18 +3232,14 @@ class fluorescence_microscopy:
             I_fluor_minus_bg = np.maximum(0, I_fluor_process[i] - bg_level[i])
 
             if self.use_gpu:
-                I_fluor_f = cp.fft.fft2(
-                    cp.array(I_fluor_minus_bg.astype("float32")), axes=(-2, -1)
-                )
+                I_fluor_f = cp.fft.fft2(cp.array(I_fluor_minus_bg.astype("float32")), axes=(-2, -1))
                 H_eff = cp.array(self.OTF_WF_2D[i].astype("complex64"))
 
                 I_fluor_deconv[i] = cp.asnumpy(
                     np.maximum(
                         cp.real(
                             cp.fft.ifft2(
-                                I_fluor_f
-                                * cp.conj(H_eff)
-                                / (cp.abs(H_eff) ** 2 + reg[i]),
+                                I_fluor_f * cp.conj(H_eff) / (cp.abs(H_eff) ** 2 + reg[i]),
                                 axes=(-2, -1),
                             )
                         ),
@@ -3871,9 +3251,7 @@ class fluorescence_microscopy:
                 I_fluor_deconv[i] = np.maximum(
                     np.real(
                         ifftn(
-                            I_fluor_f
-                            * np.conj(self.OTF_WF_2D[i])
-                            / (np.abs(self.OTF_WF_2D[i]) ** 2 + reg[i]),
+                            I_fluor_f * np.conj(self.OTF_WF_2D[i]) / (np.abs(self.OTF_WF_2D[i]) ** 2 + reg[i]),
                             axes=(-2, -1),
                         )
                     ),
@@ -3941,12 +3319,8 @@ class fluorescence_microscopy:
                 constant_values=0,
             )
             if self.pad_z < self.N_defocus:
-                I_fluor_pad[:, :, :, : self.pad_z] = (
-                    I_fluor_process[:, :, :, : self.pad_z]
-                )[:, :, :, ::-1]
-                I_fluor_pad[:, :, :, -self.pad_z :] = (
-                    I_fluor_process[:, :, :, -self.pad_z :]
-                )[:, :, :, ::-1]
+                I_fluor_pad[:, :, :, : self.pad_z] = (I_fluor_process[:, :, :, : self.pad_z])[:, :, :, ::-1]
+                I_fluor_pad[:, :, :, -self.pad_z :] = (I_fluor_process[:, :, :, -self.pad_z :])[:, :, :, ::-1]
             else:
                 print(
                     "pad_z is larger than number of z-slices, use zero padding (not effective) instead of reflection padding"
@@ -3986,9 +3360,7 @@ class fluorescence_microscopy:
             )
 
             if self.pad_z != 0:
-                I_fluor_deconv[i] = np.maximum(
-                    I_fluor_deconv_pad[..., self.pad_z : -(self.pad_z)], 0
-                )
+                I_fluor_deconv[i] = np.maximum(I_fluor_deconv_pad[..., self.pad_z : -(self.pad_z)], 0)
             else:
                 I_fluor_deconv[i] = np.maximum(I_fluor_deconv_pad, 0)
 
@@ -4022,9 +3394,7 @@ class fluorescence_microscopy:
             S2_stack = cp.array(S2_stack)
 
             anisotropy = cp.asnumpy(0.5 * cp.sqrt(S1_stack**2 + S2_stack**2))
-            orientation = cp.asnumpy(
-                (0.5 * cp.arctan2(S2_stack, S1_stack)) % np.pi
-            )
+            orientation = cp.asnumpy((0.5 * cp.arctan2(S2_stack, S1_stack)) % np.pi)
 
         else:
             anisotropy = 0.5 * np.sqrt(S1_stack**2 + S2_stack**2)

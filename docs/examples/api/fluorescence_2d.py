@@ -25,9 +25,7 @@ phantom, data = fluorescence.simulate(
 )
 
 # Reconstruct (detailed)
-tf = fluorescence.compute_transfer_function(
-    data, recon_dim=2, settings=settings
-)
+tf = fluorescence.compute_transfer_function(data, recon_dim=2, settings=settings)
 result = fluorescence.apply_inverse_transfer_function(
     data,
     tf,

@@ -24,9 +24,7 @@ from waveorder.models import inplane_oriented_thick_pol3d
 
 
 class TransferFunctionSettings(MyBaseModel):
-    swing: float = Field(
-        default=0.1, description="swing of the liquid crystal (0 to 1)"
-    )
+    swing: float = Field(default=0.1, description="swing of the liquid crystal (0 to 1)")
 
     @field_validator("swing")
     @classmethod
@@ -53,15 +51,9 @@ class ApplyInverseSettings(WavelengthIllumination):
             raise ValueError(f"{v} is not an existing directory")
         return raw_dir
 
-    remove_estimated_background: bool = Field(
-        default=False, description="estimate and remove background"
-    )
-    flip_orientation: bool = Field(
-        default=False, description="flip the orientation angle"
-    )
-    rotate_orientation: bool = Field(
-        default=False, description="rotate orientation by 90 degrees"
-    )
+    remove_estimated_background: bool = Field(default=False, description="estimate and remove background")
+    flip_orientation: bool = Field(default=False, description="flip the orientation angle")
+    rotate_orientation: bool = Field(default=False, description="rotate orientation by 90 degrees")
 
 
 class Settings(MyBaseModel):
@@ -89,13 +81,11 @@ def simulate(
     if settings is None:
         settings = Settings()
 
-    retardance, orientation, transmittance, depolarization = (
-        inplane_oriented_thick_pol3d.generate_test_phantom(yx_shape)
+    retardance, orientation, transmittance, depolarization = inplane_oriented_thick_pol3d.generate_test_phantom(
+        yx_shape
     )
-    intensity_to_stokes = (
-        inplane_oriented_thick_pol3d.calculate_transfer_function(
-            swing=settings.transfer_function.swing, scheme=scheme
-        )
+    intensity_to_stokes = inplane_oriented_thick_pol3d.calculate_transfer_function(
+        swing=settings.transfer_function.swing, scheme=scheme
     )
     cyx_data = inplane_oriented_thick_pol3d.apply_transfer_function(
         retardance,
@@ -163,11 +153,9 @@ def compute_transfer_function(
     if input_channel_names is None:
         input_channel_names = list(czyx_data.coords["c"].values)
 
-    intensity_to_stokes_matrix = (
-        inplane_oriented_thick_pol3d.calculate_transfer_function(
-            scheme=str(len(input_channel_names)) + "-State",
-            **settings.transfer_function.model_dump(),
-        )
+    intensity_to_stokes_matrix = inplane_oriented_thick_pol3d.calculate_transfer_function(
+        scheme=str(len(input_channel_names)) + "-State",
+        **settings.transfer_function.model_dump(),
     )
 
     return xr.Dataset(
@@ -199,20 +187,14 @@ def apply_inverse_transfer_function(
     biref_kwargs = _biref_inverse_kwargs(settings)
 
     czyx_tensor = torch.tensor(czyx_data.values, dtype=torch.float32)
-    bg_tensor = (
-        torch.tensor(cyx_no_sample_data, dtype=torch.float32)
-        if cyx_no_sample_data is not None
-        else None
-    )
+    bg_tensor = torch.tensor(cyx_no_sample_data, dtype=torch.float32) if cyx_no_sample_data is not None else None
 
-    reconstructed_parameters = (
-        inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
-            czyx_tensor,
-            _to_tensor(transfer_function, "intensity_to_stokes_matrix"),
-            cyx_no_sample_data=bg_tensor,
-            project_stokes_to_2d=(recon_dim == 2),
-            **biref_kwargs,
-        )
+    reconstructed_parameters = inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
+        czyx_tensor,
+        _to_tensor(transfer_function, "intensity_to_stokes_matrix"),
+        cyx_no_sample_data=bg_tensor,
+        project_stokes_to_2d=(recon_dim == 2),
+        **biref_kwargs,
     )
 
     retardance = radians_to_nanometers(reconstructed_parameters[0], wavelength)
@@ -242,6 +224,4 @@ def reconstruct(
         settings = Settings()
 
     tf = compute_transfer_function(czyx_data, settings, input_channel_names)
-    return apply_inverse_transfer_function(
-        czyx_data, tf, recon_dim, settings, cyx_no_sample_data
-    )
+    return apply_inverse_transfer_function(czyx_data, tf, recon_dim, settings, cyx_no_sample_data)

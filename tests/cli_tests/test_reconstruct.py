@@ -259,9 +259,7 @@ def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
     assert not result_path.exists()
 
     runner = CliRunner()
-    with patch(
-        "waveorder.cli.apply_inverse_transfer_function.apply_inverse_transfer_function_cli"
-    ) as mock:
+    with patch("waveorder.cli.apply_inverse_transfer_function.apply_inverse_transfer_function_cli") as mock:
         cmd = [
             "apply-inv-tf",
             "-i",
@@ -310,9 +308,7 @@ def test_cli_apply_inv_tf_output(tmp_input_path_zarr, capsys):
         tmp_config_yml = tmp_config_yml.with_name(f"{i}.yml")
 
         # # Check output
-        apply_inverse_transfer_function_cli(
-            [input_path], tf_path, tmp_config_yml, result_path, 1
-        )
+        apply_inverse_transfer_function_cli([input_path], tf_path, tmp_config_yml, result_path, 1)
 
         result_dataset = open_ome_zarr(str(result_path / "0" / "0" / "0"))
         assert result_dataset["0"].shape[0] == time_length_target

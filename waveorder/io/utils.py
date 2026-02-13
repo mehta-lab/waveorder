@@ -38,9 +38,7 @@ def add_index_to_path(path: Path):
 
 
 def load_background(background_path):
-    with open_ome_zarr(
-        os.path.join(background_path, "background.zarr", "0", "0", "0")
-    ) as dataset:
+    with open_ome_zarr(os.path.join(background_path, "background.zarr", "0", "0", "0")) as dataset:
         cyx_data = dataset["0"][0, :, 0]
         return torch.tensor(cyx_data, dtype=torch.float32)
 
@@ -104,7 +102,7 @@ def model_to_yaml(model: MyBaseModel, yaml_path: Path) -> None:
     --------
     >>> from my_model import MyModel
     >>> model = MyModel()
-    >>> model_to_yaml(model, 'model.yaml')
+    >>> model_to_yaml(model, "model.yaml")
 
     """
     yaml_path = Path(yaml_path)
@@ -115,14 +113,10 @@ def model_to_yaml(model: MyBaseModel, yaml_path: Path) -> None:
     model_dict = model.model_dump()
 
     # Remove None-valued fields
-    clean_model_dict = {
-        key: value for key, value in model_dict.items() if value is not None
-    }
+    clean_model_dict = {key: value for key, value in model_dict.items() if value is not None}
 
     with open(yaml_path, "w+") as f:
-        yaml.dump(
-            clean_model_dict, f, default_flow_style=False, sort_keys=False
-        )
+        yaml.dump(clean_model_dict, f, default_flow_style=False, sort_keys=False)
 
 
 def _collect_field_descriptions(model, prefix=""):
@@ -148,11 +142,7 @@ def _add_yaml_comments(yaml_str, descriptions, comment_column=44):
 
     for line in lines:
         stripped = line.lstrip()
-        if (
-            not stripped
-            or stripped.startswith("#")
-            or stripped.startswith("- ")
-        ):
+        if not stripped or stripped.startswith("#") or stripped.startswith("- "):
             result.append(line)
             continue
 
@@ -178,22 +168,16 @@ def _add_yaml_comments(yaml_str, descriptions, comment_column=44):
     return "\n".join(result) + "\n"
 
 
-def model_to_commented_yaml(
-    model: MyBaseModel, yaml_path: Path, comment_column: int = 44
-) -> None:
+def model_to_commented_yaml(model: MyBaseModel, yaml_path: Path, comment_column: int = 44) -> None:
     """Save a model to YAML with inline comments from Field descriptions."""
     yaml_path = Path(yaml_path)
 
     model_dict = model.model_dump()
 
     # Remove top-level None-valued fields
-    clean_model_dict = {
-        key: value for key, value in model_dict.items() if value is not None
-    }
+    clean_model_dict = {key: value for key, value in model_dict.items() if value is not None}
 
-    yaml_str = yaml.dump(
-        clean_model_dict, default_flow_style=False, sort_keys=False
-    )
+    yaml_str = yaml.dump(clean_model_dict, default_flow_style=False, sort_keys=False)
 
     descriptions = _collect_field_descriptions(model)
     commented_yaml = _add_yaml_comments(yaml_str, descriptions, comment_column)
@@ -239,9 +223,7 @@ def yaml_to_model(yaml_path: Path, model):
     yaml_path = Path(yaml_path)
 
     if not callable(getattr(model, "__init__", None)):
-        raise TypeError(
-            "The provided model must be a class with a callable constructor."
-        )
+        raise TypeError("The provided model must be a class with a callable constructor.")
 
     try:
         with open(yaml_path, "r") as file:

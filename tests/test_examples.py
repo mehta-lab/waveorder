@@ -17,9 +17,7 @@ EXAMPLES = DOCS / "examples"
     [
         EXAMPLES / "maintenance" / "QLIPP_simulation/2D_QLIPP_forward.py",
         EXAMPLES / "maintenance" / "QLIPP_simulation/2D_QLIPP_recon.py",
-        EXAMPLES
-        / "maintenance"
-        / "PTI_simulation/PTI_Simulation_Forward_2D3D.py",
+        EXAMPLES / "maintenance" / "PTI_simulation/PTI_Simulation_Forward_2D3D.py",
         EXAMPLES / "maintenance" / "PTI_simulation/PTI_Simulation_Recon2D.py",
         EXAMPLES / "maintenance" / "PTI_simulation/PTI_Simulation_Recon3D.py",
     ],
@@ -114,6 +112,4 @@ def test_cli_examples(example, tmp_path, monkeypatch):
         # Strip leading "wo " and split into args
         args = shlex.split(cmd.removeprefix("wo "))
         result = runner.invoke(cli, args)
-        assert (
-            result.exit_code == 0
-        ), f"Command '{cmd}' failed:\n{result.output}"
+        assert result.exit_code == 0, f"Command '{cmd}' failed:\n{result.output}"

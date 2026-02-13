@@ -115,21 +115,17 @@ def focus_from_transverse_band(
     >>> zyx_array.shape
     (11, 2048, 2048)
     >>> from waveorder.focus import focus_from_transverse_band
-    >>> slice = focus_from_transverse_band(zyx_array, NA_det=0.55, lambda_ill=0.532, pixel_size=6.5/20)
-    >>> in_focus_data = data[slice,:,:]
+    >>> slice = focus_from_transverse_band(zyx_array, NA_det=0.55, lambda_ill=0.532, pixel_size=6.5 / 20)
+    >>> in_focus_data = data[slice, :, :]
     """
     minmaxfunc = _mode_to_minmaxfunc(mode)
     peak_stats = {"peak_index": None, "peak_FWHM": None}
 
-    _check_focus_inputs(
-        zyx_array, NA_det, lambda_ill, pixel_size, midband_fractions
-    )
+    _check_focus_inputs(zyx_array, NA_det, lambda_ill, pixel_size, midband_fractions)
 
     # Check for single slice
     if zyx_array.shape[0] == 1:
-        warnings.warn(
-            "The dataset only contained a single slice. Returning trivial slice index = 0."
-        )
+        warnings.warn("The dataset only contained a single slice. Returning trivial slice index = 0.")
         if return_statistics:
             return 0, peak_stats
         return 0
@@ -169,9 +165,7 @@ def focus_from_transverse_band(
 
             if real_critical_points:
                 # Evaluate the polynomial at critical points to find extremum
-                critical_values = [
-                    poly_func(cp) for cp in real_critical_points
-                ]
+                critical_values = [poly_func(cp) for cp in real_critical_points]
                 if mode == "max":
                     best_idx = np.argmax(critical_values)
                 else:  # mode == "min"
@@ -192,9 +186,7 @@ def focus_from_transverse_band(
 
     peak_results = peak_widths(midband_sum, [integer_peak_index])
     peak_FWHM = peak_results[0][0]
-    peak_stats.update(
-        {"peak_index": int(peak_index), "peak_FWHM": float(peak_FWHM)}
-    )
+    peak_stats.update({"peak_index": int(peak_index), "peak_FWHM": float(peak_FWHM)})
 
     if peak_FWHM >= threshold_FWHM:
         in_focus_index = peak_index
@@ -228,14 +220,10 @@ def _mode_to_minmaxfunc(mode):
     return minmaxfunc
 
 
-def _check_focus_inputs(
-    zyx_array, NA_det, lambda_ill, pixel_size, midband_fractions
-):
+def _check_focus_inputs(zyx_array, NA_det, lambda_ill, pixel_size, midband_fractions):
     N = len(zyx_array.shape)
     if N != 3:
-        raise ValueError(
-            f"{N}D array supplied. `focus_from_transverse_band` only accepts 3D arrays."
-        )
+        raise ValueError(f"{N}D array supplied. `focus_from_transverse_band` only accepts 3D arrays.")
 
     if NA_det < 0:
         raise ValueError("NA must be > 0")
@@ -245,14 +233,12 @@ def _check_focus_inputs(
         raise ValueError("pixel_size must be > 0")
     if not 0.4 < lambda_ill / pixel_size < 10:
         warnings.warn(
-            f"WARNING: lambda_ill/pixel_size = {lambda_ill/pixel_size}."
+            f"WARNING: lambda_ill/pixel_size = {lambda_ill / pixel_size}."
             f"Did you use the same units?"
             f"Did you enter the pixel size in (demagnified) object-space units?"
         )
     if not midband_fractions[0] < midband_fractions[1]:
-        raise ValueError(
-            "midband_fractions[0] must be less than midband_fractions[1]"
-        )
+        raise ValueError("midband_fractions[0] must be less than midband_fractions[1]")
     if not (0 <= midband_fractions[0] <= 1):
         raise ValueError("midband_fractions[0] must be between 0 and 1")
     if not (0 <= midband_fractions[1] <= 1):
@@ -273,9 +259,7 @@ def _plot_focus_metric(
     # Handle floating-point peak_index for plotting
     if isinstance(peak_index, float) and not peak_index.is_integer():
         # Use interpolation to get the y-value at the floating-point x-position
-        peak_y_value = np.interp(
-            peak_index, np.arange(len(midband_sum)), midband_sum
-        )
+        peak_y_value = np.interp(peak_index, np.arange(len(midband_sum)), midband_sum)
     else:
         peak_y_value = midband_sum[int(peak_index)]
 

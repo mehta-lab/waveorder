@@ -39,9 +39,7 @@ def test_phase_3d(make_czyx):
     czyx = make_czyx(n_channels=1)
 
     tf = phase.compute_transfer_function(czyx, recon_dim=3, settings=settings)
-    result = phase.apply_inverse_transfer_function(
-        czyx, tf, recon_dim=3, settings=settings
-    )
+    result = phase.apply_inverse_transfer_function(czyx, tf, recon_dim=3, settings=settings)
 
     assert result.dims == ("c", "z", "y", "x")
     assert list(result.coords["c"].values) == ["Phase3D"]
@@ -69,9 +67,7 @@ def test_phase_2d(make_czyx):
     czyx = make_czyx(n_channels=1)
 
     tf = phase.compute_transfer_function(czyx, recon_dim=2, settings=settings)
-    result = phase.apply_inverse_transfer_function(
-        czyx, tf, recon_dim=2, settings=settings
-    )
+    result = phase.apply_inverse_transfer_function(czyx, tf, recon_dim=2, settings=settings)
 
     assert list(result.coords["c"].values) == ["Phase2D"]
     assert result.sizes["z"] == 1
@@ -97,9 +93,7 @@ def test_fluorescence_3d(make_czyx):
 
     czyx = make_czyx(n_channels=1)
 
-    tf = fluorescence.compute_transfer_function(
-        czyx, recon_dim=3, settings=settings
-    )
+    tf = fluorescence.compute_transfer_function(czyx, recon_dim=3, settings=settings)
     result = fluorescence.apply_inverse_transfer_function(
         czyx,
         tf,
@@ -131,9 +125,7 @@ def test_fluorescence_2d(make_czyx):
 
     czyx = make_czyx(n_channels=1)
 
-    tf = fluorescence.compute_transfer_function(
-        czyx, recon_dim=2, settings=settings
-    )
+    tf = fluorescence.compute_transfer_function(czyx, recon_dim=2, settings=settings)
     result = fluorescence.apply_inverse_transfer_function(
         czyx,
         tf,
@@ -162,9 +154,7 @@ def test_birefringence_3d(make_czyx):
     channel_names = [f"ch{i}" for i in range(4)]
 
     tf = birefringence.compute_transfer_function(czyx, settings, channel_names)
-    result = birefringence.apply_inverse_transfer_function(
-        czyx, tf, recon_dim=3, settings=settings
-    )
+    result = birefringence.apply_inverse_transfer_function(czyx, tf, recon_dim=3, settings=settings)
 
     assert list(result.coords["c"].values) == [
         "Retardance",

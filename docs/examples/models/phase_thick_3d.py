@@ -44,17 +44,13 @@ transfer_function_arguments = {
 }
 
 # Create a phantom
-zyx_phase = phase_thick_3d.generate_test_phantom(
-    **simulation_arguments, **phantom_arguments
-)
+zyx_phase = phase_thick_3d.generate_test_phantom(**simulation_arguments, **phantom_arguments)
 
 # Calculate transfer function
 (
     real_potential_transfer_function,
     imag_potential_transfer_function,
-) = phase_thick_3d.calculate_transfer_function(
-    **simulation_arguments, **transfer_function_arguments
-)
+) = phase_thick_3d.calculate_transfer_function(**simulation_arguments, **transfer_function_arguments)
 
 # Display transfer function
 viewer = napari.Viewer()

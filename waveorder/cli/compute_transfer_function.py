@@ -23,9 +23,7 @@ from waveorder.io import utils
 
 def _write_birefringence_tf(dataset: Position, tf_ds):
     """Write birefringence TF arrays to zarr."""
-    dataset["intensity_to_stokes_matrix"] = tf_ds[
-        "intensity_to_stokes_matrix"
-    ].values[None, None, None, ...]
+    dataset["intensity_to_stokes_matrix"] = tf_ds["intensity_to_stokes_matrix"].values[None, None, None, ...]
 
 
 def _write_phase_tf(dataset: Position, tf_ds, zyx_shape, recon_dim):
@@ -52,9 +50,7 @@ def _write_phase_tf(dataset: Position, tf_ds, zyx_shape, recon_dim):
         )
         dataset.create_image(
             "imaginary_potential_transfer_function",
-            tf_ds["imaginary_potential_transfer_function"].values[
-                None, None, ...
-            ],
+            tf_ds["imaginary_potential_transfer_function"].values[None, None, ...],
             chunks=chunks,
         )
 
@@ -128,21 +124,15 @@ def compute_transfer_function_cli(
     # Load config file
     settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
 
-    echo_headline(
-        f"Generating transfer functions and storing in {output_dirpath}\n"
-    )
+    echo_headline(f"Generating transfer functions and storing in {output_dirpath}\n")
 
     # Read shape from input dataset
-    input_dataset = open_ome_zarr(
-        input_position_dirpath, layout="fov", mode="r"
-    )
+    input_dataset = open_ome_zarr(input_position_dirpath, layout="fov", mode="r")
     input_version = input_dataset.version
     zyx_shape = input_dataset.data.shape[2:]
 
     # Check input channel names
-    if not set(settings.input_channel_names).issubset(
-        input_dataset.channel_names
-    ):
+    if not set(settings.input_channel_names).issubset(input_dataset.channel_names):
         raise ValueError(
             f"Each of the input_channel_names = {settings.input_channel_names} in {config_filepath} must appear in the dataset {input_position_dirpath} which currently contains channel_names = {input_dataset.channel_names}."
         )
@@ -153,10 +143,7 @@ def compute_transfer_function_cli(
         and settings.reconstruction_dimension == 2
         and settings.phase.transfer_function.z_focus_offset == "auto"
     ):
-
-        c_idx = input_dataset.get_channel_index(
-            settings.input_channel_names[0]
-        )
+        c_idx = input_dataset.get_channel_index(settings.input_channel_names[0])
         zyx_array = input_dataset["0"][0, c_idx]
 
         in_focus_index = focus.focus_from_transverse_band(
@@ -189,9 +176,7 @@ def compute_transfer_function_cli(
 
     # Compute and save transfer functions
     if settings.birefringence is not None and settings.phase is not None:
-        echo_headline(
-            "Generating birefringence and phase transfer functions with settings:"
-        )
+        echo_headline("Generating birefringence and phase transfer functions with settings:")
         echo_settings(settings.birefringence.transfer_function)
         echo_settings(settings.phase.transfer_function)
 
@@ -210,16 +195,13 @@ def compute_transfer_function_cli(
             _write_phase_tf(output_dataset, tf_ds, zyx_shape, recon_dim)
 
         echo_headline(
-            f"Downsampling transfer function in X and Y by "
-            f"{int(np.ceil(np.sqrt(np.array(zyx_shape).prod() / 1e7)))}x"
+            f"Downsampling transfer function in X and Y by {int(np.ceil(np.sqrt(np.array(zyx_shape).prod() / 1e7)))}x"
         )
         _write_vector_birefringence_tf(output_dataset, tf_ds, zyx_shape)
 
     else:
         if settings.birefringence is not None:
-            echo_headline(
-                "Generating birefringence transfer function with settings:"
-            )
+            echo_headline("Generating birefringence transfer function with settings:")
             echo_settings(settings.birefringence.transfer_function)
 
             tf_ds = birefringence.compute_transfer_function(
@@ -233,20 +215,14 @@ def compute_transfer_function_cli(
             echo_headline("Generating phase transfer function with settings:")
             echo_settings(settings.phase.transfer_function)
 
-            tf_ds = phase.compute_transfer_function(
-                czyx_data, recon_dim, settings.phase
-            )
+            tf_ds = phase.compute_transfer_function(czyx_data, recon_dim, settings.phase)
             _write_phase_tf(output_dataset, tf_ds, zyx_shape, recon_dim)
 
         if settings.fluorescence is not None:
-            echo_headline(
-                "Generating fluorescence transfer function with settings:"
-            )
+            echo_headline("Generating fluorescence transfer function with settings:")
             echo_settings(settings.fluorescence.transfer_function)
 
-            tf_ds = fluorescence.compute_transfer_function(
-                czyx_data, recon_dim, settings.fluorescence
-            )
+            tf_ds = fluorescence.compute_transfer_function(czyx_data, recon_dim, settings.fluorescence)
             _write_fluorescence_tf(output_dataset, tf_ds, zyx_shape, recon_dim)
 
     # Write settings to metadata
@@ -279,6 +255,4 @@ def _compute_transfer_function_cli(
 
     >> waveorder compute-tf -i ./input.zarr/0/0/0 -c ./examples/birefringence.yml -o ./transfer_function.zarr
     """
-    compute_transfer_function_cli(
-        input_position_dirpaths[0], config_filepath, output_dirpath
-    )
+    compute_transfer_function_cli(input_position_dirpaths[0], config_filepath, output_dirpath)

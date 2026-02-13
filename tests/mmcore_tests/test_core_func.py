@@ -140,9 +140,7 @@ def _set_lc_test(
     valid_values, invalid_values = _get_examples(*value_range)
     for value in valid_values:
         tested_func(mmc, DEVICE_PROPERTY, value)
-        mmc.setProperty.assert_called_with(
-            DEVICE_PROPERTY[0], DEVICE_PROPERTY[1], str(value)
-        )
+        mmc.setProperty.assert_called_with(DEVICE_PROPERTY[0], DEVICE_PROPERTY[1], str(value))
     for value in invalid_values:
         with pytest.raises(ValueError):
             tested_func(mmc, DEVICE_PROPERTY, value)
@@ -184,13 +182,8 @@ def test_define_config_state():
     mmc = _get_mmcore_mock()
     device_properties = [DEVICE_PROPERTY] * 4
     values = _get_examples(0, 10)[0].tolist()
-    define_config_state(
-        mmc, CONFIG_GROUP, CONFIG_NAME, device_properties, values
-    )
-    expected_calls = [
-        call(CONFIG_GROUP, CONFIG_NAME, *d, str(v))
-        for d, v in zip(device_properties, values)
-    ]
+    define_config_state(mmc, CONFIG_GROUP, CONFIG_NAME, device_properties, values)
+    expected_calls = [call(CONFIG_GROUP, CONFIG_NAME, *d, str(v)) for d, v in zip(device_properties, values)]
     got_calls = mmc.defineConfig.call_args_list
     assert got_calls == expected_calls, got_calls
 

@@ -11,9 +11,7 @@ from waveorder.io.utils import add_index_to_path, model_to_yaml
 @pytest.fixture
 def model():
     # Create a sample model object
-    return settings.ReconstructionSettings(
-        birefringence=settings.BirefringenceSettings()
-    )
+    return settings.ReconstructionSettings(birefringence=settings.BirefringenceSettings())
 
 
 @pytest.fixture

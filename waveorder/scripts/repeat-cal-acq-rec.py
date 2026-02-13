@@ -39,7 +39,7 @@ def stage_detour(app: MainWidget, dx: float, dy: float, wait=5):
     -----
     ```py
     with stage_detour(app) as app:
-        pass # do something at the new location
+        pass  # do something at the new location
     ```
     """
     xy_stage = app.mmc.getXYStageDevice()
@@ -74,11 +74,7 @@ def measure_fov(mmc: Core):
     """
     pixel_size = float(mmc.getPixelSizeUm())
     if pixel_size == 0:
-        float(
-            input(
-                "Pixel size is not calibrated. Please provide an estimate (in micrometers):"
-            )
-        )
+        float(input("Pixel size is not calibrated. Please provide an estimate (in micrometers):"))
     fov_x = pixel_size * float(mmc.getImageWidth())
     fov_y = pixel_size * float(mmc.getImageHeight())
     return fov_x, fov_y
@@ -133,9 +129,7 @@ def main():
                 app.last_calib_meta_file = app.calib.meta_file
                 app.capture_bg()
                 time.sleep(20)
-            app.ui.cb_bg_method.setCurrentIndex(
-                1
-            )  # Set to "Measured" bg correction
+            app.ui.cb_bg_method.setCurrentIndex(1)  # Set to "Measured" bg correction
             app.enter_bg_correction()
             app.save_name = f"cal-{cal_repeat}-bkg-{bkg_repeat}"
             app.enter_acq_bg_path()

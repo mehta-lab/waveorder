@@ -19,28 +19,18 @@ class MyBaseModel(BaseModel):
 
 
 class WavelengthIllumination(MyBaseModel):
-    wavelength_illumination: PositiveFloat = Field(
-        default=0.532, description="illumination wavelength in micrometers"
-    )
+    wavelength_illumination: PositiveFloat = Field(default=0.532, description="illumination wavelength in micrometers")
 
 
 class FourierTransferFunctionSettings(MyBaseModel):
-    yx_pixel_size: PositiveFloat = Field(
-        default=0.1, description="lateral pixel size in micrometers"
-    )
-    z_pixel_size: PositiveFloat = Field(
-        default=0.25, description="axial pixel size in micrometers"
-    )
-    z_padding: NonNegativeInt = Field(
-        default=0, description="z slices to pad for axial boundary effects"
-    )
+    yx_pixel_size: PositiveFloat = Field(default=0.1, description="lateral pixel size in micrometers")
+    z_pixel_size: PositiveFloat = Field(default=0.25, description="axial pixel size in micrometers")
+    z_padding: NonNegativeInt = Field(default=0, description="z slices to pad for axial boundary effects")
     z_focus_offset: Union[float, Literal["auto"]] = Field(
         default=0,
         description="offset from center slice in slice units (or 'auto')",
     )
-    index_of_refraction_media: PositiveFloat = Field(
-        default=1.3, description="refractive index of imaging media"
-    )
+    index_of_refraction_media: PositiveFloat = Field(default=1.3, description="refractive index of imaging media")
     numerical_aperture_detection: PositiveFloat = Field(
         default=1.2, description="detection objective numerical aperture"
     )
@@ -69,12 +59,6 @@ class FourierApplyInverseSettings(MyBaseModel):
         default="Tikhonov",
         description="'Tikhonov' or 'TV' regularization",
     )
-    regularization_strength: NonNegativeFloat = Field(
-        default=1e-3, description="strength of regularization"
-    )
-    TV_rho_strength: PositiveFloat = Field(
-        default=1e-3, description="ADMM rho parameter for TV regularization"
-    )
-    TV_iterations: NonNegativeInt = Field(
-        default=1, description="ADMM iterations for TV regularization"
-    )
+    regularization_strength: NonNegativeFloat = Field(default=1e-3, description="strength of regularization")
+    TV_rho_strength: PositiveFloat = Field(default=1e-3, description="ADMM rho parameter for TV regularization")
+    TV_iterations: NonNegativeInt = Field(default=1, description="ADMM iterations for TV regularization")

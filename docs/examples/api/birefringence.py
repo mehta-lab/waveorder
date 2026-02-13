@@ -19,9 +19,7 @@ phantom, data = birefringence.simulate(
 
 # Reconstruct (detailed)
 tf = birefringence.compute_transfer_function(data, settings, channel_names)
-result = birefringence.apply_inverse_transfer_function(
-    data, tf, recon_dim=3, settings=settings
-)
+result = birefringence.apply_inverse_transfer_function(data, tf, recon_dim=3, settings=settings)
 
 # Reconstruct (one-liner)
 result = birefringence.reconstruct(data, settings, channel_names)

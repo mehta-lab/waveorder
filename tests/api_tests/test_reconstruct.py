@@ -165,9 +165,7 @@ def test_birefringence_and_phase_3d(make_czyx):
     czyx = make_czyx(n_channels=4)
     channel_names = [f"ch{i}" for i in range(4)]
 
-    result = birefringence_and_phase.reconstruct(
-        czyx, biref_settings, phase_settings, channel_names, recon_dim=3
-    )
+    result = birefringence_and_phase.reconstruct(czyx, biref_settings, phase_settings, channel_names, recon_dim=3)
 
     expected_channels = [
         "Retardance",
@@ -213,9 +211,7 @@ def test_birefringence_and_phase_2d(make_czyx):
     czyx = make_czyx(n_channels=4)
     channel_names = [f"ch{i}" for i in range(4)]
 
-    result = birefringence_and_phase.reconstruct(
-        czyx, biref_settings, phase_settings, channel_names, recon_dim=2
-    )
+    result = birefringence_and_phase.reconstruct(czyx, biref_settings, phase_settings, channel_names, recon_dim=2)
 
     expected_channels = [
         "Retardance",

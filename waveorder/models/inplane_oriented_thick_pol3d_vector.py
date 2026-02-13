@@ -41,9 +41,7 @@ def calculate_transfer_function(
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
     fourier_oversample_factor: int = 1,
-) -> tuple[
-    torch.Tensor, torch.Tensor, tuple[torch.Tensor, torch.Tensor, torch.Tensor]
-]:
+) -> tuple[torch.Tensor, torch.Tensor, tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
     if z_padding != 0:
         raise NotImplementedError("Padding not implemented for this model")
 
@@ -88,16 +86,9 @@ def calculate_transfer_function(
     )
 
     # avg_pool3d does not support complex numbers
-    pooled_sfZYX_transfer_function_real = avg_pool3d(
-        sfZYX_transfer_function.real, (fourier_oversample_factor,) * 3
-    )
-    pooled_sfZYX_transfer_function_imag = avg_pool3d(
-        sfZYX_transfer_function.imag, (fourier_oversample_factor,) * 3
-    )
-    pooled_sfZYX_transfer_function = (
-        pooled_sfZYX_transfer_function_real
-        + 1j * pooled_sfZYX_transfer_function_imag
-    )
+    pooled_sfZYX_transfer_function_real = avg_pool3d(sfZYX_transfer_function.real, (fourier_oversample_factor,) * 3)
+    pooled_sfZYX_transfer_function_imag = avg_pool3d(sfZYX_transfer_function.imag, (fourier_oversample_factor,) * 3)
+    pooled_sfZYX_transfer_function = pooled_sfZYX_transfer_function_real + 1j * pooled_sfZYX_transfer_function_imag
 
     # Crop to original size
     sfzyx_out_shape = (
@@ -106,9 +97,7 @@ def calculate_transfer_function(
         zyx_shape[0] + 2 * z_padding,
     ) + zyx_shape[1:]
 
-    cropped = sampling.nd_fourier_central_cuboid(
-        pooled_sfZYX_transfer_function, sfzyx_out_shape
-    )
+    cropped = sampling.nd_fourier_central_cuboid(pooled_sfZYX_transfer_function, sfzyx_out_shape)
 
     # Compute singular system on cropped and downsampled
     singular_system = calculate_singular_system(cropped)
@@ -134,26 +123,18 @@ def _calculate_wrap_unsafe_transfer_function(
     invert_phase_contrast=False,
 ):
     print("Computing transfer function")
-    intensity_to_stokes_matrix = stokes.calculate_intensity_to_stokes_matrix(
-        swing, scheme=scheme
-    )
+    intensity_to_stokes_matrix = stokes.calculate_intensity_to_stokes_matrix(swing, scheme=scheme)
 
     input_jones = torch.tensor([0.0 - 1.0j, 1.0 + 0j])  # circular
     # input_jones = torch.tensor([0 + 0j, 1 + 0j]) # linear
 
     # Calculate frequencies
-    y_frequencies, x_frequencies = util.generate_frequencies(
-        zyx_shape[1:], yx_pixel_size
-    )
+    y_frequencies, x_frequencies = util.generate_frequencies(zyx_shape[1:], yx_pixel_size)
     radial_frequencies = torch.sqrt(x_frequencies**2 + y_frequencies**2)
 
     z_total = zyx_shape[0] + 2 * z_padding
-    z_position_list = torch.fft.ifftshift(
-        (torch.arange(z_total) - z_total // 2) * z_pixel_size
-    )
-    if (
-        not invert_phase_contrast
-    ):  # opposite sign of direct phase reconstruction
+    z_position_list = torch.fft.ifftshift((torch.arange(z_total) - z_total // 2) * z_pixel_size)
+    if not invert_phase_contrast:  # opposite sign of direct phase reconstruction
         z_position_list = torch.flip(z_position_list, dims=(0,))
     z_frequencies = torch.fft.fftfreq(z_total, d=z_pixel_size)
 
@@ -247,9 +228,7 @@ def _calculate_wrap_unsafe_transfer_function(
     # select phase f00 and transverse linear isotropic terms 2-2, and f22
 
     print("\tComputing final transfer function...")
-    sfZYX_transfer_function = torch.einsum(
-        "sik,ikpjzyx,lpj->slzyx", s, H_re, Y
-    )
+    sfZYX_transfer_function = torch.einsum("sik,ikpjzyx,lpj->slzyx", s, H_re, Y)
     return (
         sfZYX_transfer_function,
         intensity_to_stokes_matrix,
@@ -290,9 +269,7 @@ def apply_transfer_function(
     intensity_to_stokes_matrix: torch.Tensor,  # TODO use this to simulate intensities
 ) -> torch.Tensor:
     fZYX_object = torch.fft.fftn(fzyx_object, dim=(1, 2, 3))
-    sZYX_data = torch.einsum(
-        "fzyx,sfzyx->szyx", fZYX_object, sfZYX_transfer_function
-    )
+    sZYX_data = torch.einsum("fzyx,sfzyx->szyx", fZYX_object, sfZYX_transfer_function)
     szyx_data = torch.fft.ifftn(sZYX_data, dim=(1, 2, 3))
 
     return 50 * szyx_data  # + 0.1 * torch.randn(szyx_data.shape)
@@ -311,9 +288,7 @@ def apply_inverse_transfer_function(
     print("Computing inverse filter")
     U, S, Vh = singular_system
     S_reg = S / (S**2 + regularization_strength)
-    sfzyx_inverse_filter = torch.einsum(
-        "sjzyx,jzyx,jfzyx->sfzyx", U, S_reg, Vh
-    )
+    sfzyx_inverse_filter = torch.einsum("sjzyx,jzyx,jfzyx->sfzyx", U, S_reg, Vh)
 
     fzyx_recon = apply_filter_bank(sfzyx_inverse_filter, szyx_data)
 

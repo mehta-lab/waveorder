@@ -30,9 +30,7 @@ class TransferFunctionSettings(
     FourierTransferFunctionSettings,
     WavelengthIllumination,
 ):
-    numerical_aperture_illumination: NonNegativeFloat = Field(
-        default=0.9, description="condenser numerical aperture"
-    )
+    numerical_aperture_illumination: NonNegativeFloat = Field(default=0.9, description="condenser numerical aperture")
     invert_phase_contrast: bool = Field(
         default=False,
         description="invert contrast for positive/negative phase",
@@ -40,10 +38,7 @@ class TransferFunctionSettings(
 
     @model_validator(mode="after")
     def validate_numerical_aperture_illumination(self):
-        if (
-            self.numerical_aperture_illumination
-            > self.index_of_refraction_media
-        ):
+        if self.numerical_aperture_illumination > self.index_of_refraction_media:
             raise ValueError(
                 f"numerical_aperture_illumination = {self.numerical_aperture_illumination} must be less than or equal to index_of_refraction_media = {self.index_of_refraction_media}"
             )
@@ -106,9 +101,7 @@ def simulate(
             numerical_aperture_illumination=s.numerical_aperture_illumination,
             numerical_aperture_detection=s.numerical_aperture_detection,
         )
-        zyx_data = phase_thick_3d.apply_transfer_function(
-            zyx_phase, real_tf, z_padding=0, brightness=1e3
-        )
+        zyx_data = phase_thick_3d.apply_transfer_function(zyx_phase, real_tf, z_padding=0, brightness=1e3)
         phantom_zyx = zyx_phase.numpy()
 
     elif recon_dim == 2:
@@ -130,27 +123,21 @@ def simulate(
             scale=s.z_pixel_size,
             offset=0,
         )
-        absorption_tf, phase_tf = (
-            isotropic_thin_3d.calculate_transfer_function(
-                yx_shape=yx_shape,
-                yx_pixel_size=s.yx_pixel_size,
-                wavelength_illumination=s.wavelength_illumination,
-                z_position_list=z_position_list,
-                index_of_refraction_media=s.index_of_refraction_media,
-                numerical_aperture_illumination=s.numerical_aperture_illumination,
-                numerical_aperture_detection=s.numerical_aperture_detection,
-                invert_phase_contrast=s.invert_phase_contrast,
-            )
+        absorption_tf, phase_tf = isotropic_thin_3d.calculate_transfer_function(
+            yx_shape=yx_shape,
+            yx_pixel_size=s.yx_pixel_size,
+            wavelength_illumination=s.wavelength_illumination,
+            z_position_list=z_position_list,
+            index_of_refraction_media=s.index_of_refraction_media,
+            numerical_aperture_illumination=s.numerical_aperture_illumination,
+            numerical_aperture_detection=s.numerical_aperture_detection,
+            invert_phase_contrast=s.invert_phase_contrast,
         )
         # Zero absorption, phase-only object
         yx_absorption = torch.zeros_like(yx_phase)
-        zyx_data = isotropic_thin_3d.apply_transfer_function(
-            yx_absorption, yx_phase, absorption_tf, phase_tf
-        )
+        zyx_data = isotropic_thin_3d.apply_transfer_function(yx_absorption, yx_phase, absorption_tf, phase_tf)
         # Tile 2D phantom along Z so it appears at every defocus plane
-        phantom_zyx = np.broadcast_to(
-            yx_phase.numpy()[None, :, :], (Z, Y, X)
-        ).copy()
+        phantom_zyx = np.broadcast_to(yx_phase.numpy()[None, :, :], (Z, Y, X)).copy()
 
     phantom = xr.DataArray(
         phantom_zyx[None, ...],
@@ -183,44 +170,30 @@ def compute_transfer_function(
 
     if recon_dim == 2:
         settings_dict["yx_shape"] = [zyx_shape[1], zyx_shape[2]]
-        settings_dict["z_position_list"] = (
-            _position_list_from_shape_scale_offset(
-                shape=zyx_shape[0],
-                scale=settings_dict["z_pixel_size"],
-                offset=settings_dict["z_focus_offset"],
-            )
+        settings_dict["z_position_list"] = _position_list_from_shape_scale_offset(
+            shape=zyx_shape[0],
+            scale=settings_dict["z_pixel_size"],
+            offset=settings_dict["z_focus_offset"],
         )
         settings_dict.pop("z_pixel_size")
         settings_dict.pop("z_padding")
         settings_dict.pop("z_focus_offset")
 
-        absorption_tf, phase_tf = (
-            isotropic_thin_3d.calculate_transfer_function(**settings_dict)
-        )
-        U, S, Vh = isotropic_thin_3d.calculate_singular_system(
-            absorption_tf, phase_tf
-        )
+        absorption_tf, phase_tf = isotropic_thin_3d.calculate_transfer_function(**settings_dict)
+        U, S, Vh = isotropic_thin_3d.calculate_singular_system(absorption_tf, phase_tf)
 
         return xr.Dataset(
             {
-                "singular_system_U": _named_dataarray(
-                    U.cpu().numpy(), "singular_system_U"
-                ),
-                "singular_system_S": _named_dataarray(
-                    S.cpu().numpy(), "singular_system_S"
-                ),
-                "singular_system_Vh": _named_dataarray(
-                    Vh.cpu().numpy(), "singular_system_Vh"
-                ),
+                "singular_system_U": _named_dataarray(U.cpu().numpy(), "singular_system_U"),
+                "singular_system_S": _named_dataarray(S.cpu().numpy(), "singular_system_S"),
+                "singular_system_Vh": _named_dataarray(Vh.cpu().numpy(), "singular_system_Vh"),
             }
         )
 
     elif recon_dim == 3:
         settings_dict.pop("z_focus_offset")
 
-        real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(
-            zyx_shape=zyx_shape, **settings_dict
-        )
+        real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(zyx_shape=zyx_shape, **settings_dict)
 
         return xr.Dataset(
             {
@@ -269,9 +242,7 @@ def apply_inverse_transfer_function(
         output = phase_thick_3d.apply_inverse_transfer_function(
             czyx_tensor[0],
             _to_tensor(transfer_function, "real_potential_transfer_function"),
-            _to_tensor(
-                transfer_function, "imaginary_potential_transfer_function"
-            ),
+            _to_tensor(transfer_function, "imaginary_potential_transfer_function"),
             z_padding=settings.transfer_function.z_padding,
             **settings.apply_inverse.model_dump(),
         )

@@ -7,11 +7,9 @@ from waveorder.models import inplane_oriented_thick_pol3d
 
 
 def test_calculate_transfer_function():
-    intensity_to_stokes_matrix = (
-        inplane_oriented_thick_pol3d.calculate_transfer_function(
-            swing=0.1,
-            scheme="5-State",
-        )
+    intensity_to_stokes_matrix = inplane_oriented_thick_pol3d.calculate_transfer_function(
+        swing=0.1,
+        scheme="5-State",
     )
 
     assert intensity_to_stokes_matrix.shape == (4, 5)
@@ -23,12 +21,10 @@ def test_apply_inverse_transfer_function(device, estimate_bg):
     input_shape = (5, 10, 100, 100)
     czyx_data = torch.rand(input_shape, device=device)
 
-    intensity_to_stokes_matrix = (
-        inplane_oriented_thick_pol3d.calculate_transfer_function(
-            swing=0.1,
-            scheme="5-State",
-        ).to(device)
-    )
+    intensity_to_stokes_matrix = inplane_oriented_thick_pol3d.calculate_transfer_function(
+        swing=0.1,
+        scheme="5-State",
+    ).to(device)
 
     results = inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
         czyx_data=czyx_data,

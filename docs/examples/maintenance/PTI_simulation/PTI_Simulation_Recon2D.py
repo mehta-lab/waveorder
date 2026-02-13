@@ -1,4 +1,4 @@
-""" 
+"""
 Reconstruction of 2D uPTI
 ===========================================================
 Reconstruction of 2D uPTI
@@ -28,8 +28,7 @@ from waveorder.visuals import jupyter_visuals
 ## Load simulated images and parameters
 temp_dirpath = Path(user_data_dir("PTI_simulation"))
 file_name = (
-    temp_dirpath
-    / "PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
+    temp_dirpath / "PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
 )
 
 array_loaded = np.load(file_name)
@@ -84,9 +83,7 @@ setup = waveorder_reconstructor.waveorder_microscopy(
 ## Visualize 2  D transfer functions as a function of illumination pattern
 
 # illumination patterns used
-jupyter_visuals.plot_multicolumn(
-    fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5
-)
+jupyter_visuals.plot_multicolumn(fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5)
 plt.show()
 
 ## Reconstruct Stokes images and visualize them as a function of illumination pattern
@@ -95,26 +92,14 @@ S_image_recon = setup.Stokes_recon(I_meas)
 
 S_image_tm = np.zeros_like(S_image_recon)
 
-S_bg_mean_0 = np.mean(S_image_recon[0, :, :, :], axis=(0, 1))[
-    np.newaxis, np.newaxis, :
-]
-S_bg_mean_1 = np.mean(S_image_recon[1, :, :, :], axis=(0, 1))[
-    np.newaxis, np.newaxis, :
-]
-S_bg_mean_2 = np.mean(S_image_recon[2, :, :, :], axis=(0, 1))[
-    np.newaxis, np.newaxis, :
-]
+S_bg_mean_0 = np.mean(S_image_recon[0, :, :, :], axis=(0, 1))[np.newaxis, np.newaxis, :]
+S_bg_mean_1 = np.mean(S_image_recon[1, :, :, :], axis=(0, 1))[np.newaxis, np.newaxis, :]
+S_bg_mean_2 = np.mean(S_image_recon[2, :, :, :], axis=(0, 1))[np.newaxis, np.newaxis, :]
 
 
 S_image_tm[0] = S_image_recon[0] / S_bg_mean_0 - 1
-S_image_tm[1] = (
-    S_image_recon[1] / S_bg_mean_0
-    - S_bg_mean_1 * S_image_recon[0] / S_bg_mean_0**2
-)
-S_image_tm[2] = (
-    S_image_recon[2] / S_bg_mean_0
-    - S_bg_mean_2 * S_image_recon[0] / S_bg_mean_0**2
-)
+S_image_tm[1] = S_image_recon[1] / S_bg_mean_0 - S_bg_mean_1 * S_image_recon[0] / S_bg_mean_0**2
+S_image_tm[2] = S_image_recon[2] / S_bg_mean_0 - S_bg_mean_2 * S_image_recon[0] / S_bg_mean_0**2
 
 ## 2D uPTI reconstruction
 
@@ -122,9 +107,7 @@ S_image_tm[2] = (
 
 reg_inc = np.array([1, 1, 1, 1, 1, 1, 1]) * 1e-1
 reg_ret_pr = 1e-2
-f_tensor = setup.scattering_potential_tensor_recon_2D_vec(
-    S_image_tm, reg_inc=reg_inc, cupy_det=True
-)
+f_tensor = setup.scattering_potential_tensor_recon_2D_vec(S_image_tm, reg_inc=reg_inc, cupy_det=True)
 
 jupyter_visuals.plot_multicolumn(
     f_tensor,
@@ -173,9 +156,7 @@ phase_nm, absorption_nm, retardance_pr_nm = [
     optics.unit_conversion_from_scattering_potential_to_permittivity(
         SP_array, lambda_illu, n_media=n_media, imaging_mode=img_mode
     )
-    for img_mode, SP_array in zip(
-        ["2D", "2D", "2D-ret"], [phase, absorption, retardance_pr]
-    )
+    for img_mode, SP_array in zip(["2D", "2D", "2D-ret"], [phase, absorption, retardance_pr])
 ]
 
 # # clean up GPU memory leftorver
@@ -201,15 +182,11 @@ p_max = 0.6
 
 fig, ax = plt.subplots(2, 3, figsize=(30, 20))
 
-sub_ax = ax[0, 0].imshow(
-    absorption_nm, cmap="gray", origin="lower", vmin=abs_min, vmax=abs_max
-)
+sub_ax = ax[0, 0].imshow(absorption_nm, cmap="gray", origin="lower", vmin=abs_min, vmax=abs_max)
 ax[0, 0].set_title("absorption")
 plt.colorbar(sub_ax, ax=ax[0, 0])
 
-sub_ax = ax[0, 1].imshow(
-    phase_nm, cmap="gray", origin="lower", vmin=phase_min, vmax=phase_max
-)
+sub_ax = ax[0, 1].imshow(phase_nm, cmap="gray", origin="lower", vmin=phase_min, vmax=phase_max)
 ax[0, 1].set_title("phase")
 plt.colorbar(sub_ax, ax=ax[0, 1])
 
@@ -223,20 +200,14 @@ sub_ax = ax[0, 2].imshow(
 ax[0, 2].set_title("principal retardance (+)")
 plt.colorbar(sub_ax, ax=ax[0, 2])
 
-sub_ax = ax[1, 0].imshow(
-    p_mat_map, cmap="gray", origin="lower", vmin=p_min, vmax=p_max
-)
+sub_ax = ax[1, 0].imshow(p_mat_map, cmap="gray", origin="lower", vmin=p_min, vmax=p_max)
 ax[1, 0].set_title("optic sign probability")
 plt.colorbar(sub_ax, ax=ax[1, 0])
 
-sub_ax = ax[1, 1].imshow(
-    azimuth[0], origin="lower", cmap="gray", vmin=0, vmax=np.pi
-)
+sub_ax = ax[1, 1].imshow(azimuth[0], origin="lower", cmap="gray", vmin=0, vmax=np.pi)
 ax[1, 1].set_title("in-plane orientation (+)")
 
-sub_ax = ax[1, 2].imshow(
-    theta[0], origin="lower", cmap="gray", vmin=0, vmax=np.pi
-)
+sub_ax = ax[1, 2].imshow(theta[0], origin="lower", cmap="gray", vmin=0, vmax=np.pi)
 ax[1, 2].set_title("inclination (+)")
 
 plt.show()
@@ -252,12 +223,7 @@ orientation_3D_image = np.transpose(
         [
             azimuth[0] / 2 / np.pi,
             theta[0],
-            (
-                np.clip(
-                    np.abs(retardance_pr_nm[0]), ret_min_color, ret_max_color
-                )
-                - ret_min_color
-            )
+            (np.clip(np.abs(retardance_pr_nm[0]), ret_min_color, ret_max_color) - ret_min_color)
             / (ret_max_color - ret_min_color),
         ]
     ),
@@ -270,9 +236,7 @@ orientation_3D_image_RGB = jupyter_visuals.orientation_3D_to_rgb(
 plt.figure(figsize=(5, 5))
 plt.imshow(orientation_3D_image_RGB, origin="lower")
 plt.figure(figsize=(3, 3))
-jupyter_visuals.orientation_3D_colorwheel(
-    wheelsize=256, circ_size=50, interp_belt=20 / 180 * np.pi, sat_factor=1
-)
+jupyter_visuals.orientation_3D_colorwheel(wheelsize=256, circ_size=50, interp_belt=20 / 180 * np.pi, sat_factor=1)
 plt.show()
 
 ### Render 3D orientation with 2 channels (in-plane orientation and out-of-plane tilt)
@@ -288,12 +252,7 @@ I_hsv = np.transpose(
         [
             (azimuth[0]) % np.pi / np.pi,
             np.ones_like(retardance_pr_nm[0]),
-            (
-                np.clip(
-                    np.abs(retardance_pr_nm[0]), ret_min_color, ret_max_color
-                )
-                - ret_min_color
-            )
+            (np.clip(np.abs(retardance_pr_nm[0]), ret_min_color, ret_max_color) - ret_min_color)
             / (ret_max_color - ret_min_color),
         ]
     ),
@@ -314,19 +273,9 @@ threshold_inc = np.pi / 90
 I_hsv = np.transpose(
     np.array(
         [
-            (
-                -np.maximum(0, np.abs(theta[0] - np.pi / 2) - threshold_inc)
-                + np.pi / 2
-                + threshold_inc
-            )
-            / np.pi,
+            (-np.maximum(0, np.abs(theta[0] - np.pi / 2) - threshold_inc) + np.pi / 2 + threshold_inc) / np.pi,
             np.ones_like(retardance_pr_nm[0]),
-            (
-                np.clip(
-                    np.abs(retardance_pr_nm[0]), ret_min_color, ret_max_color
-                )
-                - ret_min_color
-            )
+            (np.clip(np.abs(retardance_pr_nm[0]), ret_min_color, ret_max_color) - ret_min_color)
             / (ret_max_color - ret_min_color),
         ]
     ),

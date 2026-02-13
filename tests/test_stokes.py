@@ -21,9 +21,7 @@ def test_S2I_matrix():
     )
 
     with pytest.raises(ValueError):
-        A2Ix = stokes.calculate_stokes_to_intensity_matrix(
-            0.1, scheme="3-State"
-        )
+        A2Ix = stokes.calculate_stokes_to_intensity_matrix(0.1, scheme="3-State")
 
 
 def test_I2S_matrix():
@@ -39,24 +37,16 @@ def test_I2S_matrix():
 
 @pytest.mark.parametrize(*_DEVICE)
 def test_s12_to_orientation(device):
-    for orientation in torch.linspace(0, np.pi, 25, device=device)[
-        :-1
-    ]:  # skip endpoint
-        orientation1 = stokes._s12_to_orientation(
-            torch.sin(2 * orientation), -torch.cos(2 * orientation)
-        )
+    for orientation in torch.linspace(0, np.pi, 25, device=device)[:-1]:  # skip endpoint
+        orientation1 = stokes._s12_to_orientation(torch.sin(2 * orientation), -torch.cos(2 * orientation))
         tt.assert_close(orientation, orientation1)
 
 
 @pytest.mark.parametrize(*_DEVICE)
 def test_stokes_recon(device):
     # NOTE: skip retardance = 0 and depolarization = 0 because orientation is not defined
-    for retardance in torch.arange(
-        1e-3, 1, 0.1, device=device
-    ):  # fractions of a wave
-        for orientation in torch.arange(
-            0, np.pi, np.pi / 10, device=device
-        ):  # radians
+    for retardance in torch.arange(1e-3, 1, 0.1, device=device):  # fractions of a wave
+        for orientation in torch.arange(0, np.pi, np.pi / 10, device=device):  # radians
             for transmittance in [0.1, 10]:
                 # Test attenuating retarder (ar) functions
                 ar = (retardance, orientation, transmittance)
@@ -66,9 +56,7 @@ def test_stokes_recon(device):
                     tt.assert_close(torch.tensor(ar[i]), ar1[i])
 
                 # Test attenuating depolarizing retarder (adr) functions
-                for depolarization in torch.arange(
-                    1e-3, 1, 0.1, device=device
-                ):
+                for depolarization in torch.arange(1e-3, 1, 0.1, device=device):
                     adr = (
                         retardance,
                         orientation,
@@ -83,21 +71,15 @@ def test_stokes_recon(device):
 
 
 def test_stokes_after_adr_usage():
-    x = stokes.stokes_after_adr(
-        torch.tensor(1), torch.tensor(1), torch.tensor(1), torch.tensor(1)
-    )
+    x = stokes.stokes_after_adr(torch.tensor(1), torch.tensor(1), torch.tensor(1), torch.tensor(1))
 
     ret = torch.ones((2, 3, 4, 5))
     orientation = torch.ones((2, 3, 4, 5))
     transmittance = torch.ones((2, 3, 4, 5))
     depolarization = torch.ones((2, 3, 4, 5))
-    x2 = stokes.stokes_after_adr(
-        ret, orientation, transmittance, depolarization
-    )
+    x2 = stokes.stokes_after_adr(ret, orientation, transmittance, depolarization)
 
-    adr_params = torch.ones(
-        (4, 2, 3, 4, 5)
-    )  # first axis contains the Stokes indices
+    adr_params = torch.ones((4, 2, 3, 4, 5))  # first axis contains the Stokes indices
     stokes.stokes_after_adr(*adr_params)  # * expands along the first axis
 
 
@@ -158,9 +140,7 @@ def test_orientation_offset(device):
     ff = stokes.apply_orientation_offset(ori, rotate=False, flip=False)
     assert torch.allclose(
         ff,
-        torch.tensor(
-            [0, torch.pi / 4, torch.pi / 2, torch.pi - 0.01, 0], device=device
-        ),
+        torch.tensor([0, torch.pi / 4, torch.pi / 2, torch.pi - 0.01, 0], device=device),
     )
 
     tf = stokes.apply_orientation_offset(ori, rotate=True, flip=False)
@@ -181,14 +161,10 @@ def test_orientation_offset(device):
     ft = stokes.apply_orientation_offset(ori, rotate=False, flip=True)
     assert torch.allclose(
         ft,
-        torch.tensor(
-            [0, 3 * torch.pi / 4, torch.pi / 2, 0.01, 0], device=device
-        ),
+        torch.tensor([0, 3 * torch.pi / 4, torch.pi / 2, 0.01, 0], device=device),
     )
 
-    rotated_fliped = stokes.apply_orientation_offset(
-        ori, rotate=True, flip=True
-    )
+    rotated_fliped = stokes.apply_orientation_offset(ori, rotate=True, flip=True)
     assert torch.allclose(
         rotated_fliped,
         torch.tensor(

@@ -37,10 +37,7 @@ def device_params():
     devices = ["cpu"]
     if torch.cuda.is_available():
         devices.append("cuda")
-    if (
-        torch.backends.mps.is_available()
-        and os.getenv("GITHUB_ACTIONS") == "false"
-    ):
+    if torch.backends.mps.is_available() and os.getenv("GITHUB_ACTIONS") == "false":
         devices.append("mps")
     return "device", devices
 

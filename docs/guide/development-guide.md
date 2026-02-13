@@ -2,12 +2,7 @@
 
 ## Install `waveorder` for development
 
-1. Install [conda](https://github.com/conda-forge/miniforge) and create a virtual environment:
-
-    ```sh
-    conda create -y -n waveorder python=3.12
-    conda activate waveorder
-    ```
+1. Install [Git](https://git-scm.com/) and [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
 2. Clone the `waveorder` directory:
 
@@ -15,24 +10,23 @@
     git clone https://github.com/mehta-lab/waveorder.git
     ```
 
-3. Install `waveorder` in editable mode with development dependencies
+3. Install `waveorder` with all development dependencies:
 
     ```sh
     cd waveorder
-    pip install -e ".[all,dev]"
+    uv sync --group dev --extra visual
     ```
 
 ## Set up a development environment
 
-### Code linting
-
-We are not currently specifying a code linter as most modern Python code editors already have their own. If not, add a plugin to your editor to help catch bugs pre-commit!
-
 ### Code formatting
 
-We use `black` to format Python code, and a specific version is installed as a development dependency. Use the `black` in the `waveorder` virtual environment, either from commandline or the editor of your choice.
+We use [ruff](https://docs.astral.sh/ruff/) to format and lint Python code. To manually check formatting:
 
-> *VS Code users*: Install the [Black Formatter](https://marketplace.visualstudio.com/items?itemName=ms-python.black-formatter) plugin. Press `^/⌘ ⇧ P` and type 'format document with...', choose the Black Formatter and start formatting!
+```sh
+uvx ruff check .
+uvx ruff format --check .
+```
 
 ### Docstring style
 
@@ -45,7 +39,7 @@ The [NumPy style](https://numpydoc.readthedocs.io/en/latest/format.html) docstri
 From within the `waveorder` directory run:
 
 ```sh
-pytest
+uv run pytest
 ```
 
 Running `pytest` for the first time will download ~50 MB of test data from Zenodo, and subsequent runs will reuse the downloaded data.

@@ -8,4 +8,3 @@ The scripts and notebooks in this folder require data from the image data reposi
 https://www.ebi.ac.uk/biostudies/bioimages/studies/S-BIAD1063
 
 The demo script [PTI_Experiment_Recon3D_anisotropic_target_small.py](PTI_Experiment_Recon3D_anisotropic_target_small.py) will run as is with the latest version of the code and a ~500 MB download from https://www.ebi.ac.uk/biostudies/files/S-BIAD1063/PTI-BIA/Anisotropic_target_small.zip.
-

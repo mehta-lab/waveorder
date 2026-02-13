@@ -37,14 +37,10 @@ from waveorder.cli.utils import (
 from waveorder.io import utils
 
 
-def _check_background_consistency(
-    background_shape, data_shape, input_channel_names
-):
+def _check_background_consistency(background_shape, data_shape, input_channel_names):
     data_cyx_shape = (len(input_channel_names),) + data_shape[3:]
     if background_shape != data_cyx_shape:
-        raise ValueError(
-            f"Background shape {background_shape} does not match data shape {data_cyx_shape}"
-        )
+        raise ValueError(f"Background shape {background_shape} does not match data shape {data_cyx_shape}")
 
 
 def _load_transfer_function_dataset(
@@ -62,16 +58,12 @@ def _load_transfer_function_dataset(
     """
 
     def _load(key, idx):
-        return _named_dataarray(
-            np.array(transfer_function_dataset[key][idx]), key
-        )
+        return _named_dataarray(np.array(transfer_function_dataset[key][idx]), key)
 
     variables = {}
 
     if recon_biref:
-        variables["intensity_to_stokes_matrix"] = _load(
-            "intensity_to_stokes_matrix", (0, 0, 0)
-        )
+        variables["intensity_to_stokes_matrix"] = _load("intensity_to_stokes_matrix", (0, 0, 0))
 
     if recon_phase and not recon_biref:
         if recon_dim == 2:
@@ -79,40 +71,20 @@ def _load_transfer_function_dataset(
             variables["singular_system_S"] = _load("singular_system_S", (0, 0))
             variables["singular_system_Vh"] = _load("singular_system_Vh", (0,))
         elif recon_dim == 3:
-            variables["real_potential_transfer_function"] = _load(
-                "real_potential_transfer_function", (0, 0)
-            )
-            variables["imaginary_potential_transfer_function"] = _load(
-                "imaginary_potential_transfer_function", (0, 0)
-            )
+            variables["real_potential_transfer_function"] = _load("real_potential_transfer_function", (0, 0))
+            variables["imaginary_potential_transfer_function"] = _load("imaginary_potential_transfer_function", (0, 0))
 
     if recon_biref and recon_phase:
         if recon_dim == 2:
-            variables["vector_singular_system_U"] = _load(
-                "vector_singular_system_U", (0,)
-            )
-            variables["vector_singular_system_S"] = _load(
-                "vector_singular_system_S", (0, 0)
-            )
-            variables["vector_singular_system_Vh"] = _load(
-                "vector_singular_system_Vh", (0,)
-            )
+            variables["vector_singular_system_U"] = _load("vector_singular_system_U", (0,))
+            variables["vector_singular_system_S"] = _load("vector_singular_system_S", (0, 0))
+            variables["vector_singular_system_Vh"] = _load("vector_singular_system_Vh", (0,))
         elif recon_dim == 3:
-            variables["real_potential_transfer_function"] = _load(
-                "real_potential_transfer_function", (0, 0)
-            )
-            variables["imaginary_potential_transfer_function"] = _load(
-                "imaginary_potential_transfer_function", (0, 0)
-            )
-            variables["vector_singular_system_U"] = _load(
-                "vector_singular_system_U", ()
-            )
-            variables["vector_singular_system_S"] = _load(
-                "vector_singular_system_S", (0,)
-            )
-            variables["vector_singular_system_Vh"] = _load(
-                "vector_singular_system_Vh", ()
-            )
+            variables["real_potential_transfer_function"] = _load("real_potential_transfer_function", (0, 0))
+            variables["imaginary_potential_transfer_function"] = _load("imaginary_potential_transfer_function", (0, 0))
+            variables["vector_singular_system_U"] = _load("vector_singular_system_U", ())
+            variables["vector_singular_system_S"] = _load("vector_singular_system_S", (0,))
+            variables["vector_singular_system_Vh"] = _load("vector_singular_system_Vh", ())
 
     if recon_fluo:
         if recon_dim == 2:
@@ -120,9 +92,7 @@ def _load_transfer_function_dataset(
             variables["singular_system_S"] = _load("singular_system_S", (0, 0))
             variables["singular_system_Vh"] = _load("singular_system_Vh", (0,))
         elif recon_dim == 3:
-            variables["optical_transfer_function"] = _load(
-                "optical_transfer_function", (0, 0)
-            )
+            variables["optical_transfer_function"] = _load("optical_transfer_function", (0, 0))
 
     return xr.Dataset(variables)
 
@@ -132,9 +102,7 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
     plate_metadata = {}
     input_version = "0.4"
     try:
-        input_plate = open_ome_zarr(
-            position_path.parent.parent.parent, mode="r"
-        )
+        input_plate = open_ome_zarr(position_path.parent.parent.parent, mode="r")
         input_version = input_plate.version
         plate_metadata = dict(input_plate.zattrs)
         # In v0.5 (zarr v3), OME metadata is nested inside an "ome" key
@@ -143,9 +111,7 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
         else:
             plate_metadata.pop("plate")
     except (RuntimeError, FileNotFoundError):
-        warnings.warn(
-            "Position is not part of a plate...no plate metadata will be copied."
-        )
+        warnings.warn("Position is not part of a plate...no plate metadata will be copied.")
 
     # Load the first position to infer dataset information
     input_dataset = open_ome_zarr(str(position_path), mode="r")
@@ -190,9 +156,7 @@ def apply_inverse_transfer_function_single_position(
     settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
 
     # Check input channel names
-    if not set(settings.input_channel_names).issubset(
-        input_dataset.channel_names
-    ):
+    if not set(settings.input_channel_names).issubset(input_dataset.channel_names):
         raise ValueError(
             f"Each of the input_channel_names = {settings.input_channel_names} in {config_filepath} must appear in the dataset {input_position_dirpath} which currently contains channel_names = {input_dataset.channel_names}."
         )
@@ -249,9 +213,7 @@ def apply_inverse_transfer_function_single_position(
         echo_headline("Reconstructing birefringence with settings:")
         echo_settings(settings.birefringence)
 
-        apply_inverse_model_function = (
-            birefringence.apply_inverse_transfer_function
-        )
+        apply_inverse_model_function = birefringence.apply_inverse_transfer_function
         apply_inverse_args = {
             "transfer_function": tf_dataset,
             "recon_dim": recon_dim,
@@ -277,9 +239,7 @@ def apply_inverse_transfer_function_single_position(
         echo_settings(settings.birefringence.apply_inverse)
         echo_settings(settings.phase.apply_inverse)
 
-        apply_inverse_model_function = (
-            birefringence_and_phase.apply_inverse_transfer_function
-        )
+        apply_inverse_model_function = birefringence_and_phase.apply_inverse_transfer_function
         apply_inverse_args = {
             "transfer_function": tf_dataset,
             "recon_dim": recon_dim,
@@ -293,9 +253,7 @@ def apply_inverse_transfer_function_single_position(
         echo_headline("Reconstructing fluorescence with settings:")
         echo_settings(settings.fluorescence.apply_inverse)
 
-        apply_inverse_model_function = (
-            fluorescence.apply_inverse_transfer_function
-        )
+        apply_inverse_model_function = fluorescence.apply_inverse_transfer_function
         apply_inverse_args = {
             "transfer_function": tf_dataset,
             "recon_dim": recon_dim,
@@ -316,9 +274,7 @@ def apply_inverse_transfer_function_single_position(
     # Multiprocessing logic
     if num_processes > 1:
         # Loop through T, processing and writing as we go
-        click.echo(
-            f"\nStarting multiprocess pool with {num_processes} processes"
-        )
+        click.echo(f"\nStarting multiprocess pool with {num_processes} processes")
         with mp.Pool(num_processes) as p:
             p.starmap(
                 partial_apply_inverse_to_zyx_and_save,
@@ -349,9 +305,7 @@ def apply_inverse_transfer_function_cli(
     num_processes,
 ) -> None:
     # Prepare output store
-    output_metadata = get_reconstruction_output_metadata(
-        input_position_dirpaths[0], config_filepath
-    )
+    output_metadata = get_reconstruction_output_metadata(input_position_dirpaths[0], config_filepath)
 
     # Generate position keys - use valid HCS keys for single-position stores
     position_keys = []

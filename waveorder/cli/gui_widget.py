@@ -26,9 +26,7 @@ def gui():
     """GUI for waveorder: Wave-optical simulation and reconstruction"""
 
     app = QApplication(sys.argv)
-    app.setStyle(
-        "Fusion"
-    )  # Other options: "Fusion", "Windows", "macOS", "WindowsVista"
+    app.setStyle("Fusion")  # Other options: "Fusion", "Windows", "macOS", "WindowsVista"
     try:
         qdarktheme.setup_theme("dark")
     except Exception as e:

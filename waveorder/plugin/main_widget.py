@@ -85,9 +85,7 @@ class MainWidget(QWidget):
 
         ## Connect GUI elements to functions
         # Top bar
-        self.ui.qbutton_connect_to_mm.clicked[bool].connect(
-            self.toggle_mm_connection
-        )
+        self.ui.qbutton_connect_to_mm.clicked[bool].connect(self.toggle_mm_connection)
 
         # Calibration tab
         self.ui.qbutton_browse.clicked[bool].connect(self.browse_dir_path)
@@ -102,31 +100,21 @@ class MainWidget(QWidget):
         self.ui.le_wavelength.setText("532")
         self.enter_wavelength()
 
-        self.ui.cb_calib_scheme.currentIndexChanged[int].connect(
-            self.enter_calib_scheme
-        )
-        self.ui.cb_calib_mode.currentIndexChanged[int].connect(
-            self.enter_calib_mode
-        )
+        self.ui.cb_calib_scheme.currentIndexChanged[int].connect(self.enter_calib_scheme)
+        self.ui.cb_calib_mode.currentIndexChanged[int].connect(self.enter_calib_mode)
         self.ui.cb_lca.currentIndexChanged[int].connect(self.enter_dac_lca)
         self.ui.cb_lcb.currentIndexChanged[int].connect(self.enter_dac_lcb)
         self.ui.qbutton_calibrate.clicked[bool].connect(self.run_calibration)
         self.ui.qbutton_load_calib.clicked[bool].connect(self.load_calibration)
-        self.ui.qbutton_calc_extinction.clicked[bool].connect(
-            self.calc_extinction
-        )
-        self.ui.cb_config_group.currentIndexChanged[int].connect(
-            self.enter_config_group
-        )
+        self.ui.qbutton_calc_extinction.clicked[bool].connect(self.calc_extinction)
+        self.ui.cb_config_group.currentIndexChanged[int].connect(self.enter_config_group)
 
         self.ui.le_bg_folder.editingFinished.connect(self.enter_bg_folder_name)
         self.ui.le_n_avg.editingFinished.connect(self.enter_n_avg)
         self.ui.qbutton_capture_bg.clicked[bool].connect(self.capture_bg)
 
         # Advanced tab
-        self.ui.cb_loglevel.currentIndexChanged[int].connect(
-            self.enter_log_level
-        )
+        self.ui.cb_loglevel.currentIndexChanged[int].connect(self.enter_log_level)
         self.ui.qbutton_push_note.clicked[bool].connect(self.push_note)
 
         # hook to render overlay
@@ -135,9 +123,7 @@ class MainWidget(QWidget):
         self.viewer.layers.events.inserted.connect(self.handle_layers_updated)
 
         # Birefringence overlay controls
-        self.ui.retMaxSlider.sliderMoved[int].connect(
-            self.handle_ret_max_slider_move
-        )
+        self.ui.retMaxSlider.sliderMoved[int].connect(self.handle_ret_max_slider_move)
 
         ## Initialize logging
         log_box = QtLogger(self.ui.te_log)
@@ -218,17 +204,13 @@ class MainWidget(QWidget):
         self.ui.cb_lcb.hide()
 
         # Hide temporarily unsupported "Overlay" functions
-        self.ui.tabWidget.setTabText(
-            self.ui.tabWidget.indexOf(self.ui.Display), "Visualization"
-        )
+        self.ui.tabWidget.setTabText(self.ui.tabWidget.indexOf(self.ui.Display), "Visualization")
         self.ui.label_orientation_legend.setHidden(True)
         self.ui.DisplayOptions.setHidden(True)
 
         # Set initial UI Properties
         self.ui.label_extinction.setText("Extinction Ratio")
-        self.ui.le_mm_status.setStyleSheet(
-            "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
-        )
+        self.ui.le_mm_status.setStyleSheet("border: 1px solid rgb(200,0,0); color: rgb(200,0,0);")
         self.ui.te_log.setStyleSheet("background-color: rgb(32,34,40);")
         self.ui.le_sat_min.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
         self.ui.le_sat_max.setStyleSheet("background-color: rgba(0, 0, 0, 0);")
@@ -238,17 +220,13 @@ class MainWidget(QWidget):
         self.red_text = QColor(200, 0, 0, 255)
 
         # Populate calibration modes from docstring
-        cal_docs = NumpyDocString(
-            Calibration.QLIPP_Calibration.__init__.__doc__
-        )
+        cal_docs = NumpyDocString(Calibration.QLIPP_Calibration.__init__.__doc__)
         mode_docs = " ".join(cal_docs["Parameters"][3].desc).split("* ")[1:]
         for i, mode_doc in enumerate(mode_docs):
             mode_name, mode_tooltip = mode_doc.split(": ")
             wrapped_tooltip = "\n".join(textwrap.wrap(mode_tooltip, width=70))
             self.ui.cb_calib_mode.addItem(mode_name)
-            self.ui.cb_calib_mode.setItemData(
-                i, wrapped_tooltip, Qt.ToolTipRole
-            )
+            self.ui.cb_calib_mode.setItemData(i, wrapped_tooltip, Qt.ToolTipRole)
 
         # make sure the top says waveorder and not 'Form'
         self.ui.tabWidget.parent().setObjectName("waveorder")
@@ -294,9 +272,7 @@ class MainWidget(QWidget):
 
         # Add back the sliders as range sliders with the same properties
         ui_slider = QSlider(getattr(self.ui, slider_parent))
-        sizePolicy.setHeightForWidth(
-            ui_slider.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(ui_slider.sizePolicy().hasHeightForWidth())
         ui_slider.setSizePolicy(sizePolicy)
         ui_slider.setOrientation(Qt.Horizontal)
         ui_slider.setObjectName(slider_name)
@@ -338,9 +314,7 @@ class MainWidget(QWidget):
 
         # Add back the sliders as range sliders with the same properties
         ui_slider = QRangeSlider(getattr(self.ui, slider_parent))
-        sizePolicy.setHeightForWidth(
-            ui_slider.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(ui_slider.sizePolicy().hasHeightForWidth())
         ui_slider.setSizePolicy(sizePolicy)
         ui_slider.setOrientation(Qt.Horizontal)
         ui_slider.setObjectName(slider_name)
@@ -367,31 +341,19 @@ class MainWidget(QWidget):
 
         # Get Information from regular sliders
         value_slider_idx = self.ui.gridLayout_17.indexOf(self.ui.slider_value)
-        value_slider_position = self.ui.gridLayout_17.getItemPosition(
-            value_slider_idx
-        )
+        value_slider_position = self.ui.gridLayout_17.getItemPosition(value_slider_idx)
         value_slider_parent = self.ui.slider_value.parent().objectName()
-        saturation_slider_idx = self.ui.gridLayout_17.indexOf(
-            self.ui.slider_saturation
-        )
-        saturation_slider_position = self.ui.gridLayout_17.getItemPosition(
-            saturation_slider_idx
-        )
-        saturation_slider_parent = (
-            self.ui.slider_saturation.parent().objectName()
-        )
+        saturation_slider_idx = self.ui.gridLayout_17.indexOf(self.ui.slider_saturation)
+        saturation_slider_position = self.ui.gridLayout_17.getItemPosition(saturation_slider_idx)
+        saturation_slider_parent = self.ui.slider_saturation.parent().objectName()
 
         # Remove regular sliders from the UI
         self.ui.gridLayout_17.removeWidget(self.ui.slider_value)
         self.ui.gridLayout_17.removeWidget(self.ui.slider_saturation)
 
         # Add back the sliders as range sliders with the same properties
-        self.ui.slider_saturation = QDoubleRangeSlider(
-            getattr(self.ui, saturation_slider_parent)
-        )
-        sizePolicy.setHeightForWidth(
-            self.ui.slider_saturation.sizePolicy().hasHeightForWidth()
-        )
+        self.ui.slider_saturation = QDoubleRangeSlider(getattr(self.ui, saturation_slider_parent))
+        sizePolicy.setHeightForWidth(self.ui.slider_saturation.sizePolicy().hasHeightForWidth())
         self.ui.slider_saturation.setSizePolicy(sizePolicy)
         self.ui.slider_saturation.setOrientation(Qt.Horizontal)
         self.ui.slider_saturation.setObjectName("slider_saturation")
@@ -404,12 +366,8 @@ class MainWidget(QWidget):
         )
         self.ui.slider_saturation.setRange(0, 100)
 
-        self.ui.slider_value = QDoubleRangeSlider(
-            getattr(self.ui, value_slider_parent)
-        )
-        sizePolicy.setHeightForWidth(
-            self.ui.slider_value.sizePolicy().hasHeightForWidth()
-        )
+        self.ui.slider_value = QDoubleRangeSlider(getattr(self.ui, value_slider_parent))
+        sizePolicy.setHeightForWidth(self.ui.slider_value.sizePolicy().hasHeightForWidth())
         self.ui.slider_value.setSizePolicy(sizePolicy)
         self.ui.slider_value.setOrientation(Qt.Horizontal)
         self.ui.slider_value.setObjectName("slider_value")
@@ -464,9 +422,7 @@ class MainWidget(QWidget):
         """
 
         self.ui.tb_calib_assessment.setText(f"Error: {str(exc)}")
-        self.ui.tb_calib_assessment.setStyleSheet(
-            "border: 1px solid rgb(200,0,0);"
-        )
+        self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid rgb(200,0,0);")
 
         # Reset ROI if it was cropped down during reconstruction
         if self.use_cropped_roi:
@@ -498,9 +454,7 @@ class MainWidget(QWidget):
         -------
 
         """
-        self.ui.tb_calib_assessment.setText(
-            "Previous calibration successfully loaded"
-        )
+        self.ui.tb_calib_assessment.setText("Previous calibration successfully loaded")
         self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid green;")
         self.ui.progress_bar.setValue(100)
 
@@ -538,9 +492,7 @@ class MainWidget(QWidget):
         if self.connected_to_mm:
             self.ui.qbutton_connect_to_mm.setText("Connect to MM")
             self.ui.le_mm_status.setText("Disconnected")
-            self.ui.le_mm_status.setStyleSheet(
-                "border: 1px solid rgb(200,0,0); color: rgb(200,0,0);"
-            )
+            self.ui.le_mm_status.setStyleSheet("border: 1px solid rgb(200,0,0); color: rgb(200,0,0);")
             self.connected_to_mm = False
             self._set_buttons_enabled(False)
             self.ui.cb_config_group.clear()
@@ -550,16 +502,12 @@ class MainWidget(QWidget):
                 self.connect_to_mm()
                 self.ui.qbutton_connect_to_mm.setText("Disconnect from MM")
                 self.ui.le_mm_status.setText("Connected")
-                self.ui.le_mm_status.setStyleSheet(
-                    "border: 1px solid green; color: green;"
-                )
+                self.ui.le_mm_status.setStyleSheet("border: 1px solid green; color: green;")
                 self.connected_to_mm = True
                 self._set_buttons_enabled(True)
             except:
                 self.ui.le_mm_status.setText("Failed")
-                self.ui.le_mm_status.setStyleSheet(
-                    "border: 1px solid yellow; color: yellow;"
-                )
+                self.ui.le_mm_status.setStyleSheet("border: 1px solid yellow; color: yellow;")
 
     @Slot(bool)
     def connect_to_mm(self):
@@ -609,10 +557,7 @@ class MainWidget(QWidget):
         zmq_mm_version = reply_json["version"]
         if zmq_mm_version != ZMQ_TARGET_VERSION:
             upgrade_str = (
-                "upgrade"
-                if version.parse(zmq_mm_version)
-                < version.parse(ZMQ_TARGET_VERSION)
-                else "downgrade"
+                "upgrade" if version.parse(zmq_mm_version) < version.parse(ZMQ_TARGET_VERSION) else "downgrade"
             )
             logging.warning(
                 (
@@ -640,16 +585,9 @@ class MainWidget(QWidget):
             config_list = []
             for j in range(configs.size()):
                 config_list.append(configs.get(j))
-            if np.all(
-                [
-                    np.any([ch in config for config in config_list])
-                    for ch in self.calib_channels
-                ]
-            ):
+            if np.all([np.any([ch in config for config in config_list]) for ch in self.calib_channels]):
                 if not config_group_found:
-                    self.config_group = (
-                        group  # set to first config group found
-                    )
+                    self.config_group = group  # set to first config group found
                     config_group_found = True
                 self.ui.cb_config_group.addItem(group)
 
@@ -659,9 +597,7 @@ class MainWidget(QWidget):
                 f"No config group contains channels {self.calib_channels}. "
                 "Please refer to the waveorder docs on how to set up the config properly."
             )
-            self.ui.cb_config_group.setStyleSheet(
-                "border: 1px solid rgb(200,0,0);"
-            )
+            self.ui.cb_config_group.setStyleSheet("border: 1px solid rgb(200,0,0);")
             raise KeyError(msg)
 
         # set startup LC control mode
@@ -669,9 +605,7 @@ class MainWidget(QWidget):
         _devices = self.mmc.getLoadedDevices()
         loaded_devices = [_devices.get(i) for i in range(_devices.size())]
         if LC_DEVICE_NAME in loaded_devices:
-            config_desc = self.mmc.getConfigData(
-                "Channel", "State0"
-            ).getVerbose()
+            config_desc = self.mmc.getConfigData("Channel", "State0").getVerbose()
             if "String send to" in config_desc:
                 self.calib_mode = "MM-Retardance"
                 self.ui.cb_calib_mode.setCurrentIndex(0)
@@ -733,17 +667,11 @@ class MainWidget(QWidget):
         self.ui.tb_calib_assessment.setText(value)
 
         if self.calib_assessment_level == "good":
-            self.ui.tb_calib_assessment.setStyleSheet(
-                "border: 1px solid green;"
-            )
+            self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid green;")
         elif self.calib_assessment_level == "okay":
-            self.ui.tb_calib_assessment.setStyleSheet(
-                "border: 1px solid rgb(252,190,3);"
-            )
+            self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid rgb(252,190,3);")
         elif self.calib_assessment_level == "bad":
-            self.ui.tb_calib_assessment.setStyleSheet(
-                "border: 1px solid rgb(200,0,0);"
-            )
+            self.ui.tb_calib_assessment.setStyleSheet("border: 1px solid rgb(200,0,0);")
         else:
             pass
 
@@ -849,12 +777,8 @@ class MainWidget(QWidget):
     @Slot(tuple)
     def handle_bg_bire_image_update(self, value):
         data, scale = value
-        self._add_or_update_image_layer(
-            data[0], "Retardance Background", scale=scale
-        )
-        self._add_or_update_image_layer(
-            data[1], "Orientation Background", cmap="hsv", scale=scale
-        )
+        self._add_or_update_image_layer(data[0], "Retardance Background", scale=scale)
+        self._add_or_update_image_layer(data[1], "Orientation Background", cmap="hsv", scale=scale)
 
     def handle_layers_updated(self, event: Event):
         """Whenever a layer is inserted or moved, we check if the top layer
@@ -875,10 +799,7 @@ class MainWidget(QWidget):
             overlay_name = "Birefringence Overlay" + suffix
             # if the matching retardance layer is present, generate an overlay
             if retardance_name in layers:
-                logging.info(
-                    "Detected updated birefringence layers: "
-                    f"'{retardance_name}', '{orientation_name}'"
-                )
+                logging.info(f"Detected updated birefringence layers: '{retardance_name}', '{orientation_name}'")
                 self._draw_bire_overlay(
                     retardance_name,
                     orientation_name,
@@ -887,10 +808,7 @@ class MainWidget(QWidget):
                 )
 
             # always display layers that start with "Orientation" in hsv
-            logging.info(
-                "Detected orientation layer in updated layer list."
-                "Setting its colormap to HSV."
-            )
+            logging.info("Detected orientation layer in updated layer list.Setting its colormap to HSV.")
             self.viewer.layers[orientation_name].colormap = "hsv"
 
     def _draw_bire_overlay(
@@ -909,9 +827,7 @@ class MainWidget(QWidget):
                 if any([("get_" in k) for k in data.dask.keys()]):
                     data: da.Array = data.compute()
             else:
-                chunks = (data.ndim - 2) * (1,) + data.shape[
-                    -2:
-                ]  # needs to match
+                chunks = (data.ndim - 2) * (1,) + data.shape[-2:]  # needs to match
                 data = da.from_array(data, chunks=chunks)
             return data
 
@@ -922,11 +838,7 @@ class MainWidget(QWidget):
         self.update_overlay_dask_array()
 
     def update_overlay_dask_array(self):
-        self.rgb_chunks = (
-            (3,)
-            + (self.overlay_retardance.ndim - 2) * (1,)
-            + self.overlay_retardance.shape[-2:]
-        )
+        self.rgb_chunks = (3,) + (self.overlay_retardance.ndim - 2) * (1,) + self.overlay_retardance.shape[-2:]
         overlay = da.map_blocks(
             ret_ori_overlay,
             np.stack((self.overlay_retardance, self.overlay_orientation)),
@@ -940,9 +852,7 @@ class MainWidget(QWidget):
 
         overlay = da.moveaxis(overlay, source=0, destination=-1)
 
-        self._add_or_update_image_layer(
-            overlay, self.overlay_name, cmap="rgb", scale=self.overlay_scale
-        )
+        self._add_or_update_image_layer(overlay, self.overlay_name, cmap="rgb", scale=self.overlay_scale)
 
     @Slot(tuple)
     def handle_bire_image_update(self, value):
@@ -952,32 +862,20 @@ class MainWidget(QWidget):
         for i, channel in enumerate(("Retardance", "Orientation")):
             name = channel
             cmap = "gray" if channel != "Orientation" else "hsv"
-            self._add_or_update_image_layer(
-                data[i], name, cmap=cmap, scale=scale
-            )
+            self._add_or_update_image_layer(data[i], name, cmap=cmap, scale=scale)
 
     @Slot(tuple)
     def handle_phase_image_update(self, value):
         phase, scale = value
         # Determine name based on data dimensionality
-        name = (
-            "Phase2D"
-            if phase.ndim == 2 or (phase.ndim > 2 and phase.shape[0] == 1)
-            else "Phase3D"
-        )
+        name = "Phase2D" if phase.ndim == 2 or (phase.ndim > 2 and phase.shape[0] == 1) else "Phase3D"
 
         # Add new layer if none exists, otherwise update layer data
         self._add_or_update_image_layer(phase, name, scale=scale)
 
-        if "Phase" not in [
-            self.ui.cb_saturation.itemText(i)
-            for i in range(self.ui.cb_saturation.count())
-        ]:
+        if "Phase" not in [self.ui.cb_saturation.itemText(i) for i in range(self.ui.cb_saturation.count())]:
             self.ui.cb_saturation.addItem("Retardance")
-        if "Phase" not in [
-            self.ui.cb_value.itemText(i)
-            for i in range(self.ui.cb_value.count())
-        ]:
+        if "Phase" not in [self.ui.cb_value.itemText(i) for i in range(self.ui.cb_value.count())]:
             self.ui.cb_value.addItem("Retardance")
 
     @Slot(object)
@@ -1141,9 +1039,7 @@ class MainWidget(QWidget):
                     "Please refer to the waveorder wiki on how to set up the config properly."
                 )
 
-                self.ui.cb_config_group.setStyleSheet(
-                    "border: 1px solid rgb(200,0,0);"
-                )
+                self.ui.cb_config_group.setStyleSheet("border: 1px solid rgb(200,0,0);")
                 raise KeyError(msg)
             else:
                 self.ui.cb_config_group.setStyleSheet("")
@@ -1195,9 +1091,7 @@ class MainWidget(QWidget):
             self.method = "QLIPP"
             self.ui.label_bf_chan.hide()
             self.ui.le_bf_chan.hide()
-            self.ui.label_chan_desc.setText(
-                "Retardance, Orientation, BF, Phase3D, Phase2D, S0, S1, S2, S3"
-            )
+            self.ui.label_chan_desc.setText("Retardance, Orientation, BF, Phase3D, Phase2D, S0, S1, S2, S3")
 
         elif idx == 1:
             self.method = "PhaseFromBF"
@@ -1224,9 +1118,7 @@ class MainWidget(QWidget):
     def enter_data_dir(self):
         entry = self.ui.le_data_dir.text()
         if not os.path.exists(entry):
-            self.ui.le_data_dir.setStyleSheet(
-                "border: 1px solid rgb(200,0,0);"
-            )
+            self.ui.le_data_dir.setStyleSheet("border: 1px solid rgb(200,0,0);")
             self.ui.le_data_dir.setText("Path Does Not Exist")
         else:
             self.ui.le_data_dir.setStyleSheet("")
@@ -1236,9 +1128,7 @@ class MainWidget(QWidget):
     def enter_calib_meta(self):
         entry = self.ui.le_calibration_metadata.text()
         if not os.path.exists(entry):
-            self.ui.le_calibration_metadata.setStyleSheet(
-                "border: 1px solid rgb(200,0,0);"
-            )
+            self.ui.le_calibration_metadata.setStyleSheet("border: 1px solid rgb(200,0,0);")
             self.ui.le_calibration_metadata.setText("Path Does Not Exist")
         else:
             self.ui.le_calibration_metadata.setStyleSheet("")
@@ -1256,9 +1146,7 @@ class MainWidget(QWidget):
 
         # make sure the user has performed a calibration in this session (or loaded a previous one)
         if not self.last_calib_meta_file:
-            raise ValueError(
-                "No calibration has been performed yet so there is no previous metadata file"
-            )
+            raise ValueError("No calibration has been performed yet so there is no previous metadata file")
         else:
             note = self.ui.le_notes_field.text()
 
@@ -1297,9 +1185,7 @@ class MainWidget(QWidget):
         state1 = snap_and_average(self.calib.snap_manager)
 
         # Calculate extinction based off captured intensities
-        extinction = self.calib.calculate_extinction(
-            self.swing, self.calib.I_Black, extinction, state1
-        )
+        extinction = self.calib.calculate_extinction(self.swing, self.calib.I_Black, extinction, state1)
         self.ui.le_extinction.setText(str(extinction))
 
     @Slot(bool)
@@ -1395,9 +1281,7 @@ class MainWidget(QWidget):
         self.intensity_monitor = []
         self.calib.swing = self.swing
         self.calib.wavelength = self.wavelength
-        self.calib.meta_file = os.path.join(
-            self.directory, "polarization_calibration.txt"
-        )
+        self.calib.meta_file = os.path.join(self.directory, "polarization_calibration.txt")
 
         # FIXME: for 1.0.0 we'd like to avoid MM call in the main thread
         # Make sure Live Mode is off
@@ -1411,16 +1295,10 @@ class MainWidget(QWidget):
         self.worker.progress_update.connect(self.handle_progress_update)
         self.worker.extinction_update.connect(self.handle_extinction_update)
         self.worker.intensity_update.connect(self.handle_plot_update)
-        self.worker.calib_assessment.connect(
-            self.handle_calibration_assessment_update
-        )
-        self.worker.calib_assessment_msg.connect(
-            self.handle_calibration_assessment_msg_update
-        )
+        self.worker.calib_assessment.connect(self.handle_calibration_assessment_update)
+        self.worker.calib_assessment_msg.connect(self.handle_calibration_assessment_msg_update)
         self.worker.calib_file_emit.connect(self.handle_calib_file_update)
-        self.worker.plot_sequence_emit.connect(
-            self.handle_plot_sequence_update
-        )
+        self.worker.plot_sequence_emit.connect(self.handle_plot_sequence_update)
         self.worker.lc_states.connect(self.handle_lc_states_emit)
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
@@ -1432,9 +1310,7 @@ class MainWidget(QWidget):
     @property
     def _channel_descriptions(self):
         return [
-            self.mmc.getConfigData(
-                self.config_group, calib_channel
-            ).getVerbose()
+            self.mmc.getConfigData(self.config_group, calib_channel).getVerbose()
             for calib_channel in self.calib_channels
         ]
 
@@ -1442,9 +1318,7 @@ class MainWidget(QWidget):
         # Warns the user if the MM configuration is not correctly set up.
         desc = self._channel_descriptions
         if self.calib_mode == "MM-Retardance":
-            if all("String send to" in s for s in desc) and not any(
-                "Voltage (V)" in s for s in desc
-            ):
+            if all("String send to" in s for s in desc) and not any("Voltage (V)" in s for s in desc):
                 return
             else:
                 msg = " \n".join(
@@ -1477,14 +1351,10 @@ class MainWidget(QWidget):
             _devices = self.mmc.getLoadedDevices()
             loaded_devices = [_devices.get(i) for i in range(_devices.size())]
             if LC_DEVICE_NAME in loaded_devices:
-                show_warning(
-                    "In 'DAC' mode the MeadowLarkLC device adapter must not be loaded in MM."
-                )
+                show_warning("In 'DAC' mode the MeadowLarkLC device adapter must not be loaded in MM.")
 
         else:
-            raise ValueError(
-                f"self.calib_mode = {self.calib_mode} is an unrecognized state."
-            )
+            raise ValueError(f"self.calib_mode = {self.calib_mode} is an unrecognized state.")
 
     @Slot(bool)
     def capture_bg(self):
@@ -1507,9 +1377,7 @@ class MainWidget(QWidget):
 
         # Connect Handlers
         self.worker.bg_image_emitter.connect(self.handle_bg_image_update)
-        self.worker.bire_image_emitter.connect(
-            self.handle_bg_bire_image_update
-        )
+        self.worker.bire_image_emitter.connect(self.handle_bg_bire_image_update)
 
         self.worker.started.connect(self._disable_buttons)
         self.worker.finished.connect(self._enable_buttons)
@@ -1530,9 +1398,7 @@ class MainWidget(QWidget):
 
         if isinstance(self.config_reader.positions, tuple):
             pos = self.config_reader.positions
-            self.config_reader.positions = (
-                f"[!!python/tuple [{pos[0]},{pos[1]}]]"
-            )
+            self.config_reader.positions = f"[!!python/tuple [{pos[0]},{pos[1]}]]"
         if isinstance(self.config_reader.timepoints, tuple):
             t = self.config_reader.timepoints
             self.config_reader.timepoints = f"[!!python/tuple [{t[0]},{t[1]}]]"
@@ -1573,17 +1439,11 @@ class MainWidget(QWidget):
 
         options = QFileDialog.DontUseNativeDialog
         if type == "dir":
-            path = QFileDialog.getExistingDirectory(
-                None, title, ref, options=options
-            )
+            path = QFileDialog.getExistingDirectory(None, title, ref, options=options)
         elif type == "file":
-            path = QFileDialog.getOpenFileName(
-                None, title, ref, options=options
-            )[0]
+            path = QFileDialog.getOpenFileName(None, title, ref, options=options)[0]
         elif type == "save":
-            path = QFileDialog.getSaveFileName(
-                None, "Choose a save name", ref, options=options
-            )[0]
+            path = QFileDialog.getSaveFileName(None, "Choose a save name", ref, options=options)[0]
         else:
             raise ValueError("Did not understand file dialogue type")
 

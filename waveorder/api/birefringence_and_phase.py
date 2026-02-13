@@ -64,8 +64,8 @@ def simulate(
     s = settings_phase.transfer_function
 
     # --- 2D star phantom (birefringence + phase) ---
-    retardance, orientation, transmittance, depolarization = (
-        inplane_oriented_thick_pol3d.generate_test_phantom(yx_shape)
+    retardance, orientation, transmittance, depolarization = inplane_oriented_thick_pol3d.generate_test_phantom(
+        yx_shape
     )
 
     # Phase from same star pattern (in cycles per voxel)
@@ -83,11 +83,9 @@ def simulate(
     zyx_phase[z_start:z_end] = yx_phase[None, :, :]
 
     # --- Birefringence forward: sample-plane State intensities ---
-    intensity_to_stokes = (
-        inplane_oriented_thick_pol3d.calculate_transfer_function(
-            swing=settings_biref.transfer_function.swing,
-            scheme=scheme,
-        )
+    intensity_to_stokes = inplane_oriented_thick_pol3d.calculate_transfer_function(
+        swing=settings_biref.transfer_function.swing,
+        scheme=scheme,
     )
     # Sample states (includes +0.1 offset from scalar model)
     cyx_states = inplane_oriented_thick_pol3d.apply_transfer_function(
@@ -127,13 +125,11 @@ def simulate(
 
     czyx_defocused = torch.zeros_like(czyx_3d)
     for c in range(num_states):
-        czyx_defocused[c] = (
-            isotropic_fluorescent_thick_3d.apply_transfer_function(
-                czyx_3d[c],
-                widefield_otf,
-                z_padding=0,
-                background=0,
-            )
+        czyx_defocused[c] = isotropic_fluorescent_thick_3d.apply_transfer_function(
+            czyx_3d[c],
+            widefield_otf,
+            z_padding=0,
+            background=0,
         )
 
     # --- Add WOTF-based phase contrast to S0 ---
@@ -245,11 +241,9 @@ def compute_transfer_function(
         input_channel_names = list(czyx_data.coords["c"].values)
 
     # Compute birefringence TF
-    intensity_to_stokes_matrix = (
-        inplane_oriented_thick_pol3d.calculate_transfer_function(
-            scheme=str(len(input_channel_names)) + "-State",
-            **settings_biref.transfer_function.model_dump(),
-        )
+    intensity_to_stokes_matrix = inplane_oriented_thick_pol3d.calculate_transfer_function(
+        scheme=str(len(input_channel_names)) + "-State",
+        **settings_biref.transfer_function.model_dump(),
     )
 
     # Compute vector birefringence TF
@@ -257,21 +251,17 @@ def compute_transfer_function(
 
     num_elements = np.array(zyx_shape).prod()
     max_tf_elements = 1e7
-    transverse_downsample_factor = np.ceil(
-        np.sqrt(num_elements / max_tf_elements)
-    )
+    transverse_downsample_factor = np.ceil(np.sqrt(num_elements / max_tf_elements))
 
     phase_settings_dict = settings_phase.transfer_function.model_dump()
     phase_settings_dict.pop("z_focus_offset")
 
-    sfZYX_transfer_function, _, singular_system = (
-        inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
-            zyx_shape=zyx_shape,
-            scheme=str(len(input_channel_names)) + "-State",
-            **settings_biref.transfer_function.model_dump(),
-            **phase_settings_dict,
-            fourier_oversample_factor=int(transverse_downsample_factor),
-        )
+    sfZYX_transfer_function, _, singular_system = inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
+        zyx_shape=zyx_shape,
+        scheme=str(len(input_channel_names)) + "-State",
+        **settings_biref.transfer_function.model_dump(),
+        **phase_settings_dict,
+        fourier_oversample_factor=int(transverse_downsample_factor),
     )
 
     U, S, Vh = singular_system
@@ -286,15 +276,9 @@ def compute_transfer_function(
             sfZYX_transfer_function.cpu().numpy(),
             "vector_transfer_function",
         ),
-        "vector_singular_system_U": _named_dataarray(
-            U.cpu().numpy(), "vector_singular_system_U"
-        ),
-        "vector_singular_system_S": _named_dataarray(
-            S.cpu().numpy(), "vector_singular_system_S"
-        ),
-        "vector_singular_system_Vh": _named_dataarray(
-            Vh.cpu().numpy(), "vector_singular_system_Vh"
-        ),
+        "vector_singular_system_U": _named_dataarray(U.cpu().numpy(), "vector_singular_system_U"),
+        "vector_singular_system_S": _named_dataarray(S.cpu().numpy(), "vector_singular_system_S"),
+        "vector_singular_system_Vh": _named_dataarray(Vh.cpu().numpy(), "vector_singular_system_Vh"),
     }
 
     # For 3D, also compute phase TFs (needed by apply_inverse)
@@ -302,9 +286,7 @@ def compute_transfer_function(
         settings_dict = settings_phase.transfer_function.model_dump()
         settings_dict.pop("z_focus_offset")
 
-        real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(
-            zyx_shape=zyx_shape, **settings_dict
-        )
+        real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(zyx_shape=zyx_shape, **settings_dict)
 
         variables["real_potential_transfer_function"] = _named_dataarray(
             real_tf.cpu().numpy(), "real_potential_transfer_function"
@@ -337,35 +319,25 @@ def apply_inverse_transfer_function(
     biref_kwargs = _biref_inverse_kwargs(settings_biref)
 
     czyx_tensor = torch.tensor(czyx_data.values, dtype=torch.float32)
-    bg_tensor = (
-        torch.tensor(cyx_no_sample_data, dtype=torch.float32)
-        if cyx_no_sample_data is not None
-        else None
-    )
-    intensity_to_stokes_matrix = _to_tensor(
-        transfer_function, "intensity_to_stokes_matrix"
-    )
+    bg_tensor = torch.tensor(cyx_no_sample_data, dtype=torch.float32) if cyx_no_sample_data is not None else None
+    intensity_to_stokes_matrix = _to_tensor(transfer_function, "intensity_to_stokes_matrix")
 
     # [biref and phase, 2]
     if recon_dim == 2:
-        reconstructed_parameters_2d = (
-            inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
-                czyx_tensor,
-                intensity_to_stokes_matrix,
-                cyx_no_sample_data=bg_tensor,
-                project_stokes_to_2d=True,
-                **biref_kwargs,
-            )
+        reconstructed_parameters_2d = inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
+            czyx_tensor,
+            intensity_to_stokes_matrix,
+            cyx_no_sample_data=bg_tensor,
+            project_stokes_to_2d=True,
+            **biref_kwargs,
         )
 
-        reconstructed_parameters_3d = (
-            inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
-                czyx_tensor,
-                intensity_to_stokes_matrix,
-                cyx_no_sample_data=bg_tensor,
-                project_stokes_to_2d=False,
-                **biref_kwargs,
-            )
+        reconstructed_parameters_3d = inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
+            czyx_tensor,
+            intensity_to_stokes_matrix,
+            cyx_no_sample_data=bg_tensor,
+            project_stokes_to_2d=False,
+            **biref_kwargs,
         )
 
         brightfield_3d = reconstructed_parameters_3d[2]
@@ -379,26 +351,18 @@ def apply_inverse_transfer_function(
             **settings_phase.apply_inverse.model_dump(),
         )
 
-        retardance = radians_to_nanometers(
-            reconstructed_parameters_2d[0], wavelength
-        )
+        retardance = radians_to_nanometers(reconstructed_parameters_2d[0], wavelength)
 
-        output = torch.stack(
-            (retardance,)
-            + reconstructed_parameters_2d[1:]
-            + (torch.unsqueeze(yx_phase, 0),)
-        )  # CZYX
+        output = torch.stack((retardance,) + reconstructed_parameters_2d[1:] + (torch.unsqueeze(yx_phase, 0),))  # CZYX
 
     # [biref and phase, 3]
     elif recon_dim == 3:
-        reconstructed_parameters_3d = (
-            inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
-                czyx_tensor,
-                intensity_to_stokes_matrix,
-                cyx_no_sample_data=bg_tensor,
-                project_stokes_to_2d=False,
-                **biref_kwargs,
-            )
+        reconstructed_parameters_3d = inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
+            czyx_tensor,
+            intensity_to_stokes_matrix,
+            cyx_no_sample_data=bg_tensor,
+            project_stokes_to_2d=False,
+            **biref_kwargs,
         )
 
         brightfield_3d = reconstructed_parameters_3d[2]
@@ -406,39 +370,27 @@ def apply_inverse_transfer_function(
         zyx_phase = phase_thick_3d.apply_inverse_transfer_function(
             brightfield_3d,
             _to_tensor(transfer_function, "real_potential_transfer_function"),
-            _to_tensor(
-                transfer_function, "imaginary_potential_transfer_function"
-            ),
+            _to_tensor(transfer_function, "imaginary_potential_transfer_function"),
             z_padding=settings_phase.transfer_function.z_padding,
             **settings_phase.apply_inverse.model_dump(),
         )
 
-        retardance = radians_to_nanometers(
-            reconstructed_parameters_3d[0], wavelength
-        )
+        retardance = radians_to_nanometers(reconstructed_parameters_3d[0], wavelength)
 
         # Convert retardance and orientation to stokes
         stokes = stokes_after_adr(*reconstructed_parameters_3d)
 
-        stokes = torch.nan_to_num_(
-            torch.stack(stokes), nan=0.0
-        )  # very rare nans from previous line
+        stokes = torch.nan_to_num_(torch.stack(stokes), nan=0.0)  # very rare nans from previous line
 
         joint_recon_params = inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
             szyx_data=stokes,
-            singular_system=_to_singular_system(
-                transfer_function, "vector_singular_system"
-            ),
+            singular_system=_to_singular_system(transfer_function, "vector_singular_system"),
             intensity_to_stokes_matrix=None,
             **settings_phase.apply_inverse.model_dump(),
         )
 
-        new_ret = (
-            joint_recon_params[1] ** 2 + joint_recon_params[2] ** 2
-        ) ** (0.5)
-        new_ori = _s12_to_orientation(
-            joint_recon_params[1], -joint_recon_params[2]
-        )
+        new_ret = (joint_recon_params[1] ** 2 + joint_recon_params[2] ** 2) ** (0.5)
+        new_ori = _s12_to_orientation(joint_recon_params[1], -joint_recon_params[2])
 
         new_ret_nm = radians_to_nanometers(new_ret, wavelength)
 
@@ -453,9 +405,7 @@ def apply_inverse_transfer_function(
 
     return _build_output_xarray(
         output.numpy(),
-        _output_channel_names(
-            recon_biref=True, recon_phase=True, recon_dim=recon_dim
-        ),
+        _output_channel_names(recon_biref=True, recon_phase=True, recon_dim=recon_dim),
         czyx_data,
         singleton_z=(recon_dim == 2),
     )

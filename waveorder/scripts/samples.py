@@ -56,9 +56,7 @@ def download_and_unzip(data_type: Literal["target", "embryo"]) -> tuple[Path]:
         download(data_url, out=str(temp_dirpath))
 
     if not data_dirpath.exists():
-        shutil.unpack_archive(
-            data_dirpath.with_suffix(".zip"), extract_dir=temp_dirpath
-        )
+        shutil.unpack_archive(data_dirpath.with_suffix(".zip"), extract_dir=temp_dirpath)
 
     data_path = data_dirpath / "raw_data.zarr"
     recon_path = data_dirpath / "reconstruction.zarr"

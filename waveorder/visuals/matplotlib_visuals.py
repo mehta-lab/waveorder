@@ -127,15 +127,9 @@ def plot_5d_ortho(
             if i > 0 and j > 0:
                 color_func = color_funcs[int((i - 1) / 2)][int((j - 1) / 2)]
 
-                Cyx_data = rcCzyx_data[
-                    int((i - 1) / 2), int((j - 1) / 2), :, zyx_slice[0]
-                ]
-                Cyz_data = rcCzyx_data[
-                    int((i - 1) / 2), int((j - 1) / 2), :, :, :, zyx_slice[2]
-                ].transpose(0, 2, 1)
-                Czx_data = rcCzyx_data[
-                    int((i - 1) / 2), int((j - 1) / 2), :, :, zyx_slice[1]
-                ]
+                Cyx_data = rcCzyx_data[int((i - 1) / 2), int((j - 1) / 2), :, zyx_slice[0]]
+                Cyz_data = rcCzyx_data[int((i - 1) / 2), int((j - 1) / 2), :, :, :, zyx_slice[2]].transpose(0, 2, 1)
+                Czx_data = rcCzyx_data[int((i - 1) / 2), int((j - 1) / 2), :, :, zyx_slice[1]]
 
                 # YX
                 if (i - 1) % 2 == 0 and (j - 1) % 2 == 0:
@@ -162,10 +156,7 @@ def plot_5d_ortho(
             left = axes[0, 0].get_position().x0
             right = axes[-1, -1].get_position().x1
             if i == 0 and (j - 1) % 2 == 0:
-                left_edge = (
-                    axes[0, j].get_position().x0
-                    + axes[0, j - 1].get_position().x1
-                ) / 2
+                left_edge = (axes[0, j].get_position().x0 + axes[0, j - 1].get_position().x1) / 2
                 fig.add_artist(
                     plt.Line2D(
                         [left_edge, left_edge],
@@ -176,10 +167,7 @@ def plot_5d_ortho(
                     )
                 )
             if j == 0 and (i - 1) % 2 == 0:
-                top_edge = (
-                    axes[i, 0].get_position().y1
-                    + axes[i - 1, 0].get_position().y0
-                ) / 2
+                top_edge = (axes[i, 0].get_position().y1 + axes[i - 1, 0].get_position().y0) / 2
                 fig.add_artist(
                     plt.Line2D(
                         [left, right],
@@ -191,9 +179,7 @@ def plot_5d_ortho(
                 )
 
             # Remove ticks and spines
-            axes[i, j].tick_params(
-                left=False, bottom=False, labelleft=False, labelbottom=False
-            )
+            axes[i, j].tick_params(left=False, bottom=False, labelleft=False, labelbottom=False)
             axes[i, j].spines["top"].set_visible(False)
             axes[i, j].spines["right"].set_visible(False)
             axes[i, j].spines["bottom"].set_visible(False)

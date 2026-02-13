@@ -15,22 +15,14 @@ simulation_arguments = {"yx_shape": (256, 256)}
 transfer_function_arguments = {"swing": 0.1, "scheme": "4-State"}
 
 # Create a phantom
-inplane_oriented_parameters = (
-    inplane_oriented_thick_pol3d.generate_test_phantom(**simulation_arguments)
-)
+inplane_oriented_parameters = inplane_oriented_thick_pol3d.generate_test_phantom(**simulation_arguments)
 
 # Calculate transfer function
-intensity_to_stokes_matrix = (
-    inplane_oriented_thick_pol3d.calculate_transfer_function(
-        **transfer_function_arguments
-    )
-)
+intensity_to_stokes_matrix = inplane_oriented_thick_pol3d.calculate_transfer_function(**transfer_function_arguments)
 
 # Display transfer function
 viewer = napari.Viewer()
-inplane_oriented_thick_pol3d.visualize_transfer_function(
-    viewer, intensity_to_stokes_matrix
-)
+inplane_oriented_thick_pol3d.visualize_transfer_function(viewer, intensity_to_stokes_matrix)
 input("Showing transfer functions. Press <enter> to continue...")
 viewer.layers.select_all()
 viewer.layers.remove_selected()
@@ -42,10 +34,8 @@ czyx_data = inplane_oriented_thick_pol3d.apply_transfer_function(
 )
 
 # Reconstruct
-inplane_oriented_parameters_recon = (
-    inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
-        czyx_data, intensity_to_stokes_matrix
-    )
+inplane_oriented_parameters_recon = inplane_oriented_thick_pol3d.apply_inverse_transfer_function(
+    czyx_data, intensity_to_stokes_matrix
 )
 
 # Display

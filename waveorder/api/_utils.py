@@ -7,9 +7,7 @@ import torch
 import xarray as xr
 
 
-def _position_list_from_shape_scale_offset(
-    shape: int, scale: float, offset: float
-) -> list:
+def _position_list_from_shape_scale_offset(shape: int, scale: float, offset: float) -> list:
     """
     Generates a list of positions based on the given array shape,
     pixel size (scale), and offset.
@@ -52,9 +50,7 @@ def _to_singular_system(
 
 def _biref_inverse_kwargs(settings) -> dict:
     """Extract model kwargs from birefringence apply-inverse settings."""
-    return settings.apply_inverse.model_dump(
-        exclude={"background_path", "wavelength_illumination"}
-    )
+    return settings.apply_inverse.model_dump(exclude={"background_path", "wavelength_illumination"})
 
 
 def _output_channel_names(
@@ -85,15 +81,11 @@ def _output_channel_names(
             "Phase_Joint_Decon",
         ]
     if recon_fluo:
-        names.append(
-            f"{fluor_channel_name}_Density{'2D' if recon_dim == 2 else '3D'}"
-        )
+        names.append(f"{fluor_channel_name}_Density{'2D' if recon_dim == 2 else '3D'}")
     return names
 
 
-def radians_to_nanometers(
-    retardance_rad: torch.Tensor, wavelength_illumination_um: float
-) -> torch.Tensor:
+def radians_to_nanometers(retardance_rad: torch.Tensor, wavelength_illumination_um: float) -> torch.Tensor:
     """
     waveorder returns retardance in radians, while waveorder displays and saves
     retardance in nanometers. This function converts from radians to nanometers
