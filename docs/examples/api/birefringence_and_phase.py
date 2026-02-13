@@ -31,7 +31,7 @@ channel_names = [f"State{i}" for i in range(4)]
 phantom, data = birefringence_and_phase.simulate(
     biref_settings,
     phase_settings,
-    zyx_shape=(100, 256, 256),
+    zyx_shape=(32, 128, 128),  # use (100, 256, 256) for higher quality
     scheme="4-State",
 )
 
