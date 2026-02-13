@@ -294,6 +294,51 @@ def test_subpixel_precision_with_plotting(tmp_path):
     assert plot_path.exists()
 
 
+def test_compute_midband_power_3d():
+    """Test that compute_midband_power handles (Z, Y, X) input."""
+    ps = 6.5 / 100
+    lambda_ill = 0.532
+    NA_det = 1.4
+
+    np.random.seed(42)
+    data_3d = torch.from_numpy(np.random.random((7, 64, 64)).astype(np.float32))
+
+    result = focus.compute_midband_power(data_3d, NA_det, lambda_ill, ps)
+    assert isinstance(result, torch.Tensor)
+    assert result.shape == (7,)
+    assert (result > 0).all()
+
+
+def test_focus_from_transverse_band_tensor():
+    """Test that focus_from_transverse_band accepts a torch Tensor."""
+    ps = 6.5 / 100
+    lambda_ill = 0.532
+    NA_det = 1.4
+
+    np.random.seed(42)
+    data_np = np.random.random((11, 64, 64)).astype(np.float32)
+    data_tensor = torch.from_numpy(data_np)
+
+    result_np = focus.focus_from_transverse_band(data_np, NA_det, lambda_ill, ps)
+    result_tensor = focus.focus_from_transverse_band(data_tensor, NA_det, lambda_ill, ps)
+    assert result_np == result_tensor
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
+def test_focus_from_transverse_band_gpu():
+    """Test focus_from_transverse_band with a GPU tensor."""
+    ps = 6.5 / 100
+    lambda_ill = 0.532
+    NA_det = 1.4
+
+    np.random.seed(42)
+    data_np = np.random.random((7, 64, 64)).astype(np.float32)
+
+    cpu_result = focus.focus_from_transverse_band(data_np, NA_det, lambda_ill, ps)
+    gpu_result = focus.focus_from_transverse_band(torch.from_numpy(data_np).cuda(), NA_det, lambda_ill, ps)
+    assert cpu_result == gpu_result
+
+
 def test_z_focus_offset_float_type():
     """Test that z_focus_offset can accept float values in settings."""
     from waveorder.cli.settings import FourierTransferFunctionSettings
