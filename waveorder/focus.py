@@ -1,5 +1,5 @@
 import warnings
-from typing import Literal, Optional
+from typing import Callable, Literal, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -75,18 +75,18 @@ def compute_midband_power(
 
 
 def focus_from_transverse_band(
-    zyx_array,
-    NA_det,
-    lambda_ill,
-    pixel_size,
-    midband_fractions=(0.125, 0.25),
+    zyx_array: Union[np.ndarray, torch.Tensor],
+    NA_det: float,
+    lambda_ill: float,
+    pixel_size: float,
+    midband_fractions: tuple[float, float] = (0.125, 0.25),
     mode: Literal["min", "max"] = "max",
     polynomial_fit_order: Optional[int] = None,
     plot_path: Optional[str] = None,
     threshold_FWHM: float = 0,
     return_statistics: bool = False,
     enable_subpixel_precision: bool = False,
-):
+) -> Union[int, float, None, tuple[Union[int, float, None], dict]]:
     """Estimates the in-focus slice from a 3D stack by optimizing a transverse spatial frequency band.
 
     Parameters
@@ -243,7 +243,7 @@ def focus_from_transverse_band(
     return in_focus_index
 
 
-def _mode_to_minmaxfunc(mode):
+def _mode_to_minmaxfunc(mode: Literal["min", "max"]) -> Callable:
     if mode == "min":
         minmaxfunc = np.argmin
     elif mode == "max":
@@ -254,8 +254,12 @@ def _mode_to_minmaxfunc(mode):
 
 
 def _check_focus_inputs(
-    zyx_array, NA_det, lambda_ill, pixel_size, midband_fractions
-):
+    zyx_array: Union[np.ndarray, torch.Tensor],
+    NA_det: float,
+    lambda_ill: float,
+    pixel_size: float,
+    midband_fractions: tuple[float, float],
+) -> None:
     N = len(zyx_array.shape)
     if N != 3:
         raise ValueError(
@@ -285,13 +289,13 @@ def _check_focus_inputs(
 
 
 def _plot_focus_metric(
-    plot_path,
-    midband_sum,
-    peak_index,
-    in_focus_index,
-    peak_results,
-    threshold_FWHM,
-):
+    plot_path: str,
+    midband_sum: np.ndarray,
+    peak_index: Union[int, float],
+    in_focus_index: Union[int, float, None],
+    peak_results: tuple,
+    threshold_FWHM: float,
+) -> None:
     _, ax = plt.subplots(1, 1, figsize=(4, 4))
     ax.plot(midband_sum, "-k")
 
