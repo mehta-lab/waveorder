@@ -1,5 +1,5 @@
 import warnings
-from typing import Literal, Optional
+from typing import Callable, Literal, Optional, Union
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -10,7 +10,7 @@ from waveorder import util
 
 
 def compute_midband_power(
-    yx_array: torch.Tensor,
+    input_tensor: torch.Tensor,
     NA_det: float,
     lambda_ill: float,
     pixel_size: float,
@@ -18,18 +18,22 @@ def compute_midband_power(
 ) -> torch.Tensor:
     """Compute midband spatial frequency power by summing over a 2D midband donut.
 
+    Accepts a 2D ``(Y, X)`` or 3D ``(Z, Y, X)`` tensor.  For 3D input the
+    frequency mask is computed once and a batched 2D FFT is applied across all
+    Z slices, which is significantly faster than looping.
+
     Parameters
     ----------
-    yx_array : torch.Tensor
-        2D tensor in (Y, X) order.
+    input_tensor : torch.Tensor
+        2D ``(Y, X)`` or 3D ``(Z, Y, X)`` tensor.
     NA_det : float
         Detection NA.
     lambda_ill : float
         Illumination wavelength.
-        Units are arbitrary, but must match [pixel_size].
+        Units are arbitrary, but must match ``pixel_size``.
     pixel_size : float
         Object-space pixel size = camera pixel size / magnification.
-        Units are arbitrary, but must match [lambda_ill].
+        Units are arbitrary, but must match ``lambda_ill``.
     midband_fractions : tuple[float, float], optional
         The minimum and maximum fraction of the cutoff frequency that define the midband.
         Default is (0.125, 0.25).
@@ -37,37 +41,57 @@ def compute_midband_power(
     Returns
     -------
     torch.Tensor
-        Sum of absolute FFT values in the midband region.
+        2D input: scalar tensor.
+        3D input: tensor of shape ``(Z,)`` with per-slice midband power.
     """
-    _, _, fxx, fyy = util.gen_coordinate(yx_array.shape, pixel_size)
-    frr = torch.tensor(np.sqrt(fxx**2 + fyy**2))
-    xy_abs_fft = torch.abs(torch.fft.fftn(yx_array))
+    if input_tensor.ndim == 2:
+        input_tensor = input_tensor.unsqueeze(0)  # (1, Y, X)
+        squeeze = True
+    elif input_tensor.ndim == 3:
+        squeeze = False
+    else:
+        raise ValueError(
+            f"{input_tensor.ndim}D tensor supplied. "
+            "`compute_midband_power` only accepts 2D or 3D tensors."
+        )
+
+    Z, Y, X = input_tensor.shape
+    device = input_tensor.device
+
+    _, _, fxx, fyy = util.gen_coordinate((Y, X), pixel_size)
+    frr = torch.tensor(np.sqrt(fxx**2 + fyy**2), device=device)
     cutoff = 2 * NA_det / lambda_ill
     mask = torch.logical_and(
         frr > cutoff * midband_fractions[0],
         frr < cutoff * midband_fractions[1],
     )
-    return torch.sum(xy_abs_fft[mask])
+
+    abs_fft = torch.abs(torch.fft.fftn(input_tensor.float(), dim=(-2, -1)))
+    result = abs_fft[:, mask].sum(dim=-1)  # (Z,)
+
+    if squeeze:
+        return result.squeeze(0)
+    return result
 
 
 def focus_from_transverse_band(
-    zyx_array,
-    NA_det,
-    lambda_ill,
-    pixel_size,
-    midband_fractions=(0.125, 0.25),
+    zyx_array: Union[np.ndarray, torch.Tensor],
+    NA_det: float,
+    lambda_ill: float,
+    pixel_size: float,
+    midband_fractions: tuple[float, float] = (0.125, 0.25),
     mode: Literal["min", "max"] = "max",
     polynomial_fit_order: Optional[int] = None,
     plot_path: Optional[str] = None,
     threshold_FWHM: float = 0,
     return_statistics: bool = False,
     enable_subpixel_precision: bool = False,
-):
+) -> Union[int, float, None, tuple[Union[int, float, None], dict]]:
     """Estimates the in-focus slice from a 3D stack by optimizing a transverse spatial frequency band.
 
     Parameters
     ----------
-    zyx_array: np.array
+    zyx_array: np.ndarray or torch.Tensor
         Data stack in (Z, Y, X) order.
         Requires len(zyx_array.shape) == 3.
     NA_det: float
@@ -134,19 +158,20 @@ def focus_from_transverse_band(
             return 0, peak_stats
         return 0
 
-    # Calculate midband power for each slice
-    midband_sum = np.array(
-        [
-            compute_midband_power(
-                torch.from_numpy(zyx_array[z]),
-                NA_det,
-                lambda_ill,
-                pixel_size,
-                midband_fractions,
-            ).numpy()
-            for z in range(zyx_array.shape[0])
-        ]
-    )
+    # Convert to tensor if needed for vectorized midband power
+    if isinstance(zyx_array, np.ndarray):
+        zyx_tensor = torch.from_numpy(zyx_array).float()
+    else:
+        zyx_tensor = zyx_array.float()
+
+    # Calculate midband power for each slice (vectorized over Z)
+    midband_sum = (
+        compute_midband_power(
+            zyx_tensor, NA_det, lambda_ill, pixel_size, midband_fractions
+        )
+        .cpu()
+        .numpy()
+    )  # (Z,)
 
     if polynomial_fit_order is None:
         peak_index = minmaxfunc(midband_sum)
@@ -218,7 +243,7 @@ def focus_from_transverse_band(
     return in_focus_index
 
 
-def _mode_to_minmaxfunc(mode):
+def _mode_to_minmaxfunc(mode: Literal["min", "max"]) -> Callable:
     if mode == "min":
         minmaxfunc = np.argmin
     elif mode == "max":
@@ -229,8 +254,12 @@ def _mode_to_minmaxfunc(mode):
 
 
 def _check_focus_inputs(
-    zyx_array, NA_det, lambda_ill, pixel_size, midband_fractions
-):
+    zyx_array: Union[np.ndarray, torch.Tensor],
+    NA_det: float,
+    lambda_ill: float,
+    pixel_size: float,
+    midband_fractions: tuple[float, float],
+) -> None:
     N = len(zyx_array.shape)
     if N != 3:
         raise ValueError(
@@ -260,13 +289,13 @@ def _check_focus_inputs(
 
 
 def _plot_focus_metric(
-    plot_path,
-    midband_sum,
-    peak_index,
-    in_focus_index,
-    peak_results,
-    threshold_FWHM,
-):
+    plot_path: str,
+    midband_sum: np.ndarray,
+    peak_index: Union[int, float],
+    in_focus_index: Union[int, float, None],
+    peak_results: tuple,
+    threshold_FWHM: float,
+) -> None:
     _, ax = plt.subplots(1, 1, figsize=(4, 4))
     ax.plot(midband_sum, "-k")
 
