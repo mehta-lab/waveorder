@@ -35,7 +35,7 @@ from waveorder.stokes import _s12_to_orientation, stokes_after_adr
 def simulate(
     settings_biref: birefringence.Settings = None,
     settings_phase: phase.Settings = None,
-    zyx_shape: tuple[int, int, int] = (100, 256, 256),
+    zyx_shape: tuple[int, int, int] = (32, 128, 128),
     scheme: str = "4-State",
     index_of_refraction_sample: float = 1.50,
     z_thickness: int = 5,
