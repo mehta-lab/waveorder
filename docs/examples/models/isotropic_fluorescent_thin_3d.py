@@ -1,4 +1,7 @@
-# Fluorescent thin object 3D simulation and reconstruction
+"""
+Fluorescent thin object 3D simulation and reconstruction
+=========================================================
+"""
 
 import napari
 import numpy as np
