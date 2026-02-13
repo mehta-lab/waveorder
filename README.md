@@ -210,7 +210,7 @@ We also maintain two dependency sets for different interfaces:
 
 ```sh
 pip install waveorder          # API, CLI
-pip install waveorder[visual]  # API, CLI, GUI
+pip install waveorder[visual]  # API, CLI, GUI (also available as waveorder[all])
 ```
 
 (M1 users) `pytorch` has [incomplete GPU support](https://github.com/pytorch/pytorch/issues/77764),
@@ -224,6 +224,6 @@ The [examples](https://github.com/mehta-lab/waveorder/tree/main/docs/examples) i
 ```sh
 git clone https://github.com/mehta-lab/waveorder.git
 cd waveorder
-pip install -e .[visual]
+pip install -e .[all]
 python ./docs/examples/models/phase_thick_3d.py
 ```

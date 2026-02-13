@@ -70,6 +70,7 @@ visual = [
   "jupyter",
   "jupytext",
 ]
+all = ["waveorder[visual]"]
 
 [dependency-groups]
 test = [

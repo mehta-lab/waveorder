@@ -43,7 +43,7 @@ conda activate waveorder
 
 Install `waveorder` with acquisition dependencies (napari and pycro-manager):
 ```
-pip install waveorder[visual]
+pip install waveorder[all]
 ```
 Check your installation:
 ```

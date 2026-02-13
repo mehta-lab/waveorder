@@ -32,7 +32,7 @@ Install `waveorder` with acquisition dependencies
 (napari with PyQt6 and pycro-manager):
 
 ```sh
-pip install waveorder[visual]
+pip install waveorder[all]
 ```
 
 Install `waveorder` without napari, QtBindings (PyQt/PySide) and pycro-manager dependencies:
