@@ -3,19 +3,41 @@ import os
 import numpy as np
 import pytest
 import torch
+import xarray as xr
 from iohub.ngff import open_ome_zarr
 
 from waveorder.cli import settings
+
+
+@pytest.fixture
+def make_czyx():
+    """Factory fixture for creating synthetic CZYX test DataArrays."""
+
+    def _make(zyx_shape=(5, 32, 32), n_channels=1):
+        rng = np.random.default_rng(42)
+        data = rng.random((n_channels,) + zyx_shape, dtype=np.float32)
+        z_pixel_size = 2.0
+        yx_pixel_size = 6.5 / 20
+
+        return xr.DataArray(
+            data,
+            dims=("c", "z", "y", "x"),
+            coords={
+                "c": [f"ch{i}" for i in range(n_channels)],
+                "z": np.arange(zyx_shape[0]) * z_pixel_size,
+                "y": np.arange(zyx_shape[1]) * yx_pixel_size,
+                "x": np.arange(zyx_shape[2]) * yx_pixel_size,
+            },
+        )
+
+    return _make
 
 
 def device_params():
     devices = ["cpu"]
     if torch.cuda.is_available():
         devices.append("cuda")
-    if (
-        torch.backends.mps.is_available()
-        and os.getenv("GITHUB_ACTIONS") == "false"
-    ):
+    if torch.backends.mps.is_available() and os.getenv("GITHUB_ACTIONS") == "false":
         devices.append("mps")
     return "device", devices
 

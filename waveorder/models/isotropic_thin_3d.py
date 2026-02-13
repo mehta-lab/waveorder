@@ -24,10 +24,7 @@ def generate_test_phantom(
         blur_size=2 * yx_pixel_size,
     )
     yx_phase = (
-        sphere[1]
-        * (index_of_refraction_sample - index_of_refraction_media)
-        * 0.1
-        / wavelength_illumination
+        sphere[1] * (index_of_refraction_sample - index_of_refraction_media) * 0.1 / wavelength_illumination
     )  # phase in radians
 
     yx_absorption = torch.clone(yx_phase)
@@ -72,20 +69,14 @@ def calculate_transfer_function(
     absorption_2d_to_3d_transfer_function_out = torch.zeros(
         (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64
     )
-    phase_2d_to_3d_transfer_function_out = torch.zeros(
-        (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64
-    )
+    phase_2d_to_3d_transfer_function_out = torch.zeros((len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64)
 
     for z in range(len(z_position_list)):
-        absorption_2d_to_3d_transfer_function_out[z] = (
-            sampling.nd_fourier_central_cuboid(
-                absorption_2d_to_3d_transfer_function[z], yx_shape
-            )
+        absorption_2d_to_3d_transfer_function_out[z] = sampling.nd_fourier_central_cuboid(
+            absorption_2d_to_3d_transfer_function[z], yx_shape
         )
-        phase_2d_to_3d_transfer_function_out[z] = (
-            sampling.nd_fourier_central_cuboid(
-                phase_2d_to_3d_transfer_function[z], yx_shape
-            )
+        phase_2d_to_3d_transfer_function_out[z] = sampling.nd_fourier_central_cuboid(
+            phase_2d_to_3d_transfer_function[z], yx_shape
         )
 
     return (
@@ -115,9 +106,7 @@ def _calculate_wrap_unsafe_transfer_function(
 
     if invert_phase_contrast:
         z_position_list = [-1 * x for x in z_position_list]
-    radial_frequencies = util.generate_radial_frequencies(
-        yx_shape, yx_pixel_size
-    )
+    radial_frequencies = util.generate_radial_frequencies(yx_shape, yx_pixel_size)
 
     illumination_pupil = optics.generate_pupil(
         radial_frequencies,
@@ -137,19 +126,13 @@ def _calculate_wrap_unsafe_transfer_function(
     )
 
     zyx_shape = (len(z_position_list),) + tuple(yx_shape)
-    absorption_2d_to_3d_transfer_function = torch.zeros(
-        zyx_shape, dtype=torch.complex64
-    )
-    phase_2d_to_3d_transfer_function = torch.zeros(
-        zyx_shape, dtype=torch.complex64
-    )
+    absorption_2d_to_3d_transfer_function = torch.zeros(zyx_shape, dtype=torch.complex64)
+    phase_2d_to_3d_transfer_function = torch.zeros(zyx_shape, dtype=torch.complex64)
     for z in range(len(z_position_list)):
         (
             absorption_2d_to_3d_transfer_function[z],
             phase_2d_to_3d_transfer_function[z],
-        ) = optics.compute_weak_object_transfer_function_2d(
-            illumination_pupil, detection_pupil * propagation_kernel[z]
-        )
+        ) = optics.compute_weak_object_transfer_function_2d(illumination_pupil, detection_pupil * propagation_kernel[z])
 
     return (
         absorption_2d_to_3d_transfer_function,
@@ -257,21 +240,13 @@ def apply_transfer_function(
 
     # simulate absorbing object
     yx_absorption_hat = torch.fft.fftn(yx_absorption)
-    zyx_absorption_data_hat = yx_absorption_hat[None, ...] * torch.real(
-        absorption_2d_to_3d_transfer_function
-    )
-    zyx_absorption_data = torch.real(
-        torch.fft.ifftn(zyx_absorption_data_hat, dim=(1, 2))
-    )
+    zyx_absorption_data_hat = yx_absorption_hat[None, ...] * torch.real(absorption_2d_to_3d_transfer_function)
+    zyx_absorption_data = torch.real(torch.fft.ifftn(zyx_absorption_data_hat, dim=(1, 2)))
 
     # simulate phase object
     yx_phase_hat = torch.fft.fftn(yx_phase)
-    zyx_phase_data_hat = yx_phase_hat[None, ...] * torch.real(
-        phase_2d_to_3d_transfer_function
-    )
-    zyx_phase_data = torch.real(
-        torch.fft.ifftn(zyx_phase_data_hat, dim=(1, 2))
-    )
+    zyx_phase_data_hat = yx_phase_hat[None, ...] * torch.real(phase_2d_to_3d_transfer_function)
+    zyx_phase_data = torch.real(torch.fft.ifftn(zyx_phase_data_hat, dim=(1, 2)))
 
     # sum and add background
     data = zyx_absorption_data + zyx_phase_data
@@ -334,9 +309,7 @@ def apply_inverse_transfer_function(
         print("Computing inverse filter")
         U, S, Vh = singular_system
         S_reg = S / (S**2 + regularization_strength)
-        sfyx_inverse_filter = torch.einsum(
-            "sj...,j...,jf...->fs...", U, S_reg, Vh
-        )
+        sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
 
         absorption_yx, phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)
 
@@ -345,3 +318,83 @@ def apply_inverse_transfer_function(
         raise NotImplementedError
 
     return absorption_yx, phase_yx
+
+
+def reconstruct(
+    zyx_data: Tensor,
+    yx_pixel_size: float,
+    z_position_list: list,
+    wavelength_illumination: float,
+    index_of_refraction_media: float,
+    numerical_aperture_illumination: float,
+    numerical_aperture_detection: float,
+    invert_phase_contrast: bool = False,
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    regularization_strength: float = 1e-3,
+    reg_p: float = 1e-6,
+    TV_rho_strength: float = 1e-3,
+    TV_iterations: int = 10,
+    bg_filter: bool = False,
+) -> Tuple[Tensor, Tensor]:
+    """Reconstruct 2D absorption and phase from a brightfield defocus stack.
+
+    Chains calculate_transfer_function, calculate_singular_system,
+    and apply_inverse_transfer_function.
+
+    Parameters
+    ----------
+    zyx_data : Tensor
+        3D raw data, label-free defocus stack
+    yx_pixel_size : float
+        Pixel size in the transverse (Y, X) dimensions
+    z_position_list : list
+        List of Z positions for defocus stack
+    wavelength_illumination : float
+        Wavelength of illumination light
+    index_of_refraction_media : float
+        Refractive index of the surrounding medium
+    numerical_aperture_illumination : float
+        Illumination numerical aperture
+    numerical_aperture_detection : float
+        Detection numerical aperture
+    invert_phase_contrast : bool, optional
+        Invert phase contrast, by default False
+    reconstruction_algorithm : str, optional
+        "Tikhonov" or "TV", by default "Tikhonov"
+    regularization_strength : float, optional
+        Regularization parameter, by default 1e-3
+    reg_p : float, optional
+        TV-specific phase regularization parameter, by default 1e-6
+    TV_rho_strength : float, optional
+        TV-specific regularization parameter, by default 1e-3
+    TV_iterations : int, optional
+        TV-specific number of iterations, by default 10
+    bg_filter : bool, optional
+        Slow-varying 2D background normalization, by default False
+
+    Returns
+    -------
+    Tuple[Tensor, Tensor]
+        yx_absorption, yx_phase
+    """
+    absorption_tf, phase_tf = calculate_transfer_function(
+        zyx_data.shape[-2:],
+        yx_pixel_size,
+        z_position_list,
+        wavelength_illumination,
+        index_of_refraction_media,
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+        invert_phase_contrast=invert_phase_contrast,
+    )
+    singular_system = calculate_singular_system(absorption_tf, phase_tf)
+    return apply_inverse_transfer_function(
+        zyx_data,
+        singular_system,
+        reconstruction_algorithm=reconstruction_algorithm,
+        regularization_strength=regularization_strength,
+        reg_p=reg_p,
+        TV_rho_strength=TV_rho_strength,
+        TV_iterations=TV_iterations,
+        bg_filter=bg_filter,
+    )

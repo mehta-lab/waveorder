@@ -1,0 +1,32 @@
+input_channel_names:                        # names of input channels in the dataset
+- State0
+- State1
+- State2
+- State3
+time_indices: all                           # time points to reconstruct
+reconstruction_dimension: 3                 # 2 for thin samples, 3 for thick
+birefringence:
+  transfer_function:
+    swing: 0.1                              # swing of the liquid crystal (0 to 1)
+  apply_inverse:
+    wavelength_illumination: 0.532          # illumination wavelength in micrometers
+    background_path: ''                     # path to background zarr (empty = no background)
+    remove_estimated_background: false      # estimate and remove background
+    flip_orientation: false                 # flip the orientation angle
+    rotate_orientation: false               # rotate orientation by 90 degrees
+phase:
+  transfer_function:
+    wavelength_illumination: 0.532          # illumination wavelength in micrometers
+    yx_pixel_size: 0.1                      # lateral pixel size in micrometers
+    z_pixel_size: 0.25                      # axial pixel size in micrometers
+    z_padding: 0                            # z slices to pad for axial boundary effects
+    z_focus_offset: 0                       # offset from center slice in slice units (or 'auto')
+    index_of_refraction_media: 1.3          # refractive index of imaging media
+    numerical_aperture_detection: 1.2       # detection objective numerical aperture
+    numerical_aperture_illumination: 0.9    # condenser numerical aperture
+    invert_phase_contrast: false            # invert contrast for positive/negative phase
+  apply_inverse:
+    reconstruction_algorithm: Tikhonov      # 'Tikhonov' or 'TV' regularization
+    regularization_strength: 0.001          # strength of regularization
+    TV_rho_strength: 0.001                  # ADMM rho parameter for TV regularization
+    TV_iterations: 1                        # ADMM iterations for TV regularization

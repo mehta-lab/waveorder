@@ -35,9 +35,7 @@ def add_transfer_function_to_viewer(
         )
     else:
         viewer.add_image(
-            torch.fft.ifftshift(torch.real(transfer_function), dim=shift_dims)
-            .cpu()
-            .numpy(),
+            torch.fft.ifftshift(torch.real(transfer_function), dim=shift_dims).cpu().numpy(),
             colormap="bwr",
             contrast_limits=(-lim, lim),
             scale=1 / voxel_scale,
@@ -45,11 +43,7 @@ def add_transfer_function_to_viewer(
         )
         if transfer_function.dtype == torch.complex64:
             viewer.add_image(
-                torch.fft.ifftshift(
-                    torch.imag(transfer_function), dim=shift_dims
-                )
-                .cpu()
-                .numpy(),
+                torch.fft.ifftshift(torch.imag(transfer_function), dim=shift_dims).cpu().numpy(),
                 colormap="bwr",
                 contrast_limits=(-lim, lim),
                 scale=1 / voxel_scale,

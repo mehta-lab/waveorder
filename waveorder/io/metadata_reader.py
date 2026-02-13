@@ -12,13 +12,7 @@ def load_json(path):
 
 
 def get_last_metadata_file(path):
-    last_metadata_file = natsorted(
-        [
-            file
-            for file in os.listdir(path)
-            if file.startswith("calibration_metadata")
-        ]
-    )[-1]
+    last_metadata_file = natsorted([file for file in os.listdir(path) if file.startswith("calibration_metadata")])[-1]
     return os.path.join(path, last_metadata_file)
 
 
@@ -38,9 +32,7 @@ class MetadataReader:
         self.json_metadata = load_json(self.metadata_path)
 
         self.Timestamp = self.get_summary_calibration_attr("Timestamp")
-        self.waveorder_version = self.get_summary_calibration_attr(
-            "waveorder version"
-        )
+        self.waveorder_version = self.get_summary_calibration_attr("waveorder version")
         self.Calibration_scheme = self.get_calibration_scheme()
         self.Swing = self.get_swing()
         self.Wavelength = self.get_summary_calibration_attr("Wavelength (nm)")
@@ -86,28 +78,13 @@ class MetadataReader:
 
         val = None
         try:
-            val = [
-                self.json_metadata["Calibration"]["LC retardance"][
-                    f"{lc}_{state}"
-                ]
-                for state in states
-            ]
+            val = [self.json_metadata["Calibration"]["LC retardance"][f"{lc}_{state}"] for state in states]
         except KeyError:
             states[0] = "Ext"
             if lc == "LCA":
-                val = [
-                    self.json_metadata["Summary"][
-                        f"[LCA_{state}, LCB_{state}]"
-                    ][0]
-                    for state in states
-                ]
+                val = [self.json_metadata["Summary"][f"[LCA_{state}, LCB_{state}]"][0] for state in states]
             elif lc == "LCB":
-                val = [
-                    self.json_metadata["Summary"][
-                        f"[LCA_{state}, LCB_{state}]"
-                    ][1]
-                    for state in states
-                ]
+                val = [self.json_metadata["Summary"][f"[LCA_{state}, LCB_{state}]"][1] for state in states]
 
         return val
 
@@ -128,12 +105,7 @@ class MetadataReader:
         if "Calibration" in self.json_metadata:
             lc_voltage = self.json_metadata["Calibration"]["LC voltage"]
             if lc_voltage:
-                val = [
-                    self.json_metadata["Calibration"]["LC voltage"][
-                        f"{lc}_{state}"
-                    ]
-                    for state in states
-                ]
+                val = [self.json_metadata["Calibration"]["LC voltage"][f"{lc}_{state}"] for state in states]
 
         return val
 
@@ -147,15 +119,9 @@ class MetadataReader:
     def get_swing_measured(self):
         states = self.get_cal_states()
         try:
-            val = [
-                self.json_metadata["Calibration"][f"Swing_{state}"]
-                for state in states[1:]
-            ]
+            val = [self.json_metadata["Calibration"][f"Swing_{state}"] for state in states[1:]]
         except KeyError:
-            val = [
-                self.json_metadata["Summary"][f"Swing{state}"]
-                for state in states[1:]
-            ]
+            val = [self.json_metadata["Summary"][f"Swing{state}"] for state in states[1:]]
 
         return val
 

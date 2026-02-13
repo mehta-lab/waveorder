@@ -79,9 +79,7 @@ def generate_acq_settings(
         channel_list = []
         for chan in channels:
             # todo: think about how to deal with missing exposure
-            exposure = app.getChannelExposureTime(
-                channel_group, chan, 10
-            )  # sets exposure to 10 if not found
+            exposure = app.getChannelExposureTime(channel_group, chan, 10)  # sets exposure to 10 if not found
             channel = channel_dict.copy()
             channel["config"] = chan
             channel["exposure"] = exposure
@@ -109,11 +107,7 @@ def generate_acq_settings(
     original_json["useSlices"] = do_z
     original_json["useFrames"] = False
     original_json["useChannels"] = True if channels else False
-    original_json["slices"] = (
-        list(np.arange(float(zstart), float(zend + zstep), float(zstep)))
-        if zstart
-        else []
-    )
+    original_json["slices"] = list(np.arange(float(zstart), float(zend + zstep), float(zstep))) if zstart else []
     original_json["sliceZStepUm"] = zstep
     original_json["sliceZBottomUm"] = zstart
     original_json["sliceZTopUm"] = zend

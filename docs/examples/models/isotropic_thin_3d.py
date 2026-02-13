@@ -17,7 +17,7 @@ from waveorder.models import isotropic_thin_3d
 # all lengths must use consistent units e.g. um
 simulation_arguments = {
     "yx_shape": (256, 256),
-    "yx_pixel_size": 6.5 / 63,
+    "yx_pixel_size": 0.1,
     "wavelength_illumination": 0.532,
     "index_of_refraction_media": 1.3,
 }
@@ -32,15 +32,13 @@ zyx_scale = np.array(
     ]
 )
 transfer_function_arguments = {
-    "z_position_list": (np.arange(z_shape) - z_shape // 2) * z_pixel_size,
+    "z_position_list": list((-np.arange(z_shape) + z_shape // 2) * z_pixel_size),
     "numerical_aperture_illumination": 0.9,
     "numerical_aperture_detection": 1.2,
 }
 
 # Create a disk phantom
-yx_absorption, yx_phase = isotropic_thin_3d.generate_test_phantom(
-    **simulation_arguments, **phantom_arguments
-)
+yx_absorption, yx_phase = isotropic_thin_3d.generate_test_phantom(**simulation_arguments, **phantom_arguments)
 yx_absorption[:, 128:] = 0  # half absorbing
 yx_phase[128:] = 0  # half phase
 
@@ -48,9 +46,7 @@ yx_phase[128:] = 0  # half phase
 (
     absorption_2d_to_3d_transfer_function,
     phase_2d_to_3d_transfer_function,
-) = isotropic_thin_3d.calculate_transfer_function(
-    **simulation_arguments, **transfer_function_arguments
-)
+) = isotropic_thin_3d.calculate_transfer_function(**simulation_arguments, **transfer_function_arguments)
 
 # Calculate singular system
 singular_system = isotropic_thin_3d.calculate_singular_system(
@@ -60,13 +56,6 @@ singular_system = isotropic_thin_3d.calculate_singular_system(
 
 # Display transfer function
 viewer = napari.Viewer()
-zyx_scale = np.array(
-    [
-        z_pixel_size,
-        simulation_arguments["yx_pixel_size"],
-        simulation_arguments["yx_pixel_size"],
-    ]
-)
 isotropic_thin_3d.visualize_transfer_function(
     viewer,
     absorption_2d_to_3d_transfer_function,

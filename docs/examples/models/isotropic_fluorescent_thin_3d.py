@@ -1,4 +1,7 @@
-# Fluorescent thin object 3D simulation and reconstruction
+"""
+Fluorescent thin object 3D simulation and reconstruction
+=========================================================
+"""
 
 import napari
 import numpy as np
@@ -9,7 +12,7 @@ from waveorder.models import isotropic_fluorescent_thin_3d
 # all lengths must use consistent units e.g. um
 simulation_arguments = {
     "yx_shape": (256, 256),
-    "yx_pixel_size": 6.5 / 63,
+    "yx_pixel_size": 0.1,
 }
 phantom_arguments = {"sphere_radius": 5}
 z_shape = 100
@@ -22,7 +25,7 @@ zyx_scale = np.array(
     ]
 )
 transfer_function_arguments = {
-    "z_position_list": (np.arange(z_shape) - z_shape // 2) * z_pixel_size,
+    "z_position_list": list((-np.arange(z_shape) + z_shape // 2) * z_pixel_size),
     "wavelength_emission": 0.532,
     "index_of_refraction_media": 1.3,
     "numerical_aperture_detection": 1.2,
@@ -34,16 +37,12 @@ yx_fluorescence_density = isotropic_fluorescent_thin_3d.generate_test_phantom(
 )
 
 # Calculate transfer function
-fluorescent_2d_to_3d_transfer_function = (
-    isotropic_fluorescent_thin_3d.calculate_transfer_function(
-        **simulation_arguments, **transfer_function_arguments
-    )
+fluorescent_2d_to_3d_transfer_function = isotropic_fluorescent_thin_3d.calculate_transfer_function(
+    **simulation_arguments, **transfer_function_arguments
 )
 
 # Calculate singular system
-singular_system = isotropic_fluorescent_thin_3d.calculate_singular_system(
-    fluorescent_2d_to_3d_transfer_function
-)
+singular_system = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_2d_to_3d_transfer_function)
 
 # Display transfer function
 viewer = napari.Viewer()
@@ -63,12 +62,10 @@ zyx_data = isotropic_fluorescent_thin_3d.apply_transfer_function(
 )
 
 # Reconstruct fluorescence density
-yx_fluorescence_recon = (
-    isotropic_fluorescent_thin_3d.apply_inverse_transfer_function(
-        zyx_data,
-        singular_system,
-        regularization_strength=1e-2,
-    )
+yx_fluorescence_recon = isotropic_fluorescent_thin_3d.apply_inverse_transfer_function(
+    zyx_data,
+    singular_system,
+    regularization_strength=1e-2,
 )
 
 # Display results

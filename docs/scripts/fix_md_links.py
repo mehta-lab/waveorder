@@ -80,13 +80,7 @@ def replace_github_videos1(content: str):
     post_fin = '" controls autoplay></video>'
     for replacements in ultimate_replacements:
         if not replacements[2]:
-            src_txt = (
-                pre_src
-                + replacements[0]
-                + post_src1
-                + replacements[0]
-                + post_src2
-            )
+            src_txt = pre_src + replacements[0] + post_src1 + replacements[0] + post_src2
             if src_txt in content:
                 fin_txt = pre_fin + replacements[1] + post_fin
                 content = content.replace(src_txt, fin_txt)
@@ -105,9 +99,7 @@ def replace_github_videos2(content: str):
     for replacements in ultimate_replacements:
         if not replacements[2]:
             src_txt = replacements[0]
-            vid_links = re.finditer(
-                r"video src=\"(.*?)\"", content, re.MULTILINE
-            )
+            vid_links = re.finditer(r"video src=\"(.*?)\"", content, re.MULTILINE)
             for vid_link in vid_links:
                 if src_txt in content:
                     src_txt = vid_link
@@ -115,9 +107,7 @@ def replace_github_videos2(content: str):
                     content = content.replace(src_txt, fin_txt)
                     print(f"Replacing '{src_txt}' with '{fin_txt}'")
                     if not replacements[2]:
-                        success = download_video(
-                            replacements[0], replacements[1]
-                        )
+                        success = download_video(replacements[0], replacements[1])
                         if success:
                             replacements[2] = True
     return content
@@ -127,15 +117,9 @@ def download_video(src_url, filename):
     output_dir = os.environ.get("READTHEDOCS_OUTPUT", "_build/html")
     resp = requests.get(src_url)  # making requests to server
     full_mp4_path = os.path.join(output_dir, "html/_static/videos", filename)
-    with open(
-        full_mp4_path, "wb"
-    ) as f:  # opening a file handler to create new file
+    with open(full_mp4_path, "wb") as f:  # opening a file handler to create new file
         f.write(resp.content)  # writing content to file
-        print(
-            "File {src} downloaded to {dl}".format(
-                src=src_url, dl=full_mp4_path
-            )
-        )
+        print("File {src} downloaded to {dl}".format(src=src_url, dl=full_mp4_path))
         return True
     return False
 

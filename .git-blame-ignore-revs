@@ -6,3 +6,9 @@
 82f6df5ed34460374ce7c0fdca089d8caa570b9f
 aa7050f973f36dc204ea495e105b5432223dc68d
 a3dd7e5e9bc0bed404792e9b241f1639ade76f33
+
+# ruff formatting
+d0a323fcd2692391014988a3799ce199a60dbb7f
+
+# trailing whitespace and missing newlines in non-Python files
+5ee9ce8c210afe6913c1f4de9cae65b6cc99d1ee

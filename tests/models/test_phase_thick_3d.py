@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+import torch
 
 from waveorder.models import phase_thick_3d
 
@@ -54,17 +55,13 @@ def simulate_phase_recon(
     }
 
     # Create a phantom
-    zyx_phase = phase_thick_3d.generate_test_phantom(
-        **simulation_arguments, **phantom_arguments
-    )
+    zyx_phase = phase_thick_3d.generate_test_phantom(**simulation_arguments, **phantom_arguments)
 
     # Calculate transfer function
     (
         real_potential_transfer_function,
         imag_potential_transfer_function,
-    ) = phase_thick_3d.calculate_transfer_function(
-        **simulation_arguments, **transfer_function_arguments
-    )
+    ) = phase_thick_3d.calculate_transfer_function(**simulation_arguments, **transfer_function_arguments)
 
     # Simulate
     zyx_data = phase_thick_3d.apply_transfer_function(
@@ -107,9 +104,7 @@ def test_phase_invariance(z_pixel_size_um, yx_pixel_size_um, tolerance):
     # Baseline with default parameters
     baseline_z_pixel_size_um = 0.1
     baseline = simulate_phase_recon(z_pixel_size_um=baseline_z_pixel_size_um)
-    recon = simulate_phase_recon(
-        z_pixel_size_um=z_pixel_size_um, yx_pixel_size_um=yx_pixel_size_um
-    )
+    recon = simulate_phase_recon(z_pixel_size_um=z_pixel_size_um, yx_pixel_size_um=yx_pixel_size_um)
 
     # Convert from cycles per voxel to Δn (refractive index difference)
     # Δn = (cycles/voxel) × λ_medium / z_pixel_size
@@ -118,7 +113,23 @@ def test_phase_invariance(z_pixel_size_um, yx_pixel_size_um, tolerance):
     recon_delta_n = recon * wavelength_medium / z_pixel_size_um
 
     # The physical property Δn should be invariant to voxel size
-    assert (
-        np.abs((recon_delta_n - baseline_delta_n) / baseline_delta_n)
-        < tolerance
+    assert np.abs((recon_delta_n - baseline_delta_n) / baseline_delta_n) < tolerance
+
+
+def test_reconstruct():
+    zyx_shape = (10, 32, 32)
+    zyx_data = torch.rand(zyx_shape)
+
+    result = phase_thick_3d.reconstruct(
+        zyx_data,
+        yx_pixel_size=6.5 / 40,
+        z_pixel_size=0.5,
+        wavelength_illumination=0.532,
+        z_padding=0,
+        index_of_refraction_media=1.3,
+        numerical_aperture_illumination=0.5,
+        numerical_aperture_detection=1.2,
     )
+
+    assert result.shape == zyx_shape
+    assert np.all(np.isfinite(result.numpy()))

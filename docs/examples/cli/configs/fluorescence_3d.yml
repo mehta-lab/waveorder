@@ -1,0 +1,19 @@
+input_channel_names:                        # names of input channels in the dataset
+- GFP
+time_indices: all                           # time points to reconstruct
+reconstruction_dimension: 3                 # 2 for thin samples, 3 for thick
+fluorescence:
+  transfer_function:
+    yx_pixel_size: 0.1                      # lateral pixel size in micrometers
+    z_pixel_size: 0.25                      # axial pixel size in micrometers
+    z_padding: 0                            # z slices to pad for axial boundary effects
+    z_focus_offset: 0                       # offset from center slice in slice units (or 'auto')
+    index_of_refraction_media: 1.3          # refractive index of imaging media
+    numerical_aperture_detection: 1.2       # detection objective numerical aperture
+    wavelength_emission: 0.532              # emission wavelength in micrometers
+    confocal_pinhole_diameter: null         # confocal pinhole diameter (null = widefield)
+  apply_inverse:
+    reconstruction_algorithm: Tikhonov      # 'Tikhonov' or 'TV' regularization
+    regularization_strength: 0.001          # strength of regularization
+    TV_rho_strength: 0.001                  # ADMM rho parameter for TV regularization
+    TV_iterations: 1                        # ADMM iterations for TV regularization

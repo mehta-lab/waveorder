@@ -11,9 +11,7 @@ def test_focus_estimator(tmp_path):
     NA_det = 1.4
 
     with pytest.raises(ValueError):
-        focus.focus_from_transverse_band(
-            np.zeros((2, 3, 4, 5)), NA_det, lambda_ill, ps
-        )
+        focus.focus_from_transverse_band(np.zeros((2, 3, 4, 5)), NA_det, lambda_ill, ps)
 
     with pytest.raises(ValueError):
         focus.focus_from_transverse_band(
@@ -34,15 +32,11 @@ def test_focus_estimator(tmp_path):
         )
 
     with pytest.raises(ValueError):
-        focus.focus_from_transverse_band(
-            np.zeros((2, 3, 4)), NA_det, lambda_ill, ps, mode="maxx"
-        )
+        focus.focus_from_transverse_band(np.zeros((2, 3, 4)), NA_det, lambda_ill, ps, mode="maxx")
 
     plot_path = tmp_path.joinpath("test.pdf")
     data3D = np.random.random((11, 256, 256))
-    slice = focus.focus_from_transverse_band(
-        data3D, NA_det, lambda_ill, ps, plot_path=str(plot_path)
-    )
+    slice = focus.focus_from_transverse_band(data3D, NA_det, lambda_ill, ps, plot_path=str(plot_path))
     assert slice >= 0
     assert slice <= data3D.shape[0]
     assert plot_path.exists()
@@ -70,9 +64,9 @@ def test_focus_estimator_snr(tmp_path):
 
     for snr in [1000, 100, 10, 1, 0.1]:
         np.random.seed(1)
-        data = np.random.poisson(
-            phantom * np.sqrt(snr), size=phantom.shape
-        ) + np.random.normal(loc=0, scale=3, size=phantom.shape)
+        data = np.random.poisson(phantom * np.sqrt(snr), size=phantom.shape) + np.random.normal(
+            loc=0, scale=3, size=phantom.shape
+        )
 
         plot_path = tmp_path / f"test-{snr}.pdf"
         slice = focus.focus_from_transverse_band(
@@ -102,9 +96,7 @@ def test_compute_midband_power():
     test_2d_torch = torch.from_numpy(test_2d_np)
 
     # Test the compute_midband_power function
-    result = focus.compute_midband_power(
-        test_2d_torch, NA_det, lambda_ill, ps, midband_fractions
-    )
+    result = focus.compute_midband_power(test_2d_torch, NA_det, lambda_ill, ps, midband_fractions)
 
     # Check result properties
     assert isinstance(result, torch.Tensor)
@@ -112,9 +104,7 @@ def test_compute_midband_power():
     assert result.item() > 0  # should be positive
 
     # Test with different midband fractions
-    result2 = focus.compute_midband_power(
-        test_2d_torch, NA_det, lambda_ill, ps, (0.1, 0.3)
-    )
+    result2 = focus.compute_midband_power(test_2d_torch, NA_det, lambda_ill, ps, (0.1, 0.3))
     assert isinstance(result2, torch.Tensor)
     assert result2.item() > 0
 
@@ -135,9 +125,7 @@ def test_compute_midband_power_consistency():
     test_3d = np.random.random((3, 32, 32)).astype(np.float32)
 
     # Test focus_from_transverse_band still works
-    focus_slice = focus.focus_from_transverse_band(
-        test_3d, NA_det, lambda_ill, ps, midband_fractions
-    )
+    focus_slice = focus.focus_from_transverse_band(test_3d, NA_det, lambda_ill, ps, midband_fractions)
 
     assert isinstance(focus_slice, (int, np.integer))
     assert 0 <= focus_slice < test_3d.shape[0]
@@ -169,15 +157,11 @@ def test_focus_from_transverse_band_with_statistics():
     test_3d = np.random.random((5, 32, 32)).astype(np.float32)
 
     # Test without statistics (backward compatibility)
-    focus_slice = focus.focus_from_transverse_band(
-        test_3d, NA_det, lambda_ill, ps
-    )
+    focus_slice = focus.focus_from_transverse_band(test_3d, NA_det, lambda_ill, ps)
     assert isinstance(focus_slice, (int, np.integer, type(None)))
 
     # Test with statistics
-    focus_slice_stats, stats = focus.focus_from_transverse_band(
-        test_3d, NA_det, lambda_ill, ps, return_statistics=True
-    )
+    focus_slice_stats, stats = focus.focus_from_transverse_band(test_3d, NA_det, lambda_ill, ps, return_statistics=True)
 
     # Check that both return the same index
     assert focus_slice == focus_slice_stats
@@ -230,12 +214,7 @@ def test_subpixel_precision():
 
     for i, z_val in enumerate(z):
         # Create Gaussian centered at true_peak_z position in physical space
-        gaussian_2d = np.exp(
-            -(
-                (x[None, :] ** 2 + y[:, None] ** 2)
-                + (z_val - (true_peak_z - 5)) ** 2
-            )
-        )
+        gaussian_2d = np.exp(-((x[None, :] ** 2 + y[:, None] ** 2) + (z_val - (true_peak_z - 5)) ** 2))
         test_data[i] = gaussian_2d
 
     # Test without sub-pixel precision (should return integer)
@@ -322,9 +301,7 @@ def test_compute_midband_power_3d():
     NA_det = 1.4
 
     np.random.seed(42)
-    data_3d = torch.from_numpy(
-        np.random.random((7, 64, 64)).astype(np.float32)
-    )
+    data_3d = torch.from_numpy(np.random.random((7, 64, 64)).astype(np.float32))
 
     result = focus.compute_midband_power(data_3d, NA_det, lambda_ill, ps)
     assert isinstance(result, torch.Tensor)
@@ -342,12 +319,8 @@ def test_focus_from_transverse_band_tensor():
     data_np = np.random.random((11, 64, 64)).astype(np.float32)
     data_tensor = torch.from_numpy(data_np)
 
-    result_np = focus.focus_from_transverse_band(
-        data_np, NA_det, lambda_ill, ps
-    )
-    result_tensor = focus.focus_from_transverse_band(
-        data_tensor, NA_det, lambda_ill, ps
-    )
+    result_np = focus.focus_from_transverse_band(data_np, NA_det, lambda_ill, ps)
+    result_tensor = focus.focus_from_transverse_band(data_tensor, NA_det, lambda_ill, ps)
     assert result_np == result_tensor
 
 
@@ -361,12 +334,8 @@ def test_focus_from_transverse_band_gpu():
     np.random.seed(42)
     data_np = np.random.random((7, 64, 64)).astype(np.float32)
 
-    cpu_result = focus.focus_from_transverse_band(
-        data_np, NA_det, lambda_ill, ps
-    )
-    gpu_result = focus.focus_from_transverse_band(
-        torch.from_numpy(data_np).cuda(), NA_det, lambda_ill, ps
-    )
+    cpu_result = focus.focus_from_transverse_band(data_np, NA_det, lambda_ill, ps)
+    gpu_result = focus.focus_from_transverse_band(torch.from_numpy(data_np).cuda(), NA_det, lambda_ill, ps)
     assert cpu_result == gpu_result
 
 
@@ -391,9 +360,7 @@ def test_z_focus_offset_float_type():
 
 def test_position_list_with_float_offset():
     """Test that _position_list_from_shape_scale_offset works correctly with float offsets."""
-    from waveorder.cli.compute_transfer_function import (
-        _position_list_from_shape_scale_offset,
-    )
+    from waveorder.api._utils import _position_list_from_shape_scale_offset
 
     # Test integer offset
     pos_int = _position_list_from_shape_scale_offset(5, 1.0, 0)

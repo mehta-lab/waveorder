@@ -46,9 +46,7 @@ def _reconstruct_cli(
     """
 
     # Handle transfer function path
-    transfer_function_path = output_dirpath.parent / Path(
-        "transfer_function_" + config_filepath.stem + ".zarr"
-    )
+    transfer_function_path = output_dirpath.parent / Path("transfer_function_" + config_filepath.stem + ".zarr")
 
     # Compute transfer function
     compute_transfer_function_cli(

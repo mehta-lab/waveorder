@@ -1,0 +1,16 @@
+input_channel_names:                        # names of input channels in the dataset
+- State0
+- State1
+- State2
+- State3
+time_indices: all                           # time points to reconstruct
+reconstruction_dimension: 3                 # 2 for thin samples, 3 for thick
+birefringence:
+  transfer_function:
+    swing: 0.1                              # swing of the liquid crystal (0 to 1)
+  apply_inverse:
+    wavelength_illumination: 0.532          # illumination wavelength in micrometers
+    background_path: ''                     # path to background zarr (empty = no background)
+    remove_estimated_background: false      # estimate and remove background
+    flip_orientation: false                 # flip the orientation angle
+    rotate_orientation: false               # rotate orientation by 90 degrees
