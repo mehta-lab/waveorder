@@ -136,6 +136,7 @@ def generate_pupil(frr, NA, lamb_in, steepness=10000.0):
     """
 
     cutoff = NA / lamb_in
+    frr = torch.as_tensor(frr, dtype=torch.float32)
     Pupil = torch.sigmoid(steepness * (cutoff - frr))
 
     return Pupil
