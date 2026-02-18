@@ -1,5 +1,7 @@
 """Shared base settings classes used across reconstruction types."""
 
+from __future__ import annotations
+
 import warnings
 from typing import Literal, Union
 
@@ -12,6 +14,15 @@ from pydantic import (
     PositiveFloat,
     model_validator,
 )
+
+from waveorder.optim._types import OptimizableFloat
+
+
+def _float_val(v) -> float:
+    """Extract float value from float or OptimizableFloat."""
+    if isinstance(v, OptimizableFloat):
+        return v.value
+    return float(v)
 
 
 class MyBaseModel(BaseModel):
@@ -37,9 +48,10 @@ class FourierTransferFunctionSettings(MyBaseModel):
 
     @model_validator(mode="after")
     def validate_numerical_aperture_detection(self):
-        if self.numerical_aperture_detection > self.index_of_refraction_media:
+        na_det = _float_val(self.numerical_aperture_detection)
+        if na_det > self.index_of_refraction_media:
             raise ValueError(
-                f"numerical_aperture_detection = {self.numerical_aperture_detection} must be less than or equal to index_of_refraction_media = {self.index_of_refraction_media}"
+                f"numerical_aperture_detection = {na_det} must be less than or equal to index_of_refraction_media = {self.index_of_refraction_media}"
             )
         return self
 
@@ -52,6 +64,27 @@ class FourierTransferFunctionSettings(MyBaseModel):
                 UserWarning,
             )
         return self
+
+
+class OptimizableFourierTransferFunctionSettings(FourierTransferFunctionSettings):
+    """FourierTransferFunctionSettings with OptimizableFloat support and tilt fields.
+
+    Used by phase and fluorescence settings (not birefringence).
+    """
+
+    z_focus_offset: Union[float, Literal["auto"], OptimizableFloat] = Field(
+        default=0,
+        description="[o] offset from center slice in slice units (or 'auto')",
+    )
+    numerical_aperture_detection: Union[PositiveFloat, OptimizableFloat] = Field(
+        default=1.2, description="[o] detection objective numerical aperture"
+    )
+    tilt_angle_zenith: Union[float, OptimizableFloat] = Field(
+        default=0.0, description="[o] illumination tilt zenith angle in radians"
+    )
+    tilt_angle_azimuth: Union[float, OptimizableFloat] = Field(
+        default=0.0, description="[o] illumination tilt azimuth angle in radians"
+    )
 
 
 class FourierApplyInverseSettings(MyBaseModel):

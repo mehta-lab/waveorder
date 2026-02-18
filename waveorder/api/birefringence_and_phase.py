@@ -255,6 +255,8 @@ def compute_transfer_function(
 
     phase_settings_dict = settings_phase.transfer_function.model_dump()
     phase_settings_dict.pop("z_focus_offset")
+    phase_settings_dict.pop("tilt_angle_zenith", None)
+    phase_settings_dict.pop("tilt_angle_azimuth", None)
 
     sfZYX_transfer_function, _, singular_system = inplane_oriented_thick_pol3d_vector.calculate_transfer_function(
         zyx_shape=zyx_shape,
@@ -285,6 +287,8 @@ def compute_transfer_function(
     if recon_dim == 3:
         settings_dict = settings_phase.transfer_function.model_dump()
         settings_dict.pop("z_focus_offset")
+        settings_dict.pop("tilt_angle_zenith", None)
+        settings_dict.pop("tilt_angle_azimuth", None)
 
         real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(zyx_shape=zyx_shape, **settings_dict)
 
