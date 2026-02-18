@@ -12,6 +12,18 @@ import numpy as np
 from waveorder.api import phase
 from waveorder.optim import OptimizableFloat
 
+# To use your own data instead of simulated data, create a CZYX xr.DataArray:
+#
+#   import xarray as xr
+#
+#   zyx_array = np.load("my_data.npy")      # shape (Z, Y, X)
+#   data = xr.DataArray(
+#       zyx_array[None],                    # add C dimension -> (1, Z, Y, X)
+#       dims=("c", "z", "y", "x"),
+#   )
+#
+# Then pass `data` to `phase.optimize(data, ...)` below.
+
 # Ground truth parameters
 gt_z_offset = 0.6
 gt_tilt_zenith = 0.5
