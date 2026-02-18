@@ -1,0 +1,30 @@
+input_channel_names: [Brightfield]
+time_indices: all
+reconstruction_dimension: 2
+phase:
+  transfer_function:
+    wavelength_illumination: 0.532        # illumination wavelength in micrometers
+    yx_pixel_size: 0.1                    # lateral pixel size in micrometers
+    z_pixel_size: 0.25                    # axial pixel size in micrometers
+    z_focus_offset:                       # [o] offset from center slice in slice units
+      init: 0
+      lr: 0.01
+    index_of_refraction_media: 1.3        # refractive index of imaging media
+    numerical_aperture_detection: 1.2     # [o] detection objective numerical aperture
+    numerical_aperture_illumination: 0.9  # [o] condenser numerical aperture
+    tilt_angle_zenith:                    # [o] illumination tilt zenith angle in radians
+      init: 0
+      lr: 0.005
+    tilt_angle_azimuth:                   # [o] illumination tilt azimuth angle in radians
+      init: 0
+      lr: 0.001
+    invert_phase_contrast: false
+  apply_inverse:
+    reconstruction_algorithm: Tikhonov
+    regularization_strength: 0.01
+optimization:
+  num_iterations: 10
+  loss:
+    type: midband_power
+    midband_fractions: [0.125, 0.25]
+  log_dir: ./runs/phase_optim
