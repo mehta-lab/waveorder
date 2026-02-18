@@ -108,7 +108,7 @@ def analyzer_output(Ein, alpha, beta):
     return Eout
 
 
-def generate_pupil(frr, NA, lamb_in):
+def generate_pupil(frr, NA, lamb_in, steepness=10000.0):
     """
 
     compute pupil function given spatial frequency, NA, wavelength.
@@ -125,17 +125,90 @@ def generate_pupil(frr, NA, lamb_in):
                     wavelength of the light in free space
                     in units of length (inverse of frr's units)
 
+        steepness : float
+                    sigmoid steepness for smooth cutoff (default 200.0)
+
     Returns
     -------
-        Pupil     : numpy.ndarray
+        Pupil     : torch.tensor
                     pupil function with the specified parameters with the size of (Ny, Nx)
 
     """
 
-    Pupil = torch.zeros(frr.shape)
-    Pupil[frr < NA / lamb_in] = 1
+    cutoff = NA / lamb_in
+    Pupil = torch.sigmoid(steepness * (cutoff - frr))
 
     return Pupil
+
+
+def generate_tilted_pupil(
+    fxx,
+    fyy,
+    NA,
+    lamb_in,
+    index_of_refraction_media=1.0,
+    tilt_angle_zenith=0.0,
+    tilt_angle_azimuth=0.0,
+    slope=4.0,
+):
+    """Generate a tilted illumination pupil on the Ewald sphere.
+
+    The pupil is defined by the cone of angles around the tilt direction
+    that fall within the NA. At large tilts the pupil appears "squeezed"
+    because it's a spherical cap projected onto the (fxx, fyy) plane.
+
+    Parameters
+    ----------
+    fxx, fyy : torch.Tensor
+        Cartesian frequency grids (Ny, Nx) in units of 1/length.
+    NA : float or Tensor
+        Numerical aperture.
+    lamb_in : float
+        Wavelength in free space (same length units as fxx/fyy).
+    index_of_refraction_media : float
+        Refractive index of the immersion medium.
+    tilt_angle_zenith : float or Tensor
+        Polar angle (radians) between the optical axis and +z.
+    tilt_angle_azimuth : float or Tensor
+        Azimuth angle (radians) of the tilt direction in the xy-plane.
+    slope : float
+        Sigmoid roll-off in units of pixels (~90% change per `slope` pixels).
+
+    Returns
+    -------
+    torch.Tensor
+        Tilted pupil function (Ny, Nx), values in [0, 1].
+    """
+    NA = torch.as_tensor(NA, dtype=torch.float32)
+    tilt_angle_zenith = torch.as_tensor(tilt_angle_zenith, dtype=torch.float32)
+    tilt_angle_azimuth = torch.as_tensor(tilt_angle_azimuth, dtype=torch.float32)
+    n = index_of_refraction_media
+
+    # Ewald sphere radius
+    K = n / lamb_in
+    cos_alpha_max = torch.sqrt(torch.clamp(1 - (NA / n) ** 2, min=0.0))
+
+    # Pixel-based slope: slope / df gives steepness per frequency unit
+    df = torch.abs(fxx[0, 1] - fxx[0, 0])
+    pixel_slope = slope / df
+
+    # fz on the Ewald sphere
+    fz_sq = K**2 - fxx**2 - fyy**2
+    fz = torch.sqrt(torch.clamp(fz_sq, min=0.0))
+    inside_sphere = (fz_sq >= 0).to(fxx.dtype)
+
+    # Tilt direction unit vector
+    sx = torch.sin(tilt_angle_zenith) * torch.cos(tilt_angle_azimuth)
+    sy = torch.sin(tilt_angle_zenith) * torch.sin(tilt_angle_azimuth)
+    sz = torch.cos(tilt_angle_zenith)
+
+    # Dot product of frequency vector with tilt direction
+    dot = fxx * sx + fyy * sy + fz * sz
+    threshold = K * cos_alpha_max
+
+    pupil = torch.sigmoid(pixel_slope * (dot - threshold)) * inside_sphere
+
+    return pupil
 
 
 def gen_sector_Pupil(fxx, fyy, NA, lamb_in, sector_angle, rotation_angle):
@@ -370,8 +443,8 @@ def generate_propagation_kernel(radial_frequencies, pupil_support, wavelength, z
 
     """
 
-    oblique_factor = (1 - wavelength**2 * radial_frequencies**2) ** (1 / 2) / wavelength
-    oblique_factor = torch.nan_to_num(oblique_factor, nan=0.0)
+    argument = 1 - wavelength**2 * radial_frequencies**2
+    oblique_factor = torch.sqrt(torch.clamp(argument, min=0.0)) / wavelength
 
     propagation_kernel = pupil_support[None, :, :] * torch.exp(
         1j * 2 * np.pi * z_position_list[:, None, None] * oblique_factor[None, :, :]
@@ -417,22 +490,24 @@ def generate_greens_function_z(
 
     """
 
-    oblique_factor = ((1 - wavelength_illumination**2 * radial_frequencies**2) * pupil_support) ** (
-        1 / 2
-    ) / wavelength_illumination
+    cos_theta_sq = torch.clamp(1 - wavelength_illumination**2 * radial_frequencies**2, min=0.0)
+    oblique_factor = torch.sqrt(cos_theta_sq) / wavelength_illumination
 
     if axially_even:
         z_positions = torch.abs(z_position_list[:, None, None])
     else:
         z_positions = z_position_list[:, None, None]
 
+    # Mask with pupil_support to zero out frequencies outside the pupil.
+    # The safe_denom avoids division by zero where oblique_factor is 0.
+    safe_denom = oblique_factor + (1 - pupil_support) + 1e-15
     greens_function_z = (
         -1j
         / 4
         / np.pi
         * pupil_support[None, :, :]
         * torch.exp(1j * 2 * np.pi * z_positions * oblique_factor[None, :, :])
-        / (oblique_factor[None, :, :] + 1e-15)
+        / safe_denom[None, :, :]
     )
 
     return greens_function_z
