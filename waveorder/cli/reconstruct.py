@@ -40,10 +40,22 @@ def _reconstruct_cli(
     to all positions in the list `input-position-dirpaths`, so all positions
     must have the same TCZYX shape.
 
+    If any parameter has an `lr` key (OptimizableFloat), an optimization loop
+    runs before the standard reconstruction pipeline.
+
     See /examples for example configuration files.
 
     >> waveorder reconstruct -i ./input.zarr/*/*/* -c ./examples/birefringence.yml -o ./output.zarr
     """
+    from waveorder.cli.settings import ReconstructionSettings
+    from waveorder.io import utils
+    from waveorder.optim import has_optimizable_params
+
+    settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
+
+    # Check for optimizable parameters and run optimization if needed
+    if has_optimizable_params(settings):
+        _run_optimization(settings, input_position_dirpaths[0], config_filepath)
 
     # Handle transfer function path
     transfer_function_path = output_dirpath.parent / Path("transfer_function_" + config_filepath.stem + ".zarr")
@@ -63,3 +75,60 @@ def _reconstruct_cli(
         output_dirpath,
         num_processes,
     )
+
+
+def _run_optimization(settings, input_position_dirpath, config_filepath):
+    """Run parameter optimization before standard reconstruction."""
+    from iohub.ngff import open_ome_zarr
+
+    from waveorder.api import fluorescence, phase
+    from waveorder.io import utils
+
+    print("Detected optimizable parameters. Running optimization...")
+
+    if settings.birefringence is not None:
+        raise NotImplementedError("Parameter optimization is not supported for birefringence reconstructions.")
+
+    # Load data
+    input_dataset = open_ome_zarr(input_position_dirpath, layout="fov", mode="r")
+    czyx_data = input_dataset.to_xarray().isel(t=0)
+
+    opt_settings = settings.optimization
+    num_iterations = opt_settings.num_iterations if opt_settings else 10
+    log_dir = opt_settings.log_dir if opt_settings else None
+    midband_fractions = (0.125, 0.25)
+    if opt_settings and opt_settings.loss:
+        midband_fractions = opt_settings.loss.midband_fractions
+
+    recon_dim = settings.reconstruction_dimension
+
+    if settings.phase is not None:
+        new_settings, _ = phase.optimize(
+            czyx_data,
+            recon_dim=recon_dim,
+            settings=settings.phase,
+            num_iterations=num_iterations,
+            midband_fractions=midband_fractions,
+            log_dir=log_dir,
+        )
+        settings.phase = new_settings
+        print("Phase optimization complete. Updated settings.")
+
+    elif settings.fluorescence is not None:
+        new_settings, _ = fluorescence.optimize(
+            czyx_data,
+            recon_dim=recon_dim,
+            settings=settings.fluorescence,
+            num_iterations=num_iterations,
+            midband_fractions=midband_fractions,
+            log_dir=log_dir,
+        )
+        settings.fluorescence = new_settings
+        print("Fluorescence optimization complete. Updated settings.")
+
+    # Save optimized settings back to config file
+    optimized_path = config_filepath.parent / (config_filepath.stem + "_optimized.yml")
+    utils.model_to_yaml(settings, optimized_path)
+    print(f"Optimized settings saved to {optimized_path}")
+
+    input_dataset.close()
