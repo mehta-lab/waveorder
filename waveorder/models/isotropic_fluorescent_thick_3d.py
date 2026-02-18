@@ -63,14 +63,15 @@ def calculate_transfer_function(
     Tensor
         3D optical transfer function
     """
+    na_det_val = float(torch.as_tensor(numerical_aperture_detection).detach())
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_emission,
-        numerical_aperture_detection,  # ill = det for fluorescence
-        numerical_aperture_detection,
+        na_det_val,  # ill = det for fluorescence
+        na_det_val,
     )
     axial_nyquist = sampling.axial_nyquist(
         wavelength_emission,
-        numerical_aperture_detection,
+        na_det_val,
         index_of_refraction_media,
     )
 
@@ -176,7 +177,9 @@ def _calculate_wrap_unsafe_transfer_function(
         # Convert back to OTF
         optical_transfer_function = torch.fft.fftn(psf_confocal, dim=(0, 1, 2))
 
-    optical_transfer_function /= torch.max(torch.abs(optical_transfer_function))  # normalize
+    optical_transfer_function = optical_transfer_function / torch.clamp(
+        torch.max(torch.abs(optical_transfer_function)), min=1e-12
+    )
 
     return optical_transfer_function
 

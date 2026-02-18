@@ -1,4 +1,6 @@
-from typing import Literal
+from __future__ import annotations
+
+from typing import Literal, Union
 
 import numpy as np
 import torch
@@ -124,18 +126,22 @@ def calculate_transfer_function(
     wavelength_illumination: float,
     z_padding: int,
     index_of_refraction_media: float,
-    numerical_aperture_illumination: float,
-    numerical_aperture_detection: float,
+    numerical_aperture_illumination: Union[float, Tensor],
+    numerical_aperture_detection: Union[float, Tensor],
     invert_phase_contrast: bool = False,
-) -> tuple[np.ndarray, np.ndarray]:
+    pupil_steepness: float = 10000.0,
+) -> tuple[Tensor, Tensor]:
+    na_ill_val = float(torch.as_tensor(numerical_aperture_illumination).detach())
+    na_det_val = float(torch.as_tensor(numerical_aperture_detection).detach())
+
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
-        numerical_aperture_illumination,
-        numerical_aperture_detection,
+        na_ill_val,
+        na_det_val,
     )
     axial_nyquist = sampling.axial_nyquist(
         wavelength_illumination,
-        numerical_aperture_detection,
+        na_det_val,
         index_of_refraction_media,
     )
 
@@ -159,6 +165,7 @@ def calculate_transfer_function(
         numerical_aperture_illumination,
         numerical_aperture_detection,
         invert_phase_contrast=invert_phase_contrast,
+        pupil_steepness=pupil_steepness,
     )
 
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
@@ -175,10 +182,11 @@ def _calculate_wrap_unsafe_transfer_function(
     wavelength_illumination: float,
     z_padding: int,
     index_of_refraction_media: float,
-    numerical_aperture_illumination: float,
-    numerical_aperture_detection: float,
+    numerical_aperture_illumination: Union[float, Tensor],
+    numerical_aperture_detection: Union[float, Tensor],
     invert_phase_contrast: bool = False,
-) -> tuple[np.ndarray, np.ndarray]:
+    pupil_steepness: float = 10000.0,
+) -> tuple[Tensor, Tensor]:
     radial_frequencies = util.generate_radial_frequencies(zyx_shape[1:], yx_pixel_size)
     z_total = zyx_shape[0] + 2 * z_padding
     z_position_list = torch.fft.ifftshift((torch.arange(z_total) - z_total // 2) * z_pixel_size)
@@ -189,11 +197,13 @@ def _calculate_wrap_unsafe_transfer_function(
         radial_frequencies,
         numerical_aperture_illumination,
         wavelength_illumination,
+        steepness=pupil_steepness,
     )
     det_pupil = optics.generate_pupil(
         radial_frequencies,
         numerical_aperture_detection,
         wavelength_illumination,
+        steepness=pupil_steepness,
     )
     propagation_kernel = optics.generate_propagation_kernel(
         radial_frequencies,
@@ -375,14 +385,15 @@ def reconstruct(
     wavelength_illumination: float,
     z_padding: int,
     index_of_refraction_media: float,
-    numerical_aperture_illumination: float,
-    numerical_aperture_detection: float,
+    numerical_aperture_illumination: Union[float, Tensor] = 0.9,
+    numerical_aperture_detection: Union[float, Tensor] = 1.2,
     invert_phase_contrast: bool = False,
     absorption_ratio: float = 0.0,
     reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
+    pupil_steepness: float = 10000.0,
 ) -> Tensor:
     """Reconstruct 3D phase from a brightfield defocus stack.
 
@@ -434,11 +445,12 @@ def reconstruct(
         numerical_aperture_illumination,
         numerical_aperture_detection,
         invert_phase_contrast=invert_phase_contrast,
+        pupil_steepness=pupil_steepness,
     )
     return apply_inverse_transfer_function(
         zyx_data,
-        torch.tensor(real_tf),
-        torch.tensor(imag_tf),
+        real_tf,
+        imag_tf,
         z_padding,
         absorption_ratio=absorption_ratio,
         reconstruction_algorithm=reconstruction_algorithm,
