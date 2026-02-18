@@ -46,7 +46,7 @@ def calculate_transfer_function(
     invert_phase_contrast: bool = False,
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
-    pupil_steepness: float = 10000.0,
+    pupil_steepness: float = 1e4,
 ) -> Tuple[Tensor, Tensor]:
     # Extract float values for Nyquist computation (not in gradient chain)
     na_ill_val = float(torch.as_tensor(numerical_aperture_illumination).detach())
@@ -105,7 +105,7 @@ def _calculate_wrap_unsafe_transfer_function(
     invert_phase_contrast: bool = False,
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
-    pupil_steepness: float = 10000.0,
+    pupil_steepness: float = 1e4,
 ) -> Tuple[Tensor, Tensor]:
     na_ill = torch.as_tensor(numerical_aperture_illumination, dtype=torch.float32)
     na_det = torch.as_tensor(numerical_aperture_detection, dtype=torch.float32)
@@ -427,7 +427,7 @@ def reconstruct(
     bg_filter: bool = False,
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
-    pupil_steepness: float = 10000.0,
+    pupil_steepness: float = 1e4,
     pseudo_svd: bool = False,
 ) -> Tuple[Tensor, Tensor]:
     """Reconstruct 2D absorption and phase from a brightfield defocus stack.

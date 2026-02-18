@@ -129,7 +129,7 @@ def calculate_transfer_function(
     numerical_aperture_illumination: Union[float, Tensor],
     numerical_aperture_detection: Union[float, Tensor],
     invert_phase_contrast: bool = False,
-    pupil_steepness: float = 10000.0,
+    pupil_steepness: float = 1e4,
 ) -> tuple[Tensor, Tensor]:
     na_ill_val = float(torch.as_tensor(numerical_aperture_illumination).detach())
     na_det_val = float(torch.as_tensor(numerical_aperture_detection).detach())
@@ -185,7 +185,7 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_illumination: Union[float, Tensor],
     numerical_aperture_detection: Union[float, Tensor],
     invert_phase_contrast: bool = False,
-    pupil_steepness: float = 10000.0,
+    pupil_steepness: float = 1e4,
 ) -> tuple[Tensor, Tensor]:
     radial_frequencies = util.generate_radial_frequencies(zyx_shape[1:], yx_pixel_size)
     z_total = zyx_shape[0] + 2 * z_padding
@@ -393,7 +393,7 @@ def reconstruct(
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
-    pupil_steepness: float = 10000.0,
+    pupil_steepness: float = 1e4,
 ) -> Tensor:
     """Reconstruct 3D phase from a brightfield defocus stack.
 
