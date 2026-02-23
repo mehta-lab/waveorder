@@ -308,7 +308,6 @@ def apply_inverse_transfer_function(
     TV_iterations: int = 10,
 ):
     # Key computation
-    print("Computing inverse filter")
     U, S, Vh = singular_system
     S_reg = S / (S**2 + regularization_strength)
     sfzyx_inverse_filter = torch.einsum(

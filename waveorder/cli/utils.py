@@ -85,8 +85,6 @@ def apply_inverse_to_zyx_and_save(
     **kwargs,
 ) -> None:
     """Load a zyx array from a Position object, apply a transformation and save the result to file"""
-    click.echo(f"Reconstructing t={t_idx}")
-
     # Load data
     czyx_uint16_numpy = position.data.oindex[t_idx, input_channel_indices]
 
@@ -116,7 +114,6 @@ def apply_inverse_to_zyx_and_save(
         output_dataset[0].oindex[
             t_idx, output_channel_indices
         ] = reconstruction_czyx
-    click.echo(f"Finished Writing.. t={t_idx}")
 
 
 def estimate_resources(shape, settings, num_processes):
