@@ -55,7 +55,7 @@ def _reconstruct_cli(
 
     # Check for optimizable parameters and run optimization if needed
     if has_optimizable_params(settings):
-        _run_optimization(settings, input_position_dirpaths[0], config_filepath)
+        config_filepath = _run_optimization(settings, input_position_dirpaths[0], config_filepath)
 
     # Handle transfer function path
     transfer_function_path = output_dirpath.parent / Path("transfer_function_" + config_filepath.stem + ".zarr")
@@ -132,3 +132,5 @@ def _run_optimization(settings, input_position_dirpath, config_filepath):
     print(f"Optimized settings saved to {optimized_path}")
 
     input_dataset.close()
+
+    return optimized_path
