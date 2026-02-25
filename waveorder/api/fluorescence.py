@@ -385,13 +385,17 @@ def optimize(
     reconstruct_fn = reconstruct_fn_2d if recon_dim == 2 else reconstruct_fn_3d
 
     def loss_fn(recon):
-        return midband_power_loss(
+        loss = midband_power_loss(
             recon,
             NA_det=_float_val(s.numerical_aperture_detection),
             lambda_ill=s.wavelength_emission,
             pixel_size=s.yx_pixel_size,
             midband_fractions=midband_fractions,
         )
+        # For 3D, midband_power_loss returns (Z,); reduce to scalar
+        if loss.ndim > 0:
+            loss = loss.mean()
+        return loss
 
     result = optimize_reconstruction(
         data=zyx_data,
