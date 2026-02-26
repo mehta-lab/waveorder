@@ -112,7 +112,9 @@ def create_empty_hcs_zarr(
         # Check if channel_names are already in the store, if not append them
         for channel_name in channel_names:
             # Read channel names directly from metadata to avoid race conditions
-            metadata_channel_names = [channel.label for channel in position.metadata.omero.channels]
+            metadata_channel_names = [
+                channel.label for channel in position.metadata.omero.channels
+            ]
             if channel_name not in metadata_channel_names:
                 position.append_channel(channel_name, resize_arrays=True)
 
@@ -196,6 +198,7 @@ def _check_nan_n_zeros(input_array):
     """
     return np.all(np.isnan(input_array)) or np.all(input_array == 0)
 
+
 def convert_data(tif_path, latest_out_path, prefix=""):
     """
     Converts Micro-Manager ome-tif to .zarr
@@ -206,16 +209,19 @@ def convert_data(tif_path, latest_out_path, prefix=""):
     )
     converter()
 
+
 def run_convert(ome_tif_path):
     """
     Converts Micro-Manager ome-tif to .zarr and returns output path
     """
     ome_tif_folder_path = Path(ome_tif_path).absolute()
     out_path = os.path.join(
-        ome_tif_folder_path.parent.absolute(), ome_tif_folder_path.name+"_converted" +  ".zarr"
+        ome_tif_folder_path.parent.absolute(),
+        ome_tif_folder_path.name + "_converted" + ".zarr",
     )
     convert_data(ome_tif_folder_path, out_path)
     return out_path
+
 
 def validate_and_process_paths(value: str) -> list[Path]:
     """
@@ -234,14 +240,16 @@ def validate_and_process_paths(value: str) -> list[Path]:
 
     return input_paths
 
+
 def check_folder_for_ometiff(input_data_folder: Path) -> bool:
     """
-    Checks for Micro-Manager ome-tif folder 
+    Checks for Micro-Manager ome-tif folder
     """
     data_type, extra_info = _infer_format(input_data_folder)
     if data_type == "ometiff":
         return True
     return False
+
 
 def get_dataset_info(path: str):
     """Retrieve summary information for a dataset.
@@ -261,7 +269,7 @@ def get_dataset_info(path: str):
     except (ValueError, RuntimeError):
         print("Error: No compatible dataset is found.")
         return None
-    
+
     fmt_msg = f"Format:\t\t\t {fmt}"
     if extra_info:
         if extra_info.startswith("0."):
@@ -271,7 +279,9 @@ def get_dataset_info(path: str):
     msgs = []
     if isinstance(reader, BaseFOVMapping):
         _, first_fov = next(iter(reader))
-        shape_msg = ", ".join([f"{a}={s}" for s, a in zip(first_fov.shape, ("T", "C", "Z", "Y", "X"))])
+        shape_msg = ", ".join(
+            [f"{a}={s}" for s, a in zip(first_fov.shape, ("T", "C", "Z", "Y", "X"))]
+        )
         msgs.extend(
             [
                 sum_msg,
@@ -283,7 +293,10 @@ def get_dataset_info(path: str):
             ]
         )
         if reader.micromanager_summary:
-            result_string = '\n'.join(f"{key}:\t\t {value}" for key, value in reader.micromanager_summary.items())
+            result_string = "\n".join(
+                f"{key}:\t\t {value}"
+                for key, value in reader.micromanager_summary.items()
+            )
             msgs.append("============")
             msgs.append(result_string)
     elif isinstance(reader, NGFFNode):
@@ -291,7 +304,9 @@ def get_dataset_info(path: str):
             [
                 sum_msg,
                 fmt_msg,
-                "".join(["Axes:\t\t\t "] + [f"{a.name} ({a.type}); " for a in reader.axes]),
+                "".join(
+                    ["Axes:\t\t\t "] + [f"{a.name} ({a.type}); " for a in reader.axes]
+                ),
                 ch_msg,
             ]
         )

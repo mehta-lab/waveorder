@@ -10,9 +10,11 @@ from waveorder.cli.option_eat_all import OptionEatAll
 from waveorder.cli.utils import check_folder_for_ometiff
 
 
-def _validate_and_process_paths(ctx: click.Context, opt: click.Option, value: str) -> list[Path]:    
-    #Ignore filepath validation if ome-tif
-    if check_folder_for_ometiff(Path(value[0])):       
+def _validate_and_process_paths(
+    ctx: click.Context, opt: click.Option, value: str
+) -> list[Path]:
+    # Ignore filepath validation if ome-tif
+    if check_folder_for_ometiff(Path(value[0])):
         return value
     # Sort and validate the input paths, expanding plates into lists of positions
     input_paths = [Path(path) for path in natsorted(value)]
