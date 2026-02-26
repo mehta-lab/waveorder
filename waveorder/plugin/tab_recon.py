@@ -23,6 +23,7 @@ from typing import (
 from iohub.ngff import open_ome_zarr
 from magicgui import widgets
 from magicgui.type_map import get_widget_class
+from waveorder.cli.utils import check_folder_for_ometiff, get_dataset_info
 
 # FIXME avoid star import
 # Since we are instantiating GUI widgets/elements based on pydantic model
@@ -478,58 +479,64 @@ class Ui_ReconTab_Form(QWidget):
             return
 
         elem.value = result
-
+            
     def validate_input_data(self, input_data_folder: str, metadata=False, BG=False) -> bool:
         try:
             self.input_channel_names = []
             self.data_input_Label.value = "Input Store"
             input_paths = Path(input_data_folder)
-            with open_ome_zarr(input_paths, mode="r") as dataset:
-                try:
-                    self.input_channel_names = dataset.channel_names
-                    self.data_input_Label.value = "Input Store" + " " + _info_icon
-                    self.data_input_Label.tooltip = "Channel Names:\n- " + "\n- ".join(self.input_channel_names)
-                except Exception as exc:
-                    print(exc.args)
 
-                try:
-                    string_pos = []
-                    i = 0
-                    for pos_paths, pos in dataset.positions():
-                        string_pos.append(pos_paths)
-                        if i == 0:
-                            axes = pos.zgroup.attrs["multiscales"][0]["axes"]
-                            string_array_n = [str(x["name"]) for x in axes]
-                            string_array = [
-                                str(x)
-                                for x in pos.zgroup.attrs["multiscales"][0]["datasets"][0]["coordinateTransformations"][
-                                    0
-                                ]["scale"]
-                            ]
-                            string_scale = []
-                            for i in range(len(string_array_n)):
-                                string_scale.append("{n}={d}".format(n=string_array_n[i], d=string_array[i]))
-                            txt = "\n\nScale: " + ", ".join(string_scale)
-                            self.data_input_Label.tooltip += txt
-                        i += 1
-                    txt = "\n\nFOV: " + ", ".join(string_pos)
-                    self.data_input_Label.tooltip += txt
-                except Exception as exc:
-                    print(exc.args)
-
-                if not BG and metadata:
-                    self.input_directory_dataset = dataset
-
-                if not BG:
-                    self.pollData = False
-                    zattrs = dataset.zattrs
-                    if self.is_dataset_acq_running(zattrs):
-                        if self.confirm_dialog(
-                            msg="This seems like an in-process Acquisition. Would you like to process data on-the-fly ?"
-                        ):
-                            self.pollData = True
-
+            if check_folder_for_ometiff(input_paths):
+                self.data_input_Label.value = "Input Store" + " " + _info_icon
+                tooltip = get_dataset_info(input_paths.absolute())
+                if tooltip:
+                    self.data_input_Label.tooltip = tooltip
                 return True, MSG_SUCCESS
+            else:        
+                self.data_input_Label.value = "Input Store" + " " + _info_icon
+                tooltip = get_dataset_info(input_paths.absolute())
+                if tooltip:
+                    self.data_input_Label.tooltip = tooltip
+
+                with open_ome_zarr(input_paths, mode="r") as dataset:   
+                    try:
+                        string_pos = []
+                        i = 0
+                        for pos_paths, pos in dataset.positions():
+                            string_pos.append(pos_paths)
+                            if i == 0:
+                                axes = pos.zgroup.attrs["multiscales"][0]["axes"]
+                                string_array_n = [str(x["name"]) for x in axes]
+                                string_array = [
+                                    str(x)
+                                    for x in pos.zgroup.attrs["multiscales"][0]["datasets"][0]["coordinateTransformations"][
+                                        0
+                                    ]["scale"]
+                                ]
+                                string_scale = []
+                                for i in range(len(string_array_n)):
+                                    string_scale.append("{n}={d}".format(n=string_array_n[i], d=string_array[i]))
+                                txt = "\n\nScale: " + ", ".join(string_scale)
+                                self.data_input_Label.tooltip += txt
+                            i += 1
+                        txt = "\n\nFOV: " + ", ".join(string_pos)
+                        self.data_input_Label.tooltip += txt
+                    except Exception as exc:
+                        print(exc.args)
+
+                    if not BG and metadata:
+                        self.input_directory_dataset = dataset
+
+                    if not BG:
+                        self.pollData = False
+                        zattrs = dataset.zattrs
+                        if self.is_dataset_acq_running(zattrs):
+                            if self.confirm_dialog(
+                                msg="This seems like an in-process Acquisition. Would you like to process data on-the-fly ?"
+                            ):
+                                self.pollData = True
+
+                    return True, MSG_SUCCESS
             raise Exception("Dataset does not appear to be a valid ome-zarr storage")
         except Exception as exc:
             return False, exc.args
@@ -1096,6 +1103,7 @@ class Ui_ReconTab_Form(QWidget):
                 exclude_modes = ["birefringence", "phase"]
 
             model = None
+
             try:
                 model = settings.ReconstructionSettings(
                     input_channel_names=chNames,

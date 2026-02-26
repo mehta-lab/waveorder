@@ -1,13 +1,18 @@
 from pathlib import Path
 from typing import Tuple
 
+import os
 import click
 import numpy as np
 import xarray as xr
-from iohub.ngff import open_ome_zarr
+from iohub.ngff.nodes import NGFFNode, Plate, Position, open_ome_zarr
+from iohub.convert import TIFFConverter
+from iohub.reader import _infer_format, sizeof_fmt
+from iohub import read_images
 from iohub.ngff.models import TransformationMeta
 from numpy.typing import DTypeLike
 
+from iohub.fov import BaseFOVMapping
 
 def generate_valid_position_key(index: int) -> tuple[str, str, str]:
     """Generate a valid HCS position key for single-position stores.
@@ -190,3 +195,131 @@ def _check_nan_n_zeros(input_array):
     Checks if data are all zeros or nan
     """
     return np.all(np.isnan(input_array)) or np.all(input_array == 0)
+
+def convert_data(tif_path, latest_out_path, prefix=""):
+    """
+    Converts Micro-Manager ome-tif to .zarr
+    """
+    converter = TIFFConverter(
+        os.path.join(tif_path, prefix),
+        latest_out_path,
+    )
+    converter()
+
+def run_convert(ome_tif_path):
+    """
+    Converts Micro-Manager ome-tif to .zarr and returns output path
+    """
+    ome_tif_folder_path = Path(ome_tif_path).absolute()
+    out_path = os.path.join(
+        ome_tif_folder_path.parent.absolute(), ome_tif_folder_path.name+"_converted" +  ".zarr"
+    )
+    convert_data(ome_tif_folder_path, out_path)
+    return out_path
+
+def validate_and_process_paths(value: str) -> list[Path]:
+    """
+    Validates and Processes Converted Micro-Manager ome-tif zarr paths
+    """
+    # Sort and validate the input paths, expanding plates into lists of positions
+    input_paths = [Path(value)]
+    # Filter out non-directories (e.g., zarr.json files from glob expansion)
+    input_paths = [path for path in input_paths if path.is_dir()]
+    for path in input_paths:
+        with open_ome_zarr(path, mode="r") as dataset:
+            if isinstance(dataset, Plate):
+                plate_path = input_paths.pop()
+                for position in dataset.positions():
+                    input_paths.append(plate_path / position[0])
+
+    return input_paths
+
+def check_folder_for_ometiff(input_data_folder: Path) -> bool:
+    """
+    Checks for Micro-Manager ome-tif folder 
+    """
+    data_type, extra_info = _infer_format(input_data_folder)
+    if data_type == "ometiff":
+        return True
+    return False
+
+def get_dataset_info(path: str):
+    """Retrieve summary information for a dataset.
+
+    Parameters
+    ----------
+    path : StrOrBytesPath
+        Path to the dataset
+    """
+    path = Path(path).resolve()
+    try:
+        fmt, extra_info = _infer_format(path)
+        if fmt == "omezarr" and extra_info in ("0.4", "0.5"):
+            reader = open_ome_zarr(path, mode="r", version=extra_info)
+        else:
+            reader = read_images(path, data_type=fmt)
+    except (ValueError, RuntimeError):
+        print("Error: No compatible dataset is found.")
+        return None
+    
+    fmt_msg = f"Format:\t\t\t {fmt}"
+    if extra_info:
+        if extra_info.startswith("0."):
+            fmt_msg += " v" + extra_info
+    sum_msg = "=== Summary ==="
+    ch_msg = f"Channel names:\t\t {reader.channel_names}"
+    msgs = []
+    if isinstance(reader, BaseFOVMapping):
+        _, first_fov = next(iter(reader))
+        shape_msg = ", ".join([f"{a}={s}" for s, a in zip(first_fov.shape, ("T", "C", "Z", "Y", "X"))])
+        msgs.extend(
+            [
+                sum_msg,
+                fmt_msg,
+                f"FOVs:\t\t\t {len(reader)}",
+                f"FOV shape:\t\t {shape_msg}",
+                ch_msg,
+                f"(Z, Y, X) scale (um):\t {first_fov.zyx_scale}",
+            ]
+        )
+        if reader.micromanager_summary:
+            result_string = '\n'.join(f"{key}:\t\t {value}" for key, value in reader.micromanager_summary.items())
+            msgs.append("============")
+            msgs.append(result_string)
+    elif isinstance(reader, NGFFNode):
+        msgs.extend(
+            [
+                sum_msg,
+                fmt_msg,
+                "".join(["Axes:\t\t\t "] + [f"{a.name} ({a.type}); " for a in reader.axes]),
+                ch_msg,
+            ]
+        )
+        if isinstance(reader, Plate):
+            meta = reader.metadata
+            msgs.extend(
+                [
+                    f"Row names:\t\t {[r.name for r in meta.rows]}",
+                    f"Column names:\t\t {[c.name for c in meta.columns]}",
+                    f"Wells:\t\t\t {len(meta.wells)}",
+                ]
+            )
+            positions = list(reader.positions())
+            total_bytes_uncompressed = sum(p["0"].nbytes for _, p in positions)
+            msgs.append(f"Positions:\t\t {len(positions)}")
+            msgs.append(f"Chunk size:\t\t {positions[0][1][0].chunks}")
+            msgs.append(
+                f"No. bytes decompressed:\t\t {total_bytes_uncompressed} [{sizeof_fmt(total_bytes_uncompressed)}]"
+            )
+        else:
+            total_bytes_uncompressed = reader["0"].nbytes
+            msgs.append(f"(Z, Y, X) scale (um):\t {tuple(reader.scale[2:])}")
+            msgs.append(f"Chunk size:\t\t {reader['0'].chunks}")
+            msgs.append(
+                f"No. bytes decompressed:\t {total_bytes_uncompressed} [{sizeof_fmt(total_bytes_uncompressed)}]"
+            )
+        reader.close()
+
+    if len(msgs) == 0:
+        return None
+    return str.join("\n", msgs)

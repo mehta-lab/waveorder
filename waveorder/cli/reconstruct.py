@@ -1,4 +1,5 @@
 from pathlib import Path
+from waveorder.cli.utils import run_convert, validate_and_process_paths
 
 import click
 
@@ -15,6 +16,7 @@ from waveorder.cli.parsing import (
     processes_option,
     unique_id,
 )
+from waveorder.cli.utils import check_folder_for_ometiff
 
 
 @click.command("reconstruct")
@@ -43,10 +45,22 @@ def _reconstruct_cli(
     See /examples for example configuration files.
 
     >> waveorder reconstruct -i ./input.zarr/*/*/* -c ./examples/birefringence.yml -o ./output.zarr
+    >> waveorder reconstruct -i ./input.ome.tif_folder -c ./examples/birefringence.yml -o ./output.zarr
     """
 
+    # Detect and Convert Micro-Manager ome-tiff
+    if len(input_position_dirpaths) > 0 and check_folder_for_ometiff(
+        Path(input_position_dirpaths[0])
+    ):
+        file_path = Path(input_position_dirpaths[0])
+        # Convert to zarr
+        converted_filepath = run_convert(file_path)
+        input_position_dirpaths = validate_and_process_paths(converted_filepath)
+
     # Handle transfer function path
-    transfer_function_path = output_dirpath.parent / Path("transfer_function_" + config_filepath.stem + ".zarr")
+    transfer_function_path = output_dirpath.parent / Path(
+        "transfer_function_" + config_filepath.stem + ".zarr"
+    )
 
     # Compute transfer function
     compute_transfer_function_cli(
