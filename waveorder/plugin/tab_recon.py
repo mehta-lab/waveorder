@@ -8,23 +8,12 @@ import types
 import uuid
 import warnings
 from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Annotated,
-    Any,
-    Final,
-    List,
-    Literal,
-    Union,
-    get_args,
-    get_origin,
-)
+from typing import (TYPE_CHECKING, Annotated, Any, Final, List, Literal, Union,
+                    get_args, get_origin)
 
 from iohub.ngff import open_ome_zarr
 from magicgui import widgets
 from magicgui.type_map import get_widget_class
-from waveorder.cli.utils import check_folder_for_ometiff, get_dataset_info
-
 # FIXME avoid star import
 # Since we are instantiating GUI widgets/elements based on pydantic model
 # star import provides that flexibility
@@ -34,6 +23,7 @@ from qtpy import QtCore
 from qtpy.QtCore import QEvent, Qt, QThread, Signal
 from qtpy.QtWidgets import *
 
+from waveorder.cli.utils import check_folder_for_ometiff, get_dataset_info
 from waveorder.plugin import job_manager
 
 if TYPE_CHECKING:
@@ -46,12 +36,9 @@ from pydantic_core import PydanticUndefinedType
 
 from waveorder.api import birefringence, fluorescence, phase
 from waveorder.api._settings import FourierApplyInverseSettings
-from waveorder.cli.settings import (
-    BirefringenceApplyInverseSettings,
-    BirefringenceSettings,
-    FluorescenceSettings,
-    PhaseSettings,
-)
+from waveorder.cli.settings import (BirefringenceApplyInverseSettings,
+                                    BirefringenceSettings,
+                                    FluorescenceSettings, PhaseSettings)
 
 PYDANTIC_CLASSES_DEF = (
     BirefringenceSettings,

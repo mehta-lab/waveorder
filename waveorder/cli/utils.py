@@ -1,18 +1,18 @@
+import os
 from pathlib import Path
 from typing import Tuple
 
-import os
 import click
 import numpy as np
 import xarray as xr
-from iohub.ngff.nodes import NGFFNode, Plate, Position, open_ome_zarr
-from iohub.convert import TIFFConverter
-from iohub.reader import _infer_format, sizeof_fmt
 from iohub import read_images
+from iohub.convert import TIFFConverter
+from iohub.fov import BaseFOVMapping
 from iohub.ngff.models import TransformationMeta
+from iohub.ngff.nodes import NGFFNode, Plate, Position, open_ome_zarr
+from iohub.reader import _infer_format, sizeof_fmt
 from numpy.typing import DTypeLike
 
-from iohub.fov import BaseFOVMapping
 
 def generate_valid_position_key(index: int) -> tuple[str, str, str]:
     """Generate a valid HCS position key for single-position stores.

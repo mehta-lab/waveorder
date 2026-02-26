@@ -3,15 +3,8 @@
 import warnings
 from typing import Literal, Union
 
-from pydantic import (
-    BaseModel,
-    ConfigDict,
-    Field,
-    NonNegativeFloat,
-    NonNegativeInt,
-    PositiveFloat,
-    model_validator,
-)
+from pydantic import (BaseModel, ConfigDict, Field, NonNegativeFloat,
+                      NonNegativeInt, PositiveFloat, model_validator)
 
 
 class MyBaseModel(BaseModel):

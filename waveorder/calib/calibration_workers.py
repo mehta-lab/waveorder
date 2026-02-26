@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-
 # type hint/check
 from typing import TYPE_CHECKING
 
@@ -15,12 +14,10 @@ from qtpy.QtCore import Signal
 from waveorder.api import birefringence
 from waveorder.calib.Calibration import LC_DEVICE_NAME
 from waveorder.cli import settings
-from waveorder.cli.apply_inverse_transfer_function import (
-    apply_inverse_transfer_function_cli,
-)
-from waveorder.cli.compute_transfer_function import (
-    compute_transfer_function_cli,
-)
+from waveorder.cli.apply_inverse_transfer_function import \
+    apply_inverse_transfer_function_cli
+from waveorder.cli.compute_transfer_function import \
+    compute_transfer_function_cli
 from waveorder.io.core_functions import set_lc_state, snap_and_average
 from waveorder.io.metadata_reader import MetadataReader
 from waveorder.io.utils import MockEmitter, add_index_to_path, model_to_yaml

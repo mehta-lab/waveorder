@@ -5,17 +5,10 @@ import numpy as np
 from iohub.ngff import Position, open_ome_zarr
 
 from waveorder import focus
-from waveorder.api import (
-    birefringence,
-    birefringence_and_phase,
-    fluorescence,
-    phase,
-)
-from waveorder.cli.parsing import (
-    config_filepath,
-    input_position_dirpaths,
-    output_dirpath,
-)
+from waveorder.api import (birefringence, birefringence_and_phase,
+                           fluorescence, phase)
+from waveorder.cli.parsing import (config_filepath, input_position_dirpaths,
+                                   output_dirpath)
 from waveorder.cli.printing import echo_headline, echo_settings
 from waveorder.cli.settings import ReconstructionSettings
 from waveorder.io import utils

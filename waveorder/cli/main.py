@@ -1,11 +1,9 @@
 import click
 
-from waveorder.cli.apply_inverse_transfer_function import (
-    _apply_inverse_transfer_function_cli,
-)
-from waveorder.cli.compute_transfer_function import (
-    _compute_transfer_function_cli,
-)
+from waveorder.cli.apply_inverse_transfer_function import \
+    _apply_inverse_transfer_function_cli
+from waveorder.cli.compute_transfer_function import \
+    _compute_transfer_function_cli
 from waveorder.cli.reconstruct import _reconstruct_cli
 from waveorder.cli.simulate import _simulate_cli
 from waveorder.cli.view import _view_cli

@@ -6,7 +6,6 @@ import os
 import textwrap
 from os.path import dirname
 from pathlib import Path, PurePath
-
 # type hint/check
 from typing import TYPE_CHECKING
 
@@ -37,11 +36,9 @@ except:
 
 from waveorder.calib import Calibration
 from waveorder.calib.Calibration import LC_DEVICE_NAME, QLIPP_Calibration
-from waveorder.calib.calibration_workers import (
-    BackgroundCaptureWorker,
-    CalibrationWorker,
-    load_calibration,
-)
+from waveorder.calib.calibration_workers import (BackgroundCaptureWorker,
+                                                 CalibrationWorker,
+                                                 load_calibration)
 from waveorder.io.core_functions import set_lc_state, snap_and_average
 from waveorder.io.metadata_reader import MetadataReader
 from waveorder.io.visualization import ret_ori_overlay

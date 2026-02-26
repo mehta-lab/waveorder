@@ -31,9 +31,9 @@ for partially coherent light microscopy," Opt. Express 25, 15699-15712 (2017)
 First, let's install the latest version of waveorder from the main branch
 """
 
+import subprocess
 # %%
 import sys
-import subprocess
 
 # Install latest waveorder from main branch
 subprocess.check_call(
@@ -47,15 +47,16 @@ subprocess.check_call(
 )
 !pip install iohub==0.2.0
 
+import io
+import zipfile
+
 # %%
 import matplotlib.pyplot as plt
+import requests
 import torch
+from iohub import open_ome_zarr
 
 from waveorder.models import phase_thick_3d
-import requests
-import zipfile
-import io
-from iohub import open_ome_zarr
 
 # %% Load the data
 # Download the file from Zenodo

@@ -10,14 +10,9 @@ import xarray as xr
 from pydantic import Field, field_validator
 
 from waveorder.api._settings import MyBaseModel, WavelengthIllumination
-from waveorder.api._utils import (
-    _biref_inverse_kwargs,
-    _build_output_xarray,
-    _named_dataarray,
-    _output_channel_names,
-    _to_tensor,
-    radians_to_nanometers,
-)
+from waveorder.api._utils import (_biref_inverse_kwargs, _build_output_xarray,
+                                  _named_dataarray, _output_channel_names,
+                                  _to_tensor, radians_to_nanometers)
 from waveorder.models import inplane_oriented_thick_pol3d
 
 # --- Settings ---

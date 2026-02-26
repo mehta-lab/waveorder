@@ -1,22 +1,15 @@
 from pathlib import Path
-from waveorder.cli.utils import run_convert, validate_and_process_paths
 
 import click
 
-from waveorder.cli.apply_inverse_transfer_function import (
-    apply_inverse_transfer_function_cli,
-)
-from waveorder.cli.compute_transfer_function import (
-    compute_transfer_function_cli,
-)
-from waveorder.cli.parsing import (
-    config_filepath,
-    input_position_dirpaths,
-    output_dirpath,
-    processes_option,
-    unique_id,
-)
-from waveorder.cli.utils import check_folder_for_ometiff
+from waveorder.cli.apply_inverse_transfer_function import \
+    apply_inverse_transfer_function_cli
+from waveorder.cli.compute_transfer_function import \
+    compute_transfer_function_cli
+from waveorder.cli.parsing import (config_filepath, input_position_dirpaths,
+                                   output_dirpath, processes_option, unique_id)
+from waveorder.cli.utils import (check_folder_for_ometiff, run_convert,
+                                 validate_and_process_paths)
 
 
 @click.command("reconstruct")

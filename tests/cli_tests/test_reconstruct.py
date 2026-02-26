@@ -9,9 +9,8 @@ from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
 from waveorder.cli import settings
-from waveorder.cli.apply_inverse_transfer_function import (
-    apply_inverse_transfer_function_cli,
-)
+from waveorder.cli.apply_inverse_transfer_function import \
+    apply_inverse_transfer_function_cli
 from waveorder.cli.main import cli
 from waveorder.io import utils
 

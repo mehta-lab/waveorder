@@ -2,12 +2,8 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from waveorder.api import (
-    birefringence,
-    birefringence_and_phase,
-    fluorescence,
-    phase,
-)
+from waveorder.api import (birefringence, birefringence_and_phase,
+                           fluorescence, phase)
 from waveorder.api._utils import _position_list_from_shape_scale_offset
 
 ZYX_SHAPE = (3, 4, 5)
