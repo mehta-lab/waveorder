@@ -243,7 +243,10 @@ def check_folder_for_ometiff(input_data_folder: Path) -> bool:
     """
     Checks for Micro-Manager ome-tif folder
     """
-    data_type, extra_info = _infer_format(input_data_folder)
+    try:
+        data_type, extra_info = _infer_format(input_data_folder)
+    except (ValueError, RuntimeError):
+        return False
     if data_type == "ometiff":
         return True
     return False
