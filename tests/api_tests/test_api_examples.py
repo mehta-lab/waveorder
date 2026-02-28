@@ -9,8 +9,7 @@ These examples use the API layer directly (no zarr, no CLI).
 
 import numpy as np
 
-from waveorder.api import (birefringence, birefringence_and_phase,
-                           fluorescence, phase)
+from waveorder.api import birefringence, birefringence_and_phase, fluorescence, phase
 
 # --- Phase ---
 

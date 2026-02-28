@@ -2,14 +2,14 @@ from typing import List, Literal, Optional, Union
 
 from pydantic import Field, NonNegativeInt, model_validator
 
-from waveorder.api._settings import (FourierApplyInverseSettings,  # noqa: F401
-                                     FourierTransferFunctionSettings,
-                                     MyBaseModel)
-from waveorder.api.birefringence import \
-    ApplyInverseSettings as BirefringenceApplyInverseSettings  # noqa: F401
+from waveorder.api._settings import (  # noqa: F401
+    FourierApplyInverseSettings,
+    FourierTransferFunctionSettings,
+    MyBaseModel,
+)
+from waveorder.api.birefringence import ApplyInverseSettings as BirefringenceApplyInverseSettings  # noqa: F401
 from waveorder.api.birefringence import Settings as BirefringenceSettings
-from waveorder.api.fluorescence import \
-    Settings as FluorescenceSettings  # noqa: F401
+from waveorder.api.fluorescence import Settings as FluorescenceSettings  # noqa: F401
 from waveorder.api.phase import Settings as PhaseSettings  # noqa: F401
 
 

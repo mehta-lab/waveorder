@@ -50,18 +50,14 @@ def _reconstruct_cli(
     """
 
     # Detect and Convert Micro-Manager ome-tiff
-    if len(input_position_dirpaths) > 0 and check_folder_for_ometiff(
-        Path(input_position_dirpaths[0])
-    ):
+    if len(input_position_dirpaths) > 0 and check_folder_for_ometiff(Path(input_position_dirpaths[0])):
         file_path = Path(input_position_dirpaths[0])
         # Convert to zarr
         converted_filepath = run_convert(file_path)
         input_position_dirpaths = validate_and_process_paths(converted_filepath)
 
     # Handle transfer function path
-    transfer_function_path = output_dirpath.parent / Path(
-        "transfer_function_" + config_filepath.stem + ".zarr"
-    )
+    transfer_function_path = output_dirpath.parent / Path("transfer_function_" + config_filepath.stem + ".zarr")
 
     # Compute transfer function
     compute_transfer_function_cli(

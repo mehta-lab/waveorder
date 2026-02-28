@@ -12,18 +12,23 @@ import xarray as xr
 from iohub import open_ome_zarr
 from iohub.ngff import Position
 
-from waveorder.api import (birefringence, birefringence_and_phase,
-                           fluorescence, phase)
+from waveorder.api import birefringence, birefringence_and_phase, fluorescence, phase
 from waveorder.api._utils import _named_dataarray
-from waveorder.cli.parsing import (config_filepath, input_position_dirpaths,
-                                   output_dirpath, processes_option,
-                                   transfer_function_dirpath)
+from waveorder.cli.parsing import (
+    config_filepath,
+    input_position_dirpaths,
+    output_dirpath,
+    processes_option,
+    transfer_function_dirpath,
+)
 from waveorder.cli.printing import echo_headline, echo_settings
 from waveorder.cli.settings import ReconstructionSettings
-from waveorder.cli.utils import (apply_inverse_to_zyx_and_save,
-                                 create_empty_hcs_zarr,
-                                 generate_valid_position_key,
-                                 is_single_position_store)
+from waveorder.cli.utils import (
+    apply_inverse_to_zyx_and_save,
+    create_empty_hcs_zarr,
+    generate_valid_position_key,
+    is_single_position_store,
+)
 from waveorder.io import utils
 
 

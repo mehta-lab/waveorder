@@ -9,7 +9,7 @@ from iohub import read_images
 from iohub.convert import TIFFConverter
 from iohub.fov import BaseFOVMapping
 from iohub.ngff.models import TransformationMeta
-from iohub.ngff.nodes import NGFFNode, Plate, Position, open_ome_zarr
+from iohub.ngff.nodes import NGFFNode, Plate, open_ome_zarr
 from iohub.reader import _infer_format, sizeof_fmt
 from numpy.typing import DTypeLike
 
@@ -112,9 +112,7 @@ def create_empty_hcs_zarr(
         # Check if channel_names are already in the store, if not append them
         for channel_name in channel_names:
             # Read channel names directly from metadata to avoid race conditions
-            metadata_channel_names = [
-                channel.label for channel in position.metadata.omero.channels
-            ]
+            metadata_channel_names = [channel.label for channel in position.metadata.omero.channels]
             if channel_name not in metadata_channel_names:
                 position.append_channel(channel_name, resize_arrays=True)
 
@@ -279,9 +277,7 @@ def get_dataset_info(path: str):
     msgs = []
     if isinstance(reader, BaseFOVMapping):
         _, first_fov = next(iter(reader))
-        shape_msg = ", ".join(
-            [f"{a}={s}" for s, a in zip(first_fov.shape, ("T", "C", "Z", "Y", "X"))]
-        )
+        shape_msg = ", ".join([f"{a}={s}" for s, a in zip(first_fov.shape, ("T", "C", "Z", "Y", "X"))])
         msgs.extend(
             [
                 sum_msg,
@@ -293,10 +289,7 @@ def get_dataset_info(path: str):
             ]
         )
         if reader.micromanager_summary:
-            result_string = "\n".join(
-                f"{key}:\t\t {value}"
-                for key, value in reader.micromanager_summary.items()
-            )
+            result_string = "\n".join(f"{key}:\t\t {value}" for key, value in reader.micromanager_summary.items())
             msgs.append("============")
             msgs.append(result_string)
     elif isinstance(reader, NGFFNode):
@@ -304,9 +297,7 @@ def get_dataset_info(path: str):
             [
                 sum_msg,
                 fmt_msg,
-                "".join(
-                    ["Axes:\t\t\t "] + [f"{a.name} ({a.type}); " for a in reader.axes]
-                ),
+                "".join(["Axes:\t\t\t "] + [f"{a.name} ({a.type}); " for a in reader.axes]),
                 ch_msg,
             ]
         )

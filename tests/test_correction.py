@@ -2,9 +2,12 @@ import pytest
 import torch
 
 from tests.conftest import _DEVICE
-from waveorder.correction import (_fit_2d_polynomial_surface,
-                                  _grid_coordinates, _sample_block_medians,
-                                  estimate_background)
+from waveorder.correction import (
+    _fit_2d_polynomial_surface,
+    _grid_coordinates,
+    _sample_block_medians,
+    estimate_background,
+)
 
 
 def test_sample_block_medians():

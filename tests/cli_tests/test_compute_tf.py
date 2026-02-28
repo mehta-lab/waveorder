@@ -2,9 +2,7 @@ from click.testing import CliRunner
 
 from waveorder.api import birefringence, fluorescence, phase
 from waveorder.cli import settings
-from waveorder.cli.compute_transfer_function import (_write_birefringence_tf,
-                                                     _write_fluorescence_tf,
-                                                     _write_phase_tf)
+from waveorder.cli.compute_transfer_function import _write_birefringence_tf, _write_fluorescence_tf, _write_phase_tf
 from waveorder.cli.main import cli
 from waveorder.io import utils
 

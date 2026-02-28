@@ -3,8 +3,7 @@
 import numpy as np
 import pytest
 
-from waveorder.api import (birefringence, birefringence_and_phase,
-                           fluorescence, phase)
+from waveorder.api import birefringence, birefringence_and_phase, fluorescence, phase
 
 # --- Phase ---
 

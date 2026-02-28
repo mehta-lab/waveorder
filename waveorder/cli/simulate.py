@@ -6,8 +6,7 @@ import xarray as xr
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
-from waveorder.api import (birefringence, birefringence_and_phase,
-                           fluorescence, phase)
+from waveorder.api import birefringence, birefringence_and_phase, fluorescence, phase
 from waveorder.cli.parsing import config_filepath, output_dirpath
 from waveorder.cli.printing import echo_headline
 from waveorder.cli.settings import ReconstructionSettings

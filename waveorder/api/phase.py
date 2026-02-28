@@ -7,13 +7,20 @@ import torch
 import xarray as xr
 from pydantic import Field, NonNegativeFloat, model_validator
 
-from waveorder.api._settings import (FourierApplyInverseSettings,
-                                     FourierTransferFunctionSettings,
-                                     MyBaseModel, WavelengthIllumination)
-from waveorder.api._utils import (_build_output_xarray, _named_dataarray,
-                                  _output_channel_names,
-                                  _position_list_from_shape_scale_offset,
-                                  _to_singular_system, _to_tensor)
+from waveorder.api._settings import (
+    FourierApplyInverseSettings,
+    FourierTransferFunctionSettings,
+    MyBaseModel,
+    WavelengthIllumination,
+)
+from waveorder.api._utils import (
+    _build_output_xarray,
+    _named_dataarray,
+    _output_channel_names,
+    _position_list_from_shape_scale_offset,
+    _to_singular_system,
+    _to_tensor,
+)
 from waveorder.models import isotropic_thin_3d, phase_thick_3d
 
 # --- Settings ---

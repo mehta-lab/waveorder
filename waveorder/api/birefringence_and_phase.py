@@ -13,14 +13,22 @@ import torch
 import xarray as xr
 
 from waveorder.api import birefringence, phase
-from waveorder.api._utils import (_biref_inverse_kwargs, _build_output_xarray,
-                                  _named_dataarray, _output_channel_names,
-                                  _to_singular_system, _to_tensor,
-                                  radians_to_nanometers)
-from waveorder.models import (inplane_oriented_thick_pol3d,
-                              inplane_oriented_thick_pol3d_vector,
-                              isotropic_fluorescent_thick_3d,
-                              isotropic_thin_3d, phase_thick_3d)
+from waveorder.api._utils import (
+    _biref_inverse_kwargs,
+    _build_output_xarray,
+    _named_dataarray,
+    _output_channel_names,
+    _to_singular_system,
+    _to_tensor,
+    radians_to_nanometers,
+)
+from waveorder.models import (
+    inplane_oriented_thick_pol3d,
+    inplane_oriented_thick_pol3d_vector,
+    isotropic_fluorescent_thick_3d,
+    isotropic_thin_3d,
+    phase_thick_3d,
+)
 from waveorder.stokes import _s12_to_orientation, stokes_after_adr
 
 

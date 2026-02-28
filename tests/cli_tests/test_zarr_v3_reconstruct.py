@@ -17,8 +17,7 @@ from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
 from waveorder.cli import settings
-from waveorder.cli.apply_inverse_transfer_function import \
-    get_reconstruction_output_metadata
+from waveorder.cli.apply_inverse_transfer_function import get_reconstruction_output_metadata
 from waveorder.cli.main import cli
 from waveorder.cli.utils import create_empty_hcs_zarr
 from waveorder.io import utils
