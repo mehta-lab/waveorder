@@ -1,7 +1,7 @@
 """Shared base settings classes used across reconstruction types."""
 
 import warnings
-from typing import Literal, Union
+from typing import Literal
 
 from pydantic import (
     BaseModel,
@@ -26,9 +26,9 @@ class FourierTransferFunctionSettings(MyBaseModel):
     yx_pixel_size: PositiveFloat = Field(default=0.1, description="lateral pixel size in micrometers")
     z_pixel_size: PositiveFloat = Field(default=0.25, description="axial pixel size in micrometers")
     z_padding: NonNegativeInt = Field(default=0, description="z slices to pad for axial boundary effects")
-    z_focus_offset: Union[float, Literal["auto"]] = Field(
+    z_focus_offset: float = Field(
         default=0,
-        description="offset from center slice in slice units (or 'auto')",
+        description="offset from center slice in slice units",
     )
     index_of_refraction_media: PositiveFloat = Field(default=1.3, description="refractive index of imaging media")
     numerical_aperture_detection: PositiveFloat = Field(
