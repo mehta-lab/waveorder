@@ -214,10 +214,14 @@ def reconstruct_positions_pipelined(
         write_stream.synchronize()
 
         try:
-            # Write to disk (may start before cpu_result fully populated - TESTING!)
+            # Convert torch tensor to numpy for zarr compatibility
+            # (torch.dtype has no .name attribute, which zarr requires)
+            cpu_result_np = cpu_result.numpy()
+
+            # Write to disk
             output_dataset[buf.pos_name][0].oindex[
                 t_idx, output_channel_indices
-            ] = cpu_result
+            ] = cpu_result_np
 
         except Exception as e:
             print(f"  [{buf.pos_name}] Write error: {e}", file=sys.stderr)
