@@ -10,9 +10,7 @@ from waveorder.io.visualization import ret_ori_overlay, ret_ori_phase_overlay
 
 @st.composite
 def _birefringence(draw):
-    shape = (2,) + tuple(
-        draw(st.lists(st.integers(1, 16), min_size=2, max_size=4))
-    )
+    shape = (2,) + tuple(draw(st.lists(st.integers(1, 16), min_size=2, max_size=4)))
     dtype = draw(npst.floating_dtypes(sizes=(32, 64)))
     bit_width = dtype.itemsize * 8
     retardance = draw(

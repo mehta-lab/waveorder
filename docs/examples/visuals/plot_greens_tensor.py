@@ -31,13 +31,9 @@ threshold = 0.5  # for marching cubes
 
 # Calculate coordinate grids
 zyx_pixel_size = (z_pixel_size, yx_pixel_size, yx_pixel_size)
-y_frequencies, x_frequencies = util.generate_frequencies(
-    zyx_shape[1:], yx_pixel_size
-)
+y_frequencies, x_frequencies = util.generate_frequencies(zyx_shape[1:], yx_pixel_size)
 radial_frequencies = torch.sqrt(x_frequencies**2 + y_frequencies**2)
-z_position_list = torch.fft.ifftshift(
-    (torch.arange(zyx_shape[0]) - zyx_shape[0] // 2) * z_pixel_size
-)
+z_position_list = torch.fft.ifftshift((torch.arange(zyx_shape[0]) - zyx_shape[0] // 2) * z_pixel_size)
 z_frequencies = torch.fft.fftfreq(zyx_shape[0], d=z_pixel_size)
 
 freq_shape = z_position_list.shape + x_frequencies.shape
@@ -87,9 +83,7 @@ for i in range(3):
         name = f"{i}_{j}"
 
         volume = G_pos[i, j]
-        verts, faces, normals, _ = measure.marching_cubes(
-            volume, level=threshold * np.max(volume)
-        )
+        verts, faces, normals, _ = measure.marching_cubes(volume, level=threshold * np.max(volume))
         viewer.add_surface(
             (verts, faces),
             name=name + "-positive-surface",
@@ -100,9 +94,7 @@ for i in range(3):
 
         volume = -G_neg[i, j]
         if i != j:
-            verts, faces, normals, _ = measure.marching_cubes(
-                volume, level=threshold * np.max(volume)
-            )
+            verts, faces, normals, _ = measure.marching_cubes(volume, level=threshold * np.max(volume))
             viewer.add_surface(
                 (verts, faces),
                 opacity=1.0,
@@ -128,12 +120,8 @@ for i in range(3):
         link_layers(viewer.layers[-2:])
 
         print(f"Screenshotting {i}_{j}")
-        viewer.camera.set_view_direction(
-            view_direction=[-1, -1, -1], up_direction=[0, 0, 1]
-        )
-        viewer.screenshot(
-            os.path.join(output_dirpath, f"{i}_{j}.png"), scale=2
-        )
+        viewer.camera.set_view_direction(view_direction=[-1, -1, -1], up_direction=[0, 0, 1])
+        viewer.screenshot(os.path.join(output_dirpath, f"{i}_{j}.png"), scale=2)
         viewer.layers[-1].visible = False
         viewer.layers[-2].visible = False
 

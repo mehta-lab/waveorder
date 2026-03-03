@@ -1,9 +1,7 @@
 import torch
 
 
-def tikhonov_regularized_inverse_filter(
-    forward_filter: torch.Tensor, regularization_strength: float
-):
+def tikhonov_regularized_inverse_filter(forward_filter: torch.Tensor, regularization_strength: float):
     """Compute the Tikhonov regularized inverse filter from a forward filter.
 
     Parameters
@@ -20,9 +18,7 @@ def tikhonov_regularized_inverse_filter(
 
     if forward_filter.ndim == 3:
         forward_filter_conj = torch.conj(forward_filter)
-        return forward_filter_conj / (
-            (forward_filter_conj * forward_filter) + regularization_strength
-        )
+        return forward_filter_conj / ((forward_filter_conj * forward_filter) + regularization_strength)
     else:
         # TC TODO INTEGRATE THE 5D FILTER BANK CASE
         raise NotImplementedError("Only 3D tensors are supported.")

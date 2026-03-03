@@ -3,8 +3,8 @@ from typing import Tuple
 
 import click
 import numpy as np
-import torch
-from iohub.ngff import Position, open_ome_zarr
+import xarray as xr
+from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 from numpy.typing import DTypeLike
 
@@ -107,47 +107,59 @@ def create_empty_hcs_zarr(
         # Check if channel_names are already in the store, if not append them
         for channel_name in channel_names:
             # Read channel names directly from metadata to avoid race conditions
-            metadata_channel_names = [
-                channel.label for channel in position.metadata.omero.channels
-            ]
+            metadata_channel_names = [channel.label for channel in position.metadata.omero.channels]
             if channel_name not in metadata_channel_names:
                 position.append_channel(channel_name, resize_arrays=True)
 
 
 def apply_inverse_to_zyx_and_save(
     func,
-    position: Position,
+    input_data: xr.DataArray,
     output_path: Path,
-    input_channel_indices: list[int],
-    output_channel_indices: list[int],
+    input_channel_names: list[str],
     t_idx: int = 0,
     **kwargs,
 ) -> None:
-    """Load a zyx array from a Position object, apply a transformation and save the result to file"""
+    """Load a zyx array from an xarray DataArray, apply a transformation and save the result to file.
+
+    Parameters
+    ----------
+    func : callable
+        Model function: xr.DataArray CZYX in, xr.DataArray CZYX out.
+    input_data : xr.DataArray
+        5D TCZYX input data.
+    output_path : Path
+        Path to the output position.
+    input_channel_names : list[str]
+        Channel names to select from input_data.
+    t_idx : int
+        Time index to process.
+    **kwargs
+        Additional arguments passed to func.
+    """
     click.echo(f"Reconstructing t={t_idx}")
 
-    # Load data
-    czyx_uint16_numpy = position.data.oindex[t_idx, input_channel_indices]
+    # Extract CZYX xarray slice
+    czyx_slice = input_data.isel(t=t_idx).sel(c=input_channel_names)
 
-    # Check if all values in czyx_uint16_numpy are not zeros or Nan
-    if _check_nan_n_zeros(czyx_uint16_numpy):
-        click.echo(
-            f"All values at t={t_idx} are zero or Nan, skipping reconstruction."
-        )
+    # Check if all values are zeros or NaN
+    if _check_nan_n_zeros(czyx_slice.values):
+        click.echo(f"All values at t={t_idx} are zero or Nan, skipping reconstruction.")
         return
 
-    # convert to np.int32 (torch doesn't accept np.uint16), then convert to tensor float32
-    czyx_data = torch.tensor(np.int32(czyx_uint16_numpy), dtype=torch.float32)
+    # Apply transformation (returns xr.DataArray CZYX)
+    output_czyx = func(czyx_slice, **kwargs)
 
-    # Apply transformation
-    reconstruction_czyx = func(czyx_data, **kwargs)
+    # Add t dimension from input coords
+    t_coord = input_data.coords["t"].values[t_idx : t_idx + 1]
+    t_attrs = input_data.coords["t"].attrs
+
+    output_xa = output_czyx.expand_dims(dim={"t": t_coord}, axis=0)
+    output_xa["t"].attrs = t_attrs
 
     # Write to file
-    # for c, recon_zyx in enumerate(reconstruction_zyx):
-    with open_ome_zarr(output_path, mode="r+") as output_dataset:
-        output_dataset[0].oindex[
-            t_idx, output_channel_indices
-        ] = reconstruction_czyx.cpu().numpy()
+    with open_ome_zarr(output_path, mode="r+") as output_position:
+        output_position.write_xarray(output_xa)
     click.echo(f"Finished Writing.. t={t_idx}")
 
 
@@ -167,9 +179,7 @@ def estimate_resources(shape, settings, num_processes):
     if settings.fluorescence is not None:
         gb_ram_per_cpu += input_memory * fourier_resource_multiplier
     ram_multiplier = 1
-    gb_ram_per_cpu = np.ceil(
-        np.max([1, ram_multiplier * gb_ram_per_cpu])
-    ).astype(int)
+    gb_ram_per_cpu = np.ceil(np.max([1, ram_multiplier * gb_ram_per_cpu])).astype(int)
     num_cpus = np.min([32, num_processes])
 
     return num_cpus, gb_ram_per_cpu

@@ -48,9 +48,7 @@ def test_click_new_button_birefringence(widget_with_temp_dirs):
     bire_checkbox.value = True
 
     # Verify checkbox is checked
-    assert (
-        bire_checkbox.value is True
-    ), "Birefringence checkbox should be checked"
+    assert bire_checkbox.value is True, "Birefringence checkbox should be checked"
 
     # Step 2: Click the 'New' button by triggering the connected function
     # This is what happens when user clicks the button
@@ -60,24 +58,18 @@ def test_click_new_button_birefringence(widget_with_temp_dirs):
     recon_tab.build_acq_contols()
 
     # Step 3: Verify model was created
-    assert (
-        len(recon_tab.pydantic_classes) > initial_model_count
-    ), "A new model should have been created"
+    assert len(recon_tab.pydantic_classes) > initial_model_count, "A new model should have been created"
 
     # Verify the model has the correct structure
     model_data = recon_tab.pydantic_classes[-1]  # Get the last (newest) model
 
     assert "container" in model_data, "Model should have a container"
     assert "selected_modes" in model_data, "Model should track selected modes"
-    assert (
-        "birefringence" in model_data["selected_modes"]
-    ), "Birefringence should be in selected modes"
+    assert "birefringence" in model_data["selected_modes"], "Birefringence should be in selected modes"
 
     # Verify the container has birefringence settings
     container = model_data["container"]
-    assert hasattr(
-        container, "birefringence"
-    ), "Container should have birefringence attribute"
+    assert hasattr(container, "birefringence"), "Container should have birefringence attribute"
 
 
 def test_click_new_button_phase(widget_with_temp_dirs):
@@ -93,9 +85,7 @@ def test_click_new_button_phase(widget_with_temp_dirs):
     recon_tab.build_acq_contols()
 
     # Verify model was created
-    assert (
-        len(recon_tab.pydantic_classes) > initial_model_count
-    ), "A new model should have been created"
+    assert len(recon_tab.pydantic_classes) > initial_model_count, "A new model should have been created"
 
     model_data = recon_tab.pydantic_classes[-1]
     container = model_data["container"]

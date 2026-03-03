@@ -1,8 +1,9 @@
-""" 
+"""
 Reconstruction of 3D uPTI
 ===========================================================
 Reconstruction of 3D uPTI
 """
+
 ####################################################################
 # The reconstruction of 3D uPTI                                    #
 # This reconstruction is based on the uPTI paper                   #
@@ -27,8 +28,7 @@ from waveorder.visuals import jupyter_visuals
 ## Load simulated images and parameters
 temp_dirpath = Path(user_data_dir("PTI_simulation"))
 file_name = (
-    temp_dirpath
-    / "PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
+    temp_dirpath / "PTI_simulation_data_NA_det_147_NA_illu_140_2D_spoke_discrete_no_1528_ne_1553_no_noise_Born.npz"
 )
 
 array_loaded = np.load(file_name)
@@ -74,34 +74,20 @@ setup = waveorder_reconstructor.waveorder_microscopy(
 
 
 ### Illumination patterns used
-jupyter_visuals.plot_multicolumn(
-    fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5
-)
+jupyter_visuals.plot_multicolumn(fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5)
 plt.show()
 
 ## Reconstruct Stokes images and visualize them as a function of illumination pattern
 S_image_recon = setup.Stokes_recon(I_meas)
 
-S_bg_mean_0 = np.mean(S_image_recon[0, :, :, :, :], axis=(1, 2, 3))[
-    :, np.newaxis, np.newaxis, np.newaxis
-]
-S_bg_mean_1 = np.mean(S_image_recon[1, :, :, :, :], axis=(1, 2, 3))[
-    :, np.newaxis, np.newaxis, np.newaxis
-]
-S_bg_mean_2 = np.mean(S_image_recon[2, :, :, :, :], axis=(1, 2, 3))[
-    :, np.newaxis, np.newaxis, np.newaxis
-]
+S_bg_mean_0 = np.mean(S_image_recon[0, :, :, :, :], axis=(1, 2, 3))[:, np.newaxis, np.newaxis, np.newaxis]
+S_bg_mean_1 = np.mean(S_image_recon[1, :, :, :, :], axis=(1, 2, 3))[:, np.newaxis, np.newaxis, np.newaxis]
+S_bg_mean_2 = np.mean(S_image_recon[2, :, :, :, :], axis=(1, 2, 3))[:, np.newaxis, np.newaxis, np.newaxis]
 
 S_image_tm = np.zeros_like(S_image_recon)
 S_image_tm[0] = S_image_recon[0] / S_bg_mean_0 - 1
-S_image_tm[1] = (
-    S_image_recon[1] / S_bg_mean_0
-    - S_bg_mean_1 * S_image_recon[0] / S_bg_mean_0**2
-)
-S_image_tm[2] = (
-    S_image_recon[2] / S_bg_mean_0
-    - S_bg_mean_2 * S_image_recon[0] / S_bg_mean_0**2
-)
+S_image_tm[1] = S_image_recon[1] / S_bg_mean_0 - S_bg_mean_1 * S_image_recon[0] / S_bg_mean_0**2
+S_image_tm[2] = S_image_recon[2] / S_bg_mean_0 - S_bg_mean_2 * S_image_recon[0] / S_bg_mean_0**2
 
 ## 3D uPTI reconstruction
 ### 3D volumes of the components of scattering potential tensor
@@ -118,9 +104,7 @@ reg_inc = np.array([1, 1, 5e1, 5e1, 5e1, 5e1, 5e1]) * 1
 #####################
 
 reg_ret_pr = 1e-2
-f_tensor = setup.scattering_potential_tensor_recon_3D_vec(
-    S_image_tm, reg_inc=reg_inc, cupy_det=True
-)
+f_tensor = setup.scattering_potential_tensor_recon_3D_vec(S_image_tm, reg_inc=reg_inc, cupy_det=True)
 
 jupyter_visuals.plot_multicolumn(
     f_tensor[..., L // 2],
@@ -337,9 +321,7 @@ sub_ax = ax[3, 1].imshow(
 ax[3, 1].set_title("optic sign probability (xz)")
 plt.colorbar(sub_ax, ax=ax[3, 1])
 
-sub_ax = ax[4, 0].imshow(
-    azimuth[0, :, :, z_layer], cmap="gray", origin="lower", vmin=0, vmax=np.pi
-)
+sub_ax = ax[4, 0].imshow(azimuth[0, :, :, z_layer], cmap="gray", origin="lower", vmin=0, vmax=np.pi)
 ax[4, 0].set_title("in-plane orientation (+) (xy)")
 
 sub_ax = ax[4, 1].imshow(
@@ -352,9 +334,7 @@ sub_ax = ax[4, 1].imshow(
 )
 ax[4, 1].set_title("in-plane orientation (+) (xz)")
 
-sub_ax = ax[5, 0].imshow(
-    theta[0, :, :, z_layer], cmap="gray", origin="lower", vmin=0, vmax=np.pi
-)
+sub_ax = ax[5, 0].imshow(theta[0, :, :, z_layer], cmap="gray", origin="lower", vmin=0, vmax=np.pi)
 ax[5, 0].set_title("inclination (+) (xy)")
 
 sub_ax = ax[5, 1].imshow(
@@ -387,12 +367,7 @@ orientation_3D_image = np.transpose(
         [
             azimuth[0] / 2 / np.pi,
             theta[0],
-            (
-                np.clip(
-                    np.abs(retardance_pr_PT[0]), ret_min_color, ret_max_color
-                )
-                - ret_min_color
-            )
+            (np.clip(np.abs(retardance_pr_PT[0]), ret_min_color, ret_max_color) - ret_min_color)
             / (ret_max_color - ret_min_color),
         ]
     ),
@@ -406,9 +381,7 @@ orientation_3D_image_RGB = jupyter_visuals.orientation_3D_to_rgb(
 plt.figure(figsize=(10, 10))
 plt.imshow(orientation_3D_image_RGB[z_layer], origin="lower")
 plt.figure(figsize=(10, 10))
-plt.imshow(
-    orientation_3D_image_RGB[:, y_layer], origin="lower", aspect=psz / ps
-)
+plt.imshow(orientation_3D_image_RGB[:, y_layer], origin="lower", aspect=psz / ps)
 # plot the top view of 3D orientation colorsphere
 plt.figure(figsize=(3, 3))
 jupyter_visuals.orientation_3D_colorwheel(
@@ -431,12 +404,7 @@ I_hsv = np.transpose(
         [
             (azimuth[0]) % np.pi / np.pi,
             np.ones_like(retardance_pr_PT[0]),
-            (
-                np.clip(
-                    np.abs(retardance_pr_PT[0]), ret_min_color, ret_max_color
-                )
-                - ret_min_color
-            )
+            (np.clip(np.abs(retardance_pr_PT[0]), ret_min_color, ret_max_color) - ret_min_color)
             / (ret_max_color - ret_min_color),
         ]
     ),
@@ -460,19 +428,9 @@ threshold_inc = np.pi / 90
 I_hsv = np.transpose(
     np.array(
         [
-            (
-                -np.maximum(0, np.abs(theta[0] - np.pi / 2) - threshold_inc)
-                + np.pi / 2
-                + threshold_inc
-            )
-            / np.pi,
+            (-np.maximum(0, np.abs(theta[0] - np.pi / 2) - threshold_inc) + np.pi / 2 + threshold_inc) / np.pi,
             np.ones_like(retardance_pr_PT[0]),
-            (
-                np.clip(
-                    np.abs(retardance_pr_PT[0]), ret_min_color, ret_max_color
-                )
-                - ret_min_color
-            )
+            (np.clip(np.abs(retardance_pr_PT[0]), ret_min_color, ret_max_color) - ret_min_color)
             / (ret_max_color - ret_min_color),
         ]
     ),

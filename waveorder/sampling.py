@@ -30,9 +30,7 @@ def transverse_nyquist(
         Transverse Nyquist sample spacing
 
     """
-    return wavelength_emission / (
-        2 * (numerical_aperture_detection + numerical_aperture_illumination)
-    )
+    return wavelength_emission / (2 * (numerical_aperture_detection + numerical_aperture_illumination))
 
 
 def axial_nyquist(
@@ -65,10 +63,7 @@ def axial_nyquist(
 
     """
     n_on_lambda = index_of_refraction_media / wavelength_emission
-    cutoff_frequency = n_on_lambda - np.sqrt(
-        n_on_lambda**2
-        - (numerical_aperture_detection / wavelength_emission) ** 2
-    )
+    cutoff_frequency = n_on_lambda - np.sqrt(n_on_lambda**2 - (numerical_aperture_detection / wavelength_emission) ** 2)
     return 1 / (2 * cutoff_frequency)
 
 
@@ -87,8 +82,5 @@ def nd_fourier_central_cuboid(source, target_shape):
         Center cuboid in Fourier space
 
     """
-    center_slices = tuple(
-        slice((s - o) // 2, (s - o) // 2 + o)
-        for s, o in zip(source.shape, target_shape)
-    )
+    center_slices = tuple(slice((s - o) // 2, (s - o) // 2 + o) for s, o in zip(source.shape, target_shape))
     return torch.fft.ifftshift(torch.fft.fftshift(source)[center_slices])

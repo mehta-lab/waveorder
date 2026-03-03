@@ -32,8 +32,8 @@ First, let's install the latest version of waveorder from the main branch
 """
 
 # %%
-import sys
 import subprocess
+import sys
 
 # Install latest waveorder from main branch
 subprocess.check_call(
@@ -47,15 +47,13 @@ subprocess.check_call(
 )
 
 # %%
-import numpy as np
-from pathlib import Path
-from platformdirs import user_data_dir
+
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 
 from waveorder import util
 from waveorder.models import phase_thick_3d
-from waveorder.visuals import jupyter_visuals
 
 # %% [markdown]
 """
@@ -92,12 +90,9 @@ transfer_function_arguments = {
 # Create a phantom
 
 # 3D Star target
-star, _, _ = util.generate_star_target(
-    yx_shape=simulation_arguments["zyx_shape"][1:3]
-)
+star, _, _ = util.generate_star_target(yx_shape=simulation_arguments["zyx_shape"][1:3])
 yx_phase = star * (
-    phantom_arguments["index_of_refraction_sample"]
-    - simulation_arguments["index_of_refraction_media"]
+    phantom_arguments["index_of_refraction_sample"] - simulation_arguments["index_of_refraction_media"]
 )  # phase in radians
 # Initialize zyx_phase with zeros
 zyx_phase = torch.zeros(simulation_arguments["zyx_shape"])
@@ -135,9 +130,7 @@ plt.show()
 (
     real_component_transfer_function,
     imaginary_component_transfer_function,
-) = phase_thick_3d.calculate_transfer_function(
-    **simulation_arguments, **transfer_function_arguments
-)
+) = phase_thick_3d.calculate_transfer_function(**simulation_arguments, **transfer_function_arguments)
 
 # Magnitude and phase of the real component of the transfer function
 tf_real_magnitude = np.fft.ifftshift(real_component_transfer_function.abs())
@@ -180,9 +173,7 @@ zyx_data_norm = (zyx_data - zyx_data.min()) / (zyx_data.max() - zyx_data.min())
 # Visualize simulated data
 fig, axes = plt.subplots(1, 5, figsize=(15, 3))
 for i, z in enumerate(z_slices):
-    axes[i].imshow(
-        zyx_data_norm[z], cmap="gray", origin="lower", vmin=0, vmax=1
-    )
+    axes[i].imshow(zyx_data_norm[z], cmap="gray", origin="lower", vmin=0, vmax=1)
     axes[i].set_title(f"Data, z = {z - z_center}")
     axes[i].axis("off")
 plt.tight_layout()
@@ -209,22 +200,16 @@ fig, axes = plt.subplots(3, 5, figsize=(15, 9))
 
 # Normalize data and reconstruction between 0 and 1
 zyx_data_norm = (zyx_data - zyx_data.min()) / (zyx_data.max() - zyx_data.min())
-zyx_recon_norm = (zyx_recon - zyx_recon.min()) / (
-    zyx_recon.max() - zyx_recon.min()
-)
+zyx_recon_norm = (zyx_recon - zyx_recon.min()) / (zyx_recon.max() - zyx_recon.min())
 
 for i, z in enumerate(z_slices):
     axes[0, i].imshow(zyx_phase[z], cmap="gray", origin="lower")
     axes[0, i].set_title(f"Ground Truth, z = {z - z_center}")
     axes[0, i].axis("off")
-    axes[1, i].imshow(
-        zyx_data_norm[z], cmap="gray", origin="lower", vmin=0, vmax=1
-    )
+    axes[1, i].imshow(zyx_data_norm[z], cmap="gray", origin="lower", vmin=0, vmax=1)
     axes[1, i].set_title(f"Data, z = {z - z_center}")
     axes[1, i].axis("off")
-    axes[2, i].imshow(
-        zyx_recon_norm[z], cmap="gray", origin="lower", vmin=0, vmax=1
-    )
+    axes[2, i].imshow(zyx_recon_norm[z], cmap="gray", origin="lower", vmin=0, vmax=1)
     axes[2, i].set_title(f"Reconstruction, z = {z - z_center}")
     axes[2, i].axis("off")
 plt.tight_layout()

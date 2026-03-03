@@ -13,9 +13,7 @@ from waveorder.correction import (
 def test_sample_block_medians():
     image = torch.arange(4 * 5, dtype=torch.float).reshape(4, 5)
     medians = _sample_block_medians(image, 2)
-    assert torch.allclose(
-        medians, torch.tensor([1, 3, 11, 13]).to(image.dtype)
-    )
+    assert torch.allclose(medians, torch.tensor([1, 3, 11, 13]).to(image.dtype))
 
 
 def test_grid_coordinates():

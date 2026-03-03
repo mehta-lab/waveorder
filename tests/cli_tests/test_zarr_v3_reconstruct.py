@@ -32,9 +32,7 @@ def _iohub_supports_v05():
     """Check if the installed iohub actually creates v0.5 stores."""
     tmp = Path(mkdtemp()) / "v05check.zarr"
     try:
-        ds = open_ome_zarr(
-            tmp, layout="fov", mode="w-", channel_names=["ch"], version="0.5"
-        )
+        ds = open_ome_zarr(tmp, layout="fov", mode="w-", channel_names=["ch"], version="0.5")
         supported = ds.version == "0.5"
         ds.close()
         return supported

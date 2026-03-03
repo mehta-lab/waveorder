@@ -12,22 +12,20 @@ from waveorder.models import inplane_oriented_thick_pol3d_vector
 
 # Parameters
 # all lengths must use consistent units e.g. um
-zyx_shape = (101, 256, 256)
+zyx_shape = (100, 256, 256)
 swing = 0.1
-scheme = "5-State"
-yx_pixel_size = 6.5 / 63
-z_pixel_size = 0.15
+scheme = "4-State"
+yx_pixel_size = 0.1
+z_pixel_size = 0.25
 wavelength_illumination = 0.532
 z_padding = 0
 index_of_refraction_media = 1.3
-numerical_aperture_illumination = 0.5
+numerical_aperture_illumination = 0.9
 numerical_aperture_detection = 1.2
 fourier_oversample_factor = 1
 
 # Create a phantom
-fzyx_object = inplane_oriented_thick_pol3d_vector.generate_test_phantom(
-    zyx_shape
-)
+fzyx_object = inplane_oriented_thick_pol3d_vector.generate_test_phantom(zyx_shape)
 
 # Calculate transfer function
 (
@@ -79,13 +77,11 @@ for array in arrays:
 
 # Reconstruct
 for reg_strength in [0.005, 0.008, 0.01, 0.05, 0.1]:
-    fzyx_object_recon = (
-        inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
-            szyx_data,
-            singular_system,
-            intensity_to_stokes_matrix,
-            regularization_strength=reg_strength,
-        )
+    fzyx_object_recon = inplane_oriented_thick_pol3d_vector.apply_inverse_transfer_function(
+        szyx_data,
+        singular_system,
+        intensity_to_stokes_matrix,
+        regularization_strength=reg_strength,
     )
     viewer.add_image(
         torch.real(fzyx_object_recon).cpu().numpy(),

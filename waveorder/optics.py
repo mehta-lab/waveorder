@@ -27,9 +27,9 @@ def Jones_sample(Ein, t, sa):
     """
 
     Eout = np.zeros_like(Ein)
-    Eout[0] = Ein[0] * (t[0] * np.cos(sa) ** 2 + t[1] * np.sin(sa) ** 2) + Ein[
-        1
-    ] * (t[0] - t[1]) * np.sin(sa) * np.cos(sa)
+    Eout[0] = Ein[0] * (t[0] * np.cos(sa) ** 2 + t[1] * np.sin(sa) ** 2) + Ein[1] * (t[0] - t[1]) * np.sin(sa) * np.cos(
+        sa
+    )
     Eout[1] = Ein[0] * (t[0] - t[1]) * np.sin(sa) * np.cos(sa) + Ein[1] * (
         t[0] * np.sin(sa) ** 2 + t[1] * np.cos(sa) ** 2
     )
@@ -66,24 +66,16 @@ def Jones_to_Stokes(Ein, use_gpu=False, gpu_id=0):
 
         S0 = (cp.abs(Ein[0]) ** 2 + cp.abs(Ein[1]) ** 2)[cp.newaxis, ...]
         S1 = (cp.abs(Ein[0]) ** 2 - cp.abs(Ein[1]) ** 2)[cp.newaxis, ...]
-        S2 = (cp.real(Ein[0].conj() * Ein[1] + Ein[0] * Ein[1].conj()))[
-            cp.newaxis, ...
-        ]
-        S3 = (
-            cp.real(-1j * (Ein[0].conj() * Ein[1] - Ein[0] * Ein[1].conj()))
-        )[cp.newaxis, ...]
+        S2 = (cp.real(Ein[0].conj() * Ein[1] + Ein[0] * Ein[1].conj()))[cp.newaxis, ...]
+        S3 = (cp.real(-1j * (Ein[0].conj() * Ein[1] - Ein[0] * Ein[1].conj())))[cp.newaxis, ...]
         Stokes = cp.concatenate((S0, S1, S2, S3), axis=0)
 
     else:
         Stokes = []
         Stokes.append(np.abs(Ein[0]) ** 2 + np.abs(Ein[1]) ** 2)  # S0
         Stokes.append(np.abs(Ein[0]) ** 2 - np.abs(Ein[1]) ** 2)  # S1
-        Stokes.append(
-            np.real(Ein[0].conj() * Ein[1] + Ein[0] * Ein[1].conj())
-        )  # S2
-        Stokes.append(
-            np.real(-1j * (Ein[0].conj() * Ein[1] - Ein[0] * Ein[1].conj()))
-        )  # S3
+        Stokes.append(np.real(Ein[0].conj() * Ein[1] + Ein[0] * Ein[1].conj()))  # S2
+        Stokes.append(np.real(-1j * (Ein[0].conj() * Ein[1] - Ein[0] * Ein[1].conj())))  # S3
         Stokes = np.array(Stokes)
 
     return Stokes
@@ -111,9 +103,7 @@ def analyzer_output(Ein, alpha, beta):
                 output electric field with the size of (2, Ny, Nx, ...)
     """
 
-    Eout = Ein[0] * np.exp(-1j * beta / 2) * np.cos(alpha / 2) - Ein[
-        1
-    ] * 1j * np.exp(1j * beta / 2) * np.sin(alpha / 2)
+    Eout = Ein[0] * np.exp(-1j * beta / 2) * np.cos(alpha / 2) - Ein[1] * 1j * np.exp(1j * beta / 2) * np.sin(alpha / 2)
 
     return Eout
 
@@ -194,28 +184,18 @@ def gen_sector_Pupil(fxx, fyy, NA, lamb_in, sector_angle, rotation_angle):
     if isinstance(rotation_angle, int) or isinstance(rotation_angle, float):
         rotation_angle = [rotation_angle]
     elif isinstance(rotation_angle, list):
-        if (not isinstance(rotation_angle[0], int)) and (
-            not isinstance(rotation_angle[0], float)
-        ):
-            raise ValueError(
-                "Elements in rotation_angle need to be either int or float"
-            )
+        if (not isinstance(rotation_angle[0], int)) and (not isinstance(rotation_angle[0], float)):
+            raise ValueError("Elements in rotation_angle need to be either int or float")
     else:
-        raise ValueError(
-            "rotation_angle needs to be int, float, or a list of int and float"
-        )
+        raise ValueError("rotation_angle needs to be int, float, or a list of int and float")
 
     for i in range(len(rotation_angle)):
         deg = rotation_angle[i]
         temp = np.zeros_like(Pupil)
         temp2 = np.zeros_like(Pupil)
-        temp[
-            fyy * np.cos(np.deg2rad(deg)) - fxx * np.sin(np.deg2rad(deg))
-            > 1e-10
-        ] = 1
+        temp[fyy * np.cos(np.deg2rad(deg)) - fxx * np.sin(np.deg2rad(deg)) > 1e-10] = 1
         temp2[
-            fyy * np.cos(np.deg2rad(deg - (180 - sector_angle)))
-            - fxx * np.sin(np.deg2rad(deg - (180 - sector_angle)))
+            fyy * np.cos(np.deg2rad(deg - (180 - sector_angle))) - fxx * np.sin(np.deg2rad(deg - (180 - sector_angle)))
             > 1e-10
         ] = 1
 
@@ -253,9 +233,7 @@ def generate_vector_source_defocus_pupil(
     ill_pupil,
     wavelength,
 ):
-    ill_pupil_3d = torch.einsum(
-        "zyx,yx->zyx", torch.fft.fft(defocus_pupil, dim=0), ill_pupil
-    ).abs()  # make this real
+    ill_pupil_3d = torch.einsum("zyx,yx->zyx", torch.fft.fft(defocus_pupil, dim=0), ill_pupil).abs()  # make this real
 
     freq_shape = z_position_list.shape + x_frequencies.shape
 
@@ -264,9 +242,7 @@ def generate_vector_source_defocus_pupil(
     z_broadcast = np.sqrt(wavelength ** (-2) - x_broadcast**2 - y_broadcast**2)
 
     # Calculate rotation matrix
-    rotations = rotation_matrix(
-        z_broadcast, y_broadcast, x_broadcast, wavelength
-    ).type(torch.complex64)
+    rotations = rotation_matrix(z_broadcast, y_broadcast, x_broadcast, wavelength).type(torch.complex64)
 
     # TEMPORARY SIMPLIFY ROTATIONS "TURN OFF ROTATIONS"
     # 3x2 IDENTITY MATRIX
@@ -275,9 +251,7 @@ def generate_vector_source_defocus_pupil(
     rotations[2, 1, ...] = 1
 
     # Main calculation in the frequency domain
-    source_pupil = torch.einsum(
-        "ijzyx,j,zyx->izyx", rotations, input_jones, ill_pupil_3d
-    )
+    source_pupil = torch.einsum("ijzyx,j,zyx->izyx", rotations, input_jones, ill_pupil_3d)
 
     # Convert back to defocus pupil
     source_defocus_pupil = torch.fft.ifft(source_pupil, dim=-3)
@@ -294,9 +268,7 @@ def generate_vector_detection_defocus_pupil(
     wavelength,
 ):
     # TODO: refactor redundancy with illumination pupil
-    det_pupil_3d = torch.einsum(
-        "zyx,yx->zyx", torch.fft.ifft(det_defocus_pupil, dim=0), det_pupil
-    )
+    det_pupil_3d = torch.einsum("zyx,yx->zyx", torch.fft.ifft(det_defocus_pupil, dim=0), det_pupil)
 
     # Calculate zyx_frequency grid (inelegant)
     z_frequencies = torch.fft.ifft(z_position_list)
@@ -306,14 +278,10 @@ def generate_vector_detection_defocus_pupil(
     x_broadcast = torch.broadcast_to(x_frequencies[None, :, :], freq_shape)
 
     # Calculate rotation matrix
-    rotations = rotation_matrix(
-        z_broadcast, y_broadcast, x_broadcast, wavelength
-    ).type(torch.complex64)
+    rotations = rotation_matrix(z_broadcast, y_broadcast, x_broadcast, wavelength).type(torch.complex64)
 
     # Main calculation in the frequency domain
-    vector_detection_pupil = torch.einsum(
-        "jizyx,zyx->ijzyx", rotations, det_pupil_3d
-    )
+    vector_detection_pupil = torch.einsum("jizyx,zyx->ijzyx", rotations, det_pupil_3d)
 
     # Convert back to defocus pupil
     detection_defocus_pupil = torch.fft.fft(vector_detection_pupil, dim=-3)
@@ -367,9 +335,7 @@ def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA=0.1):
             first_idx = False
         elif (
             np.prod(
-                (NAx_list[i] - NAx_list[illu_list]) ** 2
-                + (NAy_list[i] - NAy_list[illu_list]) ** 2
-                >= subsampled_NA**2
+                (NAx_list[i] - NAx_list[illu_list]) ** 2 + (NAy_list[i] - NAy_list[illu_list]) ** 2 >= subsampled_NA**2
             )
             == 1
         ):
@@ -381,9 +347,7 @@ def Source_subsample(Source_cont, NAx_coord, NAy_coord, subsampled_NA=0.1):
     return Source_discrete
 
 
-def generate_propagation_kernel(
-    radial_frequencies, pupil_support, wavelength, z_position_list
-):
+def generate_propagation_kernel(radial_frequencies, pupil_support, wavelength, z_position_list):
     """
     Parameters
     ----------
@@ -406,17 +370,11 @@ def generate_propagation_kernel(
 
     """
 
-    oblique_factor = ((1 - wavelength**2 * radial_frequencies**2)) ** (
-        1 / 2
-    ) / wavelength
+    oblique_factor = (1 - wavelength**2 * radial_frequencies**2) ** (1 / 2) / wavelength
     oblique_factor = torch.nan_to_num(oblique_factor, nan=0.0)
 
     propagation_kernel = pupil_support[None, :, :] * torch.exp(
-        1j
-        * 2
-        * np.pi
-        * z_position_list[:, None, None]
-        * oblique_factor[None, :, :]
+        1j * 2 * np.pi * z_position_list[:, None, None] * oblique_factor[None, :, :]
     )
 
     return propagation_kernel
@@ -459,10 +417,9 @@ def generate_greens_function_z(
 
     """
 
-    oblique_factor = (
-        (1 - wavelength_illumination**2 * radial_frequencies**2)
-        * pupil_support
-    ) ** (1 / 2) / wavelength_illumination
+    oblique_factor = ((1 - wavelength_illumination**2 * radial_frequencies**2) * pupil_support) ** (
+        1 / 2
+    ) / wavelength_illumination
 
     if axially_even:
         z_positions = torch.abs(z_position_list[:, None, None])
@@ -481,9 +438,7 @@ def generate_greens_function_z(
     return greens_function_z
 
 
-def generate_defocus_greens_tensor(
-    fxx, fyy, G_fun_z, Pupil_support, lambda_in
-):
+def generate_defocus_greens_tensor(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
     """
 
     generate forward dyadic Green's function in u_x, u_y, z space
@@ -512,9 +467,7 @@ def generate_defocus_greens_tensor(
     """
 
     fr = (fxx**2 + fyy**2) ** (1 / 2)
-    oblique_factor = ((1 - lambda_in**2 * fr**2) * Pupil_support) ** (
-        1 / 2
-    ) / lambda_in
+    oblique_factor = ((1 - lambda_in**2 * fr**2) * Pupil_support) ** (1 / 2) / lambda_in
 
     diff_filter = torch.zeros((3,) + G_fun_z.shape, dtype=torch.complex64)
     diff_filter[0] = (1j * 2 * np.pi * oblique_factor)[None, ...]
@@ -525,12 +478,7 @@ def generate_defocus_greens_tensor(
 
     for i in range(3):
         for j in range(3):
-            G_tensor_z[i, j] = (
-                G_fun_z
-                * diff_filter[i]
-                * diff_filter[j]
-                / (2 * np.pi / lambda_in) ** 2
-            )
+            G_tensor_z[i, j] = G_fun_z * diff_filter[i] * diff_filter[j] / (2 * np.pi / lambda_in) ** 2
             if i == j:
                 G_tensor_z[i, i] += G_fun_z
 
@@ -562,9 +510,7 @@ def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
 
     N, M = fxx.shape
     fr = (fxx**2 + fyy**2) ** (1 / 2)
-    oblique_factor = ((1 - lambda_in**2 * fr**2) * Pupil_support) ** (
-        1 / 2
-    ) / lambda_in
+    oblique_factor = ((1 - lambda_in**2 * fr**2) * Pupil_support) ** (1 / 2) / lambda_in
 
     diff_filter = np.zeros((3,) + G_fun_z.shape, complex)
     diff_filter[0] = (1j * 2 * np.pi * fxx * Pupil_support)[..., np.newaxis]
@@ -575,12 +521,7 @@ def gen_dyadic_Greens_tensor_z(fxx, fyy, G_fun_z, Pupil_support, lambda_in):
 
     for i in range(3):
         for j in range(3):
-            G_tensor_z[i, j] = (
-                G_fun_z
-                * diff_filter[i]
-                * diff_filter[j]
-                / (2 * np.pi / lambda_in) ** 2
-            )
+            G_tensor_z[i, j] = G_fun_z * diff_filter[i] * diff_filter[j] / (2 * np.pi / lambda_in) ** 2
             if i == j:
                 G_tensor_z[i, i] += G_fun_z
     return G_tensor_z
@@ -631,16 +572,7 @@ def gen_Greens_function_real(img_size, ps, psz, lambda_in):
 
     # average value for Green's function at r=0
     V_epsilon = (
-        1
-        / 1j
-        / k
-        * (
-            epsilon * np.exp(1j * k * epsilon)
-            - 1 / 1j / k * (np.exp(1j * k * epsilon) - 1)
-        )
-        / ps
-        / ps
-        / psz
+        1 / 1j / k * (epsilon * np.exp(1j * k * epsilon) - 1 / 1j / k * (np.exp(1j * k * epsilon) - 1)) / ps / ps / psz
     )
 
     G_real = np.exp(1j * k * rho) / (rho + 1e-7) / 4 / np.pi
@@ -695,12 +627,7 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
 
     for i in range(3):
         for j in range(3):
-            G_tensor[i, j] = (
-                G_real_f
-                * diff_filter[i]
-                * diff_filter[j]
-                / (2 * np.pi / lambda_in) ** 2
-            )
+            G_tensor[i, j] = G_real_f * diff_filter[i] * diff_filter[j] / (2 * np.pi / lambda_in) ** 2
             if i == j:
                 G_tensor[i, i] += G_real_f
 
@@ -708,12 +635,7 @@ def gen_dyadic_Greens_tensor(G_real, ps, psz, lambda_in, space="real"):
         return G_tensor
 
     elif space == "real":
-        return (
-            fftshift(ifftn(G_tensor, axes=(2, 3, 4)), axes=(2, 3, 4))
-            / ps
-            / ps
-            / psz
-        )
+        return fftshift(ifftn(G_tensor, axes=(2, 3, 4)), axes=(2, 3, 4)) / ps / ps / psz
 
 
 def generate_greens_tensor_spectrum(
@@ -748,9 +670,7 @@ def generate_greens_tensor_spectrum(
     rr = torch.sqrt(xx**2 + yy**2 + zz**2)
     rhat = torch.stack([zz, yy, xx], dim=0) / rr
 
-    scalar_g = torch.exp(1j * 2 * torch.pi * rr / wavelength) / (
-        4 * torch.pi * rr
-    )
+    scalar_g = torch.exp(1j * 2 * torch.pi * rr / wavelength) / (4 * torch.pi * rr)
 
     eye = torch.zeros((3, 3, Z, Y, X))
     eye[0, 0] = 1
@@ -768,9 +688,7 @@ def generate_greens_tensor_spectrum(
     return G_3D
 
 
-def compute_weak_object_transfer_function_2d(
-    illumination_pupil, detection_pupil
-):
+def compute_weak_object_transfer_function_2d(illumination_pupil, detection_pupil):
     """
 
     compute 2D weak object transfer function (2D WOTF)
@@ -799,18 +717,14 @@ def compute_weak_object_transfer_function_2d(
 
     H1 = torch.fft.ifft2(torch.conj(SP_hat) * P_hat)
     H2 = torch.fft.ifft2(SP_hat * torch.conj(P_hat))
-    I_norm = torch.sum(
-        illumination_pupil * detection_pupil * torch.conj(detection_pupil)
-    )
+    I_norm = torch.sum(illumination_pupil * detection_pupil * torch.conj(detection_pupil))
     absorption_transfer_function = (H1 + H2) / I_norm
     phase_transfer_function = 1j * (H1 - H2) / I_norm
 
     return absorption_transfer_function, phase_transfer_function
 
 
-def WOTF_semi_3D_compute(
-    Source_support, Source, Pupil, Hz_det, G_fun_z, use_gpu=False, gpu_id=0
-):
+def WOTF_semi_3D_compute(Source_support, Source, Pupil, Hz_det, G_fun_z, use_gpu=False, gpu_id=0):
     """
 
     compute semi-3D weak object transfer function (semi-3D WOTF)
@@ -858,14 +772,8 @@ def WOTF_semi_3D_compute(
         Hz_det = cp.array(Hz_det)
         G_fun_z = cp.array(G_fun_z)
 
-        H1 = cp.fft.ifft2(
-            cp.conj(cp.fft.fft2(Source * Pupil * Hz_det))
-            * cp.fft.fft2(Pupil * G_fun_z)
-        )
-        H2 = cp.fft.ifft2(
-            cp.fft.fft2(Source * Pupil * Hz_det)
-            * cp.conj(cp.fft.fft2(Pupil * G_fun_z))
-        )
+        H1 = cp.fft.ifft2(cp.conj(cp.fft.fft2(Source * Pupil * Hz_det)) * cp.fft.fft2(Pupil * G_fun_z))
+        H2 = cp.fft.ifft2(cp.fft.fft2(Source * Pupil * Hz_det) * cp.conj(cp.fft.fft2(Pupil * G_fun_z)))
         I_norm = cp.sum(Source_support * Pupil * cp.conj(Pupil))
         Hu = (H1 + H2) / I_norm
         Hp = 1j * (H1 - H2) / I_norm
@@ -874,12 +782,8 @@ def WOTF_semi_3D_compute(
         Hp = cp.asnumpy(Hp)
 
     else:
-        H1 = ifft2(
-            fft2(Source * Pupil * Hz_det).conj() * fft2(Pupil * G_fun_z)
-        )
-        H2 = ifft2(
-            fft2(Source * Pupil * Hz_det) * fft2(Pupil * G_fun_z).conj()
-        )
+        H1 = ifft2(fft2(Source * Pupil * Hz_det).conj() * fft2(Pupil * G_fun_z))
+        H2 = ifft2(fft2(Source * Pupil * Hz_det) * fft2(Pupil * G_fun_z).conj())
         I_norm = np.sum(Source_support * Pupil * Pupil.conj())
         Hu = (H1 + H2) / I_norm
         Hp = 1j * (H1 - H2) / I_norm
@@ -931,18 +835,13 @@ def compute_weak_object_transfer_function_3D(
     # NOTE: To match numpy's hanning window, I needed `periodic=False. I think
     # I would prefer `periodic=True` so that window[0] == 1, but the difference
     # should be marginal.
-    window = torch.fft.ifftshift(
-        torch.hann_window(propagation_kernel.shape[0], periodic=False)
-    )
+    window = torch.fft.ifftshift(torch.hann_window(propagation_kernel.shape[0], periodic=False))
 
     SPHz_hat = torch.fft.fft2(
-        (illumination_pupil * detection_pupil)[None, :, :]
-        * propagation_kernel,
+        (illumination_pupil * detection_pupil)[None, :, :] * propagation_kernel,
         dim=(1, 2),
     )
-    PG_hat = torch.fft.fft2(
-        detection_pupil[None, :, :] * greens_function_z, dim=(1, 2)
-    )
+    PG_hat = torch.fft.fft2(detection_pupil[None, :, :] * greens_function_z, dim=(1, 2))
 
     H1 = torch.fft.ifft2(torch.conj(SPHz_hat) * PG_hat, dim=(1, 2))
     H1 = H1 * window[:, None, None]
@@ -952,11 +851,7 @@ def compute_weak_object_transfer_function_3D(
     H2 = H2 * window[:, None, None]
     H2 = torch.fft.fft(H2, dim=0)
 
-    direct_intensity = torch.sum(
-        illumination_pupil_support
-        * detection_pupil
-        * torch.conj(detection_pupil)
-    )
+    direct_intensity = torch.sum(illumination_pupil_support * detection_pupil * torch.conj(detection_pupil))
     real_potential_transfer_function = (H1 + H2) / direct_intensity
     imag_potential_transfer_function = 1j * (H1 - H2) / direct_intensity
 
@@ -1004,26 +899,10 @@ def gen_geometric_inc_matrix(incident_theta, incident_phi, Source):
             [
                 1,
                 np.mean(0.5 * np.cos(2 * incident_theta[idx_y, idx_x])),
-                np.mean(
-                    -0.5
-                    * np.sin(2 * incident_theta[idx_y, idx_x])
-                    * np.cos(incident_phi[idx_y, idx_x])
-                ),
-                np.mean(
-                    -0.5
-                    * np.sin(2 * incident_theta[idx_y, idx_x])
-                    * np.sin(incident_phi[idx_y, idx_x])
-                ),
-                np.mean(
-                    -0.5
-                    * (np.sin(incident_theta[idx_y, idx_x]) ** 2)
-                    * np.cos(2 * incident_phi[idx_y, idx_x])
-                ),
-                np.mean(
-                    -0.5
-                    * (np.sin(incident_theta[idx_y, idx_x]) ** 2)
-                    * np.sin(2 * incident_phi[idx_y, idx_x])
-                ),
+                np.mean(-0.5 * np.sin(2 * incident_theta[idx_y, idx_x]) * np.cos(incident_phi[idx_y, idx_x])),
+                np.mean(-0.5 * np.sin(2 * incident_theta[idx_y, idx_x]) * np.sin(incident_phi[idx_y, idx_x])),
+                np.mean(-0.5 * (np.sin(incident_theta[idx_y, idx_x]) ** 2) * np.cos(2 * incident_phi[idx_y, idx_x])),
+                np.mean(-0.5 * (np.sin(incident_theta[idx_y, idx_x]) ** 2) * np.sin(2 * incident_phi[idx_y, idx_x])),
             ]
         )
 
@@ -1033,9 +912,7 @@ def gen_geometric_inc_matrix(incident_theta, incident_phi, Source):
     return geometric_inc_matrix, geometric_inc_matrix_inv
 
 
-def SEAGLE_vec_forward(
-    E_tot, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0
-):
+def SEAGLE_vec_forward(E_tot, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0):
     """
 
     compute vectorial SEAGLE forward model
@@ -1115,18 +992,14 @@ def SEAGLE_vec_forward(
             E_interact[p] += f_scat_tensor[p, q] * E_tot[q]
 
         for p, q in itertools.product(range(3), range(3)):
-            E_in_est[p] += pad_convolve_G(
-                E_interact[q], np.abs(np.mean(E_interact[q])), G_tensor[p, q]
-            )
+            E_in_est[p] += pad_convolve_G(E_interact[q], np.abs(np.mean(E_interact[q])), G_tensor[p, q])
             if p == q:
                 E_in_est[p] += E_tot[p]
 
     return E_in_est
 
 
-def SEAGLE_vec_backward(
-    E_diff, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0
-):
+def SEAGLE_vec_backward(E_diff, f_scat_tensor, G_tensor, use_gpu=False, gpu_id=0):
     """
 
     compute the adjoint of vectorial SEAGLE forward model
@@ -1206,9 +1079,7 @@ def SEAGLE_vec_backward(
         grad_E = np.zeros_like(E_diff, complex)
 
         for p, q in itertools.product(range(3), range(3)):
-            E_diff_conv[p] += pad_convolve_G(
-                E_diff[q], np.abs(np.mean(E_diff[p])), G_tensor[p, q].conj()
-            )
+            E_diff_conv[p] += pad_convolve_G(E_diff[q], np.abs(np.mean(E_diff[p])), G_tensor[p, q].conj())
 
         for p in range(3):
             E_interact = np.zeros((N, M, L), complex)
@@ -1219,9 +1090,7 @@ def SEAGLE_vec_backward(
     return grad_E
 
 
-def scattering_potential_tensor_to_3D_orientation_PN(
-    f_tensor, material_type="positive", reg_ret_pr=1e-1
-):
+def scattering_potential_tensor_to_3D_orientation_PN(f_tensor, material_type="positive", reg_ret_pr=1e-1):
     """
 
     compute principal retardance and 3D orientation from scattering potential tensor components
@@ -1261,18 +1130,10 @@ def scattering_potential_tensor_to_3D_orientation_PN(
         # Positive uniaxial material
 
         azimuth_p = (np.arctan2(-f_tensor[3], -f_tensor[2]) / 2) % np.pi
-        del_f_sin_square_p = -f_tensor[2] * np.cos(2 * azimuth_p) - f_tensor[
-            3
-        ] * np.sin(2 * azimuth_p)
-        del_f_sin2theta_p = -f_tensor[4] * np.cos(azimuth_p) - f_tensor[
-            5
-        ] * np.sin(azimuth_p)
+        del_f_sin_square_p = -f_tensor[2] * np.cos(2 * azimuth_p) - f_tensor[3] * np.sin(2 * azimuth_p)
+        del_f_sin2theta_p = -f_tensor[4] * np.cos(azimuth_p) - f_tensor[5] * np.sin(azimuth_p)
         theta_p = np.arctan2(2 * del_f_sin_square_p, del_f_sin2theta_p)
-        retardance_pr_p = (
-            del_f_sin_square_p
-            * np.sin(theta_p) ** 2
-            / (np.sin(theta_p) ** 4 + reg_ret_pr)
-        )
+        retardance_pr_p = del_f_sin_square_p * np.sin(theta_p) ** 2 / (np.sin(theta_p) ** 4 + reg_ret_pr)
 
         return retardance_pr_p, azimuth_p, theta_p
 
@@ -1280,18 +1141,10 @@ def scattering_potential_tensor_to_3D_orientation_PN(
         # Negative uniaxial material
 
         azimuth_n = (np.arctan2(f_tensor[3], f_tensor[2]) / 2) % np.pi
-        del_f_sin_square_n = f_tensor[2] * np.cos(2 * azimuth_n) + f_tensor[
-            3
-        ] * np.sin(2 * azimuth_n)
-        del_f_sin2theta_n = f_tensor[4] * np.cos(azimuth_n) + f_tensor[
-            5
-        ] * np.sin(azimuth_n)
+        del_f_sin_square_n = f_tensor[2] * np.cos(2 * azimuth_n) + f_tensor[3] * np.sin(2 * azimuth_n)
+        del_f_sin2theta_n = f_tensor[4] * np.cos(azimuth_n) + f_tensor[5] * np.sin(azimuth_n)
         theta_n = np.arctan2(2 * del_f_sin_square_n, del_f_sin2theta_n)
-        retardance_pr_n = (
-            -del_f_sin_square_n
-            * np.sin(theta_n) ** 2
-            / (np.sin(theta_n) ** 4 + reg_ret_pr)
-        )
+        retardance_pr_n = -del_f_sin_square_n * np.sin(theta_n) ** 2 / (np.sin(theta_n) ** 4 + reg_ret_pr)
 
         return retardance_pr_n, azimuth_n, theta_n
 
@@ -1346,16 +1199,13 @@ def optic_sign_probability(mat_map, mat_map_thres=0.1):
 
     mat_map_norm = mat_map / np.max(np.abs(np.sum(mat_map, axis=0)))
     p_mat_map = np.maximum(mat_map_norm[0], mat_map_thres) / (
-        np.maximum(mat_map_norm[0], mat_map_thres)
-        + np.maximum(mat_map_norm[1], mat_map_thres)
+        np.maximum(mat_map_norm[0], mat_map_thres) + np.maximum(mat_map_norm[1], mat_map_thres)
     )
 
     return p_mat_map
 
 
-def unit_conversion_from_scattering_potential_to_permittivity(
-    SP_array, lambda_0, n_media=1, imaging_mode="3D"
-):
+def unit_conversion_from_scattering_potential_to_permittivity(SP_array, lambda_0, n_media=1, imaging_mode="3D"):
     """
 
     Convert the scattering potential of the specimen to the relative permittivity.
@@ -1396,8 +1246,6 @@ def unit_conversion_from_scattering_potential_to_permittivity(
         P_array = SP_array / k_0**2
 
     else:
-        raise ValueError(
-            "Unsupported option for imaging dimension. imaging_mode must be 2D-phase, 2D-ret or 3D"
-        )
+        raise ValueError("Unsupported option for imaging dimension. imaging_mode must be 2D-phase, 2D-ret or 3D")
 
     return P_array

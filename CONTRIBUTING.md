@@ -19,16 +19,7 @@ to see if there is an existing discussion about it.
 
 ### Setting up development environment
 
-For local development, first install [Git](https://git-scm.com/)
-and Python with an environment management tool
-(e.g. [miniforge](https://github.com/conda-forge/miniforge), a minimal community distribution of Conda).
-
-If you use Conda, set up an environment with:
-
-```sh
-conda create -n waveorder-dev python=3.12
-conda activate waveorder-dev
-```
+Install [Git](https://git-scm.com/) and [uv](https://docs.astral.sh/uv/getting-started/installation/).
 
 If you have push permission to the repository,
 clone the repository (the code blocks below are shell commands):
@@ -41,28 +32,42 @@ git clone https://github.com/mehta-lab/waveorder.git
 Otherwise, you can follow [these instructions](https://docs.github.com/en/get-started/quickstart/fork-a-repo)
 to [fork](https://github.com/mehta-lab/waveorder/fork) the repository.
 
-Next, install the package in editable mode with all dependencies
+Next, create a virtual environment and install the package with all dev dependencies:
 
 ```sh
-cd waveorder/ # or the renamed project root directory
-pip install -e ".[all]"
+cd waveorder/
+uv sync --group dev --extra visual
 ```
-and check that the tests pass with
+
+Check that the tests pass:
+
 ```sh
-pytest
+uv run pytest
 ```
 
 Finally, make the changes and [track them with Git](https://docs.github.com/en/get-started/using-git/about-git#example-contribute-to-an-existing-repository).
 
+**Dependency groups:**
+
+- `--group test` — pytest, hypothesis, napari test deps
+- `--group docs` — sphinx and documentation deps
+- `--group dev` — includes both `test` and `docs`
+- `--extra visual` — napari, PyQt6, and visualization deps
+
 ### Code style
 
-We use [pre-commit](https://pre-commit.com/) to sort imports with [isort](https://github.com/PyCQA/isort) and format code with [black](https://black.readthedocs.io/en/stable/) automatically prior to each commit. To minimize test errors when submitting pull requests, please install pre-commit in your environment as follows:
+We use [pre-commit](https://pre-commit.com/) to lint with [ruff](https://docs.astral.sh/ruff/) automatically prior to each commit. Install pre-commit in your environment:
 
-```bash
+```sh
 pre-commit install
 ```
 
-When these packages are executed within the project root directory, they should automatically use the [project settings](./pyproject.toml).
+To manually check formatting and linting:
+
+```sh
+uvx ruff check .
+uvx ruff format --check .
+```
 
 ### Developing documentation
 
@@ -71,10 +76,10 @@ Documentation infrastructure is built using [Markdown (.md)](https://www.sphinx-
 #### Building the HTML version locally
 
 ```sh
-cd waveorder/ # or the renamed project root directory
-pip install -e ".[all]"
+cd waveorder/
+uv sync --group docs
 cd docs/
-sphinx-build -M html ./ ./build
+uv run sphinx-build -M html ./ ./build
 ```
 
 Generated HTML documentation can be found in the ``build/html`` directory. Open ``build/html/index.html`` to view the home page for the documentation.

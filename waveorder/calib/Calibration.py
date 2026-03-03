@@ -112,18 +112,15 @@ class QLIPP_Calibration:
         if lc_control_mode not in allowed_modes:
             raise ValueError(f"LC control mode must be one of {allowed_modes}")
         self.mode = lc_control_mode
-        self.LC_DAC_conversion = 4  # convert between the input range of LCs (0-20V) and the output range of the DAC (0-5V)
+        self.LC_DAC_conversion = (
+            4  # convert between the input range of LCs (0-20V) and the output range of the DAC (0-5V)
+        )
 
         # Initialize calibration class
         allowed_interp_methods = ["schnoor_fit", "linear"]
         if interp_method not in allowed_interp_methods:
-            raise ValueError(
-                "LC calibration data interpolation method must be one of "
-                f"{allowed_interp_methods}"
-            )
-        dir_path = mmc.getDeviceAdapterSearchPaths().get(
-            0
-        )  # MM device adapter directory
+            raise ValueError(f"LC calibration data interpolation method must be one of {allowed_interp_methods}")
+        dir_path = mmc.getDeviceAdapterSearchPaths().get(0)  # MM device adapter directory
         self.calib = CalibrationData(
             os.path.join(dir_path, "mmgr_dal_MeadowlarkLC.csv"),
             interp_method=interp_method,
@@ -235,9 +232,7 @@ class QLIPP_Calibration:
         if self.mode == "MM-Retardance":
             retardance = get_lc(self.mmc, self.PROPERTIES[f"{LC}"])
         elif self.mode == "MM-Voltage":
-            volts = get_lc(
-                self.mmc, self.PROPERTIES[f"{LC}-Voltage"]
-            )  # returned value is in volts
+            volts = get_lc(self.mmc, self.PROPERTIES[f"{LC}-Voltage"])  # returned value is in volts
             retardance = self.calib.get_retardance(volts)
         elif self.mode == "DAC":
             dac_volts = get_lc(self.mmc, self.PROPERTIES[f"{LC}-DAC"])
@@ -269,12 +264,8 @@ class QLIPP_Calibration:
             self.set_lc(lcb_retardance, "LCB")
             define_meadowlark_state(self.mmc, self.PROPERTIES[state])
         elif self.mode == "DAC":
-            lca_volts = (
-                self.calib.get_voltage(lca_retardance) / self.LC_DAC_conversion
-            )
-            lcb_volts = (
-                self.calib.get_voltage(lcb_retardance) / self.LC_DAC_conversion
-            )
+            lca_volts = self.calib.get_voltage(lca_retardance) / self.LC_DAC_conversion
+            lcb_volts = self.calib.get_voltage(lcb_retardance) / self.LC_DAC_conversion
             define_config_state(
                 self.mmc,
                 self.group,
@@ -386,10 +377,7 @@ class QLIPP_Calibration:
                     better_lca = lca
                     better_lcb = lcb
                     min_int = current_int
-                    logging.debug(
-                        "update (%f, %f, %f)"
-                        % (min_int, better_lca, better_lcb)
-                    )
+                    logging.debug("update (%f, %f, %f)" % (min_int, better_lca, better_lcb))
 
         logging.debug("coarse search done")
         logging.debug("better lca = " + str(better_lca))
@@ -415,13 +403,11 @@ class QLIPP_Calibration:
         # 0.01 < LCA < 0.5
         # 0.25 < LCB < 0.75
         step = 0.1
-        logging.debug(f"================================")
+        logging.debug("================================")
         logging.debug(f"Starting first grid search, step = {step}")
-        logging.debug(f"================================")
+        logging.debug("================================")
 
-        best_lca, best_lcb, i_ext_ = self.opt_lc_grid(
-            0.01, 0.5, 0.25, 0.75, step
-        )
+        best_lca, best_lcb, i_ext_ = self.opt_lc_grid(0.01, 0.5, 0.25, 0.75, step)
 
         logging.debug("grid search done")
         logging.debug("lca = " + str(best_lca))
@@ -431,9 +417,9 @@ class QLIPP_Calibration:
         self.set_lc(best_lca, "LCA")
         self.set_lc(best_lcb, "LCB")
 
-        logging.debug(f"================================")
-        logging.debug(f"Starting fine search")
-        logging.debug(f"================================")
+        logging.debug("================================")
+        logging.debug("Starting fine search")
+        logging.debug("================================")
 
         # Perform brent optimization around results of 2nd grid search
         # threshold not very necessary here as intensity value will
@@ -485,9 +471,7 @@ class QLIPP_Calibration:
         self.define_lc_state("State1", self.lca_0, self.lcb_0)
         intensity = snap_and_average(self.snap_manager)
         self.I_Elliptical = intensity
-        self.swing0 = np.sqrt(
-            (self.lcb_0 - self.lcb_ext) ** 2 + (self.lca_0 - self.lca_ext) ** 2
-        )
+        self.swing0 = np.sqrt((self.lcb_0 - self.lcb_ext) ** 2 + (self.lca_0 - self.lca_ext) ** 2)
 
         logging.info(f"LCA State1 (I0) = {self.lca_0:.3f}")
         logging.debug(f"LCA State1 (I0) = {self.lca_0:.5f}")
@@ -528,10 +512,7 @@ class QLIPP_Calibration:
 
         self.define_lc_state("State2", self.lca_45, self.lcb_45)
 
-        self.swing45 = np.sqrt(
-            (self.lcb_45 - self.lcb_ext) ** 2
-            + (self.lca_45 - self.lca_ext) ** 2
-        )
+        self.swing45 = np.sqrt((self.lcb_45 - self.lcb_ext) ** 2 + (self.lca_45 - self.lca_ext) ** 2)
 
         logging.info(f"LCA State2 (I45) = {self.lca_45:.3f}")
         logging.debug(f"LCA State2 (I45) = {self.lca_45:.5f}")
@@ -561,9 +542,7 @@ class QLIPP_Calibration:
 
         # Calculate Initial Swing for initial guess to optimize around
         # Based on ratio calculated from ellpiticity/orientation of LC simulation
-        swing_ell = np.sqrt(
-            (self.lca_ext - self.lca_0) ** 2 + (self.lcb_ext - self.lcb_0) ** 2
-        )
+        swing_ell = np.sqrt((self.lca_ext - self.lca_0) ** 2 + (self.lcb_ext - self.lcb_0) ** 2)
         lca_swing = np.sqrt(swing_ell**2 / (1 + self.ratio**2))
         lcb_swing = self.ratio * lca_swing
 
@@ -582,10 +561,7 @@ class QLIPP_Calibration:
 
         self.define_lc_state("State2", self.lca_60, self.lcb_60)
 
-        self.swing60 = np.sqrt(
-            (self.lcb_60 - self.lcb_ext) ** 2
-            + (self.lca_60 - self.lca_ext) ** 2
-        )
+        self.swing60 = np.sqrt((self.lcb_60 - self.lcb_ext) ** 2 + (self.lca_60 - self.lca_ext) ** 2)
 
         # Print comparison of target swing, target ratio
         # Ratio determines the orientation of the elliptical state
@@ -594,9 +570,7 @@ class QLIPP_Calibration:
             f"ratio: swing_LCB / swing_LCA = {(self.lcb_ext - self.lcb_60) / (self.lca_ext - self.lca_60):.4f} \
               | target ratio: {-self.ratio}"
         )
-        logging.debug(
-            f"total swing = {self.swing60:.4f} | target = {swing_ell}"
-        )
+        logging.debug(f"total swing = {self.swing60:.4f} | target = {swing_ell}")
 
         logging.info(f"LCA State2 (I60) = {self.lca_60:.3f}")
         logging.debug(f"LCA State2 (I60) = {self.lca_60:.5f}")
@@ -638,10 +612,7 @@ class QLIPP_Calibration:
 
         self.define_lc_state("State3", self.lca_90, self.lcb_90)
 
-        self.swing90 = np.sqrt(
-            (self.lcb_90 - self.lcb_ext) ** 2
-            + (self.lca_90 - self.lca_ext) ** 2
-        )
+        self.swing90 = np.sqrt((self.lcb_90 - self.lcb_ext) ** 2 + (self.lca_90 - self.lca_ext) ** 2)
 
         logging.info(f"LCA State3 (I90) = {self.lca_90:.3f}")
         logging.debug(f"LCA State3 (I90) = {self.lca_90:.5f}")
@@ -669,9 +640,7 @@ class QLIPP_Calibration:
 
         # Calculate Initial Swing for initial guess to optimize around
         # Based on ratio calculated from ellpiticity/orientation of LC simulation
-        swing_ell = np.sqrt(
-            (self.lca_ext - self.lca_0) ** 2 + (self.lcb_ext - self.lcb_0) ** 2
-        )
+        swing_ell = np.sqrt((self.lca_ext - self.lca_0) ** 2 + (self.lcb_ext - self.lcb_0) ** 2)
         lca_swing = np.sqrt(swing_ell**2 / (1 + self.ratio**2))
         lcb_swing = self.ratio * lca_swing
 
@@ -690,10 +659,7 @@ class QLIPP_Calibration:
 
         self.define_lc_state("State3", self.lca_120, self.lcb_120)
 
-        self.swing120 = np.sqrt(
-            (self.lcb_120 - self.lcb_ext) ** 2
-            + (self.lca_120 - self.lca_ext) ** 2
-        )
+        self.swing120 = np.sqrt((self.lcb_120 - self.lcb_ext) ** 2 + (self.lca_120 - self.lca_ext) ** 2)
 
         # Print comparison of target swing, target ratio
         # Ratio determines the orientation of the elliptical state
@@ -702,9 +668,7 @@ class QLIPP_Calibration:
             f"ratio: swing_LCB / swing_LCA = {(self.lcb_ext - self.lcb_120) / (self.lca_ext - self.lca_120):.4f}\
              | target ratio: {self.ratio}"
         )
-        logging.debug(
-            f"total swing = {self.swing120:.4f} | target = {swing_ell}"
-        )
+        logging.debug(f"total swing = {self.swing120:.4f} | target = {swing_ell}")
         logging.info(f"LCA State3 (I120) = {self.lca_120:.3f}")
         logging.debug(f"LCA State3 (I120) = {self.lca_120:.5f}")
         logging.info(f"LCB State3 (I120) = {self.lcb_120:.3f}")
@@ -745,10 +709,7 @@ class QLIPP_Calibration:
 
         self.define_lc_state("State4", self.lca_135, self.lcb_135)
 
-        self.swing135 = np.sqrt(
-            (self.lcb_135 - self.lcb_ext) ** 2
-            + (self.lca_135 - self.lca_ext) ** 2
-        )
+        self.swing135 = np.sqrt((self.lcb_135 - self.lcb_ext) ** 2 + (self.lca_135 - self.lca_ext) ** 2)
 
         logging.info(f"LCA State4 (I135) = {self.lca_135:.3f}")
         logging.debug(f"LCA State4 (I135) = {self.lca_135:.5f}")
@@ -774,12 +735,8 @@ class QLIPP_Calibration:
 
         """
         if self.shutter_device == "":  # no shutter
-            input(
-                "Please reset the shutter to its original state and press <Enter>"
-            )
-            logging.info(
-                "This is the end of the command-line instructions. You can return to the napari window."
-            )
+            input("Please reset the shutter to its original state and press <Enter>")
+            logging.info("This is the end of the command-line instructions. You can return to the napari window.")
         else:
             self.mmc.setAutoShutter(self._auto_shutter_state)
             self.mmc.setShutterOpen(self._shutter_state)
@@ -789,9 +746,7 @@ class QLIPP_Calibration:
         self._shutter_state = self.mmc.getShutterOpen()
 
         if self.shutter_device == "":  # no shutter
-            show_warning(
-                "No shutter found. Please follow the command-line instructions..."
-            )
+            show_warning("No shutter found. Please follow the command-line instructions...")
             shutter_warning_msg = """
             waveorder could not find an automatic shutter configured through Micro-Manager.
             >>> If you would like manually enter the black level, enter an integer or float and press <Enter>
@@ -816,9 +771,7 @@ class QLIPP_Calibration:
         blacklevel = np.mean(avgs)
         self.I_Black = blacklevel
 
-    def calculate_extinction(
-        self, swing, black_level, intensity_extinction, intensity_elliptical
-    ):
+    def calculate_extinction(self, swing, black_level, intensity_extinction, intensity_elliptical):
         """
         Returns the extinction ratio, the ratio of the largest and smallest intensities that the imaging system can transmit above background.
         See `/docs/calibration-guide.md` for a derivation of this expressions.
@@ -896,17 +849,13 @@ class QLIPP_Calibration:
                 {
                     "Channel names": [f"State{i}" for i in range(4)],
                     "LC retardance": {
-                        f"LC{i}_{j}": np.around(
-                            getattr(self, f"lc{i.lower()}_{j}"), decimals=6
-                        )
+                        f"LC{i}_{j}": np.around(getattr(self, f"lc{i.lower()}_{j}"), decimals=6)
                         for j in ["ext", "0", "60", "120"]
                         for i in ["A", "B"]
                     },
                     "LC voltage": {
                         f"LC{i}_{j}": np.around(
-                            self.calib.get_voltage(
-                                getattr(self, f"lc{i.lower()}_{j}")
-                            ),
+                            self.calib.get_voltage(getattr(self, f"lc{i.lower()}_{j}")),
                             decimals=4,
                         )
                         for j in ["ext", "0", "60", "120"]
@@ -924,17 +873,13 @@ class QLIPP_Calibration:
                 {
                     "Channel names": [f"State{i}" for i in range(5)],
                     "LC retardance": {
-                        f"LC{i}_{j}": np.around(
-                            getattr(self, f"lc{i.lower()}_{j}"), decimals=6
-                        )
+                        f"LC{i}_{j}": np.around(getattr(self, f"lc{i.lower()}_{j}"), decimals=6)
                         for j in ["ext", "0", "45", "90", "135"]
                         for i in ["A", "B"]
                     },
                     "LC voltage": {
                         f"LC{i}_{j}": np.around(
-                            self.calib.get_voltage(
-                                getattr(self, f"lc{i.lower()}_{j}")
-                            ),
+                            self.calib.get_voltage(getattr(self, f"lc{i.lower()}_{j}")),
                             decimals=4,
                         )
                         for j in ["ext", "0", "45", "90", "135"]
@@ -984,16 +929,8 @@ class QLIPP_Calibration:
         return np.mean(imgs, axis=0)
 
     def _plot_bg_images(self, imgs):
-        img_names = (
-            ["Extinction", "0", "60", "120"]
-            if len(imgs) == 4
-            else ["Extinction", "0", "45", "90", 135]
-        )
-        fig, ax = (
-            plt.subplots(2, 2, figsize=(20, 20))
-            if len(imgs) == 4
-            else plt.subplots(3, 2, figsize=(20, 20))
-        )
+        img_names = ["Extinction", "0", "60", "120"] if len(imgs) == 4 else ["Extinction", "0", "45", "90", 135]
+        fig, ax = plt.subplots(2, 2, figsize=(20, 20)) if len(imgs) == 4 else plt.subplots(3, 2, figsize=(20, 20))
 
         img_idx = 0
         for ax1 in range(len(ax[:, 0])):
@@ -1028,9 +965,7 @@ class QLIPP_Calibration:
         elif self.calib_scheme == "5-State":
             pols = ("ext", "0", "45", "90", "135")
         else:
-            raise ValueError(
-                f"Invalid calibration state: {self.calib_scheme}."
-            )
+            raise ValueError(f"Invalid calibration state: {self.calib_scheme}.")
         return pols
 
     @property
@@ -1044,10 +979,7 @@ class QLIPP_Calibration:
         """
         lc_sides = ["A", "B"]
         return {
-            f"LC{lc_side}": [
-                self.__getattribute__("lc" + lc_side.lower() + "_" + pol)
-                for pol in self.pol_states
-            ]
+            f"LC{lc_side}": [self.__getattribute__("lc" + lc_side.lower() + "_" + pol) for pol in self.pol_states]
             for lc_side in lc_sides
         }
 
@@ -1096,11 +1028,7 @@ class QLIPP_Calibration:
                 shape=(1, num_states, 1, cyx_data.shape[1], cyx_data.shape[2]),
                 dtype=np.float32,
                 chunks=(1, 1, 1, cyx_data.shape[1], cyx_data.shape[2]),
-                transform=[
-                    TransformationMeta(
-                        type="scale", scale=[1, 1, 1, yx_scale, yx_scale]
-                    )
-                ],
+                transform=[TransformationMeta(type="scale", scale=[1, 1, 1, yx_scale, yx_scale])],
             )
             position["0"][0, :, 0] = cyx_data  # save to 1C1YX array
 
@@ -1129,9 +1057,7 @@ class CalibrationData:
         """
 
         header, raw_data = self.read_data(path)
-        self.calib_wavelengths = np.array(
-            [i[:3] for i in header[1::3]]
-        ).astype("double")
+        self.calib_wavelengths = np.array([i[:3] for i in header[1::3]]).astype("double")
 
         self.wavelength = None
         self.V_min = 0.0
@@ -1144,9 +1070,7 @@ class CalibrationData:
 
         self.set_wavelength(wavelength)
         if interp_method == "linear":
-            self.interpolate_data(
-                raw_data, self.calib_wavelengths
-            )  # calib_wavelengths is not used, values hardcoded
+            self.interpolate_data(raw_data, self.calib_wavelengths)  # calib_wavelengths is not used, values hardcoded
         elif interp_method == "schnoor_fit":
             self.fit_params = self.fit_data(raw_data, self.calib_wavelengths)
 
@@ -1238,9 +1162,7 @@ class CalibrationData:
 
         """
 
-        voltage = c * (
-            ((b1 + b2 / wavelength**2) / (retardance - a)) ** (1 / e) - 1
-        ) ** (1 / d)
+        voltage = c * (((b1 + b2 / wavelength**2) / (retardance - a)) ** (1 / e) - 1) ** (1 / d)
 
         return voltage
 
@@ -1251,19 +1173,13 @@ class CalibrationData:
         return res.flatten()
 
     def set_wavelength(self, wavelength):
-        if (
-            len(self.calib_wavelengths) == 1
-            and wavelength != self.calib_wavelengths
-        ):
+        if len(self.calib_wavelengths) == 1 and wavelength != self.calib_wavelengths:
             raise ValueError(
                 "Calibration is not provided at this wavelength. "
                 "Wavelength dependence of LC retardance vs voltage cannot be extrapolated."
             )
 
-        if (
-            wavelength < self.calib_wavelengths.min()
-            or wavelength > self.calib_wavelengths.max()
-        ):
+        if wavelength < self.calib_wavelengths.min() or wavelength > self.calib_wavelengths.max():
             warnings.warn(
                 "Specified wavelength is outside of the calibration range. "
                 "LC retardance vs voltage data will be extrapolated at this wavelength."
@@ -1274,14 +1190,10 @@ class CalibrationData:
             # Interpolation of calib beyond this range produce strange results.
             if self.wavelength < 450:
                 self.wavelength = 450
-                warnings.warn(
-                    "Wavelength is limited to 450-720 nm for this interpolation method."
-                )
+                warnings.warn("Wavelength is limited to 450-720 nm for this interpolation method.")
             if self.wavelength > 720:
                 self.wavelength = 720
-                warnings.warn(
-                    "Wavelength is limited to 450-720 nm for this interpolation method."
-                )
+                warnings.warn("Wavelength is limited to 450-720 nm for this interpolation method.")
 
     def fit_data(self, raw_data, calib_wavelengths):
         """
@@ -1320,9 +1232,7 @@ class CalibrationData:
         slope, intercept, r_value, *_ = linregress(y, y_hat)
         r_squared = r_value**2
         if r_squared < 0.999:
-            warnings.warn(
-                f"Schnoor fit has R2 value of {r_squared:.5f}, fit may not have worked well."
-            )
+            warnings.warn(f"Schnoor fit has R2 value of {r_squared:.5f}, fit may not have worked well.")
 
         return p.x
 
@@ -1363,8 +1273,7 @@ class CalibrationData:
                 [
                     [
                         i,
-                        2 * new_a1_y[i]
-                        - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i]),
+                        2 * new_a1_y[i] - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i]),
                     ]
                     for i in range(len(new_a1_y))
                 ]
@@ -1384,8 +1293,7 @@ class CalibrationData:
                 [
                     [
                         i,
-                        2 * new_a1_y[i]
-                        - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i]),
+                        2 * new_a1_y[i] - (fact1 * new_a1_y[i] + fact2 * new_a2_y[i]),
                     ]
                     for i in range(len(new_a1_y))
                 ]
@@ -1400,12 +1308,7 @@ class CalibrationData:
             fact1 = np.abs(490 - self.wavelength) / (546 - 490)
             fact2 = np.abs(546 - self.wavelength) / (546 - 490)
 
-            temp_curve = np.asarray(
-                [
-                    [i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]]
-                    for i in range(len(new_a1_y))
-                ]
-            )
+            temp_curve = np.asarray([[i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]] for i in range(len(new_a1_y))])
             self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
             self.curve = self.spline(x_range)
 
@@ -1416,12 +1319,7 @@ class CalibrationData:
             fact1 = np.abs(546 - self.wavelength) / (630 - 546)
             fact2 = np.abs(630 - self.wavelength) / (630 - 546)
 
-            temp_curve = np.asarray(
-                [
-                    [i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]]
-                    for i in range(len(new_a1_y))
-                ]
-            )
+            temp_curve = np.asarray([[i, fact1 * new_a1_y[i] + fact2 * new_a2_y[i]] for i in range(len(new_a1_y))])
             self.spline = interp1d(temp_curve[:, 0], temp_curve[:, 1])
             self.curve = self.spline(x_range)
 
@@ -1467,9 +1365,7 @@ class CalibrationData:
             if self.interp_method == "linear":
                 voltage = np.abs(self.curve - ret_nanometers).argmin() / 1000
             elif self.interp_method == "schnoor_fit":
-                voltage = self.schnoor_fit_inv(
-                    ret_nanometers, *self.fit_params, self.wavelength
-                )
+                voltage = self.schnoor_fit_inv(ret_nanometers, *self.fit_params, self.wavelength)
 
         return voltage
 
@@ -1495,18 +1391,14 @@ class CalibrationData:
             volts = self.V_min
         elif volts >= self.V_max:
             if self.interp_method == "linear":
-                volts = (
-                    self.V_max - 1e-3
-                )  # interpolation breaks down at upper boundary
+                volts = self.V_max - 1e-3  # interpolation breaks down at upper boundary
             else:
                 volts = self.V_max
 
         if self.interp_method == "linear":
             ret_nanometers = self.spline(volts * 1000)
         elif self.interp_method == "schnoor_fit":
-            ret_nanometers = self.schnoor_fit(
-                volts, *self.fit_params, self.wavelength
-            )
+            ret_nanometers = self.schnoor_fit(volts, *self.fit_params, self.wavelength)
         retardance = ret_nanometers / self.wavelength
 
         return retardance

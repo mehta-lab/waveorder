@@ -34,8 +34,8 @@ First, let's install the latest version of waveorder from the main branch
 """
 
 # %%
-import sys
 import subprocess
+import sys
 
 # Install latest waveorder from main branch
 subprocess.check_call(
@@ -122,12 +122,8 @@ jupyter_visuals.plot_multicolumn(
 # Subsample source pattern for speed
 xx, yy, fxx, fyy = util.gen_coordinate((N, M), ps)
 radial_frequencies = np.sqrt(fxx**2 + fyy**2)
-Source_cont = optics.generate_pupil(
-    radial_frequencies, NA_illu, lambda_illu
-).numpy()
-Source_discrete = optics.Source_subsample(
-    Source_cont, lambda_illu * fxx, lambda_illu * fyy, subsampled_NA=0.1
-)
+Source_cont = optics.generate_pupil(radial_frequencies, NA_illu, lambda_illu).numpy()
+Source_discrete = optics.Source_subsample(Source_cont, lambda_illu * fxx, lambda_illu * fyy, subsampled_NA=0.1)
 plt.figure(figsize=(10, 10))
 plt.imshow(fftshift(Source_discrete), cmap="gray")
 plt.show()
@@ -148,17 +144,13 @@ simulator = waveorder_simulator.waveorder_microscopy_simulator(
 )
 
 # Compute image volumes and Stokes volumes
-I_meas, Stokes_out = simulator.simulate_waveorder_measurements(
-    t_eigen, sa, multiprocess=False
-)
+I_meas, Stokes_out = simulator.simulate_waveorder_measurements(t_eigen, sa, multiprocess=False)
 
 # Add noise to the measurement
 photon_count = 14000
 ext_ratio = 10000
 const_bg = photon_count / (0.5 * (1 - np.cos(chi))) / ext_ratio
-I_meas_noise = (
-    np.random.poisson(I_meas / np.max(I_meas) * photon_count + const_bg)
-).astype("float64")
+I_meas_noise = (np.random.poisson(I_meas / np.max(I_meas) * photon_count + const_bg)).astype("float64")
 
 # Save simulation
 temp_dirpath = Path(user_data_dir("QLIPP_simulation"))
@@ -222,9 +214,7 @@ setup = waveorder_reconstructor.waveorder_microscopy(
 
 S_image_recon = setup.Stokes_recon(I_meas)
 S_image_tm = setup.Stokes_transform(S_image_recon)
-Recon_para = setup.Polarization_recon(
-    S_image_tm
-)  # Without accounting for diffraction
+Recon_para = setup.Polarization_recon(S_image_tm)  # Without accounting for diffraction
 
 jupyter_visuals.plot_multicolumn(
     np.array(
@@ -260,9 +250,7 @@ S1_stack = S_image_recon[1].copy() / S_image_recon[0].mean()
 S2_stack = S_image_recon[2].copy() / S_image_recon[0].mean()
 
 # Tikhonov regularization
-retardance, azimuth = setup.Birefringence_recon_2D(
-    S1_stack, S2_stack, method="Tikhonov", reg_br=1e-2
-)
+retardance, azimuth = setup.Birefringence_recon_2D(S1_stack, S2_stack, method="Tikhonov", reg_br=1e-2)
 
 jupyter_visuals.plot_multicolumn(
     np.array([retardance, azimuth]),

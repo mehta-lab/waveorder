@@ -9,9 +9,7 @@ from natsort import natsorted
 from waveorder.cli.option_eat_all import OptionEatAll
 
 
-def _validate_and_process_paths(
-    ctx: click.Context, opt: click.Option, value: str
-) -> list[Path]:
+def _validate_and_process_paths(ctx: click.Context, opt: click.Option, value: str) -> list[Path]:
     # Sort and validate the input paths, expanding plates into lists of positions
     input_paths = [Path(path) for path in natsorted(value)]
     # Filter out non-directories (e.g., zarr.json files from glob expansion)
@@ -92,9 +90,7 @@ def processes_option(default: int = None) -> Callable:
     def check_processes_option(ctx, param, value):
         max_processes = mp.cpu_count()
         if value > max_processes:
-            raise click.BadParameter(
-                f"Maximum number of processes is {max_processes}"
-            )
+            raise click.BadParameter(f"Maximum number of processes is {max_processes}")
         return value
 
     def decorator(f: Callable) -> Callable:

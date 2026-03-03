@@ -61,12 +61,8 @@ def plot_otf_support(
         start_point = points[j]
         end_point = points[j + 1]
 
-        theta_start = np.arctan2(
-            start_point[1] - center[1], start_point[0] - center[0]
-        )
-        theta_end = np.arctan2(
-            end_point[1] - center[1], end_point[0] - center[0]
-        )
+        theta_start = np.arctan2(start_point[1] - center[1], start_point[0] - center[0])
+        theta_end = np.arctan2(end_point[1] - center[1], end_point[0] - center[0])
 
         thetas.append((theta_start, theta_end))
 
@@ -112,10 +108,7 @@ def plot_otf_support(
     mesh = []
     for face in faces:
         try:
-            ravel_face = [
-                np.ravel_multi_index(vertex, (N_phi, N_theta - 1))
-                for vertex in face
-            ]
+            ravel_face = [np.ravel_multi_index(vertex, (N_phi, N_theta - 1)) for vertex in face]
         except:
             continue  # print(face)
         mesh.append(ravel_face)
@@ -228,9 +221,7 @@ for my_color in my_colors:
 
 viewer.theme = "dark"
 viewer.dims.ndisplay = 3
-viewer.camera.set_view_direction(
-    view_direction=[-0.1, -1, -1], up_direction=[1, 0, 0]
-)
+viewer.camera.set_view_direction(view_direction=[-0.1, -1, -1], up_direction=[1, 0, 0])
 viewer.camera.zoom = 250
 viewer.grid.enabled = True
 viewer.grid.stride = 2

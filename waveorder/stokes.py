@@ -36,14 +36,14 @@ For example, the following usage modes of stokes_after_adr are valid:
 
 >>> stokes_after_adr(1, 1, 1, 1)
 
->>> retardance = torch.ones((2,3,4,5))
->>> orientation = torch.ones((2,3,4,5))
->>> transmittance = torch.ones((2,3,4,5))
->>> depolarization = torch.ones((2,3,4,5))
+>>> retardance = torch.ones((2, 3, 4, 5))
+>>> orientation = torch.ones((2, 3, 4, 5))
+>>> transmittance = torch.ones((2, 3, 4, 5))
+>>> depolarization = torch.ones((2, 3, 4, 5))
 >>> stokes_after_adr(retardance, orientation, transmittance, depolarization)
 
->>> adr_params = torch.ones((4,2,3,4,5)) # first axis contains the Stokes indices
->>> stokes_after_adr(*adr_params) # * expands along the first axis
+>>> adr_params = torch.ones((4, 2, 3, 4, 5))  # first axis contains the Stokes indices
+>>> stokes_after_adr(*adr_params)  # * expands along the first axis
 
 """
 
@@ -107,9 +107,7 @@ def calculate_stokes_to_intensity_matrix(swing, scheme="5-State"):
             dtype=torch.float32,
         )
     else:
-        raise ValueError(
-            f"{scheme} is not implemented, use 4-State or 5-State"
-        )
+        raise ValueError(f"{scheme} is not implemented, use 4-State or 5-State")
     return stokes_to_intensity_matrix
 
 
@@ -134,14 +132,10 @@ def calculate_intensity_to_stokes_matrix(swing, scheme="5-State"):
         I2S.shape = (5, 4) for scheme = "5-State"
         I2S.shape = (4, 4) for scheme = "4-State"
     """
-    return torch.linalg.pinv(
-        calculate_stokes_to_intensity_matrix(swing, scheme=scheme)
-    )
+    return torch.linalg.pinv(calculate_stokes_to_intensity_matrix(swing, scheme=scheme))
 
 
-def stokes_after_adr(
-    retardance, orientation, transmittance, depolarization, input="cpl"
-):
+def stokes_after_adr(retardance, orientation, transmittance, depolarization, input="cpl"):
     """
     Returns the Stokes parameters of the input polarization state (default =
     circularly polarized light = "cpl") that has passed through an attenuating
@@ -177,18 +171,8 @@ def stokes_after_adr(
 
     # without copying transmittance, downstream changes to s0 will affect transmittance
     s0 = torch.tensor(transmittance).clone()
-    s1 = (
-        transmittance
-        * depolarization
-        * torch.sin(retardance)
-        * torch.sin(2 * orientation)
-    )
-    s2 = (
-        transmittance
-        * depolarization
-        * -torch.sin(retardance)
-        * torch.cos(2 * orientation)
-    )
+    s1 = transmittance * depolarization * torch.sin(retardance) * torch.sin(2 * orientation)
+    s2 = transmittance * depolarization * -torch.sin(retardance) * torch.cos(2 * orientation)
     s3 = transmittance * depolarization * torch.cos(retardance)
     return s0, s1, s2, s3
 
@@ -396,9 +380,7 @@ def mueller_from_stokes(
         rotation matrix) and write a function that applies the correction
         directly.
         """
-        M = mueller_from_stokes(
-            s0, s1, s2, s3, input=input, model=model, direction="forward"
-        )
+        M = mueller_from_stokes(s0, s1, s2, s3, input=input, model=model, direction="forward")
         M_flip = torch.moveaxis(M, (0, 1), (-2, -1))
         M_inv_flip = torch.linalg.inv(M_flip)  # applied over the last two axes
         M_inv = torch.moveaxis(M_inv_flip, (-2, -1), (0, 1))

@@ -34,9 +34,7 @@ def ret_ori_overlay(
 
     """
     if czyx.shape[0] != 2:
-        raise ValueError(
-            f"Input must have shape (2, ...) instead of ({czyx.shape[0]}, ...)"
-        )
+        raise ValueError(f"Input must have shape (2, ...) instead of ({czyx.shape[0]}, ...)")
 
     retardance = czyx[0]
     orientation = czyx[1]
@@ -82,14 +80,10 @@ def ret_ori_overlay(
     else:
         raise ValueError(f"Colormap {cmap} not understood")
 
-    return np.moveaxis(
-        overlay_final, source=-1, destination=0
-    )  # .shape = (3, ...)
+    return np.moveaxis(overlay_final, source=-1, destination=0)  # .shape = (3, ...)
 
 
-def ret_ori_phase_overlay(
-    czyx, max_val_V: float = 1.0, max_val_S: float = 1.0
-):
+def ret_ori_phase_overlay(czyx, max_val_V: float = 1.0, max_val_S: float = 1.0):
     """
     Creates an overlay of retardance, orientation, and phase.
     Maps orientation to hue, retardance to saturation, and phase to value.
@@ -118,9 +112,7 @@ def ret_ori_phase_overlay(
     """
 
     if czyx.shape[0] != 3:
-        raise ValueError(
-            f"Input must have shape (3, ...) instead of ({czyx.shape[0]}, ...)"
-        )
+        raise ValueError(f"Input must have shape (3, ...) instead of ({czyx.shape[0]}, ...)")
 
     czyx_out = np.zeros_like(czyx, dtype=np.float32)
 

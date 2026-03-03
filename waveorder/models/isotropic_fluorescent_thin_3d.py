@@ -84,9 +84,7 @@ def calculate_transfer_function(
         If confocal_pinhole_diameter is not None
     """
     if confocal_pinhole_diameter is not None:
-        raise NotImplementedError(
-            "Confocal reconstruction is not implemented for 2D fluorescence"
-        )
+        raise NotImplementedError("Confocal reconstruction is not implemented for 2D fluorescence")
 
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_emission,
@@ -95,18 +93,16 @@ def calculate_transfer_function(
     )
     yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
 
-    fluorescent_2d_to_3d_transfer_function = (
-        _calculate_wrap_unsafe_transfer_function(
-            (
-                yx_shape[0] * yx_factor,
-                yx_shape[1] * yx_factor,
-            ),
-            yx_pixel_size / yx_factor,
-            z_position_list,
-            wavelength_emission,
-            index_of_refraction_media,
-            numerical_aperture_detection,
-        )
+    fluorescent_2d_to_3d_transfer_function = _calculate_wrap_unsafe_transfer_function(
+        (
+            yx_shape[0] * yx_factor,
+            yx_shape[1] * yx_factor,
+        ),
+        yx_pixel_size / yx_factor,
+        z_position_list,
+        wavelength_emission,
+        index_of_refraction_media,
+        numerical_aperture_detection,
     )
 
     fluorescent_2d_to_3d_transfer_function_out = torch.zeros(
@@ -114,10 +110,8 @@ def calculate_transfer_function(
     )
 
     for z in range(len(z_position_list)):
-        fluorescent_2d_to_3d_transfer_function_out[z] = (
-            sampling.nd_fourier_central_cuboid(
-                fluorescent_2d_to_3d_transfer_function[z], yx_shape
-            )
+        fluorescent_2d_to_3d_transfer_function_out[z] = sampling.nd_fourier_central_cuboid(
+            fluorescent_2d_to_3d_transfer_function[z], yx_shape
         )
 
     return fluorescent_2d_to_3d_transfer_function_out
@@ -170,9 +164,7 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_detection: float,
 ) -> Tensor:
     """Calculate wrap-unsafe transfer function for fluorescent imaging."""
-    radial_frequencies = util.generate_radial_frequencies(
-        yx_shape, yx_pixel_size
-    )
+    radial_frequencies = util.generate_radial_frequencies(yx_shape, yx_pixel_size)
 
     det_pupil = optics.generate_pupil(
         radial_frequencies,
@@ -188,19 +180,13 @@ def _calculate_wrap_unsafe_transfer_function(
     )
 
     zyx_shape = (len(z_position_list),) + tuple(yx_shape)
-    fluorescent_2d_to_3d_transfer_function = torch.zeros(
-        zyx_shape, dtype=torch.complex64
-    )
+    fluorescent_2d_to_3d_transfer_function = torch.zeros(zyx_shape, dtype=torch.complex64)
 
     for z in range(len(z_position_list)):
         # For fluorescent imaging, the transfer function is the squared magnitude
         # of the coherent transfer function (incoherent imaging)
-        point_spread_function = (
-            torch.abs(torch.fft.ifft2(propagation_kernel[z], dim=(0, 1))) ** 2
-        )
-        fluorescent_2d_to_3d_transfer_function[z] = torch.fft.fft2(
-            point_spread_function
-        )
+        point_spread_function = torch.abs(torch.fft.ifft2(propagation_kernel[z], dim=(0, 1))) ** 2
+        fluorescent_2d_to_3d_transfer_function[z] = torch.fft.fft2(point_spread_function)
 
     # Normalize
     max_val = torch.max(torch.abs(fluorescent_2d_to_3d_transfer_function))
@@ -262,12 +248,8 @@ def apply_transfer_function(
     """
     # Simulate fluorescent object imaging
     yx_fluorescence_hat = torch.fft.fftn(yx_fluorescence_density)
-    zyx_fluorescence_data_hat = yx_fluorescence_hat[None] * torch.real(
-        fluorescent_2d_to_3d_transfer_function
-    )
-    zyx_fluorescence_data = torch.real(
-        torch.fft.ifftn(zyx_fluorescence_data_hat, dim=(1, 2))
-    )
+    zyx_fluorescence_data_hat = yx_fluorescence_hat[None] * torch.real(fluorescent_2d_to_3d_transfer_function)
+    zyx_fluorescence_data = torch.real(torch.fft.ifftn(zyx_fluorescence_data_hat, dim=(1, 2)))
 
     # Add background
     data = zyx_fluorescence_data + background
@@ -316,16 +298,76 @@ def apply_inverse_transfer_function(
         print("Computing inverse filter")
         U, S, Vh = singular_system
         S_reg = S / (S**2 + regularization_strength)
-        sfyx_inverse_filter = torch.einsum(
-            "sj...,j...,jf...->fs...", U, S_reg, Vh
-        )
+        sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
 
         # Apply filter bank - returns tuple but we only have one object type
-        yx_fluorescence_density = apply_filter_bank(
-            sfyx_inverse_filter, zyx_data
-        )[0]
+        yx_fluorescence_density = apply_filter_bank(sfyx_inverse_filter, zyx_data)[0]
 
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError("TV reconstruction is not implemented")
 
     return yx_fluorescence_density
+
+
+def reconstruct(
+    zyx_data: Tensor,
+    yx_pixel_size: float,
+    z_position_list: list,
+    wavelength_emission: float,
+    index_of_refraction_media: float,
+    numerical_aperture_detection: float,
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    regularization_strength: float = 1e-3,
+    TV_rho_strength: float = 1e-3,
+    TV_iterations: int = 10,
+) -> Tensor:
+    """Reconstruct 2D fluorescence density from a defocus stack.
+
+    Chains calculate_transfer_function, calculate_singular_system,
+    and apply_inverse_transfer_function.
+
+    Parameters
+    ----------
+    zyx_data : Tensor
+        3D raw data, fluorescence defocus stack
+    yx_pixel_size : float
+        Pixel size in the transverse (Y, X) dimensions
+    z_position_list : list
+        List of Z positions for defocus stack
+    wavelength_emission : float
+        Emission wavelength
+    index_of_refraction_media : float
+        Refractive index of the surrounding medium
+    numerical_aperture_detection : float
+        Detection numerical aperture
+    reconstruction_algorithm : str, optional
+        "Tikhonov" or "TV", by default "Tikhonov"
+    regularization_strength : float, optional
+        Regularization parameter, by default 1e-3
+    TV_rho_strength : float, optional
+        TV-specific regularization parameter, by default 1e-3
+    TV_iterations : int, optional
+        TV-specific number of iterations, by default 10
+
+    Returns
+    -------
+    Tensor
+        yx_fluorescence_density
+    """
+    fluorescent_tf = calculate_transfer_function(
+        zyx_data.shape[-2:],
+        yx_pixel_size,
+        z_position_list,
+        wavelength_emission,
+        index_of_refraction_media,
+        numerical_aperture_detection,
+    )
+    singular_system = calculate_singular_system(fluorescent_tf)
+    return apply_inverse_transfer_function(
+        zyx_data,
+        singular_system,
+        reconstruction_algorithm=reconstruction_algorithm,
+        regularization_strength=regularization_strength,
+        TV_rho_strength=TV_rho_strength,
+        TV_iterations=TV_iterations,
+    )

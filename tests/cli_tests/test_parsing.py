@@ -26,9 +26,7 @@ def test_validate_paths_filters_zarr_json_from_glob(tmp_path):
             "0",
             (1, 1, 2, 3, 4),
             dtype=np.uint16,
-            transform=[
-                TransformationMeta(type="scale", scale=[1, 1, 1, 1, 1])
-            ],
+            transform=[TransformationMeta(type="scale", scale=[1, 1, 1, 1, 1])],
         )
         plate.close()
     except Exception:
@@ -43,9 +41,7 @@ def test_validate_paths_filters_zarr_json_from_glob(tmp_path):
     assert len(zarr_jsons) > 0, "zarr.json files should be in glob results"
 
     # Call the parsing function with glob results
-    result = _validate_and_process_paths(
-        None, None, [str(p) for p in glob_paths]
-    )
+    result = _validate_and_process_paths(None, None, [str(p) for p in glob_paths])
 
     # Only the position directory should remain
     assert len(result) == 1

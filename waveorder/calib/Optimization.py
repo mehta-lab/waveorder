@@ -13,25 +13,11 @@ class BrentOptimizer:
         current_lcb = self.calib.get_lc("LCB")
 
         # check that bounds don't exceed range of LC
-        lca_lower_bound = (
-            0.01
-            if (current_lca - lca_bound) <= 0.01
-            else current_lca - lca_bound
-        )
-        lca_upper_bound = (
-            1.6
-            if (current_lca + lca_bound) >= 1.6
-            else current_lca + lca_bound
-        )
+        lca_lower_bound = 0.01 if (current_lca - lca_bound) <= 0.01 else current_lca - lca_bound
+        lca_upper_bound = 1.6 if (current_lca + lca_bound) >= 1.6 else current_lca + lca_bound
 
-        lcb_lower_bound = (
-            0.01
-            if current_lcb - lcb_bound <= 0.01
-            else current_lcb - lcb_bound
-        )
-        lcb_upper_bound = (
-            1.6 if current_lcb + lcb_bound >= 1.6 else current_lcb + lcb_bound
-        )
+        lcb_lower_bound = 0.01 if current_lcb - lcb_bound <= 0.01 else current_lcb - lcb_bound
+        lcb_upper_bound = 1.6 if current_lcb + lcb_bound >= 1.6 else current_lcb + lcb_bound
 
         return (
             lca_lower_bound,
@@ -204,17 +190,13 @@ class BrentOptimizer:
 
             # if loop preforms more than n_iter iterations, stop
             elif iteration >= n_iter:
-                logging.debug(
-                    f"Exceeded {n_iter} Iterations: Search discontinuing"
-                )
+                logging.debug(f"Exceeded {n_iter} Iterations: Search discontinuing")
 
                 converged = True
                 optimal = np.asarray(optimal)
                 opt = np.where(optimal == np.min(np.abs(optimal[:, 0])))[0]
 
-                logging.debug(
-                    f"Lowest Inten: {optimal[opt, 0]}, lca = {optimal[opt, 1]}, lcb = {optimal[opt, 2]}"
-                )
+                logging.debug(f"Lowest Inten: {optimal[opt, 0]}, lca = {optimal[opt, 1]}, lcb = {optimal[opt, 2]}")
 
                 return optimal[-1, 0], optimal[-1, 1], optimal[-1, 2]
 
@@ -231,51 +213,19 @@ class MinScalarOptimizer:
 
         if self.calib.mode == "voltage":
             # check that bounds don't exceed range of LC
-            lca_lower_bound = (
-                0.01
-                if (current_lca - lca_bound) <= 0.01
-                else current_lca - lca_bound
-            )
-            lca_upper_bound = (
-                2.2
-                if (current_lca + lca_bound) >= 2.2
-                else current_lca + lca_bound
-            )
+            lca_lower_bound = 0.01 if (current_lca - lca_bound) <= 0.01 else current_lca - lca_bound
+            lca_upper_bound = 2.2 if (current_lca + lca_bound) >= 2.2 else current_lca + lca_bound
 
-            lcb_lower_bound = (
-                0.01
-                if current_lcb - lcb_bound <= 0.01
-                else current_lcb - lcb_bound
-            )
-            lcb_upper_bound = (
-                2.2
-                if current_lcb + lcb_bound >= 2.2
-                else current_lcb + lcb_bound
-            )
+            lcb_lower_bound = 0.01 if current_lcb - lcb_bound <= 0.01 else current_lcb - lcb_bound
+            lcb_upper_bound = 2.2 if current_lcb + lcb_bound >= 2.2 else current_lcb + lcb_bound
 
         else:
             # check that bounds don't exceed range of LC
-            lca_lower_bound = (
-                0.01
-                if (current_lca - lca_bound) <= 0.01
-                else current_lca - lca_bound
-            )
-            lca_upper_bound = (
-                1.6
-                if (current_lca + lca_bound) >= 1.6
-                else current_lca + lca_bound
-            )
+            lca_lower_bound = 0.01 if (current_lca - lca_bound) <= 0.01 else current_lca - lca_bound
+            lca_upper_bound = 1.6 if (current_lca + lca_bound) >= 1.6 else current_lca + lca_bound
 
-            lcb_lower_bound = (
-                0.01
-                if current_lcb - lcb_bound <= 0.01
-                else current_lcb - lcb_bound
-            )
-            lcb_upper_bound = (
-                1.6
-                if current_lcb + lcb_bound >= 1.6
-                else current_lcb + lcb_bound
-            )
+            lcb_lower_bound = 0.01 if current_lcb - lcb_bound <= 0.01 else current_lcb - lcb_bound
+            lcb_upper_bound = 1.6 if current_lcb + lcb_bound >= 1.6 else current_lcb + lcb_bound
 
         return (
             lca_lower_bound,
@@ -340,9 +290,7 @@ class MinScalarOptimizer:
 
         return [lca, lcb, abs_intensity, difference]
 
-    def optimize(
-        self, state, lca_bound, lcb_bound, reference, thresh=None, n_iter=None
-    ):
+    def optimize(self, state, lca_bound, lcb_bound, reference, thresh=None, n_iter=None):
         (
             lca_lower_bound,
             lca_upper_bound,
@@ -379,7 +327,7 @@ class MinScalarOptimizer:
 
             # ============BEGIN FINE SEARCH=================
 
-            logging.debug(f"\n\tBeginning Finer Search\n")
+            logging.debug("\n\tBeginning Finer Search\n")
             lca_lower_bound = results_lcb[0] - 0.01
             lca_upper_bound = results_lcb[0] + 0.01
             lcb_lower_bound = results_lcb[1] - 0.01

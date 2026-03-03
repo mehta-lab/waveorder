@@ -13,9 +13,7 @@ from scipy.stats import binned_statistic_2d
 
 
 def im_bit_convert(im, bit=16, norm=False, limit=[]):
-    im = im.astype(
-        np.float32, copy=False
-    )  # convert to float32 without making a copy to save memory
+    im = im.astype(np.float32, copy=False)  # convert to float32 without making a copy to save memory
     if norm:
         if not limit:
             limit = [
@@ -23,9 +21,7 @@ def im_bit_convert(im, bit=16, norm=False, limit=[]):
                 np.nanmax(im[:]),
             ]  # scale each image individually based on its min and max
         im = (im - limit[0]) / (limit[1] - limit[0]) * (2**bit - 1)
-    im = np.clip(
-        im, 0, 2**bit - 1
-    )  # clip the values to avoid wrap-around by np.astype
+    im = np.clip(im, 0, 2**bit - 1)  # clip the values to avoid wrap-around by np.astype
     if bit == 8:
         im = im.astype(np.uint8, copy=False)  # convert to 8 bit
     else:
@@ -52,9 +48,7 @@ def array2png_bytes(img: NDArray):
     return png.read()
 
 
-def image_stack_viewer(
-    image_stack, size=(10, 10), colormap="gray", origin="upper"
-):
+def image_stack_viewer(image_stack, size=(10, 10), colormap="gray", origin="upper"):
     """
 
     visualize 3D and 4D image stack interactively in jupyter notebook (or jupyter lab)
@@ -109,25 +103,17 @@ def image_stack_viewer(
     if image_stack.ndim == 3:
         return interact(
             interact_plot_3D,
-            stack_idx=widgets.IntSlider(
-                value=0, min=0, max=len(image_stack) - 1, step=1
-            ),
+            stack_idx=widgets.IntSlider(value=0, min=0, max=len(image_stack) - 1, step=1),
         )
     else:
         return interact(
             interact_plot_4D,
-            stack_idx_1=widgets.IntSlider(
-                value=0, min=0, max=image_stack.shape[0] - 1, step=1
-            ),
-            stack_idx_2=widgets.IntSlider(
-                value=0, min=0, max=image_stack.shape[1] - 1, step=1
-            ),
+            stack_idx_1=widgets.IntSlider(value=0, min=0, max=image_stack.shape[0] - 1, step=1),
+            stack_idx_2=widgets.IntSlider(value=0, min=0, max=image_stack.shape[1] - 1, step=1),
         )
 
 
-def image_stack_viewer_fast(
-    image_stack, size=(512, 512), origin="upper", vrange=None
-):
+def image_stack_viewer_fast(image_stack, size=(512, 512), origin="upper", vrange=None):
     """
 
     faster function to visualize 3D image stack interactively in jupyter notebook (or jupyter lab)
@@ -153,9 +139,7 @@ def image_stack_viewer_fast(
     elif vrange[0] < vrange[1]:
         imgs = im_bit_convert(image_stack, bit=16, norm=True, limit=vrange)
     else:
-        raise ValueError(
-            "vrange needs to be a two element list with vrange[0] < vrange[1]"
-        )
+        raise ValueError("vrange needs to be a two element list with vrange[0] < vrange[1]")
 
     im_dict = {}
     for idx, img in enumerate(imgs):
@@ -176,9 +160,7 @@ def image_stack_viewer_fast(
 
     interact(
         interact_plot_3D,
-        stack_idx=widgets.IntSlider(
-            value=0, min=0, max=len(im_dict) - 1, step=1
-        ),
+        stack_idx=widgets.IntSlider(value=0, min=0, max=len(im_dict) - 1, step=1),
     )
 
     return HBox([im_wgt])
@@ -224,9 +206,7 @@ def hsv_stack_viewer(image_stack, max_val=1, size=5, origin="upper"):
                 [
                     image_stack1[i] / np.pi,
                     np.ones_like(image_stack1[i]),
-                    np.minimum(
-                        1, image_stack2[i] / np.max(image_stack2[i]) / max_val
-                    ),
+                    np.minimum(1, image_stack2[i] / np.max(image_stack2[i]) / max_val),
                 ]
             ),
             (1, 2, 0),
@@ -252,9 +232,7 @@ def hsv_stack_viewer(image_stack, max_val=1, size=5, origin="upper"):
 
     return interact(
         interact_plot_hsv,
-        stack_idx=widgets.IntSlider(
-            value=0, min=0, max=len(image_stack1) - 1, step=1
-        ),
+        stack_idx=widgets.IntSlider(value=0, min=0, max=len(image_stack1) - 1, step=1),
     )
 
 
@@ -287,9 +265,7 @@ def rgb_stack_viewer(image_stack, size=5, origin="upper"):
 
     return interact(
         interact_plot_rgb,
-        stack_idx=widgets.IntSlider(
-            value=0, min=0, max=len(image_stack) - 1, step=1
-        ),
+        stack_idx=widgets.IntSlider(value=0, min=0, max=len(image_stack) - 1, step=1),
     )
 
 
@@ -338,9 +314,7 @@ def rgb_stack_viewer_fast(image_stack, size=(256, 256), origin="upper"):
 
     interact(
         interact_plot_3D,
-        stack_idx=widgets.IntSlider(
-            value=0, min=0, max=len(im_dict) - 1, step=1
-        ),
+        stack_idx=widgets.IntSlider(value=0, min=0, max=len(im_dict) - 1, step=1),
     )
 
     return HBox([im_wgt])
@@ -394,9 +368,7 @@ def parallel_4D_viewer(
 
     N_stack, N_channel, _, _ = image_stack.shape
     if set_title == True and len(titles) != N_channel:
-        raise ValueError(
-            "number of titles does not match with the number of channels"
-        )
+        raise ValueError("number of titles does not match with the number of channels")
     num_row = int(np.ceil(N_channel / num_col))
     figsize = (num_col * size, num_row * size)
 
@@ -406,9 +378,7 @@ def parallel_4D_viewer(
             if num_row == 1:
                 for i in range(N_channel):
                     col_idx = np.mod(i, num_col)
-                    ax1 = ax[col_idx].imshow(
-                        image_stack[stack_idx, i], cmap=colormap, origin=origin
-                    )
+                    ax1 = ax[col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
                     plt.colorbar(ax1, ax=ax[col_idx])
                     if set_title == True:
                         ax[col_idx].set_title(titles[i])
@@ -416,9 +386,7 @@ def parallel_4D_viewer(
             elif num_col == 1:
                 for i in range(N_channel):
                     row_idx = i // num_col
-                    ax1 = ax[row_idx].imshow(
-                        image_stack[stack_idx, i], cmap=colormap, origin=origin
-                    )
+                    ax1 = ax[row_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
                     plt.colorbar(ax1, ax=ax[row_idx])
                     if set_title == True:
                         ax[row_idx].set_title(titles[i])
@@ -427,9 +395,7 @@ def parallel_4D_viewer(
                 for i in range(N_channel):
                     row_idx = i // num_col
                     col_idx = np.mod(i, num_col)
-                    ax1 = ax[row_idx, col_idx].imshow(
-                        image_stack[stack_idx, i], cmap=colormap, origin=origin
-                    )
+                    ax1 = ax[row_idx, col_idx].imshow(image_stack[stack_idx, i], cmap=colormap, origin=origin)
                     plt.colorbar(ax1, ax=ax[row_idx, col_idx])
                     if set_title == True:
                         ax[row_idx, col_idx].set_title(titles[i])
@@ -482,9 +448,7 @@ def parallel_4D_viewer(
                 plt.show()
 
         else:
-            raise ValueError(
-                "range should be a list with length of 2 and range[0]<range[1]"
-            )
+            raise ValueError("range should be a list with length of 2 and range[0]<range[1]")
 
     return interact(
         interact_plot,
@@ -492,9 +456,7 @@ def parallel_4D_viewer(
     )
 
 
-def parallel_4D_viewer_fast(
-    image_stack, num_col=2, size=256, origin="upper", vrange=None
-):
+def parallel_4D_viewer_fast(image_stack, num_col=2, size=256, origin="upper", vrange=None):
     """
 
     simultaneous visualize all channels of image stack interactively in jupyter notebook
@@ -530,13 +492,9 @@ def parallel_4D_viewer_fast(
         if vrange is None:
             imgs = im_adjust(image_stack[:, i], tol=0, bit=16)
         elif vrange[0] < vrange[1]:
-            imgs = im_bit_convert(
-                image_stack[:, i], bit=16, norm=True, limit=vrange
-            )
+            imgs = im_bit_convert(image_stack[:, i], bit=16, norm=True, limit=vrange)
         else:
-            raise ValueError(
-                "vrange needs to be a two element list with vrange[0] < vrange[1]"
-            )
+            raise ValueError("vrange needs to be a two element list with vrange[0] < vrange[1]")
 
         list_of_img_binaries.append({})
         for idx, img in enumerate(imgs):
@@ -545,9 +503,7 @@ def parallel_4D_viewer_fast(
             elif origin == "lower":
                 list_of_img_binaries[i][idx] = array2png_bytes(np.flipud(img))
             else:
-                raise ValueError(
-                    'origin can only be either "upper" or "lower"'
-                )
+                raise ValueError('origin can only be either "upper" or "lower"')
 
         list_of_widgets.append(
             Image(
@@ -567,13 +523,7 @@ def parallel_4D_viewer_fast(
 
     return widgets.GridBox(
         list_of_widgets,
-        layout=widgets.Layout(
-            grid_template_columns="repeat("
-            + str(num_col)
-            + ","
-            + str(size + 10)
-            + "px)"
-        ),
+        layout=widgets.Layout(grid_template_columns="repeat(" + str(num_col) + "," + str(size + 10) + "px)"),
     )
 
 
@@ -621,9 +571,7 @@ def parallel_5D_viewer(
 
     N_stack, N_pattern, N_channel, _, _ = image_stack.shape
     if set_title == True and len(titles) != N_channel:
-        raise ValueError(
-            "number of titles does not match with the number of channels"
-        )
+        raise ValueError("number of titles does not match with the number of channels")
     num_row = int(np.ceil(N_channel / num_col))
     figsize = (num_col * size, num_row * size)
 
@@ -658,15 +606,11 @@ def parallel_5D_viewer(
     return interact(
         interact_plot,
         stack_idx_1=widgets.IntSlider(value=0, min=0, max=N_stack - 1, step=1),
-        stack_idx_2=widgets.IntSlider(
-            value=0, min=0, max=N_pattern - 1, step=1
-        ),
+        stack_idx_2=widgets.IntSlider(value=0, min=0, max=N_pattern - 1, step=1),
     )
 
 
-def parallel_5D_viewer_fast(
-    image_stack, num_col=2, size=256, origin="upper", vrange=None
-):
+def parallel_5D_viewer_fast(image_stack, num_col=2, size=256, origin="upper", vrange=None):
     """
 
     simultaneous visualize all channels of image stack interactively in jupyter notebook with two stepping nobs on N_stack and N_pattern
@@ -711,34 +655,24 @@ def parallel_5D_viewer_fast(
             if vrange is None:
                 imgs = im_adjust(image_stack[:, j, i], tol=0, bit=16)
             elif vrange[0] < vrange[1]:
-                imgs = im_bit_convert(
-                    image_stack[:, i], bit=16, norm=True, limit=vrange
-                )
+                imgs = im_bit_convert(image_stack[:, i], bit=16, norm=True, limit=vrange)
             else:
-                raise ValueError(
-                    "vrange needs to be a two element list with vrange[0] < vrange[1]"
-                )
+                raise ValueError("vrange needs to be a two element list with vrange[0] < vrange[1]")
 
             list_of_img_binaries.append({})
             for idx, img in enumerate(imgs):
                 if origin == "upper":
                     list_of_img_binaries[i][idx] = array2png_bytes(img)
                 elif origin == "lower":
-                    list_of_img_binaries[i][idx] = array2png_bytes(
-                        np.flipud(img)
-                    )
+                    list_of_img_binaries[i][idx] = array2png_bytes(np.flipud(img))
                 else:
-                    raise ValueError(
-                        'origin can only be either "upper" or "lower"'
-                    )
+                    raise ValueError('origin can only be either "upper" or "lower"')
 
             if j == 0:
                 list_of_widgets.append(
                     Image(
                         value=list_of_img_binaries[i][0],
-                        layout=Layout(
-                            height=str(size) + "px", width=str(size) + "px"
-                        ),
+                        layout=Layout(height=str(size) + "px", width=str(size) + "px"),
                     )
                 )
 
@@ -746,27 +680,17 @@ def parallel_5D_viewer_fast(
 
     def interact_plot(stack_idx_1, stack_idx_2):
         for i in range(N_channel):
-            list_of_widgets[i].value = list_of_list_img_binaries[stack_idx_2][
-                i
-            ][stack_idx_1]
+            list_of_widgets[i].value = list_of_list_img_binaries[stack_idx_2][i][stack_idx_1]
 
     interact(
         interact_plot,
         stack_idx_1=widgets.IntSlider(value=0, min=0, max=N_stack - 1, step=1),
-        stack_idx_2=widgets.IntSlider(
-            value=0, min=0, max=N_pattern - 1, step=1
-        ),
+        stack_idx_2=widgets.IntSlider(value=0, min=0, max=N_pattern - 1, step=1),
     )
 
     return widgets.GridBox(
         list_of_widgets,
-        layout=widgets.Layout(
-            grid_template_columns="repeat("
-            + str(num_col)
-            + ","
-            + str(size + 10)
-            + "px)"
-        ),
+        layout=widgets.Layout(grid_template_columns="repeat(" + str(num_col) + "," + str(size + 10) + "px)"),
     )
 
 
@@ -817,9 +741,7 @@ def plot_multicolumn(
     if num_row == 1:
         for i in range(N_stack):
             col_idx = np.mod(i, num_col)
-            ax1 = ax[col_idx].imshow(
-                image_stack[i], cmap=colormap, origin=origin
-            )
+            ax1 = ax[col_idx].imshow(image_stack[i], cmap=colormap, origin=origin)
             plt.colorbar(ax1, ax=ax[col_idx])
 
             if set_title == True:
@@ -828,9 +750,7 @@ def plot_multicolumn(
         for i in range(N_stack):
             row_idx = i // num_col
             col_idx = np.mod(i, num_col)
-            ax1 = ax[row_idx, col_idx].imshow(
-                image_stack[i], cmap=colormap, origin=origin
-            )
+            ax1 = ax[row_idx, col_idx].imshow(image_stack[i], cmap=colormap, origin=origin)
             plt.colorbar(ax1, ax=ax[row_idx, col_idx])
 
             if set_title == True:
@@ -868,9 +788,7 @@ def plot_hsv(image_stack, max_val=1, size=5, origin="upper"):
                 [
                     image_stack[0] / np.pi,
                     np.ones_like(image_stack[0]),
-                    np.minimum(
-                        1, image_stack[1] / np.max(image_stack[1]) / max_val
-                    ),
+                    np.minimum(1, image_stack[1] / np.max(image_stack[1]) / max_val),
                 ]
             ),
             (1, 2, 0),
@@ -896,9 +814,7 @@ def plot_hsv(image_stack, max_val=1, size=5, origin="upper"):
         raise ValueError("plot_hsv does not support N_channel >2 rendering")
 
 
-def plot_phase_hsv(
-    image_stack, max_val_V=1, max_val_S=1, size=5, origin="upper"
-):
+def plot_phase_hsv(image_stack, max_val_V=1, max_val_S=1, size=5, origin="upper"):
     """
 
     visualize retardance + orientation + phase image with hsv colormap (orientation in h, retardance in s, phase in v)
@@ -1066,9 +982,7 @@ def plotVectorField(
     if threshold is None:
         threshold = np.ones_like(X)  # no threshold
     Plotting_thres = threshold[::spacing, ::spacing]
-    Plotting_orien = (
-        ((azimuthSmooth[::spacing, ::spacing]) % np.pi) * 180 / np.pi
-    )
+    Plotting_orien = ((azimuthSmooth[::spacing, ::spacing]) % np.pi) * 180 / np.pi
 
     if colorOrient:
         im_ax = plt.imshow(img, cmap=cmapImage, vmin=clim[0], vmax=clim[1])
@@ -1148,9 +1062,7 @@ def orientation_2D_colorwheel(wheelsize=256, circ_size=50):
     orientation = (np.arctan2(yy_grid, xx_grid) % (np.pi)) / np.pi
     value = circle_mask.copy()
 
-    orientation_image = np.transpose(
-        np.array([orientation, np.ones_like(circle_mask), value]), (1, 2, 0)
-    )
+    orientation_image = np.transpose(np.array([orientation, np.ones_like(circle_mask), value]), (1, 2, 0))
     RGB_image = hsv_to_rgb(orientation_image)
 
     im_ax = plt.imshow(RGB_image, origin="lower")
@@ -1204,28 +1116,20 @@ def orientation_3D_colorwheel(
 
     if discretize:
         circle_mask[xx_grid**2 + yy_grid**2 <= 1 * circ_size**2] = 1
-        rho = ((xx_grid**2 + yy_grid**2) / (circ_size) ** 2) ** (
-            0.5
-        ) * circle_mask
+        rho = ((xx_grid**2 + yy_grid**2) / (circ_size) ** 2) ** (0.5) * circle_mask
         inc = np.round(rho * 2, 0) / 2 * np.pi / 2
         orientation = (np.arctan2(yy_grid, xx_grid) % (np.pi * 2)) / 2 / np.pi
         orientation = np.round(orientation * 16, 0) / 16
     else:
         circle_mask[xx_grid**2 + yy_grid**2 <= 4 * circ_size**2] = 1
-        rho = ((xx_grid**2 + yy_grid**2) / (circ_size) ** 2) ** (
-            0.5
-        ) * circle_mask
+        rho = ((xx_grid**2 + yy_grid**2) / (circ_size) ** 2) ** (0.5) * circle_mask
         inc = rho * np.pi / 2
         orientation = (np.arctan2(yy_grid, xx_grid) % (np.pi * 2)) / 2 / np.pi
 
     value = circle_mask.copy()
 
-    orientation_image = np.transpose(
-        np.array([orientation, inc, value]), (1, 2, 0)
-    )
-    RGB_image = orientation_3D_to_rgb(
-        orientation_image, interp_belt=interp_belt, sat_factor=sat_factor
-    )
+    orientation_image = np.transpose(np.array([orientation, inc, value]), (1, 2, 0))
+    RGB_image = orientation_3D_to_rgb(orientation_image, interp_belt=interp_belt, sat_factor=sat_factor)
 
     theta = np.linspace(0, 2 * np.pi, 1000)
 
@@ -1276,10 +1180,7 @@ def orientation_3D_to_rgb(hsv, interp_belt=20 / 180 * np.pi, sat_factor=1):
 
     # check length of the last dimension, should be _some_ sort of rgb
     if hsv.shape[-1] != 3:
-        raise ValueError(
-            "Last dimension of input array must be 3; "
-            "shape {shp} was found.".format(shp=hsv.shape)
-        )
+        raise ValueError("Last dimension of input array must be 3; shape {shp} was found.".format(shp=hsv.shape))
 
     in_shape = hsv.shape
     hsv = np.array(
@@ -1291,9 +1192,7 @@ def orientation_3D_to_rgb(hsv, interp_belt=20 / 180 * np.pi, sat_factor=1):
 
     s_sign = np.sign(np.pi / 2 - hsv[..., 1])
 
-    theta_merge_1 = (hsv[..., 1] - (np.pi / 2 - interp_belt)) / (
-        2 * interp_belt
-    )
+    theta_merge_1 = (hsv[..., 1] - (np.pi / 2 - interp_belt)) / (2 * interp_belt)
     theta_merge_2 = 1 - theta_merge_1
 
     scaling_factor = np.zeros_like(hsv[..., 1])
@@ -1305,9 +1204,7 @@ def orientation_3D_to_rgb(hsv, interp_belt=20 / 180 * np.pi, sat_factor=1):
     scaling_factor[idx_scale] = 1
 
     idx_scale = theta_merge_2 <= 0
-    scaling_factor[idx_scale] = (np.pi - hsv[idx_scale, 1]) / (
-        np.pi / 2 - interp_belt
-    )
+    scaling_factor[idx_scale] = (np.pi - hsv[idx_scale, 1]) / (np.pi / 2 - interp_belt)
 
     h = hsv[..., 0]
     s = np.sin(scaling_factor**sat_factor * np.pi / 2)
@@ -1387,101 +1284,35 @@ def orientation_3D_to_rgb(hsv, interp_belt=20 / 180 * np.pi, sat_factor=1):
 
     # inclination color blending
 
-    idx_blend = np.logical_and(
-        i % 6 == 0, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0)
-    )
-    r[idx_blend] = (
-        v[idx_blend] * theta_merge_2[idx_blend]
-        + q[idx_blend] * theta_merge_1[idx_blend]
-    )
-    g[idx_blend] = (
-        p[idx_blend] * theta_merge_2[idx_blend]
-        + q[idx_blend] * theta_merge_1[idx_blend]
-    )
-    b[idx_blend] = (
-        t[idx_blend] * theta_merge_2[idx_blend]
-        + t[idx_blend] * theta_merge_1[idx_blend]
-    )
+    idx_blend = np.logical_and(i % 6 == 0, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0))
+    r[idx_blend] = v[idx_blend] * theta_merge_2[idx_blend] + q[idx_blend] * theta_merge_1[idx_blend]
+    g[idx_blend] = p[idx_blend] * theta_merge_2[idx_blend] + q[idx_blend] * theta_merge_1[idx_blend]
+    b[idx_blend] = t[idx_blend] * theta_merge_2[idx_blend] + t[idx_blend] * theta_merge_1[idx_blend]
 
-    idx_blend = np.logical_and(
-        i == 1, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0)
-    )
-    r[idx_blend] = (
-        q[idx_blend] * theta_merge_2[idx_blend]
-        + p[idx_blend] * theta_merge_1[idx_blend]
-    )
-    g[idx_blend] = (
-        t[idx_blend] * theta_merge_2[idx_blend]
-        + t[idx_blend] * theta_merge_1[idx_blend]
-    )
-    b[idx_blend] = (
-        q[idx_blend] * theta_merge_2[idx_blend]
-        + v[idx_blend] * theta_merge_1[idx_blend]
-    )
+    idx_blend = np.logical_and(i == 1, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0))
+    r[idx_blend] = q[idx_blend] * theta_merge_2[idx_blend] + p[idx_blend] * theta_merge_1[idx_blend]
+    g[idx_blend] = t[idx_blend] * theta_merge_2[idx_blend] + t[idx_blend] * theta_merge_1[idx_blend]
+    b[idx_blend] = q[idx_blend] * theta_merge_2[idx_blend] + v[idx_blend] * theta_merge_1[idx_blend]
 
-    idx_blend = np.logical_and(
-        i == 2, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0)
-    )
-    r[idx_blend] = (
-        t[idx_blend] * theta_merge_2[idx_blend]
-        + t[idx_blend] * theta_merge_1[idx_blend]
-    )
-    g[idx_blend] = (
-        v[idx_blend] * theta_merge_2[idx_blend]
-        + q[idx_blend] * theta_merge_1[idx_blend]
-    )
-    b[idx_blend] = (
-        p[idx_blend] * theta_merge_2[idx_blend]
-        + q[idx_blend] * theta_merge_1[idx_blend]
-    )
+    idx_blend = np.logical_and(i == 2, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0))
+    r[idx_blend] = t[idx_blend] * theta_merge_2[idx_blend] + t[idx_blend] * theta_merge_1[idx_blend]
+    g[idx_blend] = v[idx_blend] * theta_merge_2[idx_blend] + q[idx_blend] * theta_merge_1[idx_blend]
+    b[idx_blend] = p[idx_blend] * theta_merge_2[idx_blend] + q[idx_blend] * theta_merge_1[idx_blend]
 
-    idx_blend = np.logical_and(
-        i == 3, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0)
-    )
-    r[idx_blend] = (
-        q[idx_blend] * theta_merge_2[idx_blend]
-        + v[idx_blend] * theta_merge_1[idx_blend]
-    )
-    g[idx_blend] = (
-        q[idx_blend] * theta_merge_2[idx_blend]
-        + p[idx_blend] * theta_merge_1[idx_blend]
-    )
-    b[idx_blend] = (
-        t[idx_blend] * theta_merge_2[idx_blend]
-        + t[idx_blend] * theta_merge_1[idx_blend]
-    )
+    idx_blend = np.logical_and(i == 3, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0))
+    r[idx_blend] = q[idx_blend] * theta_merge_2[idx_blend] + v[idx_blend] * theta_merge_1[idx_blend]
+    g[idx_blend] = q[idx_blend] * theta_merge_2[idx_blend] + p[idx_blend] * theta_merge_1[idx_blend]
+    b[idx_blend] = t[idx_blend] * theta_merge_2[idx_blend] + t[idx_blend] * theta_merge_1[idx_blend]
 
-    idx_blend = np.logical_and(
-        i == 4, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0)
-    )
-    r[idx_blend] = (
-        p[idx_blend] * theta_merge_2[idx_blend]
-        + q[idx_blend] * theta_merge_1[idx_blend]
-    )
-    g[idx_blend] = (
-        t[idx_blend] * theta_merge_2[idx_blend]
-        + t[idx_blend] * theta_merge_1[idx_blend]
-    )
-    b[idx_blend] = (
-        v[idx_blend] * theta_merge_2[idx_blend]
-        + q[idx_blend] * theta_merge_1[idx_blend]
-    )
+    idx_blend = np.logical_and(i == 4, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0))
+    r[idx_blend] = p[idx_blend] * theta_merge_2[idx_blend] + q[idx_blend] * theta_merge_1[idx_blend]
+    g[idx_blend] = t[idx_blend] * theta_merge_2[idx_blend] + t[idx_blend] * theta_merge_1[idx_blend]
+    b[idx_blend] = v[idx_blend] * theta_merge_2[idx_blend] + q[idx_blend] * theta_merge_1[idx_blend]
 
-    idx_blend = np.logical_and(
-        i == 5, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0)
-    )
-    r[idx_blend] = (
-        t[idx_blend] * theta_merge_2[idx_blend]
-        + t[idx_blend] * theta_merge_1[idx_blend]
-    )
-    g[idx_blend] = (
-        q[idx_blend] * theta_merge_2[idx_blend]
-        + v[idx_blend] * theta_merge_1[idx_blend]
-    )
-    b[idx_blend] = (
-        q[idx_blend] * theta_merge_2[idx_blend]
-        + p[idx_blend] * theta_merge_1[idx_blend]
-    )
+    idx_blend = np.logical_and(i == 5, np.logical_and(theta_merge_1 > 0, theta_merge_2 > 0))
+    r[idx_blend] = t[idx_blend] * theta_merge_2[idx_blend] + t[idx_blend] * theta_merge_1[idx_blend]
+    g[idx_blend] = q[idx_blend] * theta_merge_2[idx_blend] + v[idx_blend] * theta_merge_1[idx_blend]
+    b[idx_blend] = q[idx_blend] * theta_merge_2[idx_blend] + p[idx_blend] * theta_merge_1[idx_blend]
 
     idx = s == 0
     r[idx] = v[idx]
@@ -1493,9 +1324,7 @@ def orientation_3D_to_rgb(hsv, interp_belt=20 / 180 * np.pi, sat_factor=1):
     return rgb.reshape(in_shape)
 
 
-def save_stack_to_folder(
-    img_stack, dir_name, file_name, min_val=None, max_val=None, rgb=False
-):
+def save_stack_to_folder(img_stack, dir_name, file_name, min_val=None, max_val=None, rgb=False):
     """
 
     save image stack into separate images
@@ -1806,9 +1635,7 @@ def orientation_3D_hist(
 
     theta_hist, azimuth_hist = np.meshgrid(theta_edges, azimuth_edges)
 
-    fig, ax = plt.subplots(
-        num_row, num_col, subplot_kw=dict(projection="polar"), figsize=figsize
-    )
+    fig, ax = plt.subplots(num_row, num_col, subplot_kw=dict(projection="polar"), figsize=figsize)
 
     for i in range(N_hist):
         az = azimuth[i].copy()
@@ -1848,9 +1675,7 @@ def orientation_3D_hist(
                 )
                 if top_hemi:
                     ax.set_yticks([0, 30, 60])
-                    ax.set_xticks(
-                        np.pi / 180 * np.linspace(0, 360, 12, endpoint=False)
-                    )
+                    ax.set_xticks(np.pi / 180 * np.linspace(0, 360, 12, endpoint=False))
                     ax.set_rmax(90)
                 else:
                     ax.set_yticks([0, 30, 60, 90, 120, 150, 180])
@@ -1866,9 +1691,7 @@ def orientation_3D_hist(
                     cmap=hist_cmap,
                 )
                 if top_hemi:
-                    ax[col_idx].set_xticks(
-                        np.pi / 180 * np.linspace(0, 360, 12, endpoint=False)
-                    )
+                    ax[col_idx].set_xticks(np.pi / 180 * np.linspace(0, 360, 12, endpoint=False))
                     ax[col_idx].set_yticks([0, 30, 60])
                     ax[col_idx].set_rmax(90)
                 else:
@@ -1889,9 +1712,7 @@ def orientation_3D_hist(
                 )
 
                 if top_hemi:
-                    ax[row_idx].set_xticks(
-                        np.pi / 180 * np.linspace(0, 360, 12, endpoint=False)
-                    )
+                    ax[row_idx].set_xticks(np.pi / 180 * np.linspace(0, 360, 12, endpoint=False))
                     ax[row_idx].set_yticks([0, 30, 60])
                     ax[row_idx].set_rmax(90)
                 else:
@@ -1908,15 +1729,11 @@ def orientation_3D_hist(
                     cmap=hist_cmap,
                 )
                 if top_hemi:
-                    ax[row_idx, col_idx].set_xticks(
-                        np.pi / 180 * np.linspace(0, 360, 12, endpoint=False)
-                    )
+                    ax[row_idx, col_idx].set_xticks(np.pi / 180 * np.linspace(0, 360, 12, endpoint=False))
                     ax[row_idx, col_idx].set_yticks([0, 30, 60])
                     ax[row_idx, col_idx].set_rmax(90)
                 else:
-                    ax[row_idx, col_idx].set_yticks(
-                        [0, 30, 60, 90, 120, 150, 180]
-                    )
+                    ax[row_idx, col_idx].set_yticks([0, 30, 60, 90, 120, 150, 180])
                     ax[row_idx, col_idx].set_thetamax(180)
                 if colorbar:
                     fig.colorbar(img, ax=ax[row_idx, col_idx])

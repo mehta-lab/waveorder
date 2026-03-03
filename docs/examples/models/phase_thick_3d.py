@@ -28,7 +28,7 @@ from waveorder.models import phase_thick_3d
 # all lengths must use consistent units e.g. um
 simulation_arguments = {
     "zyx_shape": (100, 256, 256),
-    "yx_pixel_size": 6.5 / 63,
+    "yx_pixel_size": 0.1,
     "z_pixel_size": 0.25,
     "wavelength_illumination": 0.532,
     "index_of_refraction_media": 1.3,
@@ -44,17 +44,13 @@ transfer_function_arguments = {
 }
 
 # Create a phantom
-zyx_phase = phase_thick_3d.generate_test_phantom(
-    **simulation_arguments, **phantom_arguments
-)
+zyx_phase = phase_thick_3d.generate_test_phantom(**simulation_arguments, **phantom_arguments)
 
 # Calculate transfer function
 (
     real_potential_transfer_function,
     imag_potential_transfer_function,
-) = phase_thick_3d.calculate_transfer_function(
-    **simulation_arguments, **transfer_function_arguments
-)
+) = phase_thick_3d.calculate_transfer_function(**simulation_arguments, **transfer_function_arguments)
 
 # Display transfer function
 viewer = napari.Viewer()

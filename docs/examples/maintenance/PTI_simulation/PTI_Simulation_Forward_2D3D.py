@@ -89,9 +89,7 @@ if sample_type == "3D":
     azimuth = np.round(azimuth / np.pi / 2 * 16) / 16 * np.pi * 2
 elif sample_type == "2D":
     ## 2D spoke pattern, azimuth aligned with spokes, and the inclination set to 60 degrees ##
-    target, azimuth, _ = util.generate_star_target(
-        (N, M), blur_px=1 * ps, margin=10
-    )
+    target, azimuth, _ = util.generate_star_target((N, M), blur_px=1 * ps, margin=10)
     target = target.numpy()
     azimuth = azimuth.numpy()
     inclination = np.ones_like(target) * np.pi / 3
@@ -186,15 +184,7 @@ orientation_3D_image = np.transpose(
             azimuth % (2 * np.pi) / 2 / np.pi,
             inclination,
             np.clip(
-                (ne_map - no_map)
-                * z_pixel_size
-                * 2
-                * np.pi
-                / lambda_illu
-                / np.pi
-                / 2
-                * lambda_illu
-                * 1e3,
+                (ne_map - no_map) * z_pixel_size * 2 * np.pi / lambda_illu / np.pi / 2 * lambda_illu * 1e3,
                 0,
                 1.5,
             )
@@ -246,14 +236,10 @@ epsilon_tensor = np.zeros((3, 3, N, M, L))
 epsilon_tensor[0, 0] = epsilon_mean - epsilon_del * (
     np.cos(inclination) ** 2 - np.sin(inclination) ** 2 * np.cos(2 * azimuth)
 )
-epsilon_tensor[0, 1] = (
-    epsilon_del * np.sin(inclination) ** 2 * np.sin(2 * azimuth)
-)
+epsilon_tensor[0, 1] = epsilon_del * np.sin(inclination) ** 2 * np.sin(2 * azimuth)
 epsilon_tensor[0, 2] = epsilon_del * np.sin(2 * inclination) * np.cos(azimuth)
 
-epsilon_tensor[1, 0] = (
-    epsilon_del * np.sin(inclination) ** 2 * np.sin(2 * azimuth)
-)
+epsilon_tensor[1, 0] = epsilon_del * np.sin(inclination) ** 2 * np.sin(2 * azimuth)
 epsilon_tensor[1, 1] = epsilon_mean - epsilon_del * (
     np.cos(inclination) ** 2 + np.sin(inclination) ** 2 * np.cos(2 * azimuth)
 )
@@ -302,41 +288,17 @@ plt.show()
 
 del_f_component = np.zeros((7, N, M, L))
 del_f_component[0] = np.real(
-    ((2 * np.pi / lambda_illu) ** 2)
-    * (n_media**2 - epsilon_mean + epsilon_del * np.cos(inclination) ** 2)
+    ((2 * np.pi / lambda_illu) ** 2) * (n_media**2 - epsilon_mean + epsilon_del * np.cos(inclination) ** 2)
 )
 del_f_component[1] = np.imag(
-    ((2 * np.pi / lambda_illu) ** 2)
-    * (n_media**2 - epsilon_mean + epsilon_del * np.cos(inclination) ** 2)
+    ((2 * np.pi / lambda_illu) ** 2) * (n_media**2 - epsilon_mean + epsilon_del * np.cos(inclination) ** 2)
 )
-del_f_component[2] = (
-    -((2 * np.pi / lambda_illu) ** 2)
-    * epsilon_del
-    * np.sin(inclination) ** 2
-    * np.cos(2 * azimuth)
-)
-del_f_component[3] = (
-    -((2 * np.pi / lambda_illu) ** 2)
-    * epsilon_del
-    * np.sin(inclination) ** 2
-    * np.sin(2 * azimuth)
-)
-del_f_component[4] = (
-    -((2 * np.pi / lambda_illu) ** 2)
-    * epsilon_del
-    * np.sin(2 * inclination)
-    * np.cos(azimuth)
-)
-del_f_component[5] = (
-    -((2 * np.pi / lambda_illu) ** 2)
-    * epsilon_del
-    * np.sin(2 * inclination)
-    * np.sin(azimuth)
-)
+del_f_component[2] = -((2 * np.pi / lambda_illu) ** 2) * epsilon_del * np.sin(inclination) ** 2 * np.cos(2 * azimuth)
+del_f_component[3] = -((2 * np.pi / lambda_illu) ** 2) * epsilon_del * np.sin(inclination) ** 2 * np.sin(2 * azimuth)
+del_f_component[4] = -((2 * np.pi / lambda_illu) ** 2) * epsilon_del * np.sin(2 * inclination) * np.cos(azimuth)
+del_f_component[5] = -((2 * np.pi / lambda_illu) ** 2) * epsilon_del * np.sin(2 * inclination) * np.sin(azimuth)
 del_f_component[6] = (
-    ((2 * np.pi / lambda_illu) ** 2)
-    * epsilon_del
-    * (np.sin(inclination) ** 2 - 2 * np.cos(inclination) ** 2)
+    ((2 * np.pi / lambda_illu) ** 2) * epsilon_del * (np.sin(inclination) ** 2 - 2 * np.cos(inclination) ** 2)
 )
 
 
@@ -377,12 +339,8 @@ plt.show()
 xx, yy, fxx, fyy = util.gen_coordinate((N, M), ps)
 radial_frequencies = np.sqrt(fxx**2 + fyy**2)
 
-Pupil_obj = optics.generate_pupil(
-    radial_frequencies, NA_obj / n_media, lambda_illu / n_media
-).numpy()
-Source_support = optics.generate_pupil(
-    radial_frequencies, NA_illu / n_media, lambda_illu / n_media
-).numpy()
+Pupil_obj = optics.generate_pupil(radial_frequencies, NA_obj / n_media, lambda_illu / n_media).numpy()
+Source_support = optics.generate_pupil(radial_frequencies, NA_illu / n_media, lambda_illu / n_media).numpy()
 
 NAx_coord = lambda_illu / n_media * fxx
 NAy_coord = lambda_illu / n_media * fyy
@@ -392,35 +350,21 @@ rotation_angle = [0, 45, 90, 135, 180, 225, 270, 315]
 Source = np.zeros((len(rotation_angle) + 1, N, M))
 Source_cont = np.zeros_like(Source)
 
-Source_BF = optics.generate_pupil(
-    radial_frequencies, NA_illu / n_media / 2, lambda_illu / n_media
-).numpy()
+Source_BF = optics.generate_pupil(radial_frequencies, NA_illu / n_media / 2, lambda_illu / n_media).numpy()
 
 Source_cont[-1] = Source_BF.copy()
-Source[-1] = optics.Source_subsample(
-    Source_BF, NAx_coord, NAy_coord, subsampled_NA=0.1 / n_media
-)
+Source[-1] = optics.Source_subsample(Source_BF, NAx_coord, NAy_coord, subsampled_NA=0.1 / n_media)
 
 for i in range(len(rotation_angle)):
     deg = rotation_angle[i]
     Source_temp = np.zeros((N, M))
     Source_temp2 = np.zeros((N, M))
-    Source_temp[
-        fyy * np.cos(np.deg2rad(deg - 22.5))
-        - fxx * np.sin(np.deg2rad(deg - 22.5))
-        > 1e-10
-    ] = 1
-    Source_temp2[
-        fyy * np.cos(np.deg2rad(deg - 135 - 22.5))
-        - fxx * np.sin(np.deg2rad(deg - 135 - 22.5))
-        > 1e-10
-    ] = 1
+    Source_temp[fyy * np.cos(np.deg2rad(deg - 22.5)) - fxx * np.sin(np.deg2rad(deg - 22.5)) > 1e-10] = 1
+    Source_temp2[fyy * np.cos(np.deg2rad(deg - 135 - 22.5)) - fxx * np.sin(np.deg2rad(deg - 135 - 22.5)) > 1e-10] = 1
 
     Source_cont[i] = Source_temp * Source_temp2 * Source_support
 
-    Source_discrete = optics.Source_subsample(
-        Source_cont[i], NAx_coord, NAy_coord, subsampled_NA=0.1 / n_media
-    )
+    Source_discrete = optics.Source_subsample(Source_cont[i], NAx_coord, NAy_coord, subsampled_NA=0.1 / n_media)
     Source[i] = np.maximum(0, Source_discrete.copy())
 
 Source_PolState = np.zeros((len(Source), 2), complex)
@@ -431,13 +375,9 @@ for i in range(len(Source)):
 
 #### Circularly polarized illumination patterns
 
-jupyter_visuals.plot_multicolumn(
-    fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5
-)
+jupyter_visuals.plot_multicolumn(fftshift(Source_cont, axes=(1, 2)), origin="lower", num_col=5, size=5)
 # discretized illumination patterns used in simulation (faster forward model)
-jupyter_visuals.plot_multicolumn(
-    fftshift(Source, axes=(1, 2)), origin="lower", num_col=5, size=5
-)
+jupyter_visuals.plot_multicolumn(fftshift(Source, axes=(1, 2)), origin="lower", num_col=5, size=5)
 print(Source_PolState)
 plt.figure(figsize=(10, 10))
 plt.imshow(fftshift(np.sum(Source, axis=0)), origin="lower")
@@ -471,9 +411,7 @@ simulator = waveorder_simulator.waveorder_microscopy_simulator(
 (
     I_meas_SEAGLE,
     Stokes_SEAGLE,
-) = simulator.simulate_3D_vectorial_measurements_SEAGLE(
-    epsilon_tensor, itr_max=0, tolerance=1e-4, verbose=True
-)
+) = simulator.simulate_3D_vectorial_measurements_SEAGLE(epsilon_tensor, itr_max=0, tolerance=1e-4, verbose=True)
 
 
 ## situation with no noise ##

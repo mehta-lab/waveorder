@@ -61,7 +61,7 @@ myst_file_suffixes = [".md"]
 myst_all_links_external = True
 
 # default url is a dummy for local build
-html_baseurl = os.environ.get("GITHUB_PAGES_URL", f"/build/html/")
+html_baseurl = os.environ.get("GITHUB_PAGES_URL", "/build/html/")
 sitemap_locales = ["en"]
 sitemap_url_scheme = "{link}"
 
@@ -87,7 +87,7 @@ project = "waveorder"
 copyright = "2023. Talon Chandler. Chan Zuckerberg Biohub. All rights reserved"
 release = importlib_metadata.version("waveorder")
 
-json_url = f"./_static/switcher.json"
+json_url = "./_static/switcher.json"
 if "dev" in release or "rc" in release:
     # json_url = "_static/switcher.json"
     version_match = "latest"

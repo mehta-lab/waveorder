@@ -83,9 +83,7 @@ def test_single_position_detection(tmp_path):
     """Test single position store detection."""
     # Create an HCS plate structure first
     hcs_plate = tmp_path / "plate.zarr"
-    with open_ome_zarr(
-        str(hcs_plate), layout="hcs", mode="a", channel_names=["test"]
-    ) as plate:
+    with open_ome_zarr(str(hcs_plate), layout="hcs", mode="a", channel_names=["test"]) as plate:
         position = plate.create_position("A", "1", "0")
         position.create_zeros(
             name="0",
@@ -95,9 +93,7 @@ def test_single_position_detection(tmp_path):
         )
 
     hcs_position = hcs_plate / "A" / "1" / "0"
-    assert not is_single_position_store(
-        hcs_position
-    ), "Should detect as HCS plate position"
+    assert not is_single_position_store(hcs_position), "Should detect as HCS plate position"
 
     # Create a simple single-position zarr store path (simulate what happens in real usage)
     # In real usage, the path would be something like /path/to/single-pos.zarr/0/
@@ -106,6 +102,4 @@ def test_single_position_detection(tmp_path):
     fake_single_pos.mkdir(parents=True)
 
     # This should detect as single position because 3 levels up doesn't exist as plate
-    assert is_single_position_store(
-        fake_single_pos
-    ), "Should detect as single position"
+    assert is_single_position_store(fake_single_pos), "Should detect as single position"

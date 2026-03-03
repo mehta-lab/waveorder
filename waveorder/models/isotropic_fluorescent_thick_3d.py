@@ -16,9 +16,7 @@ def generate_test_phantom(
     z_pixel_size: float,
     sphere_radius: float,
 ) -> Tensor:
-    sphere, _, _ = util.generate_sphere_target(
-        zyx_shape, yx_pixel_size, z_pixel_size, sphere_radius
-    )
+    sphere, _, _ = util.generate_sphere_target(zyx_shape, yx_pixel_size, z_pixel_size, sphere_radius)
 
     return sphere
 
@@ -99,9 +97,7 @@ def calculate_transfer_function(
         confocal_pinhole_diameter,
     )
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
-    return sampling.nd_fourier_central_cuboid(
-        optical_transfer_function, zyx_out_shape
-    )
+    return sampling.nd_fourier_central_cuboid(optical_transfer_function, zyx_out_shape)
 
 
 def _calculate_pinhole_aperture_otf(
@@ -143,14 +139,10 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_detection: float,
     confocal_pinhole_diameter: float | None = None,
 ) -> Tensor:
-    radial_frequencies = util.generate_radial_frequencies(
-        zyx_shape[1:], yx_pixel_size
-    )
+    radial_frequencies = util.generate_radial_frequencies(zyx_shape[1:], yx_pixel_size)
 
     z_total = zyx_shape[0] + 2 * z_padding
-    z_position_list = torch.fft.ifftshift(
-        (torch.arange(z_total) - z_total // 2) * z_pixel_size
-    )
+    z_position_list = torch.fft.ifftshift((torch.arange(z_total) - z_total // 2) * z_pixel_size)
 
     det_pupil = optics.generate_pupil(
         radial_frequencies,
@@ -165,28 +157,18 @@ def _calculate_wrap_unsafe_transfer_function(
         z_position_list,
     )
 
-    point_spread_function = (
-        torch.abs(torch.fft.ifft2(propagation_kernel, dim=(1, 2))) ** 2
-    )
-    optical_transfer_function = torch.fft.fftn(
-        point_spread_function, dim=(0, 1, 2)
-    )
+    point_spread_function = torch.abs(torch.fft.ifft2(propagation_kernel, dim=(1, 2))) ** 2
+    optical_transfer_function = torch.fft.fftn(point_spread_function, dim=(0, 1, 2))
 
     # Confocal: multiply excitation PSF with detection PSF (downweighted by pinhole)
     if confocal_pinhole_diameter is not None:
-        pinhole_otf_2d = _calculate_pinhole_aperture_otf(
-            radial_frequencies, confocal_pinhole_diameter
-        )
+        pinhole_otf_2d = _calculate_pinhole_aperture_otf(radial_frequencies, confocal_pinhole_diameter)
         # Detection OTF is downweighted by pinhole
         otf_detection = optical_transfer_function * pinhole_otf_2d[None, :, :]
 
         # Convert to PSFs
-        psf_excitation = torch.abs(
-            torch.fft.ifftn(optical_transfer_function, dim=(0, 1, 2))
-        )
-        psf_detection = torch.abs(
-            torch.fft.ifftn(otf_detection, dim=(0, 1, 2))
-        )
+        psf_excitation = torch.abs(torch.fft.ifftn(optical_transfer_function, dim=(0, 1, 2)))
+        psf_detection = torch.abs(torch.fft.ifftn(otf_detection, dim=(0, 1, 2)))
 
         # Confocal PSF = excitation PSF * detection PSF (in real space)
         psf_confocal = psf_excitation * psf_detection
@@ -194,9 +176,7 @@ def _calculate_wrap_unsafe_transfer_function(
         # Convert back to OTF
         optical_transfer_function = torch.fft.fftn(psf_confocal, dim=(0, 1, 2))
 
-    optical_transfer_function /= torch.max(
-        torch.abs(optical_transfer_function)
-    )  # normalize
+    optical_transfer_function /= torch.max(torch.abs(optical_transfer_function))  # normalize
 
     return optical_transfer_function
 
@@ -235,17 +215,10 @@ def apply_transfer_function(
     Simulated data : torch.Tensor
 
     """
-    if (
-        zyx_object.shape[0] + 2 * z_padding
-        != optical_transfer_function.shape[0]
-    ):
-        raise ValueError(
-            "Please check padding: ZYX_obj.shape[0] + 2 * Z_pad != H_re.shape[0]"
-        )
+    if zyx_object.shape[0] + 2 * z_padding != optical_transfer_function.shape[0]:
+        raise ValueError("Please check padding: ZYX_obj.shape[0] + 2 * Z_pad != H_re.shape[0]")
     if z_padding > 0:
-        optical_transfer_function = optical_transfer_function[
-            z_padding:-z_padding
-        ]
+        optical_transfer_function = optical_transfer_function[z_padding:-z_padding]
 
     # Very simple simulation, consider adding noise and bkg knobs
     zyx_obj_hat = torch.fft.fftn(zyx_object)
@@ -305,15 +278,11 @@ def apply_inverse_transfer_function(
 
     # Reconstruct
     if reconstruction_algorithm == "Tikhonov":
-        inverse_filter = tikhonov_regularized_inverse_filter(
-            optical_transfer_function, regularization_strength
-        )
+        inverse_filter = tikhonov_regularized_inverse_filter(optical_transfer_function, regularization_strength)
 
         # [None]s and [0] are for applying a 1x1 "bank" of filters.
         # For further uniformity, consider returning (1, Z, Y, X)
-        f_real = apply_filter_bank(
-            inverse_filter[None, None], zyx_padded[None]
-        )[0]
+        f_real = apply_filter_bank(inverse_filter[None, None], zyx_padded[None])[0]
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
         f_real = util.single_variable_admm_tv_deconvolution_3D(
@@ -329,3 +298,74 @@ def apply_inverse_transfer_function(
         f_real = f_real[z_padding:-z_padding]
 
     return f_real
+
+
+def reconstruct(
+    zyx_data: Tensor,
+    yx_pixel_size: float,
+    z_pixel_size: float,
+    wavelength_emission: float,
+    z_padding: int,
+    index_of_refraction_media: float,
+    numerical_aperture_detection: float,
+    confocal_pinhole_diameter: float | None = None,
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    regularization_strength: float = 1e-3,
+    TV_rho_strength: float = 1e-3,
+    TV_iterations: int = 10,
+) -> Tensor:
+    """Reconstruct 3D fluorescence density from a defocus stack.
+
+    Chains calculate_transfer_function and apply_inverse_transfer_function.
+
+    Parameters
+    ----------
+    zyx_data : Tensor
+        3D raw data, fluorescence defocus stack
+    yx_pixel_size : float
+        Pixel size in the transverse (Y, X) dimensions
+    z_pixel_size : float
+        Pixel size in the axial (Z) dimension
+    wavelength_emission : float
+        Emission wavelength
+    z_padding : int
+        Padding for axial dimension
+    index_of_refraction_media : float
+        Refractive index of the surrounding medium
+    numerical_aperture_detection : float
+        Detection numerical aperture
+    confocal_pinhole_diameter : float | None, optional
+        Confocal pinhole diameter, by default None (widefield)
+    reconstruction_algorithm : str, optional
+        "Tikhonov" or "TV", by default "Tikhonov"
+    regularization_strength : float, optional
+        Regularization parameter, by default 1e-3
+    TV_rho_strength : float, optional
+        TV-specific regularization parameter, by default 1e-3
+    TV_iterations : int, optional
+        TV-specific number of iterations, by default 10
+
+    Returns
+    -------
+    Tensor
+        zyx_fluorescence_density
+    """
+    optical_transfer_function = calculate_transfer_function(
+        zyx_data.shape,
+        yx_pixel_size,
+        z_pixel_size,
+        wavelength_emission,
+        z_padding,
+        index_of_refraction_media,
+        numerical_aperture_detection,
+        confocal_pinhole_diameter=confocal_pinhole_diameter,
+    )
+    return apply_inverse_transfer_function(
+        zyx_data,
+        optical_transfer_function,
+        z_padding,
+        reconstruction_algorithm=reconstruction_algorithm,
+        regularization_strength=regularization_strength,
+        TV_rho_strength=TV_rho_strength,
+        TV_iterations=TV_iterations,
+    )

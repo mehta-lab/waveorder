@@ -12,9 +12,7 @@ def _move_cursor_up(n_lines, do_print=True):
         sys.stdout.write("\033[F" * n_lines)
 
 
-def _print_status(
-    jobs, position_dirpaths, elapsed_list, print_indices=None, do_print=True
-):
+def _print_status(jobs, position_dirpaths, elapsed_list, print_indices=None, do_print=True):
 
     columns = [15, 30, 40, 50]
 
@@ -94,9 +92,7 @@ def _get_jobs_to_print(jobs, num_to_print):
     return job_indices_to_print
 
 
-def monitor_jobs(
-    jobs: list[submitit.Job], position_dirpaths: list[Path], do_print=True
-):
+def monitor_jobs(jobs: list[submitit.Job], position_dirpaths: list[Path], do_print=True):
     """Displays the status of a list of submitit jobs with corresponding paths.
 
     Parameters
@@ -109,9 +105,7 @@ def monitor_jobs(
     NON_JOB_LINES = 3
 
     if not len(jobs) == len(position_dirpaths):
-        raise ValueError(
-            "The number of jobs and position_dirpaths should be the same."
-        )
+        raise ValueError("The number of jobs and position_dirpaths should be the same.")
 
     elapsed_list = [0] * len(jobs)  # timer for each job
 
@@ -123,9 +117,7 @@ def monitor_jobs(
     try:
         while not all(job.done() for job in jobs):
             terminal_lines = shutil.get_terminal_size().lines
-            num_jobs_to_print = np.min(
-                [terminal_lines - NON_JOB_LINES, len(jobs)]
-            )
+            num_jobs_to_print = np.min([terminal_lines - NON_JOB_LINES, len(jobs)])
 
             job_indices_to_print = _get_jobs_to_print(jobs, num_jobs_to_print)
 

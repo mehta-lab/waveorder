@@ -49,9 +49,7 @@ class Ui_Form(object):
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.le_mm_status.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.le_mm_status.sizePolicy().hasHeightForWidth())
         self.le_mm_status.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -61,18 +59,14 @@ class Ui_Form(object):
         self.le_mm_status.setReadOnly(True)
         self.le_mm_status.setObjectName("le_mm_status")
         self.gridLayout_22.addWidget(self.le_mm_status, 0, 1, 1, 1)
-        self.qbutton_connect_to_mm = QtWidgets.QPushButton(
-            parent=self.recon_status
-        )
+        self.qbutton_connect_to_mm = QtWidgets.QPushButton(parent=self.recon_status)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Policy.Expanding,
             QtWidgets.QSizePolicy.Policy.Fixed,
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.qbutton_connect_to_mm.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.qbutton_connect_to_mm.sizePolicy().hasHeightForWidth())
         self.qbutton_connect_to_mm.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -80,9 +74,7 @@ class Ui_Form(object):
         self.qbutton_connect_to_mm.setFont(font)
         self.qbutton_connect_to_mm.setObjectName("qbutton_connect_to_mm")
         self.gridLayout_22.addWidget(self.qbutton_connect_to_mm, 0, 0, 1, 1)
-        self.gridLayout_7.addWidget(
-            self.recon_status, 1, 0, 1, 1, QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        self.gridLayout_7.addWidget(self.recon_status, 1, 0, 1, 1, QtCore.Qt.AlignmentFlag.AlignTop)
         self.tabWidget = QtWidgets.QTabWidget(parent=Form)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Policy.Preferred,
@@ -90,9 +82,7 @@ class Ui_Form(object):
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.tabWidget.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.tabWidget.sizePolicy().hasHeightForWidth())
         self.tabWidget.setSizePolicy(sizePolicy)
         self.tabWidget.setMinimumSize(QtCore.QSize(0, 0))
         self.tabWidget.setBaseSize(QtCore.QSize(0, 0))
@@ -113,16 +103,12 @@ class Ui_Form(object):
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.Calibration.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.Calibration.sizePolicy().hasHeightForWidth())
         self.Calibration.setSizePolicy(sizePolicy)
         self.Calibration.setMinimumSize(QtCore.QSize(0, 0))
         self.Calibration.setObjectName("Calibration")
         self.gridLayout_5 = QtWidgets.QGridLayout(self.Calibration)
-        self.gridLayout_5.setSizeConstraint(
-            QtWidgets.QLayout.SizeConstraint.SetDefaultConstraint
-        )
+        self.gridLayout_5.setSizeConstraint(QtWidgets.QLayout.SizeConstraint.SetDefaultConstraint)
         self.gridLayout_5.setContentsMargins(4, 4, 4, 4)
         self.gridLayout_5.setObjectName("gridLayout_5")
         self.scrollArea = QtWidgets.QScrollArea(parent=self.Calibration)
@@ -133,27 +119,21 @@ class Ui_Form(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(
-            QtCore.QRect(0, 0, 590, 1032)
-        )
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 590, 1032))
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Policy.Preferred,
             QtWidgets.QSizePolicy.Policy.Preferred,
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.scrollAreaWidgetContents.sizePolicy().hasHeightForWidth())
         self.scrollAreaWidgetContents.setSizePolicy(sizePolicy)
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.gridLayout = QtWidgets.QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout.setContentsMargins(4, 4, 4, 4)
         self.gridLayout.setVerticalSpacing(20)
         self.gridLayout.setObjectName("gridLayout")
-        self.run_calib = QtWidgets.QGroupBox(
-            parent=self.scrollAreaWidgetContents
-        )
+        self.run_calib = QtWidgets.QGroupBox(parent=self.scrollAreaWidgetContents)
         font = QtGui.QFont()
         font.setBold(True)
         font.setItalic(False)
@@ -184,9 +164,7 @@ class Ui_Form(object):
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.label_extinction.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.label_extinction.sizePolicy().hasHeightForWidth())
         self.label_extinction.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -201,9 +179,7 @@ class Ui_Form(object):
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.qbutton_calibrate.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.qbutton_calibrate.sizePolicy().hasHeightForWidth())
         self.qbutton_calibrate.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -220,9 +196,7 @@ class Ui_Form(object):
         self.progress_bar.setProperty("value", 0)
         self.progress_bar.setObjectName("progress_bar")
         self.gridLayout_12.addWidget(self.progress_bar, 5, 0, 1, 2)
-        self.qbutton_calc_extinction = QtWidgets.QPushButton(
-            parent=self.run_calib
-        )
+        self.qbutton_calc_extinction = QtWidgets.QPushButton(parent=self.run_calib)
         font = QtGui.QFont()
         font.setBold(False)
         font.setItalic(False)
@@ -236,9 +210,7 @@ class Ui_Form(object):
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.le_extinction.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.le_extinction.sizePolicy().hasHeightForWidth())
         self.le_extinction.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setPointSize(13)
@@ -262,9 +234,7 @@ class Ui_Form(object):
         self.qbutton_load_calib.setFont(font)
         self.qbutton_load_calib.setObjectName("qbutton_load_calib")
         self.gridLayout_12.addWidget(self.qbutton_load_calib, 1, 0, 1, 2)
-        self.tb_calib_assessment = QtWidgets.QTextBrowser(
-            parent=self.run_calib
-        )
+        self.tb_calib_assessment = QtWidgets.QTextBrowser(parent=self.run_calib)
         font = QtGui.QFont()
         font.setBold(False)
         font.setItalic(False)
@@ -272,16 +242,12 @@ class Ui_Form(object):
         self.tb_calib_assessment.setObjectName("tb_calib_assessment")
         self.gridLayout_12.addWidget(self.tb_calib_assessment, 8, 1, 1, 1)
         self.gridLayout.addWidget(self.run_calib, 1, 0, 1, 1)
-        self.calib_params = QtWidgets.QGroupBox(
-            parent=self.scrollAreaWidgetContents
-        )
+        self.calib_params = QtWidgets.QGroupBox(parent=self.scrollAreaWidgetContents)
         font = QtGui.QFont()
         font.setBold(True)
         font.setItalic(False)
         self.calib_params.setFont(font)
-        self.calib_params.setContextMenuPolicy(
-            QtCore.Qt.ContextMenuPolicy.DefaultContextMenu
-        )
+        self.calib_params.setContextMenuPolicy(QtCore.Qt.ContextMenuPolicy.DefaultContextMenu)
         self.calib_params.setAlignment(
             QtCore.Qt.AlignmentFlag.AlignLeading
             | QtCore.Qt.AlignmentFlag.AlignLeft
@@ -429,18 +395,14 @@ class Ui_Form(object):
         self.qbutton_browse.setObjectName("qbutton_browse")
         self.gridLayout_2.addWidget(self.qbutton_browse, 0, 2, 1, 1)
         self.gridLayout.addWidget(self.calib_params, 0, 0, 1, 1)
-        self.tabWidget_2 = QtWidgets.QTabWidget(
-            parent=self.scrollAreaWidgetContents
-        )
+        self.tabWidget_2 = QtWidgets.QTabWidget(parent=self.scrollAreaWidgetContents)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Policy.Minimum,
             QtWidgets.QSizePolicy.Policy.Minimum,
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.tabWidget_2.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.tabWidget_2.sizePolicy().hasHeightForWidth())
         self.tabWidget_2.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -460,19 +422,11 @@ class Ui_Form(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(
-            QtCore.QRect(0, 0, 550, 302)
-        )
-        self.scrollAreaWidgetContents_3.setObjectName(
-            "scrollAreaWidgetContents_3"
-        )
-        self.verticalLayout_6 = QtWidgets.QVBoxLayout(
-            self.scrollAreaWidgetContents_3
-        )
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 550, 302))
+        self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
+        self.verticalLayout_6 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_3)
         self.verticalLayout_6.setObjectName("verticalLayout_6")
-        self.label_inten_plot = QtWidgets.QLabel(
-            parent=self.scrollAreaWidgetContents_3
-        )
+        self.label_inten_plot = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents_3)
         font = QtGui.QFont()
         font.setBold(False)
         font.setItalic(False)
@@ -501,45 +455,29 @@ class Ui_Form(object):
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.scrollArea_2.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.scrollArea_2.sizePolicy().hasHeightForWidth())
         self.scrollArea_2.setSizePolicy(sizePolicy)
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(
-            QtCore.QRect(0, 0, 550, 302)
-        )
-        self.scrollAreaWidgetContents_2.setObjectName(
-            "scrollAreaWidgetContents_2"
-        )
-        self.verticalLayout_5 = QtWidgets.QVBoxLayout(
-            self.scrollAreaWidgetContents_2
-        )
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 550, 302))
+        self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
+        self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_2)
         self.verticalLayout_5.setObjectName("verticalLayout_5")
-        self.label_loglevel = QtWidgets.QLabel(
-            parent=self.scrollAreaWidgetContents_2
-        )
+        self.label_loglevel = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents_2)
         self.label_loglevel.setObjectName("label_loglevel")
         self.verticalLayout_5.addWidget(self.label_loglevel)
-        self.cb_loglevel = QtWidgets.QComboBox(
-            parent=self.scrollAreaWidgetContents_2
-        )
+        self.cb_loglevel = QtWidgets.QComboBox(parent=self.scrollAreaWidgetContents_2)
         self.cb_loglevel.setFocusPolicy(QtCore.Qt.FocusPolicy.StrongFocus)
         self.cb_loglevel.setMaxVisibleItems(2)
         self.cb_loglevel.setObjectName("cb_loglevel")
         self.cb_loglevel.addItem("")
         self.cb_loglevel.addItem("")
         self.verticalLayout_5.addWidget(self.cb_loglevel)
-        self.label_log = QtWidgets.QLabel(
-            parent=self.scrollAreaWidgetContents_2
-        )
+        self.label_log = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents_2)
         self.label_log.setObjectName("label_log")
         self.verticalLayout_5.addWidget(self.label_log)
-        self.te_log = QtWidgets.QPlainTextEdit(
-            parent=self.scrollAreaWidgetContents_2
-        )
+        self.te_log = QtWidgets.QPlainTextEdit(parent=self.scrollAreaWidgetContents_2)
         self.te_log.setMinimumSize(QtCore.QSize(0, 150))
         self.te_log.setLineWidth(1)
         self.te_log.setReadOnly(True)
@@ -555,9 +493,7 @@ class Ui_Form(object):
         self.formLayout.setObjectName("formLayout")
         self.le_notes_field = QtWidgets.QLineEdit(parent=self.tab_notes)
         self.le_notes_field.setObjectName("le_notes_field")
-        self.formLayout.setWidget(
-            1, QtWidgets.QFormLayout.ItemRole.SpanningRole, self.le_notes_field
-        )
+        self.formLayout.setWidget(1, QtWidgets.QFormLayout.ItemRole.SpanningRole, self.le_notes_field)
         self.qbutton_push_note = QtWidgets.QPushButton(parent=self.tab_notes)
         self.qbutton_push_note.setObjectName("qbutton_push_note")
         self.formLayout.setWidget(
@@ -567,16 +503,10 @@ class Ui_Form(object):
         )
         self.label_note = QtWidgets.QLabel(parent=self.tab_notes)
         self.label_note.setObjectName("label_note")
-        self.formLayout.setWidget(
-            0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.label_note
-        )
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.ItemRole.LabelRole, self.label_note)
         self.tabWidget_2.addTab(self.tab_notes, "")
-        self.gridLayout.addWidget(
-            self.tabWidget_2, 3, 0, 1, 1, QtCore.Qt.AlignmentFlag.AlignTop
-        )
-        self.capture_background = QtWidgets.QGroupBox(
-            parent=self.scrollAreaWidgetContents
-        )
+        self.gridLayout.addWidget(self.tabWidget_2, 3, 0, 1, 1, QtCore.Qt.AlignmentFlag.AlignTop)
+        self.capture_background = QtWidgets.QGroupBox(parent=self.scrollAreaWidgetContents)
         font = QtGui.QFont()
         font.setBold(True)
         font.setItalic(False)
@@ -593,9 +523,7 @@ class Ui_Form(object):
         self.label_bg_folder.setFont(font)
         self.label_bg_folder.setObjectName("label_bg_folder")
         self.gridLayout_3.addWidget(self.label_bg_folder, 0, 0, 1, 1)
-        self.qbutton_capture_bg = QtWidgets.QPushButton(
-            parent=self.capture_background
-        )
+        self.qbutton_capture_bg = QtWidgets.QPushButton(parent=self.capture_background)
         font = QtGui.QFont()
         font.setBold(False)
         font.setItalic(False)
@@ -628,9 +556,7 @@ class Ui_Form(object):
         self.gridLayout_5.addWidget(self.scrollArea, 0, 0, 1, 1)
         self.tabWidget.addTab(self.Calibration, "")
         self.tab_reconstruction = tab_recon.Ui_ReconTab_Form(Form)
-        self.tabWidget.addTab(
-            self.tab_reconstruction.recon_tab_mainScrollArea, ""
-        )
+        self.tabWidget.addTab(self.tab_reconstruction.recon_tab_mainScrollArea, "")
         self.Display = QtWidgets.QWidget()
         self.Display.setObjectName("Display")
         self.gridLayout_18 = QtWidgets.QGridLayout(self.Display)
@@ -642,54 +568,36 @@ class Ui_Form(object):
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.scrollArea_5.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.scrollArea_5.sizePolicy().hasHeightForWidth())
         self.scrollArea_5.setSizePolicy(sizePolicy)
         self.scrollArea_5.setWidgetResizable(True)
         self.scrollArea_5.setObjectName("scrollArea_5")
         self.scrollAreaWidgetContents_5 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_5.setGeometry(
-            QtCore.QRect(0, 0, 574, 974)
-        )
-        self.scrollAreaWidgetContents_5.setObjectName(
-            "scrollAreaWidgetContents_5"
-        )
-        self.gridLayout_4 = QtWidgets.QGridLayout(
-            self.scrollAreaWidgetContents_5
-        )
+        self.scrollAreaWidgetContents_5.setGeometry(QtCore.QRect(0, 0, 574, 974))
+        self.scrollAreaWidgetContents_5.setObjectName("scrollAreaWidgetContents_5")
+        self.gridLayout_4 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_5)
         self.gridLayout_4.setObjectName("gridLayout_4")
-        self.label_orientation_image = QtWidgets.QLabel(
-            parent=self.scrollAreaWidgetContents_5
-        )
+        self.label_orientation_image = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents_5)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Policy.Preferred,
             QtWidgets.QSizePolicy.Policy.Fixed,
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.label_orientation_image.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.label_orientation_image.sizePolicy().hasHeightForWidth())
         self.label_orientation_image.setSizePolicy(sizePolicy)
         self.label_orientation_image.setText("")
-        self.label_orientation_image.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignCenter
-        )
+        self.label_orientation_image.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.label_orientation_image.setObjectName("label_orientation_image")
         self.gridLayout_4.addWidget(self.label_orientation_image, 6, 0, 1, 1)
-        self.DisplayOptions = QtWidgets.QGroupBox(
-            parent=self.scrollAreaWidgetContents_5
-        )
+        self.DisplayOptions = QtWidgets.QGroupBox(parent=self.scrollAreaWidgetContents_5)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Policy.Preferred,
             QtWidgets.QSizePolicy.Policy.Expanding,
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.DisplayOptions.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.DisplayOptions.sizePolicy().hasHeightForWidth())
         self.DisplayOptions.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(True)
@@ -740,9 +648,7 @@ class Ui_Form(object):
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.le_overlay_slice.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.le_overlay_slice.sizePolicy().hasHeightForWidth())
         self.le_overlay_slice.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -813,9 +719,7 @@ class Ui_Form(object):
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.slider_value.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.slider_value.sizePolicy().hasHeightForWidth())
         self.slider_value.setSizePolicy(sizePolicy)
         font = QtGui.QFont()
         font.setBold(False)
@@ -831,9 +735,7 @@ class Ui_Form(object):
         self.label_value.setFont(font)
         self.label_value.setObjectName("label_value")
         self.gridLayout_17.addWidget(self.label_value, 12, 0, 1, 1)
-        self.chb_display_volume = QtWidgets.QCheckBox(
-            parent=self.DisplayOptions
-        )
+        self.chb_display_volume = QtWidgets.QCheckBox(parent=self.DisplayOptions)
         font = QtGui.QFont()
         font.setBold(False)
         font.setItalic(False)
@@ -867,9 +769,7 @@ class Ui_Form(object):
         self.label_hue.setFont(font)
         self.label_hue.setObjectName("label_hue")
         self.gridLayout_17.addWidget(self.label_hue, 8, 0, 1, 1)
-        self.qbutton_create_overlay = QtWidgets.QPushButton(
-            parent=self.DisplayOptions
-        )
+        self.qbutton_create_overlay = QtWidgets.QPushButton(parent=self.DisplayOptions)
         font = QtGui.QFont()
         font.setBold(False)
         font.setItalic(False)
@@ -884,36 +784,26 @@ class Ui_Form(object):
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.label.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
         self.label.setSizePolicy(sizePolicy)
         self.label.setObjectName("label")
         self.gridLayout_4.addWidget(self.label, 1, 0, 1, 1)
-        self.retMaxSlider = QtWidgets.QSlider(
-            parent=self.scrollAreaWidgetContents_5
-        )
+        self.retMaxSlider = QtWidgets.QSlider(parent=self.scrollAreaWidgetContents_5)
         self.retMaxSlider.setMaximum(50)
         self.retMaxSlider.setSliderPosition(25)
         self.retMaxSlider.setOrientation(QtCore.Qt.Orientation.Horizontal)
         self.retMaxSlider.setObjectName("retMaxSlider")
         self.gridLayout_4.addWidget(self.retMaxSlider, 2, 0, 1, 1)
-        self.label_orientation_legend = QtWidgets.QLabel(
-            parent=self.scrollAreaWidgetContents_5
-        )
+        self.label_orientation_legend = QtWidgets.QLabel(parent=self.scrollAreaWidgetContents_5)
         sizePolicy = QtWidgets.QSizePolicy(
             QtWidgets.QSizePolicy.Policy.Preferred,
             QtWidgets.QSizePolicy.Policy.Fixed,
         )
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(
-            self.label_orientation_legend.sizePolicy().hasHeightForWidth()
-        )
+        sizePolicy.setHeightForWidth(self.label_orientation_legend.sizePolicy().hasHeightForWidth())
         self.label_orientation_legend.setSizePolicy(sizePolicy)
-        self.label_orientation_legend.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignCenter
-        )
+        self.label_orientation_legend.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.label_orientation_legend.setObjectName("label_orientation_legend")
         self.gridLayout_4.addWidget(self.label_orientation_legend, 3, 0, 1, 1)
         spacerItem = QtWidgets.QSpacerItem(
@@ -982,35 +872,23 @@ class Ui_Form(object):
         self.le_mm_status.setText(_translate("Form", "Disconnected"))
         self.qbutton_connect_to_mm.setText(_translate("Form", "Connect to MM"))
         self.run_calib.setTitle(_translate("Form", "Run Calibration"))
-        self.labell_calib_assessment.setText(
-            _translate("Form", "Calibration Assessment")
-        )
+        self.labell_calib_assessment.setText(_translate("Form", "Calibration Assessment"))
         self.label_progress.setText(_translate("Form", "Progress"))
         self.label_extinction.setText(_translate("Form", "Extinction"))
         self.qbutton_calibrate.setText(_translate("Form", "Run Calibration"))
-        self.qbutton_calc_extinction.setText(
-            _translate("Form", "Calculate Extinction")
-        )
+        self.qbutton_calc_extinction.setText(_translate("Form", "Calculate Extinction"))
         self.qbutton_stop_calib.setText(_translate("Form", "STOP"))
         self.qbutton_load_calib.setText(_translate("Form", "Load Calibration"))
-        self.calib_params.setTitle(
-            _translate("Form", "Calibration Parameters")
-        )
+        self.calib_params.setTitle(_translate("Form", "Calibration Parameters"))
         self.label_wavelength.setText(_translate("Form", "Wavelength (nm)"))
         self.label_dir.setText(_translate("Form", "Directory"))
         self.cb_lca.setItemText(0, _translate("Form", "-"))
-        self.cb_calib_scheme.setItemText(
-            0, _translate("Form", "4-State (Ext, 0, 60, 120)")
-        )
-        self.cb_calib_scheme.setItemText(
-            1, _translate("Form", "5-State (Ext, 0, 45, 90, 135)")
-        )
+        self.cb_calib_scheme.setItemText(0, _translate("Form", "4-State (Ext, 0, 60, 120)"))
+        self.cb_calib_scheme.setItemText(1, _translate("Form", "5-State (Ext, 0, 45, 90, 135)"))
         self.cb_lcb.setItemText(0, _translate("Form", "-"))
         self.label_lca.setText(_translate("Form", "LC-A"))
         self.le_swing.setText(_translate("Form", "0.1"))
-        self.le_directory.setPlaceholderText(
-            _translate("Form", "/path/to/directory")
-        )
+        self.le_directory.setPlaceholderText(_translate("Form", "/path/to/directory"))
         self.le_wavelength.setText(_translate("Form", "532"))
         self.label_lcb.setText(_translate("Form", "LC-B"))
         self.label_swing.setText(_translate("Form", "Swing"))
@@ -1019,9 +897,7 @@ class Ui_Form(object):
         self.label_scheme.setText(_translate("Form", "Illumination Scheme"))
         self.qbutton_browse.setText(_translate("Form", "Browse"))
         self.label_inten_plot.setText(_translate("Form", "Intensity Plot"))
-        self.tabWidget_2.setTabText(
-            self.tabWidget_2.indexOf(self.tab_plot), _translate("Form", "Plot")
-        )
+        self.tabWidget_2.setTabText(self.tabWidget_2.indexOf(self.tab_plot), _translate("Form", "Plot"))
         self.label_loglevel.setText(_translate("Form", "Log Level"))
         self.cb_loglevel.setItemText(0, _translate("Form", "Basic"))
         self.cb_loglevel.setItemText(1, _translate("Form", "Debug"))
@@ -1030,36 +906,24 @@ class Ui_Form(object):
             self.tabWidget_2.indexOf(self.tab_advanced),
             _translate("Form", "Advanced"),
         )
-        self.qbutton_push_note.setText(
-            _translate("Form", "Push note to last metadata file")
-        )
+        self.qbutton_push_note.setText(_translate("Form", "Push note to last metadata file"))
         self.label_note.setText(_translate("Form", "Note"))
         self.tabWidget_2.setTabText(
             self.tabWidget_2.indexOf(self.tab_notes),
             _translate("Form", "Notes"),
         )
-        self.capture_background.setTitle(
-            _translate("Form", "Capture Background")
-        )
-        self.label_bg_folder.setText(
-            _translate("Form", "Background Folder Name")
-        )
-        self.qbutton_capture_bg.setText(
-            _translate("Form", "Capture Background")
-        )
+        self.capture_background.setTitle(_translate("Form", "Capture Background"))
+        self.label_bg_folder.setText(_translate("Form", "Background Folder Name"))
+        self.qbutton_capture_bg.setText(_translate("Form", "Capture Background"))
         self.le_bg_folder.setText(_translate("Form", "bg"))
         self.le_n_avg.setText(_translate("Form", "5"))
-        self.label_n_avg.setText(
-            _translate("Form", "Number of Images to Average")
-        )
+        self.label_n_avg.setText(_translate("Form", "Number of Images to Average"))
         self.tabWidget.setTabText(
             self.tabWidget.indexOf(self.Calibration),
             _translate("Form", "LC Calibration"),
         )
         self.tabWidget.setTabText(
-            self.tabWidget.indexOf(
-                self.tab_reconstruction.recon_tab_mainScrollArea
-            ),
+            self.tabWidget.indexOf(self.tab_reconstruction.recon_tab_mainScrollArea),
             _translate("Form", "Reconstruction"),
         )
         self.DisplayOptions.setTitle(_translate("Form", "Display Options"))
@@ -1067,28 +931,18 @@ class Ui_Form(object):
         self.le_overlay_slice.setPlaceholderText(_translate("Form", "Slice"))
         self.le_sat_min.setText(_translate("Form", "20"))
         self.cb_colormap.setItemText(0, _translate("Form", "HSV"))
-        self.cb_colormap.setItemText(
-            1, _translate("Form", "JCh (Perceptually Uniform)")
-        )
+        self.cb_colormap.setItemText(1, _translate("Form", "JCh (Perceptually Uniform)"))
         self.le_val_min.setText(_translate("Form", "20"))
         self.le_sat_max.setText(_translate("Form", "80"))
         self.label_value.setText(_translate("Form", "Value"))
         self.chb_display_volume.setText(_translate("Form", "Use Full Volume"))
-        self.label_colormap.setText(
-            _translate("Form", "BirefringenceOverlay Colormap")
-        )
+        self.label_colormap.setText(_translate("Form", "BirefringenceOverlay Colormap"))
         self.le_val_max.setText(_translate("Form", "80"))
         self.label_hue.setText(_translate("Form", "Hue"))
-        self.qbutton_create_overlay.setText(
-            _translate("Form", "Create Overlay")
-        )
+        self.qbutton_create_overlay.setText(_translate("Form", "Create Overlay"))
         self.label.setText(_translate("Form", "Overlay Retardance Maximum "))
-        self.label_orientation_legend.setText(
-            _translate("Form", "Retardance Orientation Overlay Legend")
-        )
-        self.tabWidget.setTabText(
-            self.tabWidget.indexOf(self.Display), _translate("Form", "Display")
-        )
+        self.label_orientation_legend.setText(_translate("Form", "Retardance Orientation Overlay Legend"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Display), _translate("Form", "Display"))
 
 
 from pyqtgraph import PlotWidget

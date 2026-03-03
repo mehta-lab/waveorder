@@ -43,25 +43,23 @@ from concurrent.futures import ThreadPoolExecutor
 from pydantic import BaseModel, NonNegativeInt, ValidationError
 from pydantic_core import PydanticUndefinedType
 
+from waveorder.api import birefringence, fluorescence, phase
+from waveorder.api._settings import FourierApplyInverseSettings
 from waveorder.cli.settings import (
     BirefringenceApplyInverseSettings,
     BirefringenceSettings,
-    BirefringenceTransferFunctionSettings,
     FluorescenceSettings,
-    FluorescenceTransferFunctionSettings,
-    FourierApplyInverseSettings,
     PhaseSettings,
-    PhaseTransferFunctionSettings,
 )
 
 PYDANTIC_CLASSES_DEF = (
     BirefringenceSettings,
-    BirefringenceTransferFunctionSettings,
+    birefringence.TransferFunctionSettings,
     BirefringenceApplyInverseSettings,
     PhaseSettings,
-    PhaseTransferFunctionSettings,
+    phase.TransferFunctionSettings,
     FluorescenceSettings,
-    FluorescenceTransferFunctionSettings,
+    fluorescence.TransferFunctionSettings,
     FourierApplyInverseSettings,
 )
 
@@ -144,7 +142,6 @@ def is_subclass_of(
 # Does not have access to common functions in main_widget
 # ToDo : From main_widget and pass self reference
 class Ui_ReconTab_Form(QWidget):
-
     def __init__(self, parent=None, stand_alone=False):
         super().__init__(parent)
         self._ui = parent
@@ -174,9 +171,7 @@ class Ui_ReconTab_Form(QWidget):
         self.recon_tab_mainScrollArea.setWidgetResizable(True)
 
         self.recon_tab_widget = QWidget()
-        self.recon_tab_widget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-        )
+        self.recon_tab_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.recon_tab_layout = QVBoxLayout()
         self.recon_tab_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.recon_tab_layout.setContentsMargins(0, 0, 0, 0)
@@ -194,9 +189,7 @@ class Ui_ReconTab_Form(QWidget):
         # Input Data ##############################
         self.data_input_widget = QWidget()
         self.data_input_widget_layout = QHBoxLayout()
-        self.data_input_widget_layout.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        self.data_input_widget_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.data_input_widget.setLayout(self.data_input_widget_layout)
 
         self.data_input_Label = widgets.Label(value="Input Store")
@@ -205,46 +198,28 @@ class Ui_ReconTab_Form(QWidget):
         self.data_input_PushButton = widgets.PushButton(label="Browse")
         # self.data_input_PushButton.native.setMinimumWidth(75)
         self.data_input_PushButton.clicked.connect(self.browse_dir_path_input)
-        self.data_input_LineEdit.changed.connect(
-            self.read_and_set_input_path_on_validation
-        )
+        self.data_input_LineEdit.changed.connect(self.read_and_set_input_path_on_validation)
 
         self.data_input_widget_layout.addWidget(self.data_input_Label.native)
-        self.data_input_widget_layout.addWidget(
-            self.data_input_LineEdit.native
-        )
-        self.data_input_widget_layout.addWidget(
-            self.data_input_PushButton.native
-        )
+        self.data_input_widget_layout.addWidget(self.data_input_LineEdit.native)
+        self.data_input_widget_layout.addWidget(self.data_input_PushButton.native)
 
         # Output Data ##############################
         self.data_output_widget = QWidget()
         self.data_output_widget_layout = QHBoxLayout()
-        self.data_output_widget_layout.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        self.data_output_widget_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.data_output_widget.setLayout(self.data_output_widget_layout)
 
         self.data_output_Label = widgets.Label(value="Output Directory")
-        self.data_output_LineEdit = widgets.LineEdit(
-            value=self.output_directory
-        )
+        self.data_output_LineEdit = widgets.LineEdit(value=self.output_directory)
         self.data_output_PushButton = widgets.PushButton(label="Browse")
         # self.data_output_PushButton.native.setMinimumWidth(75)
-        self.data_output_PushButton.clicked.connect(
-            self.browse_dir_path_output
-        )
-        self.data_output_LineEdit.changed.connect(
-            self.read_and_set_out_path_on_validation
-        )
+        self.data_output_PushButton.clicked.connect(self.browse_dir_path_output)
+        self.data_output_LineEdit.changed.connect(self.read_and_set_out_path_on_validation)
 
         self.data_output_widget_layout.addWidget(self.data_output_Label.native)
-        self.data_output_widget_layout.addWidget(
-            self.data_output_LineEdit.native
-        )
-        self.data_output_widget_layout.addWidget(
-            self.data_output_PushButton.native
-        )
+        self.data_output_widget_layout.addWidget(self.data_output_LineEdit.native)
+        self.data_output_widget_layout.addWidget(self.data_output_PushButton.native)
 
         self.data_input_Label.native.setMinimumWidth(115)
         self.data_output_Label.native.setMinimumWidth(115)
@@ -267,9 +242,7 @@ class Ui_ReconTab_Form(QWidget):
 
         self.models_widget = QWidget()
         self.models_widget_layout = QHBoxLayout()
-        self.models_widget_layout.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        self.models_widget_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         self.models_widget.setLayout(self.models_widget_layout)
 
         self.modes_selected = OPTION_TO_MODEL_DICT.copy()
@@ -280,12 +253,8 @@ class Ui_ReconTab_Form(QWidget):
 
         # Checkboxes for the modes to select single or combination of modes
         for mode in self.modes_selected.keys():
-            self.modes_selected[mode]["Checkbox"] = widgets.Checkbox(
-                name=mode, label=mode
-            )
-            self.models_widget_layout.addWidget(
-                self.modes_selected[mode]["Checkbox"].native
-            )
+            self.modes_selected[mode]["Checkbox"] = widgets.Checkbox(name=mode, label=mode)
+            self.models_widget_layout.addWidget(self.modes_selected[mode]["Checkbox"].native)
 
         # PushButton to create a copy of the model - UI
         self.models_new_PushButton = widgets.PushButton(label="New")
@@ -296,9 +265,7 @@ class Ui_ReconTab_Form(QWidget):
         # self.models_load_PushButton.setMinimumWidth(90)
 
         # Passing model location label to model location selector
-        self.models_load_PushButton.clicked.connect(
-            lambda: self.browse_dir_path_model()
-        )
+        self.models_load_PushButton.clicked.connect(lambda: self.browse_dir_path_model())
 
         # PushButton to clear all copies of models that are create for UI
         self.models_clear_PushButton = widgets.PushButton(label="Clear")
@@ -307,9 +274,7 @@ class Ui_ReconTab_Form(QWidget):
 
         self.models_widget_layout.addWidget(self.models_new_PushButton.native)
         self.models_widget_layout.addWidget(self.models_load_PushButton)
-        self.models_widget_layout.addWidget(
-            self.models_clear_PushButton.native
-        )
+        self.models_widget_layout.addWidget(self.models_clear_PushButton.native)
 
         # Middle scrollable component which will hold Editable/(vertical) Expanding UI
         self.models_scrollArea = QScrollArea()
@@ -318,12 +283,8 @@ class Ui_ReconTab_Form(QWidget):
         self.models_container_widget_layout = QVBoxLayout()
         self.models_container_widget_layout.setContentsMargins(0, 0, 0, 0)
         self.models_container_widget_layout.setSpacing(2)
-        self.models_container_widget_layout.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
-        self.models_container_widget.setLayout(
-            self.models_container_widget_layout
-        )
+        self.models_container_widget_layout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
+        self.models_container_widget.setLayout(self.models_container_widget_layout)
         self.models_scrollArea.setWidget(self.models_container_widget)
 
         group_box_Models_layout.addWidget(self.models_widget)
@@ -340,37 +301,25 @@ class Ui_ReconTab_Form(QWidget):
 
         # Reconstruction ##################################
         # Run, Processing, On-The-Fly
-        group_box_Reconstruction_groupBox_widget = QGroupBox(
-            "Reconstruction Queue"
-        )
+        group_box_Reconstruction_groupBox_widget = QGroupBox("Reconstruction Queue")
         group_box_Reconstruction_layout = QVBoxLayout()
         group_box_Reconstruction_layout.setContentsMargins(5, 10, 5, 5)
         group_box_Reconstruction_layout.setSpacing(2)
-        group_box_Reconstruction_groupBox_widget.setLayout(
-            group_box_Reconstruction_layout
-        )
+        group_box_Reconstruction_groupBox_widget.setLayout(group_box_Reconstruction_layout)
 
         splitter.addWidget(group_box_Models_groupBox_widget)
         splitter.addWidget(group_box_Reconstruction_groupBox_widget)
 
         my_splitter_handle = splitter.handle(1)
         my_splitter_handle.setStyleSheet("background: 1px rgb(128,128,128);")
-        splitter.setStyleSheet(
-            """QSplitter::handle:pressed {background-color: #ca5;}"""
-        )
+        splitter.setStyleSheet("""QSplitter::handle:pressed {background-color: #ca5;}""")
 
         # PushButton to validate and Run the yaml file(s) based on selection against the Input store
-        self.reconstruction_run_PushButton = widgets.PushButton(
-            name="RUN Model"
-        )
+        self.reconstruction_run_PushButton = widgets.PushButton(name="RUN Model")
         self.reconstruction_run_PushButton.native.setMinimumWidth(100)
-        self.reconstruction_run_PushButton.clicked.connect(
-            self.build_model_and_run
-        )
+        self.reconstruction_run_PushButton.clicked.connect(self.build_model_and_run)
 
-        group_box_Reconstruction_layout.addWidget(
-            self.reconstruction_run_PushButton.native
-        )
+        group_box_Reconstruction_layout.addWidget(self.reconstruction_run_PushButton.native)
 
         # Tabs - Processing & On-The-Fly
         tabs_Reconstruction = QTabWidget()
@@ -383,13 +332,9 @@ class Ui_ReconTab_Form(QWidget):
         tab1_processing_widget_layout.setSpacing(2)
         tab1_processing_widget.setLayout(tab1_processing_widget_layout)
         self.proc_table_QFormLayout = QFormLayout()
-        self.proc_table_QFormLayout.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        self.proc_table_QFormLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         tab1_processing_form_widget = QWidget()
-        tab1_processing_form_widget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-        )
+        tab1_processing_form_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         tab1_processing_form_widget.setLayout(self.proc_table_QFormLayout)
         tab1_processing_widget_layout.addWidget(tab1_processing_form_widget)
 
@@ -404,13 +349,9 @@ class Ui_ReconTab_Form(QWidget):
         tab2_processing_widget_layout.setSpacing(0)
         tab2_processing_widget.setLayout(tab2_processing_widget_layout)
         self.proc_OTF_table_QFormLayout = QFormLayout()
-        self.proc_OTF_table_QFormLayout.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        self.proc_OTF_table_QFormLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         _proc_OTF_table_widget = QWidget()
-        _proc_OTF_table_widget.setSizePolicy(
-            QSizePolicy.Expanding, QSizePolicy.Expanding
-        )
+        _proc_OTF_table_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         _proc_OTF_table_widget.setLayout(self.proc_OTF_table_QFormLayout)
         tab2_processing_widget_layout.addWidget(_proc_OTF_table_widget)
         tab2_processing_widget.setMaximumHeight(100)
@@ -432,18 +373,14 @@ class Ui_ReconTab_Form(QWidget):
         # handle napari's close widget and avoid starting a second instance
         if HAS_INSTANCE["val"]:
             self.worker: MyWorker = HAS_INSTANCE["MyWorker"]
-            self.worker.set_new_instances(
-                self.proc_table_QFormLayout, self, self._ui
-            )
+            self.worker.set_new_instances(self.proc_table_QFormLayout, self, self._ui)
         else:
             self.worker = MyWorker(self.proc_table_QFormLayout, self, self._ui)
             HAS_INSTANCE["val"] = True
             HAS_INSTANCE["MyWorker"] = self.worker
 
         self.app = QApplication.instance()
-        self.app.lastWindowClosed.connect(
-            self.myCloseEvent
-        )  # this line is connection to signal close
+        self.app.lastWindowClosed.connect(self.myCloseEvent)  # this line is connection to signal close
 
     ######################################################
 
@@ -460,9 +397,7 @@ class Ui_ReconTab_Form(QWidget):
 
     def hideEvent(self, event):
         if event.type() == QEvent.Type.Hide and (
-            hasattr(self, "_ui")
-            and self._ui is not None
-            and self._ui.isVisible()
+            hasattr(self, "_ui") and self._ui is not None and self._ui.isVisible()
         ):
             pass
 
@@ -505,9 +440,7 @@ class Ui_ReconTab_Form(QWidget):
         else:
             self.clear_all_models(silent=True)
         try:
-            result = self.open_file_dialog(
-                self.input_directory, "dir", filter="ZARR Storage (*.zarr)"
-            )
+            result = self.open_file_dialog(self.input_directory, "dir", filter="ZARR Storage (*.zarr)")
             # .zarr is a folder but we could implement a filter to scan for "ending with" and present those if required
         except Exception as exc:
             self.message_box(exc.args)
@@ -546,9 +479,7 @@ class Ui_ReconTab_Form(QWidget):
 
         elem.value = result
 
-    def validate_input_data(
-        self, input_data_folder: str, metadata=False, BG=False
-    ) -> bool:
+    def validate_input_data(self, input_data_folder: str, metadata=False, BG=False) -> bool:
         try:
             self.input_channel_names = []
             self.data_input_Label.value = "Input Store"
@@ -556,13 +487,8 @@ class Ui_ReconTab_Form(QWidget):
             with open_ome_zarr(input_paths, mode="r") as dataset:
                 try:
                     self.input_channel_names = dataset.channel_names
-                    self.data_input_Label.value = (
-                        "Input Store" + " " + _info_icon
-                    )
-                    self.data_input_Label.tooltip = (
-                        "Channel Names:\n- "
-                        + "\n- ".join(self.input_channel_names)
-                    )
+                    self.data_input_Label.value = "Input Store" + " " + _info_icon
+                    self.data_input_Label.tooltip = "Channel Names:\n- " + "\n- ".join(self.input_channel_names)
                 except Exception as exc:
                     print(exc.args)
 
@@ -576,17 +502,13 @@ class Ui_ReconTab_Form(QWidget):
                             string_array_n = [str(x["name"]) for x in axes]
                             string_array = [
                                 str(x)
-                                for x in pos.zgroup.attrs["multiscales"][0][
-                                    "datasets"
-                                ][0]["coordinateTransformations"][0]["scale"]
+                                for x in pos.zgroup.attrs["multiscales"][0]["datasets"][0]["coordinateTransformations"][
+                                    0
+                                ]["scale"]
                             ]
                             string_scale = []
                             for i in range(len(string_array_n)):
-                                string_scale.append(
-                                    "{n}={d}".format(
-                                        n=string_array_n[i], d=string_array[i]
-                                    )
-                                )
+                                string_scale.append("{n}={d}".format(n=string_array_n[i], d=string_array[i]))
                             txt = "\n\nScale: " + ", ".join(string_scale)
                             self.data_input_Label.tooltip += txt
                         i += 1
@@ -608,19 +530,14 @@ class Ui_ReconTab_Form(QWidget):
                             self.pollData = True
 
                 return True, MSG_SUCCESS
-            raise Exception(
-                "Dataset does not appear to be a valid ome-zarr storage"
-            )
+            raise Exception("Dataset does not appear to be a valid ome-zarr storage")
         except Exception as exc:
             return False, exc.args
 
     # call back for input LineEdit path changed manually
     # include data validation
     def read_and_set_input_path_on_validation(self):
-        if (
-            self.data_input_LineEdit.value is None
-            or len(self.data_input_LineEdit.value) == 0
-        ):
+        if self.data_input_LineEdit.value is None or len(self.data_input_LineEdit.value) == 0:
             self.data_input_LineEdit.value = self.input_directory
             self.message_box("Input data path cannot be empty")
             return
@@ -644,15 +561,10 @@ class Ui_ReconTab_Form(QWidget):
             self.data_input_LineEdit.value = self.input_directory
             self.message_box(ret_msg)
 
-        self.data_output_LineEdit.value = Path(
-            self.input_directory
-        ).parent.absolute()
+        self.data_output_LineEdit.value = Path(self.input_directory).parent.absolute()
 
     def read_and_set_out_path_on_validation(self):
-        if (
-            self.data_output_LineEdit.value is None
-            or len(self.data_output_LineEdit.value) == 0
-        ):
+        if self.data_output_LineEdit.value is None or len(self.data_output_LineEdit.value) == 0:
             self.data_output_LineEdit.value = self.output_directory
             self.message_box("Output data path cannot be empty")
             return
@@ -678,25 +590,11 @@ class Ui_ReconTab_Form(QWidget):
                 )
                 model_item["output"] = full_out_path
 
-                save_path_exists = (
-                    True if Path(full_out_path).exists() else False
-                )
-                output_LineEdit.label = (
-                    "" if not save_path_exists else (_validate_alert + " ")
-                ) + "Output Data:"
-                output_LineEdit.tooltip = (
-                    ""
-                    if not save_path_exists
-                    else (_validate_alert + "Output file exists")
-                )
-                output_Button.text = (
-                    "" if not save_path_exists else (_validate_alert + " ")
-                ) + "Output Data:"
-                output_Button.tooltip = (
-                    ""
-                    if not save_path_exists
-                    else (_validate_alert + "Output file exists")
-                )
+                save_path_exists = True if Path(full_out_path).exists() else False
+                output_LineEdit.label = ("" if not save_path_exists else (_validate_alert + " ")) + "Output Data:"
+                output_LineEdit.tooltip = "" if not save_path_exists else (_validate_alert + "Output file exists")
+                output_Button.text = ("" if not save_path_exists else (_validate_alert + " ")) + "Output Data:"
+                output_Button.tooltip = "" if not save_path_exists else (_validate_alert + "Output file exists")
 
     def is_dataset_acq_running(self, zattrs: dict) -> bool:
         """
@@ -707,16 +605,10 @@ class Ui_ReconTab_Form(QWidget):
         required_order = ["time", "position", "z", "channel"]
         if "CurrentDimensions" in zattrs.keys():
             my_dict = zattrs["CurrentDimensions"]
-            sorted_dict_acq = {
-                k: my_dict[k]
-                for k in sorted(my_dict, key=lambda x: required_order.index(x))
-            }
+            sorted_dict_acq = {k: my_dict[k] for k in sorted(my_dict, key=lambda x: required_order.index(x))}
         if "FinalDimensions" in zattrs.keys():
             my_dict = zattrs["FinalDimensions"]
-            sorted_dict_final = {
-                k: my_dict[k]
-                for k in sorted(my_dict, key=lambda x: required_order.index(x))
-            }
+            sorted_dict_final = {k: my_dict[k] for k in sorted(my_dict, key=lambda x: required_order.index(x))}
             if sorted_dict_acq != sorted_dict_final:
                 return True
         return False
@@ -728,9 +620,7 @@ class Ui_ReconTab_Form(QWidget):
             return
 
         save_path_exists = True if Path(result).exists() else False
-        elem.label = "Output Data:" + (
-            "" if not save_path_exists else (" " + _validate_alert)
-        )
+        elem.label = "Output Data:" + ("" if not save_path_exists else (" " + _validate_alert))
         elem.tooltip = "" if not save_path_exists else "Output file exists"
 
         elem.value = Path(result).name
@@ -742,27 +632,13 @@ class Ui_ReconTab_Form(QWidget):
         if elem1.value is None or len(elem1.value) == 0:
             elem1.value = Path(save_path).name
 
-        save_path = os.path.join(
-            Path(self.output_directory).absolute(), elem1.value
-        )
+        save_path = os.path.join(Path(self.output_directory).absolute(), elem1.value)
 
         save_path_exists = True if Path(save_path).exists() else False
-        elem1.label = (
-            "" if not save_path_exists else (_validate_alert + " ")
-        ) + "Output Data:"
-        elem1.tooltip = (
-            ""
-            if not save_path_exists
-            else (_validate_alert + "Output file exists")
-        )
-        elem2.text = (
-            "" if not save_path_exists else (_validate_alert + " ")
-        ) + "Output Data:"
-        elem2.tooltip = (
-            ""
-            if not save_path_exists
-            else (_validate_alert + "Output file exists")
-        )
+        elem1.label = ("" if not save_path_exists else (_validate_alert + " ")) + "Output Data:"
+        elem1.tooltip = "" if not save_path_exists else (_validate_alert + "Output file exists")
+        elem2.text = ("" if not save_path_exists else (_validate_alert + " ")) + "Output Data:"
+        elem2.tooltip = "" if not save_path_exists else (_validate_alert + "Output file exists")
 
         self.save_last_paths()
 
@@ -770,9 +646,7 @@ class Ui_ReconTab_Form(QWidget):
     # ToDo: utilize common functions
     # Output data selector
     def browse_dir_path_model(self):
-        results = self.open_file_dialog(
-            self.directory, "files", filter="YAML Files (*.yml)"
-        )  # returns list
+        results = self.open_file_dialog(self.directory, "files", filter="YAML Files (*.yml)")  # returns list
         if len(results) == 0 or results == "":
             return
 
@@ -789,9 +663,7 @@ class Ui_ReconTab_Form(QWidget):
             self.yaml_model_file = result
 
             with open(result, "r") as yaml_in:
-                yaml_object = utils.yaml.safe_load(
-                    yaml_in
-                )  # yaml_object will be a list or a dict
+                yaml_object = utils.yaml.safe_load(yaml_in)  # yaml_object will be a list or a dict
             jsonString = json.dumps(self.convert(yaml_object))
             json_out = json.loads(jsonString)
             json_dict = dict(json_out)
@@ -810,9 +682,7 @@ class Ui_ReconTab_Form(QWidget):
                 self.message_box(ret_msg)
                 return
 
-            pydantic_model, ret_msg = self.get_model_from_file(
-                self.yaml_model_file
-            )
+            pydantic_model, ret_msg = self.get_model_from_file(self.yaml_model_file)
             if pydantic_model is None:
                 if (
                     isinstance(ret_msg, List)
@@ -822,23 +692,17 @@ class Ui_ReconTab_Form(QWidget):
                 ):
                     pydantic_model = pruned_pydantic_class  # if only background_path fails validation
                     if "birefringence" in json_dict.keys():
-                        json_dict["birefringence"]["apply_inverse"][
-                            "background_path"
-                        ] = ""
+                        json_dict["birefringence"]["apply_inverse"]["background_path"] = ""
                     else:
                         bg_loc = ""
-                    self.message_box(
-                        "background_path:\nPath was invalid and will be reset"
-                    )
+                    self.message_box("background_path:\nPath was invalid and will be reset")
                 else:
                     self.message_box(ret_msg)
                     return
             else:
                 # make sure "background_path" is valid
                 if "birefringence" in json_dict.keys():
-                    bg_loc = json_dict["birefringence"]["apply_inverse"][
-                        "background_path"
-                    ]
+                    bg_loc = json_dict["birefringence"]["apply_inverse"]["background_path"]
                 else:
                     bg_loc = ""
                 if bg_loc != "":
@@ -852,23 +716,13 @@ class Ui_ReconTab_Form(QWidget):
                         )
                     else:
                         bg_loc = Path(os.path.join(bg_loc, "background.zarr"))
-                    if not bg_loc.exists() or not self.validate_input_data(
-                        str(bg_loc)
-                    ):
-                        self.message_box(
-                            "background_path:\nPwas invalid and will be reset"
-                        )
-                        json_dict["birefringence"]["apply_inverse"][
-                            "background_path"
-                        ] = ""
+                    if not bg_loc.exists() or not self.validate_input_data(str(bg_loc)):
+                        self.message_box("background_path:\nPwas invalid and will be reset")
+                        json_dict["birefringence"]["apply_inverse"]["background_path"] = ""
                     else:
-                        json_dict["birefringence"]["apply_inverse"][
-                            "background_path"
-                        ] = str(bg_loc.parent.absolute())
+                        json_dict["birefringence"]["apply_inverse"]["background_path"] = str(bg_loc.parent.absolute())
 
-            pydantic_model = self.create_acq_contols2(
-                selected_modes, exclude_modes, pydantic_model, json_dict
-            )
+            pydantic_model = self.create_acq_contols2(selected_modes, exclude_modes, pydantic_model, json_dict)
             if pydantic_model is None:
                 self.message_box("Error - pydantic model returned None")
                 return
@@ -903,9 +757,7 @@ class Ui_ReconTab_Form(QWidget):
                     name_widget = widgetItem.widget()
                     toolTip_string = str(name_widget.toolTip)
                     if expID in toolTip_string:
-                        self.proc_table_QFormLayout.removeRow(
-                            row
-                        )  # removeRow vs takeRow for threads ?
+                        self.proc_table_QFormLayout.removeRow(row)  # removeRow vs takeRow for threads ?
         except Exception as exc:
             print(exc.args)
 
@@ -919,9 +771,7 @@ class Ui_ReconTab_Form(QWidget):
                 self.modelHighlighterVals[uid]["items"] = []
                 self.modelHighlighterVals[uid]["tooltip"] = []
                 if len(errs[uid]["errs"]) > 0:
-                    self.model_highlighter_setter(
-                        errs[uid]["errs"], container, uid
-                    )
+                    self.model_highlighter_setter(errs[uid]["errs"], container, uid)
         except Exception as exc:
             print(exc.args)
             # more of a test feature - no need to show up
@@ -937,13 +787,11 @@ class Ui_ReconTab_Form(QWidget):
                         ret_str += f"{'>'.join(errs[uid]['errs'][idx]['loc'])}:\n{errs[uid]['errs'][idx]['msg']} \n"
                     ret_str += "\n"
             return ret_str
-        except Exception as exc:
+        except Exception:
             return ret_str
 
     # recursively fix the container for highlighting
-    def model_highlighter_setter(
-        self, errs, container: Container, containerID, lev=0
-    ):
+    def model_highlighter_setter(self, errs, container: Container, containerID, lev=0):
         try:
             layout = container.native.layout()
             for i in range(layout.count()):
@@ -953,15 +801,11 @@ class Ui_ReconTab_Form(QWidget):
                     if (
                         (
                             not isinstance(widget._magic_widget, CheckBox)
-                            and not isinstance(
-                                widget._magic_widget, PushButton
-                            )
+                            and not isinstance(widget._magic_widget, PushButton)
                         )
                         and not isinstance(widget._magic_widget, LineEdit)
-                        and isinstance(
-                            widget._magic_widget._inner_widget, Container
-                        )
-                        and not (widget._magic_widget._inner_widget is None)
+                        and isinstance(widget._magic_widget._inner_widget, Container)
+                        and widget._magic_widget._inner_widget is not None
                     ):
                         self.model_highlighter_setter(
                             errs,
@@ -978,70 +822,39 @@ class Ui_ReconTab_Form(QWidget):
                                 or isinstance(widget._magic_widget, LineEdit)
                                 or isinstance(widget._magic_widget, PushButton)
                             ):
-                                if widget._magic_widget.label == errs[idx][
-                                    "loc"
-                                ][lev].replace("_", " "):
+                                if widget._magic_widget.label == errs[idx]["loc"][lev].replace("_", " "):
                                     if widget._magic_widget.tooltip is None:
                                         widget._magic_widget.tooltip = "-\n"
-                                        self.modelHighlighterVals[containerID][
-                                            "items"
-                                        ].append(widget._magic_widget)
-                                        self.modelHighlighterVals[containerID][
-                                            "tooltip"
-                                        ].append(widget._magic_widget.tooltip)
-                                    widget._magic_widget.tooltip += (
-                                        errs[idx]["msg"] + "\n"
-                                    )
+                                        self.modelHighlighterVals[containerID]["items"].append(widget._magic_widget)
+                                        self.modelHighlighterVals[containerID]["tooltip"].append(
+                                            widget._magic_widget.tooltip
+                                        )
+                                    widget._magic_widget.tooltip += errs[idx]["msg"] + "\n"
                                     widget._magic_widget.native.setStyleSheet(
                                         "border:1px solid rgb(255, 255, 0); border-width: 1px;"
                                     )
-                            elif (
-                                widget._magic_widget._label_widget.value
-                                == errs[idx]["loc"][lev].replace("_", " ")
-                            ):
-                                if (
-                                    widget._magic_widget._label_widget.tooltip
-                                    is None
-                                ):
-                                    widget._magic_widget._label_widget.tooltip = (
-                                        "-\n"
-                                    )
-                                    self.modelHighlighterVals[containerID][
-                                        "items"
-                                    ].append(
+                            elif widget._magic_widget._label_widget.value == errs[idx]["loc"][lev].replace("_", " "):
+                                if widget._magic_widget._label_widget.tooltip is None:
+                                    widget._magic_widget._label_widget.tooltip = "-\n"
+                                    self.modelHighlighterVals[containerID]["items"].append(
                                         widget._magic_widget._label_widget
                                     )
-                                    self.modelHighlighterVals[containerID][
-                                        "tooltip"
-                                    ].append(
+                                    self.modelHighlighterVals[containerID]["tooltip"].append(
                                         widget._magic_widget._label_widget.tooltip
                                     )
-                                widget._magic_widget._label_widget.tooltip += (
-                                    errs[idx]["msg"] + "\n"
-                                )
+                                widget._magic_widget._label_widget.tooltip += errs[idx]["msg"] + "\n"
                                 widget._magic_widget._label_widget.native.setStyleSheet(
                                     "border:1px solid rgb(255, 255, 0); border-width: 1px;"
                                 )
-                                if (
-                                    widget._magic_widget._inner_widget.tooltip
-                                    is None
-                                ):
-                                    widget._magic_widget._inner_widget.tooltip = (
-                                        "-\n"
-                                    )
-                                    self.modelHighlighterVals[containerID][
-                                        "items"
-                                    ].append(
+                                if widget._magic_widget._inner_widget.tooltip is None:
+                                    widget._magic_widget._inner_widget.tooltip = "-\n"
+                                    self.modelHighlighterVals[containerID]["items"].append(
                                         widget._magic_widget._inner_widget
                                     )
-                                    self.modelHighlighterVals[containerID][
-                                        "tooltip"
-                                    ].append(
+                                    self.modelHighlighterVals[containerID]["tooltip"].append(
                                         widget._magic_widget._inner_widget.tooltip
                                     )
-                                widget._magic_widget._inner_widget.tooltip += (
-                                    errs[idx]["msg"] + "\n"
-                                )
+                                widget._magic_widget._inner_widget.tooltip += errs[idx]["msg"] + "\n"
                                 widget._magic_widget._inner_widget.native.setStyleSheet(
                                     "border:1px solid rgb(255, 255, 0); border-width: 1px;"
                                 )
@@ -1056,9 +869,7 @@ class Ui_ReconTab_Form(QWidget):
                 tooltip = self.modelHighlighterVals[containerID]["tooltip"]
                 i = 0
                 for widItem in items:
-                    widItem.native.setStyleSheet(
-                        "border:1px solid rgb(0, 0, 0); border-width: 0px;"
-                    )
+                    widItem.native.setStyleSheet("border:1px solid rgb(0, 0, 0); border-width: 0px;")
                     widItem.tooltip = tooltip[i]
                     i += 1
 
@@ -1075,11 +886,8 @@ class Ui_ReconTab_Form(QWidget):
                 json_object = msg
                 json_txt = ""
                 for err in json_object:
-                    json_txt = (
-                        json_txt
-                        + "Loc: {loc}\nMsg:{msg}\nType:{type}\n\n".format(
-                            loc=err["loc"], msg=err["msg"], type=err["type"]
-                        )
+                    json_txt = json_txt + "Loc: {loc}\nMsg:{msg}\nType:{type}\n\n".format(
+                        loc=err["loc"], msg=err["msg"], type=err["type"]
                     )
                 json_txt = str(json_txt)
                 # ToDo: format it better
@@ -1108,40 +916,24 @@ class Ui_ReconTab_Form(QWidget):
         q.setIcon(QMessageBox.Icon.Warning)
         q.exec_()
 
-    def add_widget(
-        self, parentLayout: QVBoxLayout, expID, jID, table_entry_ID="", pos=""
-    ):
+    def add_widget(self, parentLayout: QVBoxLayout, expID, jID, table_entry_ID="", pos=""):
 
         jID = str(jID)
-        _cancelJobBtntext = "Cancel Job {jID} ({posName})".format(
-            jID=jID, posName=pos
-        )
-        _cancelJobButton = widgets.PushButton(
-            name="JobID", label=_cancelJobBtntext, enabled=True, value=False
-        )
+        _cancelJobBtntext = "Cancel Job {jID} ({posName})".format(jID=jID, posName=pos)
+        _cancelJobButton = widgets.PushButton(name="JobID", label=_cancelJobBtntext, enabled=True, value=False)
         _txtForInfoBox = "Updating {id}-{pos}: Please wait... \nJobID assigned: {jID} ".format(
             id=table_entry_ID, jID=jID, pos=pos
         )
-        _scrollAreaCollapsibleBoxDisplayWidget = ScrollableLabel(
-            text=_txtForInfoBox
-        )
+        _scrollAreaCollapsibleBoxDisplayWidget = ScrollableLabel(text=_txtForInfoBox)
 
         _scrollAreaCollapsibleBoxWidgetLayout = QVBoxLayout()
-        _scrollAreaCollapsibleBoxWidgetLayout.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        _scrollAreaCollapsibleBoxWidgetLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
 
-        _scrollAreaCollapsibleBoxWidgetLayout.addWidget(
-            _cancelJobButton.native
-        )
-        _scrollAreaCollapsibleBoxWidgetLayout.addWidget(
-            _scrollAreaCollapsibleBoxDisplayWidget
-        )
+        _scrollAreaCollapsibleBoxWidgetLayout.addWidget(_cancelJobButton.native)
+        _scrollAreaCollapsibleBoxWidgetLayout.addWidget(_scrollAreaCollapsibleBoxDisplayWidget)
 
         _scrollAreaCollapsibleBoxWidget = QWidget()
-        _scrollAreaCollapsibleBoxWidget.setLayout(
-            _scrollAreaCollapsibleBoxWidgetLayout
-        )
+        _scrollAreaCollapsibleBoxWidget.setLayout(_scrollAreaCollapsibleBoxWidgetLayout)
         _scrollAreaCollapsibleBox = QScrollArea()
         _scrollAreaCollapsibleBox.setWidgetResizable(True)
         _scrollAreaCollapsibleBox.setMinimumHeight(300)
@@ -1153,9 +945,7 @@ class Ui_ReconTab_Form(QWidget):
         _collapsibleBoxWidget = CollapsibleBox(
             table_entry_ID + " - " + pos
         )  # tableEntryID, tableEntryShortDesc - should update with processing status
-        _collapsibleBoxWidget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        _collapsibleBoxWidget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         _collapsibleBoxWidget.setContentLayout(_collapsibleBoxWidgetLayout)
 
         parentLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
@@ -1163,9 +953,7 @@ class Ui_ReconTab_Form(QWidget):
 
         MULTI_JOBS_REFS[expID + jID] = {}
         MULTI_JOBS_REFS[expID + jID]["cancelBtn"] = _cancelJobButton
-        MULTI_JOBS_REFS[expID + jID][
-            "infobox"
-        ] = _scrollAreaCollapsibleBoxDisplayWidget
+        MULTI_JOBS_REFS[expID + jID]["infobox"] = _scrollAreaCollapsibleBoxDisplayWidget
         NEW_WIDGETS_QUEUE.remove(expID + jID)
 
     def add_table_entry_job(self, proc_params):
@@ -1173,29 +961,19 @@ class Ui_ReconTab_Form(QWidget):
         tableEntryID = proc_params["tableEntryID"]
         parentLayout: QVBoxLayout = proc_params["parent_layout"]
 
-        _cancelJobButton = widgets.PushButton(
-            name="JobID", label="Cancel Job", value=False, enabled=False
-        )
-        _txtForInfoBox = "Updating {id}: Please wait...".format(
-            id=tableEntryID
-        )
-        _scrollAreaCollapsibleBoxDisplayWidget = ScrollableLabel(
-            text=_txtForInfoBox
-        )
+        _cancelJobButton = widgets.PushButton(name="JobID", label="Cancel Job", value=False, enabled=False)
+        _txtForInfoBox = "Updating {id}: Please wait...".format(id=tableEntryID)
+        _scrollAreaCollapsibleBoxDisplayWidget = ScrollableLabel(text=_txtForInfoBox)
         _scrollAreaCollapsibleBoxDisplayWidget.setFixedHeight(300)
 
-        proc_params["table_entry_infoBox"] = (
-            _scrollAreaCollapsibleBoxDisplayWidget
-        )
+        proc_params["table_entry_infoBox"] = _scrollAreaCollapsibleBoxDisplayWidget
         proc_params["cancelJobButton"] = _cancelJobButton
         parentLayout.addWidget(_cancelJobButton.native)
         parentLayout.addWidget(_scrollAreaCollapsibleBoxDisplayWidget)
 
         return proc_params
 
-    def add_remove_check_OTF_table_entry(
-        self, OTF_dir_path, bool_msg, do_check=False
-    ):
+    def add_remove_check_OTF_table_entry(self, OTF_dir_path, bool_msg, do_check=False):
         if do_check:
             try:
                 for row in range(self.proc_OTF_table_QFormLayout.rowCount()):
@@ -1213,17 +991,11 @@ class Ui_ReconTab_Form(QWidget):
                 return False
         else:
             if bool_msg:
-                _poll_otf_label = ScrollableLabel(
-                    text=OTF_dir_path + " " + _green_dot
-                )
+                _poll_otf_label = ScrollableLabel(text=OTF_dir_path + " " + _green_dot)
                 _poll_Stop_PushButton = QPushButton("Stop")
-                _poll_Stop_PushButton.setCheckable(
-                    True
-                )  # Make the button checkable
+                _poll_Stop_PushButton.setCheckable(True)  # Make the button checkable
                 _poll_Stop_PushButton.clicked.connect(
-                    lambda: self.stop_OTF_push_button_call(
-                        _poll_otf_label, OTF_dir_path + " " + _red_dot
-                    )
+                    lambda: self.stop_OTF_push_button_call(_poll_otf_label, OTF_dir_path + " " + _red_dot)
                 )
 
                 _poll_data_widget = QWidget()
@@ -1236,12 +1008,8 @@ class Ui_ReconTab_Form(QWidget):
                 self.proc_OTF_table_QFormLayout.insertRow(0, _poll_data_widget)
             else:
                 try:
-                    for row in range(
-                        self.proc_OTF_table_QFormLayout.rowCount()
-                    ):
-                        widgetItem = self.proc_OTF_table_QFormLayout.itemAt(
-                            row
-                        )
+                    for row in range(self.proc_OTF_table_QFormLayout.rowCount()):
+                        widgetItem = self.proc_OTF_table_QFormLayout.itemAt(row)
                         if widgetItem is not None:
                             name_widget: QWidget = widgetItem.widget()
                             name_string = str(name_widget.objectName())
@@ -1259,51 +1027,35 @@ class Ui_ReconTab_Form(QWidget):
     # row item will be purged from table as processing finishes
     # there could be 3 tabs for this processing table status
     # Running, Finished, Errored
-    def addTableEntry(
-        self, table_entry_ID, table_entry_short_desc, proc_params
-    ):
+    def addTableEntry(self, table_entry_ID, table_entry_short_desc, proc_params):
         _scrollAreaCollapsibleBoxWidgetLayout = QVBoxLayout()
-        _scrollAreaCollapsibleBoxWidgetLayout.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        _scrollAreaCollapsibleBoxWidgetLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
 
         _scrollAreaCollapsibleBoxWidget = QWidget()
-        _scrollAreaCollapsibleBoxWidget.setLayout(
-            _scrollAreaCollapsibleBoxWidgetLayout
-        )
-        _scrollAreaCollapsibleBoxWidget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        _scrollAreaCollapsibleBoxWidget.setLayout(_scrollAreaCollapsibleBoxWidgetLayout)
+        _scrollAreaCollapsibleBoxWidget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         _scrollAreaCollapsibleBox = QScrollArea()
         _scrollAreaCollapsibleBox.setWidgetResizable(True)
         _scrollAreaCollapsibleBox.setWidget(_scrollAreaCollapsibleBoxWidget)
         _scrollAreaCollapsibleBox.setMinimumHeight(300)
-        _scrollAreaCollapsibleBox.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        _scrollAreaCollapsibleBox.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         _collapsibleBoxWidgetLayout = QVBoxLayout()
         _collapsibleBoxWidgetLayout.addWidget(_scrollAreaCollapsibleBox)
 
         _collapsibleBoxWidget = CollapsibleBox(table_entry_ID)
-        _collapsibleBoxWidget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        _collapsibleBoxWidget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         _collapsibleBoxWidget.setContentLayout(_collapsibleBoxWidgetLayout)
 
         _expandingTabEntryWidgetLayout = QVBoxLayout()
-        _expandingTabEntryWidgetLayout.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        _expandingTabEntryWidgetLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         _expandingTabEntryWidgetLayout.addWidget(_collapsibleBoxWidget)
 
         _expandingTabEntryWidget = QWidget()
         _expandingTabEntryWidget.toolTip = table_entry_short_desc
         _expandingTabEntryWidget.setLayout(_expandingTabEntryWidgetLayout)
-        _expandingTabEntryWidget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        _expandingTabEntryWidget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         proc_params["tableEntryID"] = table_entry_ID
         proc_params["parent_layout"] = _scrollAreaCollapsibleBoxWidgetLayout
@@ -1355,9 +1107,7 @@ class Ui_ReconTab_Form(QWidget):
                 # use v1 and v2 differ for ValidationError - newer one is not caught properly
                 return None, exc.errors()
 
-            model = self.fix_model(
-                model, exclude_modes, "input_channel_names", chNames
-            )
+            model = self.fix_model(model, exclude_modes, "input_channel_names", chNames)
             return model, "+".join(selected_modes) + ": MSG_SUCCESS"
 
         except Exception as exc:
@@ -1398,9 +1148,7 @@ class Ui_ReconTab_Form(QWidget):
     ):
         # duplicate settings from the prev model on new model creation
         if json_dict is None and len(self.pydantic_classes) > 0:
-            ret = self.build_model_and_run(
-                validate_return_prev_model_json_txt=True
-            )
+            ret = self.build_model_and_run(validate_return_prev_model_json_txt=True)
             if ret is None:
                 return
             key, json_txt = ret
@@ -1425,13 +1173,9 @@ class Ui_ReconTab_Form(QWidget):
 
         # Container holding the pydantic UI components
         # Multiple instances/copies since more than 1 might be created
-        recon_pydantic_container = widgets.Container(
-            name=_str, scrollable=False
-        )
+        recon_pydantic_container = widgets.Container(name=_str, scrollable=False)
 
-        self.add_pydantic_to_container(
-            pydantic_class, recon_pydantic_container, exclude_modes, json_dict
-        )
+        self.add_pydantic_to_container(pydantic_class, recon_pydantic_container, exclude_modes, json_dict)
 
         # Run a validation check to see if the selected options are permitted
         # before we create the GUI
@@ -1456,9 +1200,7 @@ class Ui_ReconTab_Form(QWidget):
             return
         pydantic_kwargs["input_channel_names"] = input_channel_names
 
-        time_indices, ret_msg = self.clean_string_int_for_list(
-            "time_indices", pydantic_kwargs["time_indices"]
-        )
+        time_indices, ret_msg = self.clean_string_int_for_list("time_indices", pydantic_kwargs["time_indices"])
         if time_indices is None:
             self.message_box(ret_msg)
             return
@@ -1467,21 +1209,15 @@ class Ui_ReconTab_Form(QWidget):
         if "birefringence" in pydantic_kwargs.keys():
             background_path, ret_msg = self.clean_path_string_when_empty(
                 "background_path",
-                pydantic_kwargs["birefringence"]["apply_inverse"][
-                    "background_path"
-                ],
+                pydantic_kwargs["birefringence"]["apply_inverse"]["background_path"],
             )
             if background_path is None:
                 self.message_box(ret_msg)
                 return
-            pydantic_kwargs["birefringence"]["apply_inverse"][
-                "background_path"
-            ] = background_path
+            pydantic_kwargs["birefringence"]["apply_inverse"]["background_path"] = background_path
 
         # validate and return errors if None
-        pydantic_model, ret_msg = self.validate_pydantic_model(
-            pydantic_class, pydantic_kwargs
-        )
+        pydantic_model, ret_msg = self.validate_pydantic_model(pydantic_class, pydantic_kwargs)
         if pydantic_model is None:
             self.message_box(ret_msg)
             return
@@ -1500,9 +1236,7 @@ class Ui_ReconTab_Form(QWidget):
         _del_button = widgets.PushButton(name="Delete Model")
 
         c_mode = "-and-".join(selected_modes)
-        c_mode_short = "".join(
-            item[:3].capitalize() for item in selected_modes
-        )
+        c_mode_short = "".join(item[:3].capitalize() for item in selected_modes)
         if c_mode in CONTAINERS_INFO.keys():
             CONTAINERS_INFO[c_mode] += 1
         else:
@@ -1516,44 +1250,25 @@ class Ui_ReconTab_Form(QWidget):
         name_without_ext = os.path.splitext(Path(self.input_directory).name)[0]
         save_path = os.path.join(
             Path(self.output_directory).absolute(),
-            (
-                name_without_ext
-                + ("_" + c_mode_short + "_" + num_str)
-                + ".zarr"
-            ),
+            (name_without_ext + ("_" + c_mode_short + "_" + num_str) + ".zarr"),
         )
         save_path_exists = True if Path(save_path).exists() else False
         _output_data_loc = widgets.LineEdit(
             value=Path(save_path).name,
-            tooltip=(
-                ""
-                if not save_path_exists
-                else (_validate_alert + " Output file exists")
-            ),
+            tooltip=("" if not save_path_exists else (_validate_alert + " Output file exists")),
         )
         _output_data_btn = widgets.PushButton(
-            text=("" if not save_path_exists else (_validate_alert + " "))
-            + "Output Data:",
-            tooltip=(
-                ""
-                if not save_path_exists
-                else (_validate_alert + " Output file exists")
-            ),
+            text=("" if not save_path_exists else (_validate_alert + " ")) + "Output Data:",
+            tooltip=("" if not save_path_exists else (_validate_alert + " Output file exists")),
         )
 
         # Passing location label to output location selector
-        _output_data_btn.clicked.connect(
-            lambda: self.browse_model_dir_path_output(_output_data_loc)
-        )
+        _output_data_btn.clicked.connect(lambda: self.browse_model_dir_path_output(_output_data_loc))
         _output_data_loc.changed.connect(
-            lambda: self.read_and_set_output_path_on_validation(
-                _output_data_loc, _output_data_btn, save_path
-            )
+            lambda: self.read_and_set_output_path_on_validation(_output_data_loc, _output_data_btn, save_path)
         )
 
-        _show_CheckBox = widgets.CheckBox(
-            name="Show after Reconstruction", value=True
-        )
+        _show_CheckBox = widgets.CheckBox(name="Show after Reconstruction", value=True)
         _show_CheckBox.max_width = 200
         _validate_button = widgets.PushButton(name="Validate")
 
@@ -1582,14 +1297,10 @@ class Ui_ReconTab_Form(QWidget):
 
         # Add this container to the main scrollable widget
         _scrollAreaCollapsibleBoxWidgetLayout = QVBoxLayout()
-        _scrollAreaCollapsibleBoxWidgetLayout.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        _scrollAreaCollapsibleBoxWidgetLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
 
         _scrollAreaCollapsibleBoxWidget = MyWidget()
-        _scrollAreaCollapsibleBoxWidget.setLayout(
-            _scrollAreaCollapsibleBoxWidgetLayout
-        )
+        _scrollAreaCollapsibleBoxWidget.setLayout(_scrollAreaCollapsibleBoxWidgetLayout)
 
         _scrollAreaCollapsibleBox = QScrollArea()
         _scrollAreaCollapsibleBox.setWidgetResizable(True)
@@ -1599,9 +1310,7 @@ class Ui_ReconTab_Form(QWidget):
         _collapsibleBoxWidgetLayout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         scrollbar = _scrollAreaCollapsibleBox.horizontalScrollBar()
-        _scrollAreaCollapsibleBoxWidget.resized.connect(
-            lambda: self.check_scrollbar_visibility(scrollbar)
-        )
+        _scrollAreaCollapsibleBoxWidget.resized.connect(lambda: self.check_scrollbar_visibility(scrollbar))
 
         _scrollAreaCollapsibleBoxWidgetLayout.addWidget(
             scrollbar, alignment=Qt.AlignmentFlag.AlignTop
@@ -1613,9 +1322,7 @@ class Ui_ReconTab_Form(QWidget):
             title=c_mode_str, expanded=True if _idx == 0 else False
         )  # tableEntryID, tableEntryShortDesc - should update with processing status
 
-        _validate_button.clicked.connect(
-            lambda: self.validate_model(_str, _collapsibleBoxWidget)
-        )
+        _validate_button.clicked.connect(lambda: self.validate_model(_str, _collapsibleBoxWidget))
 
         _hBox_widget2 = QWidget()
         _hBox_layout2 = QHBoxLayout()
@@ -1626,32 +1333,20 @@ class Ui_ReconTab_Form(QWidget):
         _hBox_layout2.addWidget(_del_button.native)
 
         _expandingTabEntryWidgetLayout = QVBoxLayout()
-        _expandingTabEntryWidgetLayout.setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        _expandingTabEntryWidgetLayout.setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
         _expandingTabEntryWidgetLayout.addWidget(_collapsibleBoxWidget)
 
         _expandingTabEntryWidget.toolTip = c_mode_str
         _expandingTabEntryWidget.setLayout(_expandingTabEntryWidgetLayout)
-        _expandingTabEntryWidget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
-        _expandingTabEntryWidget.layout().setAlignment(
-            QtCore.Qt.AlignmentFlag.AlignTop
-        )
+        _expandingTabEntryWidget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        _expandingTabEntryWidget.layout().setAlignment(QtCore.Qt.AlignmentFlag.AlignTop)
 
-        _scrollAreaCollapsibleBoxWidgetLayout.addWidget(
-            recon_pydantic_container.native
-        )
+        _scrollAreaCollapsibleBoxWidgetLayout.addWidget(recon_pydantic_container.native)
         _scrollAreaCollapsibleBoxWidgetLayout.addWidget(_hBox_widget)
         _scrollAreaCollapsibleBoxWidgetLayout.addWidget(_hBox_widget2)
 
-        _scrollAreaCollapsibleBox.setMinimumHeight(
-            _scrollAreaCollapsibleBoxWidgetLayout.sizeHint().height() + 20
-        )
-        _collapsibleBoxWidget.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        _scrollAreaCollapsibleBox.setMinimumHeight(_scrollAreaCollapsibleBoxWidgetLayout.sizeHint().height() + 20)
+        _collapsibleBoxWidget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         _collapsibleBoxWidget.setContentLayout(_collapsibleBoxWidgetLayout)
 
         self.models_container_widget_layout.addWidget(_expandingTabEntryWidget)
@@ -1671,9 +1366,7 @@ class Ui_ReconTab_Form(QWidget):
                     Path(self.output_directory).absolute(),
                     _output_data_loc.value,
                 ),
-                "output_parent_dir": str(
-                    Path(self.output_directory).absolute()
-                ),
+                "output_parent_dir": str(Path(self.output_directory).absolute()),
                 "output_LineEdit": _output_data_loc,
                 "output_Button": _output_data_btn,
                 "container": recon_pydantic_container,
@@ -1686,9 +1379,7 @@ class Ui_ReconTab_Form(QWidget):
         self.index += 1
 
         if self.index > 1:
-            self.reconstruction_run_PushButton.text = "RUN {n} Models".format(
-                n=self.index
-            )
+            self.reconstruction_run_PushButton.text = "RUN {n} Models".format(n=self.index)
         else:
             self.reconstruction_run_PushButton.text = "RUN Model"
 
@@ -1725,9 +1416,7 @@ class Ui_ReconTab_Form(QWidget):
             )
             if pydantic_kwargs is None:
                 self.message_box(ret_msg)
-                _collapsibleBoxWidget.setNewName(
-                    f"{c_mode_str} {_validate_alert}"
-                )
+                _collapsibleBoxWidget.setNewName(f"{c_mode_str} {_validate_alert}")
                 return
 
             input_channel_names, ret_msg = self.clean_string_for_list(
@@ -1735,69 +1424,45 @@ class Ui_ReconTab_Form(QWidget):
             )
             if input_channel_names is None:
                 self.message_box(ret_msg)
-                _collapsibleBoxWidget.setNewName(
-                    f"{c_mode_str} {_validate_alert}"
-                )
+                _collapsibleBoxWidget.setNewName(f"{c_mode_str} {_validate_alert}")
                 return
             pydantic_kwargs["input_channel_names"] = input_channel_names
 
-            time_indices, ret_msg = self.clean_string_int_for_list(
-                "time_indices", pydantic_kwargs["time_indices"]
-            )
+            time_indices, ret_msg = self.clean_string_int_for_list("time_indices", pydantic_kwargs["time_indices"])
             if time_indices is None:
                 self.message_box(ret_msg)
-                _collapsibleBoxWidget.setNewName(
-                    f"{c_mode_str} {_validate_alert}"
-                )
+                _collapsibleBoxWidget.setNewName(f"{c_mode_str} {_validate_alert}")
                 return
             pydantic_kwargs["time_indices"] = time_indices
 
-            time_indices, ret_msg = self.clean_string_int_for_list(
-                "time_indices", pydantic_kwargs["time_indices"]
-            )
+            time_indices, ret_msg = self.clean_string_int_for_list("time_indices", pydantic_kwargs["time_indices"])
             if time_indices is None:
                 self.message_box(ret_msg)
-                _collapsibleBoxWidget.setNewName(
-                    f"{c_mode_str} {_validate_alert}"
-                )
+                _collapsibleBoxWidget.setNewName(f"{c_mode_str} {_validate_alert}")
                 return
             pydantic_kwargs["time_indices"] = time_indices
 
             if "birefringence" in pydantic_kwargs.keys():
                 background_path, ret_msg = self.clean_path_string_when_empty(
                     "background_path",
-                    pydantic_kwargs["birefringence"]["apply_inverse"][
-                        "background_path"
-                    ],
+                    pydantic_kwargs["birefringence"]["apply_inverse"]["background_path"],
                 )
                 if background_path is None:
                     self.message_box(ret_msg)
-                    _collapsibleBoxWidget.setNewName(
-                        f"{c_mode_str} {_validate_alert}"
-                    )
+                    _collapsibleBoxWidget.setNewName(f"{c_mode_str} {_validate_alert}")
                     return
-                pydantic_kwargs["birefringence"]["apply_inverse"][
-                    "background_path"
-                ] = background_path
+                pydantic_kwargs["birefringence"]["apply_inverse"]["background_path"] = background_path
 
             # validate and return errors if None
-            pydantic_model, ret_msg = self.validate_pydantic_model(
-                cls, pydantic_kwargs
-            )
+            pydantic_model, ret_msg = self.validate_pydantic_model(cls, pydantic_kwargs)
             if pydantic_model is None:
                 self.message_box(ret_msg)
-                _collapsibleBoxWidget.setNewName(
-                    f"{c_mode_str} {_validate_alert}"
-                )
+                _collapsibleBoxWidget.setNewName(f"{c_mode_str} {_validate_alert}")
                 return
             if ret_msg == MSG_SUCCESS:
-                _collapsibleBoxWidget.setNewName(
-                    f"{c_mode_str} {_validate_ok}"
-                )
+                _collapsibleBoxWidget.setNewName(f"{c_mode_str} {_validate_ok}")
             else:
-                _collapsibleBoxWidget.setNewName(
-                    f"{c_mode_str} {_validate_alert}"
-                )
+                _collapsibleBoxWidget.setNewName(f"{c_mode_str} {_validate_alert}")
 
     # UI components deletion - maybe just needs the parent container instead of individual components
     def delete_model(self, wid0, wid1, wid2, wid3, wid4, wid5, wid6, _str):
@@ -1817,9 +1482,7 @@ class Ui_ReconTab_Form(QWidget):
             i += 1
         self.index = len(self.pydantic_classes)
         if self.index > 1:
-            self.reconstruction_run_PushButton.text = "RUN {n} Models".format(
-                n=self.index
-            )
+            self.reconstruction_run_PushButton.text = "RUN {n} Models".format(n=self.index)
         else:
             self.reconstruction_run_PushButton.text = "RUN Model"
 
@@ -1829,9 +1492,7 @@ class Ui_ReconTab_Form(QWidget):
         if silent or self.confirm_dialog():
             index = self.models_container_widget_layout.count() - 1
             while index >= 0:
-                myWidget = self.models_container_widget_layout.itemAt(
-                    index
-                ).widget()
+                myWidget = self.models_container_widget_layout.itemAt(index).widget()
                 if myWidget is not None:
                     myWidget.setParent(None)
                 index -= 1
@@ -1893,9 +1554,7 @@ class Ui_ReconTab_Form(QWidget):
                 return
             pydantic_kwargs["input_channel_names"] = input_channel_names
 
-            time_indices, ret_msg = self.clean_string_int_for_list(
-                "time_indices", pydantic_kwargs["time_indices"]
-            )
+            time_indices, ret_msg = self.clean_string_int_for_list("time_indices", pydantic_kwargs["time_indices"])
             if time_indices is None and not _collectAllErrorsBool:
                 self.message_box(ret_msg)
                 return
@@ -1904,29 +1563,19 @@ class Ui_ReconTab_Form(QWidget):
             if "birefringence" in pydantic_kwargs.keys():
                 background_path, ret_msg = self.clean_path_string_when_empty(
                     "background_path",
-                    pydantic_kwargs["birefringence"]["apply_inverse"][
-                        "background_path"
-                    ],
+                    pydantic_kwargs["birefringence"]["apply_inverse"]["background_path"],
                 )
                 if background_path is None and not _collectAllErrorsBool:
                     self.message_box(ret_msg)
                     return
-                pydantic_kwargs["birefringence"]["apply_inverse"][
-                    "background_path"
-                ] = background_path
+                pydantic_kwargs["birefringence"]["apply_inverse"]["background_path"] = background_path
 
             # validate and return errors if None
-            pydantic_model, ret_msg = self.validate_pydantic_model(
-                cls, pydantic_kwargs
-            )
+            pydantic_model, ret_msg = self.validate_pydantic_model(cls, pydantic_kwargs)
             if ret_msg == MSG_SUCCESS:
-                _collapsibleBoxWidget.setNewName(
-                    f"{c_mode_str} {_validate_ok}"
-                )
+                _collapsibleBoxWidget.setNewName(f"{c_mode_str} {_validate_ok}")
             else:
-                _collapsibleBoxWidget.setNewName(
-                    f"{c_mode_str} {_validate_alert}"
-                )
+                _collapsibleBoxWidget.setNewName(f"{c_mode_str} {_validate_alert}")
                 _collectAllErrors[uuid_str]["errs"] = ret_msg
             if pydantic_model is None and not _collectAllErrorsBool:
                 self.message_box(ret_msg)
@@ -1943,9 +1592,7 @@ class Ui_ReconTab_Form(QWidget):
         for uu_key in _collectAllErrors.keys():
             if len(_collectAllErrors[uu_key]["errs"]) > 0:
                 self.model_highlighter(_collectAllErrors)
-                fmt_str = self.format_string_for_error_display(
-                    _collectAllErrors
-                )
+                fmt_str = self.format_string_for_error_display(_collectAllErrors)
                 self.message_box(fmt_str)
                 return
 
@@ -1985,9 +1632,7 @@ class Ui_ReconTab_Form(QWidget):
             output_LineEdit = item["output_LineEdit"]
             output_parent_dir = item["output_parent_dir"]
 
-            full_out_path = os.path.join(
-                output_parent_dir, output_LineEdit.value
-            )
+            full_out_path = os.path.join(output_parent_dir, output_LineEdit.value)
 
             # gather input/out locations
             input_dir = f"{item['input'].value}"
@@ -2015,17 +1660,13 @@ class Ui_ReconTab_Form(QWidget):
             pydantic_kwargs["input_channel_names"] = input_channel_names
 
             if not self.pollData:
-                time_indices, ret_msg = self.clean_string_int_for_list(
-                    "time_indices", pydantic_kwargs["time_indices"]
-                )
+                time_indices, ret_msg = self.clean_string_int_for_list("time_indices", pydantic_kwargs["time_indices"])
                 if time_indices is None:
                     self.message_box(ret_msg)
                     return
                 pydantic_kwargs["time_indices"] = time_indices
 
-                time_indices, ret_msg = self.clean_string_int_for_list(
-                    "time_indices", pydantic_kwargs["time_indices"]
-                )
+                time_indices, ret_msg = self.clean_string_int_for_list("time_indices", pydantic_kwargs["time_indices"])
                 if time_indices is None:
                     self.message_box(ret_msg)
                     return
@@ -2034,21 +1675,15 @@ class Ui_ReconTab_Form(QWidget):
             if "birefringence" in pydantic_kwargs.keys():
                 background_path, ret_msg = self.clean_path_string_when_empty(
                     "background_path",
-                    pydantic_kwargs["birefringence"]["apply_inverse"][
-                        "background_path"
-                    ],
+                    pydantic_kwargs["birefringence"]["apply_inverse"]["background_path"],
                 )
                 if background_path is None:
                     self.message_box(ret_msg)
                     return
-                pydantic_kwargs["birefringence"]["apply_inverse"][
-                    "background_path"
-                ] = background_path
+                pydantic_kwargs["birefringence"]["apply_inverse"]["background_path"] = background_path
 
             # validate and return errors if None
-            pydantic_model, ret_msg = self.validate_pydantic_model(
-                cls, pydantic_kwargs
-            )
+            pydantic_model, ret_msg = self.validate_pydantic_model(cls, pydantic_kwargs)
             if pydantic_model is None:
                 self.message_box(ret_msg)
                 return
@@ -2064,9 +1699,7 @@ class Ui_ReconTab_Form(QWidget):
             # path is next to saved data location
             save_config_path = str(Path(output_dir).parent.absolute())
             yml_file_name = "-and-".join(selected_modes)
-            yml_file = (
-                yml_file_name + "-" + unique_id + "-{:02d}".format(i) + ".yml"
-            )
+            yml_file = yml_file_name + "-" + unique_id + "-{:02d}".format(i) + ".yml"
             config_path = os.path.join(save_config_path, yml_file)
             utils.model_to_yaml(pydantic_model, config_path)
 
@@ -2078,12 +1711,8 @@ class Ui_ReconTab_Form(QWidget):
             # Table fields ID / DateTime, Reconstruction type, Input Location, Output Location, Progress indicator, Stop button
 
             expID = "{tID}-{idx}".format(tID=unique_id, idx=i)
-            tableID = "{tName}: ({tID}-{idx})".format(
-                tName=c_mode_str, tID=unique_id, idx=i
-            )
-            tableDescToolTip = "{tName}: ({tID}-{idx})".format(
-                tName=yml_file_name, tID=unique_id, idx=i
-            )
+            tableID = "{tName}: ({tID}-{idx})".format(tName=c_mode_str, tID=unique_id, idx=i)
+            tableDescToolTip = "{tName}: ({tID}-{idx})".format(tName=yml_file_name, tID=unique_id, idx=i)
 
             proc_params = {}
             proc_params["exp_id"] = expID
@@ -2091,9 +1720,7 @@ class Ui_ReconTab_Form(QWidget):
             proc_params["config_path"] = str(Path(config_path).absolute())
             proc_params["input_path"] = str(Path(input_dir).absolute())
             proc_params["output_path"] = str(Path(output_dir).absolute())
-            proc_params["output_path_parent"] = str(
-                Path(output_dir).parent.absolute()
-            )
+            proc_params["output_path_parent"] = str(Path(output_dir).parent.absolute())
             proc_params["show"] = item["show"].value
 
             self.addTableEntry(tableID, tableDescToolTip, proc_params)
@@ -2103,28 +1730,18 @@ class Ui_ReconTab_Form(QWidget):
         required_order = ["time", "position", "z", "channel"]
         _pollData = True
 
-        tableEntryWorker = AddOTFTableEntryWorkerThread(
-            input_data_path, True, False
-        )
-        tableEntryWorker.add_tableOTFentry_signal.connect(
-            self.add_remove_check_OTF_table_entry
-        )
+        tableEntryWorker = AddOTFTableEntryWorkerThread(input_data_path, True, False)
+        tableEntryWorker.add_tableOTFentry_signal.connect(self.add_remove_check_OTF_table_entry)
         tableEntryWorker.start()
         _breakFlag = False
         while True:
             time.sleep(10)
             zattrs_data = None
             try:
-                _stopCalled = self.add_remove_check_OTF_table_entry(
-                    input_data_path, True, do_check=True
-                )
+                _stopCalled = self.add_remove_check_OTF_table_entry(input_data_path, True, do_check=True)
                 if _stopCalled:
-                    tableEntryWorker2 = AddOTFTableEntryWorkerThread(
-                        input_data_path, False, False
-                    )
-                    tableEntryWorker2.add_tableOTFentry_signal.connect(
-                        self.add_remove_check_OTF_table_entry
-                    )
+                    tableEntryWorker2 = AddOTFTableEntryWorkerThread(input_data_path, False, False)
+                    tableEntryWorker2.add_tableOTFentry_signal.connect(self.add_remove_check_OTF_table_entry)
                     tableEntryWorker2.start()
 
                     # let child threads finish their work before exiting the parent thread
@@ -2143,42 +1760,29 @@ class Ui_ReconTab_Form(QWidget):
                     # each image
 
                 if zattrs_data is None:
-                    zattrs_data = self.load_zattrs_directly_as_dict(
-                        input_data_path
-                    )
+                    zattrs_data = self.load_zattrs_directly_as_dict(input_data_path)
 
                 if zattrs_data is not None:
                     if "CurrentDimensions" in zattrs_data.keys():
                         my_dict1 = zattrs_data["CurrentDimensions"]
                         sorted_dict_acq = {
-                            k: my_dict1[k]
-                            for k in sorted(
-                                my_dict1, key=lambda x: required_order.index(x)
-                            )
+                            k: my_dict1[k] for k in sorted(my_dict1, key=lambda x: required_order.index(x))
                         }
-                        my_dict_time_indices_curr = zattrs_data[
-                            "CurrentDimensions"
-                        ]["time"]
+                        my_dict_time_indices_curr = zattrs_data["CurrentDimensions"]["time"]
                         # print(sorted_dict_acq)
 
                     if "FinalDimensions" in zattrs_data.keys():
                         my_dict2 = zattrs_data["FinalDimensions"]
                         sorted_dict_final = {
-                            k: my_dict2[k]
-                            for k in sorted(
-                                my_dict2, key=lambda x: required_order.index(x)
-                            )
+                            k: my_dict2[k] for k in sorted(my_dict2, key=lambda x: required_order.index(x))
                         }
                         # print(sorted_dict_final)
 
                     # use the prev time_index, since this is current acq and we need for other dims to finish acq for this t
                     # or when all dims match - signifying acq finished
-                    if (
-                        my_dict_time_indices_curr - 2 > last_time_index
-                        or json.dumps(sorted_dict_acq)
-                        == json.dumps(sorted_dict_final)
+                    if my_dict_time_indices_curr - 2 > last_time_index or json.dumps(sorted_dict_acq) == json.dumps(
+                        sorted_dict_final
                     ):
-
                         now = datetime.datetime.now()
                         ms = now.strftime("%f")[:3]
                         unique_id = now.strftime("%Y_%m_%d_%H_%M_%S_") + ms
@@ -2194,37 +1798,27 @@ class Ui_ReconTab_Form(QWidget):
                             output_LineEdit = item["output_LineEdit"]
                             output_parent_dir = item["output_parent_dir"]
 
-                            full_out_path = os.path.join(
-                                output_parent_dir, output_LineEdit.value
-                            )
+                            full_out_path = os.path.join(output_parent_dir, output_LineEdit.value)
                             # gather input/out locations
                             input_dir = f"{item['input'].value}"
                             output_dir = full_out_path
 
                             pydantic_kwargs = {}
-                            pydantic_kwargs, ret_msg = (
-                                self.get_and_validate_pydantic_args(
-                                    cls_container,
-                                    cls,
-                                    pydantic_kwargs,
-                                    exclude_modes,
-                                )
+                            pydantic_kwargs, ret_msg = self.get_and_validate_pydantic_args(
+                                cls_container,
+                                cls,
+                                pydantic_kwargs,
+                                exclude_modes,
                             )
 
-                            input_channel_names, ret_msg = (
-                                self.clean_string_for_list(
-                                    "input_channel_names",
-                                    pydantic_kwargs["input_channel_names"],
-                                )
+                            input_channel_names, ret_msg = self.clean_string_for_list(
+                                "input_channel_names",
+                                pydantic_kwargs["input_channel_names"],
                             )
-                            pydantic_kwargs["input_channel_names"] = (
-                                input_channel_names
-                            )
+                            pydantic_kwargs["input_channel_names"] = input_channel_names
 
                             if _pollData:
-                                if json.dumps(sorted_dict_acq) == json.dumps(
-                                    sorted_dict_final
-                                ):
+                                if json.dumps(sorted_dict_acq) == json.dumps(sorted_dict_final):
                                     time_indices = list(
                                         range(
                                             last_time_index,
@@ -2242,48 +1836,26 @@ class Ui_ReconTab_Form(QWidget):
                                 pydantic_kwargs["time_indices"] = time_indices
 
                             if "birefringence" in pydantic_kwargs.keys():
-                                background_path, ret_msg = (
-                                    self.clean_path_string_when_empty(
-                                        "background_path",
-                                        pydantic_kwargs["birefringence"][
-                                            "apply_inverse"
-                                        ]["background_path"],
-                                    )
+                                background_path, ret_msg = self.clean_path_string_when_empty(
+                                    "background_path",
+                                    pydantic_kwargs["birefringence"]["apply_inverse"]["background_path"],
                                 )
 
-                                pydantic_kwargs["birefringence"][
-                                    "apply_inverse"
-                                ]["background_path"] = background_path
+                                pydantic_kwargs["birefringence"]["apply_inverse"]["background_path"] = background_path
 
                             # validate and return errors if None
-                            pydantic_model, ret_msg = (
-                                self.validate_pydantic_model(
-                                    cls, pydantic_kwargs
-                                )
-                            )
+                            pydantic_model, ret_msg = self.validate_pydantic_model(cls, pydantic_kwargs)
 
                             # save the yaml files
                             # path is next to saved data location
-                            save_config_path = str(
-                                Path(output_dir).parent.absolute()
-                            )
+                            save_config_path = str(Path(output_dir).parent.absolute())
                             yml_file_name = "-and-".join(selected_modes)
-                            yml_file = (
-                                yml_file_name
-                                + "-"
-                                + unique_id
-                                + "-{:02d}".format(i)
-                                + ".yml"
-                            )
-                            config_path = os.path.join(
-                                save_config_path, yml_file
-                            )
+                            yml_file = yml_file_name + "-" + unique_id + "-{:02d}".format(i) + ".yml"
+                            config_path = os.path.join(save_config_path, yml_file)
                             utils.model_to_yaml(pydantic_model, config_path)
 
                             expID = "{tID}-{idx}".format(tID=unique_id, idx=i)
-                            tableID = "{tName}: ({tID}-{idx})".format(
-                                tName=c_mode_str, tID=unique_id, idx=i
-                            )
+                            tableID = "{tName}: ({tID}-{idx})".format(tName=c_mode_str, tID=unique_id, idx=i)
                             tableDescToolTip = "{tName}: ({tID}-{idx})".format(
                                 tName=yml_file_name, tID=unique_id, idx=i
                             )
@@ -2291,47 +1863,23 @@ class Ui_ReconTab_Form(QWidget):
                             proc_params = {}
                             proc_params["exp_id"] = expID
                             proc_params["desc"] = tableDescToolTip
-                            proc_params["config_path"] = str(
-                                Path(config_path).absolute()
-                            )
-                            proc_params["input_path"] = str(
-                                Path(input_dir).absolute()
-                            )
-                            proc_params["output_path"] = str(
-                                Path(output_dir).absolute()
-                            )
-                            proc_params["output_path_parent"] = str(
-                                Path(output_dir).parent.absolute()
-                            )
+                            proc_params["config_path"] = str(Path(config_path).absolute())
+                            proc_params["input_path"] = str(Path(input_dir).absolute())
+                            proc_params["output_path"] = str(Path(output_dir).absolute())
+                            proc_params["output_path_parent"] = str(Path(output_dir).parent.absolute())
                             proc_params["show"] = False
 
-                            tableEntryWorker1 = AddTableEntryWorkerThread(
-                                tableID, tableDescToolTip, proc_params
-                            )
-                            tableEntryWorker1.add_tableentry_signal.connect(
-                                self.addTableEntry
-                            )
+                            tableEntryWorker1 = AddTableEntryWorkerThread(tableID, tableDescToolTip, proc_params)
+                            tableEntryWorker1.add_tableentry_signal.connect(self.addTableEntry)
                             tableEntryWorker1.start()
 
-                        if (
-                            json.dumps(sorted_dict_acq)
-                            == json.dumps(sorted_dict_final)
-                            and _breakFlag
-                        ):
-
-                            tableEntryWorker2 = AddOTFTableEntryWorkerThread(
-                                input_data_path, False, False
-                            )
-                            tableEntryWorker2.add_tableOTFentry_signal.connect(
-                                self.add_remove_check_OTF_table_entry
-                            )
+                        if json.dumps(sorted_dict_acq) == json.dumps(sorted_dict_final) and _breakFlag:
+                            tableEntryWorker2 = AddOTFTableEntryWorkerThread(input_data_path, False, False)
+                            tableEntryWorker2.add_tableOTFentry_signal.connect(self.add_remove_check_OTF_table_entry)
                             tableEntryWorker2.start()
 
                             # let child threads finish their work before exiting the parent thread
-                            while (
-                                tableEntryWorker1.isRunning()
-                                or tableEntryWorker2.isRunning()
-                            ):
+                            while tableEntryWorker1.isRunning() or tableEntryWorker2.isRunning():
                                 time.sleep(1)
                             time.sleep(5)
                             break
@@ -2339,11 +1887,7 @@ class Ui_ReconTab_Form(QWidget):
                         last_time_index = my_dict_time_indices_curr - 2
             except Exception as exc:
                 print(exc.args)
-                print(
-                    "Exiting polling for dataset: {data_path}".format(
-                        data_path=input_data_path
-                    )
-                )
+                print("Exiting polling for dataset: {data_path}".format(data_path=input_data_path))
                 break
 
     def load_zattrs_directly_as_dict(self, zattrsFilePathDir):
@@ -2402,26 +1946,18 @@ class Ui_ReconTab_Form(QWidget):
                     x = int(string[0])
                     if not isinstance(x, int):
                         raise
-                except Exception as exc:
-                    return None, {
-                        "msg": field + " first range element is not an integer"
-                    }
+                except Exception:
+                    return None, {"msg": field + " first range element is not an integer"}
                 try:
                     y = int(string[1])
                     if not isinstance(y, int):
                         raise
-                except Exception as exc:
-                    return None, {
-                        "msg": field
-                        + " second range element is not an integer"
-                    }
+                except Exception:
+                    return None, {"msg": field + " second range element is not an integer"}
                 if y > x:
                     return list(range(x, y + 1)), MSG_SUCCESS
                 else:
-                    return None, {
-                        "msg": field
-                        + " second integer cannot be smaller than first"
-                    }
+                    return None, {"msg": field + " second integer cannot be smaller than first"}
             else:
                 return None, {"msg": field + " is invalid"}
         if "," in string:
@@ -2437,14 +1973,10 @@ class Ui_ReconTab_Form(QWidget):
         return string, MSG_SUCCESS
 
     # get the pydantic_kwargs and catches any errors in doing so
-    def get_and_validate_pydantic_args(
-        self, cls_container, cls, pydantic_kwargs, exclude_modes
-    ):
+    def get_and_validate_pydantic_args(self, cls_container, cls, pydantic_kwargs, exclude_modes):
         try:
             try:
-                self.get_pydantic_kwargs(
-                    cls_container, cls, pydantic_kwargs, exclude_modes
-                )
+                self.get_pydantic_kwargs(cls_container, cls, pydantic_kwargs, exclude_modes)
                 return pydantic_kwargs, MSG_SUCCESS
             except ValidationError as exc:
                 return None, exc.errors()
@@ -2456,11 +1988,7 @@ class Ui_ReconTab_Form(QWidget):
         # instantiate the pydantic model form the kwargs we just pulled
         try:
             try:
-                pydantic_model = (
-                    settings.ReconstructionSettings.model_validate(
-                        pydantic_kwargs
-                    )
-                )
+                pydantic_model = settings.ReconstructionSettings.model_validate(pydantic_kwargs)
                 return pydantic_model, MSG_SUCCESS
             except ValidationError as exc:
                 return None, exc.errors()
@@ -2482,9 +2010,7 @@ class Ui_ReconTab_Form(QWidget):
         pydantic_model = None
         try:
             try:
-                pydantic_model = utils.yaml_to_model(
-                    model_file_path, settings.ReconstructionSettings
-                )
+                pydantic_model = utils.yaml_to_model(model_file_path, settings.ReconstructionSettings)
             except ValidationError as exc:
                 return pydantic_model, exc.errors()
             if pydantic_model is None:
@@ -2501,10 +2027,7 @@ class Ui_ReconTab_Form(QWidget):
         if isinstance(obj, (list, tuple)):
             return [self.convert(item) for item in obj]
         if isinstance(obj, dict):
-            return {
-                self.convert(key): self.convert(value)
-                for key, value in obj.items()
-            }
+            return {self.convert(key): self.convert(value) for key, value in obj.items()}
         return obj
 
     # Main function to add pydantic model to container
@@ -2530,9 +2053,7 @@ class Ui_ReconTab_Form(QWidget):
             excludes = []
 
         # Access model_fields from the class, not the instance
-        model_class = (
-            py_model if isinstance(py_model, type) else type(py_model)
-        )
+        model_class = py_model if isinstance(py_model, type) else type(py_model)
         is_instance = not isinstance(py_model, type)
         for field, field_def in model_class.model_fields.items():
             if field_def is not None and field not in excludes:
@@ -2554,10 +2075,7 @@ class Ui_ReconTab_Form(QWidget):
                     tooltip_parts.extend(constraints)
                 toolTip = " | ".join(tooltip_parts)
                 # Handle nested Pydantic models, including Optional[Model]
-                if (
-                    is_subclass_of(ftype, BaseModel)
-                    or ftype in PYDANTIC_CLASSES_DEF
-                ):
+                if is_subclass_of(ftype, BaseModel) or ftype in PYDANTIC_CLASSES_DEF:
                     json_val = None
                     if json_dict is not None and field in json_dict:
                         json_val = json_dict[field]
@@ -2567,31 +2085,21 @@ class Ui_ReconTab_Form(QWidget):
                     new_widget.tooltip = toolTip
                     # Unwrap Optional[Model] to get Model before recursing
                     unwrapped_ftype = unwrap_optional(ftype)
-                    self.add_pydantic_to_container(
-                        unwrapped_ftype, new_widget, excludes, json_val
-                    )
+                    self.add_pydantic_to_container(unwrapped_ftype, new_widget, excludes, json_val)
                 elif isinstance(ftype, type(Union[NonNegativeInt, List, str])):
-                    if (
-                        field == "background_path"
-                    ):  # field == "background_path":
+                    if field == "background_path":  # field == "background_path":
                         new_widget_cls, ops = get_widget_class(
                             def_val,
                             Annotated[Path, {"mode": "d"}],
                             dict(name=field, value=def_val),
                         )
                         new_widget = new_widget_cls(**ops)
-                        toolTip = (
-                            "Select the folder containing background.zarr"
-                        )
+                        toolTip = "Select the folder containing background.zarr"
                     elif field == "time_indices":  # field == "time_indices":
-                        new_widget_cls, ops = get_widget_class(
-                            def_val, str, dict(name=field, value=def_val)
-                        )
+                        new_widget_cls, ops = get_widget_class(def_val, str, dict(name=field, value=def_val))
                         new_widget = new_widget_cls(**ops)
                     else:  # other Union cases
-                        new_widget_cls, ops = get_widget_class(
-                            def_val, str, dict(name=field, value=def_val)
-                        )
+                        new_widget_cls, ops = get_widget_class(def_val, str, dict(name=field, value=def_val))
                         new_widget = new_widget_cls(**ops)
                     new_widget.tooltip = toolTip
                     if isinstance(new_widget, widgets.EmptyWidget):
@@ -2599,10 +2107,7 @@ class Ui_ReconTab_Form(QWidget):
                             message=f"magicgui could not identify a widget for {py_model}.{field}, which has type {ftype}"
                         )
                 elif isinstance(def_val, float) or (
-                    def_val is None
-                    and is_subclass_of(
-                        ftype, (int, float), require_optional=True
-                    )
+                    def_val is None and is_subclass_of(ftype, (int, float), require_optional=True)
                 ):
                     # Handle float fields, including Optional[float] with None value
 
@@ -2616,9 +2121,7 @@ class Ui_ReconTab_Form(QWidget):
                             dict(name=field, value=""),
                         )
                         new_widget = new_widget_cls(**ops)
-                        new_widget.tooltip = (
-                            toolTip + " (Optional - leave empty for None)"
-                        )
+                        new_widget.tooltip = toolTip + " (Optional - leave empty for None)"
                     else:
                         # Regular float field
                         def_step_size = 0.001
@@ -2651,9 +2154,7 @@ class Ui_ReconTab_Form(QWidget):
                         )
                 else:
                     # parse the field, add appropriate widget
-                    new_widget_cls, ops = get_widget_class(
-                        None, ftype, dict(name=field, value=def_val)
-                    )
+                    new_widget_cls, ops = get_widget_class(None, ftype, dict(name=field, value=def_val))
                     new_widget = new_widget_cls(**ops)
                     if isinstance(new_widget, widgets.EmptyWidget):
                         warnings.warn(
@@ -2662,19 +2163,14 @@ class Ui_ReconTab_Form(QWidget):
                     else:
                         new_widget.tooltip = toolTip
                 if json_dict is not None and (
-                    not isinstance(new_widget, widgets.Container)
-                    or (isinstance(new_widget, widgets.FileEdit))
+                    not isinstance(new_widget, widgets.Container) or (isinstance(new_widget, widgets.FileEdit))
                 ):
                     if field in json_dict.keys():
                         if isinstance(new_widget, widgets.CheckBox):
-                            new_widget.value = (
-                                True if json_dict[field] == "true" else False
-                            )
+                            new_widget.value = True if json_dict[field] == "true" else False
                         elif isinstance(new_widget, widgets.FileEdit):
                             if len(json_dict[field]) > 0:
-                                extension = os.path.splitext(json_dict[field])[
-                                    1
-                                ]
+                                extension = os.path.splitext(json_dict[field])[1]
                                 if len(extension) > 0:
                                     new_widget.value = Path(
                                         json_dict[field]
@@ -2701,11 +2197,7 @@ class Ui_ReconTab_Form(QWidget):
             excludes = []
 
         # Access model_fields from the class, not the instance
-        model_class = (
-            pydantic_model
-            if isinstance(pydantic_model, type)
-            else type(pydantic_model)
-        )
+        model_class = pydantic_model if isinstance(pydantic_model, type) else type(pydantic_model)
 
         for field, field_def in model_class.model_fields.items():
             if field in excludes:
@@ -2726,9 +2218,7 @@ class Ui_ReconTab_Form(QWidget):
                 # Leaf field - extract value from container widget
                 value = getattr(container, field).value
                 # Handle Optional numeric types: convert empty string to None, parse numeric strings
-                if is_subclass_of(
-                    ftype, (int, float), require_optional=True
-                ) and isinstance(value, str):
+                if is_subclass_of(ftype, (int, float), require_optional=True) and isinstance(value, str):
                     if value == "" or value.lower() in ("none", "null"):
                         value = None
                     else:
@@ -2742,25 +2232,15 @@ class Ui_ReconTab_Form(QWidget):
     # file open/select dialog
     def open_file_dialog(self, default_path, type, filter="All Files (*)"):
         if type == "dir":
-            return self.open_dialog(
-                "select a directory", str(default_path), type, filter
-            )
+            return self.open_dialog("select a directory", str(default_path), type, filter)
         elif type == "file":
-            return self.open_dialog(
-                "select a file", str(default_path), type, filter
-            )
+            return self.open_dialog("select a file", str(default_path), type, filter)
         elif type == "files":
-            return self.open_dialog(
-                "select file(s)", str(default_path), type, filter
-            )
+            return self.open_dialog("select file(s)", str(default_path), type, filter)
         elif type == "save":
-            return self.open_dialog(
-                "save a file", str(default_path), type, filter
-            )
+            return self.open_dialog("save a file", str(default_path), type, filter)
         else:
-            return self.open_dialog(
-                "select a directory", str(default_path), type, filter
-            )
+            return self.open_dialog("select a directory", str(default_path), type, filter)
 
     def open_dialog(self, title, ref, type, filter="All Files (*)"):
         """
@@ -2779,21 +2259,13 @@ class Ui_ReconTab_Form(QWidget):
 
         options = QFileDialog.DontUseNativeDialog
         if type == "dir":
-            path = QFileDialog.getExistingDirectory(
-                None, title, ref, options=options
-            )
+            path = QFileDialog.getExistingDirectory(None, title, ref, options=options)
         elif type == "file":
-            path = QFileDialog.getOpenFileName(
-                None, title, ref, filter=filter, options=options
-            )[0]
+            path = QFileDialog.getOpenFileName(None, title, ref, filter=filter, options=options)[0]
         elif type == "files":
-            path = QFileDialog.getOpenFileNames(
-                None, title, ref, filter=filter, options=options
-            )[0]
+            path = QFileDialog.getOpenFileNames(None, title, ref, filter=filter, options=options)[0]
         elif type == "save":
-            path = QFileDialog.getSaveFileName(
-                None, "Choose a save name", ref, filter=filter, options=options
-            )[0]
+            path = QFileDialog.getSaveFileName(None, "Choose a save name", ref, filter=filter, options=options)[0]
         else:
             raise ValueError("Did not understand file dialogue type")
 
@@ -2808,9 +2280,7 @@ class MyWorker:
         self.formLayout: QFormLayout = formLayout
         self.tab_recon: Ui_ReconTab_Form = tab_recon
         self.ui: QWidget = parentForm
-        self.max_cores = (
-            1  # os.cpu_count() - no multi-threading // parallelization
-        )
+        self.max_cores = 1  # os.cpu_count() - no multi-threading // parallelization
         # In the case of CLI, we just need to submit requests in a non-blocking way
         self.threadPool = 1  # int(self.max_cores / 2)
         self.results = {}
@@ -2823,12 +2293,8 @@ class MyWorker:
 
     def initialize(self):
         if not self.isInitialized:
-            self.workerThreadRowDeletion = RowDeletionWorkerThread(
-                self.formLayout
-            )
-            self.workerThreadRowDeletion.removeRowSignal.connect(
-                self.tab_recon.remove_row
-            )
+            self.workerThreadRowDeletion = RowDeletionWorkerThread(self.formLayout)
+            self.workerThreadRowDeletion.removeRowSignal.connect(self.tab_recon.remove_row)
             self.workerThreadRowDeletion.start()
             self.isInitialized = True
 
@@ -2875,9 +2341,7 @@ class MyWorker:
             _infoBox.setText(_infoBox.getText() + "\n" + msg)
 
             if not _cancelJobBtn.enabled:
-                _cancelJobBtn.clicked.connect(
-                    lambda: self.cancel_job(expIdx, _infoBox, _cancelJobBtn)
-                )
+                _cancelJobBtn.clicked.connect(lambda: self.cancel_job(expIdx, _infoBox, _cancelJobBtn))
                 _cancelJobBtn.enabled = True
 
     def cancel_job(self, expIdx, _infoBox, _cancelJobBtn):
@@ -2898,18 +2362,10 @@ class MyWorker:
         showData_thread.show_data_signal.connect(self.tab_recon.show_dataset)
         showData_thread.start()
 
-        if (
-            self.clearResults == True and exit_code == 0
-        ):  # remove processing entry when exiting without error
+        if self.clearResults == True and exit_code == 0:  # remove processing entry when exiting without error
             ROW_POP_QUEUE.append(expIdx)
         else:
-            _infoBox.setText(
-                _infoBox.getText()
-                + "\n"
-                + "Process ended with return code {code}".format(
-                    code=exit_code
-                )
-            )
+            _infoBox.setText(_infoBox.getText() + "\n" + "Process ended with return code {code}".format(code=exit_code))
 
         _infoBox.setText(_infoBox.getText() + "\n" + "Displaying data")
         # Wait for show thread to finish
@@ -2983,9 +2439,7 @@ class MyWorker:
             )
 
         except Exception as exc:
-            self.results[params["exp_id"]]["error"] = (
-                str(" ".join(cmd)) + "\n" + str("\n".join(exc.args))
-            )
+            self.results[params["exp_id"]]["error"] = str(" ".join(cmd)) + "\n" + str("\n".join(exc.args))
 
 
 class ShowDataWorkerThread(QThread):
@@ -3017,9 +2471,7 @@ class AddOTFTableEntryWorkerThread(QThread):
 
     def run(self):
         # Emit the signal to add the widget to the main thread
-        self.add_tableOTFentry_signal.emit(
-            self.OTF_dir_path, self.bool_msg, self.doCheck
-        )
+        self.add_tableOTFentry_signal.emit(self.OTF_dir_path, self.bool_msg, self.doCheck)
 
 
 class AddTableEntryWorkerThread(QThread):
@@ -3055,9 +2507,7 @@ class AddWidgetWorkerThread(QThread):
 
     def run(self):
         # Emit the signal to add the widget to the main thread
-        self.add_widget_signal.emit(
-            self.layout, self.expID, self.jID, self.desc, self.wellName
-        )
+        self.add_widget_signal.emit(self.layout, self.expID, self.jID, self.desc, self.wellName)
 
 
 class RowDeletionWorkerThread(QThread):
@@ -3153,21 +2603,15 @@ class ScrollableLabel(QScrollArea):
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         layout.addWidget(self.label)
-        self.label.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-        )
+        self.label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         container = QWidget()
         container.setLayout(layout)
-        container.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-        )
+        container.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self.setWidget(container)
         self.setWidgetResizable(True)
-        self.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
-        )
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setAlignment(Qt.AlignmentFlag.AlignTop)
 
     def setText(self, text):
@@ -3191,28 +2635,20 @@ class MyWidget(QWidget):
 class CollapsibleBox(QWidget):
     """A collapsible widget"""
 
-    def __init__(
-        self, title="", parent=None, hasPydanticModel=False, expanded=False
-    ):
+    def __init__(self, title="", parent=None, hasPydanticModel=False, expanded=False):
         super(CollapsibleBox, self).__init__(parent)
 
         self.hasPydanticModel = hasPydanticModel
-        self.toggle_button = QToolButton(
-            text=title, checkable=True, checked=False
-        )
+        self.toggle_button = QToolButton(text=title, checkable=True, checked=False)
         self.toggle_button.setStyleSheet("QToolButton { border: none; }")
-        self.toggle_button.setToolButtonStyle(
-            QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon
-        )
+        self.toggle_button.setToolButtonStyle(QtCore.Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
         self.toggle_button.setArrowType(QtCore.Qt.ArrowType.RightArrow)
         self.toggle_button.pressed.connect(self.on_pressed)
 
         self.toggle_animation = QtCore.QParallelAnimationGroup(self)
 
         self.content_area = QScrollArea(maximumHeight=0, minimumHeight=0)
-        self.content_area.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
-        )
+        self.content_area.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.content_area.setFrameShape(QFrame.Shape.NoFrame)
 
         lay = QVBoxLayout(self)
@@ -3221,18 +2657,10 @@ class CollapsibleBox(QWidget):
         lay.addWidget(self.toggle_button)
         lay.addWidget(self.content_area)
 
-        self.toggle_animation.addAnimation(
-            QtCore.QPropertyAnimation(self, b"minimumHeight")
-        )
-        self.toggle_animation.addAnimation(
-            QtCore.QPropertyAnimation(self, b"maximumHeight")
-        )
-        self.toggle_animation.addAnimation(
-            QtCore.QPropertyAnimation(self.content_area, b"maximumHeight")
-        )
-        collapsed_height = (
-            self.sizeHint().height() - self.content_area.maximumHeight()
-        )
+        self.toggle_animation.addAnimation(QtCore.QPropertyAnimation(self, b"minimumHeight"))
+        self.toggle_animation.addAnimation(QtCore.QPropertyAnimation(self, b"maximumHeight"))
+        self.toggle_animation.addAnimation(QtCore.QPropertyAnimation(self.content_area, b"maximumHeight"))
+        collapsed_height = self.sizeHint().height() - self.content_area.maximumHeight()
 
         content_height = lay.sizeHint().height()
         for i in range(self.toggle_animation.animationCount()):
@@ -3250,14 +2678,10 @@ class CollapsibleBox(QWidget):
     def on_pressed(self):
         checked = self.toggle_button.isChecked()
         self.toggle_button.setArrowType(
-            QtCore.Qt.ArrowType.DownArrow
-            if not checked
-            else QtCore.Qt.ArrowType.RightArrow
+            QtCore.Qt.ArrowType.DownArrow if not checked else QtCore.Qt.ArrowType.RightArrow
         )
         self.toggle_animation.setDirection(
-            QtCore.QAbstractAnimation.Direction.Forward
-            if not checked
-            else QtCore.QAbstractAnimation.Direction.Backward
+            QtCore.QAbstractAnimation.Direction.Forward if not checked else QtCore.QAbstractAnimation.Direction.Backward
         )
         self.toggle_animation.start()
         if checked and self.hasPydanticModel:
@@ -3268,9 +2692,7 @@ class CollapsibleBox(QWidget):
         lay = self.content_area.layout()
         del lay
         self.content_area.setLayout(layout)
-        collapsed_height = (
-            self.sizeHint().height() - self.content_area.maximumHeight()
-        )
+        collapsed_height = self.sizeHint().height() - self.content_area.maximumHeight()
         content_height = layout.sizeHint().height()
         for i in range(self.toggle_animation.animationCount()):
             animation = self.toggle_animation.animationAt(i)
@@ -3278,9 +2700,7 @@ class CollapsibleBox(QWidget):
             animation.setStartValue(collapsed_height)
             animation.setEndValue(collapsed_height + content_height)
 
-        content_animation = self.toggle_animation.animationAt(
-            self.toggle_animation.animationCount() - 1
-        )
+        content_animation = self.toggle_animation.animationAt(self.toggle_animation.animationCount() - 1)
         content_animation.setDuration(500)
         content_animation.setStartValue(0)
         content_animation.setEndValue(content_height)

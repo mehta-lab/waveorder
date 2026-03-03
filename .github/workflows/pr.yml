@@ -1,99 +1,15 @@
-# This workflow will install Python dependencies, run tests and lint with a single version of Python
-# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
-
-name: lint, style, and tests
+name: PR checks
 
 on:
   pull_request:
 
 jobs:
-  style:
-    name: Style Check
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        python-version: ["3.11"]
-
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install black==25.1.0
-      - name: Check code styling with Black
-        run: |
-          black --diff -S -t py311 waveorder
-          black --check -S -t py311 waveorder
-
-  # lint:
-  #   name: Lint Check
-  #   runs-on: ubuntu-latest
-
-  #   strategy:
-  #     matrix:
-  #       python-version: ["3.11"]
-
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - name: Set up Python
-  #       uses: actions/setup-python@v4
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #     - name: Install dependencies
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         pip install flake8
-  #     - name: Check code with Flake8
-  #       # E203 conflicts with black
-  #       run: |
-  #         flake8 waveorder --extend-ignore=E203
-
-  isort:
-    name: isort Check
-    runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        python-version: ["3.11"]
-
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install isort
-      - name: Check code with isort
-        run: |
-          isort --check waveorder
-
-  #   needs: [style, isort] # lint
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       python-version: ["3.11", "3.12", "3.13"]
-
-  #   steps:
-  #     - uses: actions/checkout@v3
-
-  #     - uses: actions/setup-python@v4
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-
-  #     - name: Install dependencies
-  #       run: |
-  #         python -m pip install --upgrade pip
-  #         pip install ".[all,dev]"
-
-  #     - name: Test with pytest
-  #       run: |
-  #         pytest -v
-  #         pytest -v --cov=./ --cov-report=xml
+          python-version: "3.12"
+      - uses: pre-commit/action@v3.0.1

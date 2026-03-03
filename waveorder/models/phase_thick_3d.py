@@ -14,8 +14,8 @@ from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 Phase Thick 3D Model - Units and Conventions
 =============================================
 
-This module implements phase-from-defocus optical diffraction tomography (ODT) 
-for thick phase objects using the weak object transfer function (first Born 
+This module implements phase-from-defocus optical diffraction tomography (ODT)
+for thick phase objects using the weak object transfer function (first Born
 approximation).
 
 Units Convention
@@ -163,12 +163,8 @@ def calculate_transfer_function(
 
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
     return (
-        sampling.nd_fourier_central_cuboid(
-            real_potential_transfer_function, zyx_out_shape
-        ),
-        sampling.nd_fourier_central_cuboid(
-            imag_potential_transfer_function, zyx_out_shape
-        ),
+        sampling.nd_fourier_central_cuboid(real_potential_transfer_function, zyx_out_shape),
+        sampling.nd_fourier_central_cuboid(imag_potential_transfer_function, zyx_out_shape),
     )
 
 
@@ -183,13 +179,9 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_detection: float,
     invert_phase_contrast: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
-    radial_frequencies = util.generate_radial_frequencies(
-        zyx_shape[1:], yx_pixel_size
-    )
+    radial_frequencies = util.generate_radial_frequencies(zyx_shape[1:], yx_pixel_size)
     z_total = zyx_shape[0] + 2 * z_padding
-    z_position_list = torch.fft.ifftshift(
-        (torch.arange(z_total) - z_total // 2) * z_pixel_size
-    )
+    z_position_list = torch.fft.ifftshift((torch.arange(z_total) - z_total // 2) * z_pixel_size)
     if invert_phase_contrast:
         z_position_list = torch.flip(z_position_list, dims=(0,))
 
@@ -348,15 +340,12 @@ def apply_inverse_transfer_function(
 
     # Prepare TF
     effective_transfer_function = (
-        real_potential_transfer_function
-        + absorption_ratio * imaginary_potential_transfer_function
+        real_potential_transfer_function + absorption_ratio * imaginary_potential_transfer_function
     )
 
     # Reconstruct
     if reconstruction_algorithm == "Tikhonov":
-        inverse_filter = tikhonov_regularized_inverse_filter(
-            effective_transfer_function, regularization_strength
-        )
+        inverse_filter = tikhonov_regularized_inverse_filter(effective_transfer_function, regularization_strength)
 
         # [None]s and [0] are for applying a 1x1 "bank" of filters.
         # For further uniformity, consider returning (1, Z, Y, X)
@@ -377,3 +366,83 @@ def apply_inverse_transfer_function(
         f_real = f_real[z_padding:-z_padding]
 
     return f_real
+
+
+def reconstruct(
+    zyx_data: Tensor,
+    yx_pixel_size: float,
+    z_pixel_size: float,
+    wavelength_illumination: float,
+    z_padding: int,
+    index_of_refraction_media: float,
+    numerical_aperture_illumination: float,
+    numerical_aperture_detection: float,
+    invert_phase_contrast: bool = False,
+    absorption_ratio: float = 0.0,
+    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    regularization_strength: float = 1e-3,
+    TV_rho_strength: float = 1e-3,
+    TV_iterations: int = 10,
+) -> Tensor:
+    """Reconstruct 3D phase from a brightfield defocus stack.
+
+    Chains calculate_transfer_function and apply_inverse_transfer_function.
+
+    Parameters
+    ----------
+    zyx_data : Tensor
+        3D raw data, label-free defocus stack
+    yx_pixel_size : float
+        Pixel size in the transverse (Y, X) dimensions
+    z_pixel_size : float
+        Pixel size in the axial (Z) dimension
+    wavelength_illumination : float
+        Wavelength of illumination light
+    z_padding : int
+        Padding for axial dimension
+    index_of_refraction_media : float
+        Refractive index of the surrounding medium
+    numerical_aperture_illumination : float
+        Illumination numerical aperture
+    numerical_aperture_detection : float
+        Detection numerical aperture
+    invert_phase_contrast : bool, optional
+        Invert phase contrast, by default False
+    absorption_ratio : float, optional
+        Absorption-to-phase ratio, by default 0.0
+    reconstruction_algorithm : str, optional
+        "Tikhonov" or "TV", by default "Tikhonov"
+    regularization_strength : float, optional
+        Regularization parameter, by default 1e-3
+    TV_rho_strength : float, optional
+        TV-specific regularization parameter, by default 1e-3
+    TV_iterations : int, optional
+        TV-specific number of iterations, by default 10
+
+    Returns
+    -------
+    Tensor
+        zyx_phase in cycles per voxel
+    """
+    real_tf, imag_tf = calculate_transfer_function(
+        zyx_data.shape,
+        yx_pixel_size,
+        z_pixel_size,
+        wavelength_illumination,
+        z_padding,
+        index_of_refraction_media,
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+        invert_phase_contrast=invert_phase_contrast,
+    )
+    return apply_inverse_transfer_function(
+        zyx_data,
+        torch.tensor(real_tf),
+        torch.tensor(imag_tf),
+        z_padding,
+        absorption_ratio=absorption_ratio,
+        reconstruction_algorithm=reconstruction_algorithm,
+        regularization_strength=regularization_strength,
+        TV_rho_strength=TV_rho_strength,
+        TV_iterations=TV_iterations,
+    )
