@@ -67,10 +67,28 @@ def simulate(
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """Simulate fluorescence data from a spherical phantom.
 
-    For recon_dim=3: thick 3D phantom imaged to 3D data.
-    For recon_dim=2: thin 2D phantom imaged through defocus to 3D data.
+    For ``recon_dim=3``: thick 3D phantom imaged to 3D data.
+    For ``recon_dim=2``: thin 2D phantom imaged through defocus to 3D data.
 
-    Returns (phantom, data) as CZYX xr.DataArrays.
+    Parameters
+    ----------
+    settings : Settings, optional
+        Fluorescence reconstruction settings. Uses defaults if None.
+    recon_dim : {2, 3}
+        Reconstruction dimensionality.
+    zyx_shape : tuple of int
+        (Z, Y, X) shape of the output arrays.
+    sphere_radius : float
+        Radius of the phantom sphere in micrometers.
+    channel_name : str
+        Name for the data channel coordinate.
+
+    Returns
+    -------
+    phantom : xr.DataArray
+        CZYX array with a single Phantom channel.
+    data : xr.DataArray
+        CZYX array with a single fluorescence channel.
     """
     if settings is None:
         settings = Settings()
@@ -146,8 +164,21 @@ def compute_transfer_function(
 ) -> xr.Dataset:
     """Compute fluorescence transfer function.
 
-    For 2D: returns xr.Dataset with singular_system_U, _S, _Vh.
-    For 3D: returns xr.Dataset with optical_transfer_function.
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        Input CZYX data array (shape is used to determine ZYX dimensions).
+    recon_dim : {2, 3}
+        Reconstruction dimensionality.
+    settings : Settings, optional
+        Fluorescence reconstruction settings. Uses defaults if None.
+
+    Returns
+    -------
+    xr.Dataset
+        For 2D: contains ``singular_system_U``, ``singular_system_S``,
+        ``singular_system_Vh``.
+        For 3D: contains ``optical_transfer_function``.
     """
     if settings is None:
         settings = Settings()
@@ -200,8 +231,23 @@ def apply_inverse_transfer_function(
 ) -> xr.DataArray:
     """Reconstruct fluorescence density.
 
-    Returns CZYX xr.DataArray with a single fluorescence density channel.
-    Uses thin (2D) or thick (3D) model depending on recon_dim.
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        Input CZYX fluorescence data.
+    transfer_function : xr.Dataset
+        Transfer function from ``compute_transfer_function``.
+    recon_dim : {2, 3}
+        Reconstruction dimensionality.
+    settings : Settings, optional
+        Fluorescence reconstruction settings. Uses defaults if None.
+    fluor_channel_name : str
+        Name for the output fluorescence channel.
+
+    Returns
+    -------
+    xr.DataArray
+        CZYX array with a single fluorescence density channel.
     """
     if settings is None:
         settings = Settings()
@@ -245,9 +291,26 @@ def reconstruct(
     settings: Settings = None,
     fluor_channel_name: str = "",
 ) -> xr.DataArray:
-    """Reconstruct fluorescence density (one-liner).
+    """Reconstruct fluorescence density.
 
-    Chains compute_transfer_function + apply_inverse_transfer_function.
+    Convenience function that chains ``compute_transfer_function`` and
+    ``apply_inverse_transfer_function``.
+
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        Input CZYX fluorescence data.
+    recon_dim : {2, 3}
+        Reconstruction dimensionality.
+    settings : Settings, optional
+        Fluorescence reconstruction settings. Uses defaults if None.
+    fluor_channel_name : str
+        Name for the output fluorescence channel.
+
+    Returns
+    -------
+    xr.DataArray
+        CZYX array with a single fluorescence density channel.
     """
     if settings is None:
         settings = Settings()
