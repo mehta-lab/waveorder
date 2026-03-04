@@ -30,7 +30,6 @@ class OptimizationSettings(MyBaseModel):
     log_dir: Optional[str] = Field(default=None, description="TensorBoard log directory (null = no logging)")
 
 
-
 # Top level settings (CLI-specific)
 class ReconstructionSettings(MyBaseModel):
     input_channel_names: List[str] = Field(

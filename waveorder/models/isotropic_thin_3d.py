@@ -109,8 +109,12 @@ def _calculate_wrap_unsafe_transfer_function(
 ) -> Tuple[Tensor, Tensor]:
     # Infer device: any Tensor arg on CUDA means we should use that device
     _device = None
-    for _candidate in (numerical_aperture_illumination, numerical_aperture_detection,
-                       tilt_angle_zenith, tilt_angle_azimuth):
+    for _candidate in (
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+        tilt_angle_zenith,
+        tilt_angle_azimuth,
+    ):
         if isinstance(_candidate, Tensor) and _candidate.is_cuda:
             _device = _candidate.device
             break
