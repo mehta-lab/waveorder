@@ -1479,8 +1479,8 @@ wheels = [
 
 [[package]]
 name = "iohub"
-version = "0.3.0a6.dev10+761490f"
-source = { git = "https://github.com/czbiohub-sf/iohub.git?rev=xarray-integration#761490f685f1fb2e1b619d7f9bd064696f9f4354" }
+version = "0.3.0a7.dev4+610d8a4"
+source = { git = "https://github.com/czbiohub-sf/iohub?branch=main#610d8a4f7ccce77d8b7472ea9148314997a6efdd" }
 dependencies = [
     { name = "blosc2" },
     { name = "dask", extra = ["array"] },
@@ -5298,7 +5298,7 @@ requires-dist = [
     { name = "click", specifier = ">=8.0.1" },
     { name = "colorspacious", specifier = ">=1.1.2" },
     { name = "importlib-metadata" },
-    { name = "iohub", git = "https://github.com/czbiohub-sf/iohub.git?rev=xarray-integration" },
+    { name = "iohub", git = "https://github.com/czbiohub-sf/iohub?branch=main" },
     { name = "ipywidgets", specifier = ">=7.5.1" },
     { name = "jupyter", marker = "extra == 'all'" },
     { name = "jupyter", marker = "extra == 'visual'" },

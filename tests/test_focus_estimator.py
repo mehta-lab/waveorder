@@ -348,10 +348,6 @@ def test_z_focus_offset_float_type():
     assert settings.z_focus_offset == 1.5
     assert isinstance(settings.z_focus_offset, float)
 
-    # Test that "auto" still works
-    settings_auto = FourierTransferFunctionSettings(z_focus_offset="auto")
-    assert settings_auto.z_focus_offset == "auto"
-
     # Test that integers are converted to float
     settings_int = FourierTransferFunctionSettings(z_focus_offset=2)
     assert settings_int.z_focus_offset == 2

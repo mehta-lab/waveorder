@@ -176,12 +176,13 @@ def run_acquire(input_path, waitBetweenT):
 # This will convert an existing ome-tif to a .zarr storage
 
 # ome_tif_path = "/ome-zarr_data/waveorderAcq/test/snap_6D_ometiff_1"
-# runConvert(ome_tif_path)
+# run_convert(ome_tif_path)
 
 # %% #############################################
 # Step 2:
 # run the test to simulate Acquiring a waveorder .zarr store
 
-input_path = "/ome-zarr_data/waveorderAcq/test/raw_snap_6D_ometiff_1.zarr"
-waitBetweenT = 60
-run_acquire(input_path, waitBetweenT)
+if __name__ == "__main__":
+    input_path = "/ome-zarr_data/waveorderAcq/test/raw_snap_6D_ometiff_1.zarr"
+    waitBetweenT = 60
+    run_acquire(input_path, waitBetweenT)
