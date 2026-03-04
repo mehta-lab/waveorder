@@ -308,9 +308,9 @@ def gen_coordinate(img_dim, ps):
     return (xx, yy, fxx, fyy)
 
 
-def generate_frequencies(img_dim, ps):
-    fy = torch.fft.fftfreq(img_dim[0], ps)
-    fx = torch.fft.fftfreq(img_dim[1], ps)
+def generate_frequencies(img_dim, ps, device=None):
+    fy = torch.fft.fftfreq(img_dim[0], ps, device=device)
+    fx = torch.fft.fftfreq(img_dim[1], ps, device=device)
     fyy, fxx = torch.meshgrid(fy, fx, indexing="ij")
     return fyy, fxx
 

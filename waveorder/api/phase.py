@@ -327,6 +327,7 @@ def optimize(
     midband_fractions: tuple[float, float] = (0.125, 0.25),
     log_dir: str | None = None,
     log_images: bool = False,
+    device: str = "cpu",
 ) -> tuple[Settings, xr.DataArray]:
     """Optimize reconstruction parameters by maximizing midband spatial frequency power.
 
@@ -347,6 +348,8 @@ def optimize(
         TensorBoard log directory. None = print-only logging.
     log_images : bool
         If True, log reconstruction images to TensorBoard each iteration.
+    device : str
+        Device for tensors (e.g., "cpu", "cuda"). Default: "cpu".
 
     Returns
     -------
@@ -374,7 +377,7 @@ def optimize(
 
     s = settings.transfer_function
     kw = _settings_to_model_kwargs(settings)
-    zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32)
+    zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32, device=device)
     Z = zyx_data.shape[0]
     yx_shape = (zyx_data.shape[1], zyx_data.shape[2])
 
@@ -389,7 +392,7 @@ def optimize(
         tilt_azimuth = _get(tensor_params, "tilt_angle_azimuth", kw["tilt_angle_azimuth"])
 
         if recon_dim == 2:
-            z_positions = (-torch.arange(Z) + (Z // 2) + z_offset) * s.z_pixel_size
+            z_positions = (-torch.arange(Z, device=device) + (Z // 2) + z_offset) * s.z_pixel_size
             return isotropic_thin_3d.reconstruct(
                 data,
                 yx_pixel_size=s.yx_pixel_size,
@@ -435,7 +438,7 @@ def optimize(
         tilt_z = param_tensors.get("tilt_angle_zenith", kw["tilt_angle_zenith"])
         tilt_a = param_tensors.get("tilt_angle_azimuth", kw["tilt_angle_azimuth"])
         na_ill_t = param_tensors.get("numerical_aperture_illumination", kw["numerical_aperture_illumination"])
-        fyy, fxx = util.generate_frequencies(yx_shape, s.yx_pixel_size)
+        fyy, fxx = util.generate_frequencies(yx_shape, s.yx_pixel_size, device=device)
         pupil = optics.generate_tilted_pupil(
             fxx,
             fyy,
@@ -456,6 +459,7 @@ def optimize(
         logger=logger,
         log_images=log_images,
         log_extras_fn=log_extras,
+        device=device,
     )
 
     # Build updated settings

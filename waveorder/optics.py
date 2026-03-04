@@ -180,9 +180,10 @@ def generate_tilted_pupil(
     torch.Tensor
         Tilted pupil function (Ny, Nx), values in [0, 1].
     """
-    NA = torch.as_tensor(NA, dtype=torch.float32)
-    tilt_angle_zenith = torch.as_tensor(tilt_angle_zenith, dtype=torch.float32)
-    tilt_angle_azimuth = torch.as_tensor(tilt_angle_azimuth, dtype=torch.float32)
+    _device = fxx.device
+    NA = torch.as_tensor(NA, dtype=torch.float32, device=_device)
+    tilt_angle_zenith = torch.as_tensor(tilt_angle_zenith, dtype=torch.float32, device=_device)
+    tilt_angle_azimuth = torch.as_tensor(tilt_angle_azimuth, dtype=torch.float32, device=_device)
     n = index_of_refraction_media
 
     # Ewald sphere radius
