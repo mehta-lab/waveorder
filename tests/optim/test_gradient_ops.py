@@ -166,3 +166,29 @@ def test_gradient_through_phase_thick_3d():
     loss = f_real.sum()
     loss.backward()
     assert na_det.grad is not None
+
+
+def test_gradient_through_phase_thick_3d_with_tilt():
+    """Gradient flows through 3D phase thick model with tilt parameters."""
+    from waveorder.models import phase_thick_3d
+
+    tilt_z = torch.tensor(0.1, requires_grad=True)
+    tilt_a = torch.tensor(0.3, requires_grad=True)
+    real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(
+        zyx_shape=(5, 16, 16),
+        yx_pixel_size=0.1,
+        z_pixel_size=0.25,
+        wavelength_illumination=0.532,
+        z_padding=0,
+        index_of_refraction_media=1.3,
+        numerical_aperture_illumination=0.5,
+        numerical_aperture_detection=1.2,
+        tilt_angle_zenith=tilt_z,
+        tilt_angle_azimuth=tilt_a,
+        pupil_steepness=100.0,
+    )
+    loss = real_tf.abs().sum() + imag_tf.abs().sum()
+    loss.backward()
+    assert tilt_z.grad is not None
+    assert tilt_z.grad.abs() > 0
+    assert tilt_a.grad is not None

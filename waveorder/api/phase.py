@@ -126,6 +126,8 @@ def simulate(
             index_of_refraction_media=s.index_of_refraction_media,
             numerical_aperture_illumination=_float_val(s.numerical_aperture_illumination),
             numerical_aperture_detection=_float_val(s.numerical_aperture_detection),
+            tilt_angle_zenith=_float_val(s.tilt_angle_zenith),
+            tilt_angle_azimuth=_float_val(s.tilt_angle_azimuth),
         )
         zyx_data = phase_thick_3d.apply_transfer_function(zyx_phase, real_tf, z_padding=0, brightness=1e3)
         phantom_zyx = zyx_phase.numpy()
@@ -262,10 +264,13 @@ def compute_transfer_function(
     elif recon_dim == 3:
         settings_dict = settings.transfer_function.model_dump()
         settings_dict.pop("z_focus_offset")
-        settings_dict.pop("tilt_angle_zenith")
-        settings_dict.pop("tilt_angle_azimuth")
-        # Extract float values
-        for k in ["numerical_aperture_detection", "numerical_aperture_illumination"]:
+        # Extract float values from OptimizableFloat fields
+        for k in [
+            "numerical_aperture_detection",
+            "numerical_aperture_illumination",
+            "tilt_angle_zenith",
+            "tilt_angle_azimuth",
+        ]:
             if k in settings_dict:
                 settings_dict[k] = _float_val(settings_dict.get(k, 0))
 
@@ -477,6 +482,8 @@ def optimize(
                 numerical_aperture_detection=na_det,
                 invert_phase_contrast=s.invert_phase_contrast,
                 regularization_strength=settings.apply_inverse.regularization_strength,
+                tilt_angle_zenith=tilt_zenith,
+                tilt_angle_azimuth=tilt_azimuth,
                 pupil_steepness=100.0,
             )
 

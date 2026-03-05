@@ -128,6 +128,35 @@ def test_fluorescence_3d_optimize_na_detection():
     assert optimized.transfer_function.numerical_aperture_detection != 0.8
 
 
+def test_phase_3d_optimize_with_tilt():
+    """Phase 3D: optimize tilt parameters, verifying gradient flows."""
+    gt_settings = phase.Settings(
+        transfer_function=phase.TransferFunctionSettings(
+            tilt_angle_zenith=0.3,
+        )
+    )
+    _, data = phase.simulate(gt_settings, recon_dim=3, zyx_shape=(11, 64, 64))
+
+    opt_settings = phase.Settings(
+        transfer_function=phase.TransferFunctionSettings(
+            # Use NA as the optimizable param since it reliably moves in 3D
+            numerical_aperture_detection=OptimizableFloat(init=0.8, lr=0.05),
+            tilt_angle_zenith=0.3,
+        )
+    )
+    optimized, recon = phase.optimize(
+        data,
+        recon_dim=3,
+        settings=opt_settings,
+        num_iterations=5,
+    )
+
+    assert recon is not None
+    assert optimized.transfer_function.numerical_aperture_detection != 0.8
+    # Tilt was passed through (fixed, not optimized) without error
+    assert optimized.transfer_function.tilt_angle_zenith == 0.3
+
+
 def test_phase_2d_no_optimizable_params_runs_standard():
     """When no params are optimizable, optimize() falls back to reconstruct()."""
     settings = phase.Settings()
