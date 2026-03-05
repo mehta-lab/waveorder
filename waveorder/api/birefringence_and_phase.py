@@ -44,15 +44,34 @@ def simulate(
 
     Creates a thin star-shaped phantom (z_thickness slices in the center)
     with birefringence and phase properties. The simulation:
+
     1. Computes sample-plane State intensities from birefringence
     2. Creates a 3D State volume (thin object + background)
     3. Applies widefield defocus (OTF convolution) to each State
     4. Adds WOTF-based phase contrast to S0 for phase reconstruction
 
-    Returns (phantom, data) as CZYX xr.DataArrays.
-    Phantom channels: Retardance, Orientation, Transmittance,
-                      Depolarization, Phase.
-    Data channels: State0, State1, ... (one per polarization state).
+    Parameters
+    ----------
+    settings_biref : birefringence.Settings, optional
+        Birefringence settings. Uses defaults if None.
+    settings_phase : phase.Settings, optional
+        Phase settings. Uses defaults if None.
+    zyx_shape : tuple of int
+        (Z, Y, X) shape of the output arrays.
+    scheme : str
+        Polarization scheme, e.g. "4-State".
+    index_of_refraction_sample : float
+        Refractive index of the sample.
+    z_thickness : int
+        Number of z slices occupied by the phantom.
+
+    Returns
+    -------
+    phantom : xr.DataArray
+        CZYX array with channels [Retardance, Orientation, Transmittance,
+        Depolarization, Phase].
+    data : xr.DataArray
+        CZYX array with channels [State0, State1, ...].
     """
     if settings_biref is None:
         settings_biref = birefringence.Settings()
@@ -231,11 +250,25 @@ def compute_transfer_function(
 ) -> xr.Dataset:
     """Compute joint birefringence + phase transfer functions.
 
-    Returns xr.Dataset with:
-    - "intensity_to_stokes_matrix": birefringence TF
-    - "vector_transfer_function": vector birefringence TF
-    - "vector_singular_system_U/S/Vh": vector birefringence singular system
-    - For 3D only: "real/imaginary_potential_transfer_function"
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        Input CZYX data array (shape is used to determine ZYX dimensions).
+    settings_biref : birefringence.Settings
+        Birefringence reconstruction settings.
+    settings_phase : phase.Settings
+        Phase reconstruction settings.
+    input_channel_names : list of str, optional
+        Channel names to use. Inferred from ``czyx_data`` if None.
+    recon_dim : {2, 3}
+        Reconstruction dimensionality.
+
+    Returns
+    -------
+    xr.Dataset
+        Contains ``intensity_to_stokes_matrix``,
+        ``vector_singular_system_U/S/Vh``, and for 3D also
+        ``real/imaginary_potential_transfer_function``.
     """
     if input_channel_names is None:
         input_channel_names = list(czyx_data.coords["c"].values)
@@ -274,10 +307,6 @@ def compute_transfer_function(
             intensity_to_stokes_matrix.cpu().numpy(),
             "intensity_to_stokes_matrix",
         ),
-        "vector_transfer_function": _named_dataarray(
-            sfZYX_transfer_function.cpu().numpy(),
-            "vector_transfer_function",
-        ),
         "vector_singular_system_U": _named_dataarray(U.cpu().numpy(), "vector_singular_system_U"),
         "vector_singular_system_S": _named_dataarray(S.cpu().numpy(), "vector_singular_system_S"),
         "vector_singular_system_Vh": _named_dataarray(Vh.cpu().numpy(), "vector_singular_system_Vh"),
@@ -312,12 +341,29 @@ def apply_inverse_transfer_function(
 ) -> xr.DataArray:
     """Reconstruct joint birefringence and phase.
 
-    2D returns CZYX xr.DataArray with channels
-    [Retardance (nm), Orientation, Transmittance, Depolarization, Phase].
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        Input CZYX polarization data.
+    transfer_function : xr.Dataset
+        Transfer function from ``compute_transfer_function``.
+    recon_dim : {2, 3}
+        Reconstruction dimensionality.
+    settings_biref : birefringence.Settings
+        Birefringence reconstruction settings.
+    settings_phase : phase.Settings
+        Phase reconstruction settings.
+    cyx_no_sample_data : np.ndarray, optional
+        CYX background data for background correction.
 
-    3D returns CZYX xr.DataArray with channels
-    [Retardance (nm), Orientation, Transmittance, Depolarization, Phase,
-     Retardance_Joint_Decon (nm), Orientation_Joint_Decon, Phase_Joint_Decon].
+    Returns
+    -------
+    xr.DataArray
+        For 2D: CZYX array with channels [Retardance (nm), Orientation,
+        Transmittance, Depolarization, Phase].
+        For 3D: CZYX array with channels [Retardance (nm), Orientation,
+        Transmittance, Depolarization, Phase, Retardance_Joint_Decon (nm),
+        Orientation_Joint_Decon, Phase_Joint_Decon].
     """
     wavelength = settings_biref.apply_inverse.wavelength_illumination
     biref_kwargs = _biref_inverse_kwargs(settings_biref)
@@ -423,9 +469,31 @@ def reconstruct(
     recon_dim: Literal[2, 3] = 3,
     cyx_no_sample_data: Optional[np.ndarray] = None,
 ) -> xr.DataArray:
-    """Reconstruct joint birefringence and phase (one-liner).
+    """Reconstruct joint birefringence and phase.
 
-    Chains compute_transfer_function + apply_inverse_transfer_function.
+    Convenience function that chains ``compute_transfer_function`` and
+    ``apply_inverse_transfer_function``.
+
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        Input CZYX polarization data.
+    settings_biref : birefringence.Settings
+        Birefringence reconstruction settings.
+    settings_phase : phase.Settings
+        Phase reconstruction settings.
+    input_channel_names : list of str, optional
+        Channel names to use. Inferred from ``czyx_data`` if None.
+    recon_dim : {2, 3}
+        Reconstruction dimensionality.
+    cyx_no_sample_data : np.ndarray, optional
+        CYX background data for background correction.
+
+    Returns
+    -------
+    xr.DataArray
+        CZYX reconstructed data. See ``apply_inverse_transfer_function``
+        for channel details.
     """
     tf = compute_transfer_function(
         czyx_data,

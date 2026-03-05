@@ -74,9 +74,28 @@ def simulate(
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """Simulate polarization data from a star-target phantom.
 
-    Returns (phantom, data) as CZYX xr.DataArrays.
-    Phantom channels: Retardance, Orientation, Transmittance, Depolarization.
-    Data channels: State0, State1, ... (one per polarization state).
+    Parameters
+    ----------
+    settings : Settings, optional
+        Birefringence reconstruction settings. Uses defaults if None.
+    yx_shape : tuple of int
+        Lateral (Y, X) shape of the phantom.
+    z_depth : int
+        Number of z slices (phantom is tiled along z).
+    yx_pixel_size : float
+        Lateral pixel size in micrometers.
+    z_pixel_size : float
+        Axial pixel size in micrometers.
+    scheme : str
+        Polarization scheme, e.g. "4-State" or "5-State".
+
+    Returns
+    -------
+    phantom : xr.DataArray
+        CZYX array with channels [Retardance, Orientation, Transmittance,
+        Depolarization].
+    data : xr.DataArray
+        CZYX array with channels [State0, State1, ...].
     """
     if settings is None:
         settings = Settings()
@@ -144,8 +163,19 @@ def compute_transfer_function(
 ) -> xr.Dataset:
     """Compute birefringence transfer function.
 
-    Returns xr.Dataset with:
-    - "intensity_to_stokes_matrix": 2D array mapping intensities to Stokes
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        Input CZYX data array.
+    settings : Settings, optional
+        Birefringence reconstruction settings. Uses defaults if None.
+    input_channel_names : list of str, optional
+        Channel names to use. Inferred from ``czyx_data`` if None.
+
+    Returns
+    -------
+    xr.Dataset
+        Dataset with ``intensity_to_stokes_matrix``.
     """
     if settings is None:
         settings = Settings()
@@ -177,8 +207,24 @@ def apply_inverse_transfer_function(
 ) -> xr.DataArray:
     """Reconstruct birefringence from polarization data.
 
-    Returns CZYX xr.DataArray with channels
-    [Retardance (nm), Orientation, Transmittance, Depolarization].
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        Input CZYX polarization data.
+    transfer_function : xr.Dataset
+        Transfer function from ``compute_transfer_function``.
+    recon_dim : {2, 3}
+        Reconstruction dimensionality.
+    settings : Settings, optional
+        Birefringence reconstruction settings. Uses defaults if None.
+    cyx_no_sample_data : np.ndarray, optional
+        CYX background data for background correction.
+
+    Returns
+    -------
+    xr.DataArray
+        CZYX array with channels [Retardance (nm), Orientation,
+        Transmittance, Depolarization].
     """
     if settings is None:
         settings = Settings()
@@ -216,9 +262,29 @@ def reconstruct(
     recon_dim: Literal[2, 3] = 3,
     cyx_no_sample_data: Optional[np.ndarray] = None,
 ) -> xr.DataArray:
-    """Reconstruct birefringence from polarization data (one-liner).
+    """Reconstruct birefringence from polarization data.
 
-    Chains compute_transfer_function + apply_inverse_transfer_function.
+    Convenience function that chains ``compute_transfer_function`` and
+    ``apply_inverse_transfer_function``.
+
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        Input CZYX polarization data.
+    settings : Settings, optional
+        Birefringence reconstruction settings. Uses defaults if None.
+    input_channel_names : list of str, optional
+        Channel names to use. Inferred from ``czyx_data`` if None.
+    recon_dim : {2, 3}
+        Reconstruction dimensionality.
+    cyx_no_sample_data : np.ndarray, optional
+        CYX background data for background correction.
+
+    Returns
+    -------
+    xr.DataArray
+        CZYX array with channels [Retardance (nm), Orientation,
+        Transmittance, Depolarization].
     """
     if settings is None:
         settings = Settings()
