@@ -33,6 +33,7 @@ from waveorder.cli.utils import (
     create_empty_hcs_zarr,
     generate_valid_position_key,
     is_single_position_store,
+    resolve_time_indices,
 )
 from waveorder.io import utils
 
@@ -162,12 +163,7 @@ def apply_inverse_transfer_function_single_position(
         )
 
     # Find time indices
-    if settings.time_indices == "all":
-        time_indices = range(input_dataset.data.shape[0])
-    elif isinstance(settings.time_indices, list):
-        time_indices = settings.time_indices
-    elif isinstance(settings.time_indices, int):
-        time_indices = [settings.time_indices]
+    time_indices = resolve_time_indices(settings.time_indices, input_dataset.data.shape[0])
 
     # Check for invalid times
     time_ubound = input_dataset.data.shape[0] - 1

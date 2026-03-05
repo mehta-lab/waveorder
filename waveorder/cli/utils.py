@@ -9,6 +9,16 @@ from iohub.ngff.models import TransformationMeta
 from numpy.typing import DTypeLike
 
 
+def resolve_time_indices(time_indices, num_timepoints: int) -> list[int]:
+    """Resolve time_indices config value to a concrete list of ints."""
+    if time_indices == "all":
+        return list(range(num_timepoints))
+    elif isinstance(time_indices, list):
+        return time_indices
+    else:
+        return [int(time_indices)]
+
+
 def generate_valid_position_key(index: int) -> tuple[str, str, str]:
     """Generate a valid HCS position key for single-position stores.
 

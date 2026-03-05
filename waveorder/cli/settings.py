@@ -19,8 +19,8 @@ from waveorder.api.phase import Settings as PhaseSettings  # noqa: F401
 
 class MidbandPowerLoss(MyBaseModel):
     type: Literal["midband_power"] = "midband_power"
-    midband_fractions: tuple[float, float] = Field(
-        default=(0.125, 0.25), description="inner/outer fractions of cutoff frequency"
+    midband_fractions: List[float] = Field(
+        default=[0.125, 0.25], description="inner/outer fractions of cutoff frequency"
     )
 
 
