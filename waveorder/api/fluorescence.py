@@ -10,7 +10,6 @@ import torch
 import xarray as xr
 from pydantic import Field, PositiveFloat, model_validator
 
-from waveorder import util
 from waveorder.api._settings import (
     FourierApplyInverseSettings,
     MyBaseModel,
@@ -364,7 +363,6 @@ def optimize(
     tuple[Settings, xr.DataArray]
         Updated settings with optimized parameter values, and the final reconstruction.
     """
-    from waveorder.filter import apply_filter_bank
     from waveorder.optim import (
         PrintLogger,
         TensorBoardLogger,
@@ -372,7 +370,6 @@ def optimize(
         midband_power_loss,
         optimize_reconstruction,
     )
-    from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 
     if settings is None:
         settings = Settings()
@@ -387,10 +384,9 @@ def optimize(
 
     s = settings.transfer_function
     zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32)
-    zyx_shape = zyx_data.shape
-    yx_shape = (zyx_shape[1], zyx_shape[2])
+    Z = zyx_data.shape[0]
 
-    def reconstruct_fn_2d(data, **tensor_params):
+    def reconstruct_fn(data, **tensor_params):
         na_det = tensor_params.get(
             "numerical_aperture_detection",
             _float_val(s.numerical_aperture_detection),
@@ -400,52 +396,28 @@ def optimize(
             _float_val(s.z_focus_offset),
         )
 
-        z_position_list = (-torch.arange(zyx_shape[0]) + (zyx_shape[0] // 2) + z_offset) * s.z_pixel_size
-
-        fluorescent_tf = isotropic_fluorescent_thin_3d.calculate_transfer_function(
-            yx_shape=yx_shape,
-            yx_pixel_size=s.yx_pixel_size,
-            z_position_list=z_position_list,
-            wavelength_emission=s.wavelength_emission,
-            index_of_refraction_media=s.index_of_refraction_media,
-            numerical_aperture_detection=na_det,
-        )
-
-        U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_tf)
-
-        S_reg = S / (S**2 + settings.apply_inverse.regularization_strength)
-        sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
-
-        yx_density = apply_filter_bank(sfyx_inverse_filter, data)[0]
-        return yx_density
-
-    def reconstruct_fn_3d(data, **tensor_params):
-        na_det = tensor_params.get(
-            "numerical_aperture_detection",
-            _float_val(s.numerical_aperture_detection),
-        )
-
-        otf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
-            zyx_shape=zyx_shape,
-            yx_pixel_size=s.yx_pixel_size,
-            z_pixel_size=s.z_pixel_size,
-            wavelength_emission=s.wavelength_emission,
-            z_padding=s.z_padding,
-            index_of_refraction_media=s.index_of_refraction_media,
-            numerical_aperture_detection=na_det,
-        )
-
-        inverse_filter = tikhonov_regularized_inverse_filter(otf, settings.apply_inverse.regularization_strength)
-
-        zyx_padded = util.pad_zyx_along_z(data, s.z_padding)
-        f_real = apply_filter_bank(inverse_filter[None, None], zyx_padded[None])[0]
-
-        if s.z_padding != 0:
-            f_real = f_real[s.z_padding : -s.z_padding]
-
-        return f_real
-
-    reconstruct_fn = reconstruct_fn_2d if recon_dim == 2 else reconstruct_fn_3d
+        if recon_dim == 2:
+            z_position_list = (-torch.arange(Z) + (Z // 2) + z_offset) * s.z_pixel_size
+            return isotropic_fluorescent_thin_3d.reconstruct(
+                data,
+                yx_pixel_size=s.yx_pixel_size,
+                z_position_list=z_position_list,
+                wavelength_emission=s.wavelength_emission,
+                index_of_refraction_media=s.index_of_refraction_media,
+                numerical_aperture_detection=na_det,
+                regularization_strength=settings.apply_inverse.regularization_strength,
+            )
+        else:
+            return isotropic_fluorescent_thick_3d.reconstruct(
+                data,
+                yx_pixel_size=s.yx_pixel_size,
+                z_pixel_size=s.z_pixel_size,
+                wavelength_emission=s.wavelength_emission,
+                z_padding=s.z_padding,
+                index_of_refraction_media=s.index_of_refraction_media,
+                numerical_aperture_detection=na_det,
+                regularization_strength=settings.apply_inverse.regularization_strength,
+            )
 
     def loss_fn(recon):
         loss = midband_power_loss(
