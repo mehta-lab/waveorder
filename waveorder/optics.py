@@ -108,7 +108,7 @@ def analyzer_output(Ein, alpha, beta):
     return Eout
 
 
-def generate_pupil(frr, NA, lamb_in, steepness=1e4):
+def generate_pupil(frr, NA, lamb_in, steepness=10000.0):
     """
 
     compute pupil function given spatial frequency, NA, wavelength.
@@ -126,7 +126,7 @@ def generate_pupil(frr, NA, lamb_in, steepness=1e4):
                     in units of length (inverse of frr's units)
 
         steepness : float
-                    sigmoid steepness for smooth cutoff (default 1e4)
+                    sigmoid steepness for smooth cutoff (default 200.0)
 
     Returns
     -------
@@ -136,7 +136,6 @@ def generate_pupil(frr, NA, lamb_in, steepness=1e4):
     """
 
     cutoff = NA / lamb_in
-    frr = torch.as_tensor(frr, dtype=torch.float32)
     Pupil = torch.sigmoid(steepness * (cutoff - frr))
 
     return Pupil
@@ -180,10 +179,9 @@ def generate_tilted_pupil(
     torch.Tensor
         Tilted pupil function (Ny, Nx), values in [0, 1].
     """
-    _device = fxx.device
-    NA = torch.as_tensor(NA, dtype=torch.float32, device=_device)
-    tilt_angle_zenith = torch.as_tensor(tilt_angle_zenith, dtype=torch.float32, device=_device)
-    tilt_angle_azimuth = torch.as_tensor(tilt_angle_azimuth, dtype=torch.float32, device=_device)
+    NA = torch.as_tensor(NA, dtype=torch.float32)
+    tilt_angle_zenith = torch.as_tensor(tilt_angle_zenith, dtype=torch.float32)
+    tilt_angle_azimuth = torch.as_tensor(tilt_angle_azimuth, dtype=torch.float32)
     n = index_of_refraction_media
 
     # Ewald sphere radius

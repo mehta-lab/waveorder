@@ -33,7 +33,6 @@ def optimize_reconstruction(
     logger: OptimLogger | None = None,
     log_images: bool = False,
     log_extras_fn: Callable | None = None,
-    device: str | torch.device = "cpu",
 ) -> OptimizationResult:
     """Run optimization loop over reconstruction parameters.
 
@@ -56,8 +55,6 @@ def optimize_reconstruction(
         Logger for tracking optimization progress.
     log_images : bool
         If True, log reconstruction images each iteration.
-    device : str or torch.device
-        Device for tensors (e.g., "cpu", "cuda"). Default: "cpu".
 
     Returns
     -------
@@ -70,14 +67,12 @@ def optimize_reconstruction(
     if fixed_params is None:
         fixed_params = {}
 
-    data = data.to(device)
-
     # Create optimizable tensors with per-parameter learning rates
     param_tensors: dict[str, Tensor] = {}
     param_groups: list[dict] = []
 
     for name, (init_val, lr) in optimizable_params.items():
-        t = torch.tensor(init_val, dtype=torch.float32, device=device, requires_grad=True)
+        t = torch.tensor(init_val, dtype=torch.float32, requires_grad=True)
         param_tensors[name] = t
         param_groups.append({"params": [t], "lr": lr})
 

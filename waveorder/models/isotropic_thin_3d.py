@@ -46,7 +46,7 @@ def calculate_transfer_function(
     invert_phase_contrast: bool = False,
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
-    pupil_steepness: float = 1e4,
+    pupil_steepness: float = 10000.0,
 ) -> Tuple[Tensor, Tensor]:
     # Extract float values for Nyquist computation (not in gradient chain)
     na_ill_val = float(torch.as_tensor(numerical_aperture_illumination).detach())
@@ -105,25 +105,10 @@ def _calculate_wrap_unsafe_transfer_function(
     invert_phase_contrast: bool = False,
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
-    pupil_steepness: float = 1e4,
+    pupil_steepness: float = 10000.0,
 ) -> Tuple[Tensor, Tensor]:
-    # Infer device: any Tensor arg on CUDA means we should use that device
-    _device = None
-    for _candidate in (
-        numerical_aperture_illumination,
-        numerical_aperture_detection,
-        tilt_angle_zenith,
-        tilt_angle_azimuth,
-    ):
-        if isinstance(_candidate, Tensor) and _candidate.is_cuda:
-            _device = _candidate.device
-            break
-
     na_ill = torch.as_tensor(numerical_aperture_illumination, dtype=torch.float32)
     na_det = torch.as_tensor(numerical_aperture_detection, dtype=torch.float32)
-    if _device is not None:
-        na_ill = na_ill.to(_device)
-        na_det = na_det.to(_device)
 
     # Clamp illumination NA if >= detection NA (differentiable)
     clamped_ill = torch.where(
@@ -139,11 +124,11 @@ def _calculate_wrap_unsafe_transfer_function(
             "numerical_aperture_detection to avoid singularities."
         )
 
-    z_positions = torch.as_tensor(z_position_list, dtype=torch.float32, device=_device)
+    z_positions = torch.as_tensor(z_position_list, dtype=torch.float32)
     if invert_phase_contrast:
         z_positions = -z_positions
 
-    fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size, device=_device)
+    fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size)
     radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
 
     # Use tilted pupil if tilt is specified
@@ -442,7 +427,7 @@ def reconstruct(
     bg_filter: bool = False,
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
-    pupil_steepness: float = 1e4,
+    pupil_steepness: float = 10000.0,
     pseudo_svd: bool = False,
 ) -> Tuple[Tensor, Tensor]:
     """Reconstruct 2D absorption and phase from a brightfield defocus stack.
