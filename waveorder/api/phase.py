@@ -417,6 +417,10 @@ def optimize(
     Z = zyx_data.shape[0]
     yx_shape = (zyx_data.shape[1], zyx_data.shape[2])
 
+    # Soft pupil cutoff for smooth gradients during optimization.
+    # The final reconstruction (after optimize returns) uses the default 1e4.
+    optim_steepness = 100.0
+
     def reconstruct_fn(data, **tensor_params):
         na_ill = tensor_params.get("numerical_aperture_illumination", s.numerical_aperture_illumination)
         na_det = tensor_params.get("numerical_aperture_detection", s.numerical_aperture_detection)
@@ -438,7 +442,7 @@ def optimize(
                 regularization_strength=settings.apply_inverse.regularization_strength,
                 tilt_angle_zenith=tilt_zenith,
                 tilt_angle_azimuth=tilt_azimuth,
-                pupil_steepness=100.0,
+                pupil_steepness=optim_steepness,
             )[1]  # [1] = phase
         else:
             return phase_thick_3d.reconstruct(
@@ -454,7 +458,7 @@ def optimize(
                 regularization_strength=settings.apply_inverse.regularization_strength,
                 tilt_angle_zenith=tilt_zenith,
                 tilt_angle_azimuth=tilt_azimuth,
-                pupil_steepness=100.0,
+                pupil_steepness=optim_steepness,
             )
 
     def loss_fn(recon):
