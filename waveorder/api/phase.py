@@ -442,15 +442,12 @@ def optimize(
     Z = zyx_data.shape[0]
     yx_shape = (zyx_data.shape[1], zyx_data.shape[2])
 
-    def _get(tensor_params, name, default):
-        return tensor_params.get(name, default)
-
     def reconstruct_fn(data, **tensor_params):
-        na_ill = _get(tensor_params, "numerical_aperture_illumination", kw["numerical_aperture_illumination"])
-        na_det = _get(tensor_params, "numerical_aperture_detection", kw["numerical_aperture_detection"])
-        z_offset = _get(tensor_params, "z_focus_offset", kw["z_focus_offset"])
-        tilt_zenith = _get(tensor_params, "tilt_angle_zenith", kw["tilt_angle_zenith"])
-        tilt_azimuth = _get(tensor_params, "tilt_angle_azimuth", kw["tilt_angle_azimuth"])
+        na_ill = tensor_params.get("numerical_aperture_illumination", kw["numerical_aperture_illumination"])
+        na_det = tensor_params.get("numerical_aperture_detection", kw["numerical_aperture_detection"])
+        z_offset = tensor_params.get("z_focus_offset", kw["z_focus_offset"])
+        tilt_zenith = tensor_params.get("tilt_angle_zenith", kw["tilt_angle_zenith"])
+        tilt_azimuth = tensor_params.get("tilt_angle_azimuth", kw["tilt_angle_azimuth"])
 
         if recon_dim == 2:
             z_positions = (-torch.arange(Z) + (Z // 2) + z_offset) * s.z_pixel_size
