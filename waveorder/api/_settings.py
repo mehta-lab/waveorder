@@ -37,9 +37,9 @@ class FourierTransferFunctionSettings(MyBaseModel):
     yx_pixel_size: PositiveFloat = Field(default=0.1, description="lateral pixel size in micrometers")
     z_pixel_size: PositiveFloat = Field(default=0.25, description="axial pixel size in micrometers")
     z_padding: NonNegativeInt = Field(default=0, description="z slices to pad for axial boundary effects")
-    z_focus_offset: Union[float, Literal["auto"]] = Field(
+    z_focus_offset: float = Field(
         default=0,
-        description="offset from center slice in slice units (or 'auto')",
+        description="offset from center slice in slice units",
     )
     index_of_refraction_media: PositiveFloat = Field(default=1.3, description="refractive index of imaging media")
     numerical_aperture_detection: PositiveFloat = Field(
@@ -72,9 +72,9 @@ class OptimizableFourierTransferFunctionSettings(FourierTransferFunctionSettings
     Used by phase and fluorescence settings (not birefringence).
     """
 
-    z_focus_offset: Union[float, Literal["auto"], OptimizableFloat] = Field(
+    z_focus_offset: Union[float, OptimizableFloat] = Field(
         default=0,
-        description="[o] offset from center slice in slice units (or 'auto')",
+        description="[o] offset from center slice in slice units",
     )
     numerical_aperture_detection: Union[PositiveFloat, OptimizableFloat] = Field(
         default=1.2, description="[o] detection objective numerical aperture"

@@ -113,7 +113,7 @@ def simulate(
             yx_pixel_size=s.yx_pixel_size,
             sphere_radius=sphere_radius,
         )
-        sim_offset = _float_val(s.z_focus_offset) if s.z_focus_offset != "auto" else 0
+        sim_offset = _float_val(s.z_focus_offset)
         z_position_list = _position_list_from_shape_scale_offset(
             shape=Z,
             scale=s.z_pixel_size,
@@ -334,7 +334,7 @@ def optimize(
         )
         z_offset = tensor_params.get(
             "z_focus_offset",
-            _float_val(s.z_focus_offset) if s.z_focus_offset != "auto" else 0.0,
+            _float_val(s.z_focus_offset),
         )
 
         z_position_list = (-torch.arange(zyx_shape[0]) + (zyx_shape[0] // 2) + z_offset) * s.z_pixel_size

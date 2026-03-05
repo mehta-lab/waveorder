@@ -4,7 +4,6 @@ import click
 import numpy as np
 from iohub.ngff import Position, open_ome_zarr
 
-from waveorder import focus
 from waveorder.api import (
     birefringence,
     birefringence_and_phase,
@@ -136,28 +135,6 @@ def compute_transfer_function_cli(
         raise ValueError(
             f"Each of the input_channel_names = {settings.input_channel_names} in {config_filepath} must appear in the dataset {input_position_dirpath} which currently contains channel_names = {input_dataset.channel_names}."
         )
-
-    # Find in-focus slices for 2D reconstruction in "auto" mode
-    if (
-        settings.phase is not None
-        and settings.reconstruction_dimension == 2
-        and settings.phase.transfer_function.z_focus_offset == "auto"
-    ):
-        c_idx = input_dataset.get_channel_index(settings.input_channel_names[0])
-        zyx_array = input_dataset["0"][0, c_idx]
-
-        in_focus_index = focus.focus_from_transverse_band(
-            zyx_array,
-            NA_det=settings.phase.transfer_function.numerical_aperture_detection,
-            lambda_ill=settings.phase.transfer_function.wavelength_illumination,
-            pixel_size=settings.phase.transfer_function.yx_pixel_size,
-            mode="min",
-            polynomial_fit_order=4,
-        )
-
-        z_focus_offset = in_focus_index - (zyx_shape[0] // 2)
-        settings.phase.transfer_function.z_focus_offset = z_focus_offset
-        print("Found z_focus_offset:", z_focus_offset)
 
     # Get input data as CZYX xarray for the API
     czyx_data = input_dataset.to_xarray().isel(t=0)

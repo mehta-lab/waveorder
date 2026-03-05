@@ -123,7 +123,7 @@ def simulate(
             sphere_radius=sphere_radius,
         )
         # Use same z_position_list as compute_transfer_function
-        sim_offset = _float_val(s.z_focus_offset) if s.z_focus_offset != "auto" else 0
+        sim_offset = _float_val(s.z_focus_offset)
         z_position_list = _position_list_from_shape_scale_offset(
             shape=Z,
             scale=s.z_pixel_size,
@@ -171,7 +171,7 @@ def _settings_to_model_kwargs(settings: Settings) -> dict:
         "yx_pixel_size": s.yx_pixel_size,
         "z_pixel_size": s.z_pixel_size,
         "z_padding": s.z_padding,
-        "z_focus_offset": _float_val(s.z_focus_offset) if s.z_focus_offset != "auto" else "auto",
+        "z_focus_offset": _float_val(s.z_focus_offset),
         "index_of_refraction_media": s.index_of_refraction_media,
         "numerical_aperture_detection": _float_val(s.numerical_aperture_detection),
         "numerical_aperture_illumination": _float_val(s.numerical_aperture_illumination),
