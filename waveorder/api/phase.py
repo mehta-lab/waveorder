@@ -106,7 +106,7 @@ def simulate(
     if settings is None:
         settings = Settings()
 
-    s = settings.transfer_function
+    s = settings.transfer_function.resolve_floats()
     Z, Y, X = zyx_shape
     zyx_coords = {
         "z": np.arange(Z) * s.z_pixel_size,
@@ -131,10 +131,10 @@ def simulate(
             wavelength_illumination=s.wavelength_illumination,
             z_padding=0,
             index_of_refraction_media=s.index_of_refraction_media,
-            numerical_aperture_illumination=_float_val(s.numerical_aperture_illumination),
-            numerical_aperture_detection=_float_val(s.numerical_aperture_detection),
-            tilt_angle_zenith=_float_val(s.tilt_angle_zenith),
-            tilt_angle_azimuth=_float_val(s.tilt_angle_azimuth),
+            numerical_aperture_illumination=s.numerical_aperture_illumination,
+            numerical_aperture_detection=s.numerical_aperture_detection,
+            tilt_angle_zenith=s.tilt_angle_zenith,
+            tilt_angle_azimuth=s.tilt_angle_azimuth,
         )
         zyx_data = phase_thick_3d.apply_transfer_function(zyx_phase, real_tf, z_padding=0, brightness=1e3)
         phantom_zyx = zyx_phase.numpy()
@@ -149,12 +149,10 @@ def simulate(
             index_of_refraction_sample=index_of_refraction_sample,
             sphere_radius=sphere_radius,
         )
-        # Use same z_position_list as compute_transfer_function
-        sim_offset = _float_val(s.z_focus_offset)
         z_position_list = _position_list_from_shape_scale_offset(
             shape=Z,
             scale=s.z_pixel_size,
-            offset=sim_offset,
+            offset=s.z_focus_offset,
         )
         absorption_tf, phase_tf = isotropic_thin_3d.calculate_transfer_function(
             yx_shape=yx_shape,
@@ -162,11 +160,11 @@ def simulate(
             wavelength_illumination=s.wavelength_illumination,
             z_position_list=z_position_list,
             index_of_refraction_media=s.index_of_refraction_media,
-            numerical_aperture_illumination=_float_val(s.numerical_aperture_illumination),
-            numerical_aperture_detection=_float_val(s.numerical_aperture_detection),
+            numerical_aperture_illumination=s.numerical_aperture_illumination,
+            numerical_aperture_detection=s.numerical_aperture_detection,
             invert_phase_contrast=s.invert_phase_contrast,
-            tilt_angle_zenith=_float_val(s.tilt_angle_zenith),
-            tilt_angle_azimuth=_float_val(s.tilt_angle_azimuth),
+            tilt_angle_zenith=s.tilt_angle_zenith,
+            tilt_angle_azimuth=s.tilt_angle_azimuth,
         )
         # Zero absorption, phase-only object
         yx_absorption = torch.zeros_like(yx_phase)
@@ -185,27 +183,6 @@ def simulate(
         coords={"c": ["Brightfield"], **zyx_coords},
     )
     return phantom, data
-
-
-def _settings_to_model_kwargs(settings: Settings) -> dict:
-    """Convert settings to kwargs for model functions.
-
-    Extracts float values from OptimizableFloat fields.
-    """
-    s = settings.transfer_function
-    return {
-        "wavelength_illumination": s.wavelength_illumination,
-        "yx_pixel_size": s.yx_pixel_size,
-        "z_pixel_size": s.z_pixel_size,
-        "z_padding": s.z_padding,
-        "z_focus_offset": _float_val(s.z_focus_offset),
-        "index_of_refraction_media": s.index_of_refraction_media,
-        "numerical_aperture_detection": _float_val(s.numerical_aperture_detection),
-        "numerical_aperture_illumination": _float_val(s.numerical_aperture_illumination),
-        "invert_phase_contrast": s.invert_phase_contrast,
-        "tilt_angle_zenith": _float_val(s.tilt_angle_zenith),
-        "tilt_angle_azimuth": _float_val(s.tilt_angle_azimuth),
-    }
 
 
 def compute_transfer_function(
@@ -236,27 +213,26 @@ def compute_transfer_function(
         settings = Settings()
 
     zyx_shape = czyx_data.shape[1:]  # CZYX -> ZYX
-    kw = _settings_to_model_kwargs(settings)
+    s = settings.transfer_function.resolve_floats()
 
     if recon_dim == 2:
-        z_offset = kw["z_focus_offset"]
         z_position_list = _position_list_from_shape_scale_offset(
             shape=zyx_shape[0],
-            scale=kw["z_pixel_size"],
-            offset=z_offset,
+            scale=s.z_pixel_size,
+            offset=s.z_focus_offset,
         )
 
         absorption_tf, phase_tf = isotropic_thin_3d.calculate_transfer_function(
             yx_shape=[zyx_shape[1], zyx_shape[2]],
-            yx_pixel_size=kw["yx_pixel_size"],
+            yx_pixel_size=s.yx_pixel_size,
             z_position_list=z_position_list,
-            wavelength_illumination=kw["wavelength_illumination"],
-            index_of_refraction_media=kw["index_of_refraction_media"],
-            numerical_aperture_illumination=kw["numerical_aperture_illumination"],
-            numerical_aperture_detection=kw["numerical_aperture_detection"],
-            invert_phase_contrast=kw["invert_phase_contrast"],
-            tilt_angle_zenith=kw["tilt_angle_zenith"],
-            tilt_angle_azimuth=kw["tilt_angle_azimuth"],
+            wavelength_illumination=s.wavelength_illumination,
+            index_of_refraction_media=s.index_of_refraction_media,
+            numerical_aperture_illumination=s.numerical_aperture_illumination,
+            numerical_aperture_detection=s.numerical_aperture_detection,
+            invert_phase_contrast=s.invert_phase_contrast,
+            tilt_angle_zenith=s.tilt_angle_zenith,
+            tilt_angle_azimuth=s.tilt_angle_azimuth,
         )
         U, S, Vh = isotropic_thin_3d.calculate_singular_system(absorption_tf, phase_tf)
 
@@ -269,19 +245,19 @@ def compute_transfer_function(
         )
 
     elif recon_dim == 3:
-        settings_dict = settings.transfer_function.model_dump()
-        settings_dict.pop("z_focus_offset")
-        # Extract float values from OptimizableFloat fields
-        for k in [
-            "numerical_aperture_detection",
-            "numerical_aperture_illumination",
-            "tilt_angle_zenith",
-            "tilt_angle_azimuth",
-        ]:
-            if k in settings_dict:
-                settings_dict[k] = _float_val(settings_dict.get(k, 0))
-
-        real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(zyx_shape=zyx_shape, **settings_dict)
+        real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(
+            zyx_shape=zyx_shape,
+            yx_pixel_size=s.yx_pixel_size,
+            z_pixel_size=s.z_pixel_size,
+            wavelength_illumination=s.wavelength_illumination,
+            z_padding=s.z_padding,
+            index_of_refraction_media=s.index_of_refraction_media,
+            numerical_aperture_illumination=s.numerical_aperture_illumination,
+            numerical_aperture_detection=s.numerical_aperture_detection,
+            invert_phase_contrast=s.invert_phase_contrast,
+            tilt_angle_zenith=s.tilt_angle_zenith,
+            tilt_angle_azimuth=s.tilt_angle_azimuth,
+        )
 
         return xr.Dataset(
             {
@@ -436,18 +412,17 @@ def optimize(
 
     logger = TensorBoardLogger(log_dir) if log_dir else PrintLogger()
 
-    s = settings.transfer_function
-    kw = _settings_to_model_kwargs(settings)
+    s = settings.transfer_function.resolve_floats()
     zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32)
     Z = zyx_data.shape[0]
     yx_shape = (zyx_data.shape[1], zyx_data.shape[2])
 
     def reconstruct_fn(data, **tensor_params):
-        na_ill = tensor_params.get("numerical_aperture_illumination", kw["numerical_aperture_illumination"])
-        na_det = tensor_params.get("numerical_aperture_detection", kw["numerical_aperture_detection"])
-        z_offset = tensor_params.get("z_focus_offset", kw["z_focus_offset"])
-        tilt_zenith = tensor_params.get("tilt_angle_zenith", kw["tilt_angle_zenith"])
-        tilt_azimuth = tensor_params.get("tilt_angle_azimuth", kw["tilt_angle_azimuth"])
+        na_ill = tensor_params.get("numerical_aperture_illumination", s.numerical_aperture_illumination)
+        na_det = tensor_params.get("numerical_aperture_detection", s.numerical_aperture_detection)
+        z_offset = tensor_params.get("z_focus_offset", s.z_focus_offset)
+        tilt_zenith = tensor_params.get("tilt_angle_zenith", s.tilt_angle_zenith)
+        tilt_azimuth = tensor_params.get("tilt_angle_azimuth", s.tilt_angle_azimuth)
 
         if recon_dim == 2:
             z_positions = (-torch.arange(Z) + (Z // 2) + z_offset) * s.z_pixel_size
@@ -485,7 +460,7 @@ def optimize(
     def loss_fn(recon):
         loss = -compute_midband_power(
             recon,
-            NA_det=float(torch.as_tensor(kw["numerical_aperture_detection"]).detach()),
+            NA_det=s.numerical_aperture_detection,
             lambda_ill=s.wavelength_illumination,
             pixel_size=s.yx_pixel_size,
             midband_fractions=midband_fractions,
@@ -497,9 +472,9 @@ def optimize(
     def log_extras(step, lgr, param_tensors):
         if not log_images:
             return
-        tilt_z = param_tensors.get("tilt_angle_zenith", kw["tilt_angle_zenith"])
-        tilt_a = param_tensors.get("tilt_angle_azimuth", kw["tilt_angle_azimuth"])
-        na_ill_t = param_tensors.get("numerical_aperture_illumination", kw["numerical_aperture_illumination"])
+        tilt_z = param_tensors.get("tilt_angle_zenith", s.tilt_angle_zenith)
+        tilt_a = param_tensors.get("tilt_angle_azimuth", s.tilt_angle_azimuth)
+        na_ill_t = param_tensors.get("numerical_aperture_illumination", s.numerical_aperture_illumination)
         fyy, fxx = util.generate_frequencies(yx_shape, s.yx_pixel_size)
         pupil = optics.generate_tilted_pupil(
             fxx,

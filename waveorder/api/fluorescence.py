@@ -14,7 +14,6 @@ from waveorder.api._settings import (
     FourierApplyInverseSettings,
     MyBaseModel,
     OptimizableFourierTransferFunctionSettings,
-    _float_val,
 )
 from waveorder.api._utils import (
     _build_output_xarray,
@@ -103,7 +102,7 @@ def simulate(
     if settings is None:
         settings = Settings()
 
-    s = settings.transfer_function
+    s = settings.transfer_function.resolve_floats()
     Z, Y, X = zyx_shape
     zyx_coords = {
         "z": np.arange(Z) * s.z_pixel_size,
@@ -125,7 +124,7 @@ def simulate(
             wavelength_emission=s.wavelength_emission,
             z_padding=0,
             index_of_refraction_media=s.index_of_refraction_media,
-            numerical_aperture_detection=_float_val(s.numerical_aperture_detection),
+            numerical_aperture_detection=s.numerical_aperture_detection,
         )
         zyx_data = isotropic_fluorescent_thick_3d.apply_transfer_function(zyx_fluorescence, otf, z_padding=0)
         phantom_zyx = zyx_fluorescence.numpy()
@@ -137,11 +136,10 @@ def simulate(
             yx_pixel_size=s.yx_pixel_size,
             sphere_radius=sphere_radius,
         )
-        sim_offset = _float_val(s.z_focus_offset)
         z_position_list = _position_list_from_shape_scale_offset(
             shape=Z,
             scale=s.z_pixel_size,
-            offset=sim_offset,
+            offset=s.z_focus_offset,
         )
         fluorescent_tf = isotropic_fluorescent_thin_3d.calculate_transfer_function(
             yx_shape=yx_shape,
@@ -149,7 +147,7 @@ def simulate(
             wavelength_emission=s.wavelength_emission,
             z_position_list=z_position_list,
             index_of_refraction_media=s.index_of_refraction_media,
-            numerical_aperture_detection=_float_val(s.numerical_aperture_detection),
+            numerical_aperture_detection=s.numerical_aperture_detection,
         )
         zyx_data = isotropic_fluorescent_thin_3d.apply_transfer_function(yx_fluorescence, fluorescent_tf)
         # Tile 2D phantom along Z so it appears at every defocus plane
@@ -195,30 +193,24 @@ def compute_transfer_function(
         settings = Settings()
 
     zyx_shape = czyx_data.shape[1:]  # CZYX -> ZYX
-    settings_dict = settings.transfer_function.model_dump()
-
-    # Extract float from OptimizableFloat fields
-    for k in ["numerical_aperture_detection", "z_focus_offset", "tilt_angle_zenith", "tilt_angle_azimuth"]:
-        if k in settings_dict and isinstance(settings_dict[k], dict):
-            settings_dict[k] = settings_dict[k].get("initial_value", settings_dict[k].get("init", 0.0))
+    s = settings.transfer_function.resolve_floats()
 
     if recon_dim == 2:
-        settings_dict["yx_shape"] = [zyx_shape[1], zyx_shape[2]]
-        settings_dict["z_position_list"] = _position_list_from_shape_scale_offset(
+        z_position_list = _position_list_from_shape_scale_offset(
             shape=zyx_shape[0],
-            scale=settings_dict["z_pixel_size"],
-            offset=settings_dict["z_focus_offset"],
+            scale=s.z_pixel_size,
+            offset=s.z_focus_offset,
         )
-        settings_dict.pop("z_pixel_size")
-        settings_dict.pop("z_padding")
-        settings_dict.pop("z_focus_offset")
-        settings_dict.pop("tilt_angle_zenith", None)
-        settings_dict.pop("tilt_angle_azimuth", None)
 
-        fluorescent_2d_to_3d_tf = isotropic_fluorescent_thin_3d.calculate_transfer_function(
-            **settings_dict,
+        fluorescent_tf = isotropic_fluorescent_thin_3d.calculate_transfer_function(
+            yx_shape=[zyx_shape[1], zyx_shape[2]],
+            yx_pixel_size=s.yx_pixel_size,
+            z_position_list=z_position_list,
+            wavelength_emission=s.wavelength_emission,
+            index_of_refraction_media=s.index_of_refraction_media,
+            numerical_aperture_detection=s.numerical_aperture_detection,
         )
-        U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_2d_to_3d_tf)
+        U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_tf)
 
         return xr.Dataset(
             {
@@ -229,11 +221,15 @@ def compute_transfer_function(
         )
 
     elif recon_dim == 3:
-        settings_dict.pop("z_focus_offset")
-        settings_dict.pop("tilt_angle_zenith", None)
-        settings_dict.pop("tilt_angle_azimuth", None)
-
-        optical_tf = isotropic_fluorescent_thick_3d.calculate_transfer_function(zyx_shape=zyx_shape, **settings_dict)
+        optical_tf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
+            zyx_shape=zyx_shape,
+            yx_pixel_size=s.yx_pixel_size,
+            z_pixel_size=s.z_pixel_size,
+            wavelength_emission=s.wavelength_emission,
+            z_padding=s.z_padding,
+            index_of_refraction_media=s.index_of_refraction_media,
+            numerical_aperture_detection=s.numerical_aperture_detection,
+        )
 
         return xr.Dataset(
             {
@@ -381,19 +377,13 @@ def optimize(
 
     logger = TensorBoardLogger(log_dir) if log_dir else PrintLogger()
 
-    s = settings.transfer_function
+    s = settings.transfer_function.resolve_floats()
     zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32)
     Z = zyx_data.shape[0]
 
     def reconstruct_fn(data, **tensor_params):
-        na_det = tensor_params.get(
-            "numerical_aperture_detection",
-            _float_val(s.numerical_aperture_detection),
-        )
-        z_offset = tensor_params.get(
-            "z_focus_offset",
-            _float_val(s.z_focus_offset),
-        )
+        na_det = tensor_params.get("numerical_aperture_detection", s.numerical_aperture_detection)
+        z_offset = tensor_params.get("z_focus_offset", s.z_focus_offset)
 
         if recon_dim == 2:
             z_position_list = (-torch.arange(Z) + (Z // 2) + z_offset) * s.z_pixel_size
@@ -421,7 +411,7 @@ def optimize(
     def loss_fn(recon):
         loss = -compute_midband_power(
             recon,
-            NA_det=_float_val(s.numerical_aperture_detection),
+            NA_det=s.numerical_aperture_detection,
             lambda_ill=s.wavelength_emission,
             pixel_size=s.yx_pixel_size,
             midband_fractions=midband_fractions,

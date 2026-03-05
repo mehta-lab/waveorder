@@ -86,6 +86,14 @@ class OptimizableFourierTransferFunctionSettings(FourierTransferFunctionSettings
         default=0.0, description="[o] illumination tilt azimuth angle in radians"
     )
 
+    def resolve_floats(self):
+        """Return a copy with OptimizableFloat fields resolved to plain floats."""
+        d = {}
+        for name in self.__class__.model_fields:
+            v = getattr(self, name)
+            d[name] = v.value if isinstance(v, OptimizableFloat) else v
+        return self.__class__.model_validate(d)
+
 
 class FourierApplyInverseSettings(MyBaseModel):
     reconstruction_algorithm: Literal["Tikhonov", "TV"] = Field(
