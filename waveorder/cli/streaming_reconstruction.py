@@ -102,8 +102,8 @@ def reconstruct_positions_pipelined(
     # Load transfer functions once and move to GPU
     real_tf_np = tf_dataset["real_potential_transfer_function"][0, 0]
     imag_tf_np = tf_dataset["imaginary_potential_transfer_function"][0, 0]
-    real_tf = torch.tensor(real_tf_np, dtype=torch.float32).to(device)
-    imag_tf = torch.tensor(imag_tf_np, dtype=torch.float32).to(device)
+    real_tf = torch.tensor(real_tf_np).to(device)
+    imag_tf = torch.tensor(imag_tf_np).to(device)
 
     # Get input/output channel indices (assuming Phase3D reconstruction)
     # For pheno: input channels are typically 0-4 (5 z-stacks)
