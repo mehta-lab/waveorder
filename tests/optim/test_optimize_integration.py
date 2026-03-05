@@ -78,6 +78,56 @@ def test_fluorescence_2d_optimize_z_focus_offset():
     assert abs(optimized.transfer_function.z_focus_offset - gt_offset) < 1.0
 
 
+def test_phase_3d_optimize_na_detection():
+    """Phase 3D: optimize NA_detection, verifying 3D loss reduces to scalar."""
+    gt_settings = phase.Settings(
+        transfer_function=phase.TransferFunctionSettings(
+            numerical_aperture_detection=1.0,
+        )
+    )
+    _, data = phase.simulate(gt_settings, recon_dim=3, zyx_shape=(11, 64, 64))
+
+    opt_settings = phase.Settings(
+        transfer_function=phase.TransferFunctionSettings(
+            numerical_aperture_detection=OptimizableFloat(init=0.8, lr=0.05),
+        )
+    )
+    optimized, recon = phase.optimize(
+        data,
+        recon_dim=3,
+        settings=opt_settings,
+        num_iterations=5,
+    )
+
+    assert recon is not None
+    assert optimized.transfer_function.numerical_aperture_detection != 0.8
+
+
+def test_fluorescence_3d_optimize_na_detection():
+    """Fluorescence 3D: optimize NA_detection, verifying 3D loss reduces to scalar."""
+    gt_settings = fluorescence.Settings(
+        transfer_function=fluorescence.TransferFunctionSettings(
+            numerical_aperture_detection=1.0,
+        )
+    )
+    _, data = fluorescence.simulate(gt_settings, recon_dim=3, zyx_shape=(11, 64, 64))
+
+    opt_settings = fluorescence.Settings(
+        transfer_function=fluorescence.TransferFunctionSettings(
+            numerical_aperture_detection=OptimizableFloat(init=0.8, lr=0.05),
+        )
+    )
+    optimized, recon = fluorescence.optimize(
+        data,
+        recon_dim=3,
+        settings=opt_settings,
+        num_iterations=5,
+    )
+
+    assert recon is not None
+    assert optimized.transfer_function.numerical_aperture_detection != 0.8
+
+
 def test_phase_2d_no_optimizable_params_runs_standard():
     """When no params are optimizable, optimize() falls back to reconstruct()."""
     settings = phase.Settings()
