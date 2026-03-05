@@ -105,20 +105,22 @@ def reconstruct_positions_pipelined(
     real_tf = torch.tensor(real_tf_np).to(device)
     imag_tf = torch.tensor(imag_tf_np).to(device)
 
-    # Get input/output channel indices (assuming Phase3D reconstruction)
-    # For pheno: input channels are typically 0-4 (5 z-stacks)
+    # Resolve input channel from config against store channel names
     pos_example = input_dataset[position_names[0]]
-    num_input_channels = pos_example.data.shape[1]
-    input_channel_indices = list(range(num_input_channels))
+    store_channel_names = input_dataset.channel_names
+    config_input_channels = settings.input_channel_names
+    if config_input_channels and len(config_input_channels) == 1:
+        target_channel = config_input_channels[0]
+        if target_channel in store_channel_names:
+            input_channel_idx = store_channel_names.index(target_channel)
+        else:
+            input_channel_idx = 0
+    else:
+        input_channel_idx = 0
     output_channel_indices = [0]  # Single Phase3D output channel
 
-    # Thread pool for parallel zarr I/O (4 threads per worker)
-    # Zarr chunks are independent files, so loading channels in parallel speeds up disk I/O
+    # Thread pool for parallel zarr I/O
     io_thread_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="zarr_io")
-
-    def load_single_channel(pos_dataset, channel_idx):
-        """Load a single channel from zarr (for parallel I/O)"""
-        return pos_dataset.data.oindex[t_idx, channel_idx]
 
     def stage_load(buf_idx: int, pos_name: str):
         """Stage 0: Load data from disk to pinned CPU memory (multi-threaded I/O)"""
@@ -127,18 +129,10 @@ def reconstruct_positions_pipelined(
         buf.skip = False
 
         try:
-            # Load data with multi-threaded I/O for zarr chunks
+            # Load only the target channel from disk
             pos_dataset = input_dataset[pos_name]
-
-            # Load each channel in parallel using thread pool
-            channel_futures = [
-                io_thread_pool.submit(load_single_channel, pos_dataset, ch)
-                for ch in input_channel_indices
-            ]
-
-            # Gather results (blocks until all channels loaded)
-            channel_arrays = [future.result() for future in channel_futures]
-            czyx_uint16 = np.stack(channel_arrays, axis=0)
+            zyx_uint16 = pos_dataset.data.oindex[t_idx, input_channel_idx]
+            czyx_uint16 = zyx_uint16[np.newaxis]  # (Z, Y, X) -> (1, Z, Y, X)
 
             # Check for zero/NaN
             if _check_nan_n_zeros(czyx_uint16):
