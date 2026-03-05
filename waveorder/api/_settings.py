@@ -74,17 +74,24 @@ class OptimizableFourierTransferFunctionSettings(FourierTransferFunctionSettings
 
     z_focus_offset: Union[float, OptimizableFloat] = Field(
         default=0,
-        description="[o] offset from center slice in slice units",
+        description="(optimizable) offset from center slice in slice units",
     )
     numerical_aperture_detection: Union[PositiveFloat, OptimizableFloat] = Field(
-        default=1.2, description="[o] detection objective numerical aperture"
+        default=1.2, description="(optimizable) detection objective numerical aperture"
     )
     tilt_angle_zenith: Union[float, OptimizableFloat] = Field(
-        default=0.0, description="[o] illumination tilt zenith angle in radians"
+        default=0.0, description="(optimizable) illumination tilt zenith angle in radians"
     )
     tilt_angle_azimuth: Union[float, OptimizableFloat] = Field(
-        default=0.0, description="[o] illumination tilt azimuth angle in radians"
+        default=0.0, description="(optimizable) illumination tilt azimuth angle in radians"
     )
+
+    @model_validator(mode="after")
+    def validate_positive_na_detection(self):
+        val = _float_val(self.numerical_aperture_detection)
+        if val <= 0:
+            raise ValueError(f"numerical_aperture_detection must be positive, got {val}")
+        return self
 
     def resolve_floats(self):
         """Return a copy with OptimizableFloat fields resolved to plain floats."""

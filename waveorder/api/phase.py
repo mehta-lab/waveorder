@@ -43,7 +43,7 @@ class TransferFunctionSettings(
     WavelengthIllumination,
 ):
     numerical_aperture_illumination: Union[NonNegativeFloat, OptimizableFloat] = Field(
-        default=0.9, description="[o] condenser numerical aperture"
+        default=0.9, description="(optimizable) condenser numerical aperture"
     )
     invert_phase_contrast: bool = Field(
         default=False,
