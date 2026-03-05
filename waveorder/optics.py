@@ -108,7 +108,7 @@ def analyzer_output(Ein, alpha, beta):
     return Eout
 
 
-def generate_pupil(frr, NA, lamb_in, steepness=10000.0):
+def generate_pupil(frr, NA, lamb_in, steepness=1e4):
     """
 
     compute pupil function given spatial frequency, NA, wavelength.
@@ -126,7 +126,7 @@ def generate_pupil(frr, NA, lamb_in, steepness=10000.0):
                     in units of length (inverse of frr's units)
 
         steepness : float
-                    sigmoid steepness for smooth cutoff (default 200.0)
+                    sigmoid steepness for smooth cutoff
 
     Returns
     -------
