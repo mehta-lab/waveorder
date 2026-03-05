@@ -411,7 +411,7 @@ def optimize(
             numerical_aperture_detection=na_det,
         )
 
-        U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_tf, pseudo_svd=True)
+        U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_tf)
 
         S_reg = S / (S**2 + settings.apply_inverse.regularization_strength)
         sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)

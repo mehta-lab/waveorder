@@ -119,55 +119,27 @@ def calculate_transfer_function(
 
 def calculate_singular_system(
     fluorescent_2d_to_3d_transfer_function: Tensor,
-    pseudo_svd: bool = False,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """Calculates the singular system of the fluorescent transfer function.
 
     The transfer function has shape (Z, Vy, Vx), where (Z,) is the data-space
     dimension, and (Vy, Vx) are the spatial frequency dimensions.
 
-    The SVD is computed over the (Z,) dimension.
+    Uses a norm-based decomposition that is faster than full SVD and
+    supports gradient flow through complex tensors.
 
     Parameters
     ----------
     fluorescent_2d_to_3d_transfer_function : Tensor
         ZYX transfer function for fluorescence
-    pseudo_svd : bool
-        If True, use a norm-based pseudo-SVD that supports gradient flow.
 
     Returns
     -------
     Tuple[Tensor, Tensor, Tensor]
-        U, S, Vh components of the SVD
+        U (1, 1, Vy, Vx), S (1, Vy, Vx), Vh (1, Z, Vy, Vx)
     """
-    # For fluorescence, we have only one object property (fluorescence density)
-    # Input shape: (Z, Vy, Vx)
-
-    # We need to create the format: (1, Z, Vy, Vx) where 1 represents single object type
-    sfYX_transfer_function = fluorescent_2d_to_3d_transfer_function[None]
-
-    if pseudo_svd:
-        return _pseudo_svd_1(sfYX_transfer_function)
-
-    # Permute to: (Vy, Vx, 1, Z) for SVD
-    YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
-    Up, Sp, Vhp = torch.linalg.svd(YXsf_transfer_function, full_matrices=False)
-    # SVD gives us: Up: (Vy, Vx, 1, min(1,Z)), Sp: (Vy, Vx, min(1,Z)), Vhp: (Vy, Vx, min(1,Z), Z)
-
-    # Permute back to match expected format:
-    U = Up.permute(2, 3, 0, 1)  # (1, min(1,Z), Vy, Vx) -> (1, Z, Vy, Vx)
-    S = Sp.permute(2, 0, 1)  # (min(1,Z), Vy, Vx) -> (1, Vy, Vx)
-    Vh = Vhp.permute(2, 3, 0, 1)  # (min(1,Z), Z, Vy, Vx) -> (1, 1, Vy, Vx)
-    return U, S, Vh
-
-
-def _pseudo_svd_1(sfYX: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
-    """Norm-based pseudo-SVD for (1, Z, Vy, Vx) complex transfer function.
-
-    For rank-1 (fluorescence: single object type), this simplifies to
-    a norm-based decomposition.
-    """
-    # sfYX shape: (1, Z, Vy, Vx)
+    # sfYX shape: (1, Z, Vy, Vx) where 1 represents single object type
+    sfYX = fluorescent_2d_to_3d_transfer_function[None]
     _, Z, Vy, Vx = sfYX.shape
 
     # S: norm over Z per frequency

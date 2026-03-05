@@ -208,16 +208,16 @@ def _calculate_wrap_unsafe_transfer_function(
 def calculate_singular_system(
     absorption_2d_to_3d_transfer_function: Tensor,
     phase_2d_to_3d_transfer_function: Tensor,
-    pseudo_svd: bool = False,
 ) -> Tuple[Tensor, Tensor, Tensor]:
-    """Calculates the singular system of the absoprtion and phase transfer
+    """Calculates the singular system of the absorption and phase transfer
     functions.
 
     Together, the transfer functions form a (2, Z, Vy, Vx) tensor, where
     (2,) is the object-space dimension (abs, phase), (Z,) is the data-space
     dimension, and (Vy, Vx) are the spatial frequency dimensions.
 
-    The SVD is computed over the (2, Z) dimensions.
+    Uses a norm-based decomposition that is faster than full SVD and
+    supports gradient flow through complex tensors.
 
     Parameters
     ----------
@@ -225,51 +225,20 @@ def calculate_singular_system(
         ZYX transfer function for absorption
     phase_2d_to_3d_transfer_function : Tensor
         ZYX transfer function for phase
-    pseudo_svd : bool
-        If True, use a norm-based pseudo-SVD that supports gradient flow
-        through complex tensors.
 
     Returns
     -------
     Tuple[Tensor, Tensor, Tensor]
+        U (2, 2, Vy, Vx), S (2, Vy, Vx), Vh (2, Z, Vy, Vx)
     """
-    sfYX_transfer_function = torch.stack(
+    # sfYX shape: (s=2, Z, Vy, Vx)
+    sfYX = torch.stack(
         (
             absorption_2d_to_3d_transfer_function,
             phase_2d_to_3d_transfer_function,
         ),
         dim=0,
     )
-
-    if pseudo_svd:
-        return _pseudo_svd_2(sfYX_transfer_function)
-
-    YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
-    Up, Sp, Vhp = torch.linalg.svd(YXsf_transfer_function, full_matrices=False)
-    U = Up.permute(2, 3, 0, 1)
-    S = Sp.permute(2, 0, 1)
-    Vh = Vhp.permute(2, 3, 0, 1)
-    return U, S, Vh
-
-
-def _pseudo_svd_2(sfYX: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
-    """Gradient-friendly pseudo-SVD for (2, Z, Vy, Vx) complex transfer functions.
-
-    Computes the SVD-like decomposition by treating each (s, Z) column as
-    a vector and computing per-channel norms. This avoids torch.linalg.svd
-    which doesn't support backward through complex tensors.
-
-    Returns (U, S, Vh) with shapes matching torch.linalg.svd output:
-    U: (2, 2, Vy, Vx), S: (2, Vy, Vx), Vh: (2, Z, Vy, Vx).
-    """
-    # sfYX shape: (s=2, Z, Vy, Vx)
-    # At each (Vy, Vx), we have a (2, Z) matrix H.
-    # SVD: H = U @ diag(S) @ Vh
-    # For Tikhonov: inv_filter = conj(H)^T / (|H|^2 + reg)
-    # We can express this via: U=I, S_k = norm(H[k,:]), Vh[k,:] = H[k,:] / S_k
-    # This is a per-row decomposition (not a true SVD) but gives the correct
-    # Tikhonov inverse when used as: U @ diag(S_reg) @ Vh
-
     s, Z, Vy, Vx = sfYX.shape
 
     # Per-channel norms: S[k] = norm(H[k, :]) for k in {absorption, phase}
@@ -450,7 +419,6 @@ def reconstruct(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 10000.0,
-    pseudo_svd: bool = False,
 ) -> Tuple[Tensor, Tensor]:
     """Reconstruct 2D absorption and phase from a brightfield defocus stack.
 
@@ -493,8 +461,6 @@ def reconstruct(
         Illumination tilt azimuth angle in radians, by default 0.0
     pupil_steepness : float, optional
         Sigmoid steepness for smooth pupil cutoff, by default 10000.0
-    pseudo_svd : bool, optional
-        Use gradient-friendly pseudo-SVD, by default False
 
     Returns
     -------
@@ -514,7 +480,7 @@ def reconstruct(
         tilt_angle_azimuth=tilt_angle_azimuth,
         pupil_steepness=pupil_steepness,
     )
-    singular_system = calculate_singular_system(absorption_tf, phase_tf, pseudo_svd=pseudo_svd)
+    singular_system = calculate_singular_system(absorption_tf, phase_tf)
     return apply_inverse_transfer_function(
         zyx_data,
         singular_system,

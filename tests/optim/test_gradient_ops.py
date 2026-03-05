@@ -69,8 +69,8 @@ def test_gradient_through_phase_transfer_function():
     assert tilt_z.grad.abs() > 0
 
 
-def test_gradient_through_phase_pseudo_svd():
-    """Gradient flows through pseudo-SVD for phase."""
+def test_gradient_through_phase_singular_system():
+    """Gradient flows through singular system for phase."""
     tilt_z = torch.tensor(0.1, requires_grad=True)
     abs_tf, phase_tf = isotropic_thin_3d.calculate_transfer_function(
         yx_shape=(32, 32),
@@ -83,7 +83,7 @@ def test_gradient_through_phase_pseudo_svd():
         tilt_angle_zenith=tilt_z,
         pupil_steepness=100.0,
     )
-    U, S, Vh = isotropic_thin_3d.calculate_singular_system(abs_tf, phase_tf, pseudo_svd=True)
+    U, S, Vh = isotropic_thin_3d.calculate_singular_system(abs_tf, phase_tf)
     loss = S.sum()
     loss.backward()
     assert tilt_z.grad is not None
@@ -106,7 +106,7 @@ def test_gradient_through_full_phase_pipeline():
         tilt_angle_zenith=tilt_z,
         pupil_steepness=100.0,
     )
-    U, S, Vh = isotropic_thin_3d.calculate_singular_system(abs_tf, phase_tf, pseudo_svd=True)
+    U, S, Vh = isotropic_thin_3d.calculate_singular_system(abs_tf, phase_tf)
     S_reg = S / (S**2 + 1e-2)
     inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
 
@@ -132,7 +132,7 @@ def test_gradient_through_fluorescence_pipeline():
         numerical_aperture_detection=na_det,
     )
 
-    U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_tf, pseudo_svd=True)
+    U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_tf)
     loss = S.sum()
     loss.backward()
     assert na_det.grad is not None
