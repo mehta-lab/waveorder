@@ -36,6 +36,25 @@ def test_generate_tilted_pupil():
     assert corner < 0.1  # corner is outside pupil
 
 
+def test_tilted_pupil_zero_tilt_matches_generate_pupil():
+    """At zero tilt, generate_tilted_pupil should match generate_pupil."""
+    yx_shape = (64, 64)
+    pixel_size = 0.1
+    NA = 0.5
+    wavelength = 0.532
+    n = 1.3
+
+    fyy, fxx = util.generate_frequencies(yx_shape, pixel_size)
+    frr = torch.sqrt(fyy**2 + fxx**2)
+
+    tilted = optics.generate_tilted_pupil(fxx, fyy, NA, wavelength, n, 0.0, 0.0)
+    radial = optics.generate_pupil(frr, NA, wavelength)
+
+    # Both should be ~1 inside the cutoff and ~0 outside
+    # Threshold at 0.5 to get binary masks and compare
+    assert torch.all((tilted > 0.5) == (radial > 0.5))
+
+
 def test_generate_tilted_pupil_gradient():
     fyy, fxx = util.generate_frequencies((32, 32), 0.1)
     tilt_z = torch.tensor(0.1, requires_grad=True)

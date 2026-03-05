@@ -163,25 +163,15 @@ def _calculate_wrap_unsafe_transfer_function(
     fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size)
     radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
 
-    # Use tilted pupil if tilt is specified
-    _has_tilt = isinstance(tilt_angle_zenith, Tensor) or tilt_angle_zenith != 0.0
-    if _has_tilt:
-        illumination_pupil = optics.generate_tilted_pupil(
-            fxx,
-            fyy,
-            clamped_ill,
-            wavelength_illumination,
-            index_of_refraction_media,
-            tilt_angle_zenith,
-            tilt_angle_azimuth,
-        )
-    else:
-        illumination_pupil = optics.generate_pupil(
-            radial_frequencies,
-            clamped_ill,
-            wavelength_illumination,
-            steepness=pupil_steepness,
-        )
+    illumination_pupil = optics.generate_tilted_pupil(
+        fxx,
+        fyy,
+        clamped_ill,
+        wavelength_illumination,
+        index_of_refraction_media,
+        tilt_angle_zenith,
+        tilt_angle_azimuth,
+    )
 
     detection_pupil = optics.generate_pupil(
         radial_frequencies,
