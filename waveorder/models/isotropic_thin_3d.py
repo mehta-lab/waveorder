@@ -38,7 +38,7 @@ def generate_test_phantom(
 def calculate_transfer_function(
     yx_shape: Tuple[int, int],
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: Union[list, Tensor],
     wavelength_illumination: float,
     index_of_refraction_media: float,
     numerical_aperture_illumination: Union[float, Tensor],
@@ -48,6 +48,38 @@ def calculate_transfer_function(
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 10000.0,
 ) -> Tuple[Tensor, Tensor]:
+    """Calculate the transfer function for 2D phase imaging.
+
+    Parameters
+    ----------
+    yx_shape : tuple[int, int]
+        Shape of YX dimensions
+    yx_pixel_size : float
+        Pixel size in YX plane
+    z_position_list : list or Tensor
+        Defocus distances in micrometers
+    wavelength_illumination : float
+        Wavelength of illumination light
+    index_of_refraction_media : float
+        Refractive index of the surrounding medium
+    numerical_aperture_illumination : float or Tensor
+        Illumination numerical aperture
+    numerical_aperture_detection : float or Tensor
+        Detection numerical aperture
+    invert_phase_contrast : bool, optional
+        Invert phase contrast, by default False
+    tilt_angle_zenith : float or Tensor, optional
+        Illumination tilt zenith angle in radians, by default 0.0
+    tilt_angle_azimuth : float or Tensor, optional
+        Illumination tilt azimuth angle in radians, by default 0.0
+    pupil_steepness : float, optional
+        Sigmoid steepness for smooth pupil cutoff, by default 10000.0
+
+    Returns
+    -------
+    Tuple[Tensor, Tensor]
+        absorption_2d_to_3d_transfer_function, phase_2d_to_3d_transfer_function
+    """
     # Extract float values for Nyquist computation (not in gradient chain)
     na_ill_val = float(torch.as_tensor(numerical_aperture_illumination).detach())
     na_det_val = float(torch.as_tensor(numerical_aperture_detection).detach())
@@ -97,7 +129,7 @@ def calculate_transfer_function(
 def _calculate_wrap_unsafe_transfer_function(
     yx_shape: Tuple[int, int],
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: Union[list, Tensor],
     wavelength_illumination: float,
     index_of_refraction_media: float,
     numerical_aperture_illumination: Union[float, Tensor],
@@ -413,7 +445,7 @@ def apply_inverse_transfer_function(
 def reconstruct(
     zyx_data: Tensor,
     yx_pixel_size: float,
-    z_position_list,
+    z_position_list: Union[list, Tensor],
     wavelength_illumination: float,
     index_of_refraction_media: float,
     numerical_aperture_illumination: Union[float, Tensor] = 0.9,
@@ -441,15 +473,15 @@ def reconstruct(
         3D raw data, label-free defocus stack
     yx_pixel_size : float
         Pixel size in the transverse (Y, X) dimensions
-    z_position_list : list
-        List of Z positions for defocus stack
+    z_position_list : list or Tensor
+        Defocus distances in micrometers
     wavelength_illumination : float
         Wavelength of illumination light
     index_of_refraction_media : float
         Refractive index of the surrounding medium
-    numerical_aperture_illumination : float
+    numerical_aperture_illumination : float or Tensor
         Illumination numerical aperture
-    numerical_aperture_detection : float
+    numerical_aperture_detection : float or Tensor
         Detection numerical aperture
     invert_phase_contrast : bool, optional
         Invert phase contrast, by default False
@@ -465,6 +497,14 @@ def reconstruct(
         TV-specific number of iterations, by default 10
     bg_filter : bool, optional
         Slow-varying 2D background normalization, by default False
+    tilt_angle_zenith : float or Tensor, optional
+        Illumination tilt zenith angle in radians, by default 0.0
+    tilt_angle_azimuth : float or Tensor, optional
+        Illumination tilt azimuth angle in radians, by default 0.0
+    pupil_steepness : float, optional
+        Sigmoid steepness for smooth pupil cutoff, by default 10000.0
+    pseudo_svd : bool, optional
+        Use gradient-friendly pseudo-SVD, by default False
 
     Returns
     -------

@@ -48,7 +48,7 @@ def generate_test_phantom(
 def calculate_transfer_function(
     yx_shape: tuple[int, int],
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: Union[list, Tensor],
     wavelength_emission: float,
     index_of_refraction_media: float,
     numerical_aperture_detection: Union[float, Tensor],
@@ -62,8 +62,8 @@ def calculate_transfer_function(
         Shape of YX dimensions
     yx_pixel_size : float
         Pixel size in YX plane
-    z_position_list : list
-        List of Z positions for defocus stack
+    z_position_list : list or Tensor
+        Defocus distances in micrometers
     wavelength_emission : float
         Emission wavelength
     index_of_refraction_media : float
@@ -193,7 +193,7 @@ def _pseudo_svd_1(sfYX: Tensor) -> Tuple[Tensor, Tensor, Tensor]:
 def _calculate_wrap_unsafe_transfer_function(
     yx_shape: tuple[int, int],
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: Union[list, Tensor],
     wavelength_emission: float,
     index_of_refraction_media: float,
     numerical_aperture_detection: Union[float, Tensor],
@@ -347,10 +347,10 @@ def apply_inverse_transfer_function(
 def reconstruct(
     zyx_data: Tensor,
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: Union[list, Tensor],
     wavelength_emission: float,
     index_of_refraction_media: float,
-    numerical_aperture_detection: float,
+    numerical_aperture_detection: Union[float, Tensor],
     reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
@@ -367,13 +367,13 @@ def reconstruct(
         3D raw data, fluorescence defocus stack
     yx_pixel_size : float
         Pixel size in the transverse (Y, X) dimensions
-    z_position_list : list
-        List of Z positions for defocus stack
+    z_position_list : list or Tensor
+        Defocus distances in micrometers
     wavelength_emission : float
         Emission wavelength
     index_of_refraction_media : float
         Refractive index of the surrounding medium
-    numerical_aperture_detection : float
+    numerical_aperture_detection : float or Tensor
         Detection numerical aperture
     reconstruction_algorithm : str, optional
         "Tikhonov" or "TV", by default "Tikhonov"
