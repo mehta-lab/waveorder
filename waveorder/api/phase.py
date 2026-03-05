@@ -424,13 +424,17 @@ def optimize(
             )
 
     def loss_fn(recon):
-        return midband_power_loss(
+        loss = midband_power_loss(
             recon,
             NA_det=float(torch.as_tensor(kw["numerical_aperture_detection"]).detach()),
             lambda_ill=s.wavelength_illumination,
             pixel_size=s.yx_pixel_size,
             midband_fractions=midband_fractions,
         )
+        # For 3D, midband_power_loss returns (Z,); reduce to scalar
+        if loss.ndim > 0:
+            loss = loss.mean()
+        return loss
 
     def log_extras(step, lgr, param_tensors):
         if not log_images:
@@ -464,8 +468,9 @@ def optimize(
 
     # Build updated settings
     new_tf_dict = settings.transfer_function.model_dump()
-    for name, value in result.optimized_values.items():
-        new_tf_dict[name] = value
+    for dotted_name, value in result.optimized_values.items():
+        field_name = dotted_name.split(".")[-1]
+        new_tf_dict[field_name] = value
 
     new_settings = Settings(
         transfer_function=TransferFunctionSettings(**new_tf_dict),
