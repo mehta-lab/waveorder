@@ -196,6 +196,8 @@ def reconstruct_positions_pipelined(
             buf.gpu_result = result.unsqueeze(0)  # (Z, Y, X) -> (1, Z, Y, X)
 
         except Exception as e:
+            if "CUDA out of memory" in str(e) or "OutOfMemoryError" in type(e).__name__:
+                raise
             print(f"  [{buf.pos_name}] Compute error: {e}", file=sys.stderr)
             buf.skip = True
 
