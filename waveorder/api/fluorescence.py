@@ -24,9 +24,16 @@ from waveorder.api._utils import (
     _to_singular_system,
     _to_tensor,
 )
+from waveorder.focus import compute_midband_power
 from waveorder.models import (
     isotropic_fluorescent_thick_3d,
     isotropic_fluorescent_thin_3d,
+)
+from waveorder.optim import (
+    PrintLogger,
+    TensorBoardLogger,
+    extract_optimizable_params,
+    optimize_reconstruction,
 )
 
 # --- Settings ---
@@ -363,14 +370,6 @@ def optimize(
     tuple[Settings, xr.DataArray]
         Updated settings with optimized parameter values, and the final reconstruction.
     """
-    from waveorder.optim import (
-        PrintLogger,
-        TensorBoardLogger,
-        extract_optimizable_params,
-        midband_power_loss,
-        optimize_reconstruction,
-    )
-
     if settings is None:
         settings = Settings()
 
@@ -420,14 +419,13 @@ def optimize(
             )
 
     def loss_fn(recon):
-        loss = midband_power_loss(
+        loss = -compute_midband_power(
             recon,
             NA_det=_float_val(s.numerical_aperture_detection),
             lambda_ill=s.wavelength_emission,
             pixel_size=s.yx_pixel_size,
             midband_fractions=midband_fractions,
         )
-        # For 3D, midband_power_loss returns (Z,); reduce to scalar
         if loss.ndim > 0:
             loss = loss.mean()
         return loss

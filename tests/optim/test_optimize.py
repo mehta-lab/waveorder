@@ -2,21 +2,21 @@
 
 import torch
 
+from waveorder.focus import compute_midband_power
 from waveorder.optim import optimize_reconstruction
-from waveorder.optim.losses import midband_power_loss as mb_loss
 
 
-def test_midband_power_loss_is_scalar():
-    """Loss returns a scalar."""
+def test_midband_power_is_scalar():
+    """compute_midband_power returns a scalar for 2D input."""
     recon = torch.randn(64, 64)
-    loss = mb_loss(recon, NA_det=1.2, lambda_ill=0.532, pixel_size=0.1)
-    assert loss.ndim == 0
+    power = compute_midband_power(recon, NA_det=1.2, lambda_ill=0.532, pixel_size=0.1)
+    assert power.ndim == 0
 
 
-def test_midband_power_loss_is_differentiable():
-    """Loss supports backward."""
+def test_midband_power_is_differentiable():
+    """compute_midband_power supports backward."""
     recon = torch.randn(64, 64, requires_grad=True)
-    loss = mb_loss(recon, NA_det=1.2, lambda_ill=0.532, pixel_size=0.1)
+    loss = -compute_midband_power(recon, NA_det=1.2, lambda_ill=0.532, pixel_size=0.1)
     loss.backward()
     assert recon.grad is not None
 
