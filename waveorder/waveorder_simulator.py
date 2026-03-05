@@ -100,7 +100,7 @@ class waveorder_microscopy_simulator:
 
         # setup microscocpe variables
         self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
-        self.frr = np.sqrt(self.fxx**2 + self.fyy**2)
+        self.frr = torch.sqrt(torch.as_tensor(self.fxx**2 + self.fyy**2, dtype=torch.float32))
 
         self.Pupil_obj = generate_pupil(self.frr, self.NA_obj, self.lambda_illu).numpy()
         self.Pupil_support = self.Pupil_obj.copy()
@@ -789,7 +789,7 @@ class waveorder_microscopy_simulator:
                 f_scat_tensor[p, q] = (2 * np.pi / self.lambda_illu) ** 2 * (-epsilon_tensor[p, q] / self.n_media**2)
 
         fr = (self.fxx**2 + self.fyy**2) ** (0.5)
-        Pupil_prop = generate_pupil(fr, 1, self.lambda_illu).numpy()
+        Pupil_prop = generate_pupil(torch.as_tensor(fr, dtype=torch.float32), 1, self.lambda_illu).numpy()
         oblique_factor_prop = ((1 - self.lambda_illu**2 * fr**2) * Pupil_prop) ** (1 / 2) / self.lambda_illu
         z_defocus_m = self.z_defocus - (self.N_defocus / 2 - 1) * self.psz
         Hz_defocus = Pupil_prop[:, :, np.newaxis] * np.exp(
