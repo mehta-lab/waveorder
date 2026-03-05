@@ -159,7 +159,7 @@ def test_birefringence_and_phase_3d(make_czyx):
     )
     assert isinstance(tf_ds, xr.Dataset)
     assert "intensity_to_stokes_matrix" in tf_ds
-    assert "vector_transfer_function" in tf_ds
+
     assert "vector_singular_system_U" in tf_ds
     assert "vector_singular_system_S" in tf_ds
     assert "vector_singular_system_Vh" in tf_ds
@@ -178,7 +178,7 @@ def test_birefringence_and_phase_2d(make_czyx):
     )
     assert isinstance(tf_ds, xr.Dataset)
     assert "intensity_to_stokes_matrix" in tf_ds
-    assert "vector_transfer_function" in tf_ds
+
     assert "vector_singular_system_U" in tf_ds
     # 2D should NOT have real/imag potential TFs
     assert "real_potential_transfer_function" not in tf_ds

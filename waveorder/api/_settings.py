@@ -56,7 +56,7 @@ class FourierTransferFunctionSettings(MyBaseModel):
         return self
 
     @model_validator(mode="after")
-    def warn_unit_consistency(self):
+    def warn_pixel_size_consistency(self):
         ratio = self.yx_pixel_size / self.z_pixel_size
         if ratio < 1.0 / 20 or ratio > 20:
             warnings.warn(

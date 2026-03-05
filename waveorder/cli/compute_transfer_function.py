@@ -90,11 +90,6 @@ def _write_vector_birefringence_tf(dataset: Position, tf_ds, zyx_shape):
         dataset.append_channel(f"ch{i}")
 
     dataset.create_image(
-        "vector_transfer_function",
-        tf_ds["vector_transfer_function"].values,
-        chunks=chunks,
-    )
-    dataset.create_image(
         "vector_singular_system_U",
         tf_ds["vector_singular_system_U"].values,
         chunks=chunks,

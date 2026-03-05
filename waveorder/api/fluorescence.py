@@ -41,11 +41,11 @@ class TransferFunctionSettings(OptimizableFourierTransferFunctionSettings):
     )
 
     @model_validator(mode="after")
-    def warn_unit_consistency(self):
+    def warn_wavelength_consistency(self):
         ratio = self.yx_pixel_size / self.wavelength_emission
         if ratio < 1.0 / 20 or ratio > 20:
             warnings.warn(
-                f"yx_pixel_size ({self.yx_pixel_size}) / wavelength_illumination ({self.wavelength_emission}) = {ratio}. Did you use consistent units?",
+                f"yx_pixel_size ({self.yx_pixel_size}) / wavelength_emission ({self.wavelength_emission}) = {ratio}. Did you use consistent units?",
                 UserWarning,
             )
         return self
