@@ -11,6 +11,7 @@ import numpy as np
 
 from waveorder.api import phase
 from waveorder.optim import OptimizableFloat
+from waveorder.optim.losses import MidbandPowerLossSettings
 
 # To use your own data instead of simulated data, create a CZYX xr.DataArray:
 #
@@ -54,7 +55,7 @@ optimized_settings, recon = phase.optimize(
     data,
     settings=opt_settings,
     max_iterations=50,
-    midband_fractions=(0.1, 0.5),
+    loss_settings=MidbandPowerLossSettings(midband_fractions=[0.1, 0.5]),
     log_dir=log_dir,
     log_images=True,
 )

@@ -99,7 +99,7 @@ def _run_optimization(settings, input_position_dirpath, config_filepath):
         convergence_patience=opt.convergence_patience,
         use_gradients=opt.use_gradients,
         grid_points=opt.grid_points,
-        midband_fractions=opt.loss.midband_fractions,
+        loss_settings=opt.loss,
         log_dir=opt.log_dir,
     )
 

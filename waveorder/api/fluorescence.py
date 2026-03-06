@@ -23,7 +23,6 @@ from waveorder.api._utils import (
     _to_singular_system,
     _to_tensor,
 )
-from waveorder.focus import compute_midband_power
 from waveorder.models import (
     isotropic_fluorescent_thick_3d,
     isotropic_fluorescent_thin_3d,
@@ -34,6 +33,7 @@ from waveorder.optim import (
     extract_optimizable_params,
     optimize_reconstruction,
 )
+from waveorder.optim.losses import MidbandPowerLossSettings, build_loss_fn
 
 # --- Settings ---
 
@@ -345,7 +345,7 @@ def optimize(
     convergence_patience: int | None = 5,
     use_gradients: bool | None = None,
     grid_points: int = 7,
-    midband_fractions: tuple[float, float] = (0.125, 0.25),
+    loss_settings=None,
     log_dir: str | None = None,
     log_images: bool = False,
 ) -> tuple[Settings, xr.DataArray]:
@@ -371,8 +371,8 @@ def optimize(
         Whether to compute gradients. Auto-detected from method if None.
     grid_points : int
         Number of grid points per parameter (grid_search only).
-    midband_fractions : tuple[float, float]
-        Inner and outer fractions of cutoff frequency for the loss annulus.
+    loss_settings : LossSettings, optional
+        Loss function configuration. Defaults to MidbandPowerLossSettings.
     log_dir : str, optional
         TensorBoard log directory. None = print-only logging.
 
@@ -423,17 +423,15 @@ def optimize(
                 regularization_strength=settings.apply_inverse.regularization_strength,
             )
 
-    def loss_fn(recon):
-        loss = -compute_midband_power(
-            recon,
-            NA_det=s.numerical_aperture_detection,
-            lambda_ill=s.wavelength_emission,
-            pixel_size=s.yx_pixel_size,
-            midband_fractions=midband_fractions,
-        )
-        if loss.ndim > 0:
-            loss = loss.mean()
-        return loss
+    if loss_settings is None:
+        loss_settings = MidbandPowerLossSettings()
+
+    loss_fn = build_loss_fn(
+        loss_settings,
+        NA_det=s.numerical_aperture_detection,
+        wavelength=s.wavelength_emission,
+        pixel_size=s.yx_pixel_size,
+    )
 
     optim_kwargs = dict(
         max_iterations=max_iterations,

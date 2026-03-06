@@ -2,6 +2,7 @@
 
 from waveorder.api import fluorescence, phase
 from waveorder.optim import OptimizableFloat
+from waveorder.optim.losses import MidbandPowerLossSettings
 
 
 def test_phase_2d_optimize_z_focus_offset():
@@ -19,7 +20,7 @@ def test_phase_2d_optimize_z_focus_offset():
         data,
         settings=opt_settings,
         max_iterations=50,
-        midband_fractions=(0.1, 0.5),
+        loss_settings=MidbandPowerLossSettings(midband_fractions=[0.1, 0.5]),
     )
 
     assert abs(optimized.transfer_function.z_focus_offset - gt_offset) < 0.5
@@ -47,7 +48,7 @@ def test_phase_2d_optimize_with_tilt_loss_improves():
         data,
         settings=opt_settings,
         max_iterations=20,
-        midband_fractions=(0.1, 0.5),
+        loss_settings=MidbandPowerLossSettings(midband_fractions=[0.1, 0.5]),
     )
 
     # Just verify the optimization ran and produced a result
@@ -72,7 +73,7 @@ def test_fluorescence_2d_optimize_z_focus_offset():
         data,
         settings=opt_settings,
         max_iterations=50,
-        midband_fractions=(0.1, 0.5),
+        loss_settings=MidbandPowerLossSettings(midband_fractions=[0.1, 0.5]),
     )
 
     assert abs(optimized.transfer_function.z_focus_offset - gt_offset) < 1.0

@@ -1,6 +1,6 @@
-from typing import List, Literal, Optional, Union
+from typing import Annotated, List, Literal, Optional, Union
 
-from pydantic import Field, NonNegativeInt, PositiveInt, model_validator
+from pydantic import Discriminator, Field, NonNegativeInt, PositiveInt, Tag, model_validator
 
 from waveorder.api._settings import (  # noqa: F401
     FourierApplyInverseSettings,
@@ -15,13 +15,31 @@ from waveorder.api.fluorescence import (  # noqa: F401
     Settings as FluorescenceSettings,
 )
 from waveorder.api.phase import Settings as PhaseSettings  # noqa: F401
+from waveorder.optim.losses import (
+    LaplacianVarianceLossSettings,
+    MidbandPowerLossSettings,
+    NormalizedVarianceLossSettings,
+    SpectralFlatnessLossSettings,
+    TotalVariationLossSettings,
+)
 
 
-class MidbandPowerLoss(MyBaseModel):
-    type: Literal["midband_power"] = "midband_power"
-    midband_fractions: List[float] = Field(
-        default=[0.125, 0.25], description="inner/outer fractions of cutoff frequency"
-    )
+def _loss_discriminator(v):
+    if isinstance(v, dict):
+        return v.get("type", "midband_power")
+    return getattr(v, "type", "midband_power")
+
+
+LossConfig = Annotated[
+    Union[
+        Annotated[MidbandPowerLossSettings, Tag("midband_power")],
+        Annotated[TotalVariationLossSettings, Tag("total_variation")],
+        Annotated[LaplacianVarianceLossSettings, Tag("laplacian_variance")],
+        Annotated[NormalizedVarianceLossSettings, Tag("normalized_variance")],
+        Annotated[SpectralFlatnessLossSettings, Tag("spectral_flatness")],
+    ],
+    Discriminator(_loss_discriminator),
+]
 
 
 class OptimizationSettings(MyBaseModel):
@@ -31,7 +49,7 @@ class OptimizationSettings(MyBaseModel):
     convergence_patience: Optional[PositiveInt] = Field(default=5, description="patience for early stopping")
     use_gradients: Optional[bool] = Field(default=None, description="auto-detect from method if null")
     grid_points: int = Field(default=7, description="grid points per parameter (grid_search only)")
-    loss: MidbandPowerLoss = Field(default_factory=MidbandPowerLoss, description="loss function configuration")
+    loss: LossConfig = Field(default_factory=MidbandPowerLossSettings, description="loss function configuration")
     log_dir: Optional[str] = Field(default=None, description="TensorBoard log directory (null = no logging)")
 
 
