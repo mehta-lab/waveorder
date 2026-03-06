@@ -188,14 +188,13 @@ def generate_tilted_pupil(
     K = n / lamb_in
     cos_alpha_max = torch.sqrt(torch.clamp(1 - (NA / n) ** 2, min=0.0))
 
-    # Pixel-based slope: slope / df gives steepness per frequency unit
-    df = torch.abs(fxx[0, 1] - fxx[0, 0])
-    pixel_slope = slope / df
-
-    # fz on the Ewald sphere
-    fz_sq = K**2 - fxx**2 - fyy**2
-    fz = torch.sqrt(torch.clamp(fz_sq, min=0.0))
-    inside_sphere = (fz_sq >= 0).to(fxx.dtype)
+    # Grid-derived quantities don't need gradients
+    with torch.no_grad():
+        df = torch.abs(fxx[0, 1] - fxx[0, 0])
+        pixel_slope = slope / df
+        fz_sq = K**2 - fxx**2 - fyy**2
+        inside_sphere = (fz_sq >= 0).to(fxx.dtype)
+        fz = torch.sqrt(torch.clamp(fz_sq, min=0.0))
 
     # Tilt direction unit vector
     sx = torch.sin(tilt_angle_zenith) * torch.cos(tilt_angle_azimuth)
