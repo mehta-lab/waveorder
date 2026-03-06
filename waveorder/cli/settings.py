@@ -1,6 +1,6 @@
-from typing import Annotated, List, Literal, Optional, Union
+from typing import Any, List, Literal, Optional, Union
 
-from pydantic import Discriminator, Field, NonNegativeInt, PositiveInt, Tag, model_validator
+from pydantic import Field, NonNegativeInt, PositiveInt, model_validator
 
 from waveorder.api._settings import (  # noqa: F401
     FourierApplyInverseSettings,
@@ -15,31 +15,28 @@ from waveorder.api.fluorescence import (  # noqa: F401
     Settings as FluorescenceSettings,
 )
 from waveorder.api.phase import Settings as PhaseSettings  # noqa: F401
-from waveorder.optim.losses import (
-    LaplacianVarianceLossSettings,
-    MidbandPowerLossSettings,
-    NormalizedVarianceLossSettings,
-    SpectralFlatnessLossSettings,
-    TotalVariationLossSettings,
-)
+from waveorder.optim.losses import MidbandPowerLossSettings, _LossBaseModel
+
+_LOSS_TYPE_MAP = {
+    "midband_power": "MidbandPowerLossSettings",
+    "total_variation": "TotalVariationLossSettings",
+    "laplacian_variance": "LaplacianVarianceLossSettings",
+    "normalized_variance": "NormalizedVarianceLossSettings",
+    "spectral_flatness": "SpectralFlatnessLossSettings",
+}
 
 
-def _loss_discriminator(v):
+def _parse_loss(v: Any):
+    """Parse a loss config dict or instance into a LossSettings object."""
     if isinstance(v, dict):
-        return v.get("type", "midband_power")
-    return getattr(v, "type", "midband_power")
+        from waveorder.optim import losses
 
-
-LossConfig = Annotated[
-    Union[
-        Annotated[MidbandPowerLossSettings, Tag("midband_power")],
-        Annotated[TotalVariationLossSettings, Tag("total_variation")],
-        Annotated[LaplacianVarianceLossSettings, Tag("laplacian_variance")],
-        Annotated[NormalizedVarianceLossSettings, Tag("normalized_variance")],
-        Annotated[SpectralFlatnessLossSettings, Tag("spectral_flatness")],
-    ],
-    Discriminator(_loss_discriminator),
-]
+        loss_type = v.get("type", "midband_power")
+        cls_name = _LOSS_TYPE_MAP.get(loss_type)
+        if cls_name is None:
+            raise ValueError(f"Unknown loss type: {loss_type}")
+        return getattr(losses, cls_name)(**v)
+    return v
 
 
 class OptimizationSettings(MyBaseModel):
@@ -49,8 +46,15 @@ class OptimizationSettings(MyBaseModel):
     convergence_patience: Optional[PositiveInt] = Field(default=5, description="patience for early stopping")
     use_gradients: Optional[bool] = Field(default=None, description="auto-detect from method if null")
     grid_points: int = Field(default=7, description="grid points per parameter (grid_search only)")
-    loss: LossConfig = Field(default_factory=MidbandPowerLossSettings, description="loss function configuration")
+    loss: _LossBaseModel = Field(default_factory=MidbandPowerLossSettings, description="loss function configuration")
     log_dir: Optional[str] = Field(default=None, description="TensorBoard log directory (null = no logging)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _parse_loss_config(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "loss" in data:
+            data["loss"] = _parse_loss(data["loss"])
+        return data
 
 
 # Top level settings (CLI-specific)
