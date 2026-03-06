@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 
 import napari
@@ -45,11 +46,15 @@ def compute_midband_power(
     pixel_size: float,
     band: tuple[float, float] = (0.125, 0.25),
 ) -> torch.Tensor:
-    _, _, fxx, fyy = util.gen_coordinate(yx_array.shape, pixel_size)
-    frr = torch.sqrt(fxx**2 + fyy**2)
+    with torch.no_grad():
+        _, _, fxx, fyy = util.gen_coordinate(yx_array.shape, pixel_size)
+        frr = torch.sqrt(fxx**2 + fyy**2)
+        cutoff = 2 * NA_det / lambda_ill
+        mask = torch.logical_and(
+            frr > cutoff * band[0], frr < cutoff * band[1]
+        )
     xy_abs_fft = torch.abs(torch.fft.fftn(yx_array))
-    cutoff = 2 * NA_det / lambda_ill
-    mask = torch.logical_and(frr > cutoff * band[0], frr < cutoff * band[1])
+    # TODO: I added the `mask.sum()` otherwise the loss scale with the size of the tile and mask
     return torch.sum(mask * xy_abs_fft) / mask.sum()
     # return torch.sum(xy_abs_fft[mask])
 
@@ -83,7 +88,7 @@ def log_optimization_progress(
     step: int,
     optimization_params: dict[str, torch.nn.Parameter],
     loss: torch.Tensor,
-    tb_writer: SummaryWriter,
+    tb_writer: SummaryWriter | None,
     recon_args: dict,
     yx_recon: torch.Tensor,
 ) -> None:
@@ -92,6 +97,10 @@ def log_optimization_progress(
     for name, param in optimization_params.items():
         print(f"\t{name} = {param.item():.4f}")
     print(f"\tLoss: {loss.item():.2e}\n")
+
+    if tb_writer is None:
+        # skips the expensive logging operations
+        return
 
     # Log metrics and images
     tb_writer.add_scalar("Loss", loss.item(), step)
@@ -147,8 +156,26 @@ def optimize_tile(
     optimizable_params: dict[str, tuple[bool, float, float]],
     tb_writer: SummaryWriter,
     num_iterations: int = 10,
+    device: torch.device | str | None = None,
 ) -> torch.Tensor:
-    optimization_params, optimizer = prepare_optimizer(optimizable_params)
+
+    start_time = time.time()
+
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    zyx_tile = zyx_tile.to(device)
+    recon_args = {
+        k: v.to(device) if isinstance(v, torch.Tensor) else v
+        for k, v in recon_args.items()
+    }
+
+    # TODO: should be removed, I don't think it's a great practice to change the default device
+    torch.set_default_device(device)
+
+    optimization_params, optimizer = prepare_optimizer(
+        optimizable_params, device=device
+    )
 
     for step in range(num_iterations):
 
@@ -175,7 +202,15 @@ def optimize_tile(
             step, optimization_params, loss, tb_writer, recon_args, yx_recon
         )
 
-    return yx_recon.detach()
+    yx_recon = yx_recon.detach()
+
+    torch.cuda.synchronize()
+    end_time = time.time()
+
+    print(f"Tile shape: {zyx_tile.shape}")
+    print(f"Tile runtime: {end_time - start_time} seconds")
+
+    return yx_recon
 
 
 # === Configuration ===
@@ -196,6 +231,7 @@ OVERLAP_FRACTION = 0.2
 # OPTIMIZATION
 NUM_ITERATIONS = 10
 LOGS_DIR = "./runs"
+LOGGING = False
 FIXED_PARAMS = {
     "wavelength_illumination": 0.450,
     "index_of_refraction_media": 1.0,
@@ -234,7 +270,7 @@ for key in selected_keys:
     print(f"Processing tile {key}")
     timestamp = datetime.now().strftime("%d%H%M")
     log_dir = f"{LOGS_DIR}/tile_{key.replace('/', '_')}_{timestamp}"
-    tb_writer = SummaryWriter(log_dir=log_dir)
+    tb_writer = SummaryWriter(log_dir=log_dir) if LOGGING else None
 
     # Prepare reconstruction arguments
     recon_args = FIXED_PARAMS
@@ -254,16 +290,21 @@ for key in selected_keys:
         tb_writer,
         num_iterations=NUM_ITERATIONS,
     )
-    tb_writer.close()
+    if tb_writer is not None:
+        tb_writer.close()
 
     # Write to napari viewer
     scale = [z_scale, y_scale, x_scale]
     viewer = napari.Viewer()
     viewer.add_image(
-        initial_recon.numpy()[None], name=f"initial-{key}", scale=scale
+        initial_recon.cpu().detach().numpy()[None],
+        name=f"initial-{key}",
+        scale=scale,
     )
     viewer.add_image(
-        optimized_recon.numpy()[None], name=f"optimized-{key}", scale=scale
+        optimized_recon.cpu().detach().numpy()[None],
+        name=f"optimized-{key}",
+        scale=scale,
     )
     viewer.add_image(zyx_tile, name=f"tile-{key}", scale=scale)
 
@@ -271,7 +312,7 @@ for key in selected_keys:
     pos = output_store.create_position(*key.split("/"))
     pos.create_image(
         "0",
-        optimized_recon[None, None, None].numpy(),
+        optimized_recon[None, None, None].cpu().detach().numpy(),
         transform=[TransformationMeta(type="scale", scale=[1, 1] + scale)],
     )
     input("Press Enter to continue...")
