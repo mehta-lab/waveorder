@@ -70,17 +70,26 @@ def axial_nyquist(
 def nd_fourier_central_cuboid(source, target_shape):
     """Central cuboid of an N-D Fourier transform.
 
+    If ``target_shape`` has fewer dimensions than ``source``, the
+    central cuboid is taken from the last ``len(target_shape)``
+    dimensions, preserving leading (batch) dimensions.
+
     Parameters
     ----------
     source : torch.Tensor
-        Source tensor
+        Source tensor.
     target_shape : tuple of int
+        Target spatial shape.
 
     Returns
     -------
     torch.Tensor
-        Center cuboid in Fourier space
-
+        Center cuboid in Fourier space.
     """
-    center_slices = tuple(slice((s - o) // 2, (s - o) // 2 + o) for s, o in zip(source.shape, target_shape))
-    return torch.fft.ifftshift(torch.fft.fftshift(source)[center_slices])
+    n_dim = len(target_shape)
+    dims = tuple(range(source.ndim))[-n_dim:]
+    center_slices = tuple(
+        slice((s - o) // 2, (s - o) // 2 + o) for s, o in zip(source.shape[-n_dim:], target_shape, strict=True)
+    )
+    center_slices = (slice(None),) * (source.ndim - n_dim) + center_slices
+    return torch.fft.ifftshift(torch.fft.fftshift(source, dim=dims)[center_slices], dim=dims)

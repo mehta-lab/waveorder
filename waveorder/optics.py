@@ -792,9 +792,13 @@ def compute_weak_object_transfer_function_2d(illumination_pupil, detection_pupil
 
     H1 = torch.fft.ifft2(torch.conj(SP_hat) * P_hat)
     H2 = torch.fft.ifft2(SP_hat * torch.conj(P_hat))
-    I_norm = torch.sum(illumination_pupil * detection_pupil * torch.conj(detection_pupil))
-    absorption_transfer_function = (H1 + H2) / I_norm
-    phase_transfer_function = 1j * (H1 - H2) / I_norm
+    inv_I_norm = 1 / torch.sum(
+        illumination_pupil * detection_pupil * torch.conj(detection_pupil),
+        dim=(-2, -1),
+        keepdim=True,
+    )
+    absorption_transfer_function = (H1 + H2) * inv_I_norm
+    phase_transfer_function = (H1 - H2) * (inv_I_norm * 1j)
 
     return absorption_transfer_function, phase_transfer_function
 
