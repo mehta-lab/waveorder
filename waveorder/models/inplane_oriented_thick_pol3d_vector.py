@@ -59,9 +59,6 @@ def calculate_transfer_function(
     yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
     z_factor = int(np.ceil(z_pixel_size / axial_nyquist))
 
-    print("YX factor:", yx_factor)
-    print("Z factor:", z_factor)
-
     tf_calculation_shape = (
         int(zyx_shape[0] * z_factor / fourier_oversample_factor),
         int(np.ceil(zyx_shape[1] * yx_factor / fourier_oversample_factor)),
@@ -122,7 +119,6 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_detection,
     invert_phase_contrast=False,
 ):
-    print("Computing transfer function")
     intensity_to_stokes_matrix = stokes.calculate_intensity_to_stokes_matrix(swing, scheme=scheme)
 
     input_jones = torch.tensor([0.0 - 1.0j, 1.0 + 0j])  # circular
@@ -139,7 +135,6 @@ def _calculate_wrap_unsafe_transfer_function(
     z_frequencies = torch.fft.fftfreq(z_total, d=z_pixel_size)
 
     # 2D pupils
-    print("\tCalculating pupils...")
     ill_pupil = optics.generate_pupil(
         radial_frequencies,
         numerical_aperture_illumination,
@@ -186,7 +181,6 @@ def _calculate_wrap_unsafe_transfer_function(
     P_3D = torch.abs(torch.fft.ifft(P, dim=-3)).type(torch.complex64)
     S_3D = torch.fft.ifft(S, dim=-3)
 
-    print("\tCalculating greens tensor spectrum...")
     G_3D = optics.generate_greens_tensor_spectrum(
         zyx_shape=(z_total, zyx_shape[1], zyx_shape[2]),
         zyx_pixel_size=(z_pixel_size, yx_pixel_size, yx_pixel_size),
@@ -199,13 +193,11 @@ def _calculate_wrap_unsafe_transfer_function(
 
     del P_3D, G_3D, S_3D
 
-    print("\tComputing pg and ps...")
     pg = torch.fft.fftn(PG_3D, dim=(-3, -2, -1))
     ps = torch.fft.fftn(PS_3D, dim=(-3, -2, -1))
 
     del PG_3D, PS_3D
 
-    print("\tComputing H1 and H2...")
     H1 = torch.fft.ifftn(
         torch.einsum("ipzyx,jkzyx->ijpkzyx", pg, torch.conj(ps)),
         dim=(-3, -2, -1),
@@ -227,7 +219,6 @@ def _calculate_wrap_unsafe_transfer_function(
     Y = util.gellmann()[[0, 4, 8]]
     # select phase f00 and transverse linear isotropic terms 2-2, and f22
 
-    print("\tComputing final transfer function...")
     sfZYX_transfer_function = torch.einsum("sik,ikpjzyx,lpj->slzyx", s, H_re, Y)
     return (
         sfZYX_transfer_function,
@@ -237,7 +228,6 @@ def _calculate_wrap_unsafe_transfer_function(
 
 def calculate_singular_system(sfZYX_transfer_function):
     # Compute regularized inverse filter
-    print("Computing SVD")
     ZYXsf_transfer_function = sfZYX_transfer_function.permute(2, 3, 4, 0, 1)
     U, S, Vh = torch.linalg.svd(ZYXsf_transfer_function, full_matrices=False)
     singular_system = (
@@ -285,7 +275,6 @@ def apply_inverse_transfer_function(
     TV_iterations: int = 10,
 ):
     # Key computation
-    print("Computing inverse filter")
     U, S, Vh = singular_system
     S_reg = S / (S**2 + regularization_strength)
     sfzyx_inverse_filter = torch.einsum("sjzyx,jzyx,jfzyx->sfzyx", U, S_reg, Vh)
