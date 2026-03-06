@@ -18,17 +18,24 @@ from waveorder.models import isotropic_thin_3d
 
 # === Core Functions ===
 def run_reconstruction(
-    zyx_tile: torch.Tensor, recon_args: dict
+    zyx_tile: torch.Tensor,
+    recon_args: dict,
+    z_list: torch.Tensor | None = None,
 ) -> torch.Tensor:
 
     # Prepare transfer function arguments
     tf_args = recon_args.copy()
-    Z, _, _ = zyx_tile.shape
-    tf_args["z_position_list"] = (
-        torch.arange(Z) - (Z // 2) + recon_args["z_offset"]
-    ) * recon_args["z_scale"]
     tf_args.pop("z_offset")
     tf_args.pop("z_scale")
+
+    if z_list is None:
+        # allocating this tensor inside the training loop was syncing the device
+        Z, _, _ = zyx_tile.shape
+        z_list = torch.arange(Z, device=zyx_tile.device) - (Z // 2)
+
+    tf_args["z_position_list"] = (
+        z_list + recon_args["z_offset"]
+    ) * recon_args["z_scale"]
 
     # Core reconstruction calls
     tf_abs, tf_phase = isotropic_thin_3d.calculate_transfer_function(**tf_args)
@@ -178,6 +185,10 @@ def optimize_tile(
         optimizable_params, device=device
     )
 
+    z_list = torch.arange(zyx_tile.shape[0], device=device) - (
+        zyx_tile.shape[0] // 2
+    )
+
     for step in range(num_iterations):
 
         # Update params
@@ -185,7 +196,7 @@ def optimize_tile(
             recon_args[name] = param
 
         # Run reconstruction and compute loss
-        yx_recon = run_reconstruction(zyx_tile, recon_args)
+        yx_recon = run_reconstruction(zyx_tile, recon_args, z_list)
         loss = -compute_midband_power(
             yx_recon,
             NA_det=0.15,
