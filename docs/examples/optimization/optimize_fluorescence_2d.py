@@ -32,7 +32,7 @@ log_dir = f"./runs/{datetime.datetime.now():%Y%m%d_%H%M%S}"
 optimized_settings, recon = fluorescence.optimize(
     data,
     settings=opt_settings,
-    num_iterations=50,
+    max_iterations=50,
     midband_fractions=(0.01, 0.5),
     log_dir=log_dir,
     log_images=True,

@@ -23,7 +23,7 @@ phase:
     reconstruction_algorithm: Tikhonov
     regularization_strength: 0.01
 optimization:
-  num_iterations: 10
+  max_iterations: 10
   loss:
     type: midband_power
     midband_fractions: [0.125, 0.25]

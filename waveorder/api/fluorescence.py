@@ -339,7 +339,7 @@ def optimize(
     czyx_data: xr.DataArray,
     recon_dim: Literal[2, 3] = 2,
     settings: Settings = None,
-    num_iterations: int = 10,
+    max_iterations: int = 10,
     method: str = "adam",
     convergence_tol: float | None = None,
     convergence_patience: int | None = 5,
@@ -359,7 +359,7 @@ def optimize(
         Reconstruction dimensionality (2 or 3).
     settings : Settings
         Fluorescence settings with OptimizableFloat fields.
-    num_iterations : int
+    max_iterations : int
         Maximum optimizer steps (ignored by grid_search).
     method : str
         Optimizer method: "adam", "lbfgs", "nelder_mead", "grid_search".
@@ -436,7 +436,7 @@ def optimize(
         return loss
 
     optim_kwargs = dict(
-        num_iterations=num_iterations,
+        max_iterations=max_iterations,
         method=method,
         use_gradients=use_gradients,
         grid_points=grid_points,

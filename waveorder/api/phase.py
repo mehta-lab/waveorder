@@ -371,7 +371,7 @@ def optimize(
     czyx_data: xr.DataArray,
     recon_dim: Literal[2, 3] = 2,
     settings: Settings = None,
-    num_iterations: int = 10,
+    max_iterations: int = 10,
     method: str = "adam",
     convergence_tol: float | None = None,
     convergence_patience: int | None = 5,
@@ -391,7 +391,7 @@ def optimize(
         Reconstruction dimensionality.
     settings : Settings
         Phase settings. Fields with ``lr > 0`` will be optimized.
-    num_iterations : int
+    max_iterations : int
         Maximum optimizer steps (ignored by grid_search).
     method : str
         Optimizer method: "adam", "lbfgs", "nelder_mead", "grid_search".
@@ -506,7 +506,7 @@ def optimize(
         lgr.log_image("illumination_pupil", torch.fft.fftshift(pupil).detach(), step)
 
     optim_kwargs = dict(
-        num_iterations=num_iterations,
+        max_iterations=max_iterations,
         method=method,
         use_gradients=use_gradients,
         grid_points=grid_points,

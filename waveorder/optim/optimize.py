@@ -53,7 +53,7 @@ def optimize_reconstruction(
     optimizable_params: dict[str, tuple[float, float]],
     fixed_params: dict | None = None,
     method: str = "adam",
-    num_iterations: int = 10,
+    max_iterations: int = 10,
     convergence_tol: float | None = None,
     convergence_patience: int = 5,
     use_gradients: bool | None = None,
@@ -86,14 +86,14 @@ def optimize_reconstruction(
         - ``"lbfgs"`` — gradient-based with line search.
           ``use_gradients`` defaults to True.
         - ``"nelder_mead"`` — gradient-free (scipy). Always runs under
-          ``torch.no_grad()``. ``num_iterations`` caps the number of
+          ``torch.no_grad()``. ``max_iterations`` caps the number of
           function evaluations.
         - ``"grid_search"`` — exhaustive evaluation over a parameter
           grid. Always runs under ``torch.no_grad()``.
-          ``num_iterations`` is ignored; the grid is
+          ``max_iterations`` is ignored; the grid is
           ``grid_points`` evenly spaced values centered on
           ``initial_value`` with spacing ``learning_rate``.
-    num_iterations : int
+    max_iterations : int
         Maximum optimizer steps (or function evaluations for
         Nelder-Mead). Ignored by grid_search.
     convergence_tol : float, optional
@@ -131,7 +131,7 @@ def optimize_reconstruction(
             loss_fn,
             optimizable_params,
             fixed_params=fixed_params,
-            num_iterations=num_iterations,
+            max_iterations=max_iterations,
             convergence_tol=convergence_tol,
             convergence_patience=convergence_patience,
             logger=logger,
@@ -158,7 +158,7 @@ def optimize_reconstruction(
         optimizable_params,
         fixed_params=fixed_params,
         method=method,
-        num_iterations=num_iterations,
+        max_iterations=max_iterations,
         convergence_tol=convergence_tol,
         convergence_patience=convergence_patience,
         use_gradients=use_gradients,
@@ -175,7 +175,7 @@ def _optimize_gradient(
     optimizable_params,
     fixed_params=None,
     method="adam",
-    num_iterations=10,
+    max_iterations=10,
     convergence_tol=None,
     convergence_patience=5,
     use_gradients=True,
@@ -219,7 +219,7 @@ def _optimize_gradient(
     patience_counter = 0
     best_loss = float("inf")
 
-    pbar = tqdm(range(num_iterations), desc="Optimizing")
+    pbar = tqdm(range(max_iterations), desc="Optimizing")
     for step in pbar:
         t_start = time.monotonic()
 
@@ -292,7 +292,7 @@ def _optimize_gradient(
                 final_recon = recon.detach()
                 break
 
-        if step == num_iterations - 1:
+        if step == max_iterations - 1:
             final_recon = recon.detach()
 
     logger.close()
@@ -313,7 +313,7 @@ def _optimize_nelder_mead(
     loss_fn,
     optimizable_params,
     fixed_params=None,
-    num_iterations=10,
+    max_iterations=10,
     convergence_tol=None,
     convergence_patience=5,
     logger=None,
@@ -322,7 +322,7 @@ def _optimize_nelder_mead(
 ) -> OptimizationResult:
     """Gradient-free Nelder-Mead optimization via scipy.
 
-    Always runs under ``torch.no_grad()``. ``num_iterations`` caps
+    Always runs under ``torch.no_grad()``. ``max_iterations`` caps
     both function evaluations and simplex iterations.
     """
     if logger is None:
@@ -381,8 +381,8 @@ def _optimize_nelder_mead(
         return loss_val
 
     options = {
-        "maxfev": num_iterations,
-        "maxiter": num_iterations,
+        "maxfev": max_iterations,
+        "maxiter": max_iterations,
     }
     if convergence_tol is not None:
         options["fatol"] = convergence_tol

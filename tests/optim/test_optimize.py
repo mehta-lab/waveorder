@@ -38,7 +38,7 @@ def test_optimize_reconstruction_basic():
         reconstruct_fn=reconstruct_fn,
         loss_fn=loss_fn,
         optimizable_params={"scale": (0.5, 0.1)},
-        num_iterations=3,
+        max_iterations=3,
     )
 
     assert "scale" in result.optimized_values
@@ -64,7 +64,7 @@ def test_optimize_reconstruction_converges():
         reconstruct_fn=reconstruct_fn,
         loss_fn=loss_fn,
         optimizable_params={"offset": (0.0, 0.5)},
-        num_iterations=20,
+        max_iterations=20,
     )
 
     # Loss should decrease
@@ -97,7 +97,7 @@ def test_convergence_early_stopping():
         reconstruct_fn=reconstruct_fn,
         loss_fn=loss_fn,
         optimizable_params={"offset": (2.9, 0.5)},
-        num_iterations=200,
+        max_iterations=200,
         convergence_tol=1e-4,
         convergence_patience=5,
     )
@@ -115,7 +115,7 @@ def test_no_grad_mode():
         reconstruct_fn=reconstruct_fn,
         loss_fn=loss_fn,
         optimizable_params={"offset": (0.0, 0.5)},
-        num_iterations=5,
+        max_iterations=5,
         use_gradients=False,
     )
 
@@ -134,7 +134,7 @@ def test_lbfgs_backend():
         loss_fn=loss_fn,
         optimizable_params={"offset": (0.0, 0.5)},
         method="lbfgs",
-        num_iterations=10,
+        max_iterations=10,
     )
 
     assert result.loss_history[-1] < result.loss_history[0]
@@ -151,7 +151,7 @@ def test_nelder_mead_backend():
         loss_fn=loss_fn,
         optimizable_params={"offset": (0.0, 0.5)},
         method="nelder_mead",
-        num_iterations=50,
+        max_iterations=50,
     )
 
     assert len(result.loss_history) > 0
@@ -183,7 +183,7 @@ def test_wall_times_recorded():
         reconstruct_fn=reconstruct_fn,
         loss_fn=loss_fn,
         optimizable_params={"offset": (0.0, 0.5)},
-        num_iterations=3,
+        max_iterations=3,
     )
 
     assert len(result.wall_times) == 3

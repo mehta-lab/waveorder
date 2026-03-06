@@ -270,7 +270,7 @@ def test_optimization_cli(tmp_path):
         phase=settings.PhaseSettings(
             transfer_function=PhaseTFSettings(z_focus_offset={"init": 0, "lr": 0.1}),
         ),
-        optimization=OptimizationSettings(num_iterations=2),
+        optimization=OptimizationSettings(max_iterations=2),
     )
     config_path = tmp_path / "optim.yml"
     utils.model_to_yaml(recon_settings, config_path)

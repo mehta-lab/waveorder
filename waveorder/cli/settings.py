@@ -25,7 +25,7 @@ class MidbandPowerLoss(MyBaseModel):
 
 
 class OptimizationSettings(MyBaseModel):
-    num_iterations: PositiveInt = Field(default=10, description="maximum optimizer steps (ignored by grid_search)")
+    max_iterations: PositiveInt = Field(default=10, description="maximum optimizer steps (ignored by grid_search)")
     method: str = Field(default="adam", description="optimizer method: adam, lbfgs, nelder_mead, grid_search")
     convergence_tol: Optional[float] = Field(default=None, description="early stopping tolerance")
     convergence_patience: Optional[PositiveInt] = Field(default=5, description="patience for early stopping")
