@@ -7,6 +7,14 @@ from typing import Any, Union
 from pydantic import BaseModel, model_validator
 
 
+class CacheSpec(BaseModel):
+    """Specification for caching a parameter's transfer functions on a grid."""
+
+    start: float
+    stop: float
+    step: float
+
+
 class OptimizableFloat(BaseModel):
     """A float parameter that can optionally be optimized.
 
@@ -23,6 +31,7 @@ class OptimizableFloat(BaseModel):
 
     initial_value: float = 0.0
     learning_rate: float = 0.01
+    cache: CacheSpec | None = None
 
     @model_validator(mode="before")
     @classmethod
