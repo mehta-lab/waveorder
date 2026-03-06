@@ -127,8 +127,9 @@ def _calculate_wrap_unsafe_transfer_function(
     else:
         z_positions = z_position_list.clone()
 
-    fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size)
-    radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
+    with torch.no_grad():
+        fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size)
+        radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
 
     illumination_pupil = optics.generate_tilted_pupil(
         fxx,

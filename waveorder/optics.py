@@ -204,16 +204,17 @@ def generate_tilted_pupil(
     K = n / lamb_in  # Ewald-sphere radius
     cos_alpha_max = torch.sqrt(1 - (NA / n) ** 2)
 
-    # sampling metrics
-    # Assume fxx, fyy are on a regular grid ⇒ pixel spacing in fx direction:
-    df = torch.abs(fxx[0, 1] - fxx[0, 0])
-    pixel_slope = slope / df
+    with torch.no_grad():
+        # sampling metrics
+        # Assume fxx, fyy are on a regular grid ⇒ pixel spacing in fx direction:
+        df = torch.abs(fxx[0, 1] - fxx[0, 0])
+        pixel_slope = slope / df
 
-    # sphere coordinates
-    fz_sq = K**2 - fxx**2 - fyy**2
-    inside_sphere = fz_sq >= 0
-    # clamp to avoid negative round-off, but keep gradients
-    fz = torch.sqrt(torch.clamp(fz_sq, min=0.0))
+        # sphere coordinates
+        fz_sq = K**2 - fxx**2 - fyy**2
+        inside_sphere = fz_sq >= 0
+        # clamp to avoid negative round-off, but keep gradients
+        fz = torch.sqrt(torch.clamp(fz_sq, min=0.0))
 
     # tilt unit vector
     sx = torch.sin(tilt_angle_zenith) * torch.cos(tilt_angle_azimuth)
