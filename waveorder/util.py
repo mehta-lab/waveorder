@@ -1,6 +1,7 @@
 import re
 import time
 from collections import namedtuple
+from functools import lru_cache
 
 import numpy as np
 import pywt
@@ -290,6 +291,7 @@ def generate_sphere_target(
     return sphere, azimuth, inc_angle
 
 
+@lru_cache(maxsize=1)
 def gen_coordinate(
     img_dim: tuple[int, int], ps: float
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
