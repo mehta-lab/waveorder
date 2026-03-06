@@ -25,7 +25,12 @@ class MidbandPowerLoss(MyBaseModel):
 
 
 class OptimizationSettings(MyBaseModel):
-    num_iterations: PositiveInt = Field(default=10, description="number of Adam optimizer steps")
+    num_iterations: PositiveInt = Field(default=10, description="maximum optimizer steps (ignored by grid_search)")
+    method: str = Field(default="adam", description="optimizer method: adam, lbfgs, nelder_mead, grid_search")
+    convergence_tol: Optional[float] = Field(default=None, description="early stopping tolerance")
+    convergence_patience: Optional[PositiveInt] = Field(default=5, description="patience for early stopping")
+    use_gradients: Optional[bool] = Field(default=None, description="auto-detect from method if null")
+    grid_points: int = Field(default=7, description="grid points per parameter (grid_search only)")
     loss: MidbandPowerLoss = Field(default_factory=MidbandPowerLoss, description="loss function configuration")
     log_dir: Optional[str] = Field(default=None, description="TensorBoard log directory (null = no logging)")
 

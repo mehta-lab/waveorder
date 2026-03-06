@@ -94,6 +94,11 @@ def _run_optimization(settings, input_position_dirpath, config_filepath):
     optimize_kwargs = dict(
         recon_dim=recon_dim,
         num_iterations=opt.num_iterations,
+        method=opt.method,
+        convergence_tol=opt.convergence_tol,
+        convergence_patience=opt.convergence_patience,
+        use_gradients=opt.use_gradients,
+        grid_points=opt.grid_points,
         midband_fractions=opt.loss.midband_fractions,
         log_dir=opt.log_dir,
     )

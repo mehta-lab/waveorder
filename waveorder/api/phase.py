@@ -372,6 +372,11 @@ def optimize(
     recon_dim: Literal[2, 3] = 2,
     settings: Settings = None,
     num_iterations: int = 10,
+    method: str = "adam",
+    convergence_tol: float | None = None,
+    convergence_patience: int | None = 5,
+    use_gradients: bool | None = None,
+    grid_points: int = 7,
     midband_fractions: tuple[float, float] = (0.125, 0.25),
     log_dir: str | None = None,
     log_images: bool = False,
@@ -385,10 +390,19 @@ def optimize(
     recon_dim : {2, 3}
         Reconstruction dimensionality.
     settings : Settings
-        Phase settings. Fields annotated as OptimizableFloat (with lr > 0)
-        will be optimized.
+        Phase settings. Fields with ``lr > 0`` will be optimized.
     num_iterations : int
-        Number of Adam optimizer steps.
+        Maximum optimizer steps (ignored by grid_search).
+    method : str
+        Optimizer method: "adam", "lbfgs", "nelder_mead", "grid_search".
+    convergence_tol : float, optional
+        Stop early if loss does not improve by at least this amount.
+    convergence_patience : int, optional
+        Iterations without improvement before early stopping.
+    use_gradients : bool, optional
+        Whether to compute gradients. Auto-detected from method if None.
+    grid_points : int
+        Number of grid points per parameter (grid_search only).
     midband_fractions : tuple[float, float]
         Inner and outer fractions of cutoff frequency for the loss annulus.
     log_dir : str, optional
@@ -399,7 +413,7 @@ def optimize(
     Returns
     -------
     tuple[Settings, xr.DataArray]
-        Updated settings with optimized parameter values, and the final reconstruction.
+        Updated settings with optimized values, and the final reconstruction.
     """
     if settings is None:
         settings = Settings()
@@ -491,15 +505,26 @@ def optimize(
         )
         lgr.log_image("illumination_pupil", torch.fft.fftshift(pupil).detach(), step)
 
+    optim_kwargs = dict(
+        num_iterations=num_iterations,
+        method=method,
+        use_gradients=use_gradients,
+        grid_points=grid_points,
+        log_images=log_images,
+        log_extras_fn=log_extras,
+    )
+    if convergence_tol is not None:
+        optim_kwargs["convergence_tol"] = convergence_tol
+    if convergence_patience is not None:
+        optim_kwargs["convergence_patience"] = convergence_patience
+
     result = optimize_reconstruction(
         data=zyx_data,
         reconstruct_fn=reconstruct_fn,
         loss_fn=loss_fn,
         optimizable_params=opt_params,
-        num_iterations=num_iterations,
         logger=logger,
-        log_images=log_images,
-        log_extras_fn=log_extras,
+        **optim_kwargs,
     )
 
     # Build updated settings
