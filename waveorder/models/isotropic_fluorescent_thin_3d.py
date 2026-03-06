@@ -1,4 +1,6 @@
-from typing import Literal, Tuple
+from __future__ import annotations
+
+from typing import Literal, Tuple, Union
 
 import numpy as np
 import torch
@@ -21,8 +23,6 @@ def generate_test_phantom(
         Shape of YX dimensions
     yx_pixel_size : float
         Pixel size in YX plane
-    wavelength_emission : float
-        Emission wavelength
     sphere_radius : float
         Radius of spherical phantom
 
@@ -48,10 +48,10 @@ def generate_test_phantom(
 def calculate_transfer_function(
     yx_shape: tuple[int, int],
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: Union[list, Tensor],
     wavelength_emission: float,
     index_of_refraction_media: float,
-    numerical_aperture_detection: float,
+    numerical_aperture_detection: Union[float, Tensor],
     confocal_pinhole_diameter: float | None = None,
 ) -> Tensor:
     """Calculate transfer function for fluorescent thin object imaging.
@@ -62,13 +62,13 @@ def calculate_transfer_function(
         Shape of YX dimensions
     yx_pixel_size : float
         Pixel size in YX plane
-    z_position_list : list
-        List of Z positions for defocus stack
+    z_position_list : list or Tensor
+        Defocus distances in micrometers
     wavelength_emission : float
         Emission wavelength
     index_of_refraction_media : float
         Refractive index of imaging medium
-    numerical_aperture_detection : float
+    numerical_aperture_detection : float or Tensor
         Numerical aperture of detection objective
     confocal_pinhole_diameter : float | None, optional
         Diameter of confocal pinhole. Not implemented for 2D fluorescence.
@@ -86,10 +86,13 @@ def calculate_transfer_function(
     if confocal_pinhole_diameter is not None:
         raise NotImplementedError("Confocal reconstruction is not implemented for 2D fluorescence")
 
+    # Extract float value for Nyquist computation (not in gradient chain)
+    na_det_val = float(torch.as_tensor(numerical_aperture_detection).detach())
+
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_emission,
-        numerical_aperture_detection,  # ill = det for fluorescence
-        numerical_aperture_detection,
+        na_det_val,  # ill = det for fluorescence
+        na_det_val,
     )
     yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
 
@@ -105,14 +108,11 @@ def calculate_transfer_function(
         numerical_aperture_detection,
     )
 
-    fluorescent_2d_to_3d_transfer_function_out = torch.zeros(
-        (len(z_position_list),) + tuple(yx_shape), dtype=torch.complex64
-    )
-
+    parts = []
     for z in range(len(z_position_list)):
-        fluorescent_2d_to_3d_transfer_function_out[z] = sampling.nd_fourier_central_cuboid(
-            fluorescent_2d_to_3d_transfer_function[z], yx_shape
-        )
+        parts.append(sampling.nd_fourier_central_cuboid(fluorescent_2d_to_3d_transfer_function[z], yx_shape))
+
+    fluorescent_2d_to_3d_transfer_function_out = torch.stack(parts, dim=0)
 
     return fluorescent_2d_to_3d_transfer_function_out
 
@@ -125,7 +125,8 @@ def calculate_singular_system(
     The transfer function has shape (Z, Vy, Vx), where (Z,) is the data-space
     dimension, and (Vy, Vx) are the spatial frequency dimensions.
 
-    The SVD is computed over the (Z,) dimension.
+    Uses a norm-based decomposition that is faster than full SVD and
+    supports gradient flow through complex tensors.
 
     Parameters
     ----------
@@ -135,33 +136,39 @@ def calculate_singular_system(
     Returns
     -------
     Tuple[Tensor, Tensor, Tensor]
-        U, S, Vh components of the SVD
+        U (1, 1, Vy, Vx), S (1, Vy, Vx), Vh (1, Z, Vy, Vx)
     """
-    # For fluorescence, we have only one object property (fluorescence density)
-    # Input shape: (Z, Vy, Vx)
+    # sfYX shape: (1, Z, Vy, Vx) where 1 represents single object type
+    sfYX = fluorescent_2d_to_3d_transfer_function[None]
+    _, Z, Vy, Vx = sfYX.shape
 
-    # We need to create the format: (1, Z, Vy, Vx) where 1 represents single object type
-    sfYX_transfer_function = fluorescent_2d_to_3d_transfer_function[None]
+    # S: norm over Z per frequency
+    S = torch.sqrt(
+        torch.clamp(
+            torch.sum(torch.abs(sfYX[0]) ** 2, dim=0),
+            min=1e-12,
+        )
+    )  # (Vy, Vx)
 
-    # Permute to: (Vy, Vx, 1, Z) for SVD
-    YXsf_transfer_function = sfYX_transfer_function.permute(2, 3, 0, 1)
-    Up, Sp, Vhp = torch.linalg.svd(YXsf_transfer_function, full_matrices=False)
-    # SVD gives us: Up: (Vy, Vx, 1, min(1,Z)), Sp: (Vy, Vx, min(1,Z)), Vhp: (Vy, Vx, min(1,Z), Z)
+    # Vh: normalized TF (1, Z, Vy, Vx)
+    Vh = sfYX / (S[None, None] + 1e-12)
 
-    # Permute back to match expected format:
-    U = Up.permute(2, 3, 0, 1)  # (1, min(1,Z), Vy, Vx) -> (1, Z, Vy, Vx)
-    S = Sp.permute(2, 0, 1)  # (min(1,Z), Vy, Vx) -> (1, Vy, Vx)
-    Vh = Vhp.permute(2, 3, 0, 1)  # (min(1,Z), Z, Vy, Vx) -> (1, 1, Vy, Vx)
+    # U: identity for single object type (1, 1, Vy, Vx)
+    U = torch.ones(1, 1, Vy, Vx, dtype=sfYX.dtype, device=sfYX.device)
+
+    # S: (1, Vy, Vx)
+    S = S[None]
+
     return U, S, Vh
 
 
 def _calculate_wrap_unsafe_transfer_function(
     yx_shape: tuple[int, int],
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: Union[list, Tensor],
     wavelength_emission: float,
     index_of_refraction_media: float,
-    numerical_aperture_detection: float,
+    numerical_aperture_detection: Union[float, Tensor],
 ) -> Tensor:
     """Calculate wrap-unsafe transfer function for fluorescent imaging."""
     radial_frequencies = util.generate_radial_frequencies(yx_shape, yx_pixel_size)
@@ -176,24 +183,24 @@ def _calculate_wrap_unsafe_transfer_function(
         radial_frequencies,
         det_pupil,
         wavelength_emission / index_of_refraction_media,
-        torch.tensor(z_position_list),
+        torch.as_tensor(z_position_list, dtype=torch.float32),
     )
 
-    zyx_shape = (len(z_position_list),) + tuple(yx_shape)
-    fluorescent_2d_to_3d_transfer_function = torch.zeros(zyx_shape, dtype=torch.complex64)
-
-    for z in range(len(z_position_list)):
+    parts = []
+    for z in range(propagation_kernel.shape[0]):
         # For fluorescent imaging, the transfer function is the squared magnitude
         # of the coherent transfer function (incoherent imaging)
         point_spread_function = torch.abs(torch.fft.ifft2(propagation_kernel[z], dim=(0, 1))) ** 2
-        fluorescent_2d_to_3d_transfer_function[z] = torch.fft.fft2(point_spread_function)
+        parts.append(torch.fft.fft2(point_spread_function))
+
+    fluorescent_tf = torch.stack(parts, dim=0)
 
     # Normalize
-    max_val = torch.max(torch.abs(fluorescent_2d_to_3d_transfer_function))
-    if max_val > 0:
-        fluorescent_2d_to_3d_transfer_function /= max_val
+    max_val = torch.max(torch.abs(fluorescent_tf))
+    max_val = torch.clamp(max_val, min=1e-12)
+    fluorescent_tf = fluorescent_tf / max_val
 
-    return fluorescent_2d_to_3d_transfer_function
+    return fluorescent_tf
 
 
 def visualize_transfer_function(
@@ -312,10 +319,10 @@ def apply_inverse_transfer_function(
 def reconstruct(
     zyx_data: Tensor,
     yx_pixel_size: float,
-    z_position_list: list,
+    z_position_list: Union[list, Tensor],
     wavelength_emission: float,
     index_of_refraction_media: float,
-    numerical_aperture_detection: float,
+    numerical_aperture_detection: Union[float, Tensor],
     reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
@@ -332,13 +339,13 @@ def reconstruct(
         3D raw data, fluorescence defocus stack
     yx_pixel_size : float
         Pixel size in the transverse (Y, X) dimensions
-    z_position_list : list
-        List of Z positions for defocus stack
+    z_position_list : list or Tensor
+        Defocus distances in micrometers
     wavelength_emission : float
         Emission wavelength
     index_of_refraction_media : float
         Refractive index of the surrounding medium
-    numerical_aperture_detection : float
+    numerical_aperture_detection : float or Tensor
         Detection numerical aperture
     reconstruction_algorithm : str, optional
         "Tikhonov" or "TV", by default "Tikhonov"

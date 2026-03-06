@@ -1,5 +1,7 @@
 """Fluorescence reconstruction: settings, transfer functions, inverse, and simulation."""
 
+from __future__ import annotations
+
 import warnings
 from typing import Literal, Optional
 
@@ -10,8 +12,8 @@ from pydantic import Field, PositiveFloat, model_validator
 
 from waveorder.api._settings import (
     FourierApplyInverseSettings,
-    FourierTransferFunctionSettings,
     MyBaseModel,
+    OptimizableFourierTransferFunctionSettings,
 )
 from waveorder.api._utils import (
     _build_output_xarray,
@@ -21,15 +23,22 @@ from waveorder.api._utils import (
     _to_singular_system,
     _to_tensor,
 )
+from waveorder.focus import compute_midband_power
 from waveorder.models import (
     isotropic_fluorescent_thick_3d,
     isotropic_fluorescent_thin_3d,
+)
+from waveorder.optim import (
+    PrintLogger,
+    TensorBoardLogger,
+    extract_optimizable_params,
+    optimize_reconstruction,
 )
 
 # --- Settings ---
 
 
-class TransferFunctionSettings(FourierTransferFunctionSettings):
+class TransferFunctionSettings(OptimizableFourierTransferFunctionSettings):
     wavelength_emission: PositiveFloat = Field(default=0.532, description="emission wavelength in micrometers")
     confocal_pinhole_diameter: Optional[PositiveFloat] = Field(
         default=None,
@@ -93,7 +102,7 @@ def simulate(
     if settings is None:
         settings = Settings()
 
-    s = settings.transfer_function
+    s = settings.transfer_function.resolve_floats()
     Z, Y, X = zyx_shape
     zyx_coords = {
         "z": np.arange(Z) * s.z_pixel_size,
@@ -130,7 +139,7 @@ def simulate(
         z_position_list = _position_list_from_shape_scale_offset(
             shape=Z,
             scale=s.z_pixel_size,
-            offset=0,
+            offset=s.z_focus_offset,
         )
         fluorescent_tf = isotropic_fluorescent_thin_3d.calculate_transfer_function(
             yx_shape=yx_shape,
@@ -184,23 +193,24 @@ def compute_transfer_function(
         settings = Settings()
 
     zyx_shape = czyx_data.shape[1:]  # CZYX -> ZYX
-    settings_dict = settings.transfer_function.model_dump()
+    s = settings.transfer_function.resolve_floats()
 
     if recon_dim == 2:
-        settings_dict["yx_shape"] = [zyx_shape[1], zyx_shape[2]]
-        settings_dict["z_position_list"] = _position_list_from_shape_scale_offset(
+        z_position_list = _position_list_from_shape_scale_offset(
             shape=zyx_shape[0],
-            scale=settings_dict["z_pixel_size"],
-            offset=settings_dict["z_focus_offset"],
+            scale=s.z_pixel_size,
+            offset=s.z_focus_offset,
         )
-        settings_dict.pop("z_pixel_size")
-        settings_dict.pop("z_padding")
-        settings_dict.pop("z_focus_offset")
 
-        fluorescent_2d_to_3d_tf = isotropic_fluorescent_thin_3d.calculate_transfer_function(
-            **settings_dict,
+        fluorescent_tf = isotropic_fluorescent_thin_3d.calculate_transfer_function(
+            yx_shape=[zyx_shape[1], zyx_shape[2]],
+            yx_pixel_size=s.yx_pixel_size,
+            z_position_list=z_position_list,
+            wavelength_emission=s.wavelength_emission,
+            index_of_refraction_media=s.index_of_refraction_media,
+            numerical_aperture_detection=s.numerical_aperture_detection,
         )
-        U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_2d_to_3d_tf)
+        U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_tf)
 
         return xr.Dataset(
             {
@@ -211,9 +221,15 @@ def compute_transfer_function(
         )
 
     elif recon_dim == 3:
-        settings_dict.pop("z_focus_offset")
-
-        optical_tf = isotropic_fluorescent_thick_3d.calculate_transfer_function(zyx_shape=zyx_shape, **settings_dict)
+        optical_tf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
+            zyx_shape=zyx_shape,
+            yx_pixel_size=s.yx_pixel_size,
+            z_pixel_size=s.z_pixel_size,
+            wavelength_emission=s.wavelength_emission,
+            z_padding=s.z_padding,
+            index_of_refraction_media=s.index_of_refraction_media,
+            numerical_aperture_detection=s.numerical_aperture_detection,
+        )
 
         return xr.Dataset(
             {
@@ -317,3 +333,113 @@ def reconstruct(
 
     tf = compute_transfer_function(czyx_data, recon_dim, settings)
     return apply_inverse_transfer_function(czyx_data, tf, recon_dim, settings, fluor_channel_name)
+
+
+def optimize(
+    czyx_data: xr.DataArray,
+    recon_dim: Literal[2, 3] = 2,
+    settings: Settings = None,
+    num_iterations: int = 10,
+    midband_fractions: tuple[float, float] = (0.125, 0.25),
+    log_dir: str | None = None,
+    log_images: bool = False,
+) -> tuple[Settings, xr.DataArray]:
+    """Optimize fluorescence reconstruction parameters.
+
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        CZYX fluorescence data (single channel).
+    recon_dim : {2, 3}
+        Reconstruction dimensionality (2 or 3).
+    settings : Settings
+        Fluorescence settings with OptimizableFloat fields.
+    num_iterations : int
+        Number of Adam optimizer steps.
+    midband_fractions : tuple[float, float]
+        Inner and outer fractions of cutoff frequency for the loss annulus.
+    log_dir : str, optional
+        TensorBoard log directory. None = print-only logging.
+
+    Returns
+    -------
+    tuple[Settings, xr.DataArray]
+        Updated settings with optimized parameter values, and the final reconstruction.
+    """
+    if settings is None:
+        settings = Settings()
+
+    opt_params, _ = extract_optimizable_params(settings.transfer_function)
+
+    if not opt_params:
+        print("No optimizable parameters found. Running standard reconstruction.")
+        return settings, reconstruct(czyx_data, recon_dim=recon_dim, settings=settings)
+
+    logger = TensorBoardLogger(log_dir) if log_dir else PrintLogger()
+
+    s = settings.transfer_function.resolve_floats()
+    zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32)
+    Z = zyx_data.shape[0]
+
+    def reconstruct_fn(data, **tensor_params):
+        na_det = tensor_params.get("numerical_aperture_detection", s.numerical_aperture_detection)
+        z_offset = tensor_params.get("z_focus_offset", s.z_focus_offset)
+
+        if recon_dim == 2:
+            z_position_list = (-torch.arange(Z) + (Z // 2) + z_offset) * s.z_pixel_size
+            return isotropic_fluorescent_thin_3d.reconstruct(
+                data,
+                yx_pixel_size=s.yx_pixel_size,
+                z_position_list=z_position_list,
+                wavelength_emission=s.wavelength_emission,
+                index_of_refraction_media=s.index_of_refraction_media,
+                numerical_aperture_detection=na_det,
+                regularization_strength=settings.apply_inverse.regularization_strength,
+            )
+        else:
+            return isotropic_fluorescent_thick_3d.reconstruct(
+                data,
+                yx_pixel_size=s.yx_pixel_size,
+                z_pixel_size=s.z_pixel_size,
+                wavelength_emission=s.wavelength_emission,
+                z_padding=s.z_padding,
+                index_of_refraction_media=s.index_of_refraction_media,
+                numerical_aperture_detection=na_det,
+                regularization_strength=settings.apply_inverse.regularization_strength,
+            )
+
+    def loss_fn(recon):
+        loss = -compute_midband_power(
+            recon,
+            NA_det=s.numerical_aperture_detection,
+            lambda_ill=s.wavelength_emission,
+            pixel_size=s.yx_pixel_size,
+            midband_fractions=midband_fractions,
+        )
+        if loss.ndim > 0:
+            loss = loss.mean()
+        return loss
+
+    result = optimize_reconstruction(
+        data=zyx_data,
+        reconstruct_fn=reconstruct_fn,
+        loss_fn=loss_fn,
+        optimizable_params=opt_params,
+        num_iterations=num_iterations,
+        logger=logger,
+        log_images=log_images,
+    )
+
+    new_tf_dict = settings.transfer_function.model_dump()
+    for dotted_name, value in result.optimized_values.items():
+        field_name = dotted_name.split(".")[-1]
+        new_tf_dict[field_name] = value
+
+    new_settings = Settings(
+        transfer_function=TransferFunctionSettings(**new_tf_dict),
+        apply_inverse=settings.apply_inverse,
+    )
+
+    final_recon = reconstruct(czyx_data, recon_dim=recon_dim, settings=new_settings)
+
+    return new_settings, final_recon

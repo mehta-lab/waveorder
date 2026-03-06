@@ -1,17 +1,21 @@
 """Phase reconstruction: settings, transfer functions, inverse, and simulation."""
 
-from typing import Literal
+from __future__ import annotations
+
+from typing import Literal, Union
 
 import numpy as np
 import torch
 import xarray as xr
 from pydantic import Field, NonNegativeFloat, model_validator
 
+from waveorder import optics, util
 from waveorder.api._settings import (
     FourierApplyInverseSettings,
-    FourierTransferFunctionSettings,
     MyBaseModel,
+    OptimizableFourierTransferFunctionSettings,
     WavelengthIllumination,
+    _float_val,
 )
 from waveorder.api._utils import (
     _build_output_xarray,
@@ -21,16 +25,26 @@ from waveorder.api._utils import (
     _to_singular_system,
     _to_tensor,
 )
+from waveorder.focus import compute_midband_power
 from waveorder.models import isotropic_thin_3d, phase_thick_3d
+from waveorder.optim import (
+    PrintLogger,
+    TensorBoardLogger,
+    extract_optimizable_params,
+    optimize_reconstruction,
+)
+from waveorder.optim._types import OptimizableFloat
 
 # --- Settings ---
 
 
 class TransferFunctionSettings(
-    FourierTransferFunctionSettings,
+    OptimizableFourierTransferFunctionSettings,
     WavelengthIllumination,
 ):
-    numerical_aperture_illumination: NonNegativeFloat = Field(default=0.9, description="condenser numerical aperture")
+    numerical_aperture_illumination: Union[NonNegativeFloat, OptimizableFloat] = Field(
+        default=0.9, description="(optimizable) condenser numerical aperture"
+    )
     invert_phase_contrast: bool = Field(
         default=False,
         description="invert contrast for positive/negative phase",
@@ -38,9 +52,10 @@ class TransferFunctionSettings(
 
     @model_validator(mode="after")
     def validate_numerical_aperture_illumination(self):
-        if self.numerical_aperture_illumination > self.index_of_refraction_media:
+        na_ill = _float_val(self.numerical_aperture_illumination)
+        if na_ill > self.index_of_refraction_media:
             raise ValueError(
-                f"numerical_aperture_illumination = {self.numerical_aperture_illumination} must be less than or equal to index_of_refraction_media = {self.index_of_refraction_media}"
+                f"numerical_aperture_illumination = {na_ill} must be less than or equal to index_of_refraction_media = {self.index_of_refraction_media}"
             )
         return self
 
@@ -91,7 +106,7 @@ def simulate(
     if settings is None:
         settings = Settings()
 
-    s = settings.transfer_function
+    s = settings.transfer_function.resolve_floats()
     Z, Y, X = zyx_shape
     zyx_coords = {
         "z": np.arange(Z) * s.z_pixel_size,
@@ -118,6 +133,8 @@ def simulate(
             index_of_refraction_media=s.index_of_refraction_media,
             numerical_aperture_illumination=s.numerical_aperture_illumination,
             numerical_aperture_detection=s.numerical_aperture_detection,
+            tilt_angle_zenith=s.tilt_angle_zenith,
+            tilt_angle_azimuth=s.tilt_angle_azimuth,
         )
         zyx_data = phase_thick_3d.apply_transfer_function(zyx_phase, real_tf, z_padding=0, brightness=1e3)
         phantom_zyx = zyx_phase.numpy()
@@ -132,14 +149,10 @@ def simulate(
             index_of_refraction_sample=index_of_refraction_sample,
             sphere_radius=sphere_radius,
         )
-        # Half-circle phantom (matching model-level example)
-        yx_phase[Y // 2 :] = 0
-
-        # Use same z_position_list as compute_transfer_function
         z_position_list = _position_list_from_shape_scale_offset(
             shape=Z,
             scale=s.z_pixel_size,
-            offset=0,
+            offset=s.z_focus_offset,
         )
         absorption_tf, phase_tf = isotropic_thin_3d.calculate_transfer_function(
             yx_shape=yx_shape,
@@ -150,6 +163,8 @@ def simulate(
             numerical_aperture_illumination=s.numerical_aperture_illumination,
             numerical_aperture_detection=s.numerical_aperture_detection,
             invert_phase_contrast=s.invert_phase_contrast,
+            tilt_angle_zenith=s.tilt_angle_zenith,
+            tilt_angle_azimuth=s.tilt_angle_azimuth,
         )
         # Zero absorption, phase-only object
         yx_absorption = torch.zeros_like(yx_phase)
@@ -198,20 +213,27 @@ def compute_transfer_function(
         settings = Settings()
 
     zyx_shape = czyx_data.shape[1:]  # CZYX -> ZYX
-    settings_dict = settings.transfer_function.model_dump()
+    s = settings.transfer_function.resolve_floats()
 
     if recon_dim == 2:
-        settings_dict["yx_shape"] = [zyx_shape[1], zyx_shape[2]]
-        settings_dict["z_position_list"] = _position_list_from_shape_scale_offset(
+        z_position_list = _position_list_from_shape_scale_offset(
             shape=zyx_shape[0],
-            scale=settings_dict["z_pixel_size"],
-            offset=settings_dict["z_focus_offset"],
+            scale=s.z_pixel_size,
+            offset=s.z_focus_offset,
         )
-        settings_dict.pop("z_pixel_size")
-        settings_dict.pop("z_padding")
-        settings_dict.pop("z_focus_offset")
 
-        absorption_tf, phase_tf = isotropic_thin_3d.calculate_transfer_function(**settings_dict)
+        absorption_tf, phase_tf = isotropic_thin_3d.calculate_transfer_function(
+            yx_shape=[zyx_shape[1], zyx_shape[2]],
+            yx_pixel_size=s.yx_pixel_size,
+            z_position_list=z_position_list,
+            wavelength_illumination=s.wavelength_illumination,
+            index_of_refraction_media=s.index_of_refraction_media,
+            numerical_aperture_illumination=s.numerical_aperture_illumination,
+            numerical_aperture_detection=s.numerical_aperture_detection,
+            invert_phase_contrast=s.invert_phase_contrast,
+            tilt_angle_zenith=s.tilt_angle_zenith,
+            tilt_angle_azimuth=s.tilt_angle_azimuth,
+        )
         U, S, Vh = isotropic_thin_3d.calculate_singular_system(absorption_tf, phase_tf)
 
         return xr.Dataset(
@@ -223,9 +245,19 @@ def compute_transfer_function(
         )
 
     elif recon_dim == 3:
-        settings_dict.pop("z_focus_offset")
-
-        real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(zyx_shape=zyx_shape, **settings_dict)
+        real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(
+            zyx_shape=zyx_shape,
+            yx_pixel_size=s.yx_pixel_size,
+            z_pixel_size=s.z_pixel_size,
+            wavelength_illumination=s.wavelength_illumination,
+            z_padding=s.z_padding,
+            index_of_refraction_media=s.index_of_refraction_media,
+            numerical_aperture_illumination=s.numerical_aperture_illumination,
+            numerical_aperture_detection=s.numerical_aperture_detection,
+            invert_phase_contrast=s.invert_phase_contrast,
+            tilt_angle_zenith=s.tilt_angle_zenith,
+            tilt_angle_azimuth=s.tilt_angle_azimuth,
+        )
 
         return xr.Dataset(
             {
@@ -333,3 +365,153 @@ def reconstruct(
 
     tf = compute_transfer_function(czyx_data, recon_dim, settings)
     return apply_inverse_transfer_function(czyx_data, tf, recon_dim, settings)
+
+
+def optimize(
+    czyx_data: xr.DataArray,
+    recon_dim: Literal[2, 3] = 2,
+    settings: Settings = None,
+    num_iterations: int = 10,
+    midband_fractions: tuple[float, float] = (0.125, 0.25),
+    log_dir: str | None = None,
+    log_images: bool = False,
+) -> tuple[Settings, xr.DataArray]:
+    """Optimize reconstruction parameters by maximizing midband spatial frequency power.
+
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        CZYX brightfield data (single channel).
+    recon_dim : {2, 3}
+        Reconstruction dimensionality.
+    settings : Settings
+        Phase settings. Fields annotated as OptimizableFloat (with lr > 0)
+        will be optimized.
+    num_iterations : int
+        Number of Adam optimizer steps.
+    midband_fractions : tuple[float, float]
+        Inner and outer fractions of cutoff frequency for the loss annulus.
+    log_dir : str, optional
+        TensorBoard log directory. None = print-only logging.
+    log_images : bool
+        If True, log reconstruction images to TensorBoard each iteration.
+
+    Returns
+    -------
+    tuple[Settings, xr.DataArray]
+        Updated settings with optimized parameter values, and the final reconstruction.
+    """
+    if settings is None:
+        settings = Settings()
+
+    opt_params, _ = extract_optimizable_params(settings.transfer_function)
+
+    if not opt_params:
+        print("No optimizable parameters found. Running standard reconstruction.")
+        return settings, reconstruct(czyx_data, recon_dim=recon_dim, settings=settings)
+
+    logger = TensorBoardLogger(log_dir) if log_dir else PrintLogger()
+
+    s = settings.transfer_function.resolve_floats()
+    zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32)
+    Z = zyx_data.shape[0]
+    yx_shape = (zyx_data.shape[1], zyx_data.shape[2])
+
+    # Soft pupil cutoff for smooth gradients during optimization.
+    # The final reconstruction (after optimize returns) uses the default 1e4.
+    optim_steepness = 100.0
+
+    def reconstruct_fn(data, **tensor_params):
+        na_ill = tensor_params.get("numerical_aperture_illumination", s.numerical_aperture_illumination)
+        na_det = tensor_params.get("numerical_aperture_detection", s.numerical_aperture_detection)
+        z_offset = tensor_params.get("z_focus_offset", s.z_focus_offset)
+        tilt_zenith = tensor_params.get("tilt_angle_zenith", s.tilt_angle_zenith)
+        tilt_azimuth = tensor_params.get("tilt_angle_azimuth", s.tilt_angle_azimuth)
+
+        if recon_dim == 2:
+            z_positions = (-torch.arange(Z) + (Z // 2) + z_offset) * s.z_pixel_size
+            return isotropic_thin_3d.reconstruct(
+                data,
+                yx_pixel_size=s.yx_pixel_size,
+                z_position_list=z_positions,
+                wavelength_illumination=s.wavelength_illumination,
+                index_of_refraction_media=s.index_of_refraction_media,
+                numerical_aperture_illumination=na_ill,
+                numerical_aperture_detection=na_det,
+                invert_phase_contrast=s.invert_phase_contrast,
+                regularization_strength=settings.apply_inverse.regularization_strength,
+                tilt_angle_zenith=tilt_zenith,
+                tilt_angle_azimuth=tilt_azimuth,
+                pupil_steepness=optim_steepness,
+            )[1]  # [1] = phase
+        else:
+            return phase_thick_3d.reconstruct(
+                data,
+                yx_pixel_size=s.yx_pixel_size,
+                z_pixel_size=s.z_pixel_size,
+                wavelength_illumination=s.wavelength_illumination,
+                z_padding=s.z_padding,
+                index_of_refraction_media=s.index_of_refraction_media,
+                numerical_aperture_illumination=na_ill,
+                numerical_aperture_detection=na_det,
+                invert_phase_contrast=s.invert_phase_contrast,
+                regularization_strength=settings.apply_inverse.regularization_strength,
+                tilt_angle_zenith=tilt_zenith,
+                tilt_angle_azimuth=tilt_azimuth,
+                pupil_steepness=optim_steepness,
+            )
+
+    def loss_fn(recon):
+        loss = -compute_midband_power(
+            recon,
+            NA_det=s.numerical_aperture_detection,
+            lambda_ill=s.wavelength_illumination,
+            pixel_size=s.yx_pixel_size,
+            midband_fractions=midband_fractions,
+        )
+        if loss.ndim > 0:
+            loss = loss.mean()
+        return loss
+
+    def log_extras(step, lgr, param_tensors):
+        if not log_images:
+            return
+        tilt_z = param_tensors.get("tilt_angle_zenith", s.tilt_angle_zenith)
+        tilt_a = param_tensors.get("tilt_angle_azimuth", s.tilt_angle_azimuth)
+        na_ill_t = param_tensors.get("numerical_aperture_illumination", s.numerical_aperture_illumination)
+        fyy, fxx = util.generate_frequencies(yx_shape, s.yx_pixel_size)
+        pupil = optics.generate_tilted_pupil(
+            fxx,
+            fyy,
+            na_ill_t,
+            s.wavelength_illumination,
+            s.index_of_refraction_media,
+            tilt_z,
+            tilt_a,
+        )
+        lgr.log_image("illumination_pupil", torch.fft.fftshift(pupil).detach(), step)
+
+    result = optimize_reconstruction(
+        data=zyx_data,
+        reconstruct_fn=reconstruct_fn,
+        loss_fn=loss_fn,
+        optimizable_params=opt_params,
+        num_iterations=num_iterations,
+        logger=logger,
+        log_images=log_images,
+        log_extras_fn=log_extras,
+    )
+
+    # Build updated settings
+    new_tf_dict = settings.transfer_function.model_dump()
+    for dotted_name, value in result.optimized_values.items():
+        field_name = dotted_name.split(".")[-1]
+        new_tf_dict[field_name] = value
+
+    new_settings = Settings(
+        transfer_function=TransferFunctionSettings(**new_tf_dict),
+        apply_inverse=settings.apply_inverse,
+    )
+
+    final_recon = reconstruct(czyx_data, recon_dim=recon_dim, settings=new_settings)
+    return new_settings, final_recon

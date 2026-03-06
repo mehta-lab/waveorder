@@ -246,6 +246,61 @@ def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
         assert dataset.channel_names[-1] == "GFP_Density2D"
 
 
+def test_optimization_cli(tmp_path):
+    """Smoke test: reconstruct with OptimizableFloat runs optimization then reconstructs."""
+    from waveorder.api.phase import TransferFunctionSettings as PhaseTFSettings
+    from waveorder.cli.settings import OptimizationSettings
+
+    input_path = tmp_path / "optim_input.zarr"
+    output_path = tmp_path / "optim_output.zarr"
+
+    # Create input dataset with a single channel
+    channel_names = ["Brightfield"]
+    dataset = open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=channel_names)
+    position = dataset.create_position("0", "0", "0")
+    data = np.random.rand(1, 1, 4, 5, 6).astype(np.float32) + 10.0
+    position.create_image("0", data, transform=[TransformationMeta(type="scale", scale=input_scale)])
+    dataset.close()
+
+    # Config with an optimizable z_focus_offset
+    recon_settings = settings.ReconstructionSettings(
+        input_channel_names=channel_names,
+        time_indices=0,
+        reconstruction_dimension=2,
+        phase=settings.PhaseSettings(
+            transfer_function=PhaseTFSettings(z_focus_offset={"init": 0, "lr": 0.1}),
+        ),
+        optimization=OptimizationSettings(num_iterations=2),
+    )
+    config_path = tmp_path / "optim.yml"
+    utils.model_to_yaml(recon_settings, config_path)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    assert output_path.exists()
+
+    # Verify optimized config was saved with updated parameters
+    optimized_config = config_path.with_name("optim_optimized.yml")
+    assert optimized_config.exists()
+    optimized = utils.yaml_to_model(optimized_config, settings.ReconstructionSettings)
+    # z_focus_offset should be a plain float (no longer OptimizableFloat) and should have moved from 0
+    assert isinstance(optimized.phase.transfer_function.z_focus_offset, float)
+    assert optimized.phase.transfer_function.z_focus_offset != 0.0
+
+
 def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
     tmp_input_zarr, tmp_config_yml = tmp_input_path_zarr
     tmp_config_yml = tmp_config_yml.with_name("0.yml").resolve()

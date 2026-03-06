@@ -1,6 +1,6 @@
 from typing import List, Literal, Optional, Union
 
-from pydantic import Field, NonNegativeInt, model_validator
+from pydantic import Field, NonNegativeInt, PositiveInt, model_validator
 
 from waveorder.api._settings import (  # noqa: F401
     FourierApplyInverseSettings,
@@ -17,6 +17,19 @@ from waveorder.api.fluorescence import (  # noqa: F401
 from waveorder.api.phase import Settings as PhaseSettings  # noqa: F401
 
 
+class MidbandPowerLoss(MyBaseModel):
+    type: Literal["midband_power"] = "midband_power"
+    midband_fractions: List[float] = Field(
+        default=[0.125, 0.25], description="inner/outer fractions of cutoff frequency"
+    )
+
+
+class OptimizationSettings(MyBaseModel):
+    num_iterations: PositiveInt = Field(default=10, description="number of Adam optimizer steps")
+    loss: MidbandPowerLoss = Field(default_factory=MidbandPowerLoss, description="loss function configuration")
+    log_dir: Optional[str] = Field(default=None, description="TensorBoard log directory (null = no logging)")
+
+
 # Top level settings (CLI-specific)
 class ReconstructionSettings(MyBaseModel):
     input_channel_names: List[str] = Field(
@@ -30,6 +43,7 @@ class ReconstructionSettings(MyBaseModel):
     birefringence: Optional[BirefringenceSettings] = None
     phase: Optional[PhaseSettings] = None
     fluorescence: Optional[FluorescenceSettings] = None
+    optimization: Optional[OptimizationSettings] = None
 
     @model_validator(mode="after")
     def validate_reconstruction_types(self):

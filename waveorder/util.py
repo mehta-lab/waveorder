@@ -684,15 +684,17 @@ def inten_normalization(img_stack, bg_filter=True):
 
     Z, Y, X = img_stack.shape
 
-    img_norm_stack = torch.zeros_like(img_stack)
-
-    for i in range(Z):
-        if bg_filter:
+    if bg_filter:
+        img_norm_stack = torch.zeros_like(img_stack)
+        for i in range(Z):
             img_norm_stack[i] = img_stack[i] / uniform_filter(img_stack[i], size=X // 2)
-        else:
-            img_norm_stack[i] = img_stack[i]
-        img_norm_stack[i] /= torch.mean(img_norm_stack[i])
-        img_norm_stack[i] -= 1
+        means = torch.mean(img_norm_stack, dim=(-2, -1), keepdim=True)
+        means = torch.clamp(means, min=1e-12)
+        img_norm_stack = img_norm_stack / means - 1
+    else:
+        means = torch.mean(img_stack, dim=(-2, -1), keepdim=True)
+        means = torch.clamp(means, min=1e-12)
+        img_norm_stack = img_stack / means - 1
 
     return img_norm_stack
 
@@ -713,8 +715,7 @@ def inten_normalization_3D(img_stack):
                          normalized image stack with size of (Z, Y, X)
 
     """
-    img_norm_stack = img_stack / torch.mean(img_stack)
-    img_norm_stack -= 1
+    img_norm_stack = img_stack / torch.clamp(torch.mean(img_stack), min=1e-12) - 1
     return img_norm_stack
 
 

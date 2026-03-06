@@ -388,7 +388,7 @@ class waveorder_microscopy:
         if QLIPP_birefringence_only == False:
             # setup microscocpe variables
             self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
-            self.frr = np.sqrt(self.fxx**2 + self.fyy**2)
+            self.frr = torch.sqrt(torch.as_tensor(self.fxx**2 + self.fyy**2, dtype=torch.float32))
             self.Pupil_obj = generate_pupil(self.frr, self.NA_obj, self.lambda_illu).numpy()
             self.Pupil_support = self.Pupil_obj.copy()
 
