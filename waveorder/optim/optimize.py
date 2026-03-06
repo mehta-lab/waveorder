@@ -11,7 +11,7 @@ import torch
 from torch import Tensor
 from tqdm import tqdm
 
-from waveorder.optim.logging import OptimLogger, PrintLogger
+from waveorder.optim.logging import NullLogger, OptimLogger
 
 
 @dataclass
@@ -62,7 +62,7 @@ def optimize_reconstruction(
         Contains optimized parameter values, loss history, and final reconstruction.
     """
     if logger is None:
-        logger = PrintLogger()
+        logger = NullLogger()
 
     if fixed_params is None:
         fixed_params = {}

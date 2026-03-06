@@ -28,7 +28,7 @@ from waveorder.api._utils import (
 from waveorder.focus import compute_midband_power
 from waveorder.models import isotropic_thin_3d, phase_thick_3d
 from waveorder.optim import (
-    PrintLogger,
+    NullLogger,
     TensorBoardLogger,
     extract_optimizable_params,
     optimize_reconstruction,
@@ -410,7 +410,7 @@ def optimize(
         print("No optimizable parameters found. Running standard reconstruction.")
         return settings, reconstruct(czyx_data, recon_dim=recon_dim, settings=settings)
 
-    logger = TensorBoardLogger(log_dir) if log_dir else PrintLogger()
+    logger = TensorBoardLogger(log_dir) if log_dir else NullLogger()
 
     s = settings.transfer_function.resolve_floats()
     zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32)
