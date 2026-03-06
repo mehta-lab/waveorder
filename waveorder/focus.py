@@ -58,7 +58,7 @@ def compute_midband_power(
     device = input_tensor.device
 
     _, _, fxx, fyy = util.gen_coordinate((Y, X), pixel_size)
-    frr = torch.tensor(np.sqrt(fxx**2 + fyy**2), device=device)
+    frr = torch.sqrt(fxx**2 + fyy**2).to(device)
     cutoff = 2 * NA_det / lambda_ill
     mask = torch.logical_and(
         frr > cutoff * midband_fractions[0],

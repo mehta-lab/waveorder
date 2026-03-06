@@ -69,7 +69,7 @@ I_cali_mean = np.array(PTI_file.I_cali_mean)
 _, _, Ns, Ms, _ = I_meas.shape
 
 xx, yy, fxx, fyy = util.gen_coordinate((Ns, Ms), ps)
-frr = np.sqrt(fxx**2 + fyy**2)
+frr = torch.sqrt(fxx**2 + fyy**2)
 
 rotation_angle = [
     180 - 22.5,

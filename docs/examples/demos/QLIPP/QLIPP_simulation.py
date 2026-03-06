@@ -121,7 +121,7 @@ jupyter_visuals.plot_multicolumn(
 # Source pupil
 # Subsample source pattern for speed
 xx, yy, fxx, fyy = util.gen_coordinate((N, M), ps)
-radial_frequencies = np.sqrt(fxx**2 + fyy**2)
+radial_frequencies = torch.sqrt(fxx**2 + fyy**2)
 Source_cont = optics.generate_pupil(radial_frequencies, NA_illu, lambda_illu).numpy()
 Source_discrete = optics.Source_subsample(Source_cont, lambda_illu * fxx, lambda_illu * fyy, subsampled_NA=0.1)
 plt.figure(figsize=(10, 10))
