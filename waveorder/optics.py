@@ -235,11 +235,14 @@ def generate_tilted_pupil(
     rho_sq = ((fxx / norm) ** 2 + (fyy / norm) ** 2).clamp(min=1e-6)
     rho = torch.sqrt(rho_sq).clamp(max=1.0)
     theta = torch.atan2(fyy, fxx)
-    phase = torch.zeros_like(rho)
 
-    for j, coeff in enumerate(phase_zernike_vector):
-        m, n = zernike.noll_to_zern(j + 1)
-        phase = phase + (coeff * zernike.zernike(m, n, rho, theta))
+    zernikes = []
+    for j in len(phase_zernike_vector):
+        m, n_ = zernike.noll_to_zern(j + 1)
+        zernikes.append(zernike.zernike(m, n_, rho, theta))
+
+    zernikes = torch.stack(zernikes, dim=-1)
+    phase = torch.sum(zernikes * phase_zernike_vector, dim=-1)
 
     return pupil * torch.exp(1j * phase)
 
@@ -898,7 +901,9 @@ def compute_weak_object_transfer_function_2d(
     H1 = torch.fft.ifft2(torch.conj(SP_hat) * P_hat)
     H2 = torch.fft.ifft2(SP_hat * torch.conj(P_hat))
     inv_I_norm = 1 / torch.sum(
-        illumination_pupil * detection_pupil * torch.conj(detection_pupil)
+        illumination_pupil * detection_pupil * torch.conj(detection_pupil),
+        dim=(-2, -1),
+        keepdim=True,
     )
     absorption_transfer_function = (H1 + H2) * inv_I_norm
     phase_transfer_function = (H1 - H2) * (inv_I_norm * 1j)

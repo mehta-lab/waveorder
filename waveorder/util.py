@@ -1,7 +1,6 @@
 import re
 import time
 from collections import namedtuple
-from functools import lru_cache
 
 import numpy as np
 import pywt
@@ -291,7 +290,9 @@ def generate_sphere_target(
     return sphere, azimuth, inc_angle
 
 
-def gen_coordinate(img_dim: tuple[int, int], ps: float) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+def gen_coordinate(
+    img_dim: tuple[int, int], ps: float
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
     generate spatial and spatial frequency coordinate arrays
 
@@ -320,8 +321,12 @@ def gen_coordinate(img_dim: tuple[int, int], ps: float) -> tuple[torch.Tensor, t
 
     fx = torch.fft.fftfreq(M, ps)
     fy = torch.fft.fftfreq(N, ps)
-    x = torch.fft.ifftshift((torch.arange(M, dtype=torch.float64) - M / 2) * ps)
-    y = torch.fft.ifftshift((torch.arange(N, dtype=torch.float64) - N / 2) * ps)
+    x = torch.fft.ifftshift(
+        (torch.arange(M, dtype=torch.float64) - M / 2) * ps
+    )
+    y = torch.fft.ifftshift(
+        (torch.arange(N, dtype=torch.float64) - N / 2) * ps
+    )
 
     xx, yy = torch.meshgrid(x, y, indexing="xy")
     fxx, fyy = torch.meshgrid(fx, fy, indexing="xy")
@@ -703,19 +708,19 @@ def inten_normalization(img_stack, bg_filter=True):
 
     """
 
-    Z, Y, X = img_stack.shape
+    _, Y, X = img_stack.shape
 
-    img_norm_stack = torch.zeros_like(img_stack)
+    if bg_filter:
+        img_norm_stack = img_stack / torch.as_tensor(
+            uniform_filter(img_stack, size=(1, X // 2, X // 2))
+        )
+    else:
+        img_norm_stack = img_stack.clone()
 
-    for i in range(Z):
-        if bg_filter:
-            img_norm_stack[i] = img_stack[i] / uniform_filter(
-                img_stack[i], size=X // 2
-            )
-        else:
-            img_norm_stack[i] = img_stack[i]
-        img_norm_stack[i] /= torch.mean(img_norm_stack[i])
-        img_norm_stack[i] -= 1
+    img_norm_stack = (
+        img_norm_stack / torch.mean(img_norm_stack, dim=(-2, -1), keepdim=True)
+        - 1
+    )
 
     return img_norm_stack
 

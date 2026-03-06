@@ -74,8 +74,10 @@ def calculate_transfer_function(
         tilt_angle_azimuth=tilt_angle_azimuth,
     )
 
-    absorption_2d_to_3d_transfer_function_out = sampling.nd_fourier_central_cuboid(
-        absorption_2d_to_3d_transfer_function, yx_shape
+    absorption_2d_to_3d_transfer_function_out = (
+        sampling.nd_fourier_central_cuboid(
+            absorption_2d_to_3d_transfer_function, yx_shape
+        )
     )
 
     phase_2d_to_3d_transfer_function_out = sampling.nd_fourier_central_cuboid(
@@ -149,19 +151,13 @@ def _calculate_wrap_unsafe_transfer_function(
         wavelength_illumination / index_of_refraction_media,
         z_positions,
     )
-    prop_kernel_z_list = propagation_kernel.unbind(dim=0)
-    absorption_2d_to_3d_transfer_function = []
-    phase_2d_to_3d_transfer_function = []
- 
-    for prop_kernel_z in prop_kernel_z_list:
-        absorption, phase = optics.compute_weak_object_transfer_function_2d(
-            illumination_pupil, detection_pupil * prop_kernel_z
+
+    absorption_2d_to_3d_transfer_function, phase_2d_to_3d_transfer_function = (
+        optics.compute_weak_object_transfer_function_2d(
+            illumination_pupil,
+            detection_pupil.unsqueeze(0) * propagation_kernel,
         )
-        absorption_2d_to_3d_transfer_function.append(absorption)
-        phase_2d_to_3d_transfer_function.append(phase)
-    
-    absorption_2d_to_3d_transfer_function = torch.stack(absorption_2d_to_3d_transfer_function, dim=0)
-    phase_2d_to_3d_transfer_function = torch.stack(phase_2d_to_3d_transfer_function, dim=0)
+    )
 
     return (
         absorption_2d_to_3d_transfer_function,
