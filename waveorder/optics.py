@@ -237,7 +237,7 @@ def generate_tilted_pupil(
     theta = torch.atan2(fyy, fxx)
 
     zernikes = []
-    for j in len(phase_zernike_vector):
+    for j in range(len(phase_zernike_vector)):
         m, n_ = zernike.noll_to_zern(j + 1)
         zernikes.append(zernike.zernike(m, n_, rho, theta))
 
