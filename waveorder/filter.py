@@ -64,8 +64,6 @@ def apply_filter_bank(
     if io_filter_bank.shape[0] != i_input_array.shape[0]:
         raise ValueError("io_filter_bank.shape[0] and i_input_array.shape[0] must be the same.")
 
-    num_input_channels, num_output_channels = io_filter_bank.shape[:2]
-
     # Pad input_array until each dimension is divisible by transfer_function
     pad_sizes = [(0, (t - (i % t)) % t) for t, i in zip(io_filter_bank.shape[2:][::-1], i_input_array.shape[1:][::-1])]
     flat_pad_sizes = list(itertools.chain(*pad_sizes))
@@ -75,31 +73,61 @@ def apply_filter_bank(
     fft_dims = [d for d in range(1, i_input_array.ndim)]
     padded_input_spectrum = torch.fft.fftn(padded_input_array, dim=fft_dims)
 
-    # Matrix-vector multiplication over f
-    # If this is a bottleneck, consider extending `stretched_multiply` to
-    # a `stretched_matrix_multiply` that uses an call like
-    # torch.einsum('io..., i... -> o...', io_filter_bank, padded_input_spectrum)
-    #
-    # Further optimization is likely with a combination of
-    # torch.baddbmm, torch.pixel_shuffle, torch.pixel_unshuffle.
-    padded_output_spectrum = torch.zeros(
-        (num_output_channels,) + padded_input_spectrum.shape[1:],
-        dtype=padded_input_spectrum.dtype,
-        device=padded_input_spectrum.device,
-    )
-    for input_channel_idx in range(num_input_channels):
-        for output_channel_idx in range(num_output_channels):
-            padded_output_spectrum[output_channel_idx] += stretched_multiply(
-                io_filter_bank[input_channel_idx, output_channel_idx],
-                padded_input_spectrum[input_channel_idx],
-            )
+    # Batched matrix-vector multiply over all i/o channels at once
+    padded_output_spectrum = stretched_matrix_multiply(io_filter_bank, padded_input_spectrum)
 
     # Cast to real, ignoring imaginary part
     padded_result = torch.real(torch.fft.ifftn(padded_output_spectrum, dim=fft_dims))
 
-    # Remove padding and return
-    slices = tuple(slice(0, i) for i in i_input_array.shape)
+    # Remove padding and return (keep all output channels, unpad spatial dims)
+    slices = (slice(None),) + tuple(slice(0, s) for s in i_input_array.shape[1:])
     return padded_result[slices]
+
+
+def stretched_matrix_multiply(
+    io_filter_bank: torch.Tensor,
+    padded_input_spectrum: torch.Tensor,
+) -> torch.Tensor:
+    """Batched stretched multiply over input/output channels.
+
+    Equivalent to the double loop::
+
+        for i in range(I):
+            for o in range(O):
+                out[o] += stretched_multiply(filter[i, o], spectrum[i])
+
+    Parameters
+    ----------
+    io_filter_bank : torch.Tensor
+        Shape ``(I, O, s0, s1, ..., s_{n-1})``.
+    padded_input_spectrum : torch.Tensor
+        Shape ``(I, l0, l1, ..., l_{n-1})``, where each ``lk`` is
+        divisible by ``sk``.
+
+    Returns
+    -------
+    torch.Tensor
+        Shape ``(O, l0, l1, ..., l_{n-1})``.
+    """
+    num_input_channels, num_output_channels = io_filter_bank.shape[:2]
+    s_shape = io_filter_bank.shape[2:]
+    l_shape = padded_input_spectrum.shape[1:]
+    ndim = len(s_shape)
+
+    b_shape = tuple(l // s for l, s in zip(l_shape, s_shape))
+
+    # (I, l0, ...) -> (I, 1, s0, b0, s1, b1, ...)
+    interleaved_l = tuple(itertools.chain(*zip(s_shape, b_shape)))
+    spectrum_reshaped = padded_input_spectrum.reshape((num_input_channels, 1) + interleaved_l)
+
+    # (I, O, s0, ...) -> (I, O, s0, 1, s1, 1, ...)
+    interleaved_s = tuple(itertools.chain(*zip(s_shape, ndim * (1,))))
+    filter_reshaped = io_filter_bank.reshape((num_input_channels, num_output_channels) + interleaved_s)
+
+    # Multiply and contract over I -> (O, s0, b0, s1, b1, ...)
+    result_reshaped = (spectrum_reshaped * filter_reshaped).sum(dim=0)
+
+    return result_reshaped.reshape((num_output_channels,) + l_shape)
 
 
 def stretched_multiply(small_array: torch.Tensor, large_array: torch.Tensor) -> torch.Tensor:
