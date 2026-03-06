@@ -159,6 +159,7 @@ def optimize_tile(
     device: torch.device | str | None = None,
 ) -> torch.Tensor:
 
+    torch.cuda.synchronize()
     start_time = time.time()
 
     if device is None:
