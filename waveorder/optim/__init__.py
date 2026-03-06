@@ -7,6 +7,7 @@ from waveorder.optim._types import (
     extract_optimizable_params,
     has_optimizable_params,
 )
+from waveorder.optim.benchmark import benchmark_optimizers
 from waveorder.optim.cache import TransferFunctionCache
 from waveorder.optim.logging import OptimLogger, PrintLogger, TensorBoardLogger
 from waveorder.optim.optimize import OptimizationResult, optimize_reconstruction
@@ -14,6 +15,7 @@ from waveorder.optim.optimize import OptimizationResult, optimize_reconstruction
 __all__ = [
     "CacheSpec",
     "TransferFunctionCache",
+    "benchmark_optimizers",
     "OptimizableFloat",
     "OptimizableValue",
     "OptimizationResult",
