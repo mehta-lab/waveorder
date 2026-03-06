@@ -46,11 +46,12 @@ def compute_midband_power(
     band: tuple[float, float] = (0.125, 0.25),
 ) -> torch.Tensor:
     _, _, fxx, fyy = util.gen_coordinate(yx_array.shape, pixel_size)
-    frr = torch.tensor(np.sqrt(fxx**2 + fyy**2))
+    frr = torch.sqrt(fxx**2 + fyy**2)
     xy_abs_fft = torch.abs(torch.fft.fftn(yx_array))
     cutoff = 2 * NA_det / lambda_ill
     mask = torch.logical_and(frr > cutoff * band[0], frr < cutoff * band[1])
-    return torch.sum(xy_abs_fft[mask])
+    return torch.sum(mask * xy_abs_fft) / mask.sum()
+    # return torch.sum(xy_abs_fft[mask])
 
 
 def extract_tiles(
@@ -113,28 +114,30 @@ def log_optimization_progress(
     )
     tb_writer.add_image(
         "Illumination Pupil",
-        torch.fft.fftshift(pupil).detach().numpy()[None],
+        torch.fft.fftshift(pupil).cpu().detach().numpy()[None],
         step,
     )
     tb_writer.add_image(
-        "Reconstructed Phase", yx_recon.detach().numpy()[None], step
+        "Reconstructed Phase", yx_recon.cpu().detach().numpy()[None], step
     )
 
 
 def prepare_optimizer(
     optimizable_params: dict[str, tuple[bool, float, float]],
+    device: torch.device,
 ) -> tuple[dict[str, torch.nn.Parameter], torch.optim.Optimizer]:
     optimization_params: dict[str, torch.nn.Parameter] = {}
     optimizer_config = []
     for name, (enabled, initial, lr) in optimizable_params.items():
         if enabled:
             param = torch.nn.Parameter(
-                torch.tensor([initial], device="cpu"), requires_grad=True
+                torch.tensor([initial], device=device), requires_grad=True
             )
             optimization_params[name] = param
             optimizer_config.append({"params": [param], "lr": lr})
 
-    optimizer = torch.optim.Adam(optimizer_config)
+    # capturable=True is avoiding syncing the device after each optimization step
+    optimizer = torch.optim.Adam(optimizer_config, capturable=True)
     return optimization_params, optimizer
 
 

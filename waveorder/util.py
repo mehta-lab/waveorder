@@ -1,6 +1,7 @@
 import re
 import time
 from collections import namedtuple
+from functools import lru_cache
 
 import numpy as np
 import pywt
@@ -290,9 +291,8 @@ def generate_sphere_target(
     return sphere, azimuth, inc_angle
 
 
-def gen_coordinate(img_dim, ps):
+def gen_coordinate(img_dim: tuple[int, int], ps: float) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-
     generate spatial and spatial frequency coordinate arrays
 
     Input:
@@ -303,29 +303,28 @@ def gen_coordinate(img_dim, ps):
                   transverse pixel size of the image space
 
     Output:
-        xx      : numpy.ndarray
+        xx      : torch.Tensor
                   x coordinate array with the size of (Ny, Nx)
 
-        yy      : numpy.ndarray
+        yy      : torch.Tensor
                   y coordinate array with the size of (Ny, Nx)
 
-        fxx     : numpy.ndarray
+        fxx     : torch.Tensor
                   x component of 2D spatial frequency array with the size of (Ny, Nx)
 
-        fyy     : numpy.ndarray
+        fyy     : torch.Tensor
                   y component of 2D spatial frequency array with the size of (Ny, Nx)
 
     """
-
     N, M = img_dim
 
-    fx = ifftshift((np.r_[:M] - M / 2) / M / ps)
-    fy = ifftshift((np.r_[:N] - N / 2) / N / ps)
-    x = ifftshift((np.r_[:M] - M / 2) * ps)
-    y = ifftshift((np.r_[:N] - N / 2) * ps)
+    fx = torch.fft.fftfreq(M, ps)
+    fy = torch.fft.fftfreq(N, ps)
+    x = torch.fft.ifftshift((torch.arange(M, dtype=torch.float64) - M / 2) * ps)
+    y = torch.fft.ifftshift((torch.arange(N, dtype=torch.float64) - N / 2) * ps)
 
-    xx, yy = np.meshgrid(x, y)
-    fxx, fyy = np.meshgrid(fx, fy)
+    xx, yy = torch.meshgrid(x, y, indexing="xy")
+    fxx, fyy = torch.meshgrid(fx, fy, indexing="xy")
 
     return (xx, yy, fxx, fyy)
 

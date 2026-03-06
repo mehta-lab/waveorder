@@ -1,6 +1,8 @@
 import torch
+from functools import lru_cache
 
 
+@lru_cache(maxsize=128)
 def noll_to_zern(j: int) -> tuple[int, int]:
     n = 0
     j1 = j - 1
@@ -11,6 +13,7 @@ def noll_to_zern(j: int) -> tuple[int, int]:
     return m, n
 
 
+@lru_cache(maxsize=128)
 def factorial(n: int) -> int:
     return 1 if n < 2 else n * factorial(n - 1)
 
