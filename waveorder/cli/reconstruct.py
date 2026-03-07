@@ -96,6 +96,7 @@ def _run_optimization(settings, input_position_dirpath, config_filepath):
         num_iterations=opt.num_iterations,
         midband_fractions=opt.loss.midband_fractions,
         log_dir=opt.log_dir,
+        device=settings.device,
     )
 
     if settings.phase is not None:
