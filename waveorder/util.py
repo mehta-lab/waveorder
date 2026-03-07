@@ -292,6 +292,7 @@ def gen_coordinate(
         y spatial frequency array with shape ``(Ny, Nx)``.
     """
     N, M = img_dim
+    ps = float(ps)
 
     fx = torch.fft.fftfreq(M, ps)
     fy = torch.fft.fftfreq(N, ps)

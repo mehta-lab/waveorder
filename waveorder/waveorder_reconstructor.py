@@ -387,7 +387,9 @@ class waveorder_microscopy:
 
         if QLIPP_birefringence_only == False:
             # setup microscocpe variables
-            self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
+            xx, yy, fxx, fyy = gen_coordinate((self.N, self.M), ps)
+            self.xx, self.yy = xx.numpy(), yy.numpy()
+            self.fxx, self.fyy = fxx.numpy(), fyy.numpy()
             self.frr = torch.sqrt(torch.as_tensor(self.fxx**2 + self.fyy**2, dtype=torch.float32))
             self.Pupil_obj = generate_pupil(self.frr, self.NA_obj, self.lambda_illu).numpy()
             self.Pupil_support = self.Pupil_obj.copy()
@@ -3130,7 +3132,9 @@ class fluorescence_microscopy:
         self.deconv_mode = deconv_mode
 
         # setup microscocpe variables
-        self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
+        xx, yy, fxx, fyy = gen_coordinate((self.N, self.M), ps)
+        self.xx, self.yy = xx.numpy(), yy.numpy()
+        self.fxx, self.fyy = fxx.numpy(), fyy.numpy()
 
         # Setup defocus kernel
         self.Hz_det_setup(deconv_mode)
