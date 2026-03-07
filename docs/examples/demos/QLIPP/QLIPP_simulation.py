@@ -123,7 +123,9 @@ jupyter_visuals.plot_multicolumn(
 xx, yy, fxx, fyy = util.gen_coordinate((N, M), ps)
 radial_frequencies = torch.sqrt(fxx**2 + fyy**2)
 Source_cont = optics.generate_pupil(radial_frequencies, NA_illu, lambda_illu).numpy()
-Source_discrete = optics.Source_subsample(Source_cont, lambda_illu * fxx, lambda_illu * fyy, subsampled_NA=0.1)
+Source_discrete = optics.Source_subsample(
+    Source_cont, (lambda_illu * fxx).numpy(), (lambda_illu * fyy).numpy(), subsampled_NA=0.1
+)
 plt.figure(figsize=(10, 10))
 plt.imshow(fftshift(Source_discrete), cmap="gray")
 plt.show()
