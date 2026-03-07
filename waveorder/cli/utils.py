@@ -103,10 +103,10 @@ def apply_inverse_to_zyx_and_save(
     # Apply transformation
     reconstruction_czyx = func(czyx_data, **kwargs)
 
-    # BUG FIX: Move result back to CPU before writing to zarr
-    # If reconstruction_czyx is a tensor on GPU, convert to numpy on CPU
-    if isinstance(reconstruction_czyx, torch.Tensor) and reconstruction_czyx.is_cuda:
-        reconstruction_czyx = reconstruction_czyx.cpu().numpy()
+    # BUG FIX: Move result back to CPU/numpy before writing to zarr
+    # torch.dtype is incompatible with zarr v3 (.dtype.name attribute missing)
+    if isinstance(reconstruction_czyx, torch.Tensor):
+        reconstruction_czyx = reconstruction_czyx.detach().cpu().numpy()
 
     # Write to file
     # for c, recon_zyx in enumerate(reconstruction_zyx):
