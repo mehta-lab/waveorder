@@ -23,12 +23,13 @@ from waveorder.api._utils import (
     _to_singular_system,
     _to_tensor,
 )
+from waveorder.device import resolve_device
 from waveorder.models import (
     isotropic_fluorescent_thick_3d,
     isotropic_fluorescent_thin_3d,
 )
 from waveorder.optim import (
-    PrintLogger,
+    NullLogger,
     TensorBoardLogger,
     extract_optimizable_params,
     optimize_reconstruction,
@@ -170,6 +171,7 @@ def compute_transfer_function(
     czyx_data: xr.DataArray,
     recon_dim: Literal[2, 3],
     settings: Settings = None,
+    device: str | torch.device | None = None,
 ) -> xr.Dataset:
     """Compute fluorescence transfer function.
 
@@ -191,15 +193,20 @@ def compute_transfer_function(
     """
     if settings is None:
         settings = Settings()
+    device = resolve_device(device)
 
     zyx_shape = czyx_data.shape[1:]  # CZYX -> ZYX
     s = settings.transfer_function.resolve_floats()
 
     if recon_dim == 2:
-        z_position_list = _position_list_from_shape_scale_offset(
-            shape=zyx_shape[0],
-            scale=s.z_pixel_size,
-            offset=s.z_focus_offset,
+        z_position_list = torch.tensor(
+            _position_list_from_shape_scale_offset(
+                shape=zyx_shape[0],
+                scale=s.z_pixel_size,
+                offset=s.z_focus_offset,
+            ),
+            dtype=torch.float32,
+            device=device,
         )
 
         fluorescent_tf = isotropic_fluorescent_thin_3d.calculate_transfer_function(
@@ -244,6 +251,7 @@ def apply_inverse_transfer_function(
     recon_dim: Literal[2, 3],
     settings: Settings = None,
     fluor_channel_name: str = "",
+    device: str | torch.device | None = None,
 ) -> xr.DataArray:
     """Reconstruct fluorescence density.
 
@@ -267,21 +275,23 @@ def apply_inverse_transfer_function(
     """
     if settings is None:
         settings = Settings()
+    device = resolve_device(device)
 
-    czyx_tensor = torch.tensor(czyx_data.values, dtype=torch.float32)
+    czyx_tensor = torch.tensor(czyx_data.values, dtype=torch.float32, device=device)
 
     # [fluo, 2]
     if recon_dim == 2:
+        U, S, Vh = _to_singular_system(transfer_function)
         output = isotropic_fluorescent_thin_3d.apply_inverse_transfer_function(
             czyx_tensor[0],
-            _to_singular_system(transfer_function),
+            (U.to(device), S.to(device), Vh.to(device)),
             **settings.apply_inverse.model_dump(),
         )
     # [fluo, 3]
     elif recon_dim == 3:
         output = isotropic_fluorescent_thick_3d.apply_inverse_transfer_function(
             czyx_tensor[0],
-            _to_tensor(transfer_function, "optical_transfer_function"),
+            _to_tensor(transfer_function, "optical_transfer_function").to(device),
             settings.transfer_function.z_padding,
             **settings.apply_inverse.model_dump(),
         )
@@ -290,7 +300,7 @@ def apply_inverse_transfer_function(
         output = torch.unsqueeze(output, 0)
 
     return _build_output_xarray(
-        output.numpy(),
+        output.cpu().numpy(),
         _output_channel_names(
             recon_fluo=True,
             recon_dim=recon_dim,
@@ -306,6 +316,7 @@ def reconstruct(
     recon_dim: Literal[2, 3],
     settings: Settings = None,
     fluor_channel_name: str = "",
+    device: str | torch.device | None = None,
 ) -> xr.DataArray:
     """Reconstruct fluorescence density.
 
@@ -331,8 +342,8 @@ def reconstruct(
     if settings is None:
         settings = Settings()
 
-    tf = compute_transfer_function(czyx_data, recon_dim, settings)
-    return apply_inverse_transfer_function(czyx_data, tf, recon_dim, settings, fluor_channel_name)
+    tf = compute_transfer_function(czyx_data, recon_dim, settings, device=device)
+    return apply_inverse_transfer_function(czyx_data, tf, recon_dim, settings, fluor_channel_name, device=device)
 
 
 def optimize(
@@ -348,6 +359,7 @@ def optimize(
     loss_settings=None,
     log_dir: str | None = None,
     log_images: bool = False,
+    device: str | torch.device | None = None,
 ) -> tuple[Settings, xr.DataArray]:
     """Optimize fluorescence reconstruction parameters.
 
@@ -390,10 +402,12 @@ def optimize(
         print("No optimizable parameters found. Running standard reconstruction.")
         return settings, reconstruct(czyx_data, recon_dim=recon_dim, settings=settings)
 
-    logger = TensorBoardLogger(log_dir) if log_dir else PrintLogger()
+    logger = TensorBoardLogger(log_dir) if log_dir else NullLogger()
 
     s = settings.transfer_function.resolve_floats()
-    zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32)
+    device = resolve_device(device)
+
+    zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32, device=device)
     Z = zyx_data.shape[0]
 
     def reconstruct_fn(data, **tensor_params):
@@ -464,6 +478,6 @@ def optimize(
         apply_inverse=settings.apply_inverse,
     )
 
-    final_recon = reconstruct(czyx_data, recon_dim=recon_dim, settings=new_settings)
+    final_recon = reconstruct(czyx_data, recon_dim=recon_dim, settings=new_settings, device=device)
 
     return new_settings, final_recon

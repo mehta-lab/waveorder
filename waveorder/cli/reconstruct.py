@@ -101,6 +101,7 @@ def _run_optimization(settings, input_position_dirpath, config_filepath):
         grid_points=opt.grid_points,
         loss_settings=opt.loss,
         log_dir=opt.log_dir,
+        device=settings.device,
     )
 
     if settings.phase is not None:

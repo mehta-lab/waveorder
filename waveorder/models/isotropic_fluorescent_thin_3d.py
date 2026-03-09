@@ -171,7 +171,8 @@ def _calculate_wrap_unsafe_transfer_function(
     numerical_aperture_detection: Union[float, Tensor],
 ) -> Tensor:
     """Calculate wrap-unsafe transfer function for fluorescent imaging."""
-    radial_frequencies = util.generate_radial_frequencies(yx_shape, yx_pixel_size)
+    z_positions = torch.as_tensor(z_position_list, dtype=torch.float32)
+    radial_frequencies = util.generate_radial_frequencies(yx_shape, yx_pixel_size, device=z_positions.device)
 
     det_pupil = optics.generate_pupil(
         radial_frequencies,
@@ -183,7 +184,7 @@ def _calculate_wrap_unsafe_transfer_function(
         radial_frequencies,
         det_pupil,
         wavelength_emission / index_of_refraction_media,
-        torch.as_tensor(z_position_list, dtype=torch.float32),
+        z_positions,
     )
 
     parts = []
@@ -302,7 +303,6 @@ def apply_inverse_transfer_function(
         TV is not implemented
     """
     if reconstruction_algorithm == "Tikhonov":
-        print("Computing inverse filter")
         U, S, Vh = singular_system
         S_reg = S / (S**2 + regularization_strength)
         sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)

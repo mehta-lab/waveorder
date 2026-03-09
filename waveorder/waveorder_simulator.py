@@ -99,7 +99,9 @@ class waveorder_microscopy_simulator:
         self.chi = chi
 
         # setup microscocpe variables
-        self.xx, self.yy, self.fxx, self.fyy = gen_coordinate((self.N, self.M), ps)
+        xx, yy, fxx, fyy = gen_coordinate((self.N, self.M), ps)
+        self.xx, self.yy = xx.numpy(), yy.numpy()
+        self.fxx, self.fyy = fxx.numpy(), fyy.numpy()
         self.frr = torch.sqrt(torch.as_tensor(self.fxx**2 + self.fyy**2, dtype=torch.float32))
 
         self.Pupil_obj = generate_pupil(self.frr, self.NA_obj, self.lambda_illu).numpy()

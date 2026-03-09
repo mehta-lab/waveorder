@@ -25,9 +25,10 @@ from waveorder.api._utils import (
     _to_singular_system,
     _to_tensor,
 )
+from waveorder.device import resolve_device
 from waveorder.models import isotropic_thin_3d, phase_thick_3d
 from waveorder.optim import (
-    PrintLogger,
+    NullLogger,
     TensorBoardLogger,
     extract_optimizable_params,
     optimize_reconstruction,
@@ -189,6 +190,7 @@ def compute_transfer_function(
     czyx_data: xr.DataArray,
     recon_dim: Literal[2, 3],
     settings: Settings = None,
+    device: str | torch.device | None = None,
 ) -> xr.Dataset:
     """Compute phase transfer function.
 
@@ -200,6 +202,8 @@ def compute_transfer_function(
         Reconstruction dimensionality.
     settings : Settings, optional
         Phase reconstruction settings. Uses defaults if None.
+    device : str, torch.device, or None
+        Compute device. None = CPU, "auto" = best available.
 
     Returns
     -------
@@ -211,15 +215,20 @@ def compute_transfer_function(
     """
     if settings is None:
         settings = Settings()
+    device = resolve_device(device)
 
     zyx_shape = czyx_data.shape[1:]  # CZYX -> ZYX
     s = settings.transfer_function.resolve_floats()
 
     if recon_dim == 2:
-        z_position_list = _position_list_from_shape_scale_offset(
-            shape=zyx_shape[0],
-            scale=s.z_pixel_size,
-            offset=s.z_focus_offset,
+        z_position_list = torch.tensor(
+            _position_list_from_shape_scale_offset(
+                shape=zyx_shape[0],
+                scale=s.z_pixel_size,
+                offset=s.z_focus_offset,
+            ),
+            dtype=torch.float32,
+            device=device,
         )
 
         absorption_tf, phase_tf = isotropic_thin_3d.calculate_transfer_function(
@@ -278,6 +287,7 @@ def apply_inverse_transfer_function(
     transfer_function: xr.Dataset,
     recon_dim: Literal[2, 3],
     settings: Settings = None,
+    device: str | torch.device | None = None,
 ) -> xr.DataArray:
     """Reconstruct phase from brightfield data.
 
@@ -291,6 +301,8 @@ def apply_inverse_transfer_function(
         Reconstruction dimensionality.
     settings : Settings, optional
         Phase reconstruction settings. Uses defaults if None.
+    device : str, torch.device, or None
+        Compute device. None = CPU, "auto" = best available.
 
     Returns
     -------
@@ -299,17 +311,19 @@ def apply_inverse_transfer_function(
     """
     if settings is None:
         settings = Settings()
+    device = resolve_device(device)
 
-    czyx_tensor = torch.tensor(czyx_data.values, dtype=torch.float32)
+    czyx_tensor = torch.tensor(czyx_data.values, dtype=torch.float32, device=device)
 
     # [phase only, 2]
     if recon_dim == 2:
+        U, S, Vh = _to_singular_system(transfer_function)
         (
             absorption_yx,
             phase_yx,
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             czyx_tensor[0],
-            _to_singular_system(transfer_function),
+            (U.to(device), S.to(device), Vh.to(device)),
             **settings.apply_inverse.model_dump(),
         )
         output = phase_yx[None, None]
@@ -318,8 +332,8 @@ def apply_inverse_transfer_function(
     elif recon_dim == 3:
         output = phase_thick_3d.apply_inverse_transfer_function(
             czyx_tensor[0],
-            _to_tensor(transfer_function, "real_potential_transfer_function"),
-            _to_tensor(transfer_function, "imaginary_potential_transfer_function"),
+            _to_tensor(transfer_function, "real_potential_transfer_function").to(device),
+            _to_tensor(transfer_function, "imaginary_potential_transfer_function").to(device),
             z_padding=settings.transfer_function.z_padding,
             **settings.apply_inverse.model_dump(),
         )
@@ -329,7 +343,7 @@ def apply_inverse_transfer_function(
         output = torch.unsqueeze(output, 0)
 
     return _build_output_xarray(
-        output.numpy(),
+        output.cpu().numpy(),
         _output_channel_names(recon_phase=True, recon_dim=recon_dim),
         czyx_data,
         singleton_z=(recon_dim == 2),
@@ -340,6 +354,7 @@ def reconstruct(
     czyx_data: xr.DataArray,
     recon_dim: Literal[2, 3],
     settings: Settings = None,
+    device: str | torch.device | None = None,
 ) -> xr.DataArray:
     """Reconstruct phase from brightfield data.
 
@@ -354,6 +369,8 @@ def reconstruct(
         Reconstruction dimensionality.
     settings : Settings, optional
         Phase reconstruction settings. Uses defaults if None.
+    device : str, torch.device, or None
+        Compute device. None = CPU, "auto" = best available.
 
     Returns
     -------
@@ -363,8 +380,8 @@ def reconstruct(
     if settings is None:
         settings = Settings()
 
-    tf = compute_transfer_function(czyx_data, recon_dim, settings)
-    return apply_inverse_transfer_function(czyx_data, tf, recon_dim, settings)
+    tf = compute_transfer_function(czyx_data, recon_dim, settings, device=device)
+    return apply_inverse_transfer_function(czyx_data, tf, recon_dim, settings, device=device)
 
 
 def optimize(
@@ -380,6 +397,7 @@ def optimize(
     loss_settings=None,
     log_dir: str | None = None,
     log_images: bool = False,
+    device: str | torch.device | None = None,
 ) -> tuple[Settings, xr.DataArray]:
     """Optimize reconstruction parameters.
 
@@ -406,9 +424,11 @@ def optimize(
     loss_settings : LossSettings, optional
         Loss function configuration. Defaults to MidbandPowerLossSettings.
     log_dir : str, optional
-        TensorBoard log directory. None = print-only logging.
+        TensorBoard log directory. None = no logging.
     log_images : bool
         If True, log reconstruction images to TensorBoard each iteration.
+    device : str, torch.device, or None
+        Compute device. None = CPU, "auto" = best available.
 
     Returns
     -------
@@ -417,23 +437,27 @@ def optimize(
     """
     if settings is None:
         settings = Settings()
+    device = resolve_device(device)
 
     opt_params, _ = extract_optimizable_params(settings.transfer_function)
 
     if not opt_params:
         print("No optimizable parameters found. Running standard reconstruction.")
-        return settings, reconstruct(czyx_data, recon_dim=recon_dim, settings=settings)
+        return settings, reconstruct(czyx_data, recon_dim=recon_dim, settings=settings, device=device)
 
-    logger = TensorBoardLogger(log_dir) if log_dir else PrintLogger()
+    logger = TensorBoardLogger(log_dir) if log_dir else NullLogger()
 
     s = settings.transfer_function.resolve_floats()
-    zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32)
+    zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32, device=device)
     Z = zyx_data.shape[0]
     yx_shape = (zyx_data.shape[1], zyx_data.shape[2])
 
     # Soft pupil cutoff for smooth gradients during optimization.
     # The final reconstruction (after optimize returns) uses the default 1e4.
     optim_steepness = 100.0
+
+    # Pre-allocate z index tensor on device (avoids GPU sync per iteration)
+    z_indices = -torch.arange(Z, device=device) + (Z // 2)
 
     def reconstruct_fn(data, **tensor_params):
         na_ill = tensor_params.get("numerical_aperture_illumination", s.numerical_aperture_illumination)
@@ -443,7 +467,7 @@ def optimize(
         tilt_azimuth = tensor_params.get("tilt_angle_azimuth", s.tilt_angle_azimuth)
 
         if recon_dim == 2:
-            z_positions = (-torch.arange(Z) + (Z // 2) + z_offset) * s.z_pixel_size
+            z_positions = (z_indices + z_offset) * s.z_pixel_size
             return isotropic_thin_3d.reconstruct(
                 data,
                 yx_pixel_size=s.yx_pixel_size,
@@ -536,5 +560,5 @@ def optimize(
         apply_inverse=settings.apply_inverse,
     )
 
-    final_recon = reconstruct(czyx_data, recon_dim=recon_dim, settings=new_settings)
+    final_recon = reconstruct(czyx_data, recon_dim=recon_dim, settings=new_settings, device=device)
     return new_settings, final_recon

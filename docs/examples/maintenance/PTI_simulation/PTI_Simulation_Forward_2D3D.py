@@ -343,8 +343,8 @@ radial_frequencies = torch.sqrt(torch.as_tensor(fxx**2 + fyy**2, dtype=torch.flo
 Pupil_obj = optics.generate_pupil(radial_frequencies, NA_obj / n_media, lambda_illu / n_media).numpy()
 Source_support = optics.generate_pupil(radial_frequencies, NA_illu / n_media, lambda_illu / n_media).numpy()
 
-NAx_coord = lambda_illu / n_media * fxx
-NAy_coord = lambda_illu / n_media * fyy
+NAx_coord = (lambda_illu / n_media * fxx).numpy()
+NAy_coord = (lambda_illu / n_media * fyy).numpy()
 
 rotation_angle = [0, 45, 90, 135, 180, 225, 270, 315]
 

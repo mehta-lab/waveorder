@@ -9,7 +9,7 @@ from waveorder.optim._types import (
 )
 from waveorder.optim.benchmark import benchmark_optimizers
 from waveorder.optim.cache import TransferFunctionCache
-from waveorder.optim.logging import OptimLogger, PrintLogger, TensorBoardLogger
+from waveorder.optim.logging import NullLogger, OptimLogger, PrintLogger, TensorBoardLogger
 from waveorder.optim.losses import LossSettings, build_loss_fn
 from waveorder.optim.optimize import OptimizationResult, optimize_reconstruction
 
@@ -22,6 +22,7 @@ __all__ = [
     "OptimizableFloat",
     "OptimizableValue",
     "OptimizationResult",
+    "NullLogger",
     "OptimLogger",
     "PrintLogger",
     "TensorBoardLogger",

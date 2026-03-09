@@ -268,55 +268,56 @@ def generate_sphere_target(zyx_shape, yx_pixel_size, z_pixel_size, radius, blur_
     return sphere, azimuth, inc_angle
 
 
-def gen_coordinate(img_dim, ps):
+def gen_coordinate(
+    img_dim: tuple[int, int],
+    ps: float,
+    device: str | torch.device | None = None,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Generate spatial and spatial frequency coordinate arrays.
+
+    Parameters
+    ----------
+    img_dim : tuple of int
+        Shape of the computed 2D space ``(Ny, Nx)``.
+    ps : float
+        Transverse pixel size of the image space.
+    device : str, torch.device, or None
+        Output tensor device.
+
+    Returns
+    -------
+    xx : torch.Tensor
+        x coordinate array with shape ``(Ny, Nx)``.
+    yy : torch.Tensor
+        y coordinate array with shape ``(Ny, Nx)``.
+    fxx : torch.Tensor
+        x spatial frequency array with shape ``(Ny, Nx)``.
+    fyy : torch.Tensor
+        y spatial frequency array with shape ``(Ny, Nx)``.
     """
-
-    generate spatial and spatial frequency coordinate arrays
-
-    Input:
-        img_dim : tuple
-                  shape of the computed 2D space with size of (Ny, Nx)
-
-        ps      : float
-                  transverse pixel size of the image space
-
-    Output:
-        xx      : numpy.ndarray
-                  x coordinate array with the size of (Ny, Nx)
-
-        yy      : numpy.ndarray
-                  y coordinate array with the size of (Ny, Nx)
-
-        fxx     : numpy.ndarray
-                  x component of 2D spatial frequency array with the size of (Ny, Nx)
-
-        fyy     : numpy.ndarray
-                  y component of 2D spatial frequency array with the size of (Ny, Nx)
-
-    """
-
     N, M = img_dim
+    ps = float(ps)
 
-    fx = ifftshift((np.r_[:M] - M / 2) / M / ps)
-    fy = ifftshift((np.r_[:N] - N / 2) / N / ps)
-    x = ifftshift((np.r_[:M] - M / 2) * ps)
-    y = ifftshift((np.r_[:N] - N / 2) * ps)
+    fx = torch.fft.fftfreq(M, ps, device=device)
+    fy = torch.fft.fftfreq(N, ps, device=device)
+    x = torch.fft.ifftshift((torch.arange(M, dtype=torch.float32, device=device) - M / 2) * ps)
+    y = torch.fft.ifftshift((torch.arange(N, dtype=torch.float32, device=device) - N / 2) * ps)
 
-    xx, yy = np.meshgrid(x, y)
-    fxx, fyy = np.meshgrid(fx, fy)
+    xx, yy = torch.meshgrid(x, y, indexing="xy")
+    fxx, fyy = torch.meshgrid(fx, fy, indexing="xy")
 
     return (xx, yy, fxx, fyy)
 
 
-def generate_frequencies(img_dim, ps):
-    fy = torch.fft.fftfreq(img_dim[0], ps)
-    fx = torch.fft.fftfreq(img_dim[1], ps)
+def generate_frequencies(img_dim, ps, device=None):
+    fy = torch.fft.fftfreq(img_dim[0], ps, device=device)
+    fx = torch.fft.fftfreq(img_dim[1], ps, device=device)
     fyy, fxx = torch.meshgrid(fy, fx, indexing="ij")
     return fyy, fxx
 
 
-def generate_radial_frequencies(img_dim, ps):
-    fyy, fxx = generate_frequencies(img_dim, ps)
+def generate_radial_frequencies(img_dim, ps, device=None):
+    fyy, fxx = generate_frequencies(img_dim, ps, device=device)
     return torch.sqrt(fyy**2 + fxx**2)
 
 

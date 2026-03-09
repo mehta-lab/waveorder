@@ -128,6 +128,7 @@ def apply_inverse_to_zyx_and_save(
     output_path: Path,
     input_channel_names: list[str],
     t_idx: int = 0,
+    verbose: bool = True,
     **kwargs,
 ) -> None:
     """Load a zyx array from an xarray DataArray, apply a transformation and save the result to file.
@@ -144,10 +145,13 @@ def apply_inverse_to_zyx_and_save(
         Channel names to select from input_data.
     t_idx : int
         Time index to process.
+    verbose : bool
+        Print progress messages per time point.
     **kwargs
         Additional arguments passed to func.
     """
-    click.echo(f"Reconstructing t={t_idx}")
+    if verbose:
+        click.echo(f"Reconstructing t={t_idx}")
 
     # Extract CZYX xarray slice
     czyx_slice = input_data.isel(t=t_idx).sel(c=input_channel_names)
@@ -170,7 +174,9 @@ def apply_inverse_to_zyx_and_save(
     # Write to file
     with open_ome_zarr(output_path, mode="r+") as output_position:
         output_position.write_xarray(output_xa)
-    click.echo(f"Finished Writing.. t={t_idx}")
+
+    if verbose:
+        click.echo(f"Finished writing t={t_idx}")
 
 
 def estimate_resources(shape, settings, num_processes):

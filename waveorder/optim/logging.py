@@ -13,6 +13,19 @@ class OptimLogger(Protocol):
     def close(self) -> None: ...
 
 
+class NullLogger:
+    """Silent logger (default)."""
+
+    def log_scalar(self, tag: str, value: float, step: int) -> None:
+        pass
+
+    def log_image(self, tag: str, image: Tensor, step: int) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
 class PrintLogger:
     """Logger that prints to stdout."""
 

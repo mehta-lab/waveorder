@@ -15,7 +15,7 @@ from scipy.optimize import minimize as scipy_minimize
 from torch import Tensor
 from tqdm import tqdm
 
-from waveorder.optim.logging import OptimLogger, PrintLogger
+from waveorder.optim.logging import NullLogger, OptimLogger
 
 
 @dataclass
@@ -185,7 +185,7 @@ def _optimize_gradient(
 ) -> OptimizationResult:
     """Gradient-based optimization (Adam, L-BFGS)."""
     if logger is None:
-        logger = PrintLogger()
+        logger = NullLogger()
     if fixed_params is None:
         fixed_params = {}
 
