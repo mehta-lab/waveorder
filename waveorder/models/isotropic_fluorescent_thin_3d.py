@@ -172,7 +172,7 @@ def _calculate_wrap_unsafe_transfer_function(
 ) -> Tensor:
     """Calculate wrap-unsafe transfer function for fluorescent imaging."""
     z_positions = torch.as_tensor(z_position_list, dtype=torch.float32)
-    radial_frequencies = util.generate_radial_frequencies(yx_shape, yx_pixel_size).to(z_positions.device)
+    radial_frequencies = util.generate_radial_frequencies(yx_shape, yx_pixel_size, device=z_positions.device)
 
     det_pupil = optics.generate_pupil(
         radial_frequencies,

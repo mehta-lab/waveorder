@@ -269,7 +269,9 @@ def generate_sphere_target(zyx_shape, yx_pixel_size, z_pixel_size, radius, blur_
 
 
 def gen_coordinate(
-    img_dim: tuple[int, int], ps: float
+    img_dim: tuple[int, int],
+    ps: float,
+    device: str | torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """Generate spatial and spatial frequency coordinate arrays.
 
@@ -279,6 +281,8 @@ def gen_coordinate(
         Shape of the computed 2D space ``(Ny, Nx)``.
     ps : float
         Transverse pixel size of the image space.
+    device : str, torch.device, or None
+        Output tensor device.
 
     Returns
     -------
@@ -294,10 +298,10 @@ def gen_coordinate(
     N, M = img_dim
     ps = float(ps)
 
-    fx = torch.fft.fftfreq(M, ps)
-    fy = torch.fft.fftfreq(N, ps)
-    x = torch.fft.ifftshift((torch.arange(M, dtype=torch.float64) - M / 2) * ps)
-    y = torch.fft.ifftshift((torch.arange(N, dtype=torch.float64) - N / 2) * ps)
+    fx = torch.fft.fftfreq(M, ps, device=device)
+    fy = torch.fft.fftfreq(N, ps, device=device)
+    x = torch.fft.ifftshift((torch.arange(M, dtype=torch.float32, device=device) - M / 2) * ps)
+    y = torch.fft.ifftshift((torch.arange(N, dtype=torch.float32, device=device) - N / 2) * ps)
 
     xx, yy = torch.meshgrid(x, y, indexing="xy")
     fxx, fyy = torch.meshgrid(fx, fy, indexing="xy")
@@ -305,15 +309,15 @@ def gen_coordinate(
     return (xx, yy, fxx, fyy)
 
 
-def generate_frequencies(img_dim, ps):
-    fy = torch.fft.fftfreq(img_dim[0], ps)
-    fx = torch.fft.fftfreq(img_dim[1], ps)
+def generate_frequencies(img_dim, ps, device=None):
+    fy = torch.fft.fftfreq(img_dim[0], ps, device=device)
+    fx = torch.fft.fftfreq(img_dim[1], ps, device=device)
     fyy, fxx = torch.meshgrid(fy, fx, indexing="ij")
     return fyy, fxx
 
 
-def generate_radial_frequencies(img_dim, ps):
-    fyy, fxx = generate_frequencies(img_dim, ps)
+def generate_radial_frequencies(img_dim, ps, device=None):
+    fyy, fxx = generate_frequencies(img_dim, ps, device=device)
     return torch.sqrt(fyy**2 + fxx**2)
 
 
