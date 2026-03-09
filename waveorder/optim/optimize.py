@@ -15,7 +15,7 @@ from scipy.optimize import minimize as scipy_minimize
 from torch import Tensor
 from tqdm import tqdm
 
-from waveorder.optim.logging import NullLogger, OptimLogger
+from waveorder.optim.logging import NullLogger, OptimLogger, PrintLogger
 
 
 @dataclass
