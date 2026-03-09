@@ -111,18 +111,9 @@ def calculate_transfer_function(
         pupil_steepness=pupil_steepness,
     )
 
-    absorption_parts = []
-    phase_parts = []
-    for z in range(len(z_position_list)):
-        absorption_parts.append(sampling.nd_fourier_central_cuboid(absorption_2d_to_3d_transfer_function[z], yx_shape))
-        phase_parts.append(sampling.nd_fourier_central_cuboid(phase_2d_to_3d_transfer_function[z], yx_shape))
-
-    absorption_2d_to_3d_transfer_function_out = torch.stack(absorption_parts, dim=0)
-    phase_2d_to_3d_transfer_function_out = torch.stack(phase_parts, dim=0)
-
     return (
-        absorption_2d_to_3d_transfer_function_out,
-        phase_2d_to_3d_transfer_function_out,
+        sampling.nd_fourier_central_cuboid(absorption_2d_to_3d_transfer_function, yx_shape),
+        sampling.nd_fourier_central_cuboid(phase_2d_to_3d_transfer_function, yx_shape),
     )
 
 
@@ -160,8 +151,9 @@ def _calculate_wrap_unsafe_transfer_function(
     if invert_phase_contrast:
         z_positions = -z_positions
 
-    fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size)
-    radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
+    with torch.no_grad():
+        fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size, device=z_positions.device)
+        radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
 
     illumination_pupil = optics.generate_tilted_pupil(
         fxx,
@@ -186,22 +178,9 @@ def _calculate_wrap_unsafe_transfer_function(
         z_positions,
     )
 
-    # Build transfer functions without in-place ops (gradient-friendly)
-    abs_parts = []
-    phase_parts = []
-    for z in range(z_positions.shape[0]):
-        abs_tf_z, phase_tf_z = optics.compute_weak_object_transfer_function_2d(
-            illumination_pupil, detection_pupil * propagation_kernel[z]
-        )
-        abs_parts.append(abs_tf_z)
-        phase_parts.append(phase_tf_z)
-
-    absorption_2d_to_3d_transfer_function = torch.stack(abs_parts, dim=0)
-    phase_2d_to_3d_transfer_function = torch.stack(phase_parts, dim=0)
-
-    return (
-        absorption_2d_to_3d_transfer_function,
-        phase_2d_to_3d_transfer_function,
+    # Batched WOTF: (Y,X) * (Z,Y,X) broadcasts to (Z,Y,X)
+    return optics.compute_weak_object_transfer_function_2d(
+        illumination_pupil, detection_pupil.unsqueeze(0) * propagation_kernel
     )
 
 
@@ -387,7 +366,6 @@ def apply_inverse_transfer_function(
 
     # TODO Consider refactoring with vectorial transfer function SVD
     if reconstruction_algorithm == "Tikhonov":
-        print("Computing inverse filter")
         U, S, Vh = singular_system
         S_reg = S / (S**2 + regularization_strength)
         sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)

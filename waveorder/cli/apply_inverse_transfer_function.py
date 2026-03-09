@@ -141,9 +141,11 @@ def apply_inverse_transfer_function_single_position(
     output_position_dirpath: Path,
     num_processes,
     output_channel_names: list[str],
+    verbose: bool = True,
 ) -> None:
 
-    echo_headline("\nStarting reconstruction...")
+    if verbose:
+        echo_headline("\nStarting reconstruction...")
 
     # Load datasets
     transfer_function_dataset = open_ome_zarr(transfer_function_dirpath)
@@ -264,13 +266,14 @@ def apply_inverse_transfer_function_single_position(
         input_xa,
         output_position_dirpath,
         settings.input_channel_names,
+        verbose=verbose,
         **apply_inverse_args,
     )
 
     # Multiprocessing logic
     if num_processes > 1:
-        # Loop through T, processing and writing as we go
-        click.echo(f"\nStarting multiprocess pool with {num_processes} processes")
+        if verbose:
+            click.echo(f"\nStarting multiprocess pool with {num_processes} processes")
         with mp.Pool(num_processes) as p:
             p.starmap(
                 partial_apply_inverse_to_zyx_and_save,
@@ -283,14 +286,11 @@ def apply_inverse_transfer_function_single_position(
     # Save metadata at position level
     output_dataset.zattrs["settings"] = settings.model_dump()
 
-    echo_headline(f"Closing {output_position_dirpath}\n")
+    if verbose:
+        echo_headline(f"Closing {output_position_dirpath}\n")
 
     output_dataset.close()
     input_dataset.close()
-
-    echo_headline(
-        f"Recreate this reconstruction with:\n$ waveorder apply-inv-tf {input_position_dirpath} {transfer_function_dirpath} -c {config_filepath} -o {output_position_dirpath}"
-    )
 
 
 def apply_inverse_transfer_function_cli(

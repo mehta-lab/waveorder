@@ -1,6 +1,7 @@
 input_channel_names: [Brightfield]
 time_indices: all
 reconstruction_dimension: 2
+device: null                              # null=cpu, auto, cuda:0, cuda:1, mps
 phase:
   transfer_function:
     wavelength_illumination: 0.532        # illumination wavelength in micrometers

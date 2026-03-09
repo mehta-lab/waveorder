@@ -33,6 +33,42 @@ def test_stretched_multiply():
     assert result.shape == (99, 99, 99)
 
 
+def test_stretched_matrix_multiply_matches_loop():
+    """Batched stretched_matrix_multiply must match the per-channel loop."""
+    torch.manual_seed(42)
+    for spatial_shape, filter_shape in [
+        ((16, 16), (4, 4)),
+        ((12, 18), (3, 3)),
+        ((8, 8, 8), (2, 2, 2)),
+    ]:
+        num_input, num_output = 3, 5
+        i_input = torch.rand((num_input,) + spatial_shape)
+        io_filter_bank = torch.rand((num_input, num_output) + filter_shape)
+
+        # Full pipeline (uses stretched_matrix_multiply internally)
+        result = filter.apply_filter_bank(io_filter_bank, i_input)
+
+        # Reference: original per-channel loop
+        import itertools
+
+        fft_dims = list(range(1, i_input.ndim))
+        pad_sizes = [(0, (t - (s % t)) % t) for t, s in zip(filter_shape[::-1], spatial_shape[::-1])]
+        padded = torch.nn.functional.pad(i_input, list(itertools.chain(*pad_sizes)))
+        spectrum = torch.fft.fftn(padded, dim=fft_dims)
+
+        ref = torch.zeros((num_output,) + spectrum.shape[1:], dtype=spectrum.dtype)
+        for i in range(num_input):
+            for o in range(num_output):
+                ref[o] += filter.stretched_multiply(io_filter_bank[i, o], spectrum[i])
+
+        ref_out = torch.real(torch.fft.ifftn(ref, dim=fft_dims))
+        slices = (slice(None),) + tuple(slice(0, n) for n in spatial_shape)
+        ref_out = ref_out[slices]
+
+        assert result.shape == ref_out.shape
+        assert torch.allclose(result, ref_out, atol=1e-5)
+
+
 def test_stretched_multiply_incompatible_dims():
     # small_array > large_array
     small_array = torch.tensor([[1, 2, 3], [4, 5, 6], [7, 8, 9]])

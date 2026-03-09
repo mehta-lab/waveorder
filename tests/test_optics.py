@@ -127,3 +127,38 @@ def test_WOTF_3D():
 
     assert H_re.shape == (11, 10, 10)
     assert H_im.shape == (11, 10, 10)
+
+
+def test_batched_wotf_matches_loop():
+    """Batched WOTF (Z,Y,X detection pupil) matches per-Z loop."""
+    wavelength = 0.5
+    yx_pixel_size = 0.25
+    z_pixel_size = 0.2
+    numerical_aperture = 0.5
+    z_position_list = torch.fft.fftfreq(7, 1 / z_pixel_size)
+
+    frr = util.generate_radial_frequencies((12, 12), yx_pixel_size)
+    illumination_pupil = optics.generate_pupil(frr, numerical_aperture, wavelength)
+    detection_pupil = optics.generate_pupil(frr, numerical_aperture, wavelength)
+    propagation_kernel = optics.generate_propagation_kernel(frr, detection_pupil, wavelength, z_position_list)
+
+    # Reference: loop over z-slices
+    abs_loop, phase_loop = [], []
+    for z in range(propagation_kernel.shape[0]):
+        a, p = optics.compute_weak_object_transfer_function_2d(
+            illumination_pupil, detection_pupil * propagation_kernel[z]
+        )
+        abs_loop.append(a)
+        phase_loop.append(p)
+    abs_loop = torch.stack(abs_loop, dim=0)
+    phase_loop = torch.stack(phase_loop, dim=0)
+
+    # Batched: pass (Z, Y, X) detection pupil
+    abs_batch, phase_batch = optics.compute_weak_object_transfer_function_2d(
+        illumination_pupil, detection_pupil.unsqueeze(0) * propagation_kernel
+    )
+
+    assert abs_batch.shape == (7, 12, 12)
+    assert phase_batch.shape == (7, 12, 12)
+    assert torch.allclose(abs_batch, abs_loop, atol=1e-6)
+    assert torch.allclose(phase_batch, phase_loop, atol=1e-6)

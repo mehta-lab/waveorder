@@ -258,7 +258,7 @@ def test_optimization_cli(tmp_path):
     channel_names = ["Brightfield"]
     dataset = open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=channel_names)
     position = dataset.create_position("0", "0", "0")
-    data = np.random.rand(1, 1, 4, 5, 6).astype(np.float32) + 10.0
+    data = np.random.rand(1, 1, 4, 32, 32).astype(np.float32) + 10.0
     position.create_image("0", data, transform=[TransformationMeta(type="scale", scale=input_scale)])
     dataset.close()
 
