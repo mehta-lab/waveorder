@@ -242,23 +242,16 @@ def calculate_singular_system(
         ),
         dim=1,
     )
-    B, s, Z, Vy, Vx = sfYX.shape
 
-    # Per-channel norms: S[b, k] = norm(H[b, k, :])
-    S = torch.sqrt(
-        torch.clamp(
-            torch.sum(torch.abs(sfYX) ** 2, dim=2),
-            min=1e-12,
-        )
-    )  # (B, s=2, Vy, Vx)
-
-    # Normalized rows: Vh[b, k, z] = H[b, k, z] / S[b, k]
-    Vh = sfYX / (S[:, :, None] + 1e-12)  # (B, s=2, Z, Vy, Vx)
-
-    # U = identity (each channel reconstructs independently)
-    U = torch.zeros(B, s, s, Vy, Vx, dtype=sfYX.dtype, device=sfYX.device)
-    for i in range(s):
-        U[:, i, i] = 1.0
+    # SVD over the (s=2, Z) dimensions at each spatial frequency.
+    # Permute to (..., Vy, Vx, s, Z) for torch.linalg.svd, then permute back.
+    # Shape: (B, Vy, Vx, s=2, Z)
+    BVyVxsZ = sfYX.permute(0, 3, 4, 1, 2)
+    Up, Sp, Vhp = torch.linalg.svd(BVyVxsZ, full_matrices=False)
+    # Up: (B, Vy, Vx, s, s), Sp: (B, Vy, Vx, s), Vhp: (B, Vy, Vx, s, Z)
+    U = Up.permute(0, 3, 4, 1, 2)  # (B, s, s, Vy, Vx)
+    S = Sp.permute(0, 3, 1, 2)  # (B, s, Vy, Vx)
+    Vh = Vhp.permute(0, 3, 4, 1, 2)  # (B, s, Z, Vy, Vx)
 
     if not batched:
         U = U.squeeze(0)
@@ -395,7 +388,7 @@ def apply_inverse_transfer_function(
         batched_ss = S.ndim == 4  # (B, 2, Vy, Vx)
 
         if not batched_ss:
-            # Shared singular system: use apply_filter_bank per tile
+            # Shared singular system: compute inverse filter once
             S_reg = S / (S**2 + regularization_strength)
             sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
             results = []
@@ -403,17 +396,13 @@ def apply_inverse_transfer_function(
                 results.append(apply_filter_bank(sfyx_inverse_filter, zyx[b]))
             output = torch.stack(results, dim=0)  # (B, 2, Y, X)
         else:
-            # Per-tile singular system: batched direct FFT multiply
-            S_reg = S / (S**2 + regularization_strength)  # (B, 2, Y, X)
-            # inverse_filter: S_reg * Vh -> (B, 2, Z, Y, X)
-            inverse_filter = S_reg[:, :, None, :, :] * Vh  # (B, s=2, Z=f, Y, X)
-            # Transpose to (B, Z=f, s=2, Y, X) for matrix multiply
-            inverse_filter = inverse_filter.permute(0, 2, 1, 3, 4)
-
-            data_fft = torch.fft.fft2(zyx)  # (B, Z, Y, X)
-            # filter (B, Z, 2, Y, X) * data (B, Z, 1, Y, X) -> sum over Z -> (B, 2, Y, X)
-            output_fft = (inverse_filter * data_fft[:, :, None, :, :]).sum(dim=1)
-            output = torch.fft.ifft2(output_fft).real  # (B, 2, Y, X)
+            # Per-tile singular system: compute inverse filter per tile
+            S_reg = S / (S**2 + regularization_strength)
+            results = []
+            for b in range(zyx.shape[0]):
+                filt_b = torch.einsum("sj...,j...,jf...->fs...", U[b], S_reg[b], Vh[b])
+                results.append(apply_filter_bank(filt_b, zyx[b]))
+            output = torch.stack(results, dim=0)  # (B, 2, Y, X)
 
     # ADMM deconvolution with anisotropic TV regularization
     elif reconstruction_algorithm == "TV":
