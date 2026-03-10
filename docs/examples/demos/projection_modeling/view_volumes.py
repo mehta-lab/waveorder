@@ -36,8 +36,13 @@ def main():
             for arr_name in group.array_keys():
                 data = np.array(group[arr_name])
                 layer_name = f"{group_name}/{arr_name}"
+                lo, hi = float(data.min()), float(data.max())
+                if lo == hi:
+                    hi = lo + 1.0
                 s.layers[layer_name] = neuroglancer.ImageLayer(
                     source=neuroglancer.LocalVolume(data, dimensions=dimensions),
+                    shader="#uicontrol invlerp normalized\nvoid main() { emitGrayscale(normalized()); }",
+                    shader_controls={"normalized": neuroglancer.InvlerpParameters(range=[lo, hi])},
                 )
 
     print(f"Neuroglancer viewer: {viewer}")
