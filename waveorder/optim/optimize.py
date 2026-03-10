@@ -183,21 +183,39 @@ def _optimize_gradient(
     log_images=False,
     log_extras_fn=None,
 ) -> OptimizationResult:
-    """Gradient-based optimization (Adam, L-BFGS)."""
+    """Gradient-based optimization (Adam, L-BFGS).
+
+    When ``data.ndim == 4`` (batched), each parameter becomes a ``(B,)``
+    tensor so that every tile is optimized independently. Standard Adam
+    maintains per-element momentum and variance, so this is equivalent
+    to running B independent Adam optimizers with a single backward pass.
+    """
     if logger is None:
         logger = NullLogger()
     if fixed_params is None:
         fixed_params = {}
 
+    batched = data.ndim == 4
+    B = data.shape[0] if batched else 1
+
     param_tensors: dict[str, Tensor] = {}
     param_groups: list[dict] = []
 
     for name, (init_val, lr) in optimizable_params.items():
-        t = torch.tensor(
-            init_val,
-            dtype=torch.float32,
-            requires_grad=use_gradients,
-        )
+        if batched:
+            # Per-tile parameter: (B,) tensor with independent gradients
+            t = torch.full(
+                (B,),
+                init_val,
+                dtype=torch.float32,
+                requires_grad=use_gradients,
+            )
+        else:
+            t = torch.tensor(
+                init_val,
+                dtype=torch.float32,
+                requires_grad=use_gradients,
+            )
         param_tensors[name] = t
         param_groups.append({"params": [t], "lr": lr})
 
@@ -223,6 +241,12 @@ def _optimize_gradient(
     for step in pbar:
         t_start = time.monotonic()
 
+        def _compute_loss(recon):
+            """Apply loss_fn; for batched data, sum per-tile losses."""
+            if batched:
+                return torch.stack([loss_fn(recon[b]) for b in range(B)]).sum()
+            return loss_fn(recon)
+
         if method == "lbfgs":
 
             def closure():
@@ -231,7 +255,7 @@ def _optimize_gradient(
                 kwargs.update(param_tensors)
                 with contextlib.redirect_stdout(io.StringIO()):
                     recon = reconstruct_fn(data, **kwargs)
-                loss = loss_fn(recon)
+                loss = _compute_loss(recon)
                 if use_gradients:
                     loss.backward()
                 return loss
@@ -250,7 +274,7 @@ def _optimize_gradient(
             grad_ctx = contextlib.nullcontext() if use_gradients else torch.no_grad()
             with grad_ctx, contextlib.redirect_stdout(io.StringIO()):
                 recon = reconstruct_fn(data, **kwargs)
-            loss = loss_fn(recon)
+            loss = _compute_loss(recon)
 
             if use_gradients:
                 loss.backward()
@@ -262,18 +286,19 @@ def _optimize_gradient(
 
         postfix = {"loss": f"{loss_val:.4f}"}
         for name, t in param_tensors.items():
-            postfix[name] = f"{t.item():.4f}"
+            postfix[name] = f"{t.mean().item():.4f}"
         pbar.set_postfix(postfix)
 
         logger.log_scalar("loss", loss_val, step)
         for name, t in param_tensors.items():
-            logger.log_scalar(name, t.item(), step)
-            if use_gradients:
-                grad_val = t.grad.item() if t.grad is not None else 0.0
-                logger.log_scalar(f"grad/{name}", grad_val, step)
+            logger.log_scalar(name, t.mean().item(), step)
+            if use_gradients and t.grad is not None:
+                logger.log_scalar(f"grad/{name}", t.grad.mean().item(), step)
 
         if log_images:
             img = recon.detach()
+            if img.ndim == 4:
+                img = img[0]  # Show first tile
             if img.ndim == 3:
                 img = img[img.shape[0] // 2]
             logger.log_image("reconstruction", img, step)
@@ -297,8 +322,13 @@ def _optimize_gradient(
 
     logger.close()
 
+    if batched:
+        optimized_values = {name: t.detach().cpu().tolist() for name, t in param_tensors.items()}
+    else:
+        optimized_values = {name: t.item() for name, t in param_tensors.items()}
+
     return OptimizationResult(
-        optimized_values={name: t.item() for name, t in param_tensors.items()},
+        optimized_values=optimized_values,
         loss_history=loss_history,
         final_reconstruction=final_recon,
         converged=converged,

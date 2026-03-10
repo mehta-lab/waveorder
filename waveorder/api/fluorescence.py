@@ -16,12 +16,12 @@ from waveorder.api._settings import (
     OptimizableFourierTransferFunctionSettings,
 )
 from waveorder.api._utils import (
-    _build_output_xarray,
     _named_dataarray,
     _output_channel_names,
     _position_list_from_shape_scale_offset,
     _to_singular_system,
     _to_tensor,
+    _wrap_output_tensor,
 )
 from waveorder.device import resolve_device
 from waveorder.models import (
@@ -246,19 +246,21 @@ def compute_transfer_function(
 
 
 def apply_inverse_transfer_function(
-    czyx_data: xr.DataArray,
+    czyx_data: xr.DataArray | list[xr.DataArray],
     transfer_function: xr.Dataset,
     recon_dim: Literal[2, 3],
     settings: Settings = None,
     fluor_channel_name: str = "",
     device: str | torch.device | None = None,
-) -> xr.DataArray:
+) -> xr.DataArray | list[xr.DataArray]:
     """Reconstruct fluorescence density.
 
     Parameters
     ----------
-    czyx_data : xr.DataArray
-        Input CZYX fluorescence data.
+    czyx_data : xr.DataArray or list[xr.DataArray]
+        Input CZYX fluorescence data. When a list is provided, tiles are
+        stacked into a batch for efficient GPU processing and the result
+        is returned as a list of xr.DataArrays.
     transfer_function : xr.Dataset
         Transfer function from ``compute_transfer_function``.
     recon_dim : {2, 3}
@@ -267,48 +269,57 @@ def apply_inverse_transfer_function(
         Fluorescence reconstruction settings. Uses defaults if None.
     fluor_channel_name : str
         Name for the output fluorescence channel.
+    device : str, torch.device, or None
+        Compute device.
 
     Returns
     -------
-    xr.DataArray
-        CZYX array with a single fluorescence density channel.
+    xr.DataArray or list[xr.DataArray]
+        CZYX array(s) with a single fluorescence density channel.
     """
     if settings is None:
         settings = Settings()
     device = resolve_device(device)
 
-    czyx_tensor = torch.tensor(czyx_data.values, dtype=torch.float32, device=device)
+    channel_names = _output_channel_names(
+        recon_fluo=True,
+        recon_dim=recon_dim,
+        fluor_channel_name=fluor_channel_name,
+    )
 
+    # Normalize input: list -> (B,Z,Y,X), single -> (Z,Y,X)
+    is_list = isinstance(czyx_data, list)
+    if is_list:
+        data_list = czyx_data
+        zyx_tensor = torch.stack(
+            [torch.tensor(d.values[0], dtype=torch.float32, device=device) for d in data_list]
+        )  # (B, Z, Y, X)
+    else:
+        zyx_tensor = torch.tensor(czyx_data.values[0], dtype=torch.float32, device=device)  # (Z, Y, X)
+
+    # Single model call — handles both (Z,Y,X) and (B,Z,Y,X)
     # [fluo, 2]
     if recon_dim == 2:
         U, S, Vh = _to_singular_system(transfer_function)
         output = isotropic_fluorescent_thin_3d.apply_inverse_transfer_function(
-            czyx_tensor[0],
+            zyx_tensor,
             (U.to(device), S.to(device), Vh.to(device)),
             **settings.apply_inverse.model_dump(),
         )
     # [fluo, 3]
     elif recon_dim == 3:
         output = isotropic_fluorescent_thick_3d.apply_inverse_transfer_function(
-            czyx_tensor[0],
+            zyx_tensor,
             _to_tensor(transfer_function, "optical_transfer_function").to(device),
             settings.transfer_function.z_padding,
             **settings.apply_inverse.model_dump(),
         )
-    # Pad to CZYX
-    while output.ndim != 4:
-        output = torch.unsqueeze(output, 0)
 
-    return _build_output_xarray(
-        output.cpu().numpy(),
-        _output_channel_names(
-            recon_fluo=True,
-            recon_dim=recon_dim,
-            fluor_channel_name=fluor_channel_name,
-        ),
-        czyx_data,
-        singleton_z=(recon_dim == 2),
-    )
+    # Wrap output tensor(s) back into xr.DataArray(s)
+    sz = recon_dim == 2
+    if is_list:
+        return [_wrap_output_tensor(output[i], channel_names, data_list[i], sz) for i in range(len(data_list))]
+    return _wrap_output_tensor(output, channel_names, czyx_data, sz)
 
 
 def reconstruct(

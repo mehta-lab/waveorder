@@ -18,12 +18,12 @@ from waveorder.api._settings import (
     _float_val,
 )
 from waveorder.api._utils import (
-    _build_output_xarray,
     _named_dataarray,
     _output_channel_names,
     _position_list_from_shape_scale_offset,
     _to_singular_system,
     _to_tensor,
+    _wrap_output_tensor,
 )
 from waveorder.device import resolve_device
 from waveorder.models import isotropic_thin_3d, phase_thick_3d
@@ -283,18 +283,20 @@ def compute_transfer_function(
 
 
 def apply_inverse_transfer_function(
-    czyx_data: xr.DataArray,
+    czyx_data: xr.DataArray | list[xr.DataArray],
     transfer_function: xr.Dataset,
     recon_dim: Literal[2, 3],
     settings: Settings = None,
     device: str | torch.device | None = None,
-) -> xr.DataArray:
+) -> xr.DataArray | list[xr.DataArray]:
     """Reconstruct phase from brightfield data.
 
     Parameters
     ----------
-    czyx_data : xr.DataArray
-        Input CZYX brightfield data.
+    czyx_data : xr.DataArray or list[xr.DataArray]
+        Input CZYX brightfield data. When a list is provided, tiles are
+        stacked into a batch for efficient processing and the result
+        is returned as a list of xr.DataArrays.
     transfer_function : xr.Dataset
         Transfer function from ``compute_transfer_function``.
     recon_dim : {2, 3}
@@ -306,48 +308,48 @@ def apply_inverse_transfer_function(
 
     Returns
     -------
-    xr.DataArray
-        CZYX array with a single Phase channel.
+    xr.DataArray or list[xr.DataArray]
+        CZYX array(s) with a single Phase channel.
     """
     if settings is None:
         settings = Settings()
     device = resolve_device(device)
 
-    czyx_tensor = torch.tensor(czyx_data.values, dtype=torch.float32, device=device)
+    # Normalize input: list -> (B,Z,Y,X), single -> (Z,Y,X)
+    is_list = isinstance(czyx_data, list)
+    if is_list:
+        data_list = czyx_data
+        zyx_tensor = torch.stack(
+            [torch.tensor(d.values[0], dtype=torch.float32, device=device) for d in data_list]
+        )  # (B, Z, Y, X)
+    else:
+        zyx_tensor = torch.tensor(czyx_data.values[0], dtype=torch.float32, device=device)  # (Z, Y, X)
 
+    # Single model call — handles both (Z,Y,X) and (B,Z,Y,X)
     # [phase only, 2]
     if recon_dim == 2:
         U, S, Vh = _to_singular_system(transfer_function)
-        (
-            absorption_yx,
-            phase_yx,
-        ) = isotropic_thin_3d.apply_inverse_transfer_function(
-            czyx_tensor[0],
+        _, output = isotropic_thin_3d.apply_inverse_transfer_function(
+            zyx_tensor,
             (U.to(device), S.to(device), Vh.to(device)),
             **settings.apply_inverse.model_dump(),
         )
-        output = phase_yx[None, None]
-
     # [phase only, 3]
     elif recon_dim == 3:
         output = phase_thick_3d.apply_inverse_transfer_function(
-            czyx_tensor[0],
+            zyx_tensor,
             _to_tensor(transfer_function, "real_potential_transfer_function").to(device),
             _to_tensor(transfer_function, "imaginary_potential_transfer_function").to(device),
             z_padding=settings.transfer_function.z_padding,
             **settings.apply_inverse.model_dump(),
         )
 
-    # Pad to CZYX
-    while output.ndim != 4:
-        output = torch.unsqueeze(output, 0)
-
-    return _build_output_xarray(
-        output.cpu().numpy(),
-        _output_channel_names(recon_phase=True, recon_dim=recon_dim),
-        czyx_data,
-        singleton_z=(recon_dim == 2),
-    )
+    # Wrap output tensor(s) back into xr.DataArray(s)
+    ch = _output_channel_names(recon_phase=True, recon_dim=recon_dim)
+    sz = recon_dim == 2
+    if is_list:
+        return [_wrap_output_tensor(output[i], ch, data_list[i], sz) for i in range(len(data_list))]
+    return _wrap_output_tensor(output, ch, czyx_data, sz)
 
 
 def reconstruct(
