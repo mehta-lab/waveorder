@@ -277,41 +277,42 @@ def apply_inverse_transfer_function(
     Parameters
     ----------
     zyx_data : Tensor
-        3D raw data, fluorescence defocus stack
+        Raw data of shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
     singular_system : Tuple[Tensor, Tensor, Tensor]
-        Singular system of the fluorescent transfer function
-    reconstruction_algorithm : Literal["Tikhonov", "TV"], optional
-        Reconstruction algorithm, by default "Tikhonov"
-        "TV" is not implemented
+        Singular system ``(U, S, Vh)`` (shared, not batched).
+    reconstruction_algorithm : {"Tikhonov", "TV"}, optional
+        By default "Tikhonov". "TV" is not implemented.
     regularization_strength : float, optional
         Regularization parameter, by default 1e-3
     TV_rho_strength : float, optional
         TV-specific regularization parameter, by default 1e-3
-        "TV" is not implemented
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
-        "TV" is not implemented
 
     Returns
     -------
     Tensor
-        YX fluorescence density reconstruction
-
-    Raises
-    ------
-    NotImplementedError
-        TV is not implemented
+        Fluorescence density with shape ``(Y, X)`` or ``(B, Y, X)``
     """
+    batched = zyx_data.ndim == 4
+    if not batched:
+        zyx_data = zyx_data.unsqueeze(0)
+
     if reconstruction_algorithm == "Tikhonov":
         U, S, Vh = singular_system
         S_reg = S / (S**2 + regularization_strength)
         sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
 
-        # Apply filter bank - returns tuple but we only have one object type
-        yx_fluorescence_density = apply_filter_bank(sfyx_inverse_filter, zyx_data)[0]
+        results = []
+        for b in range(zyx_data.shape[0]):
+            results.append(apply_filter_bank(sfyx_inverse_filter, zyx_data[b])[0])
+        yx_fluorescence_density = torch.stack(results, dim=0)  # (B, Y, X)
 
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError("TV reconstruction is not implemented")
+
+    if not batched:
+        yx_fluorescence_density = yx_fluorescence_density.squeeze(0)
 
     return yx_fluorescence_density
 
@@ -330,13 +331,10 @@ def reconstruct(
 ) -> Tensor:
     """Reconstruct 2D fluorescence density from a defocus stack.
 
-    Chains calculate_transfer_function, calculate_singular_system,
-    and apply_inverse_transfer_function.
-
     Parameters
     ----------
     zyx_data : Tensor
-        3D raw data, fluorescence defocus stack
+        Raw data of shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
     yx_pixel_size : float
         Pixel size in the transverse (Y, X) dimensions
     z_position_list : list or Tensor
@@ -347,8 +345,8 @@ def reconstruct(
         Refractive index of the surrounding medium
     numerical_aperture_detection : float or Tensor
         Detection numerical aperture
-    reconstruction_algorithm : str, optional
-        "Tikhonov" or "TV", by default "Tikhonov"
+    reconstruction_algorithm : {"Tikhonov", "TV"}, optional
+        By default "Tikhonov".
     regularization_strength : float, optional
         Regularization parameter, by default 1e-3
     TV_rho_strength : float, optional
@@ -359,7 +357,7 @@ def reconstruct(
     Returns
     -------
     Tensor
-        yx_fluorescence_density
+        Fluorescence density with shape ``(Y, X)`` or ``(B, Y, X)``
     """
     fluorescent_tf = calculate_transfer_function(
         zyx_data.shape[-2:],

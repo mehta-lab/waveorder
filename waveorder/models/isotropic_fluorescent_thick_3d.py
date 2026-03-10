@@ -5,7 +5,6 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
-from waveorder.filter import apply_filter_bank
 from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
@@ -241,64 +240,55 @@ def apply_inverse_transfer_function(
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
 ) -> Tensor:
-    """Reconstructs fluorescence density from zyx_data and
-    an optical_transfer_function, providing options for z padding and
-    reconstruction algorithms.
+    """Reconstructs fluorescence density from defocus data.
 
     Parameters
     ----------
     zyx_data : Tensor
-        3D raw data, fluorescence defocus stack
+        Raw data of shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
     optical_transfer_function : Tensor
-        3D optical transfer function, see calculate_transfer_function above
+        3D optical transfer function (shared, not batched)
     z_padding : int
         Padding for axial dimension. Use zero for defocus stacks that
         extend ~3 PSF widths beyond the sample. Pad by ~3 PSF widths otherwise.
-    reconstruction_algorithm : str, optional
-        "Tikhonov" or "TV", by default "Tikhonov"
-        "TV" is not implemented.
+    reconstruction_algorithm : {"Tikhonov", "TV"}, optional
+        By default "Tikhonov". "TV" is not implemented.
     regularization_strength : float, optional
-        regularization parameter, by default 1e-3
-    TV_rho_strength : _type_, optional
+        Regularization parameter, by default 1e-3
+    TV_rho_strength : float, optional
         TV-specific regularization parameter, by default 1e-3
-        "TV" is not implemented.
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
-        "TV" is not implemented.
 
     Returns
     -------
     Tensor
-        zyx_fluorescence_density (fluorophores per volumes)
-
-    Raises
-    ------
-    NotImplementedError
-        TV is not implemented
+        Fluorescence density, shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
     """
-    # Handle padding
+    batched = zyx_data.ndim == 4
+    if not batched:
+        zyx_data = zyx_data.unsqueeze(0)
+
+    # Handle padding: (B, Z, Y, X) -> (B, Z+2*pad, Y, X)
     zyx_padded = util.pad_zyx_along_z(zyx_data, z_padding)
 
     # Reconstruct
     if reconstruction_algorithm == "Tikhonov":
         inverse_filter = tikhonov_regularized_inverse_filter(optical_transfer_function, regularization_strength)
 
-        # [None]s and [0] are for applying a 1x1 "bank" of filters.
-        # For further uniformity, consider returning (1, Z, Y, X)
-        f_real = apply_filter_bank(inverse_filter[None, None], zyx_padded[None])[0]
+        # Batched FFT multiply: inverse_filter (Z,Y,X) broadcasts over B
+        zyx_fft = torch.fft.fftn(zyx_padded, dim=(-3, -2, -1))
+        f_real = torch.real(torch.fft.ifftn(zyx_fft * inverse_filter, dim=(-3, -2, -1)))
+
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
-        f_real = util.single_variable_admm_tv_deconvolution_3D(
-            zyx_padded,
-            optical_transfer_function,
-            reg_re=regularization_strength,
-            rho=TV_rho_strength,
-            itr=TV_iterations,
-        )
 
     # Unpad
     if z_padding != 0:
-        f_real = f_real[z_padding:-z_padding]
+        f_real = f_real[:, z_padding:-z_padding]
+
+    if not batched:
+        f_real = f_real.squeeze(0)
 
     return f_real
 
@@ -319,12 +309,10 @@ def reconstruct(
 ) -> Tensor:
     """Reconstruct 3D fluorescence density from a defocus stack.
 
-    Chains calculate_transfer_function and apply_inverse_transfer_function.
-
     Parameters
     ----------
     zyx_data : Tensor
-        3D raw data, fluorescence defocus stack
+        Raw data of shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
     yx_pixel_size : float
         Pixel size in the transverse (Y, X) dimensions
     z_pixel_size : float
@@ -339,8 +327,8 @@ def reconstruct(
         Detection numerical aperture
     confocal_pinhole_diameter : float | None, optional
         Confocal pinhole diameter, by default None (widefield)
-    reconstruction_algorithm : str, optional
-        "Tikhonov" or "TV", by default "Tikhonov"
+    reconstruction_algorithm : {"Tikhonov", "TV"}, optional
+        By default "Tikhonov".
     regularization_strength : float, optional
         Regularization parameter, by default 1e-3
     TV_rho_strength : float, optional
@@ -351,10 +339,12 @@ def reconstruct(
     Returns
     -------
     Tensor
-        zyx_fluorescence_density
+        Fluorescence density, shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
     """
+    # Use last 3 dims as zyx_shape for TF computation
+    zyx_shape = zyx_data.shape[-3:]
     optical_transfer_function = calculate_transfer_function(
-        zyx_data.shape,
+        zyx_shape,
         yx_pixel_size,
         z_pixel_size,
         wavelength_emission,
