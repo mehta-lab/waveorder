@@ -8,70 +8,84 @@ Forward simulation
 2. Convert each to fluorescence density and phase density
 3. Simulate fluorescence and phase images via transfer functions
 4. Save all volumes to an OME-Zarr v3 store (ome-ngff 0.5) via iohub
-5. Compute Siddon sum-projections of simulated images at -70 to +70 degrees in 5-degree steps
+5. Compute Siddon mean-projections of simulated images at -70 to +70 degrees in 5-degree steps
 6. Assume the black level of 100 and the peak photon flux of 1024, scale the simulated images (but not the test phantom) that sets the value of brightest voxel to 1024. Add Poisson noise to mimic realistic imaging.
 
-Inverse algorithm - geometric:
-1. From the noisy projections of original object at angles +- x degrees, estimate the projection along the 0 degree. Ignore the blur and map the phantoms to intensities. In other words, simulate the existence of the solution.
+Inverse algorithm — four subcommands:
+1. **geometric**: Reconstruct from ALL projections of the unblurred object using Siddon-only forward model. Tests whether the CG-Tikhonov solver recovers the object from clean geometric projections.
+2. **wave**: Reconstruct from ALL projections of the blurred+noisy rawimage using 3D OTF + Siddon forward model. Tests simultaneous deconvolution and reconstruction.
+3. **geometric-limited**: Reconstruct from a single ±theta projection pair of the unblurred object. No blur in forward model.
+4. **wave-limited**: Reconstruct from a single ±theta projection pair of the blurred+noisy rawimage. 3D OTF in forward model.
 
-Inverse algorithm - wave optical:
-1. Repeat the above process for images of 3 targets acquired with with blur, and estimate the projection along z-axis from projections made at angles +-x degrees. In other words, use 6 sets of projection images to estimate the object.
-
+Fourier-slice theorem: projecting an OTF-blurred 3D volume at angle theta is equivalent to applying the central slice of the 3D OTF at that angle as a 2D transfer function. Using the full 3D OTF convolution in the forward model naturally accounts for angle-dependent resolution and defocus coupling.
 
 Metrics:
-Compute the metrics of similarity between the original object and reconstruction. Make a note of these metrics for all targets, their images, and inverse algorithm. Choose standard Tikhonov regularized inverse algorithms.
+MSE and PSNR between reconstruction and unblurred ground truth (`object` column). Stored in position zattrs.
 
 
 ## Output
 Forward simulation CLI: `docs/examples/demos/projection_modeling/projection_modeling.py`
-Inverse algorithm - geometric: `docs/examples/demos/projection_modeling/projection_reconstruction_geometric.py`
-Inverse algorithm - wave: `docs/examples/demos/projection_modeling/projection_reconstruction_wave.py`
+Reconstruction CLI: `docs/examples/demos/projection_modeling/projection_reconstruction.py`
+
+Legacy scripts (superseded):
+- `projection_reconstruction_geometric.py`
+- `projection_reconstruction_wave.py`
 
 
 ---
 
 ## CLI Usage
 
-The forward simulation is a Click CLI with three subcommands that run in sequence.
-Each subcommand reads the output of the previous stage from the shared store.
-
 ```bash
 cd docs/examples/demos/projection_modeling/
 
-# Step 1: Generate 3D test phantoms → object column
-uv run python projection_modeling.py object --data-dir ./data
+# === Forward simulation (three stages) ===
+uv run python projection_modeling.py object   --data-dir ./data
+uv run python projection_modeling.py image    --data-dir ./data
+uv run python projection_modeling.py project  --data-dir ./data
 
-# Step 2: Blur + noise → rawimage column
-uv run python projection_modeling.py image --data-dir ./data
+# === Reconstruction (four subcommands, extend existing store) ===
+# All 29 projection angles
+uv run python projection_reconstruction.py geometric --data-dir ./data
+uv run python projection_reconstruction.py wave      --data-dir ./data
 
-# Step 3: Siddon projections → projections column
-uv run python projection_modeling.py project --data-dir ./data
+# Single +/-theta pair
+uv run python projection_reconstruction.py geometric-limited --angle 30 --data-dir ./data
+uv run python projection_reconstruction.py wave-limited      --angle 30 --data-dir ./data
+
+# Tune reconstruction parameters
+uv run python projection_reconstruction.py geometric --reg 1e-4 --niter 100
+uv run python projection_reconstruction.py wave --reg 1e-2 --niter 30
 
 # Show help
-uv run python projection_modeling.py -h
-uv run python projection_modeling.py object -h
+uv run python projection_reconstruction.py -h
+uv run python projection_reconstruction.py wave -h
 ```
 
 ---
 
 ## Data Format: OME-Zarr v3 via iohub
 
-All scripts write to a single HCS-layout OME-Zarr store using `iohub.ngff.open_ome_zarr` with `version="0.5"`. This produces zarr v3 stores with ome-ngff 0.5 metadata, viewable in napari via `napari-ome-zarr`.
+All scripts write to a single HCS-layout OME-Zarr store using `iohub.ngff.open_ome_zarr` with `version="0.5"`.
 
 ### Store Layout
 
 ```
 projection_modeling.zarr/          # HCS plate, ome-ngff 0.5
   point/                           # row = sample_type
-    object/                        # col: ground-truth densities
-      0/                           # FOV: TCZYX (1, 2, 256, 256, 256)
-    rawimage/                      # col: blurred + noisy images
-      0/                           # FOV: TCZYX (1, 2, 256, 256, 256)
-    projections/                   # col: Siddon projection stacks
-      0/                           # FOV: TCZYX (1, 2, 29, 256, X_pad)
-    recongeo/                      # col: geometric reconstruction
+    object/                        # ground-truth densities  (1, 2, 256, 256, 256)
       0/
-    reconwave/                     # col: wave-optical reconstruction
+    rawimage/                      # blurred + noisy images  (1, 2, 256, 256, 256)
+      0/
+    projections/                   # Siddon projection stacks (1, 2, 29, 256, 363)
+      0/
+    recongeo/                      # geometric recon, all angles
+      0/
+    reconwave/                     # wave-optical recon, all angles
+      0/
+    recongeoL/                     # geometric recon, limited ±theta
+      0/
+    reconwaveL/                    # wave-optical recon, limited ±theta
       0/
   lines/
     (same columns)
@@ -79,40 +93,44 @@ projection_modeling.zarr/          # HCS plate, ome-ngff 0.5
     (same columns)
 ```
 
-**Note:** HCS plate axis names must be alphanumeric. Use `rawimage`, `recongeo`, `reconwave`, `shepplogan` (no underscores or hyphens).
+**Note:** HCS axis names must be alphanumeric. Column names: `rawimage`, `recongeo`, `reconwave`, `recongeoL`, `reconwaveL`, `shepplogan`.
 
-Each subcommand creates its own column positions when it runs:
-- `object` creates the store fresh and writes `object` positions
-- `image` opens the store in `r+` mode and creates `rawimage` positions
-- `project` opens the store in `r+` mode and creates `projections` positions
+Each script/subcommand creates its own column positions when it runs. Positions that already exist are reused (data overwritten).
 
 ### Channel Naming
 
 All columns share channel names `["Fluorescence", "Phase"]` (C=0 and C=1).
 
-| Column | Shape | Description |
-|--------|-------|-------------|
-| `object` | `(1, 2, 256, 256, 256)` | Ground-truth densities, normalized [0, 1] |
-| `rawimage` | `(1, 2, 256, 256, 256)` | Blurred, scaled to [100, 1024], Poisson noise |
-| `projections` | `(1, 2, 29, 256, X_pad)` | Siddon sum-projections at -70:5:70 deg |
-| `recongeo` | `(1, 2, 256, 256, 256)` | Geometric reconstruction (no OTF) |
-| `reconwave` | `(1, 2, 256, 256, 256)` | Wave-optical reconstruction (with OTF) |
+| Column | Shape | Source | Forward model |
+|--------|-------|--------|---------------|
+| `object` | `(1, 2, 256, 256, 256)` | Phantom generator | — |
+| `rawimage` | `(1, 2, 256, 256, 256)` | OTF blur + noise | — |
+| `projections` | `(1, 2, 29, 256, 363)` | Siddon mean-proj of rawimage | — |
+| `recongeo` | `(1, 2, 256, 256, 256)` | object → Siddon | CG-Tikhonov, all angles |
+| `reconwave` | `(1, 2, 256, 256, 256)` | rawimage → OTF+Siddon | CG-Tikhonov, all angles |
+| `recongeoL` | `(1, 2, 256, 256, 256)` | object → Siddon | CG-Tikhonov, ±theta |
+| `reconwaveL` | `(1, 2, 256, 256, 256)` | rawimage → OTF+Siddon | CG-Tikhonov, ±theta |
+
+### Reconstruction Metadata
+
+Each reconstruction position stores metrics and parameters in zattrs:
+
+```python
+pos.zattrs["Fluorescence_mse"]   # MSE vs ground truth
+pos.zattrs["Fluorescence_psnr"]  # PSNR in dB
+pos.zattrs["Phase_mse"]
+pos.zattrs["Phase_psnr"]
+pos.zattrs["angles"]             # list of projection angles used
+pos.zattrs["reg_strength"]       # Tikhonov lambda
+pos.zattrs["n_iter"]             # CG iterations
+```
 
 ### Projection Stack Convention
 
 Projections are stored as 3D stacks browsable with a standard Z-slider.
-Each slice along the Z-axis is one projection angle.
-The Z-scale in the transform metadata encodes the angular step: `scale[2] = 5.0` (degrees).
-Actual angles are stored in position zattrs:
-
-```python
-pos.zattrs["projection_angles_deg"]  # [-70, -65, ..., 65, 70]
-pos.zattrs["angle_step_deg"]         # 5
-pos.zattrs["angle_start_deg"]        # -70
-```
-
-Since Siddon projections at oblique angles produce wider lateral output,
-all projections are center-padded to the maximum width (363 pixels for a 256^3 cube at 70 deg).
+Each Z-slice is one projection angle. Z-scale = 5.0 (angular step in degrees).
+Actual angles stored in `pos.zattrs["projection_angles_deg"]`.
+Oblique projections center-padded to maximum width (363 px for 256^3 cube at 70 deg).
 
 ### Viewing
 
@@ -134,85 +152,89 @@ napari.run(); plate.close()
 
 ## Part 1: Configurable Parameters
 
-Module-level constants at the top of the CLI script:
+Module-level constants at the top of each CLI script:
 
 ```python
-BEAD_RADIUS = 0.25              # um (0.5 um diameter)
-BEAD_INDEX = 1.52               # refractive index of beads/structures
-MEDIA_INDEX = 1.33              # water
-LINE_RADIUS = 0.25              # um (0.5 um line thickness → radius)
-BRACKET_HALF_EXTENT = 2.0       # um, half-height of brackets in Y
-BRACKET_X_OFFSET = 2.0          # um, bracket distance from center in X
-BRACKET_CAP_LENGTH = 0.6        # um, horizontal cap length for [ and ]
-TORUS_MAJOR_RADIUS = 0.8        # um, ring radius for 'o'
-
-VOLUME_EXTENT = 12.8            # um (256 voxels at 50 nm)
-VOXEL_SIZE = 0.05               # um (50 nm isotropic sampling)
+VOXEL_SIZE = 0.05               # um (50 nm isotropic)
+ZYX_SHAPE = (256, 256, 256)     # 12.8 um cube
 
 WAVELENGTH_ILLUMINATION = 0.500  # um
-WAVELENGTH_EMISSION = 0.520      # um (Stokes shift)
+WAVELENGTH_EMISSION = 0.520      # um
 NA_DETECTION = 1.0
 NA_ILLUMINATION = 0.5
-Z_PADDING = 0
-BLACK_LEVEL = 100                # detector black level (counts)
-PEAK_INTENSITY = 1024            # peak photon flux (counts)
+MEDIA_INDEX = 1.33
+BLACK_LEVEL = 100                # detector offset (counts)
+PEAK_INTENSITY = 1024            # peak signal (counts)
 
 PROJECTION_ANGLES = list(range(-70, 75, 5))  # 29 angles
+REG_STRENGTH = 1e-3              # default Tikhonov lambda
+N_ITER = 50                      # default CG iterations
 ```
-
-Derived shape: `ZYX_SHAPE = (256, 256, 256)`.
 
 ## Part 2: Three Test Phantoms
 
 ### 2a: Isolated bead
-
-A single sphere at the volume center with radius 0.25 um (0.5 um diameter). Binary volume: voxels within `bead_radius` of center set to 1.
+Single sphere at volume center, radius 0.25 um. Binary volume.
 
 ### 2b: Line `[o]` pattern
-
-Bracket-shaped cylinders and a torus ring, all with 0.5 um tube diameter:
-
-- **`[`**: Three segments — vertical bar at `x = -bracket_x_offset`, plus horizontal caps at `y = ±bracket_half_extent` extending rightward by `bracket_cap_length`.
-- **`]`**: Mirror of `[` — vertical bar at `x = +bracket_x_offset`, caps extending leftward.
-- **`o`**: Torus of radius `torus_major_radius` centered at the origin.
-
-Gap between brackets and ring: `bracket_x_offset - torus_major_radius - line_radius = 0.95 um`.
+Bracket-shaped cylinders and a torus ring, 0.5 um tube diameter.
+Gap between brackets and ring: 0.95 um (no overlap).
 
 ### 2c: Shepp-Logan
+Standard 10-ellipsoid 3D phantom. Density normalized to [0, 1].
 
-Standard 10-ellipsoid 3D Shepp-Logan phantom. Density normalized to [0, 1].
+## Part 3: Forward Simulation
 
-## Part 3: Conversion to Fluorescence and Phase Density
+`projection_modeling.py image` blurs each channel through the 3D transfer function:
+- Fluorescence: `isotropic_fluorescent_thick_3d` OTF
+- Phase: `phase_thick_3d` real transfer function
 
-Each phantom volume (values 0–1) is converted to fluorescence density (direct mapping) and phase (delta_n * voxel_size / wavelength_medium). Uniform transmission assumed.
+Then scales to [BLACK_LEVEL, PEAK_INTENSITY] and applies Poisson noise.
 
-## Part 4: Forward Simulation (image subcommand)
+## Part 4: Projections
 
-Blur fluorescence density through the fluorescence OTF, phase density through the phase transfer function. Scale each to [BLACK_LEVEL, PEAK_INTENSITY] and apply Poisson noise.
+`projection_modeling.py project` computes Siddon mean-projections (sum / physical path length) at 29 angles. All projections padded to uniform width and stacked along Z.
 
-## Part 5: Projections (project subcommand)
+## Part 5: Reconstruction
 
-For each sample, read the rawimage volumes, compute Siddon sum-projections at 29 angles (-70 to +70, step 5). Center-pad oblique projections to uniform width. Stack into a TCZYX array where Z indexes angle.
+`projection_reconstruction.py` implements four subcommands sharing one core CG-Tikhonov solver.
 
-## Part 6: Reconstruction (separate scripts)
+### Forward models
 
-### Geometric reconstruction (projection_reconstruction_geometric.py)
-Read `object` stage, compute Siddon projections at ±x degrees, run CG-Tikhonov, write to `recongeo`.
+**Geometric**: `forward(x) = [siddon_project(x, angle) for angle in angles]`
 
-### Wave-optical reconstruction (projection_reconstruction_wave.py)
-Read `rawimage` stage, write to `reconwave`.
+**Wave-optical**: `forward(x) = [siddon_project(OTF_3D ⊛ x, angle) for angle in angles]`
+
+The wave adjoint is: `adjoint(y) = OTF_3D^† ⊛ sum(siddon_backproject(y_i, angle_i))`
+
+OTF convolution uses PyTorch FFT on GPU (`torch.fft.fftn`/`ifftn`). Siddon ray-tracing and CG iterations remain on CPU (numpy).
+
+### Angle configurations
+
+- **All angles** (`geometric`, `wave`): 29 projections at -70:5:70 degrees
+- **Limited** (`geometric-limited`, `wave-limited`): single ±theta pair (2 projections)
+
+### Fourier-slice theorem
+
+Projecting a 3D OTF-blurred volume at angle theta samples the central slice of the 3D Fourier transform at that angle. The 3D OTF convolution in the forward model correctly weights each Fourier slice by the angle-dependent microscope transfer function, coupling defocus and projection geometry. This is why the wave-optical forward model applies the full 3D OTF (not an angle-dependent 2D OTF) before Siddon projection.
 
 ## Testing
 
 ```bash
 cd docs/examples/demos/projection_modeling/
 
-# Run all forward simulation stages
+# Run full pipeline
 uv run python projection_modeling.py object
 uv run python projection_modeling.py image
 uv run python projection_modeling.py project
+uv run python projection_reconstruction.py geometric
+uv run python projection_reconstruction.py wave
 
-# Verify store structure
+# Limited reconstructions
+uv run python projection_reconstruction.py geometric-limited --angle 30
+uv run python projection_reconstruction.py wave-limited --angle 30
+
+# Verify store
 uv run python -c "
 from iohub.ngff import open_ome_zarr
 with open_ome_zarr('data/projection_modeling.zarr', mode='r') as p:
