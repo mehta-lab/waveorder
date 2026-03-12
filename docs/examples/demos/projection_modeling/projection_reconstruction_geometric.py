@@ -30,7 +30,6 @@ from pathlib import Path
 
 import numpy as np
 import zarr
-
 from siddon import cg_tikhonov, siddon_backproject, siddon_project
 
 # %% [markdown]
@@ -64,9 +63,9 @@ output_store.attrs["n_iter"] = n_iter
 
 # %%
 for phantom_name in phantom_names:
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Phantom: {phantom_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     volume_gt = np.array(input_store[f"{phantom_name}/fluorescence_density"])
     output_store[f"{phantom_name}/ground_truth"] = volume_gt
@@ -98,9 +97,8 @@ for phantom_name in phantom_names:
             return [_pad_to(p_p, _w), _pad_to(p_m, _w)]
 
         def adjoint(projs, _angle=angle, _shape=zyx_shape, _vs=voxel_size):
-            return (
-                siddon_backproject(projs[0], +_angle, _shape, _vs)
-                + siddon_backproject(projs[1], -_angle, _shape, _vs)
+            return siddon_backproject(projs[0], +_angle, _shape, _vs) + siddon_backproject(
+                projs[1], -_angle, _shape, _vs
             )
 
         print(f"    Running CG ({n_iter} iterations)...")

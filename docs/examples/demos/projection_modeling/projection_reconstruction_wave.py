@@ -35,8 +35,8 @@ from pathlib import Path
 import numpy as np
 import torch
 import zarr
-
 from siddon import cg_tikhonov, siddon_backproject, siddon_project
+
 from waveorder.models import isotropic_fluorescent_thick_3d
 
 # %% [markdown]
@@ -109,11 +109,13 @@ def apply_otf_adjoint(vol_np):
 
 # %%
 for phantom_name in phantom_names:
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Phantom: {phantom_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     volume_blurred = np.array(input_store[f"{phantom_name}/fluorescence_blurred"])
+    # Subtract the constant background added by apply_transfer_function
+    volume_blurred = volume_blurred - volume_blurred.min()
     volume_gt = np.array(input_store[f"{phantom_name}/fluorescence_density"])
     output_store[f"{phantom_name}/ground_truth"] = volume_gt
 
@@ -144,10 +146,7 @@ for phantom_name in phantom_names:
             return [_pad_to(p_p, _w), _pad_to(p_m, _w)]
 
         def adjoint(projs, _angle=angle, _shape=zyx_shape, _vs=voxel_size):
-            bp = (
-                siddon_backproject(projs[0], +_angle, _shape, _vs)
-                + siddon_backproject(projs[1], -_angle, _shape, _vs)
-            )
+            bp = siddon_backproject(projs[0], +_angle, _shape, _vs) + siddon_backproject(projs[1], -_angle, _shape, _vs)
             return apply_otf_adjoint(bp)
 
         print(f"    Running CG ({n_iter} iterations)...")

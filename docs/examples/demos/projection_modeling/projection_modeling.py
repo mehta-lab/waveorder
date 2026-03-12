@@ -1,145 +1,80 @@
-# -*- coding: utf-8 -*-
-# ---
-# jupyter:
-#   jupytext:
-#     formats: py:percent,ipynb
-#     text_representation:
-#       extension: .py
-#       format_name: percent
-#       format_version: '1.3'
-#       jupytext_version: 1.15.2
-#   kernelspec:
-#     display_name: Python 3
-#     language: python
-#     name: python3
-# ---
+"""Projection modeling CLI: simulate phantoms, images, and projections.
 
-# %% [markdown]
-"""
-# Projection Modeling: Three Test Phantoms and Forward Simulation
+Usage::
 
-This notebook generates three distinct 3D phantoms, converts each to
-fluorescence density and phase density, and blurs them through the
-microscope transfer functions.
+    python projection_modeling.py object   --data-dir ./data
+    python projection_modeling.py image    --data-dir ./data
+    python projection_modeling.py project  --data-dir ./data
 
-Phantoms:
-1. Isolated bead — a single 0.5 um sphere
-2. Line `[o]` pattern — thin cylinders and a torus ring
-3. Shepp-Logan — complex extended object
+Each subcommand builds on the previous stage stored in the OME-Zarr store
+at ``<data-dir>/projection_modeling.zarr``.
 """
 
-# %%
+import shutil
 from pathlib import Path
 
+import click
 import numpy as np
 import torch
-import zarr
+from iohub.ngff import open_ome_zarr
+from iohub.ngff.models import TransformationMeta
 from scipy.ndimage import gaussian_filter
-
 from siddon import siddon_project
+
 from waveorder.models import isotropic_fluorescent_thick_3d, phase_thick_3d
 
-# %% [markdown]
-"""
-## Configurable Parameters
-"""
+# ---------------------------------------------------------------------------
+# Simulation constants
+# ---------------------------------------------------------------------------
+# Object
+BEAD_RADIUS = 0.25  # um
+BEAD_INDEX = 1.52
+MEDIA_INDEX = 1.33
+LINE_RADIUS = 0.25  # um
+BRACKET_HALF_EXTENT = 2.0  # um
+BRACKET_X_OFFSET = 2.0  # um
+BRACKET_CAP_LENGTH = 0.6  # um
+TORUS_MAJOR_RADIUS = 0.8  # um
 
-# %%
-# --- Object parameters ---
-bead_radius = 0.25  # um (0.5 um diameter)
-bead_index = 1.52  # refractive index of structures
-media_index = 1.33  # water
-line_radius = 0.25  # um (0.5 um line thickness → radius)
-pattern_extent = 2.5  # um, half-extent of [o] pattern around center
-line_spacing = 2.0  # um, spacing between bracket line positions
+# Volume
+VOLUME_EXTENT = 12.8  # um  (256 voxels at 50 nm)
+VOXEL_SIZE = 0.05  # um
 
-# --- Volume parameters ---
-volume_extent_x = 10.0  # um
-volume_extent_y = 10.0  # um
-volume_extent_z = 10.0  # um
-voxel_size = 0.05  # um (50 nm isotropic sampling)
+# Imaging
+WAVELENGTH_ILLUMINATION = 0.500  # um
+WAVELENGTH_EMISSION = 0.520  # um
+NA_DETECTION = 1.0
+NA_ILLUMINATION = 0.5
+Z_PADDING = 0
+BLACK_LEVEL = 100  # counts
+PEAK_INTENSITY = 1024  # counts
 
-# --- Imaging parameters ---
-wavelength_illumination = 0.500  # um
-wavelength_emission = 0.520  # um (Stokes-shifted fluorescence)
-na_detection = 1.0
-na_illumination = 0.5
-z_padding = 0
-
-# --- Projection parameters ---
-projection_angles = [-60, 0, 60]  # degrees from z-axis (rotation around Y)
-
-# --- Derived parameters ---
-nz = int(volume_extent_z / voxel_size)
-ny = int(volume_extent_y / voxel_size)
-nx = int(volume_extent_x / voxel_size)
-zyx_shape = (nz, ny, nx)
-
-print(f"Volume shape: {zyx_shape} ({nz * ny * nx / 1e6:.1f}M voxels)")
-print(f"Physical size: {volume_extent_z} x {volume_extent_y} x {volume_extent_x} um")
-
-# %% [markdown]
-"""
-## Phantom Generators
-"""
+# Derived
+N = int(VOLUME_EXTENT / VOXEL_SIZE)  # 256
+ZYX_SHAPE = (N, N, N)
+SAMPLE_TYPES = ["point", "lines", "shepplogan"]
+CHANNEL_NAMES = ["Fluorescence", "Phase"]
+PROJECTION_ANGLES = list(range(-70, 75, 5))  # -70 to +70, step 5
 
 
-# %%
+# ---------------------------------------------------------------------------
+# Phantom generators
+# ---------------------------------------------------------------------------
 def generate_isolated_bead(zyx_shape, voxel_size, bead_radius):
-    """Single sphere at volume center.
-
-    Parameters
-    ----------
-    zyx_shape : tuple of int
-        (nz, ny, nx) volume shape.
-    voxel_size : float
-        Isotropic voxel spacing in um.
-    bead_radius : float
-        Sphere radius in um.
-
-    Returns
-    -------
-    volume : np.ndarray
-        Binary volume with 1 inside the sphere, 0 outside.
-    """
+    """Single sphere at volume center. Returns binary volume (0/1)."""
     nz, ny, nx = zyx_shape
     z = (np.arange(nz) - nz / 2) * voxel_size
     y = (np.arange(ny) - ny / 2) * voxel_size
     x = (np.arange(nx) - nx / 2) * voxel_size
     zz, yy, xx = np.meshgrid(z, y, x, indexing="ij")
     dist = np.sqrt(zz**2 + yy**2 + xx**2)
-    volume = (dist <= bead_radius).astype(np.float32)
-    return volume
+    return (dist <= bead_radius).astype(np.float32)
 
 
-def generate_line_pattern(zyx_shape, voxel_size, line_radius, pattern_extent, line_spacing):
-    """[o] pattern from cylinders (brackets) and a torus (ring).
-
-    Brackets `[` and `]` are vertical line segments (cylinders along Y)
-    at x = +/-pattern_extent/2, spanning y in [-pattern_extent/2, +pattern_extent/2],
-    centered at z = 0.
-
-    The `o` is a torus in the central XY plane with major radius 0.8 um
-    and tube radius = line_radius.
-
-    Parameters
-    ----------
-    zyx_shape : tuple of int
-        (nz, ny, nx) volume shape.
-    voxel_size : float
-        Isotropic voxel spacing in um.
-    line_radius : float
-        Half-thickness of lines in um.
-    pattern_extent : float
-        Half-extent of the pattern in um.
-    line_spacing : float
-        Not used directly; reserved for future bracket segment spacing.
-
-    Returns
-    -------
-    volume : np.ndarray
-        Smooth volume (0-1) with the [o] pattern.
-    """
+def generate_line_pattern(
+    zyx_shape, voxel_size, line_radius, bracket_half_extent, bracket_x_offset, bracket_cap_length, torus_major_radius
+):
+    """[o] pattern from bracket-shaped cylinders and a torus ring."""
     nz, ny, nx = zyx_shape
     z = (np.arange(nz) - nz / 2) * voxel_size
     y = (np.arange(ny) - ny / 2) * voxel_size
@@ -148,50 +83,42 @@ def generate_line_pattern(zyx_shape, voxel_size, line_radius, pattern_extent, li
 
     volume = np.zeros(zyx_shape, dtype=np.float32)
 
-    # '[' bracket: cylinder along Y at x = -pattern_extent/2, z = 0
-    x_left = -pattern_extent / 2
-    y_mask_left = (yy >= -pattern_extent / 2) & (yy <= pattern_extent / 2)
-    dist_left = np.sqrt((xx - x_left) ** 2 + zz**2)
-    volume[(dist_left <= line_radius) & y_mask_left] = 1.0
+    def _add_cylinder_y(vol, x_center, y_min, y_max):
+        y_clamped = np.clip(yy, y_min, y_max)
+        dist = np.sqrt((xx - x_center) ** 2 + zz**2 + (yy - y_clamped) ** 2)
+        vol[dist <= line_radius] = 1.0
 
-    # ']' bracket: cylinder along Y at x = +pattern_extent/2, z = 0
-    x_right = pattern_extent / 2
-    y_mask_right = (yy >= -pattern_extent / 2) & (yy <= pattern_extent / 2)
-    dist_right = np.sqrt((xx - x_right) ** 2 + zz**2)
-    volume[(dist_right <= line_radius) & y_mask_right] = 1.0
+    def _add_cylinder_x(vol, y_center, x_min, x_max):
+        x_clamped = np.clip(xx, x_min, x_max)
+        dist = np.sqrt((yy - y_center) ** 2 + zz**2 + (xx - x_clamped) ** 2)
+        vol[dist <= line_radius] = 1.0
 
-    # 'o' ring: torus with major radius R in XY plane, tube radius = line_radius
-    torus_major_radius = 0.8  # um
-    # Distance from the ring centerline (circle of radius R in XY at z=0):
-    # d = sqrt((sqrt(x^2 + y^2) - R)^2 + z^2)
+    # '[' bracket
+    x_left = -bracket_x_offset
+    _add_cylinder_y(volume, x_left, -bracket_half_extent, bracket_half_extent)
+    _add_cylinder_x(volume, +bracket_half_extent, x_left, x_left + bracket_cap_length)
+    _add_cylinder_x(volume, -bracket_half_extent, x_left, x_left + bracket_cap_length)
+
+    # ']' bracket
+    x_right = +bracket_x_offset
+    _add_cylinder_y(volume, x_right, -bracket_half_extent, bracket_half_extent)
+    _add_cylinder_x(volume, +bracket_half_extent, x_right - bracket_cap_length, x_right)
+    _add_cylinder_x(volume, -bracket_half_extent, x_right - bracket_cap_length, x_right)
+
+    # 'o' torus
     rho = np.sqrt(xx**2 + yy**2)
     dist_torus = np.sqrt((rho - torus_major_radius) ** 2 + zz**2)
     volume[dist_torus <= line_radius] = 1.0
 
-    # Smooth edges
-    blur_sigma = 1.0  # voxels
+    blur_sigma = 1.0
     volume = gaussian_filter(volume, sigma=blur_sigma)
     if volume.max() > 0:
-        volume = volume / volume.max()
-
+        volume /= volume.max()
     return volume
 
 
 def generate_shepp_logan_3d(zyx_shape):
-    """3D Shepp-Logan phantom from the standard 10-ellipsoid parameterization.
-
-    Parameters
-    ----------
-    zyx_shape : tuple of int
-        (nz, ny, nx) volume shape.
-
-    Returns
-    -------
-    phantom : np.ndarray
-        Density array normalized to [0, 1].
-    """
-    # (density, cx, cy, cz, semi_a, semi_b, semi_c, phi_deg)
-    # Coordinates and semi-axes in normalized units [-1, 1]
+    """3D Shepp-Logan phantom. Returns density array normalized to [0, 1]."""
     ellipsoids = [
         (1.0, 0.0, 0.0, 0.0, 0.69, 0.92, 0.81, 0),
         (-0.8, 0.0, -0.0184, 0.0, 0.6624, 0.8740, 0.78, 0),
@@ -204,10 +131,8 @@ def generate_shepp_logan_3d(zyx_shape):
         (0.1, 0.0, -0.605, 0.0, 0.023, 0.023, 0.02, 0),
         (0.1, 0.06, -0.605, 0.0, 0.046, 0.023, 0.02, 0),
     ]
-
     nz, ny, nx = zyx_shape
     phantom = np.zeros(zyx_shape, dtype=np.float32)
-
     z = np.linspace(-1, 1, nz)
     y = np.linspace(-1, 1, ny)
     x = np.linspace(-1, 1, nx)
@@ -215,49 +140,21 @@ def generate_shepp_logan_3d(zyx_shape):
 
     for density, cx, cy, cz, sa, sb, sc, phi_deg in ellipsoids:
         phi = np.radians(phi_deg)
-        cos_phi = np.cos(phi)
-        sin_phi = np.sin(phi)
-
-        xp = xx - cx
-        yp = yy - cy
-        zp = zz - cz
-
+        cos_phi, sin_phi = np.cos(phi), np.sin(phi)
+        xp, yp, zp = xx - cx, yy - cy, zz - cz
         xr = xp * cos_phi + yp * sin_phi
         yr = -xp * sin_phi + yp * cos_phi
-
         inside = (xr / sa) ** 2 + (yr / sb) ** 2 + (zp / sc) ** 2 <= 1.0
         phantom[inside] += density
 
     phantom = np.clip(phantom, 0, None)
     if phantom.max() > 0:
-        phantom = phantom / phantom.max()
-
+        phantom /= phantom.max()
     return phantom
 
 
 def phantom_to_fluorescence_and_phase(volume, voxel_size, bead_index, media_index, wavelength_illumination):
-    """Convert a density volume to fluorescence and phase representations.
-
-    Parameters
-    ----------
-    volume : np.ndarray
-        Density values in [0, 1].
-    voxel_size : float
-        Isotropic voxel spacing in um.
-    bead_index : float
-        Refractive index of the structure.
-    media_index : float
-        Refractive index of the surrounding medium.
-    wavelength_illumination : float
-        Illumination wavelength in um.
-
-    Returns
-    -------
-    fluorescence : torch.Tensor
-        Fluorescence density (0-1).
-    phase : torch.Tensor
-        Phase in cycles per voxel.
-    """
+    """Convert density volume to fluorescence and phase tensors."""
     fluorescence = torch.tensor(volume, dtype=torch.float32)
     wavelength_medium = wavelength_illumination / media_index
     delta_n = (bead_index - media_index) * volume
@@ -265,147 +162,276 @@ def phantom_to_fluorescence_and_phase(volume, voxel_size, bead_index, media_inde
     return fluorescence, phase
 
 
-# %% [markdown]
-"""
-## Generate Phantoms
-"""
+def _generate_all_phantoms():
+    """Return dict of {sample_name: volume} for the three test phantoms."""
+    phantoms = {}
+    click.echo("Generating isolated bead...")
+    phantoms["point"] = generate_isolated_bead(ZYX_SHAPE, VOXEL_SIZE, BEAD_RADIUS)
+    click.echo("Generating line [o] pattern...")
+    phantoms["lines"] = generate_line_pattern(
+        ZYX_SHAPE, VOXEL_SIZE, LINE_RADIUS, BRACKET_HALF_EXTENT, BRACKET_X_OFFSET, BRACKET_CAP_LENGTH, TORUS_MAJOR_RADIUS
+    )
+    click.echo("Generating Shepp-Logan phantom...")
+    phantoms["shepplogan"] = generate_shepp_logan_3d(ZYX_SHAPE)
+    for name, vol in phantoms.items():
+        click.echo(f"  {name}: shape={vol.shape}, range=[{vol.min():.3f}, {vol.max():.3f}]")
+    return phantoms
 
-# %%
-phantoms = {}
 
-print("Generating isolated bead...")
-phantoms["isolated_bead"] = generate_isolated_bead(zyx_shape, voxel_size, bead_radius)
+def _scale_and_noise(vol):
+    """Scale to [BLACK_LEVEL, PEAK_INTENSITY] and apply Poisson noise."""
+    v = vol.numpy() if isinstance(vol, torch.Tensor) else vol
+    v_min, v_max = v.min(), v.max()
+    if v_max > v_min:
+        v = BLACK_LEVEL + (PEAK_INTENSITY - BLACK_LEVEL) * (v - v_min) / (v_max - v_min)
+    else:
+        v = np.full_like(v, BLACK_LEVEL)
+    return np.random.poisson(np.clip(v, 0, None)).astype(np.float32)
 
-print("Generating line [o] pattern...")
-phantoms["line_pattern"] = generate_line_pattern(zyx_shape, voxel_size, line_radius, pattern_extent, line_spacing)
 
-print("Generating Shepp-Logan phantom...")
-phantoms["shepp_logan"] = generate_shepp_logan_3d(zyx_shape)
+def _pad_projection(proj, target_width):
+    """Center-pad a 2D projection to target_width along axis 1."""
+    if proj.shape[1] >= target_width:
+        return proj
+    pad_left = (target_width - proj.shape[1]) // 2
+    pad_right = target_width - proj.shape[1] - pad_left
+    return np.pad(proj, ((0, 0), (pad_left, pad_right)))
 
-for name, vol in phantoms.items():
-    print(f"  {name}: shape={vol.shape}, range=[{vol.min():.3f}, {vol.max():.3f}]")
 
-# %% [markdown]
-"""
-## Forward Simulation
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+CONTEXT = {"help_option_names": ["-h", "--help"]}
 
-Compute fluorescence OTF and phase transfer function once,
-then apply to each phantom.
-"""
 
-# %%
-print("Computing fluorescence OTF...")
-fluorescence_otf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
-    zyx_shape=zyx_shape,
-    yx_pixel_size=voxel_size,
-    z_pixel_size=voxel_size,
-    wavelength_emission=wavelength_emission,
-    z_padding=z_padding,
-    index_of_refraction_media=media_index,
-    numerical_aperture_detection=na_detection,
-)
-print(f"Fluorescence OTF shape: {fluorescence_otf.shape}")
+@click.group(context_settings=CONTEXT)
+@click.option("--data-dir", type=click.Path(), default="./data", show_default=True, help="Directory for the zarr store.")
+@click.pass_context
+def cli(ctx, data_dir):
+    """Projection modeling: generate phantoms, simulate images, and compute projections.
 
-print("Computing phase transfer functions...")
-real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(
-    zyx_shape=zyx_shape,
-    yx_pixel_size=voxel_size,
-    z_pixel_size=voxel_size,
-    wavelength_illumination=wavelength_illumination,
-    z_padding=z_padding,
-    index_of_refraction_media=media_index,
-    numerical_aperture_illumination=na_illumination,
-    numerical_aperture_detection=na_detection,
-)
-print(f"Phase TF shape: {real_tf.shape}")
+    Three subcommands run in sequence.  Each reads the output of the
+    previous stage from the shared OME-Zarr store at
+    ``<data-dir>/projection_modeling.zarr``.
 
-# %% [markdown]
-"""
-## Convert, Blur, and Save
-"""
+    \b
+    python projection_modeling.py object   --data-dir ./data
+    python projection_modeling.py image    --data-dir ./data
+    python projection_modeling.py project  --data-dir ./data
+    """
+    ctx.ensure_object(dict)
+    ctx.obj["data_dir"] = Path(data_dir)
+    ctx.obj["store_path"] = Path(data_dir) / "projection_modeling.zarr"
 
-# %%
-data_dir = Path("./data")
-data_dir.mkdir(exist_ok=True)
 
-store = zarr.open(str(data_dir / "projection_modeling.zarr"), mode="w")
+# ---- object ---------------------------------------------------------------
+@cli.command()
+@click.pass_context
+def object(ctx):
+    """Generate 3D test phantoms and write ground-truth densities.
 
-# Keep blurred volumes for projection computation
-blurred_volumes = {}
+    Creates three phantoms (point bead, [o] lines, Shepp-Logan),
+    converts each to fluorescence density and phase, and writes them
+    to the ``object`` column of the OME-Zarr store.
 
-for name, volume in phantoms.items():
-    print(f"\nProcessing {name}...")
+    Overwrites any existing store.
+    """
+    store_path = ctx.obj["store_path"]
+    data_dir = ctx.obj["data_dir"]
+    data_dir.mkdir(parents=True, exist_ok=True)
 
-    fluorescence, phase = phantom_to_fluorescence_and_phase(
-        volume, voxel_size, bead_index, media_index, wavelength_illumination
+    # Remove old store
+    if store_path.exists():
+        shutil.rmtree(store_path)
+        click.echo(f"Removed existing {store_path}")
+
+    phantoms = _generate_all_phantoms()
+
+    click.echo(f"\nCreating OME-Zarr v3 store at {store_path} ...")
+    plate = open_ome_zarr(
+        str(store_path),
+        layout="hcs",
+        mode="w-",
+        channel_names=CHANNEL_NAMES,
+        version="0.5",
+    )
+    for sample in SAMPLE_TYPES:
+        position = plate.create_position(sample, "object", "0")
+        position.create_zeros(
+            name="0",
+            shape=(1, len(CHANNEL_NAMES), *ZYX_SHAPE),
+            chunks=(1, 1, 1, 256, 256),
+            dtype=np.float32,
+            transform=[TransformationMeta(type="scale", scale=[1, 1, VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE])],
+        )
+    plate.close()
+
+    with open_ome_zarr(str(store_path), mode="r+") as plate:
+        for name, volume in phantoms.items():
+            fluorescence, phase = phantom_to_fluorescence_and_phase(
+                volume, VOXEL_SIZE, BEAD_INDEX, MEDIA_INDEX, WAVELENGTH_ILLUMINATION
+            )
+            pos = plate[f"{name}/object/0"]
+            pos["0"][0, 0] = fluorescence.numpy()
+            pos["0"][0, 1] = phase.numpy()
+            click.echo(f"  Wrote {name}/object/0")
+
+    click.echo("Done.")
+
+
+# ---- image ----------------------------------------------------------------
+@cli.command()
+@click.pass_context
+def image(ctx):
+    """Blur phantoms through microscope transfer functions and add noise.
+
+    Reads the ``object`` column, applies the fluorescence OTF and
+    phase transfer function, scales each volume to the detector range
+    [100, 1024], adds Poisson noise, and writes to the ``rawimage``
+    column.
+    """
+    store_path = ctx.obj["store_path"]
+    if not store_path.exists():
+        raise click.UsageError(f"Store not found: {store_path}. Run 'object' first.")
+
+    click.echo("Computing fluorescence OTF...")
+    fluorescence_otf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
+        zyx_shape=ZYX_SHAPE,
+        yx_pixel_size=VOXEL_SIZE,
+        z_pixel_size=VOXEL_SIZE,
+        wavelength_emission=WAVELENGTH_EMISSION,
+        z_padding=Z_PADDING,
+        index_of_refraction_media=MEDIA_INDEX,
+        numerical_aperture_detection=NA_DETECTION,
+    )
+    click.echo("Computing phase transfer function...")
+    real_tf, _imag_tf = phase_thick_3d.calculate_transfer_function(
+        zyx_shape=ZYX_SHAPE,
+        yx_pixel_size=VOXEL_SIZE,
+        z_pixel_size=VOXEL_SIZE,
+        wavelength_illumination=WAVELENGTH_ILLUMINATION,
+        z_padding=Z_PADDING,
+        index_of_refraction_media=MEDIA_INDEX,
+        numerical_aperture_illumination=NA_ILLUMINATION,
+        numerical_aperture_detection=NA_DETECTION,
     )
 
-    print("  Blurring fluorescence...")
-    fluorescence_blurred = isotropic_fluorescent_thick_3d.apply_transfer_function(
-        fluorescence, fluorescence_otf, z_padding
-    )
+    with open_ome_zarr(str(store_path), mode="r+") as plate:
+        for sample in SAMPLE_TYPES:
+            click.echo(f"\nProcessing {sample}...")
 
-    print("  Blurring phase...")
-    phase_blurred = phase_thick_3d.apply_transfer_function(phase, real_tf, z_padding, brightness=1e3)
+            # Create rawimage position
+            position = plate.create_position(sample, "rawimage", "0")
+            position.create_zeros(
+                name="0",
+                shape=(1, len(CHANNEL_NAMES), *ZYX_SHAPE),
+                chunks=(1, 1, 1, 256, 256),
+                dtype=np.float32,
+                transform=[TransformationMeta(type="scale", scale=[1, 1, VOXEL_SIZE, VOXEL_SIZE, VOXEL_SIZE])],
+            )
 
-    store[f"{name}/fluorescence_density"] = fluorescence.numpy()
-    store[f"{name}/phase_density"] = phase.numpy()
-    store[f"{name}/fluorescence_blurred"] = fluorescence_blurred.numpy()
-    store[f"{name}/phase_blurred"] = phase_blurred.numpy()
+            # Read object
+            obj_pos = plate[f"{sample}/object/0"]
+            fluorescence = torch.tensor(np.array(obj_pos["0"][0, 0]), dtype=torch.float32)
+            phase = torch.tensor(np.array(obj_pos["0"][0, 1]), dtype=torch.float32)
 
-    blurred_volumes[name] = {
-        "fluorescence_density": fluorescence.numpy(),
-        "phase_density": phase.numpy(),
-        "fluorescence_blurred": fluorescence_blurred.numpy(),
-        "phase_blurred": phase_blurred.numpy(),
-    }
+            click.echo("  Blurring fluorescence...")
+            fluor_blurred = isotropic_fluorescent_thick_3d.apply_transfer_function(fluorescence, fluorescence_otf, Z_PADDING)
 
-# %% [markdown]
-"""
-## Projections via Siddon's Algorithm
+            click.echo("  Blurring phase...")
+            phase_blurred = phase_thick_3d.apply_transfer_function(phase, real_tf, Z_PADDING, brightness=1e3)
 
-Compute average and max projections of each volume at 0° and ±60°.
-At 0° the projection reduces to a simple axis sum/max along Z.
-At oblique angles, Siddon's ray-tracing algorithm computes exact
-voxel intersection lengths for accurate line integrals.
-"""
+            click.echo("  Scaling + Poisson noise...")
+            img_pos = plate[f"{sample}/rawimage/0"]
+            img_pos["0"][0, 0] = _scale_and_noise(fluor_blurred)
+            img_pos["0"][0, 1] = _scale_and_noise(phase_blurred)
+            click.echo(f"  Wrote {sample}/rawimage/0")
 
-# %%
-for name in phantoms:
-    print(f"\nProjecting {name}...")
-    for vol_type, vol_data in blurred_volumes[name].items():
-        for angle in projection_angles:
-            for mode in ("avg", "max"):
-                siddon_mode = "sum" if mode == "avg" else "max"
-                proj = siddon_project(vol_data, angle, voxel_size, mode=siddon_mode)
-                if mode == "avg":
-                    # Normalize sum projection to average by dividing by
-                    # the path length through the volume at this angle
-                    theta = np.radians(angle)
-                    if abs(np.cos(theta)) > 1e-10:
-                        path_length = nz * voxel_size / abs(np.cos(theta))
-                    else:
-                        path_length = nx * voxel_size / abs(np.sin(theta))
-                    proj = proj / path_length
-                arr_name = f"{name}/proj_{vol_type}_{mode}_{angle:+d}deg"
-                store[arr_name] = proj
-                print(f"  {arr_name}: shape={proj.shape}")
+    click.echo("Done.")
 
-# Store metadata
-store.attrs["voxel_size_um"] = voxel_size
-store.attrs["zyx_shape"] = list(zyx_shape)
-store.attrs["wavelength_illumination_um"] = wavelength_illumination
-store.attrs["wavelength_emission_um"] = wavelength_emission
-store.attrs["na_detection"] = na_detection
-store.attrs["na_illumination"] = na_illumination
-store.attrs["media_index"] = media_index
-store.attrs["bead_index"] = bead_index
-store.attrs["projection_angles"] = projection_angles
 
-print(f"\nSaved zarr store: {data_dir / 'projection_modeling.zarr'}")
-print(f"Groups: {list(store.group_keys())}")
-for group_name in store.group_keys():
-    group = store[group_name]
-    for arr_name in group.array_keys():
-        arr = group[arr_name]
-        print(f"  {group_name}/{arr_name}: shape={arr.shape}, dtype={arr.dtype}")
+# ---- project --------------------------------------------------------------
+@cli.command()
+@click.pass_context
+def project(ctx):
+    """Compute Siddon mean-projections of simulated images at -70 to +70 degrees.
+
+    Reads the ``rawimage`` column, projects each volume at 29 angles
+    (-70 to +70 in 5-degree steps) using Siddon's ray-tracing
+    algorithm, divides by the ray path length to obtain the mean, and
+    writes the projection stacks to the ``projections`` column.
+
+    The mean projection preserves the dynamic range of the 3D volume.
+    Each stack has shape (1, C, N_angles, Y, X_padded) in TCZYX
+    convention; the Z-axis scale encodes the angular step (5 degrees).
+    """
+    store_path = ctx.obj["store_path"]
+    if not store_path.exists():
+        raise click.UsageError(f"Store not found: {store_path}. Run 'object' and 'image' first.")
+
+    angles = PROJECTION_ANGLES
+    n_angles = len(angles)
+
+    with open_ome_zarr(str(store_path), mode="r+") as plate:
+        for sample in SAMPLE_TYPES:
+            click.echo(f"\nProjecting {sample}...")
+
+            img_pos = plate[f"{sample}/rawimage/0"]
+            fluor_vol = np.array(img_pos["0"][0, 0])
+            phase_vol = np.array(img_pos["0"][0, 1])
+
+            # First pass: compute mean projections and find max lateral width
+            fluor_projs = []
+            phase_projs = []
+            max_width = 0
+            nz_vol = fluor_vol.shape[0]
+            nx_vol = fluor_vol.shape[2]
+            for angle in angles:
+                fp = siddon_project(fluor_vol, angle, VOXEL_SIZE, mode="sum")
+                pp = siddon_project(phase_vol, angle, VOXEL_SIZE, mode="sum")
+                # Normalize sum to mean: divide by physical path length (um)
+                # siddon_project returns sum weighted by intersection length,
+                # so dividing by total path gives the mean voxel value.
+                theta = np.radians(angle)
+                cos_t, sin_t = abs(np.cos(theta)), abs(np.sin(theta))
+                path_length = (nz_vol * cos_t + nx_vol * sin_t) * VOXEL_SIZE
+                if path_length > 0:
+                    fp = fp / path_length
+                    pp = pp / path_length
+                fluor_projs.append(fp)
+                phase_projs.append(pp)
+                max_width = max(max_width, fp.shape[1], pp.shape[1])
+
+            # Second pass: pad to uniform width and stack
+            ny_proj = fluor_projs[0].shape[0]
+            fluor_stack = np.zeros((n_angles, ny_proj, max_width), dtype=np.float32)
+            phase_stack = np.zeros((n_angles, ny_proj, max_width), dtype=np.float32)
+            for i in range(n_angles):
+                fluor_stack[i] = _pad_projection(fluor_projs[i], max_width)
+                phase_stack[i] = _pad_projection(phase_projs[i], max_width)
+
+            click.echo(f"  Stack shape: ({n_angles}, {ny_proj}, {max_width}), angles {angles[0]} to {angles[-1]} deg")
+
+            # Create projections position with angular Z-scale
+            position = plate.create_position(sample, "projections", "0")
+            position.create_zeros(
+                name="0",
+                shape=(1, len(CHANNEL_NAMES), n_angles, ny_proj, max_width),
+                chunks=(1, 1, 1, ny_proj, max_width),
+                dtype=np.float32,
+                transform=[TransformationMeta(type="scale", scale=[1, 1, 5.0, VOXEL_SIZE, VOXEL_SIZE])],
+            )
+
+            pos = plate[f"{sample}/projections/0"]
+            pos["0"][0, 0] = fluor_stack
+            pos["0"][0, 1] = phase_stack
+            pos.zattrs["projection_angles_deg"] = angles
+            pos.zattrs["angle_step_deg"] = 5
+            pos.zattrs["angle_start_deg"] = angles[0]
+            click.echo(f"  Wrote {sample}/projections/0")
+
+    click.echo("Done.")
+
+
+if __name__ == "__main__":
+    cli()
