@@ -210,6 +210,7 @@ def _calculate_wrap_unsafe_transfer_function(
 def calculate_singular_system(
     absorption_2d_to_3d_transfer_function: Tensor,
     phase_2d_to_3d_transfer_function: Tensor,
+    use_svd: bool = True,
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """Calculates the singular system of the absorption and phase transfer
     functions.
@@ -221,6 +222,10 @@ def calculate_singular_system(
         ``(B, Z, Vy, Vx)``
     phase_2d_to_3d_transfer_function : Tensor
         Transfer function for phase, same shape as absorption TF
+    use_svd : bool
+        If True (default), use torch.linalg.svd for best reconstruction
+        accuracy. Set to False for a norm-based decomposition that
+        supports gradient backpropagation on all devices
 
     Returns
     -------
@@ -242,16 +247,33 @@ def calculate_singular_system(
         ),
         dim=1,
     )
+    B, s, Z, Vy, Vx = sfYX.shape
 
-    # SVD over the (s=2, Z) dimensions at each spatial frequency.
-    # Permute to (..., Vy, Vx, s, Z) for torch.linalg.svd, then permute back.
-    # Shape: (B, Vy, Vx, s=2, Z)
-    BVyVxsZ = sfYX.permute(0, 3, 4, 1, 2)
-    Up, Sp, Vhp = torch.linalg.svd(BVyVxsZ, full_matrices=False)
-    # Up: (B, Vy, Vx, s, s), Sp: (B, Vy, Vx, s), Vhp: (B, Vy, Vx, s, Z)
-    U = Up.permute(0, 3, 4, 1, 2)  # (B, s, s, Vy, Vx)
-    S = Sp.permute(0, 3, 1, 2)  # (B, s, Vy, Vx)
-    Vh = Vhp.permute(0, 3, 4, 1, 2)  # (B, s, Z, Vy, Vx)
+    if use_svd:
+        # Full SVD over the (s=2, Z) matrix at each spatial frequency.
+        # Captures cross-channel coupling between absorption and phase,
+        # giving the best reconstruction accuracy.
+        # Note: torch.linalg.svd backward fails with complex tensors on
+        # some GPU types due to singular vector phase ambiguity
+        # (svd_backward: e^{i phi} error). Use use_svd=False when
+        # gradients are needed.
+        BVyVxsZ = sfYX.permute(0, 3, 4, 1, 2)
+        Up, Sp, Vhp = torch.linalg.svd(BVyVxsZ, full_matrices=False)
+        U = Up.permute(0, 3, 4, 1, 2)  # (B, s, s, Vy, Vx)
+        S = Sp.permute(0, 3, 1, 2)  # (B, s, Vy, Vx)
+        Vh = Vhp.permute(0, 3, 4, 1, 2)  # (B, s, Z, Vy, Vx)
+    else:
+        # Norm-based decomposition: assumes absorption and phase channels
+        # are independent (U=identity). Less accurate than full SVD but
+        # supports gradient backpropagation on all devices.
+        # Per-channel norms: S[b, k] = norm(H[b, k, :])
+        S = torch.sqrt(torch.clamp(torch.sum(torch.abs(sfYX) ** 2, dim=2), min=1e-12))  # (B, s=2, Vy, Vx)
+        # Normalized rows: Vh[b, k, z] = H[b, k, z] / S[b, k]
+        Vh = sfYX / (S[:, :, None] + 1e-12)  # (B, s=2, Z, Vy, Vx)
+        # U = identity (each channel reconstructs independently)
+        U = torch.zeros(B, s, s, Vy, Vx, dtype=sfYX.dtype, device=sfYX.device)
+        for i in range(s):
+            U[:, i, i] = 1.0
 
     if not batched:
         U = U.squeeze(0)
@@ -496,7 +518,10 @@ def reconstruct(
         tilt_angle_azimuth=tilt_angle_azimuth,
         pupil_steepness=pupil_steepness,
     )
-    singular_system = calculate_singular_system(absorption_tf, phase_tf)
+    # Use norm-based decomposition when gradients are needed (optimization),
+    # full SVD otherwise (better accuracy for final reconstruction)
+    needs_grad = absorption_tf.requires_grad or phase_tf.requires_grad
+    singular_system = calculate_singular_system(absorption_tf, phase_tf, use_svd=not needs_grad)
     return apply_inverse_transfer_function(
         zyx_data,
         singular_system,
