@@ -7,8 +7,8 @@ Usage::
     python projection_reconstruction.py wave      --data-dir ./data
 
     # Reconstruct from a single +/-theta pair
-    python projection_reconstruction.py geometric-limited --angle 30 --data-dir ./data
-    python projection_reconstruction.py wave-limited      --angle 30 --data-dir ./data
+    python projection_reconstruction.py geometric-two-projections --angle 30 --data-dir ./data
+    python projection_reconstruction.py wave-two-projections      --angle 30 --data-dir ./data
 
 Each subcommand reads from and writes to the shared OME-Zarr store
 at ``<data-dir>/projection_modeling.zarr``.
@@ -317,8 +317,8 @@ def cli(ctx, data_dir):
     \b
     python projection_reconstruction.py geometric         --data-dir ./data
     python projection_reconstruction.py wave              --data-dir ./data
-    python projection_reconstruction.py geometric-limited --angle 30
-    python projection_reconstruction.py wave-limited      --angle 30
+    python projection_reconstruction.py geometric-two-projections --angle 30
+    python projection_reconstruction.py wave-two-projections      --angle 30
     """
     ctx.ensure_object(dict)
     ctx.obj["store_path"] = Path(data_dir) / "projection_modeling.zarr"
@@ -380,40 +380,40 @@ def wave(ctx, reg, niter, ramp_filter):
     click.echo("\nDone.")
 
 
-# ---- geometric-limited (single +/-theta pair) -----------------------------
-@cli.command("geometric-limited")
+# ---- geometric-two-projections (single +/-theta pair) ---------------------
+@cli.command("geometric-two-projections")
 @click.option("--angle", type=int, required=True, help="Half-angle theta; uses +/-theta projection pair.")
 @click.option("--reg", type=float, default=REG_STRENGTH, show_default=True, help="Tikhonov regularization lambda.")
 @click.option("--niter", type=int, default=N_ITER, show_default=True, help="CG iterations.")
 @click.pass_context
-def geometric_limited(ctx, angle, reg, niter):
+def geometric_two_projections(ctx, angle, reg, niter):
     """Reconstruct from a single +/-theta pair using Siddon (no OTF).
 
     Uses only two projections at +angle and -angle degrees.
-    Writes to the ``recongeoL`` column.
+    Writes to the ``recongeo2`` column.
     """
     store_path = ctx.obj["store_path"]
     if not store_path.exists():
         raise click.UsageError(f"Store not found: {store_path}")
 
     angles = [-angle, +angle]
-    _run_reconstruction(store_path, "object", "recongeoL", angles, reg, niter)
+    _run_reconstruction(store_path, "object", "recongeo2", angles, reg, niter)
     click.echo("\nDone.")
 
 
-# ---- wave-limited (single +/-theta pair) ----------------------------------
-@cli.command("wave-limited")
+# ---- wave-two-projections (single +/-theta pair) -------------------------
+@cli.command("wave-two-projections")
 @click.option("--angle", type=int, required=True, help="Half-angle theta; uses +/-theta projection pair.")
 @click.option("--reg", type=float, default=REG_STRENGTH, show_default=True, help="Tikhonov regularization lambda.")
 @click.option("--niter", type=int, default=N_ITER, show_default=True, help="CG iterations.")
 @click.pass_context
-def wave_limited(ctx, angle, reg, niter):
+def wave_two_projections(ctx, angle, reg, niter):
     """Reconstruct from a single +/-theta pair using OTF blur + Siddon.
 
     Uses only two projections at +angle and -angle degrees.
     The 3D OTF in the forward model captures angle-dependent
     resolution via the Fourier-slice theorem.  Writes to the
-    ``reconwaveL`` column.
+    ``reconwave2`` column.
     """
     store_path = ctx.obj["store_path"]
     if not store_path.exists():
@@ -421,7 +421,7 @@ def wave_limited(ctx, angle, reg, niter):
 
     blur_ops = _compute_transfer_functions()
     angles = [-angle, +angle]
-    _run_reconstruction(store_path, "rawimage", "reconwaveL", angles, reg, niter, blur_ops)
+    _run_reconstruction(store_path, "rawimage", "reconwave2", angles, reg, niter, blur_ops)
     click.echo("\nDone.")
 
 
