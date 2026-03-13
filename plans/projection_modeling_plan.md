@@ -9,7 +9,8 @@
 |--------|---------|
 | `projection_modeling.py` | Forward simulation CLI: `object`, `image`, `project` |
 | `projection_reconstruction.py` | Reconstruction CLI: `geometric`, `wave`, `geometric-two-projections`, `wave-two-projections` |
-| `geometric_two_projections_sweep.py` | Two-view sweep: PSNR vs theta from 5 to 70 deg |
+| `geometric_two_projections_sweep.py` | Two-view geometric sweep: PSNR vs theta from 5 to 70 deg |
+| `wave_two_projections_sweep.py` | Two-view wave-optical sweep: PSNR vs theta, both channels |
 | `visualize_reconstruction.py` | Plotting: forward, geometric, wave figures |
 | `siddon.py` | `SiddonOperator` (sparse matmul), `cg_tikhonov`, `ramp_filter_sinogram` |
 
@@ -45,8 +46,9 @@ uv run python projection_reconstruction.py wave      --data-dir ./data
 uv run python projection_reconstruction.py geometric-two-projections --angle 30 --data-dir ./data
 uv run python projection_reconstruction.py wave-two-projections      --angle 30 --data-dir ./data
 
-# Two-view sweep
+# Two-view sweeps
 uv run python geometric_two_projections_sweep.py --data-dir ./data --out-dir ./plots
+uv run python wave_two_projections_sweep.py      --data-dir ./data --out-dir ./plots
 
 # Visualize
 uv run python visualize_reconstruction.py plot --sample all

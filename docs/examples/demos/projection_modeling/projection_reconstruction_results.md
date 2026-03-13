@@ -15,21 +15,15 @@ against the unblurred ground-truth object.
 
 ### Point
 
-| Fluorescence | Phase |
-|---|---|
-| ![](plots/point/point_Fluorescence_forward.png) | ![](plots/point/point_Phase_forward.png) |
+![](plots/point/point_Phase_forward.png)
 
 ### Lines [o]
 
-| Fluorescence | Phase |
-|---|---|
-| ![](plots/lines/lines_Fluorescence_forward.png) | ![](plots/lines/lines_Phase_forward.png) |
+![](plots/lines/lines_Phase_forward.png)
 
 ### Shepp-Logan
 
-| Fluorescence | Phase |
-|---|---|
-| ![](plots/shepplogan/shepplogan_Fluorescence_forward.png) | ![](plots/shepplogan/shepplogan_Phase_forward.png) |
+![](plots/shepplogan/shepplogan_Phase_forward.png)
 
 ---
 
@@ -37,7 +31,7 @@ against the unblurred ground-truth object.
 
 Forward model: Siddon ray-tracing at 29 angles (-70 to +70 deg). Source:
 unblurred `object`. Each figure shows sinogram, reconstruction, object,
-difference, and kz-kx Fourier cross-sections.
+and kz-kx Fourier cross-sections.
 
 ### Point
 
@@ -69,8 +63,6 @@ unblurred `object`. Theta swept from 5 to 70 deg in 5 deg steps.
 
 ![](plots/psnr_vs_theta_geometric_two_projections.png)
 
-
-
 ### Reconstructions at Optimal Angle
 
 #### Point (±10 deg)
@@ -91,9 +83,11 @@ benefits from wide-angle projections (monotonically increasing, peak at
 ±70 deg). Shepp-Logan peaks at ±45 deg, where two projections maximally
 separate the overlapping ellipsoids.
 
+Per-projection mean subtraction removes the common DC background before
+reconstruction, focusing the solver on structural differences between views.
 Two views lose 3-5 dB relative to 29 projections. The gap is smallest for
 the sparse point bead (3.6 dB) and largest for the extended Shepp-Logan
-(5.4 dB). Two projections sample only two Fourier slices; the XZ FFT panels
+(5.2 dB). Two projections sample only two Fourier slices; the XZ FFT panels
 show energy along two narrow bands with the rest near zero.
 
 ---
@@ -107,29 +101,23 @@ function at each tilt.
 
 ### PSNR
 
-| Sample | Fluorescence | Phase |
-|--------|-------------|-------|
-| point | 45.86 dB | 45.37 dB |
-| lines | 30.25 dB | 30.35 dB |
-| shepplogan | 16.13 dB | 14.57 dB |
+| Sample | Phase | Fluorescence |
+|--------|-------|-------------|
+| point | 45.37 dB | 45.86 dB |
+| lines | 30.35 dB | 30.25 dB |
+| shepplogan | 14.57 dB | 16.13 dB |
 
 ### Point
 
-| Fluorescence | Phase |
-|---|---|
-| ![](plots/point/point_Fluorescence_wave.png) | ![](plots/point/point_Phase_wave.png) |
+![](plots/point/point_Phase_wave.png)
 
 ### Lines [o]
 
-| Fluorescence | Phase |
-|---|---|
-| ![](plots/lines/lines_Fluorescence_wave.png) | ![](plots/lines/lines_Phase_wave.png) |
+![](plots/lines/lines_Phase_wave.png)
 
 ### Shepp-Logan
 
-| Fluorescence | Phase |
-|---|---|
-| ![](plots/shepplogan/shepplogan_Fluorescence_wave.png) | ![](plots/shepplogan/shepplogan_Phase_wave.png) |
+![](plots/shepplogan/shepplogan_Phase_wave.png)
 
 The wave model reconstructs worse than the geometric model. Three factors
 compound: (1) the OTF zeros high frequencies that Tikhonov regularization
@@ -142,8 +130,44 @@ additional 1-3 dB because its transfer function has a null at kz = 0.
 
 ## 4. Two-View Tomography with Blur (2 projections, OTF)
 
-*Not yet computed.* The `wave-two-projections` subcommand exists; results
-will follow the same sweep format as Section 2.
+Forward model: 3D OTF convolution + Siddon ray-tracing with two projections
+at +/-theta. Source: blurred + noisy `rawimage`. Theta swept from 5 to 70 deg
+in 5 deg steps; both fluorescence and phase channels reconstructed.
+
+### PSNR vs Projection Half-Angle
+
+![](plots/psnr_vs_theta_wave_two_projections.png)
+
+### PSNR at Optimal Angle (by Fluorescence)
+
+| Sample | Optimal theta | Phase | Fluorescence |
+|--------|--------------|-------|-------------|
+| point | +/-10 deg | 45.13 dB | 45.26 dB |
+| lines | +/-10 deg | 29.50 dB | 29.60 dB |
+| shepplogan | +/-45 deg | 13.85 dB | 15.26 dB |
+
+### Point (+/-10 deg)
+
+![](plots/point/point_Phase_wave_two_projections.png)
+
+### Lines [o] (+/-10 deg)
+
+![](plots/lines/lines_Phase_wave_two_projections.png)
+
+### Shepp-Logan (+/-45 deg)
+
+![](plots/shepplogan/shepplogan_Phase_wave_two_projections.png)
+
+Per-projection mean subtraction removes the common DC background before
+reconstruction, focusing the CG solver on structural differences between
+views. After this correction the Shepp-Logan optimal angle shifts from
++/-20 to +/-45 deg, matching the geometric case (Section 2).
+
+The phase channel varies less than 0.2 dB across all thetas because the
+phase TF null at kz = 0 dominates information loss, regardless of
+projection geometry. The fluorescence channel shows mild theta dependence:
+PSNR peaks near +/-45 deg for the Shepp-Logan phantom but remains flat
+for the spectrally compact point bead.
 
 ---
 
@@ -178,3 +202,49 @@ at a similar rate.
 
 Before computing PSNR, the optimal gain `alpha = <recon, gt> / <recon, recon>`
 removes the arbitrary scale between reconstruction and ground truth.
+
+---
+
+## Appendix: Fluorescence Channel Results
+
+### Forward Simulation
+
+#### Point
+
+![](plots/point/point_Fluorescence_forward.png)
+
+#### Lines [o]
+
+![](plots/lines/lines_Fluorescence_forward.png)
+
+#### Shepp-Logan
+
+![](plots/shepplogan/shepplogan_Fluorescence_forward.png)
+
+### Limited-Angle Tomography with Blur (29 projections, OTF)
+
+#### Point
+
+![](plots/point/point_Fluorescence_wave.png)
+
+#### Lines [o]
+
+![](plots/lines/lines_Fluorescence_wave.png)
+
+#### Shepp-Logan
+
+![](plots/shepplogan/shepplogan_Fluorescence_wave.png)
+
+### Two-View Tomography with Blur (2 projections, OTF)
+
+#### Point (+/-10 deg)
+
+![](plots/point/point_Fluorescence_wave_two_projections.png)
+
+#### Lines [o] (+/-10 deg)
+
+![](plots/lines/lines_Fluorescence_wave_two_projections.png)
+
+#### Shepp-Logan (+/-45 deg)
+
+![](plots/shepplogan/shepplogan_Fluorescence_wave_two_projections.png)

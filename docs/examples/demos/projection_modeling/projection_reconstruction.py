@@ -113,6 +113,7 @@ def _reconstruct_channel(
     forward_blur=None,
     adjoint_blur=None,
     use_ramp_filter=False,
+    subtract_mean=False,
 ):
     """CG-Tikhonov reconstruction of a single channel from Siddon projections.
 
@@ -136,6 +137,11 @@ def _reconstruct_channel(
         backprojection.  This preconditions the normal operator H*H so
         that all spatial frequencies converge at a similar rate in CG,
         reducing Gibbs ringing near sharp edges.
+    subtract_mean : bool
+        If True, subtract the per-projection mean from each measurement
+        before reconstruction.  With few projections the common DC
+        background carries no angular diversity; removing it focuses the
+        solver on structural differences between views.
 
     Returns
     -------
@@ -148,6 +154,9 @@ def _reconstruct_channel(
     source_vol_t = torch.tensor(source_volume, dtype=torch.float32, device=device)
     measurements = siddon_op.project_all(source_vol_t)
     del source_vol_t
+
+    if subtract_mean:
+        measurements = [p - p.mean() for p in measurements]
 
     def forward(vol):
         v = vol
@@ -225,7 +234,7 @@ def _compute_transfer_functions():
 
 
 def _run_reconstruction(
-    store_path, source_col, target_col, angles, reg, niter, blur_ops=None, use_ramp_filter=False
+    store_path, source_col, target_col, angles, reg, niter, blur_ops=None, use_ramp_filter=False, subtract_mean=False
 ):
     """Core reconstruction loop shared by all four subcommands.
 
@@ -248,6 +257,8 @@ def _run_reconstruction(
     use_ramp_filter : bool
         If True, apply ramp filter to projections before backprojection
         (preconditions CG for more uniform frequency convergence).
+    subtract_mean : bool
+        If True, subtract per-projection mean before reconstruction.
     """
     # Build the Siddon operator once for all samples and channels
     click.echo(f"\nBuilding Siddon sparse matrices for {len(angles)} angles on {DEVICE}...")
@@ -282,7 +293,7 @@ def _run_reconstruction(
 
                 click.echo(f"  CG-Tikhonov: {niter} iters, lambda={reg}, {len(angles)} angles")
                 recon = _reconstruct_channel(
-                    siddon_op, source_vol, reg, niter, fwd_blur, adj_blur, use_ramp_filter
+                    siddon_op, source_vol, reg, niter, fwd_blur, adj_blur, use_ramp_filter, subtract_mean
                 )
 
                 mse, psnr = _compute_metrics(recon, ground_truth)
@@ -397,7 +408,7 @@ def geometric_two_projections(ctx, angle, reg, niter):
         raise click.UsageError(f"Store not found: {store_path}")
 
     angles = [-angle, +angle]
-    _run_reconstruction(store_path, "object", "recongeo2", angles, reg, niter)
+    _run_reconstruction(store_path, "object", "recongeo2", angles, reg, niter, subtract_mean=True)
     click.echo("\nDone.")
 
 
@@ -421,7 +432,7 @@ def wave_two_projections(ctx, angle, reg, niter):
 
     blur_ops = _compute_transfer_functions()
     angles = [-angle, +angle]
-    _run_reconstruction(store_path, "rawimage", "reconwave2", angles, reg, niter, blur_ops)
+    _run_reconstruction(store_path, "rawimage", "reconwave2", angles, reg, niter, blur_ops, subtract_mean=True)
     click.echo("\nDone.")
 
 

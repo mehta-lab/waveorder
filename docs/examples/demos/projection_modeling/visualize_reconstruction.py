@@ -180,19 +180,26 @@ def _plot_forward(plate, sample, c_idx, out_dir):
     proj_angles_show = [0, 15, -15]
     proj_indices = [PROJECTION_ANGLES.index(a) for a in proj_angles_show]
 
+    # Clip projection display at 1st/99th percentile to reveal structure
+    proj_shown = np.stack([proj_stack[i] for i in proj_indices])
+    proj_vmin = float(np.percentile(proj_shown, 1))
+    proj_vmax = float(np.percentile(proj_shown, 99))
+
     fig, axes = plt.subplots(3, 3, figsize=(15, 12))
     fig.suptitle(f"{sample} / {ch} — Forward Simulation", fontsize=14, y=0.98)
 
     for row in range(3):
-        axes[row, 0].imshow(obj_sl[row], cmap="gray", aspect="equal")
+        axes[row, 0].imshow(obj_sl[row], cmap="inferno", aspect="equal")
         _style_ax(axes[row, 0], title="Object" if row == 0 else None, ylabel=views[row])
-        axes[row, 1].imshow(raw_sl[row], cmap="gray", aspect="equal")
+        axes[row, 1].imshow(raw_sl[row], cmap="inferno", aspect="equal")
         _style_ax(axes[row, 1], title="Rawimage (blurred + noise)" if row == 0 else None)
 
         # Rightmost column: projections at 0, +15, -15 degrees
         idx = proj_indices[row]
         angle = proj_angles_show[row]
-        axes[row, 2].imshow(proj_stack[idx], cmap="gray", aspect="equal")
+        axes[row, 2].imshow(
+            proj_stack[idx], cmap="inferno", vmin=proj_vmin, vmax=proj_vmax, aspect="equal"
+        )
         _style_ax(
             axes[row, 2],
             title="Projections" if row == 0 else None,
@@ -212,16 +219,13 @@ def _plot_forward(plate, sample, c_idx, out_dir):
 # Figure: Geometric reconstruction (channel-independent)
 # ---------------------------------------------------------------------------
 def _plot_geometric(plate, sample, out_dir, stack_cache):
-    """Sinogram orthogonal views, reconstruction, object, difference, FFTs.
+    """Sinogram orthogonal views, reconstruction, object, FFTs.
 
     Geometric reconstruction is identical for both channels, so this
     generates one figure per sample using channel 0.
 
-    Column 0 shows three orthogonal slices through the projection stack
-    (angle, Y, X), matching the volume views:
-      Row 0: projection at 0 deg — (Y, X)
-      Row 1: sinogram at Y=center — (angle, X)
-      Row 2: sinogram at X=center — (angle, Y)
+    Layout: 3 columns (Measurements, Reconstruction, Object) × 4 rows
+    (XY, XZ, YZ, FFT XZ).
     """
     import matplotlib.pyplot as plt
 
@@ -244,9 +248,12 @@ def _plot_geometric(plate, sample, out_dir, stack_cache):
     cy_s = ny_s // 2
     cx_s = nx_s // 2
 
-    diff = rec_s - obj
-    vmin, vmax = float(obj.min()), float(obj.max())
-    dlim = max(float(np.abs(diff).max()) * 0.5, 1e-10)
+    # Clip projection display at 1st percentile to reveal structure
+    proj_vmin = float(np.percentile(stack, 1))
+    proj_vmax = float(stack.max())
+
+    obj_vmin, obj_vmax = float(obj.min()), float(obj.max())
+    rec_vmin, rec_vmax = float(rec_s.min()), float(rec_s.max())
 
     ft_rec = _log_ft(rec_s)
     ft_obj = _log_ft(obj)
@@ -254,12 +261,11 @@ def _plot_geometric(plate, sample, out_dir, stack_cache):
 
     obj_sl = _ortho(obj)
     rec_sl = _ortho(rec_s)
-    diff_sl = _ortho(diff)
     ft_rec_sl = _ortho(ft_rec)
     ft_obj_sl = _ortho(ft_obj)
     views = ["XY (z=center)", "XZ (y=center)", "YZ (x=center)"]
 
-    fig, axes = plt.subplots(4, 4, figsize=(18, 17))
+    fig, axes = plt.subplots(4, 3, figsize=(14, 17))
     fig.suptitle(
         f"{sample} — Limited-Angle Tomography "
         f"(PSNR {psnr_val:.1f} dB, gain={alpha:.4f})",
@@ -267,47 +273,45 @@ def _plot_geometric(plate, sample, out_dir, stack_cache):
         y=0.99,
     )
 
-    col_titles = ["Measurements", "Reconstruction", "Object", "Rec - Object"]
+    col_titles = ["Projections", "Reconstruction", "Object"]
 
     # Row 0 (XY): projection at 0 deg + volume slices
-    axes[0, 0].imshow(stack[ca], cmap="gray", aspect="equal")
+    axes[0, 0].imshow(stack[ca], cmap="gray", vmin=proj_vmin, vmax=proj_vmax, aspect="equal")
     _style_ax(axes[0, 0], title=col_titles[0], ylabel=f"Proj at {PROJECTION_ANGLES[ca]} deg")
-    axes[0, 1].imshow(rec_sl[0], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[0, 1].imshow(rec_sl[0], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
     _style_ax(axes[0, 1], title=col_titles[1], ylabel=views[0])
-    axes[0, 2].imshow(obj_sl[0], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[0, 2].imshow(obj_sl[0], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
     _style_ax(axes[0, 2], title=col_titles[2])
-    axes[0, 3].imshow(diff_sl[0], cmap="RdBu_r", vmin=-dlim, vmax=dlim, aspect="equal")
-    _style_ax(axes[0, 3], title=col_titles[3])
 
     # Row 1 (XZ): sinogram at Y=center (angle vs X)
     axes[1, 0].imshow(
         stack[:, cy_s, :],
         cmap="gray",
+        vmin=proj_vmin,
+        vmax=proj_vmax,
         aspect="auto",
         extent=[0, nx_s, PROJECTION_ANGLES[-1], PROJECTION_ANGLES[0]],
     )
     _style_ax(axes[1, 0], ylabel="Sino (angle, X)\nat Y=center")
-    axes[1, 1].imshow(rec_sl[1], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[1, 1].imshow(rec_sl[1], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
     _style_ax(axes[1, 1], ylabel=views[1])
-    axes[1, 2].imshow(obj_sl[1], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[1, 2].imshow(obj_sl[1], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
     _style_ax(axes[1, 2])
-    axes[1, 3].imshow(diff_sl[1], cmap="RdBu_r", vmin=-dlim, vmax=dlim, aspect="equal")
-    _style_ax(axes[1, 3])
 
     # Row 2 (YZ): sinogram at X=center (angle vs Y)
     axes[2, 0].imshow(
         stack[:, :, cx_s],
         cmap="gray",
+        vmin=proj_vmin,
+        vmax=proj_vmax,
         aspect="auto",
         extent=[0, ny_s, PROJECTION_ANGLES[-1], PROJECTION_ANGLES[0]],
     )
     _style_ax(axes[2, 0], ylabel="Sino (angle, Y)\nat X=center")
-    axes[2, 1].imshow(rec_sl[2], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[2, 1].imshow(rec_sl[2], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
     _style_ax(axes[2, 1], ylabel=views[2])
-    axes[2, 2].imshow(obj_sl[2], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[2, 2].imshow(obj_sl[2], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
     _style_ax(axes[2, 2])
-    axes[2, 3].imshow(diff_sl[2], cmap="RdBu_r", vmin=-dlim, vmax=dlim, aspect="equal")
-    _style_ax(axes[2, 3])
 
     # Row 3: FFT XZ slices (ky=0)
     axes[3, 0].axis("off")
@@ -315,7 +319,6 @@ def _plot_geometric(plate, sample, out_dir, stack_cache):
     _style_ax(axes[3, 1], title="FFT Reconstruction")
     axes[3, 2].imshow(ft_obj_sl[1], cmap="inferno", vmin=0, vmax=ft_max, aspect="equal")
     _style_ax(axes[3, 2], title="FFT Object")
-    axes[3, 3].axis("off")
     axes[3, 1].set_ylabel("FFT XZ (ky=0)", fontsize=10)
 
     plt.tight_layout()
@@ -331,47 +334,41 @@ def _plot_geometric(plate, sample, out_dir, stack_cache):
 # Figure: Wave-optical reconstruction
 # ---------------------------------------------------------------------------
 def _plot_wave(plate, sample, c_idx, out_dir, otf, device):
-    """Sinogram, reconstruction, object, diffs (vs blur and vs object), FFTs."""
+    """Sinogram, gain-calibrated reconstruction, object, FFTs.
+
+    Layout: 3 columns (Measurements, Reconstruction, Object) × 4 rows
+    (XY, XZ, YZ, FFT XZ) — same as geometric figures.
+    """
     import matplotlib.pyplot as plt
 
     ch = CHANNEL_NAMES[c_idx]
     obj = np.array(plate[f"{sample}/object/0"]["0"][0, c_idx], dtype=np.float32)
-    raw = np.array(plate[f"{sample}/rawimage/0"]["0"][0, c_idx], dtype=np.float32)
     rec = np.array(plate[f"{sample}/reconwave/0"]["0"][0, c_idx], dtype=np.float32)
 
     alpha = _optimal_gain(rec, obj)
     rec_s = alpha * rec
     psnr_val = _psnr(rec_s, obj)
 
-    blurred = _apply_otf(obj, otf, device)
     sino = _stored_sinogram(plate, sample, c_idx)
 
-    diff_blur = rec_s - blurred
-    diff_obj = rec_s - obj
-    vmin, vmax = float(obj.min()), float(obj.max())
-    dlim = max(
-        float(np.abs(diff_blur).max()) * 0.5,
-        float(np.abs(diff_obj).max()) * 0.5,
-        1e-10,
-    )
+    # Clip sinogram display at 1st percentile to reveal structure
+    sino_vmin = float(np.percentile(sino, 1))
+    sino_vmax = float(sino.max())
+
+    obj_vmin, obj_vmax = float(obj.min()), float(obj.max())
+    rec_vmin, rec_vmax = float(rec_s.min()), float(rec_s.max())
 
     ft_rec = _log_ft(rec_s)
     ft_obj = _log_ft(obj)
-    ft_blur = _log_ft(blurred)
-    ft_raw = _log_ft(raw - float(raw.min()))
-    ft_max = max(float(ft_rec.max()), float(ft_obj.max()), float(ft_blur.max()))
+    ft_max = max(float(ft_rec.max()), float(ft_obj.max()))
 
     rec_sl = _ortho(rec_s)
     obj_sl = _ortho(obj)
-    db_sl = _ortho(diff_blur)
-    do_sl = _ortho(diff_obj)
     ft_rec_sl = _ortho(ft_rec)
     ft_obj_sl = _ortho(ft_obj)
-    ft_blur_sl = _ortho(ft_blur)
-    ft_raw_sl = _ortho(ft_raw)
     views = ["XY (z=center)", "XZ (y=center)", "YZ (x=center)"]
 
-    fig, axes = plt.subplots(4, 5, figsize=(22, 17))
+    fig, axes = plt.subplots(4, 3, figsize=(14, 17))
     fig.suptitle(
         f"{sample} / {ch} — Wave-Optical Reconstruction "
         f"(PSNR {psnr_val:.1f} dB, gain={alpha:.6f})",
@@ -379,56 +376,39 @@ def _plot_wave(plate, sample, c_idx, out_dir, otf, device):
         y=0.99,
     )
 
-    col_titles = [
-        "Measurements",
-        "Reconstruction",
-        "Object",
-        "Rec - OTF*Obj",
-        "Rec - Object",
-    ]
+    col_titles = ["Projections", "Reconstruction", "Object"]
 
     # Row 0 (XY): sinogram + volume slices
     axes[0, 0].imshow(
         sino,
         cmap="gray",
+        vmin=sino_vmin,
+        vmax=sino_vmax,
         aspect="auto",
         extent=[0, sino.shape[1], PROJECTION_ANGLES[-1], PROJECTION_ANGLES[0]],
     )
     axes[0, 0].set_ylabel("Angle (deg)", fontsize=9)
     axes[0, 0].set_title(col_titles[0], fontsize=10)
-    axes[0, 1].imshow(rec_sl[0], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
-    _style_ax(axes[0, 1], title=col_titles[1])
-    axes[0, 2].imshow(obj_sl[0], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[0, 1].imshow(rec_sl[0], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
+    _style_ax(axes[0, 1], title=col_titles[1], ylabel=views[0])
+    axes[0, 2].imshow(obj_sl[0], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
     _style_ax(axes[0, 2], title=col_titles[2])
-    axes[0, 3].imshow(db_sl[0], cmap="RdBu_r", vmin=-dlim, vmax=dlim, aspect="equal")
-    _style_ax(axes[0, 3], title=col_titles[3])
-    axes[0, 4].imshow(do_sl[0], cmap="RdBu_r", vmin=-dlim, vmax=dlim, aspect="equal")
-    _style_ax(axes[0, 4], title=col_titles[4])
 
     # Rows 1-2 (XZ, YZ)
     for row in range(1, 3):
         axes[row, 0].axis("off")
-        axes[row, 1].imshow(rec_sl[row], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+        axes[row, 1].imshow(rec_sl[row], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
         _style_ax(axes[row, 1], ylabel=views[row])
-        axes[row, 2].imshow(obj_sl[row], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+        axes[row, 2].imshow(obj_sl[row], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
         _style_ax(axes[row, 2])
-        axes[row, 3].imshow(db_sl[row], cmap="RdBu_r", vmin=-dlim, vmax=dlim, aspect="equal")
-        _style_ax(axes[row, 3])
-        axes[row, 4].imshow(do_sl[row], cmap="RdBu_r", vmin=-dlim, vmax=dlim, aspect="equal")
-        _style_ax(axes[row, 4])
-    axes[0, 1].set_ylabel(views[0], fontsize=10)
 
     # Row 3: FFT XZ slices (ky=0)
-    axes[3, 0].imshow(ft_raw_sl[1], cmap="inferno", vmin=0, vmax=ft_max, aspect="equal")
-    _style_ax(axes[3, 0], title="FFT Rawimage")
+    axes[3, 0].axis("off")
     axes[3, 1].imshow(ft_rec_sl[1], cmap="inferno", vmin=0, vmax=ft_max, aspect="equal")
     _style_ax(axes[3, 1], title="FFT Reconstruction")
     axes[3, 2].imshow(ft_obj_sl[1], cmap="inferno", vmin=0, vmax=ft_max, aspect="equal")
     _style_ax(axes[3, 2], title="FFT Object")
-    axes[3, 3].imshow(ft_blur_sl[1], cmap="inferno", vmin=0, vmax=ft_max, aspect="equal")
-    _style_ax(axes[3, 3], title="FFT OTF*Object")
-    axes[3, 4].axis("off")
-    axes[3, 0].set_ylabel("FFT XZ (ky=0)", fontsize=10)
+    axes[3, 1].set_ylabel("FFT XZ (ky=0)", fontsize=10)
 
     plt.tight_layout()
     out = Path(out_dir) / sample

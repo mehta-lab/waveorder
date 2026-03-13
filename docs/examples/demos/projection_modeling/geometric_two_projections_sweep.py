@@ -77,11 +77,17 @@ def _style_ax(ax, title=None, ylabel=None):
 
 
 def _reconstruct_single(siddon_op, source_vol_np, reg, niter):
-    """CG-Tikhonov reconstruction from precomputed SiddonOperator."""
+    """CG-Tikhonov reconstruction from precomputed SiddonOperator.
+
+    Subtracts per-projection mean before solving: with only two views
+    the common DC background carries no angular diversity.
+    """
     device = siddon_op.device
     source_t = torch.tensor(source_vol_np, dtype=torch.float32, device=device)
     measurements = siddon_op.project_all(source_t)
     del source_t
+
+    measurements = [p - p.mean() for p in measurements]
 
     def forward(vol):
         return siddon_op.project_all(vol)
@@ -185,7 +191,11 @@ def plot_psnr_vs_theta(results, out_dir):
 # Plot: Detailed figure at optimal theta
 # ---------------------------------------------------------------------------
 def plot_optimal_reconstruction(sample, obj, best_theta, reg, niter, out_dir):
-    """Projections at ±theta, reconstruction, object, difference, XZ FFTs."""
+    """Projections at +/-theta, gain-calibrated reconstruction, object, FFTs.
+
+    Layout: 3 columns (Projections, Reconstruction, Object) × 4 rows
+    (XY, XZ, YZ, FFT XZ).
+    """
     angles = [-best_theta, best_theta]
     siddon_op = SiddonOperator(ZYX_SHAPE, angles, VOXEL_SIZE, DEVICE)
     recon, measurements = _reconstruct_single(siddon_op, obj, reg, niter)
@@ -193,13 +203,16 @@ def plot_optimal_reconstruction(sample, obj, best_theta, reg, niter, out_dir):
     rec_s = alpha * recon
     psnr_val = _psnr(rec_s, obj)
 
-    # Extract projections as numpy
-    proj_neg = measurements[0].cpu().numpy()  # (ny, n_lat_neg)
-    proj_pos = measurements[1].cpu().numpy()  # (ny, n_lat_pos)
+    proj_neg = measurements[0].cpu().numpy()
+    proj_pos = measurements[1].cpu().numpy()
 
-    diff = rec_s - obj
-    vmin, vmax = float(obj.min()), float(obj.max())
-    dlim = max(float(np.abs(diff).max()) * 0.5, 1e-10)
+    # Clip projection display at 1st percentile to reveal structure
+    all_proj = np.concatenate([proj_neg.ravel(), proj_pos.ravel()])
+    proj_vmin = float(np.percentile(all_proj, 1))
+    proj_vmax = float(all_proj.max())
+
+    obj_vmin, obj_vmax = float(obj.min()), float(obj.max())
+    rec_vmin, rec_vmax = float(rec_s.min()), float(rec_s.max())
 
     ft_rec = _log_ft(rec_s)
     ft_obj = _log_ft(obj)
@@ -207,49 +220,42 @@ def plot_optimal_reconstruction(sample, obj, best_theta, reg, niter, out_dir):
 
     rec_sl = _ortho(rec_s)
     obj_sl = _ortho(obj)
-    diff_sl = _ortho(diff)
     ft_rec_sl = _ortho(ft_rec)
     ft_obj_sl = _ortho(ft_obj)
     views = ["XY (z=center)", "XZ (y=center)", "YZ (x=center)"]
 
-    fig, axes = plt.subplots(4, 4, figsize=(18, 17))
+    fig, axes = plt.subplots(4, 3, figsize=(14, 17))
     fig.suptitle(
-        f"{sample} — Two-View Geometric Reconstruction at ±{best_theta} deg "
+        f"{sample} — Two-View Geometric Reconstruction at +/-{best_theta} deg "
         f"(PSNR {psnr_val:.1f} dB, gain={alpha:.4f})",
         fontsize=13,
         y=0.99,
     )
 
-    col_titles = ["Projections", "Reconstruction", "Object", "Rec - Object"]
+    col_titles = ["Projections", "Reconstruction", "Object"]
 
     # Row 0 (XY): projection at +theta
-    axes[0, 0].imshow(proj_pos, cmap="gray", aspect="equal")
+    axes[0, 0].imshow(proj_pos, cmap="gray", vmin=proj_vmin, vmax=proj_vmax, aspect="equal")
     _style_ax(axes[0, 0], title=col_titles[0], ylabel=f"+{best_theta} deg")
-    axes[0, 1].imshow(rec_sl[0], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[0, 1].imshow(rec_sl[0], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
     _style_ax(axes[0, 1], title=col_titles[1], ylabel=views[0])
-    axes[0, 2].imshow(obj_sl[0], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[0, 2].imshow(obj_sl[0], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
     _style_ax(axes[0, 2], title=col_titles[2])
-    axes[0, 3].imshow(diff_sl[0], cmap="RdBu_r", vmin=-dlim, vmax=dlim, aspect="equal")
-    _style_ax(axes[0, 3], title=col_titles[3])
 
     # Row 1 (XZ): projection at -theta
-    axes[1, 0].imshow(proj_neg, cmap="gray", aspect="equal")
+    axes[1, 0].imshow(proj_neg, cmap="gray", vmin=proj_vmin, vmax=proj_vmax, aspect="equal")
     _style_ax(axes[1, 0], ylabel=f"-{best_theta} deg")
-    axes[1, 1].imshow(rec_sl[1], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[1, 1].imshow(rec_sl[1], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
     _style_ax(axes[1, 1], ylabel=views[1])
-    axes[1, 2].imshow(obj_sl[1], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[1, 2].imshow(obj_sl[1], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
     _style_ax(axes[1, 2])
-    axes[1, 3].imshow(diff_sl[1], cmap="RdBu_r", vmin=-dlim, vmax=dlim, aspect="equal")
-    _style_ax(axes[1, 3])
 
     # Row 2 (YZ): blank projection slot
     axes[2, 0].axis("off")
-    axes[2, 1].imshow(rec_sl[2], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[2, 1].imshow(rec_sl[2], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
     _style_ax(axes[2, 1], ylabel=views[2])
-    axes[2, 2].imshow(obj_sl[2], cmap="gray", vmin=vmin, vmax=vmax, aspect="equal")
+    axes[2, 2].imshow(obj_sl[2], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
     _style_ax(axes[2, 2])
-    axes[2, 3].imshow(diff_sl[2], cmap="RdBu_r", vmin=-dlim, vmax=dlim, aspect="equal")
-    _style_ax(axes[2, 3])
 
     # Row 3: FFT XZ slices (ky=0)
     axes[3, 0].axis("off")
@@ -257,7 +263,6 @@ def plot_optimal_reconstruction(sample, obj, best_theta, reg, niter, out_dir):
     _style_ax(axes[3, 1], title="FFT Reconstruction")
     axes[3, 2].imshow(ft_obj_sl[1], cmap="inferno", vmin=0, vmax=ft_max, aspect="equal")
     _style_ax(axes[3, 2], title="FFT Object")
-    axes[3, 3].axis("off")
     axes[3, 1].set_ylabel("FFT XZ (ky=0)", fontsize=10)
 
     plt.tight_layout()
