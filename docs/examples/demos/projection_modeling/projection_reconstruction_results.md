@@ -90,6 +90,37 @@ the sparse point bead (3.6 dB) and largest for the extended Shepp-Logan
 (5.2 dB). Two projections sample only two Fourier slices; the XZ FFT panels
 show energy along two narrow bands with the rest near zero.
 
+<details>
+<summary>Note: apparent aspect-ratio distortion at oblique projection angles</summary>
+
+The Siddon operator projects in the ZX plane; each Y row is processed
+independently. The Y extent of the reconstruction therefore matches the
+object exactly at all angles (FWHM 231 vs 233 voxels for Shepp-Logan).
+The X extent, however, depends on angular coverage. Two Fourier slices at
+±theta leave large gaps along kx; the CG solver fills these gaps with
+ringing that expands the effective X extent.
+
+| Angle | Y FWHM | X FWHM | Y/X  |
+|-------|--------|--------|------|
+| Object | 233 | 175 | 1.33 |
+| ±10 deg | 231 | 175 | 1.32 |
+| ±45 deg | 231 | 255 | 0.91 |
+| ±70 deg | 231 | 255 | 0.91 |
+
+At ±10 deg (nearly vertical rays) the Fourier slices straddle the kx axis,
+preserving X resolution. At ±45 or ±70 deg the slices tilt away from kx,
+and the X FWHM expands to fill the volume. The Shepp-Logan ellipse thus
+appears to change from taller-than-wide (Y/X = 1.33) to wider-than-tall
+(Y/X ≈ 0.9), giving the visual impression of a 90-degree rotation. The
+wave-optical two-view reconstruction (Section 4) avoids this effect because
+its optimal angle for the lines phantom is ±10 deg and the OTF bandwidth
+further suppresses high-frequency ringing.
+
+This is an inherent resolution anisotropy of two-view tomography, not a
+coordinate error.
+
+</details>
+
 ---
 
 ## 3. Limited-Angle Tomography with Blur (29 projections, OTF)
