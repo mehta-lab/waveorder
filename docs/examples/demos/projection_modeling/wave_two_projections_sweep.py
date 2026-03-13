@@ -323,6 +323,17 @@ def plot_optimal_reconstruction(sample, ch, gt, source, best_theta, reg, niter, 
     ft_obj_sl = _ortho(ft_obj)
     views = ["XY (z=center)", "XZ (y=center)", "YZ (x=center)"]
 
+    # Physical extent in micrometers for axis labeling
+    nz, ny, nx = ZYX_SHAPE
+    phys_z = nz * VOXEL_SIZE
+    phys_y = ny * VOXEL_SIZE
+    phys_x = nx * VOXEL_SIZE
+    ext_xy = [0, phys_x, phys_y, 0]
+    ext_xz = [0, phys_x, phys_z, 0]
+    ext_yz = [0, phys_y, phys_z, 0]
+    vol_extents = [ext_xy, ext_xz, ext_yz]
+    axis_labels = [("X", "Y"), ("X", "Z"), ("Y", "Z")]
+
     fig, axes = plt.subplots(4, 3, figsize=(14, 17))
     fig.suptitle(
         f"{sample} / {ch} — Two-View Wave-Optical Reconstruction at +/-{best_theta} deg "
@@ -336,25 +347,38 @@ def plot_optimal_reconstruction(sample, ch, gt, source, best_theta, reg, niter, 
     # Row 0 (XY): projection at +theta
     axes[0, 0].imshow(proj_pos, cmap="gray", vmin=proj_vmin, vmax=proj_vmax, aspect="equal")
     _style_ax(axes[0, 0], title=col_titles[0], ylabel=f"+{best_theta} deg")
-    axes[0, 1].imshow(rec_sl[0], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
+    axes[0, 1].imshow(rec_sl[0], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_xy)
     _style_ax(axes[0, 1], title=col_titles[1], ylabel=views[0])
-    axes[0, 2].imshow(obj_sl[0], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
+    axes[0, 2].imshow(obj_sl[0], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_xy)
     _style_ax(axes[0, 2], title=col_titles[2])
 
     # Row 1 (XZ): projection at -theta
     axes[1, 0].imshow(proj_neg, cmap="gray", vmin=proj_vmin, vmax=proj_vmax, aspect="equal")
     _style_ax(axes[1, 0], ylabel=f"-{best_theta} deg")
-    axes[1, 1].imshow(rec_sl[1], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
+    axes[1, 1].imshow(rec_sl[1], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_xz)
     _style_ax(axes[1, 1], ylabel=views[1])
-    axes[1, 2].imshow(obj_sl[1], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
+    axes[1, 2].imshow(obj_sl[1], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_xz)
     _style_ax(axes[1, 2])
 
     # Row 2 (YZ): blank projection slot
     axes[2, 0].axis("off")
-    axes[2, 1].imshow(rec_sl[2], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
+    axes[2, 1].imshow(rec_sl[2], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_yz)
     _style_ax(axes[2, 1], ylabel=views[2])
-    axes[2, 2].imshow(obj_sl[2], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
+    axes[2, 2].imshow(obj_sl[2], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_yz)
     _style_ax(axes[2, 2])
+
+    # Add scale ticks (um) to reconstruction and object columns
+    for row in range(3):
+        ext = vol_extents[row]
+        xlbl, ylbl = axis_labels[row]
+        for col in [1, 2]:
+            ax = axes[row, col]
+            ax.set_xticks([0, ext[1] / 2, ext[1]])
+            ax.set_xticklabels(["0", f"{ext[1]/2:.1f}", f"{ext[1]:.1f}"], fontsize=7)
+            ax.set_yticks([0, ext[3] if ext[3] > 0 else ext[2]])
+            ax.set_yticklabels(["0", f"{max(ext[2], ext[3]):.1f}"], fontsize=7)
+            if row == 2:
+                ax.set_xlabel(f"{xlbl} (um)", fontsize=8)
 
     # Row 3: FFT XZ slices (ky=0)
     axes[3, 0].axis("off")

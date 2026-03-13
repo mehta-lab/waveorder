@@ -265,6 +265,17 @@ def _plot_geometric(plate, sample, out_dir, stack_cache):
     ft_obj_sl = _ortho(ft_obj)
     views = ["XY (z=center)", "XZ (y=center)", "YZ (x=center)"]
 
+    # Physical extent in micrometers for axis labeling
+    nz, ny, nx = ZYX_SHAPE
+    phys_z = nz * VOXEL_SIZE
+    phys_y = ny * VOXEL_SIZE
+    phys_x = nx * VOXEL_SIZE
+    ext_xy = [0, phys_x, phys_y, 0]
+    ext_xz = [0, phys_x, phys_z, 0]
+    ext_yz = [0, phys_y, phys_z, 0]
+    vol_extents = [ext_xy, ext_xz, ext_yz]
+    axis_labels = [("X", "Y"), ("X", "Z"), ("Y", "Z")]
+
     fig, axes = plt.subplots(4, 3, figsize=(14, 17))
     fig.suptitle(
         f"{sample} — Limited-Angle Tomography "
@@ -278,9 +289,9 @@ def _plot_geometric(plate, sample, out_dir, stack_cache):
     # Row 0 (XY): projection at 0 deg + volume slices
     axes[0, 0].imshow(stack[ca], cmap="gray", vmin=proj_vmin, vmax=proj_vmax, aspect="equal")
     _style_ax(axes[0, 0], title=col_titles[0], ylabel=f"Proj at {PROJECTION_ANGLES[ca]} deg")
-    axes[0, 1].imshow(rec_sl[0], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
+    axes[0, 1].imshow(rec_sl[0], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_xy)
     _style_ax(axes[0, 1], title=col_titles[1], ylabel=views[0])
-    axes[0, 2].imshow(obj_sl[0], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
+    axes[0, 2].imshow(obj_sl[0], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_xy)
     _style_ax(axes[0, 2], title=col_titles[2])
 
     # Row 1 (XZ): sinogram at Y=center (angle vs X)
@@ -293,9 +304,9 @@ def _plot_geometric(plate, sample, out_dir, stack_cache):
         extent=[0, nx_s, PROJECTION_ANGLES[-1], PROJECTION_ANGLES[0]],
     )
     _style_ax(axes[1, 0], ylabel="Sino (angle, X)\nat Y=center")
-    axes[1, 1].imshow(rec_sl[1], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
+    axes[1, 1].imshow(rec_sl[1], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_xz)
     _style_ax(axes[1, 1], ylabel=views[1])
-    axes[1, 2].imshow(obj_sl[1], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
+    axes[1, 2].imshow(obj_sl[1], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_xz)
     _style_ax(axes[1, 2])
 
     # Row 2 (YZ): sinogram at X=center (angle vs Y)
@@ -308,10 +319,23 @@ def _plot_geometric(plate, sample, out_dir, stack_cache):
         extent=[0, ny_s, PROJECTION_ANGLES[-1], PROJECTION_ANGLES[0]],
     )
     _style_ax(axes[2, 0], ylabel="Sino (angle, Y)\nat X=center")
-    axes[2, 1].imshow(rec_sl[2], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
+    axes[2, 1].imshow(rec_sl[2], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_yz)
     _style_ax(axes[2, 1], ylabel=views[2])
-    axes[2, 2].imshow(obj_sl[2], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
+    axes[2, 2].imshow(obj_sl[2], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_yz)
     _style_ax(axes[2, 2])
+
+    # Add scale ticks (um) to reconstruction and object columns
+    for row in range(3):
+        ext = vol_extents[row]
+        xlbl, ylbl = axis_labels[row]
+        for col in [1, 2]:
+            ax = axes[row, col]
+            ax.set_xticks([0, ext[1] / 2, ext[1]])
+            ax.set_xticklabels(["0", f"{ext[1]/2:.1f}", f"{ext[1]:.1f}"], fontsize=7)
+            ax.set_yticks([0, ext[3] if ext[3] > 0 else ext[2]])
+            ax.set_yticklabels(["0", f"{max(ext[2], ext[3]):.1f}"], fontsize=7)
+            if row == 2:
+                ax.set_xlabel(f"{xlbl} (um)", fontsize=8)
 
     # Row 3: FFT XZ slices (ky=0)
     axes[3, 0].axis("off")
@@ -334,10 +358,10 @@ def _plot_geometric(plate, sample, out_dir, stack_cache):
 # Figure: Wave-optical reconstruction
 # ---------------------------------------------------------------------------
 def _plot_wave(plate, sample, c_idx, out_dir, otf, device):
-    """Sinogram, gain-calibrated reconstruction, object, FFTs.
+    """Projection + sinograms, gain-calibrated reconstruction, object, FFTs.
 
-    Layout: 3 columns (Measurements, Reconstruction, Object) × 4 rows
-    (XY, XZ, YZ, FFT XZ) — same as geometric figures.
+    Layout: 3 columns (Projections, Reconstruction, Object) × 4 rows
+    (XY, XZ, YZ, FFT XZ) — matches geometric figures.
     """
     import matplotlib.pyplot as plt
 
@@ -349,11 +373,16 @@ def _plot_wave(plate, sample, c_idx, out_dir, otf, device):
     rec_s = alpha * rec
     psnr_val = _psnr(rec_s, obj)
 
-    sino = _stored_sinogram(plate, sample, c_idx)
+    # Full stored projection stack: (n_angles, ny, nx)
+    proj_stack = np.array(plate[f"{sample}/projections/0"]["0"][0, c_idx], dtype=np.float32)
+    n_angles, ny_s, nx_s = proj_stack.shape
+    ca = n_angles // 2  # center angle index (0 deg)
+    cy_s = ny_s // 2
+    cx_s = nx_s // 2
 
-    # Clip sinogram display at 1st percentile to reveal structure
-    sino_vmin = float(np.percentile(sino, 1))
-    sino_vmax = float(sino.max())
+    # Clip projection display at 1st percentile to reveal structure
+    proj_vmin = float(np.percentile(proj_stack, 1))
+    proj_vmax = float(proj_stack.max())
 
     obj_vmin, obj_vmax = float(obj.min()), float(obj.max())
     rec_vmin, rec_vmax = float(rec_s.min()), float(rec_s.max())
@@ -368,6 +397,17 @@ def _plot_wave(plate, sample, c_idx, out_dir, otf, device):
     ft_obj_sl = _ortho(ft_obj)
     views = ["XY (z=center)", "XZ (y=center)", "YZ (x=center)"]
 
+    # Physical extent in micrometers for axis labeling
+    nz, ny, nx = ZYX_SHAPE
+    phys_z = nz * VOXEL_SIZE
+    phys_y = ny * VOXEL_SIZE
+    phys_x = nx * VOXEL_SIZE
+    ext_xy = [0, phys_x, phys_y, 0]
+    ext_xz = [0, phys_x, phys_z, 0]
+    ext_yz = [0, phys_y, phys_z, 0]
+    vol_extents = [ext_xy, ext_xz, ext_yz]
+    axis_labels = [("X", "Y"), ("X", "Z"), ("Y", "Z")]
+
     fig, axes = plt.subplots(4, 3, figsize=(14, 17))
     fig.suptitle(
         f"{sample} / {ch} — Wave-Optical Reconstruction "
@@ -378,29 +418,56 @@ def _plot_wave(plate, sample, c_idx, out_dir, otf, device):
 
     col_titles = ["Projections", "Reconstruction", "Object"]
 
-    # Row 0 (XY): sinogram + volume slices
-    axes[0, 0].imshow(
-        sino,
-        cmap="gray",
-        vmin=sino_vmin,
-        vmax=sino_vmax,
-        aspect="auto",
-        extent=[0, sino.shape[1], PROJECTION_ANGLES[-1], PROJECTION_ANGLES[0]],
-    )
-    axes[0, 0].set_ylabel("Angle (deg)", fontsize=9)
-    axes[0, 0].set_title(col_titles[0], fontsize=10)
-    axes[0, 1].imshow(rec_sl[0], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
+    # Row 0 (XY): projection at 0 deg + volume slices
+    axes[0, 0].imshow(proj_stack[ca], cmap="gray", vmin=proj_vmin, vmax=proj_vmax, aspect="equal")
+    _style_ax(axes[0, 0], title=col_titles[0], ylabel=f"Proj at {PROJECTION_ANGLES[ca]} deg")
+    axes[0, 1].imshow(rec_sl[0], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_xy)
     _style_ax(axes[0, 1], title=col_titles[1], ylabel=views[0])
-    axes[0, 2].imshow(obj_sl[0], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
+    axes[0, 2].imshow(obj_sl[0], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_xy)
     _style_ax(axes[0, 2], title=col_titles[2])
 
-    # Rows 1-2 (XZ, YZ)
-    for row in range(1, 3):
-        axes[row, 0].axis("off")
-        axes[row, 1].imshow(rec_sl[row], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal")
-        _style_ax(axes[row, 1], ylabel=views[row])
-        axes[row, 2].imshow(obj_sl[row], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal")
-        _style_ax(axes[row, 2])
+    # Row 1 (XZ): sinogram at Y=center (angle vs X)
+    axes[1, 0].imshow(
+        proj_stack[:, cy_s, :],
+        cmap="gray",
+        vmin=proj_vmin,
+        vmax=proj_vmax,
+        aspect="auto",
+        extent=[0, nx_s, PROJECTION_ANGLES[-1], PROJECTION_ANGLES[0]],
+    )
+    _style_ax(axes[1, 0], ylabel="Sino (angle, X)\nat Y=center")
+    axes[1, 1].imshow(rec_sl[1], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_xz)
+    _style_ax(axes[1, 1], ylabel=views[1])
+    axes[1, 2].imshow(obj_sl[1], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_xz)
+    _style_ax(axes[1, 2])
+
+    # Row 2 (YZ): sinogram at X=center (angle vs Y)
+    axes[2, 0].imshow(
+        proj_stack[:, :, cx_s],
+        cmap="gray",
+        vmin=proj_vmin,
+        vmax=proj_vmax,
+        aspect="auto",
+        extent=[0, ny_s, PROJECTION_ANGLES[-1], PROJECTION_ANGLES[0]],
+    )
+    _style_ax(axes[2, 0], ylabel="Sino (angle, Y)\nat X=center")
+    axes[2, 1].imshow(rec_sl[2], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_yz)
+    _style_ax(axes[2, 1], ylabel=views[2])
+    axes[2, 2].imshow(obj_sl[2], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_yz)
+    _style_ax(axes[2, 2])
+
+    # Add scale ticks (um) to reconstruction and object columns
+    for row in range(3):
+        ext = vol_extents[row]
+        xlbl, ylbl = axis_labels[row]
+        for col in [1, 2]:
+            ax = axes[row, col]
+            ax.set_xticks([0, ext[1] / 2, ext[1]])
+            ax.set_xticklabels(["0", f"{ext[1]/2:.1f}", f"{ext[1]:.1f}"], fontsize=7)
+            ax.set_yticks([0, ext[3] if ext[3] > 0 else ext[2]])
+            ax.set_yticklabels(["0", f"{max(ext[2], ext[3]):.1f}"], fontsize=7)
+            if row == 2:
+                ax.set_xlabel(f"{xlbl} (um)", fontsize=8)
 
     # Row 3: FFT XZ slices (ky=0)
     axes[3, 0].axis("off")

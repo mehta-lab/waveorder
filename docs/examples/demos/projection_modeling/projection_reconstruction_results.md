@@ -9,8 +9,8 @@ against the unblurred ground-truth object.
 ## Forward Simulation
 
 1. Generate 3D phantom.
-2. Convolve with 3D transfer function (fluorescence OTF or phase TF).
-3. Scale to [100, 1024] detector counts; add Poisson noise.
+2. Blur with 3D transfer function (fluorescence OTF or phase TF).
+3. Scale the intensities to [100, 1024] detector counts; add Poisson noise.
 4. Compute Siddon mean-projections at 29 angles (-70 to +70 deg, 5 deg steps).
 
 ### Point
