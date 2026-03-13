@@ -12,10 +12,10 @@ Forward simulation
 6. Assume the black level of 100 and the peak photon flux of 1024, scale the simulated images (but not the test phantom) that sets the value of brightest voxel to 1024. Add Poisson noise to mimic realistic imaging.
 
 Inverse algorithm — four subcommands:
-1. **geometric**: Reconstruct from ALL projections of the unblurred object using Siddon-only forward model. Tests whether the CG-Tikhonov solver recovers the object from clean geometric projections.
-2. **wave**: Reconstruct from ALL projections of the blurred+noisy rawimage using 3D OTF + Siddon forward model. Tests simultaneous deconvolution and reconstruction.
-3. **geometric-limited**: Reconstruct from a single ±theta projection pair of the unblurred object. No blur in forward model.
-4. **wave-limited**: Reconstruct from a single ±theta projection pair of the blurred+noisy rawimage. 3D OTF in forward model.
+1. **geometric** (limited-angle tomography without blur): Reconstruct from ALL projections of the unblurred object using Siddon-only forward model. Tests whether the CG-Tikhonov solver recovers the object from clean geometric projections.
+2. **wave** (limited-angle tomography with blur): Reconstruct from ALL projections of the blurred+noisy rawimage using 3D OTF + Siddon forward model. Tests simultaneous deconvolution and reconstruction.
+3. **geometric-limited** (limited-angle tomography with two views, no blur): Reconstruct from a single ±theta projection pair of the unblurred object. No blur in forward model.
+4. **wave-limited** (limited-angle tomography with two views and blur): Reconstruct from a single ±theta projection pair of the blurred+noisy rawimage. 3D OTF in forward model.
 
 Fourier-slice theorem: projecting an OTF-blurred 3D volume at angle theta is equivalent to applying the central slice of the 3D OTF at that angle as a 2D transfer function. Using the full 3D OTF convolution in the forward model naturally accounts for angle-dependent resolution and defocus coupling.
 
@@ -79,13 +79,13 @@ projection_modeling.zarr/          # HCS plate, ome-ngff 0.5
       0/
     projections/                   # Siddon projection stacks (1, 2, 29, 256, 363)
       0/
-    recongeo/                      # geometric recon, all angles
+    recongeo/                      # limited-angle tomography without blur
       0/
-    reconwave/                     # wave-optical recon, all angles
+    reconwave/                     # limited-angle tomography with blur
       0/
-    recongeoL/                     # geometric recon, limited ±theta
+    recongeoL/                     # two-view tomography without blur
       0/
-    reconwaveL/                    # wave-optical recon, limited ±theta
+    reconwaveL/                    # two-view tomography with blur
       0/
   lines/
     (same columns)
@@ -106,10 +106,10 @@ All columns share channel names `["Fluorescence", "Phase"]` (C=0 and C=1).
 | `object` | `(1, 2, 256, 256, 256)` | Phantom generator | — |
 | `rawimage` | `(1, 2, 256, 256, 256)` | OTF blur + noise | — |
 | `projections` | `(1, 2, 29, 256, 363)` | Siddon mean-proj of rawimage | — |
-| `recongeo` | `(1, 2, 256, 256, 256)` | object → Siddon | CG-Tikhonov, all angles |
-| `reconwave` | `(1, 2, 256, 256, 256)` | rawimage → OTF+Siddon | CG-Tikhonov, all angles |
-| `recongeoL` | `(1, 2, 256, 256, 256)` | object → Siddon | CG-Tikhonov, ±theta |
-| `reconwaveL` | `(1, 2, 256, 256, 256)` | rawimage → OTF+Siddon | CG-Tikhonov, ±theta |
+| `recongeo` | `(1, 2, 256, 256, 256)` | object → Siddon | Limited-angle tomography, no blur |
+| `reconwave` | `(1, 2, 256, 256, 256)` | rawimage → OTF+Siddon | Limited-angle tomography, with blur |
+| `recongeoL` | `(1, 2, 256, 256, 256)` | object → Siddon | Two-view tomography, no blur |
+| `reconwaveL` | `(1, 2, 256, 256, 256)` | rawimage → OTF+Siddon | Two-view tomography, with blur |
 
 ### Reconstruction Metadata
 
@@ -211,8 +211,8 @@ OTF convolution uses PyTorch FFT on GPU (`torch.fft.fftn`/`ifftn`). Siddon ray-t
 
 ### Angle configurations
 
-- **All angles** (`geometric`, `wave`): 29 projections at -70:5:70 degrees
-- **Limited** (`geometric-limited`, `wave-limited`): single ±theta pair (2 projections)
+- **All angles** (`geometric`, `wave`): Limited-angle tomography with 29 projections at -70:5:70 degrees
+- **Two views** (`geometric-limited`, `wave-limited`): Limited-angle tomography with a single ±theta pair (2 projections)
 
 ### Fourier-slice theorem
 

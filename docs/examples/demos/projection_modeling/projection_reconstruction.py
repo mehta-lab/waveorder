@@ -27,6 +27,7 @@ angle-dependent resolution and defocus.  Reconstructs from projections
 of the blurred+noisy ``rawimage`` column.
 
 Both algorithms solve (H^T H + lambda I) x = H^T y via CG-Tikhonov.
+Siddon projection and backprojection use sparse matmul on GPU (or CPU).
 OTF convolution uses PyTorch FFT on GPU when available.
 """
 
@@ -37,7 +38,7 @@ import numpy as np
 import torch
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
-from siddon import cg_tikhonov, siddon_backproject, siddon_project
+from siddon import SiddonOperator, cg_tikhonov
 
 from waveorder.models import isotropic_fluorescent_thick_3d, phase_thick_3d
 
@@ -105,59 +106,63 @@ def _ensure_position(plate, row, col, fov, shape):
 
 
 def _reconstruct_channel(
+    siddon_op,
     source_volume,
-    angles,
     reg_strength,
     n_iter,
     forward_blur=None,
     adjoint_blur=None,
+    use_ramp_filter=False,
 ):
     """CG-Tikhonov reconstruction of a single channel from Siddon projections.
 
     Parameters
     ----------
+    siddon_op : SiddonOperator
+        Precomputed sparse projection operator for all angles.
     source_volume : np.ndarray, shape (Z, Y, X)
         Volume to project as measurements (object or rawimage channel).
-    angles : list of float
-        Projection angles in degrees.
     reg_strength : float
         Tikhonov regularization lambda.
     n_iter : int
         Number of CG iterations.
     forward_blur : callable or None
         If given, applied to the volume before Siddon projection (wave model).
-        Signature: np.ndarray -> np.ndarray.
+        Signature: torch.Tensor -> torch.Tensor.
     adjoint_blur : callable or None
         If given, applied after Siddon backprojection (wave adjoint).
+    use_ramp_filter : bool
+        If True, apply Ram-Lak ramp filter to each projection before
+        backprojection.  This preconditions the normal operator H*H so
+        that all spatial frequencies converge at a similar rate in CG,
+        reducing Gibbs ringing near sharp edges.
 
     Returns
     -------
     recon : np.ndarray
         Reconstructed 3D volume.
     """
-    # Compute measurements: project the source volume
-    # No padding — each projection keeps its native width.
-    # siddon_backproject expects the same width that siddon_project produced;
-    # center-padding would shift the data and break the adjoint.
-    measurements = []
-    for angle in angles:
-        proj = siddon_project(source_volume, angle, VOXEL_SIZE, mode="sum")
-        measurements.append(proj)
+    device = siddon_op.device
+
+    # Move source volume to device and compute measurements
+    source_vol_t = torch.tensor(source_volume, dtype=torch.float32, device=device)
+    measurements = siddon_op.project_all(source_vol_t)
+    del source_vol_t
 
     def forward(vol):
+        v = vol
         if forward_blur is not None:
-            vol = forward_blur(vol)
-        return [siddon_project(vol, a, VOXEL_SIZE, "sum") for a in angles]
+            v = forward_blur(v)
+        return siddon_op.project_all(v)
 
     def adjoint(projs):
-        bp = np.zeros(ZYX_SHAPE, dtype=np.float32)
-        for proj, angle in zip(projs, angles):
-            bp += siddon_backproject(proj, angle, ZYX_SHAPE, VOXEL_SIZE)
+        bp = siddon_op.backproject_all(projs, ramp_filter=use_ramp_filter)
         if adjoint_blur is not None:
             bp = adjoint_blur(bp)
         return bp
 
-    return cg_tikhonov(forward, adjoint, measurements, ZYX_SHAPE, reg_strength, n_iter)
+    recon = cg_tikhonov(forward, adjoint, measurements, ZYX_SHAPE, reg_strength, n_iter, device)
+    return recon.cpu().numpy()
 
 
 def _make_blur_ops(otf_tensor):
@@ -173,13 +178,11 @@ def _make_blur_ops(otf_tensor):
     """
     otf_conj = torch.conj(otf_tensor)
 
-    def forward_blur(vol_np):
-        vol = torch.tensor(vol_np, dtype=torch.float32, device=DEVICE)
-        return torch.fft.ifftn(torch.fft.fftn(vol) * otf_tensor).real.cpu().numpy()
+    def forward_blur(vol):
+        return torch.fft.ifftn(torch.fft.fftn(vol) * otf_tensor).real
 
-    def adjoint_blur(vol_np):
-        vol = torch.tensor(vol_np, dtype=torch.float32, device=DEVICE)
-        return torch.fft.ifftn(torch.fft.fftn(vol) * otf_conj).real.cpu().numpy()
+    def adjoint_blur(vol):
+        return torch.fft.ifftn(torch.fft.fftn(vol) * otf_conj).real
 
     return forward_blur, adjoint_blur
 
@@ -221,7 +224,9 @@ def _compute_transfer_functions():
     }
 
 
-def _run_reconstruction(store_path, source_col, target_col, angles, reg, niter, blur_ops=None):
+def _run_reconstruction(
+    store_path, source_col, target_col, angles, reg, niter, blur_ops=None, use_ramp_filter=False
+):
     """Core reconstruction loop shared by all four subcommands.
 
     Parameters
@@ -240,12 +245,20 @@ def _run_reconstruction(store_path, source_col, target_col, angles, reg, niter, 
         CG iterations.
     blur_ops : dict or None
         If given, maps channel name to (forward_blur, adjoint_blur) callables.
+    use_ramp_filter : bool
+        If True, apply ramp filter to projections before backprojection
+        (preconditions CG for more uniform frequency convergence).
     """
+    # Build the Siddon operator once for all samples and channels
+    click.echo(f"\nBuilding Siddon sparse matrices for {len(angles)} angles on {DEVICE}...")
+    siddon_op = SiddonOperator(ZYX_SHAPE, angles, VOXEL_SIZE, DEVICE)
+    click.echo("  Done.")
+
     with open_ome_zarr(str(store_path), mode="r+") as plate:
         for sample in SAMPLE_TYPES:
             click.echo(f"\n{'=' * 60}")
             click.echo(f"Reconstructing {sample} → {target_col}")
-            click.echo(f"  Angles: {angles}")
+            click.echo(f"  Angles: {angles}, ramp_filter={use_ramp_filter}")
             click.echo(f"{'=' * 60}")
 
             _ensure_position(plate, sample, target_col, "0", (1, len(CHANNEL_NAMES), *ZYX_SHAPE))
@@ -268,7 +281,9 @@ def _run_reconstruction(store_path, source_col, target_col, angles, reg, niter, 
                     fwd_blur, adj_blur = blur_ops[ch_name]
 
                 click.echo(f"  CG-Tikhonov: {niter} iters, lambda={reg}, {len(angles)} angles")
-                recon = _reconstruct_channel(source_vol, angles, reg, niter, fwd_blur, adj_blur)
+                recon = _reconstruct_channel(
+                    siddon_op, source_vol, reg, niter, fwd_blur, adj_blur, use_ramp_filter
+                )
 
                 mse, psnr = _compute_metrics(recon, ground_truth)
                 click.echo(f"  MSE: {mse:.6f}, PSNR: {psnr:.2f} dB")
@@ -280,6 +295,7 @@ def _run_reconstruction(store_path, source_col, target_col, angles, reg, niter, 
             tgt_pos.zattrs["angles"] = angles
             tgt_pos.zattrs["reg_strength"] = reg
             tgt_pos.zattrs["n_iter"] = niter
+            tgt_pos.zattrs["ramp_filter"] = use_ramp_filter
             click.echo(f"  Wrote {sample}/{target_col}/0")
 
 
@@ -312,19 +328,26 @@ def cli(ctx, data_dir):
 @cli.command()
 @click.option("--reg", type=float, default=REG_STRENGTH, show_default=True, help="Tikhonov regularization lambda.")
 @click.option("--niter", type=int, default=N_ITER, show_default=True, help="CG iterations.")
+@click.option("--ramp-filter", is_flag=True, default=False, help="Apply ramp filter to precondition CG (reduces edge ringing).")
 @click.pass_context
-def geometric(ctx, reg, niter):
-    """Reconstruct from all projections using Siddon ray-tracing (no OTF).
+def geometric(ctx, reg, niter, ramp_filter):
+    """Limited-angle tomography without blur (Siddon ray-tracing only).
 
     Reads the ``object`` column (unblurred ground truth), computes
     Siddon projections at all 29 angles as measurements, and solves
     (H^T H + lambda I) x = H^T y.  Writes to the ``recongeo`` column.
+
+    With --ramp-filter, the adjoint applies a Ram-Lak ramp filter to
+    each projection before backprojection, preconditioning the normal
+    operator for more uniform frequency convergence.
     """
     store_path = ctx.obj["store_path"]
     if not store_path.exists():
         raise click.UsageError(f"Store not found: {store_path}")
 
-    _run_reconstruction(store_path, "object", "recongeo", PROJECTION_ANGLES, reg, niter)
+    _run_reconstruction(
+        store_path, "object", "recongeo", PROJECTION_ANGLES, reg, niter, use_ramp_filter=ramp_filter
+    )
     click.echo("\nDone.")
 
 
@@ -332,8 +355,9 @@ def geometric(ctx, reg, niter):
 @cli.command()
 @click.option("--reg", type=float, default=REG_STRENGTH, show_default=True, help="Tikhonov regularization lambda.")
 @click.option("--niter", type=int, default=N_ITER, show_default=True, help="CG iterations.")
+@click.option("--ramp-filter", is_flag=True, default=False, help="Apply ramp filter to precondition CG.")
 @click.pass_context
-def wave(ctx, reg, niter):
+def wave(ctx, reg, niter, ramp_filter):
     """Reconstruct from all projections using OTF blur + Siddon (wave model).
 
     The forward model convolves the volume with the 3D microscope OTF
@@ -350,7 +374,9 @@ def wave(ctx, reg, niter):
         raise click.UsageError(f"Store not found: {store_path}")
 
     blur_ops = _compute_transfer_functions()
-    _run_reconstruction(store_path, "rawimage", "reconwave", PROJECTION_ANGLES, reg, niter, blur_ops)
+    _run_reconstruction(
+        store_path, "rawimage", "reconwave", PROJECTION_ANGLES, reg, niter, blur_ops, use_ramp_filter=ramp_filter
+    )
     click.echo("\nDone.")
 
 
