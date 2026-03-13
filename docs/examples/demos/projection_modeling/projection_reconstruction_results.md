@@ -279,3 +279,18 @@ removes the arbitrary scale between reconstruction and ground truth.
 #### Shepp-Logan (+/-45 deg)
 
 ![](plots/shepplogan/shepplogan_Fluorescence_wave_two_projections.png)
+
+---
+
+## Interactive Viewer
+
+Browse all samples and reconstructions with
+[ndimg](https://github.com/czbiohub-sf/nd-embedding-atlas):
+
+    cd /path/to/nd-embedding-atlas
+    uv run ndimg /path/to/projection_modeling.zarr --port 5055
+
+Open http://localhost:5055. The table lists all 15 FOVs (3 samples × 5 data
+columns); click any row to load the volume in the image viewer.
+
+Or use napari with napari-ome-zarr plugin.

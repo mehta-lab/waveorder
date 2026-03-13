@@ -541,60 +541,45 @@ def plot(sample, channel, data_dir, out_dir):
 
 
 @cli.command()
-@click.option("--sample", default="point", show_default=True)
-@click.option("--channel", default=0, show_default=True, help="0=Fluorescence, 1=Phase")
+@click.option("--sample", default="all", show_default=True, help="Sample name or 'all'.")
 @click.option("--data-dir", default="./data", show_default=True)
-def napari(sample, channel, data_dir):
-    """Open napari with ground truth, geometric, and wave reconstructions."""
+def napari(sample, data_dir):
+    """Open each sample in its own napari window with object, rawimage, and projections."""
     import napari as nap
 
     store_path = Path(data_dir) / "projection_modeling.zarr"
-    ch_name = CHANNEL_NAMES[channel]
+    samples = SAMPLES if sample == "all" else [sample]
+    scale_3d = [VOXEL_SIZE] * 3  # ZYX in um
 
     with open_ome_zarr(str(store_path), mode="r") as plate:
-        gt = np.array(plate[f"{sample}/object/0"]["0"][0, channel], dtype=np.float32)
-        rawimage = np.array(plate[f"{sample}/rawimage/0"]["0"][0, channel], dtype=np.float32)
-        recongeo = np.array(plate[f"{sample}/recongeo/0"]["0"][0, channel], dtype=np.float32)
-        reconwave = np.array(plate[f"{sample}/reconwave/0"]["0"][0, channel], dtype=np.float32)
+        for s in samples:
+            click.echo(f"\nOpening {s}...")
+            obj = np.array(plate[f"{s}/object/0"]["0"][0, 0], dtype=np.float32)
+            proj_stack = np.array(plate[f"{s}/projections/0"]["0"][0], dtype=np.float32)
+            raw_phase = np.array(plate[f"{s}/rawimage/0"]["0"][0, 1], dtype=np.float32)
+            raw_fluor = np.array(plate[f"{s}/rawimage/0"]["0"][0, 0], dtype=np.float32)
 
-    alpha_geo = _optimal_gain(recongeo, gt)
-    alpha_wave = _optimal_gain(reconwave, gt)
-    geo = alpha_geo * recongeo
-    wave = alpha_wave * reconwave
+            # proj_stack shape: (C=2, n_angles=29, Y, X)
+            proj_fluor = proj_stack[0]  # (29, Y, X)
+            proj_phase = proj_stack[1]  # (29, Y, X)
 
-    diff_geo = geo - gt
-    diff_wave = wave - gt
-    diff_lim = max(np.abs(diff_geo).max(), np.abs(diff_wave).max()) * 0.5
+            # Compute geometric projections of unblurred object
+            click.echo(f"  Computing object projections (Siddon, {len(PROJECTION_ANGLES)} angles)...")
+            obj_proj = _compute_projection_stack(obj, PROJECTION_ANGLES, VOXEL_SIZE)
 
-    ft_gt = _log_ft(gt)
-    ft_geo = _log_ft(geo)
-    ft_wave = _log_ft(wave)
-    ft_max = max(ft_gt.max(), ft_geo.max(), ft_wave.max())
+            viewer = nap.Viewer(title=f"{s}")
 
-    viewer = nap.Viewer(title=f"{sample} / {ch_name} — reconstruction comparison")
-    viewer.add_image(gt, name="ground truth", colormap="gray", visible=True)
-    viewer.add_image(geo, name="geometric recon", colormap="gray", visible=False)
-    viewer.add_image(wave, name="wave recon", colormap="gray", visible=False)
-    viewer.add_image(rawimage, name="rawimage", colormap="gray", visible=False)
-    viewer.add_image(
-        diff_geo,
-        name="diff: geo - gt",
-        colormap="RdBu",
-        visible=False,
-        contrast_limits=(-diff_lim, diff_lim),
-    )
-    viewer.add_image(
-        diff_wave,
-        name="diff: wave - gt",
-        colormap="RdBu",
-        visible=False,
-        contrast_limits=(-diff_lim, diff_lim),
-    )
-    viewer.add_image(ft_gt, name="FFT: gt", colormap="inferno", visible=False, contrast_limits=(0, ft_max))
-    viewer.add_image(ft_geo, name="FFT: geo", colormap="inferno", visible=False, contrast_limits=(0, ft_max))
-    viewer.add_image(ft_wave, name="FFT: wave", colormap="inferno", visible=False, contrast_limits=(0, ft_max))
-    viewer.dims.current_step = (gt.shape[0] // 2,) + tuple(viewer.dims.current_step[1:])
-    click.echo(f"Gain — geo: {alpha_geo:.6f}, wave: {alpha_wave:.6f}")
+            # Layers bottom-to-top: last added is on top
+            viewer.add_image(proj_fluor, name="fluorescence projections", colormap="gray", visible=False)
+            viewer.add_image(raw_fluor, name="fluorescence volume", colormap="gray", visible=False, scale=scale_3d)
+            viewer.add_image(proj_phase, name="phase projections", colormap="gray", visible=False)
+            viewer.add_image(raw_phase, name="phase volume", colormap="gray", visible=False, scale=scale_3d)
+            viewer.add_image(obj_proj, name="object projections", colormap="gray", visible=False)
+            viewer.add_image(obj, name="object", colormap="gray", visible=True, scale=scale_3d)
+
+            viewer.dims.current_step = (obj.shape[0] // 2,) + tuple(viewer.dims.current_step[1:])
+            click.echo(f"  Layers: object, object projections, phase volume, phase projections, "
+                       f"fluorescence volume, fluorescence projections")
 
     nap.run()
 
