@@ -237,6 +237,9 @@ def _optimize_gradient(
     patience_counter = 0
     best_loss = float("inf")
 
+    # Checkpoint initial params for rollback on NaN/SVD errors
+    last_good = {name: t.detach().clone() for name, t in param_tensors.items()}
+
     pbar = tqdm(range(max_iterations), desc="Optimizing")
     for step in pbar:
         t_start = time.monotonic()
@@ -247,38 +250,52 @@ def _optimize_gradient(
                 return torch.stack([loss_fn(recon[b]) for b in range(B)]).sum()
             return loss_fn(recon)
 
-        if method == "lbfgs":
+        try:
+            if method == "lbfgs":
 
-            def closure():
+                def closure():
+                    optimizer.zero_grad()
+                    kwargs = dict(fixed_params)
+                    kwargs.update(param_tensors)
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        recon = reconstruct_fn(data, **kwargs)
+                    loss = _compute_loss(recon)
+                    if use_gradients:
+                        loss.backward()
+                    return loss
+
+                loss = optimizer.step(closure)
+                kwargs = dict(fixed_params)
+                kwargs.update(param_tensors)
+                with torch.no_grad():
+                    with contextlib.redirect_stdout(io.StringIO()):
+                        recon = reconstruct_fn(data, **kwargs)
+            else:
                 optimizer.zero_grad()
                 kwargs = dict(fixed_params)
                 kwargs.update(param_tensors)
-                with contextlib.redirect_stdout(io.StringIO()):
+
+                grad_ctx = contextlib.nullcontext() if use_gradients else torch.no_grad()
+                with grad_ctx, contextlib.redirect_stdout(io.StringIO()):
                     recon = reconstruct_fn(data, **kwargs)
                 loss = _compute_loss(recon)
+
+                if torch.isnan(loss) or torch.isnan(recon).any():
+                    raise ValueError("NaN in reconstruction or loss")
+
                 if use_gradients:
                     loss.backward()
-                return loss
+                    optimizer.step()
 
-            loss = optimizer.step(closure)
-            kwargs = dict(fixed_params)
-            kwargs.update(param_tensors)
+        except (RuntimeError, ValueError):
+            # SVD convergence failure or NaN — revert to last good params
             with torch.no_grad():
-                with contextlib.redirect_stdout(io.StringIO()):
-                    recon = reconstruct_fn(data, **kwargs)
-        else:
-            optimizer.zero_grad()
-            kwargs = dict(fixed_params)
-            kwargs.update(param_tensors)
+                for name, t in param_tensors.items():
+                    t.copy_(last_good[name])
+            break
 
-            grad_ctx = contextlib.nullcontext() if use_gradients else torch.no_grad()
-            with grad_ctx, contextlib.redirect_stdout(io.StringIO()):
-                recon = reconstruct_fn(data, **kwargs)
-            loss = _compute_loss(recon)
-
-            if use_gradients:
-                loss.backward()
-                optimizer.step()
+        # Checkpoint good params
+        last_good = {name: t.detach().clone() for name, t in param_tensors.items()}
 
         wall_times.append(time.monotonic() - t_start)
         loss_val = loss.item()
