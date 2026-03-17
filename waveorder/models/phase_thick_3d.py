@@ -478,3 +478,161 @@ def reconstruct(
         TV_rho_strength=TV_rho_strength,
         TV_iterations=TV_iterations,
     )
+
+
+def calculate_skewed_transfer_function(
+    raw_data_shape: tuple[int, int, int],
+    yx_pixel_size: float,
+    ls_angle_deg: float,
+    px_to_scan_ratio: float,
+    wavelength_illumination: float,
+    z_padding: int,
+    index_of_refraction_media: float,
+    numerical_aperture_illumination: Union[float, Tensor],
+    numerical_aperture_detection: Union[float, Tensor],
+    invert_phase_contrast: bool = False,
+    tilt_angle_zenith: Union[float, Tensor] = 0.0,
+    tilt_angle_azimuth: Union[float, Tensor] = 0.0,
+    pupil_steepness: float = 1e4,
+) -> tuple[Tensor, Tensor]:
+    """Compute phase transfer function in skewed (raw oblique) coordinates.
+
+    Uses the Fourier affine theorem to resample the standard deskewed
+    transfer function onto the skewed data's Fourier grid. The deskew
+    transform is an affine mapping A (skewed → deskewed), so in Fourier
+    space: H_skewed(k_s) = H_deskewed(A^{-T} k_s) / |det A|.
+
+    The frequency mapping (derived from the biahub deskew affine) is:
+
+        kZ_d = -(cos(θ) · kz_scan + ky_tilt) / sin(θ)
+        kY_d = -kx_cover
+        kX_d = kz_scan
+
+    where all frequencies are in physical units (cycles/μm).
+
+    Parameters
+    ----------
+    raw_data_shape : tuple[int, int, int]
+        Shape (Z_scan, Y_tilt, X_cover) of the raw oblique data.
+    yx_pixel_size : float
+        Camera pixel size in micrometers.
+    ls_angle_deg : float
+        Light sheet angle in degrees (angle from optical axis).
+    px_to_scan_ratio : float
+        pixel_size / scan_step.
+    wavelength_illumination : float
+        Illumination wavelength in micrometers.
+    z_padding : int
+        Number of z-slices to pad for boundary effects.
+    index_of_refraction_media : float
+        Refractive index of the imaging medium.
+    numerical_aperture_illumination : float or Tensor
+        Illumination numerical aperture.
+    numerical_aperture_detection : float or Tensor
+        Detection numerical aperture.
+    invert_phase_contrast : bool
+        Invert phase contrast sign.
+    tilt_angle_zenith : float or Tensor
+        Illumination tilt zenith angle in radians.
+    tilt_angle_azimuth : float or Tensor
+        Illumination tilt azimuth angle in radians.
+    pupil_steepness : float
+        Sigmoid steepness for smooth pupil cutoff.
+
+    Returns
+    -------
+    real_tf_skewed : Tensor
+        Real potential transfer function in skewed coordinates.
+        Shape: (Z_scan + 2*z_padding, Y_tilt, X_cover).
+    imag_tf_skewed : Tensor
+        Imaginary potential transfer function in skewed coordinates.
+        Shape: (Z_scan + 2*z_padding, Y_tilt, X_cover).
+    """
+    from scipy.ndimage import map_coordinates
+
+    theta = np.radians(ls_angle_deg)
+    st = np.sin(theta)
+    ct = np.cos(theta)
+    scan_step = yx_pixel_size / px_to_scan_ratio
+
+    Z_scan, Y_tilt, X_cover = raw_data_shape
+
+    # Deskewed geometry (no averaging)
+    dz_d = st * yx_pixel_size
+    Nz_d = Y_tilt
+    Ny_d = X_cover
+    Nx_d = int(np.ceil(Z_scan / px_to_scan_ratio))
+
+    # Compute standard TF in deskewed space (includes z_padding)
+    real_tf_d, imag_tf_d = calculate_transfer_function(
+        (Nz_d, Ny_d, Nx_d),
+        yx_pixel_size,
+        dz_d,
+        wavelength_illumination,
+        z_padding=z_padding,
+        index_of_refraction_media=index_of_refraction_media,
+        numerical_aperture_illumination=numerical_aperture_illumination,
+        numerical_aperture_detection=numerical_aperture_detection,
+        invert_phase_contrast=invert_phase_contrast,
+        tilt_angle_zenith=tilt_angle_zenith,
+        tilt_angle_azimuth=tilt_angle_azimuth,
+        pupil_steepness=pupil_steepness,
+    )
+
+    # --- Fourier resampling ---
+    # The deskewed TF is in FFT order. We fftshift to make frequencies
+    # monotonic for interpolation, resample, then ifftshift back.
+
+    Nz_d_padded = Nz_d + 2 * z_padding
+    Z_s_padded = Z_scan + 2 * z_padding
+
+    # Deskewed frequency axes (physical, fftshifted = monotonic)
+    kz_d = np.fft.fftshift(np.fft.fftfreq(Nz_d_padded, dz_d))
+    ky_d = np.fft.fftshift(np.fft.fftfreq(Ny_d, yx_pixel_size))
+    kx_d = np.fft.fftshift(np.fft.fftfreq(Nx_d, yx_pixel_size))
+
+    # Skewed frequency axes (physical, fftshifted)
+    kz_s = np.fft.fftshift(np.fft.fftfreq(Z_s_padded, scan_step))
+    ky_s = np.fft.fftshift(np.fft.fftfreq(Y_tilt, yx_pixel_size))
+    kx_s = np.fft.fftshift(np.fft.fftfreq(X_cover, yx_pixel_size))
+
+    # Build 3D meshgrid of target (skewed) frequencies
+    KZ_s, KY_s, KX_s = np.meshgrid(kz_s, ky_s, kx_s, indexing="ij")
+
+    # Map to deskewed frequencies using the affine Fourier theorem:
+    #   H_skewed(k_s) = H_deskewed(A^{-T} k_s) / |det A|
+    # where A is the deskew matrix (skewed pixel → deskewed pixel).
+    KZ_d_target = -(ct * KZ_s + KY_s) / st
+    KY_d_target = -KX_s
+    KX_d_target = KZ_s
+
+    # Convert physical frequencies to fractional indices in the
+    # fftshifted deskewed grid (for map_coordinates)
+    def _freq_to_index(k_target, k_axis):
+        """Map physical frequency to continuous index in a sorted array."""
+        dk = k_axis[1] - k_axis[0] if len(k_axis) > 1 else 1.0
+        return (k_target - k_axis[0]) / dk
+
+    iz = _freq_to_index(KZ_d_target, kz_d)
+    iy = _freq_to_index(KY_d_target, ky_d)
+    ix = _freq_to_index(KX_d_target, kx_d)
+
+    coords = np.array([iz.ravel(), iy.ravel(), ix.ravel()])
+
+    # Determinant of the deskew matrix (skewed pixel → deskewed pixel)
+    # A = [[0,-1,0],[0,0,-1],[1/R,-ct,0]], det(A) = 1/R
+    det_A = 1.0 / px_to_scan_ratio
+
+    def _resample(tf_tensor):
+        tf_shifted = np.fft.fftshift(tf_tensor.numpy())
+        # Interpolate real and imaginary parts
+        out_real = map_coordinates(tf_shifted.real, coords, order=1, mode="constant", cval=0.0).reshape(KZ_s.shape)
+        out_imag = map_coordinates(tf_shifted.imag, coords, order=1, mode="constant", cval=0.0).reshape(KZ_s.shape)
+        # Apply normalization and ifftshift back to FFT order
+        result = (out_real + 1j * out_imag) / abs(det_A)
+        return torch.from_numpy(np.fft.ifftshift(result)).to(tf_tensor.dtype)
+
+    real_tf_skewed = _resample(real_tf_d)
+    imag_tf_skewed = _resample(imag_tf_d)
+
+    return real_tf_skewed, imag_tf_skewed
