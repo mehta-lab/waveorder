@@ -135,8 +135,11 @@ def _calculate_wrap_unsafe_transfer_function(
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 10000.0,
 ) -> Tuple[Tensor, Tensor]:
-    na_ill = torch.as_tensor(numerical_aperture_illumination, dtype=torch.float32)
-    na_det = torch.as_tensor(numerical_aperture_detection, dtype=torch.float32)
+    z_positions = torch.as_tensor(z_position_list, dtype=torch.float32)
+    device = z_positions.device
+
+    na_ill = torch.as_tensor(numerical_aperture_illumination, dtype=torch.float32, device=device)
+    na_det = torch.as_tensor(numerical_aperture_detection, dtype=torch.float32, device=device)
 
     # Clamp illumination NA if >= detection NA (differentiable)
     clamped_ill = torch.where(
@@ -152,17 +155,16 @@ def _calculate_wrap_unsafe_transfer_function(
             "numerical_aperture_detection to avoid singularities."
         )
 
-    z_positions = torch.as_tensor(z_position_list, dtype=torch.float32)
     if invert_phase_contrast:
         z_positions = -z_positions
 
     with torch.no_grad():
-        fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size, device=z_positions.device)
+        fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size, device=device)
         radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
 
     # Detect batched tilt angles
-    tilt_zenith_t = torch.as_tensor(tilt_angle_zenith, dtype=torch.float32)
-    tilt_azimuth_t = torch.as_tensor(tilt_angle_azimuth, dtype=torch.float32)
+    tilt_zenith_t = torch.as_tensor(tilt_angle_zenith, dtype=torch.float32, device=device)
+    tilt_azimuth_t = torch.as_tensor(tilt_angle_azimuth, dtype=torch.float32, device=device)
     batched = tilt_zenith_t.ndim >= 1 and tilt_zenith_t.shape[0] > 1
 
     detection_pupil = optics.generate_pupil(
@@ -210,6 +212,7 @@ def _calculate_wrap_unsafe_transfer_function(
 def calculate_singular_system(
     absorption_2d_to_3d_transfer_function: Tensor,
     phase_2d_to_3d_transfer_function: Tensor,
+    svd_backend: str = "closed_form",
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """Calculates the singular system of the absorption and phase transfer
     functions.
@@ -221,6 +224,10 @@ def calculate_singular_system(
         ``(B, Z, Vy, Vx)``
     phase_2d_to_3d_transfer_function : Tensor
         Transfer function for phase, same shape as absorption TF
+    svd_backend : str
+        ``"closed_form"`` uses an analytical 2×2 eigendecomposition (~10-19×
+        faster, torch.compile compatible). ``"torch"`` uses
+        ``torch.linalg.svd`` (cuSOLVER).
 
     Returns
     -------
@@ -244,10 +251,18 @@ def calculate_singular_system(
     )
 
     # SVD over the (s=2, Z) dimensions at each spatial frequency.
-    # Permute to (..., Vy, Vx, s, Z) for torch.linalg.svd, then permute back.
+    # Permute to (..., Vy, Vx, s, Z) for SVD, then permute back.
     # Shape: (B, Vy, Vx, s=2, Z)
     BVyVxsZ = sfYX.permute(0, 3, 4, 1, 2)
-    Up, Sp, Vhp = torch.linalg.svd(BVyVxsZ, full_matrices=False)
+
+    if svd_backend == "closed_form":
+        from waveorder.linalg import closed_form_svd_2xN
+        Up, Sp, Vhp = closed_form_svd_2xN(BVyVxsZ)
+    elif svd_backend == "torch":
+        Up, Sp, Vhp = torch.linalg.svd(BVyVxsZ, full_matrices=False)
+    else:
+        raise ValueError(f"Unknown svd_backend: {svd_backend!r}. Use 'closed_form' or 'torch'.")
+
     # Up: (B, Vy, Vx, s, s), Sp: (B, Vy, Vx, s), Vhp: (B, Vy, Vx, s, Z)
     U = Up.permute(0, 3, 4, 1, 2)  # (B, s, s, Vy, Vx)
     S = Sp.permute(0, 3, 1, 2)  # (B, s, Vy, Vx)
@@ -436,6 +451,7 @@ def reconstruct(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 10000.0,
+    svd_backend: str = "closed_form",
 ) -> Tuple[Tensor, Tensor]:
     """Reconstruct 2D absorption and phase from a brightfield defocus stack.
 
@@ -477,6 +493,10 @@ def reconstruct(
         Scalar for shared tilt, ``(B,)`` tensor for per-tile tilt.
     pupil_steepness : float, optional
         Sigmoid steepness for smooth pupil cutoff, by default 10000.0
+    svd_backend: str, optional
+        "closed_form" uses an analytical 2×2 eigendecomposition
+        (~10-19× faster, torch.compile compatible). "torch" uses
+        torch.linalg.svd (cuSOLVER).
 
     Returns
     -------
@@ -496,7 +516,7 @@ def reconstruct(
         tilt_angle_azimuth=tilt_angle_azimuth,
         pupil_steepness=pupil_steepness,
     )
-    singular_system = calculate_singular_system(absorption_tf, phase_tf)
+    singular_system = calculate_singular_system(absorption_tf, phase_tf, svd_backend=svd_backend)
     return apply_inverse_transfer_function(
         zyx_data,
         singular_system,

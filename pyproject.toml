@@ -101,6 +101,11 @@ dev = [
   { include-group = "docs" },
   "pre-commit",
 ]
+cuda = [
+    "cuda-tile>=1.2.0",
+    "nvidia-cuda-tileiras>=13.2.51",
+    "nvidia-cutlass-dsl>=4.4.1",
+]
 
 [project.urls]
 Homepage = "https://github.com/mehta-lab/waveorder"

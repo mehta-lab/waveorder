@@ -483,6 +483,7 @@ def optimize(
                 tilt_angle_zenith=tilt_zenith,
                 tilt_angle_azimuth=tilt_azimuth,
                 pupil_steepness=optim_steepness,
+                svd_backend="closed_form",
             )[1]  # [1] = phase
         else:
             return phase_thick_3d.reconstruct(
