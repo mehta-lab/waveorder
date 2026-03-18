@@ -15,19 +15,20 @@ numbers = re.compile(r"(\d+)")
 
 def pad_zyx_along_z(zyx_data, z_padding):
     """
-    Pad a 3D tensor along the z-dimension.
+    Pad a tensor along the z-dimension.
 
     Parameters
     ----------
     zyx_data : torch.Tensor
-        Input 3D tensor of shape (Z, Y, X).
+        Input tensor of shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``.
     z_padding : int
         Number of padding slices to add on both ends of the z-dimension.
 
     Returns
     -------
     torch.Tensor
-        Padded 3D tensor of shape (Z + 2 * z_padding, Y, X).
+        Padded tensor of shape ``(Z + 2*z_padding, Y, X)`` or
+        ``(B, Z + 2*z_padding, Y, X)``.
 
     Raises
     ------
@@ -37,34 +38,38 @@ def pad_zyx_along_z(zyx_data, z_padding):
     Notes
     -----
     - If z_padding is 0, the function returns the input tensor unchanged.
-    - If z_padding is positive, the function pads the tensor with zeros along the z-dimension.
-    - If z_padding is greater than or equal to the number of z-slices in zyx_data, a warning message is included in the returned tensor,
-      indicating that zero padding is used instead of reflection padding (less effective).
-    - Reflection padding is used when z_padding is smaller than the number of z-slices in zyx_data, providing a symmetric padding.
+    - If z_padding is positive, the function pads the tensor with zeros
+      along the z-dimension.
+    - If z_padding is greater than or equal to the number of z-slices in
+      zyx_data, zero padding is used instead of reflection padding (less
+      effective).
+    - Reflection padding is used when z_padding is smaller than the number
+      of z-slices in zyx_data, providing a symmetric padding.
     """
     if z_padding < 0:
         raise ValueError("z_padding cannot be negative.")
     elif z_padding == 0:
         return zyx_data
-    else:
-        zyx_padded = torch.nn.functional.pad(
-            zyx_data,
-            (0, 0, 0, 0, z_padding, z_padding),
-            mode="constant",
-            value=0,
-        )
-        if z_padding < zyx_data.shape[0]:
-            zyx_padded[:z_padding] = torch.flip(zyx_data[:z_padding], dims=[0])
-            zyx_padded[-z_padding:] = torch.flip(zyx_data[-z_padding:], dims=[0])
-        else:
-            warning_msg = "Warning: z_padding is larger than the number of z-slices. Using zero padding instead of reflection padding (less effective)."
-            zyx_padded = torch.nn.functional.pad(
-                zyx_padded,
-                (0, 0, 0, 0, 0, 0),
-                mode="constant",
-                value=0,
-            )
-        return zyx_padded
+
+    batched = zyx_data.ndim == 4
+    if not batched:
+        zyx_data = zyx_data.unsqueeze(0)
+
+    B, Z, Y, X = zyx_data.shape
+    zyx_padded = torch.nn.functional.pad(
+        zyx_data,
+        (0, 0, 0, 0, z_padding, z_padding),
+        mode="constant",
+        value=0,
+    )
+    if z_padding < Z:
+        zyx_padded[:, :z_padding] = torch.flip(zyx_data[:, :z_padding], dims=[1])
+        zyx_padded[:, -z_padding:] = torch.flip(zyx_data[:, -z_padding:], dims=[1])
+
+    if not batched:
+        zyx_padded = zyx_padded.squeeze(0)
+
+    return zyx_padded
 
 
 def numericalSort(value):
@@ -665,30 +670,32 @@ def uniform_filter_2D(image, size, use_gpu=False, gpu_id=0):
 
 def inten_normalization(img_stack, bg_filter=True):
     """
-
-    layer-by-layer intensity normalization to reduce low-frequency phase artifacts
+    Layer-by-layer intensity normalization to reduce low-frequency phase artifacts.
 
     Parameters
     ----------
-        img_stack      : torch.tensor
-                         image stack for normalization with size of (Z, Y, X)
-
-        bg_filter      : bool
-                         option for slow-varying 2D background normalization with uniform filter
+    img_stack : torch.Tensor
+        Input image stack of shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
+    bg_filter : bool
+        Option for slow-varying 2D background normalization with uniform
+        filter
 
     Returns
     -------
-        img_norm_stack : torch.tensor
-                         normalized image stack with size of (Z, Y, X)
-
+    torch.Tensor
+        Normalized image stack with the same shape as input
     """
+    batched = img_stack.ndim == 4
+    if not batched:
+        img_stack = img_stack.unsqueeze(0)
 
-    Z, Y, X = img_stack.shape
+    B, Z, Y, X = img_stack.shape
 
     if bg_filter:
         img_norm_stack = torch.zeros_like(img_stack)
-        for i in range(Z):
-            img_norm_stack[i] = img_stack[i] / uniform_filter(img_stack[i], size=X // 2)
+        for b in range(B):
+            for i in range(Z):
+                img_norm_stack[b, i] = img_stack[b, i] / uniform_filter(img_stack[b, i], size=X // 2)
         means = torch.mean(img_norm_stack, dim=(-2, -1), keepdim=True)
         means = torch.clamp(means, min=1e-12)
         img_norm_stack = img_norm_stack / means - 1
@@ -697,26 +704,38 @@ def inten_normalization(img_stack, bg_filter=True):
         means = torch.clamp(means, min=1e-12)
         img_norm_stack = img_stack / means - 1
 
+    if not batched:
+        img_norm_stack = img_norm_stack.squeeze(0)
+
     return img_norm_stack
 
 
 def inten_normalization_3D(img_stack):
     """
-
-    whole-stack intensity normalization to reduce low-frequency phase artifacts
+    Whole-stack intensity normalization to reduce low-frequency phase artifacts.
 
     Parameters
     ----------
-        img_stack      : torch.tensor
-                         image stack for normalization with size of (Z, Y, X)
+    img_stack : torch.Tensor
+        Input image stack of shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
 
     Returns
     -------
-        img_norm_stack : torch.tensor
-                         normalized image stack with size of (Z, Y, X)
-
+    torch.Tensor
+        Normalized image stack with the same shape as input
     """
-    img_norm_stack = img_stack / torch.clamp(torch.mean(img_stack), min=1e-12) - 1
+    batched = img_stack.ndim == 4
+    if not batched:
+        img_stack = img_stack.unsqueeze(0)
+
+    # Per-tile global mean: mean over (Z, Y, X) for each batch element
+    means = torch.mean(img_stack, dim=(-3, -2, -1), keepdim=True)
+    means = torch.clamp(means, min=1e-12)
+    img_norm_stack = img_stack / means - 1
+
+    if not batched:
+        img_norm_stack = img_norm_stack.squeeze(0)
+
     return img_norm_stack
 
 

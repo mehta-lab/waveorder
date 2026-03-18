@@ -8,6 +8,7 @@ import datetime
 
 from waveorder.api import fluorescence
 from waveorder.optim import OptimizableFloat
+from waveorder.optim.losses import MidbandPowerLossSettings
 
 # Ground truth parameters
 gt_z_offset = 0.6
@@ -32,8 +33,8 @@ log_dir = f"./runs/{datetime.datetime.now():%Y%m%d_%H%M%S}"
 optimized_settings, recon = fluorescence.optimize(
     data,
     settings=opt_settings,
-    num_iterations=50,
-    midband_fractions=(0.01, 0.5),
+    max_iterations=50,
+    loss_settings=MidbandPowerLossSettings(midband_fractions=[0.01, 0.5]),
     log_dir=log_dir,
     log_images=True,
 )

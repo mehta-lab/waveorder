@@ -93,8 +93,13 @@ def _run_optimization(settings, input_position_dirpath, config_filepath):
     recon_dim = settings.reconstruction_dimension
     optimize_kwargs = dict(
         recon_dim=recon_dim,
-        num_iterations=opt.num_iterations,
-        midband_fractions=opt.loss.midband_fractions,
+        max_iterations=opt.max_iterations,
+        method=opt.method,
+        convergence_tol=opt.convergence_tol,
+        convergence_patience=opt.convergence_patience,
+        use_gradients=opt.use_gradients,
+        grid_points=opt.grid_points,
+        loss_settings=opt.loss,
         log_dir=opt.log_dir,
         device=settings.device,
     )

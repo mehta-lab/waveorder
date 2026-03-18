@@ -70,15 +70,19 @@ def calculate_transfer_function(
         Invert phase contrast, by default False
     tilt_angle_zenith : float or Tensor, optional
         Illumination tilt zenith angle in radians, by default 0.0
+        Scalar for shared tilt; ``(B,)`` tensor for per-tile tilt
+        (produces batched output).
     tilt_angle_azimuth : float or Tensor, optional
         Illumination tilt azimuth angle in radians, by default 0.0
+        Scalar for shared tilt; ``(B,)`` tensor for per-tile tilt.
     pupil_steepness : float, optional
         Sigmoid steepness for smooth pupil cutoff, by default 10000.0
 
     Returns
     -------
     Tuple[Tensor, Tensor]
-        absorption_2d_to_3d_transfer_function, phase_2d_to_3d_transfer_function
+        ``(absorption_tf, phase_tf)`` with shape ``(Z, Y, X)`` or
+        ``(B, Z, Y, X)`` when batched tilt angles are provided.
     """
     # Extract float values for Nyquist computation (not in gradient chain)
     na_ill_val = float(torch.as_tensor(numerical_aperture_illumination).detach())
@@ -111,6 +115,7 @@ def calculate_transfer_function(
         pupil_steepness=pupil_steepness,
     )
 
+    # nd_fourier_central_cuboid preserves leading batch dims
     return (
         sampling.nd_fourier_central_cuboid(absorption_2d_to_3d_transfer_function, yx_shape),
         sampling.nd_fourier_central_cuboid(phase_2d_to_3d_transfer_function, yx_shape),
@@ -130,8 +135,11 @@ def _calculate_wrap_unsafe_transfer_function(
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 10000.0,
 ) -> Tuple[Tensor, Tensor]:
-    na_ill = torch.as_tensor(numerical_aperture_illumination, dtype=torch.float32)
-    na_det = torch.as_tensor(numerical_aperture_detection, dtype=torch.float32)
+    z_positions = torch.as_tensor(z_position_list, dtype=torch.float32)
+    device = z_positions.device
+
+    na_ill = torch.as_tensor(numerical_aperture_illumination, dtype=torch.float32, device=device)
+    na_det = torch.as_tensor(numerical_aperture_detection, dtype=torch.float32, device=device)
 
     # Clamp illumination NA if >= detection NA (differentiable)
     clamped_ill = torch.where(
@@ -147,23 +155,17 @@ def _calculate_wrap_unsafe_transfer_function(
             "numerical_aperture_detection to avoid singularities."
         )
 
-    z_positions = torch.as_tensor(z_position_list, dtype=torch.float32)
     if invert_phase_contrast:
         z_positions = -z_positions
 
     with torch.no_grad():
-        fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size, device=z_positions.device)
+        fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size, device=device)
         radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
 
-    illumination_pupil = optics.generate_tilted_pupil(
-        fxx,
-        fyy,
-        clamped_ill,
-        wavelength_illumination,
-        index_of_refraction_media,
-        tilt_angle_zenith,
-        tilt_angle_azimuth,
-    )
+    # Detect batched tilt angles
+    tilt_zenith_t = torch.as_tensor(tilt_angle_zenith, dtype=torch.float32, device=device)
+    tilt_azimuth_t = torch.as_tensor(tilt_angle_azimuth, dtype=torch.float32, device=device)
+    batched = tilt_zenith_t.ndim >= 1 and tilt_zenith_t.shape[0] > 1
 
     detection_pupil = optics.generate_pupil(
         radial_frequencies,
@@ -178,63 +180,98 @@ def _calculate_wrap_unsafe_transfer_function(
         z_positions,
     )
 
-    # Batched WOTF: (Y,X) * (Z,Y,X) broadcasts to (Z,Y,X)
-    return optics.compute_weak_object_transfer_function_2d(
-        illumination_pupil, detection_pupil.unsqueeze(0) * propagation_kernel
-    )
+    # det_prop: (Z, Yos, Xos)
+    det_prop = detection_pupil.unsqueeze(0) * propagation_kernel
+
+    # Generate tilted illumination pupil
+    # For batched (B,) tilt angles, reshape to (B, 1, 1) so
+    # generate_tilted_pupil broadcasts against (Yos, Xos) grids
+    if batched:
+        tilt_angle_zenith = tilt_zenith_t[:, None, None]
+        tilt_angle_azimuth = tilt_azimuth_t[:, None, None]
+
+    illumination_pupil = optics.generate_tilted_pupil(
+        fxx,
+        fyy,
+        clamped_ill,
+        wavelength_illumination,
+        index_of_refraction_media,
+        tilt_angle_zenith,
+        tilt_angle_azimuth,
+    )  # (Yos, Xos) or (B, Yos, Xos)
+
+    if not batched:
+        # Unbatched WOTF: ill (Yos, Xos) broadcasts against det_prop (Z, Yos, Xos)
+        return optics.compute_weak_object_transfer_function_2d(illumination_pupil, det_prop)
+
+    # Batched WOTF: ill (B, 1, Yos, Xos) broadcasts against
+    # det_prop (1, Z, Yos, Xos) -> (B, Z, Yos, Xos)
+    return optics.compute_weak_object_transfer_function_2d(illumination_pupil[:, None], det_prop[None])
 
 
 def calculate_singular_system(
     absorption_2d_to_3d_transfer_function: Tensor,
     phase_2d_to_3d_transfer_function: Tensor,
+    svd_backend: str = "closed_form",
 ) -> Tuple[Tensor, Tensor, Tensor]:
     """Calculates the singular system of the absorption and phase transfer
     functions.
 
-    Together, the transfer functions form a (2, Z, Vy, Vx) tensor, where
-    (2,) is the object-space dimension (abs, phase), (Z,) is the data-space
-    dimension, and (Vy, Vx) are the spatial frequency dimensions.
-
-    Uses a norm-based decomposition that is faster than full SVD and
-    supports gradient flow through complex tensors.
-
     Parameters
     ----------
     absorption_2d_to_3d_transfer_function : Tensor
-        ZYX transfer function for absorption
+        Transfer function for absorption, shape ``(Z, Vy, Vx)`` or
+        ``(B, Z, Vy, Vx)``
     phase_2d_to_3d_transfer_function : Tensor
-        ZYX transfer function for phase
+        Transfer function for phase, same shape as absorption TF
+    svd_backend : str
+        ``"closed_form"`` uses an analytical 2×2 eigendecomposition (~10-19×
+        faster, torch.compile compatible). ``"torch"`` uses
+        ``torch.linalg.svd`` (cuSOLVER).
 
     Returns
     -------
     Tuple[Tensor, Tensor, Tensor]
-        U (2, 2, Vy, Vx), S (2, Vy, Vx), Vh (2, Z, Vy, Vx)
+        - U : ``(2, 2, Vy, Vx)`` or ``(B, 2, 2, Vy, Vx)``
+        - S : ``(2, Vy, Vx)`` or ``(B, 2, Vy, Vx)``
+        - Vh : ``(2, Z, Vy, Vx)`` or ``(B, 2, Z, Vy, Vx)``
     """
-    # sfYX shape: (s=2, Z, Vy, Vx)
+    batched = absorption_2d_to_3d_transfer_function.ndim == 4
+    if not batched:
+        absorption_2d_to_3d_transfer_function = absorption_2d_to_3d_transfer_function.unsqueeze(0)
+        phase_2d_to_3d_transfer_function = phase_2d_to_3d_transfer_function.unsqueeze(0)
+
+    # sfYX shape: (B, s=2, Z, Vy, Vx)
     sfYX = torch.stack(
         (
             absorption_2d_to_3d_transfer_function,
             phase_2d_to_3d_transfer_function,
         ),
-        dim=0,
+        dim=1,
     )
-    s, Z, Vy, Vx = sfYX.shape
 
-    # Per-channel norms: S[k] = norm(H[k, :]) for k in {absorption, phase}
-    S = torch.sqrt(
-        torch.clamp(
-            torch.sum(torch.abs(sfYX) ** 2, dim=1),
-            min=1e-12,
-        )
-    )  # (s=2, Vy, Vx)
+    # SVD over the (s=2, Z) dimensions at each spatial frequency.
+    # Permute to (..., Vy, Vx, s, Z) for SVD, then permute back.
+    # Shape: (B, Vy, Vx, s=2, Z)
+    BVyVxsZ = sfYX.permute(0, 3, 4, 1, 2)
 
-    # Normalized rows: Vh[k, z] = H[k, z] / S[k]
-    Vh = sfYX / (S[:, None] + 1e-12)  # (s=2, Z, Vy, Vx)
+    if svd_backend == "closed_form":
+        from waveorder.linalg import closed_form_svd_2xN
+        Up, Sp, Vhp = closed_form_svd_2xN(BVyVxsZ)
+    elif svd_backend == "torch":
+        Up, Sp, Vhp = torch.linalg.svd(BVyVxsZ, full_matrices=False)
+    else:
+        raise ValueError(f"Unknown svd_backend: {svd_backend!r}. Use 'closed_form' or 'torch'.")
 
-    # U = identity (each channel reconstructs independently)
-    U = torch.zeros(s, s, Vy, Vx, dtype=sfYX.dtype, device=sfYX.device)
-    for i in range(s):
-        U[i, i] = 1.0
+    # Up: (B, Vy, Vx, s, s), Sp: (B, Vy, Vx, s), Vhp: (B, Vy, Vx, s, Z)
+    U = Up.permute(0, 3, 4, 1, 2)  # (B, s, s, Vy, Vx)
+    S = Sp.permute(0, 3, 1, 2)  # (B, s, Vy, Vx)
+    Vh = Vhp.permute(0, 3, 4, 1, 2)  # (B, s, Z, Vy, Vx)
+
+    if not batched:
+        U = U.squeeze(0)
+        S = S.squeeze(0)
+        Vh = Vh.squeeze(0)
 
     return U, S, Vh
 
@@ -324,57 +361,74 @@ def apply_inverse_transfer_function(
     TV_iterations: int = 10,
     bg_filter: bool = False,
 ) -> Tuple[Tensor, Tensor]:
-    """Reconstructs absorption and phase from zyx_data and a pair of
-    3D-to-2D transfer functions named absorption_2d_to_3d_transfer_function and
-    phase_2d_to_3d_transfer_function, providing options for reconstruction
-    algorithms.
+    """Reconstructs absorption and phase from zyx_data.
 
     Parameters
     ----------
     zyx_data : Tensor
-        3D raw data, label-free defocus stack
+        Raw data of shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
     singular_system : Tuple[Tensor, Tensor, Tensor]
-        singular system of the transfer function bank
-    reconstruction_algorithm : Literal["Tikhonov";, "TV";], optional
-        "Tikhonov" or "TV", by default "Tikhonov"
-        "TV" is not implemented.
+        Singular system ``(U, S, Vh)``. Unbatched shapes:
+        ``(2, 2, Vy, Vx)``, ``(2, Vy, Vx)``, ``(2, Z, Vy, Vx)``.
+        Batched shapes have a leading ``B`` dimension.
+    reconstruction_algorithm : {"Tikhonov", "TV"}, optional
+        By default "Tikhonov". "TV" is not implemented.
     regularization_strength : float, optional
-        regularization parameter, by default 1e-3
+        Regularization parameter, by default 1e-3
     reg_p : float, optional
         TV-specific phase regularization parameter, by default 1e-6
-        "TV" is not implemented.
+    TV_rho_strength : float, optional
+        TV-specific rho strength, by default 1e-3
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
-        "TV" is not implemented.
     bg_filter : bool, optional
-        option for slow-varying 2D background normalization with uniform filter
-        by default False
+        Slow-varying 2D background normalization, by default False
 
     Returns
     -------
-    Tuple[Tensor]
-        yx_absorption (unitless)
-        yx_phase (radians)
-
-    Raises
-    ------
-    NotImplementedError
-        TV is not implemented
+    Tuple[Tensor, Tensor]
+        ``(yx_absorption, yx_phase)`` with shape ``(Y, X)`` or
+        ``(B, Y, X)``.
     """
-    # Normalize
+    batched = zyx_data.ndim == 4
+    if not batched:
+        zyx_data = zyx_data.unsqueeze(0)
+
+    # Normalize: (B, Z, Y, X)
     zyx = util.inten_normalization(zyx_data, bg_filter=bg_filter)
 
     # TODO Consider refactoring with vectorial transfer function SVD
     if reconstruction_algorithm == "Tikhonov":
         U, S, Vh = singular_system
-        S_reg = S / (S**2 + regularization_strength)
-        sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
+        batched_ss = S.ndim == 4  # (B, 2, Vy, Vx)
 
-        absorption_yx, phase_yx = apply_filter_bank(sfyx_inverse_filter, zyx)
+        if not batched_ss:
+            # Shared singular system: compute inverse filter once
+            S_reg = S / (S**2 + regularization_strength)
+            sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
+            results = []
+            for b in range(zyx.shape[0]):
+                results.append(apply_filter_bank(sfyx_inverse_filter, zyx[b]))
+            output = torch.stack(results, dim=0)  # (B, 2, Y, X)
+        else:
+            # Per-tile singular system: compute inverse filter per tile
+            S_reg = S / (S**2 + regularization_strength)
+            results = []
+            for b in range(zyx.shape[0]):
+                filt_b = torch.einsum("sj...,j...,jf...->fs...", U[b], S_reg[b], Vh[b])
+                results.append(apply_filter_bank(filt_b, zyx[b]))
+            output = torch.stack(results, dim=0)  # (B, 2, Y, X)
 
     # ADMM deconvolution with anisotropic TV regularization
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
+
+    absorption_yx = output[:, 0]  # (B, Y, X)
+    phase_yx = output[:, 1]  # (B, Y, X)
+
+    if not batched:
+        absorption_yx = absorption_yx.squeeze(0)
+        phase_yx = phase_yx.squeeze(0)
 
     return absorption_yx, phase_yx
 
@@ -397,16 +451,14 @@ def reconstruct(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 10000.0,
+    svd_backend: str = "closed_form",
 ) -> Tuple[Tensor, Tensor]:
     """Reconstruct 2D absorption and phase from a brightfield defocus stack.
-
-    Chains calculate_transfer_function, calculate_singular_system,
-    and apply_inverse_transfer_function.
 
     Parameters
     ----------
     zyx_data : Tensor
-        3D raw data, label-free defocus stack
+        Raw data of shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
     yx_pixel_size : float
         Pixel size in the transverse (Y, X) dimensions
     z_position_list : list or Tensor
@@ -421,8 +473,8 @@ def reconstruct(
         Detection numerical aperture
     invert_phase_contrast : bool, optional
         Invert phase contrast, by default False
-    reconstruction_algorithm : str, optional
-        "Tikhonov" or "TV", by default "Tikhonov"
+    reconstruction_algorithm : {"Tikhonov", "TV"}, optional
+        By default "Tikhonov".
     regularization_strength : float, optional
         Regularization parameter, by default 1e-3
     reg_p : float, optional
@@ -435,15 +487,21 @@ def reconstruct(
         Slow-varying 2D background normalization, by default False
     tilt_angle_zenith : float or Tensor, optional
         Illumination tilt zenith angle in radians, by default 0.0
+        Scalar for shared tilt, ``(B,)`` tensor for per-tile tilt.
     tilt_angle_azimuth : float or Tensor, optional
         Illumination tilt azimuth angle in radians, by default 0.0
+        Scalar for shared tilt, ``(B,)`` tensor for per-tile tilt.
     pupil_steepness : float, optional
         Sigmoid steepness for smooth pupil cutoff, by default 10000.0
+    svd_backend: str, optional
+        "closed_form" uses an analytical 2×2 eigendecomposition
+        (~10-19× faster, torch.compile compatible). "torch" uses
+        torch.linalg.svd (cuSOLVER).
 
     Returns
     -------
     Tuple[Tensor, Tensor]
-        yx_absorption, yx_phase
+        ``(yx_absorption, yx_phase)`` with shape ``(Y, X)`` or ``(B, Y, X)``.
     """
     absorption_tf, phase_tf = calculate_transfer_function(
         zyx_data.shape[-2:],
@@ -458,7 +516,7 @@ def reconstruct(
         tilt_angle_azimuth=tilt_angle_azimuth,
         pupil_steepness=pupil_steepness,
     )
-    singular_system = calculate_singular_system(absorption_tf, phase_tf)
+    singular_system = calculate_singular_system(absorption_tf, phase_tf, svd_backend=svd_backend)
     return apply_inverse_transfer_function(
         zyx_data,
         singular_system,

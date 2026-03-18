@@ -24,8 +24,9 @@ phase:
     reconstruction_algorithm: Tikhonov
     regularization_strength: 0.01
 optimization:
-  num_iterations: 10
+  max_iterations: 10
+  method: adam                          # adam, lbfgs, nelder_mead, grid_search
   loss:
-    type: midband_power
-    midband_fractions: [0.125, 0.25]
+    type: midband_power                 # midband_power, total_variation, laplacian_variance,
+    midband_fractions: [0.125, 0.25]    # normalized_variance, spectral_flatness
   log_dir: ./runs/phase_optim

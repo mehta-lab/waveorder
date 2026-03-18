@@ -177,7 +177,9 @@ def generate_tilted_pupil(
     Returns
     -------
     torch.Tensor
-        Tilted pupil function (Ny, Nx), values in [0, 1].
+        Tilted pupil function with shape ``(Ny, Nx)`` or
+        ``(B, Ny, Nx)`` when tilt angles have a leading batch
+        dimension (e.g. ``(B, 1, 1)``). Values in [0, 1].
     """
     NA = torch.as_tensor(NA, dtype=torch.float32)
     tilt_angle_zenith = torch.as_tensor(tilt_angle_zenith, dtype=torch.float32)
@@ -764,25 +766,28 @@ def generate_greens_tensor_spectrum(
 
 def compute_weak_object_transfer_function_2d(illumination_pupil, detection_pupil):
     """
+    Compute 2D weak object transfer function (2D WOTF).
 
-    compute 2D weak object transfer function (2D WOTF)
+    Supports broadcasting: e.g. illumination ``(B, 1, Y, X)`` against
+    detection ``(1, Z, Y, X)`` produces ``(B, Z, Y, X)`` transfer functions.
 
     Parameters
     ----------
         illumination_pupil  : torch.tensor
-                  illumination source pattern with the size of (Y, X)
+                  illumination source pattern, broadcastable against
+                  detection_pupil in all dims except the last two (Y, X)
 
         detection_pupil   : torch.tensor
-                  pupil function with the size of (Y, X)
+                  pupil function, broadcastable against illumination_pupil
 
     Returns
     -------
 
         absorption_transfer_function      : torch.tensor
-                  absorption transfer function with size of (Y, X)
+                  absorption transfer function
 
         phase_transfer_function      : torch.tensor
-                  phase transfer function with size of (Y, X)
+                  phase transfer function
 
     """
 
