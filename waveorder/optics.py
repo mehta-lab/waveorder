@@ -4,6 +4,104 @@ import numpy as np
 import torch
 from numpy.fft import fft2, fftn, fftshift, ifft2, ifftn, ifftshift
 
+# ---------------------------------------------------------------------------
+# Zernike polynomials (Noll indices 4-10)
+# ---------------------------------------------------------------------------
+
+# Noll-indexed Zernike modes 4-10:
+#   4: defocus           (n=2, m=0)
+#   5: oblique astigmatism (n=2, m=-2)
+#   6: vertical astigmatism (n=2, m=2)
+#   7: vertical coma     (n=3, m=-1)
+#   8: horizontal coma   (n=3, m=1)
+#   9: vertical trefoil  (n=3, m=-3)
+#  10: oblique trefoil   (n=3, m=3)
+
+ZERNIKE_NOLL_INDICES = [4, 5, 6, 7, 8, 9, 10]
+ZERNIKE_NAMES = [
+    "defocus",
+    "oblique_astigmatism",
+    "vertical_astigmatism",
+    "vertical_coma",
+    "horizontal_coma",
+    "vertical_trefoil",
+    "oblique_trefoil",
+]
+NUM_ZERNIKE = len(ZERNIKE_NOLL_INDICES)
+
+
+def _zernike_basis(rho, theta, noll_index):
+    """Evaluate a single Zernike polynomial at given polar coordinates.
+
+    Parameters
+    ----------
+    rho : torch.Tensor
+        Normalized radial coordinate (0 to 1 inside pupil).
+    theta : torch.Tensor
+        Azimuthal angle.
+    noll_index : int
+        Noll index (4-10 supported).
+
+    Returns
+    -------
+    torch.Tensor
+        Zernike polynomial evaluated at (rho, theta).
+    """
+    if noll_index == 4:  # defocus
+        return torch.sqrt(torch.tensor(3.0)) * (2 * rho**2 - 1)
+    elif noll_index == 5:  # oblique astigmatism
+        return torch.sqrt(torch.tensor(6.0)) * rho**2 * torch.sin(2 * theta)
+    elif noll_index == 6:  # vertical astigmatism
+        return torch.sqrt(torch.tensor(6.0)) * rho**2 * torch.cos(2 * theta)
+    elif noll_index == 7:  # vertical coma
+        return torch.sqrt(torch.tensor(8.0)) * (3 * rho**3 - 2 * rho) * torch.sin(theta)
+    elif noll_index == 8:  # horizontal coma
+        return torch.sqrt(torch.tensor(8.0)) * (3 * rho**3 - 2 * rho) * torch.cos(theta)
+    elif noll_index == 9:  # vertical trefoil
+        return torch.sqrt(torch.tensor(8.0)) * rho**3 * torch.sin(3 * theta)
+    elif noll_index == 10:  # oblique trefoil
+        return torch.sqrt(torch.tensor(8.0)) * rho**3 * torch.cos(3 * theta)
+    else:
+        raise ValueError(f"Unsupported Noll index: {noll_index}")
+
+
+def compute_zernike_phase(fxx, fyy, NA, lamb_in, zernike_coefficients):
+    """Compute pupil phase from Zernike polynomial coefficients.
+
+    Parameters
+    ----------
+    fxx, fyy : torch.Tensor
+        Cartesian frequency grids (Ny, Nx) in units of 1/length.
+    NA : float
+        Numerical aperture defining the pupil radius.
+    lamb_in : float
+        Wavelength in free space.
+    zernike_coefficients : list of float or torch.Tensor
+        Coefficients for Noll indices 4-10 (length 7), in radians of
+        wavefront error.
+
+    Returns
+    -------
+    torch.Tensor
+        Phase map (Ny, Nx) in radians.
+    """
+    cutoff = NA / lamb_in
+    frr = torch.sqrt(fxx**2 + fyy**2)
+    rho = frr / cutoff  # normalized radial coordinate
+    theta = torch.atan2(fyy, fxx)
+
+    phase = torch.zeros_like(fxx)
+    for i, noll_idx in enumerate(ZERNIKE_NOLL_INDICES):
+        coeff = zernike_coefficients[i]
+        if isinstance(coeff, (int, float)) and coeff == 0:
+            continue
+        coeff_t = torch.as_tensor(coeff, dtype=fxx.dtype)
+        phase = phase + coeff_t * _zernike_basis(rho, theta, noll_idx)
+
+    # Zero outside the pupil
+    mask = (rho <= 1.0).to(phase.dtype)
+    return phase * mask
+
 
 def Jones_sample(Ein, t, sa):
     """
@@ -108,33 +206,30 @@ def analyzer_output(Ein, alpha, beta):
     return Eout
 
 
-def generate_pupil(frr, NA, lamb_in, steepness=1e4):
-    """
-
-    compute pupil function given spatial frequency, NA, wavelength.
+def generate_pupil(frr, NA, lamb_in, steepness=1e4, fxx=None, fyy=None, zernike_coefficients=None):
+    """Compute pupil function given spatial frequency, NA, wavelength.
 
     Parameters
     ----------
-        frr       : torch.tensor
-                    radial frequency coordinate in units of inverse length
-
-        NA        : float
-                    numerical aperture of the pupil function (normalized by the refractive index of the immersion media)
-
-        lamb_in : float
-                    wavelength of the light in free space
-                    in units of length (inverse of frr's units)
-
-        steepness : float
-                    sigmoid steepness for smooth cutoff
+    frr : torch.Tensor
+        Radial frequency coordinate in units of inverse length.
+    NA : float
+        Numerical aperture of the pupil function.
+    lamb_in : float
+        Wavelength of the light in free space.
+    steepness : float
+        Sigmoid steepness for smooth cutoff.
+    fxx, fyy : torch.Tensor, optional
+        Cartesian frequency grids. Required if zernike_coefficients is not None.
+    zernike_coefficients : list, optional
+        7 Zernike coefficients (Noll 4-10) in radians of wavefront error.
 
     Returns
     -------
-        Pupil     : torch.tensor
-                    pupil function with the specified parameters with the size of (Ny, Nx)
-
+    torch.Tensor
+        Pupil function. Always real-valued (Zernike aberrations are not applied
+        here; use ``compute_zernike_phase`` separately for aberrated pupils).
     """
-
     cutoff = NA / lamb_in
     Pupil = torch.sigmoid(steepness * (cutoff - frr))
 
