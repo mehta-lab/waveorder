@@ -25,9 +25,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from iohub.ngff import open_ome_zarr
-from siddon import SiddonOperator, cg_tikhonov
 
 from waveorder.models import isotropic_fluorescent_thick_3d, phase_thick_3d
+from waveorder.projection import SiddonOperator, cg_tikhonov
 
 matplotlib.use("Agg")
 plt.style.use("dark_background")
@@ -187,10 +187,7 @@ def run_sweep(store_path, reg, niter, blur_ops):
     rawimages : dict
         {sample: {channel: np.ndarray}} blurred+noisy source volumes.
     """
-    results = {
-        s: {ch: {"thetas": [], "psnrs": []} for ch in CHANNEL_NAMES}
-        for s in SAMPLE_TYPES
-    }
+    results = {s: {ch: {"thetas": [], "psnrs": []} for ch in CHANNEL_NAMES} for s in SAMPLE_TYPES}
     objects = {}
     rawimages = {}
 
@@ -199,12 +196,8 @@ def run_sweep(store_path, reg, niter, blur_ops):
             objects[sample] = {}
             rawimages[sample] = {}
             for c_idx, ch in enumerate(CHANNEL_NAMES):
-                objects[sample][ch] = np.array(
-                    plate[f"{sample}/object/0"]["0"][0, c_idx], dtype=np.float32
-                )
-                raw = np.array(
-                    plate[f"{sample}/rawimage/0"]["0"][0, c_idx], dtype=np.float32
-                )
+                objects[sample][ch] = np.array(plate[f"{sample}/object/0"]["0"][0, c_idx], dtype=np.float32)
+                raw = np.array(plate[f"{sample}/rawimage/0"]["0"][0, c_idx], dtype=np.float32)
                 rawimages[sample][ch] = raw - BLACK_LEVEL
 
     for theta in THETA_RANGE:
@@ -288,10 +281,10 @@ def plot_psnr_vs_theta(results, out_dir):
 # Plot: Detailed figure at optimal theta
 # ---------------------------------------------------------------------------
 def plot_optimal_reconstruction(sample, ch, gt, source, best_theta, reg, niter, blur_ops, out_dir):
-    """Projections at +/-theta, gain-calibrated reconstruction, object, FFTs.
+    """Object, projections at +/-theta, reconstruction, and FFT.
 
-    Layout: 3 columns (Projections, Reconstruction, Object) × 4 rows
-    (XY, XZ, YZ, FFT XZ) — same as geometric two-projection figures.
+    Layout: 4 columns (Object, Projections, Reconstruction, FFT) × 3 rows
+    (XY, XZ, YZ) — matches geometric two-projection figures.
     """
     fwd_blur, adj_blur = blur_ops[ch]
     angles = [-best_theta, best_theta]
@@ -305,7 +298,6 @@ def plot_optimal_reconstruction(sample, ch, gt, source, best_theta, reg, niter, 
     proj_pos = measurements[1].cpu().numpy()
 
     # Clip projection display at 1st percentile to reveal structure
-    # in low-contrast channels (e.g. phase)
     all_proj = np.concatenate([proj_neg.ravel(), proj_pos.ravel()])
     proj_vmin = float(np.percentile(all_proj, 1))
     proj_vmax = float(all_proj.max())
@@ -334,7 +326,7 @@ def plot_optimal_reconstruction(sample, ch, gt, source, best_theta, reg, niter, 
     vol_extents = [ext_xy, ext_xz, ext_yz]
     axis_labels = [("X", "Y"), ("X", "Z"), ("Y", "Z")]
 
-    fig, axes = plt.subplots(4, 3, figsize=(14, 17))
+    fig, axes = plt.subplots(3, 4, figsize=(20, 14))
     fig.suptitle(
         f"{sample} / {ch} — Two-View Wave-Optical Reconstruction at +/-{best_theta} deg "
         f"(PSNR {psnr_val:.1f} dB, gain={alpha:.6f})",
@@ -342,51 +334,56 @@ def plot_optimal_reconstruction(sample, ch, gt, source, best_theta, reg, niter, 
         y=0.99,
     )
 
-    col_titles = ["Projections", "Reconstruction", "Object"]
+    col_titles = ["Object", "Projections", "Reconstruction", "FFT kz-kx"]
 
-    # Row 0 (XY): projection at +theta
-    axes[0, 0].imshow(proj_pos, cmap="gray", vmin=proj_vmin, vmax=proj_vmax, aspect="equal")
-    _style_ax(axes[0, 0], title=col_titles[0], ylabel=f"+{best_theta} deg")
-    axes[0, 1].imshow(rec_sl[0], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_xy)
-    _style_ax(axes[0, 1], title=col_titles[1], ylabel=views[0])
-    axes[0, 2].imshow(obj_sl[0], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_xy)
+    # Row 0 (XY): object + projection at +theta + recon + FFT object
+    axes[0, 0].imshow(obj_sl[0], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_xy)
+    _style_ax(axes[0, 0], title=col_titles[0], ylabel=views[0])
+    axes[0, 1].imshow(proj_pos, cmap="gray", vmin=proj_vmin, vmax=proj_vmax, aspect="equal")
+    _style_ax(axes[0, 1], title=col_titles[1], ylabel=f"+{best_theta} deg")
+    axes[0, 2].imshow(rec_sl[0], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_xy)
     _style_ax(axes[0, 2], title=col_titles[2])
+    axes[0, 3].imshow(ft_obj_sl[1], cmap="inferno", vmin=0, vmax=ft_max, aspect="equal")
+    _style_ax(axes[0, 3], title=col_titles[3], ylabel="Object")
 
-    # Row 1 (XZ): projection at -theta
-    axes[1, 0].imshow(proj_neg, cmap="gray", vmin=proj_vmin, vmax=proj_vmax, aspect="equal")
-    _style_ax(axes[1, 0], ylabel=f"-{best_theta} deg")
-    axes[1, 1].imshow(rec_sl[1], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_xz)
-    _style_ax(axes[1, 1], ylabel=views[1])
-    axes[1, 2].imshow(obj_sl[1], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_xz)
+    # Row 1 (XZ): object + projection at -theta + recon + FFT recon
+    axes[1, 0].imshow(obj_sl[1], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_xz)
+    _style_ax(axes[1, 0], ylabel=views[1])
+    axes[1, 1].imshow(proj_neg, cmap="gray", vmin=proj_vmin, vmax=proj_vmax, aspect="equal")
+    _style_ax(axes[1, 1], ylabel=f"-{best_theta} deg")
+    axes[1, 2].imshow(rec_sl[1], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_xz)
     _style_ax(axes[1, 2])
+    axes[1, 3].imshow(ft_rec_sl[1], cmap="inferno", vmin=0, vmax=ft_max, aspect="equal")
+    _style_ax(axes[1, 3], ylabel="Recon")
 
-    # Row 2 (YZ): blank projection slot
-    axes[2, 0].axis("off")
-    axes[2, 1].imshow(rec_sl[2], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_yz)
-    _style_ax(axes[2, 1], ylabel=views[2])
-    axes[2, 2].imshow(obj_sl[2], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_yz)
+    # Row 2 (YZ): object + blank + recon + blank
+    axes[2, 0].imshow(obj_sl[2], cmap="inferno", vmin=obj_vmin, vmax=obj_vmax, aspect="equal", extent=ext_yz)
+    _style_ax(axes[2, 0], ylabel=views[2])
+    axes[2, 1].axis("off")
+    axes[2, 2].imshow(rec_sl[2], cmap="inferno", vmin=rec_vmin, vmax=rec_vmax, aspect="equal", extent=ext_yz)
     _style_ax(axes[2, 2])
+    axes[2, 3].axis("off")
 
-    # Add scale ticks (um) to reconstruction and object columns
+    # Add scale ticks (um) to object and reconstruction columns
     for row in range(3):
         ext = vol_extents[row]
         xlbl, ylbl = axis_labels[row]
-        for col in [1, 2]:
+        for col in [0, 2]:
             ax = axes[row, col]
             ax.set_xticks([0, ext[1] / 2, ext[1]])
-            ax.set_xticklabels(["0", f"{ext[1]/2:.1f}", f"{ext[1]:.1f}"], fontsize=7)
+            ax.set_xticklabels(["0", f"{ext[1] / 2:.1f}", f"{ext[1]:.1f}"], fontsize=7)
             ax.set_yticks([0, ext[3] if ext[3] > 0 else ext[2]])
             ax.set_yticklabels(["0", f"{max(ext[2], ext[3]):.1f}"], fontsize=7)
             if row == 2:
-                ax.set_xlabel(f"{xlbl} (um)", fontsize=8)
+                ax.set_xlabel(f"{xlbl} (\u00b5m)", fontsize=8)
 
-    # Row 3: FFT XZ slices (ky=0)
-    axes[3, 0].axis("off")
-    axes[3, 1].imshow(ft_rec_sl[1], cmap="inferno", vmin=0, vmax=ft_max, aspect="equal")
-    _style_ax(axes[3, 1], title="FFT Reconstruction")
-    axes[3, 2].imshow(ft_obj_sl[1], cmap="inferno", vmin=0, vmax=ft_max, aspect="equal")
-    _style_ax(axes[3, 2], title="FFT Object")
-    axes[3, 1].set_ylabel("FFT XZ (ky=0)", fontsize=10)
+    # Label projection column (col 1)
+    axes[1, 1].set_xlabel(r"$X_d$ (\u00b5m)", fontsize=8)
+
+    # Label FFT column (col 3)
+    for row in [0, 1]:
+        axes[row, 3].set_xlabel(r"$k_x$", fontsize=9)
+        axes[row, 3].set_ylabel(r"$k_z$", fontsize=9)
 
     plt.tight_layout()
     out = Path(out_dir) / sample
@@ -437,8 +434,15 @@ def main(data_dir, out_dir, reg, niter):
         click.echo(f"\n{sample}: plotting optimal reconstruction at +/-{best_theta} deg")
         for ch in CHANNEL_NAMES:
             plot_optimal_reconstruction(
-                sample, ch, objects[sample][ch], rawimages[sample][ch],
-                best_theta, reg, niter, blur_ops, out_dir,
+                sample,
+                ch,
+                objects[sample][ch],
+                rawimages[sample][ch],
+                best_theta,
+                reg,
+                niter,
+                blur_ops,
+                out_dir,
             )
 
     # Print summary table
