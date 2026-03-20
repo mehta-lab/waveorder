@@ -47,6 +47,7 @@ def calculate_transfer_function(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 10000.0,
+    zernike_coefficients: list | None = None,
 ) -> Tuple[Tensor, Tensor]:
     """Calculate the transfer function for 2D phase imaging.
 
@@ -113,6 +114,7 @@ def calculate_transfer_function(
         tilt_angle_zenith=tilt_angle_zenith,
         tilt_angle_azimuth=tilt_angle_azimuth,
         pupil_steepness=pupil_steepness,
+        zernike_coefficients=zernike_coefficients,
     )
 
     # nd_fourier_central_cuboid preserves leading batch dims
@@ -134,6 +136,7 @@ def _calculate_wrap_unsafe_transfer_function(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 10000.0,
+    zernike_coefficients: list | None = None,
 ) -> Tuple[Tensor, Tensor]:
     na_ill = torch.as_tensor(numerical_aperture_illumination, dtype=torch.float32)
     na_det = torch.as_tensor(numerical_aperture_detection, dtype=torch.float32)
@@ -171,6 +174,20 @@ def _calculate_wrap_unsafe_transfer_function(
         wavelength_illumination,
         steepness=pupil_steepness,
     )
+
+    # Apply Zernike aberrations as complex phase on detection pupil
+    if zernike_coefficients is not None:
+        zernike_phase = optics.compute_zernike_phase(
+            fxx,
+            fyy,
+            na_det,
+            wavelength_illumination,
+            zernike_coefficients,
+        )
+        detection_pupil_aberrated = detection_pupil * torch.exp(1j * zernike_phase)
+    else:
+        detection_pupil_aberrated = detection_pupil
+
     propagation_kernel = optics.generate_propagation_kernel(
         radial_frequencies,
         detection_pupil,
@@ -178,8 +195,8 @@ def _calculate_wrap_unsafe_transfer_function(
         z_positions,
     )
 
-    # det_prop: (Z, Yos, Xos)
-    det_prop = detection_pupil.unsqueeze(0) * propagation_kernel
+    # det_prop: (Z, Yos, Xos) — uses aberrated pupil for WOTF
+    det_prop = detection_pupil_aberrated.unsqueeze(0) * propagation_kernel
 
     # Generate tilted illumination pupil
     # For batched (B,) tilt angles, reshape to (B, 1, 1) so
@@ -458,6 +475,7 @@ def reconstruct(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 10000.0,
+    zernike_coefficients: list | None = None,
 ) -> Tuple[Tensor, Tensor]:
     """Reconstruct 2D absorption and phase from a brightfield defocus stack.
 
@@ -499,6 +517,8 @@ def reconstruct(
         Scalar for shared tilt, ``(B,)`` tensor for per-tile tilt.
     pupil_steepness : float, optional
         Sigmoid steepness for smooth pupil cutoff, by default 10000.0
+    zernike_coefficients : list, optional
+        7 Zernike coefficients (Noll 4-10) in radians.
 
     Returns
     -------
@@ -517,6 +537,7 @@ def reconstruct(
         tilt_angle_zenith=tilt_angle_zenith,
         tilt_angle_azimuth=tilt_angle_azimuth,
         pupil_steepness=pupil_steepness,
+        zernike_coefficients=zernike_coefficients,
     )
     # Use norm-based decomposition when gradients are needed (optimization),
     # full SVD otherwise (better accuracy for final reconstruction)

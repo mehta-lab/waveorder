@@ -131,6 +131,7 @@ def calculate_transfer_function(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 1e4,
+    zernike_coefficients: list | None = None,
 ) -> tuple[Tensor, Tensor]:
     na_ill_val = float(torch.as_tensor(numerical_aperture_illumination).detach())
     na_det_val = float(torch.as_tensor(numerical_aperture_detection).detach())
@@ -169,6 +170,7 @@ def calculate_transfer_function(
         tilt_angle_zenith=tilt_angle_zenith,
         tilt_angle_azimuth=tilt_angle_azimuth,
         pupil_steepness=pupil_steepness,
+        zernike_coefficients=zernike_coefficients,
     )
 
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
@@ -191,6 +193,7 @@ def _calculate_wrap_unsafe_transfer_function(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 1e4,
+    zernike_coefficients: list | None = None,
 ) -> tuple[Tensor, Tensor]:
     fyy, fxx = util.generate_frequencies(zyx_shape[1:], yx_pixel_size)
     radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
@@ -214,15 +217,29 @@ def _calculate_wrap_unsafe_transfer_function(
         wavelength_illumination,
         steepness=pupil_steepness,
     )
+
+    # Apply Zernike aberrations as a complex phase on the detection pupil
+    if zernike_coefficients is not None:
+        zernike_phase = optics.compute_zernike_phase(
+            fxx,
+            fyy,
+            numerical_aperture_detection,
+            wavelength_illumination,
+            zernike_coefficients,
+        )
+        det_pupil_aberrated = det_pupil * torch.exp(1j * zernike_phase)
+    else:
+        det_pupil_aberrated = det_pupil
+
     propagation_kernel = optics.generate_propagation_kernel(
         radial_frequencies,
-        det_pupil,
+        det_pupil,  # real-valued support for propagation
         wavelength_illumination / index_of_refraction_media,
         z_position_list,
     )
     greens_function_z = optics.generate_greens_function_z(
         radial_frequencies,
-        det_pupil,
+        det_pupil,  # real-valued support for Green's function
         wavelength_illumination / index_of_refraction_media,
         z_position_list,
         axially_even=False,
@@ -234,7 +251,7 @@ def _calculate_wrap_unsafe_transfer_function(
     ) = optics.compute_weak_object_transfer_function_3D(
         ill_pupil,
         ill_pupil,
-        det_pupil,
+        det_pupil_aberrated,  # aberrated pupil for WOTF
         propagation_kernel,
         greens_function_z,
         z_pixel_size,
@@ -394,6 +411,7 @@ def reconstruct(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 1e4,
+    zernike_coefficients: list | None = None,
 ) -> Tensor:
     """Reconstruct 3D phase from a brightfield defocus stack.
 
@@ -454,6 +472,7 @@ def reconstruct(
         tilt_angle_zenith=tilt_angle_zenith,
         tilt_angle_azimuth=tilt_angle_azimuth,
         pupil_steepness=pupil_steepness,
+        zernike_coefficients=zernike_coefficients,
     )
     return apply_inverse_transfer_function(
         zyx_data,

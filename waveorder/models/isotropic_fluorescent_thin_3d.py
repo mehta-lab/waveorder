@@ -53,6 +53,7 @@ def calculate_transfer_function(
     index_of_refraction_media: float,
     numerical_aperture_detection: Union[float, Tensor],
     confocal_pinhole_diameter: float | None = None,
+    zernike_coefficients: list | None = None,
 ) -> Tensor:
     """Calculate transfer function for fluorescent thin object imaging.
 
@@ -106,6 +107,7 @@ def calculate_transfer_function(
         wavelength_emission,
         index_of_refraction_media,
         numerical_aperture_detection,
+        zernike_coefficients=zernike_coefficients,
     )
 
     parts = []
@@ -169,10 +171,12 @@ def _calculate_wrap_unsafe_transfer_function(
     wavelength_emission: float,
     index_of_refraction_media: float,
     numerical_aperture_detection: Union[float, Tensor],
+    zernike_coefficients: list | None = None,
 ) -> Tensor:
     """Calculate wrap-unsafe transfer function for fluorescent imaging."""
     z_positions = torch.as_tensor(z_position_list, dtype=torch.float32)
-    radial_frequencies = util.generate_radial_frequencies(yx_shape, yx_pixel_size, device=z_positions.device)
+    fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size, device=z_positions.device)
+    radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
 
     det_pupil = optics.generate_pupil(
         radial_frequencies,
@@ -180,9 +184,24 @@ def _calculate_wrap_unsafe_transfer_function(
         wavelength_emission,
     )
 
+    # Apply Zernike aberrations to detection pupil
+    if zernike_coefficients is not None:
+        zernike_phase = optics.compute_zernike_phase(
+            fxx,
+            fyy,
+            numerical_aperture_detection,
+            wavelength_emission,
+            zernike_coefficients,
+        )
+        det_pupil_aberrated = det_pupil * torch.exp(1j * zernike_phase)
+    else:
+        det_pupil_aberrated = det_pupil
+
+    # For PSF computation, use aberrated pupil if available
+    pupil_for_psf = det_pupil_aberrated if zernike_coefficients is not None else det_pupil
     propagation_kernel = optics.generate_propagation_kernel(
         radial_frequencies,
-        det_pupil,
+        pupil_for_psf,
         wavelength_emission / index_of_refraction_media,
         z_positions,
     )
@@ -328,6 +347,7 @@ def reconstruct(
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
+    zernike_coefficients: list | None = None,
 ) -> Tensor:
     """Reconstruct 2D fluorescence density from a defocus stack.
 
@@ -353,6 +373,8 @@ def reconstruct(
         TV-specific regularization parameter, by default 1e-3
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
+    zernike_coefficients : list, optional
+        7 Zernike coefficients (Noll 4-10) for detection pupil aberrations.
 
     Returns
     -------
@@ -366,6 +388,7 @@ def reconstruct(
         wavelength_emission,
         index_of_refraction_media,
         numerical_aperture_detection,
+        zernike_coefficients=zernike_coefficients,
     )
     singular_system = calculate_singular_system(fluorescent_tf)
     return apply_inverse_transfer_function(
