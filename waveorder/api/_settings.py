@@ -85,6 +85,28 @@ class OptimizableFourierTransferFunctionSettings(FourierTransferFunctionSettings
     tilt_angle_azimuth: Union[float, OptimizableFloat] = Field(
         default=0.0, description="(optimizable) illumination tilt azimuth angle in radians"
     )
+    # Zernike aberration coefficients (Noll indices 4-10)
+    zernike_defocus: Union[float, OptimizableFloat] = Field(
+        default=0.0, description="(optimizable) Zernike defocus coefficient (Noll 4) in radians"
+    )
+    zernike_oblique_astigmatism: Union[float, OptimizableFloat] = Field(
+        default=0.0, description="(optimizable) Zernike oblique astigmatism (Noll 5) in radians"
+    )
+    zernike_vertical_astigmatism: Union[float, OptimizableFloat] = Field(
+        default=0.0, description="(optimizable) Zernike vertical astigmatism (Noll 6) in radians"
+    )
+    zernike_vertical_coma: Union[float, OptimizableFloat] = Field(
+        default=0.0, description="(optimizable) Zernike vertical coma (Noll 7) in radians"
+    )
+    zernike_horizontal_coma: Union[float, OptimizableFloat] = Field(
+        default=0.0, description="(optimizable) Zernike horizontal coma (Noll 8) in radians"
+    )
+    zernike_vertical_trefoil: Union[float, OptimizableFloat] = Field(
+        default=0.0, description="(optimizable) Zernike vertical trefoil (Noll 9) in radians"
+    )
+    zernike_oblique_trefoil: Union[float, OptimizableFloat] = Field(
+        default=0.0, description="(optimizable) Zernike oblique trefoil (Noll 10) in radians"
+    )
 
     @model_validator(mode="after")
     def validate_positive_na_detection(self):
@@ -92,6 +114,23 @@ class OptimizableFourierTransferFunctionSettings(FourierTransferFunctionSettings
         if val <= 0:
             raise ValueError(f"numerical_aperture_detection must be positive, got {val}")
         return self
+
+    @property
+    def zernike_field_names(self):
+        """Return ordered list of Zernike field names."""
+        return [
+            "zernike_defocus",
+            "zernike_oblique_astigmatism",
+            "zernike_vertical_astigmatism",
+            "zernike_vertical_coma",
+            "zernike_horizontal_coma",
+            "zernike_vertical_trefoil",
+            "zernike_oblique_trefoil",
+        ]
+
+    def get_zernike_coefficients(self):
+        """Return list of Zernike coefficient values."""
+        return [_float_val(getattr(self, name)) for name in self.zernike_field_names]
 
     def resolve_floats(self):
         """Return a copy with OptimizableFloat fields resolved to plain floats."""
