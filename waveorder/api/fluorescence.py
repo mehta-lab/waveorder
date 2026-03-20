@@ -421,12 +421,23 @@ def optimize(
     zyx_data = torch.tensor(czyx_data.values[0], dtype=torch.float32, device=device)
     Z = zyx_data.shape[0]
 
+    # Zernike field names for resolving tensor params
+    zernike_field_names = s.zernike_field_names
+    zernike_defaults = s.get_zernike_coefficients()
+
     def reconstruct_fn(data, **tensor_params):
         na_det = tensor_params.get("numerical_aperture_detection", s.numerical_aperture_detection)
         z_offset = tensor_params.get("z_focus_offset", s.z_focus_offset)
 
+        # Collect Zernike coefficients
+        zernike_coeffs = [
+            tensor_params.get(name, default) for name, default in zip(zernike_field_names, zernike_defaults)
+        ]
+        has_zernike = any(not (isinstance(c, (int, float)) and c == 0) for c in zernike_coeffs)
+        zernike_arg = zernike_coeffs if has_zernike else None
+
         if recon_dim == 2:
-            z_position_list = (-torch.arange(Z) + (Z // 2) + z_offset) * s.z_pixel_size
+            z_position_list = (-torch.arange(Z, device=data.device) + (Z // 2) + z_offset) * s.z_pixel_size
             return isotropic_fluorescent_thin_3d.reconstruct(
                 data,
                 yx_pixel_size=s.yx_pixel_size,
@@ -435,6 +446,7 @@ def optimize(
                 index_of_refraction_media=s.index_of_refraction_media,
                 numerical_aperture_detection=na_det,
                 regularization_strength=settings.apply_inverse.regularization_strength,
+                zernike_coefficients=zernike_arg,
             )
         else:
             return isotropic_fluorescent_thick_3d.reconstruct(

@@ -254,6 +254,8 @@ def compute_transfer_function(
         )
 
     elif recon_dim == 3:
+        zernike_coeffs = s.get_zernike_coefficients()
+        has_zernike = any(c != 0 for c in zernike_coeffs)
         real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(
             zyx_shape=zyx_shape,
             yx_pixel_size=s.yx_pixel_size,
@@ -266,6 +268,7 @@ def compute_transfer_function(
             invert_phase_contrast=s.invert_phase_contrast,
             tilt_angle_zenith=s.tilt_angle_zenith,
             tilt_angle_azimuth=s.tilt_angle_azimuth,
+            zernike_coefficients=zernike_coeffs if has_zernike else None,
         )
 
         return xr.Dataset(
@@ -461,12 +464,24 @@ def optimize(
     # Pre-allocate z index tensor on device (avoids GPU sync per iteration)
     z_indices = -torch.arange(Z, device=device) + (Z // 2)
 
+    # Zernike field names for resolving tensor params
+    zernike_field_names = s.zernike_field_names
+    zernike_defaults = s.get_zernike_coefficients()
+
     def reconstruct_fn(data, **tensor_params):
         na_ill = tensor_params.get("numerical_aperture_illumination", s.numerical_aperture_illumination)
         na_det = tensor_params.get("numerical_aperture_detection", s.numerical_aperture_detection)
         z_offset = tensor_params.get("z_focus_offset", s.z_focus_offset)
         tilt_zenith = tensor_params.get("tilt_angle_zenith", s.tilt_angle_zenith)
         tilt_azimuth = tensor_params.get("tilt_angle_azimuth", s.tilt_angle_azimuth)
+
+        # Collect Zernike coefficients from tensor_params or defaults
+        zernike_coeffs = [
+            tensor_params.get(name, default) for name, default in zip(zernike_field_names, zernike_defaults)
+        ]
+        # Only pass zernike if any are non-zero or optimizable
+        has_zernike = any(not (isinstance(c, (int, float)) and c == 0) for c in zernike_coeffs)
+        zernike_arg = zernike_coeffs if has_zernike else None
 
         if recon_dim == 2:
             z_positions = (z_indices + z_offset) * s.z_pixel_size
@@ -483,6 +498,7 @@ def optimize(
                 tilt_angle_zenith=tilt_zenith,
                 tilt_angle_azimuth=tilt_azimuth,
                 pupil_steepness=optim_steepness,
+                zernike_coefficients=zernike_arg,
             )[1]  # [1] = phase
         else:
             return phase_thick_3d.reconstruct(
@@ -499,6 +515,7 @@ def optimize(
                 tilt_angle_zenith=tilt_zenith,
                 tilt_angle_azimuth=tilt_azimuth,
                 pupil_steepness=optim_steepness,
+                zernike_coefficients=zernike_arg,
             )
 
     if loss_settings is None:
