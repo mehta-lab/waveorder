@@ -83,6 +83,8 @@ def optimize_reconstruction(
 
         - ``"adam"`` — gradient-based (default). ``use_gradients``
           defaults to True. Per-iteration cost includes a backward pass.
+        - ``"nadam"`` — Adam with Nesterov momentum. Same interface as
+          ``"adam"`` but may converge faster on some problems.
         - ``"lbfgs"`` — gradient-based with line search.
           ``use_gradients`` defaults to True.
         - ``"nelder_mead"`` — gradient-free (scipy). Always runs under
@@ -122,7 +124,7 @@ def optimize_reconstruction(
         reconstruction.
     """
     if use_gradients is None:
-        use_gradients = method in ("adam", "lbfgs")
+        use_gradients = method in ("adam", "nadam", "lbfgs")
 
     if method == "nelder_mead":
         return _optimize_nelder_mead(
@@ -227,6 +229,8 @@ def _optimize_gradient(
             lr=max_lr,
             max_iter=1,
         )
+    elif method == "nadam":
+        optimizer = torch.optim.NAdam(param_groups)
     else:
         optimizer = torch.optim.Adam(param_groups)
 
