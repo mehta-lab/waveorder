@@ -1,4 +1,4 @@
-"""Shared utilities for benchmarks: timing, metadata, and fixtures."""
+"""Shared utilities for benchmarks: timing, metadata, and formatting."""
 
 import json
 import platform
@@ -8,6 +8,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import numpy as np
 import torch
 
 # --- TimingTree ---
@@ -124,3 +125,33 @@ def collect_metadata() -> dict:
         "gpu_count": gpu_count,
         "platform": platform.platform(),
     }
+
+
+# --- Formatting ---
+
+
+def render_histogram(hist: dict) -> str:
+    """Render a histogram as an inline sparkline.
+
+    Parameters
+    ----------
+    hist : dict
+        Histogram with "bin_edges" and "counts" keys.
+
+    Returns
+    -------
+    str
+        Single-line sparkline with range labels,
+        e.g. ``[0.00] ▁▃█▇▃▁ [1.00]``
+    """
+    counts = np.array(hist["counts"])
+    edges = np.array(hist["bin_edges"])
+
+    if counts.max() == 0:
+        return "(empty)"
+
+    blocks = "▁▂▃▄▅▆▇█"
+    normalized = counts / counts.max()
+    bars = "".join(blocks[int(v * 7)] for v in normalized)
+
+    return f"[{edges[0]:.3g}] {bars} [{edges[-1]:.3g}]"
