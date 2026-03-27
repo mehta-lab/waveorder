@@ -82,11 +82,15 @@ class TimingTree:
 # --- Metadata collection ---
 
 
+# Path to the waveorder repo root (two levels up from this file)
+_REPO_ROOT = str(Path(__file__).resolve().parent.parent)
+
+
 def _run_git(*args: str) -> str:
-    """Run a git command and return stripped stdout, or '' on failure."""
+    """Run a git command in the waveorder repo and return stripped stdout, or '' on failure."""
     try:
         result = subprocess.run(
-            ["git", *args],
+            ["git", "-C", _REPO_ROOT, *args],
             capture_output=True,
             text=True,
             timeout=5,

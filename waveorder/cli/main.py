@@ -1,3 +1,15 @@
+import logging
+import os
+import warnings
+
+# Suppress noisy CUDA and dependency warnings.
+# PYTHONWARNINGS env var catches warnings from torch's C++ queued callbacks
+# that fire after import but before Python filterwarnings can intercept them.
+os.environ.setdefault("PYTHONWARNINGS", "ignore::UserWarning,ignore::DeprecationWarning")
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+logging.getLogger("iohub").setLevel(logging.ERROR)
+
 import click
 
 from waveorder.cli.apply_inverse_transfer_function import (
@@ -12,8 +24,13 @@ from waveorder.cli.view import _view_cli
 
 try:
     from waveorder.cli.gui_widget import gui as _interactive_cli
-except:
+except Exception:
     _interactive_cli = None
+
+try:
+    from waveorder.cli.bench import benchmark as _benchmark_cli
+except Exception:
+    _benchmark_cli = None
 
 CONTEXT = {"help_option_names": ["-h", "--help"]}
 
@@ -85,6 +102,8 @@ cli.add_command(_apply_inverse_transfer_function_cli, "apply-inverse-transfer-fu
 cli.add_command(_view_cli, "view")
 if _interactive_cli is not None:
     cli.add_command(_interactive_cli, "interactive")
+if _benchmark_cli is not None:
+    cli.add_command(_benchmark_cli, "benchmark")
 
 # Display order: (command_name, indent)
 cli._display_order = [
@@ -94,6 +113,7 @@ cli._display_order = [
     ("simulate", 0),
     ("view", 0),
     ("interactive", 0),
+    ("benchmark", 0),
 ]
 
 # Aliases
@@ -104,6 +124,8 @@ cli.add_alias("compute-tf", "compute-transfer-function")
 cli.add_alias("apply-inv-tf", "apply-inverse-transfer-function")
 if _interactive_cli is not None:
     cli.add_alias("gui", "interactive")
+if _benchmark_cli is not None:
+    cli.add_alias("bm", "benchmark")
 
 if __name__ == "__main__":
     cli()

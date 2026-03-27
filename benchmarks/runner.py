@@ -8,8 +8,12 @@ case can be copy-pasted for production use.
 from __future__ import annotations
 
 import json
+import logging
+import os
 import subprocess
 from pathlib import Path
+
+logging.getLogger("iohub").setLevel(logging.ERROR)
 
 import numpy as np
 import torch
@@ -176,10 +180,12 @@ def run_synthetic_case(
 
         # Reconstruct via wo rec
         with tt.time("reconstruct"):
+            env = {**os.environ, "PYTHONWARNINGS": "ignore::UserWarning,ignore::DeprecationWarning"}
             result = subprocess.run(
                 ["wo", "rec", "-i", str(position_path), "-c", str(config_path), "-o", str(recon_path)],
                 capture_output=True,
                 text=True,
+                env=env,
             )
             if result.returncode != 0:
                 raise RuntimeError(f"wo rec failed:\n{result.stderr}")
