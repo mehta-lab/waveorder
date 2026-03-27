@@ -247,7 +247,7 @@ def run_experiment(
     metadata = collect_metadata()
     from datetime import datetime
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M")
+    timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     run_name = f"{timestamp}_{experiment.name}"
     run_dir = output_dir / "runs" / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
