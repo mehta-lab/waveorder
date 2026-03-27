@@ -120,9 +120,6 @@ allow-direct-references = true
 [tool.hatch.version]
 source = "uv-dynamic-versioning"
 
-[tool.uv.sources]
-iohub = {git = "https://github.com/czbiohub-sf/iohub", branch="main"}
-
 [tool.uv-dynamic-versioning]
 vcs = "git"
 style = "pep440"
