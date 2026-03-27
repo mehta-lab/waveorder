@@ -245,7 +245,10 @@ def run_experiment(
     output_dir = Path(output_dir)
 
     metadata = collect_metadata()
-    run_name = f"{metadata['git_hash']}_{experiment.name}"
+    from datetime import datetime
+
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H:%M")
+    run_name = f"{timestamp}_{experiment.name}"
     run_dir = output_dir / "runs" / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
 
