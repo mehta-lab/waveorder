@@ -1,31 +1,20 @@
 from pathlib import Path
 
 import click
-import numpy as np
-from iohub.ngff import Position, open_ome_zarr
 
-from waveorder.api import (
-    birefringence,
-    birefringence_and_phase,
-    fluorescence,
-    phase,
-)
 from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,
 )
-from waveorder.cli.printing import echo_headline, echo_settings
-from waveorder.cli.settings import ReconstructionSettings
-from waveorder.io import utils
 
 
-def _write_birefringence_tf(dataset: Position, tf_ds):
+def _write_birefringence_tf(dataset, tf_ds):
     """Write birefringence TF arrays to zarr."""
     dataset["intensity_to_stokes_matrix"] = tf_ds["intensity_to_stokes_matrix"].values[None, None, None, ...]
 
 
-def _write_phase_tf(dataset: Position, tf_ds, zyx_shape, recon_dim):
+def _write_phase_tf(dataset, tf_ds, zyx_shape, recon_dim):
     """Write phase TF arrays to zarr."""
     if recon_dim == 2:
         dataset.create_image(
@@ -54,7 +43,7 @@ def _write_phase_tf(dataset: Position, tf_ds, zyx_shape, recon_dim):
         )
 
 
-def _write_fluorescence_tf(dataset: Position, tf_ds, zyx_shape, recon_dim):
+def _write_fluorescence_tf(dataset, tf_ds, zyx_shape, recon_dim):
     """Write fluorescence TF arrays to zarr."""
     yx_shape = zyx_shape[1:]
     if recon_dim == 2:
@@ -81,7 +70,7 @@ def _write_fluorescence_tf(dataset: Position, tf_ds, zyx_shape, recon_dim):
         )
 
 
-def _write_vector_birefringence_tf(dataset: Position, tf_ds, zyx_shape):
+def _write_vector_birefringence_tf(dataset, tf_ds, zyx_shape):
     """Write vector birefringence TF arrays to zarr."""
     chunks = (1, 1, 1, zyx_shape[1], zyx_shape[2])
 
@@ -114,6 +103,20 @@ def compute_transfer_function_cli(
     """CLI command to compute the transfer function given a configuration file path
     and a desired output path.
     """
+    # Deferred imports: these pull in torch, iohub, numpy, etc.
+    # Only loaded when the command runs, keeping wo compute-tf -h fast.
+    import numpy as np
+    from iohub.ngff import open_ome_zarr
+
+    from waveorder.api import (
+        birefringence,
+        birefringence_and_phase,
+        fluorescence,
+        phase,
+    )
+    from waveorder.cli.printing import echo_headline, echo_settings
+    from waveorder.cli.settings import ReconstructionSettings
+    from waveorder.io import utils
 
     # Load config file
     settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
@@ -208,7 +211,7 @@ def compute_transfer_function_cli(
     )
 
 
-@click.command("compute-tf")
+@click.command("compute-tf", no_args_is_help=True)
 @input_position_dirpaths()
 @config_filepath()
 @output_dirpath()
@@ -217,14 +220,13 @@ def _compute_transfer_function_cli(
     config_filepath: Path,
     output_dirpath: Path,
 ) -> None:
-    """
-    Compute a transfer function using a dataset and configuration file.
+    """Compute a transfer function using a dataset and configuration file.
 
     Calculates the transfer function based on the shape of the first position
     in the list `input-position-dirpaths`.
 
-    See /examples for example configuration files.
-
-    >> waveorder compute-tf -i ./input.zarr/0/0/0 -c ./examples/birefringence.yml -o ./transfer_function.zarr
+    \b
+    Example:
+      \033[92mwo compute-tf -i ./input.zarr/0/0/0 -c ./config.yml -o ./tf.zarr\033[0m
     """
     compute_transfer_function_cli(input_position_dirpaths[0], config_filepath, output_dirpath)

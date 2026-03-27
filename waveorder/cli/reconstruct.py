@@ -1,15 +1,7 @@
 from pathlib import Path
 
 import click
-from iohub.ngff import open_ome_zarr
 
-from waveorder.api import fluorescence, phase
-from waveorder.cli.apply_inverse_transfer_function import (
-    apply_inverse_transfer_function_cli,
-)
-from waveorder.cli.compute_transfer_function import (
-    compute_transfer_function_cli,
-)
 from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
@@ -17,13 +9,9 @@ from waveorder.cli.parsing import (
     processes_option,
     unique_id,
 )
-from waveorder.cli.settings import OptimizationSettings, ReconstructionSettings
-from waveorder.cli.utils import resolve_time_indices
-from waveorder.io import utils
-from waveorder.optim import has_optimizable_params
 
 
-@click.command("reconstruct")
+@click.command("reconstruct", no_args_is_help=True)
 @input_position_dirpaths()
 @config_filepath()
 @output_dirpath()
@@ -51,8 +39,20 @@ def _reconstruct_cli(
 
     See /examples for example configuration files.
 
-    >> waveorder reconstruct -i ./input.zarr/*/*/* -c ./examples/birefringence.yml -o ./output.zarr
+    \b
+    Example:
+      \033[92mwo rec -i ./input.zarr/*/*/* -c ./config.yml -o ./output.zarr\033[0m
     """
+    click.echo(click.style("Starting reconstruction...", fg="green"))
+
+    # Deferred imports: these pull in torch, iohub, numpy, etc.
+    # Only loaded when the command runs, keeping wo rec -h fast.
+    from waveorder.cli.apply_inverse_transfer_function import apply_inverse_transfer_function_cli
+    from waveorder.cli.compute_transfer_function import compute_transfer_function_cli
+    from waveorder.cli.settings import ReconstructionSettings
+    from waveorder.io import utils
+    from waveorder.optim import has_optimizable_params
+
     settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
 
     # Check for optimizable parameters and run optimization if needed
@@ -81,6 +81,14 @@ def _reconstruct_cli(
 
 def _run_optimization(settings, input_position_dirpath, config_filepath):
     """Run parameter optimization before standard reconstruction."""
+    # Deferred imports for the same reason as above
+    from iohub.ngff import open_ome_zarr
+
+    from waveorder.api import fluorescence, phase
+    from waveorder.cli.settings import OptimizationSettings
+    from waveorder.cli.utils import resolve_time_indices
+    from waveorder.io import utils
+
     if settings.birefringence is not None:
         raise NotImplementedError("Parameter optimization is not supported for birefringence reconstructions.")
 
@@ -93,8 +101,13 @@ def _run_optimization(settings, input_position_dirpath, config_filepath):
     recon_dim = settings.reconstruction_dimension
     optimize_kwargs = dict(
         recon_dim=recon_dim,
-        num_iterations=opt.num_iterations,
-        midband_fractions=opt.loss.midband_fractions,
+        max_iterations=opt.max_iterations,
+        method=opt.method,
+        convergence_tol=opt.convergence_tol,
+        convergence_patience=opt.convergence_patience,
+        use_gradients=opt.use_gradients,
+        grid_points=opt.grid_points,
+        loss_settings=opt.loss,
         log_dir=opt.log_dir,
         device=settings.device,
     )

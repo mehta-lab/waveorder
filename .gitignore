@@ -155,3 +155,6 @@ waveorder/_version.py
 # example data
 /examples/data_temp/*
 /logs/*
+
+# local scripts
+scripts/
