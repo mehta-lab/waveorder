@@ -1,51 +1,11 @@
 from pathlib import Path
 
 import click
-import numpy as np
-import xarray as xr
-from iohub.ngff import open_ome_zarr
-from iohub.ngff.models import TransformationMeta
 
-from waveorder.api import (
-    birefringence,
-    birefringence_and_phase,
-    fluorescence,
-    phase,
-)
 from waveorder.cli.parsing import config_filepath, output_dirpath
-from waveorder.cli.printing import echo_headline
-from waveorder.cli.settings import ReconstructionSettings
-from waveorder.io import utils
 
 
-def _write_czyx(czyx: xr.DataArray, path: Path):
-    """Write a CZYX xr.DataArray to an HCS OME-Zarr."""
-    channel_names = list(czyx.coords["c"].values)
-    dataset = open_ome_zarr(path, layout="hcs", mode="w", channel_names=channel_names)
-    position = dataset.create_position("0", "0", "0")
-    position.create_zeros(
-        "0",
-        (1, *czyx.shape),
-        dtype=np.float32,
-        transform=[
-            TransformationMeta(
-                type="scale",
-                scale=[
-                    1,
-                    1,
-                    float(czyx.z[1] - czyx.z[0]),
-                    float(czyx.y[1] - czyx.y[0]),
-                    float(czyx.x[1] - czyx.x[0]),
-                ],
-            )
-        ],
-    )
-    position["0"][0] = czyx.values
-
-    dataset.close()
-
-
-@click.command("simulate")
+@click.command("simulate", no_args_is_help=True)
 @config_filepath()
 @output_dirpath()
 def _simulate_cli(config_filepath: Path, output_dirpath: Path):
@@ -55,8 +15,53 @@ def _simulate_cli(config_filepath: Path, output_dirpath: Path):
     simulated measurement as separate channels.
 
     \b
-    >> wo sim -c ./phase.yml -o ./phase.zarr
+    Example:
+      \033[92mwo sim -c ./phase.yml -o ./phase.zarr\033[0m
     """
+    click.echo(click.style("Starting simulation...", fg="green"))
+
+    # Deferred imports: these pull in torch, iohub, numpy, etc.
+    # Only loaded when the command runs, keeping wo sim -h fast.
+    import numpy as np
+    import xarray as xr
+    from iohub.ngff import open_ome_zarr
+    from iohub.ngff.models import TransformationMeta
+
+    from waveorder.api import (
+        birefringence,
+        birefringence_and_phase,
+        fluorescence,
+        phase,
+    )
+    from waveorder.cli.printing import echo_headline
+    from waveorder.cli.settings import ReconstructionSettings
+    from waveorder.io import utils
+
+    def _write_czyx(czyx: xr.DataArray, path: Path):
+        """Write a CZYX xr.DataArray to an HCS OME-Zarr."""
+        channel_names = list(czyx.coords["c"].values)
+        dataset = open_ome_zarr(path, layout="hcs", mode="w", channel_names=channel_names)
+        position = dataset.create_position("0", "0", "0")
+        position.create_zeros(
+            "0",
+            (1, *czyx.shape),
+            dtype=np.float32,
+            transform=[
+                TransformationMeta(
+                    type="scale",
+                    scale=[
+                        1,
+                        1,
+                        float(czyx.z[1] - czyx.z[0]),
+                        float(czyx.y[1] - czyx.y[0]),
+                        float(czyx.x[1] - czyx.x[0]),
+                    ],
+                )
+            ],
+        )
+        position["0"][0] = czyx.values
+        dataset.close()
+
     settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
 
     recon_dim = settings.reconstruction_dimension

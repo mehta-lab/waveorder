@@ -2,14 +2,16 @@ from pathlib import Path
 from typing import Callable
 
 import click
-import torch.multiprocessing as mp
-from iohub.ngff import Plate, open_ome_zarr
-from natsort import natsorted
 
 from waveorder.cli.option_eat_all import OptionEatAll
 
 
 def _validate_and_process_paths(ctx: click.Context, opt: click.Option, value: str) -> list[Path]:
+    # Deferred imports: iohub and natsort are heavy (pull in torch via zarr/numpy chain).
+    # Only needed when the command actually runs, not for --help.
+    from iohub.ngff import Plate, open_ome_zarr
+    from natsort import natsorted
+
     # Sort and validate the input paths, expanding plates into lists of positions
     input_paths = [Path(path) for path in natsorted(value)]
     # Filter out non-directories (e.g., zarr.json files from glob expansion)
@@ -88,6 +90,9 @@ def output_dirpath() -> Callable:
 # TODO: this setting will have to be collected from SLURM?
 def processes_option(default: int = None) -> Callable:
     def check_processes_option(ctx, param, value):
+        # Deferred: torch.multiprocessing pulls in all of torch.
+        import torch.multiprocessing as mp
+
         max_processes = mp.cpu_count()
         if value > max_processes:
             raise click.BadParameter(f"Maximum number of processes is {max_processes}")
@@ -97,7 +102,7 @@ def processes_option(default: int = None) -> Callable:
         return click.option(
             "--num_processes",
             "-j",
-            default=default or mp.cpu_count(),
+            default=default or 1,
             type=int,
             help="Number of processes to run in parallel.",
             callback=check_processes_option,

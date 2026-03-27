@@ -14,6 +14,8 @@ import subprocess
 from pathlib import Path
 
 logging.getLogger("iohub").setLevel(logging.ERROR)
+logging.getLogger("iohub.ngff").setLevel(logging.ERROR)
+logging.getLogger("iohub.ngff.nodes").setLevel(logging.ERROR)
 
 import numpy as np
 import torch
