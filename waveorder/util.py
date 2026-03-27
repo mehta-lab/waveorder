@@ -212,67 +212,6 @@ def genStarTarget_3D(
     return star, azimuth, inc_angle
 
 
-def generate_sphere_target(zyx_shape, yx_pixel_size, z_pixel_size, radius, blur_size=0.1):
-    """
-
-    generate 3D sphere target for simulation
-
-    Parameters
-    ----------
-        zyx_shape   : tuple
-                    shape of the computed 3D space with size of (Z, Y, X)
-
-        yx_pixel_size        : float
-                    transverse pixel size of the image space
-
-        z_pixel_size       : float
-                    axial step size of the image space
-
-        radius    : float
-                    radius of the generated sphere
-
-        blur_size : float
-                    the standard deviation of the imposed 3D Gaussian blur on the simulated image
-
-
-    Returns
-    -------
-        sphere    : torch.tensor
-                    3D star image with the size of (Z, Y, X)
-
-        azimuth   : torch.tensor
-                    azimuthal angle of the 3D polar coordinate with the size of (Z, Y, X)
-
-        inc_angle : torch.tensor
-                    theta angle of the 3D polar coordinate with the size of (Z, Y, X)
-
-    """
-
-    Z, Y, X = zyx_shape
-    x = (torch.arange(X) - X // 2) * yx_pixel_size
-    y = (torch.arange(Y) - Y // 2) * yx_pixel_size
-    z = (torch.arange(Z) - Z // 2) * z_pixel_size
-
-    zz, yy, xx = torch.meshgrid(z, y, x, indexing="ij")
-
-    rho = torch.sqrt(xx**2 + yy**2 + zz**2)
-    azimuth = torch.arctan2(yy, xx)
-    inc_angle = torch.arctan2((xx**2 + yy**2) ** (1 / 2), zz)
-
-    sphere = torch.zeros_like(xx)
-    sphere[xx**2 + yy**2 + zz**2 < radius**2] = 1
-
-    Gaussian = np.exp(-(rho**2) / (2 * blur_size**2))
-
-    sphere = np.maximum(
-        0,
-        torch.real(torch.fft.ifftn(torch.fft.fftn(sphere) * torch.fft.fftn(torch.fft.ifftshift(Gaussian)))),
-    )
-    sphere /= torch.max(sphere)
-
-    return sphere, azimuth, inc_angle
-
-
 def gen_coordinate(
     img_dim: tuple[int, int],
     ps: float,
