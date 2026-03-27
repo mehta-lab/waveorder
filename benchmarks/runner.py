@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -224,7 +225,7 @@ def run_synthetic_case(
 
 def run_experiment(
     experiment_path: str | Path,
-    output_dir: str | Path = ".",
+    output_dir: str | Path | None = None,
 ) -> dict:
     """Run all cases in an experiment.
 
@@ -242,6 +243,8 @@ def run_experiment(
     """
     experiment_path = Path(experiment_path)
     experiment = load_experiment(experiment_path)
+    if output_dir is None:
+        output_dir = Path(os.environ.get("WAVEORDER_BENCH_OUTPUT", "."))
     output_dir = Path(output_dir)
 
     metadata = collect_metadata()
@@ -253,6 +256,7 @@ def run_experiment(
     run_dir.mkdir(parents=True, exist_ok=True)
 
     (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
+    shutil.copy2(experiment_path, run_dir / "experiment.yml")
 
     results = {}
     for case_name, case in experiment.cases.items():
