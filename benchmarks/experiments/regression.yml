@@ -19,3 +19,9 @@ cases:
       bead_radius_um: 2.5
       fluorescence_intensity: 1.0
     config: ../configs/fluor_3d_beads.yml
+
+  ops_pheno_center:
+    type: hpc
+    input: /hpc/projects/intracellular_dashboard/ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
+    position: A/1/029029
+    config: ../configs/ops_pheno_phase_2d.yml

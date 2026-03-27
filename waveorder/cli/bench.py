@@ -52,7 +52,7 @@ def run(experiment, scope, output_dir):
 
     # Deferred imports: benchmarks.runner pulls in torch, iohub, etc.
     from benchmarks.config import load_experiment, resolve_recon_config
-    from benchmarks.runner import run_synthetic_case
+    from benchmarks.runner import run_hpc_case, run_synthetic_case
     from benchmarks.utils import collect_metadata
 
     if experiment is None:
@@ -81,31 +81,38 @@ def run(experiment, scope, output_dir):
 
     results = {}
     for case_name, case in exp.cases.items():
-        if case.type != "synthetic" and scope == "synthetic":
-            click.echo(f"  {case_name:24s} skipped (non-synthetic)")
+        if case.type == "hpc" and scope == "synthetic":
             continue
-        if case.type == "hpc":
-            click.echo(f"  {case_name:24s} skipped (HPC not yet supported)")
+        if case.type not in ("synthetic", "hpc"):
+            click.echo(f"  {case_name:24s} skipped ({case.type} not yet supported)")
             continue
 
         case_dir = run_dir / "cases" / case_name
         recon_config = resolve_recon_config(case, experiment_path.parent)
-        modality = "phase" if "phase" in recon_config else "fluorescence"
 
         click.echo(f"  {case_name:24s} running...", nl=False)
         try:
-            metrics = run_synthetic_case(
-                phantom_config=case.phantom,
-                recon_config=recon_config,
-                case_dir=case_dir,
-                modality=modality,
-            )
+            if case.type == "synthetic":
+                modality = "phase" if "phase" in recon_config else "fluorescence"
+                metrics = run_synthetic_case(
+                    phantom_config=case.phantom,
+                    recon_config=recon_config,
+                    case_dir=case_dir,
+                    modality=modality,
+                )
+            elif case.type == "hpc":
+                metrics = run_hpc_case(
+                    input_path=case.input,
+                    position=case.position,
+                    recon_config=recon_config,
+                    case_dir=case_dir,
+                )
+
             results[case_name] = metrics
 
             timing = json.loads((case_dir / "timing.json").read_text())
             elapsed = timing.get("elapsed_s", 0)
             metrics["elapsed_s"] = elapsed
-            # Clear the "running..." line and print the result row
             click.echo("\033[2K\r", nl=False)
             _print_row(case_name, metrics, elapsed=elapsed)
         except Exception as e:

@@ -43,6 +43,8 @@ class CaseConfig(BaseModel):
     phantom: PhantomConfig | None = None
     config: str | None = None
     overrides: dict[str, Any] | None = None
+    input: str | None = None
+    position: str | None = None
 
 
 class ExperimentConfig(BaseModel):

@@ -223,6 +223,86 @@ def run_synthetic_case(
     return metrics
 
 
+def run_hpc_case(
+    input_path: str,
+    position: str,
+    recon_config: dict,
+    case_dir: Path,
+) -> dict:
+    """Run a single HPC benchmark case on existing data via ``wo rec``.
+
+    Parameters
+    ----------
+    input_path : str
+        Path to input OME-Zarr store.
+    position : str
+        Position key within the store (e.g. "A/1/029029").
+    recon_config : dict
+        Reconstruction config dict.
+    case_dir : Path
+        Output directory for this case.
+
+    Returns
+    -------
+    dict
+        Metrics dict from compute_metrics.
+    """
+    case_dir.mkdir(parents=True, exist_ok=True)
+    tt = TimingTree()
+
+    # Determine modality and optics from config
+    modality = "phase" if "phase" in recon_config else "fluorescence"
+    tf_settings = recon_config.get(modality, {}).get("transfer_function", {})
+
+    with tt.time("total"):
+        # Write reconstruction config
+        config_path = case_dir / "config.yml"
+        config_path.write_text(yaml.dump(recon_config, default_flow_style=False))
+
+        # Build CLI command
+        position_path = Path(input_path) / position
+        recon_path = case_dir / "reconstruction.zarr"
+        cli_cmd = f"wo rec -i {position_path} -c {config_path} -o {recon_path}"
+        (case_dir / "cli_command.sh").write_text(f"#!/bin/bash\n{cli_cmd}\n")
+
+        # Reconstruct via wo rec
+        with tt.time("reconstruct"):
+            env = {**os.environ, "PYTHONWARNINGS": "ignore::UserWarning,ignore::DeprecationWarning"}
+            result = subprocess.run(
+                ["wo", "rec", "-i", str(position_path), "-c", str(config_path), "-o", str(recon_path)],
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(f"wo rec failed:\n{result.stderr}")
+
+        # Load reconstruction and compute metrics (image_quality only, no phantom)
+        with tt.time("metrics"):
+            recon_data = _read_zarr(recon_path)
+            while recon_data.ndim > 3:
+                recon_data = recon_data[0]
+
+            NA_det = tf_settings.get("numerical_aperture_detection", 1.2)
+            wavelength = tf_settings.get(
+                "wavelength_illumination",
+                tf_settings.get("wavelength_emission", 0.532),
+            )
+            pixel_size = tf_settings.get("yx_pixel_size", 0.1)
+
+            metrics = compute_metrics(
+                recon_data,
+                NA_det=NA_det,
+                wavelength=wavelength,
+                pixel_size=pixel_size,
+            )
+
+    tt.save(case_dir / "timing.json")
+    (case_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
+
+    return metrics
+
+
 def run_experiment(
     experiment_path: str | Path,
     output_dir: str | Path | None = None,
