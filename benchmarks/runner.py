@@ -17,7 +17,7 @@ import yaml
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
-from benchmarks.config import load_experiment
+from benchmarks.config import PhantomConfig, load_experiment, resolve_recon_config
 from benchmarks.metrics import compute_metrics
 from benchmarks.simulate import simulate_fluorescence_3d, simulate_phase_3d
 from benchmarks.utils import TimingTree, collect_metadata
@@ -30,27 +30,25 @@ _PHANTOM_FUNCTIONS = {
 }
 
 
-def _build_phantom(phantom_config: dict) -> phantoms.Phantom:
-    """Build a phantom from a config dict.
+def _build_phantom(phantom_config: PhantomConfig | dict) -> phantoms.Phantom:
+    """Build a phantom from a config.
 
     Parameters
     ----------
-    phantom_config : dict
-        Must include "function" key. Remaining keys are passed
-        as kwargs to the phantom function.
+    phantom_config : PhantomConfig or dict
+        Phantom configuration. If dict, will be validated as PhantomConfig.
 
     Returns
     -------
     Phantom
         Generated phantom.
     """
-    config = dict(phantom_config)
-    func_name = config.pop("function")
+    if isinstance(phantom_config, dict):
+        phantom_config = PhantomConfig(**phantom_config)
+    kwargs = phantom_config.model_dump()
+    func_name = kwargs.pop("function")
     func = _PHANTOM_FUNCTIONS[func_name]
-    for key in ("shape", "pixel_sizes"):
-        if key in config:
-            config[key] = tuple(config[key])
-    return func(**config)
+    return func(**kwargs)
 
 
 def _write_zarr(data: torch.Tensor, path: Path, channel_name: str, pixel_sizes: tuple[float, float, float]):
@@ -234,38 +232,29 @@ def run_experiment(
     dict
         Per-case metrics keyed by case name.
     """
+    experiment_path = Path(experiment_path)
     experiment = load_experiment(experiment_path)
     output_dir = Path(output_dir)
 
     metadata = collect_metadata()
-    run_name = f"{metadata['git_hash']}_{experiment.get('name', 'experiment')}"
+    run_name = f"{metadata['git_hash']}_{experiment.name}"
     run_dir = output_dir / "runs" / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
 
     (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
 
     results = {}
-    for case_name, case in experiment.get("cases", {}).items():
-        case_type = case.get("type", "synthetic")
-        if case_type != "synthetic":
+    for case_name, case in experiment.cases.items():
+        if case.type != "synthetic":
             print(f"Skipping non-synthetic case: {case_name}")
             continue
 
         case_dir = run_dir / "cases" / case_name
-
-        # Resolve config
-        recon_config = case.get("_resolved_config", {})
-        if not recon_config and "config" in case:
-            config_path = Path(case["config"])
-            if not config_path.is_absolute():
-                config_path = Path(experiment_path).parent / config_path
-            with open(config_path) as f:
-                recon_config = yaml.safe_load(f)
-
+        recon_config = resolve_recon_config(case, experiment_path.parent)
         modality = "phase" if "phase" in recon_config else "fluorescence"
 
         results[case_name] = run_synthetic_case(
-            phantom_config=case["phantom"],
+            phantom_config=case.phantom,
             recon_config=recon_config,
             case_dir=case_dir,
             modality=modality,
