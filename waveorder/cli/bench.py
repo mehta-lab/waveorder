@@ -8,10 +8,6 @@ from pathlib import Path
 
 import click
 
-from benchmarks.config import load_experiment, resolve_recon_config
-from benchmarks.runner import run_synthetic_case
-from benchmarks.utils import collect_metadata, render_histogram
-
 _DEFAULT_EXPERIMENT = Path(__file__).parent.parent.parent / "benchmarks" / "experiments" / "regression.yml"
 
 
@@ -43,7 +39,19 @@ def benchmark():
     help="Root output directory for benchmark runs.",
 )
 def run(experiment, scope, output_dir):
-    """Run benchmark cases."""
+    """Run benchmark cases.
+
+    \b
+    Example:
+      \033[92mwo bm run --scope synthetic\033[0m
+    """
+    click.echo(click.style("Starting benchmark run...", fg="green"))
+
+    # Deferred imports: benchmarks.runner pulls in torch, iohub, etc.
+    from benchmarks.config import load_experiment, resolve_recon_config
+    from benchmarks.runner import run_synthetic_case
+    from benchmarks.utils import collect_metadata
+
     if experiment is None:
         experiment = str(_DEFAULT_EXPERIMENT)
 
@@ -112,6 +120,11 @@ def run(experiment, scope, output_dir):
 @click.option("--output-dir", "-o", type=click.Path(), default=".", help="Root output directory.")
 def latest(output_dir):
     """Show summary of the most recent benchmark run."""
+    click.echo(click.style("Loading latest benchmark...", fg="green"))
+
+    # Deferred import
+    from benchmarks.utils import render_histogram
+
     runs_dir = Path(output_dir) / "runs"
     if not runs_dir.exists():
         click.echo("No benchmark runs found.")
