@@ -259,24 +259,21 @@ def _optimize_gradient(
 
         try:
             if method == "lbfgs":
+                closure_recon = [None]
 
                 def closure():
                     optimizer.zero_grad()
                     kwargs = dict(fixed_params)
                     kwargs.update(param_tensors)
                     with contextlib.redirect_stdout(io.StringIO()):
-                        recon = reconstruct_fn(data, **kwargs)
-                    loss = _compute_loss(recon)
+                        closure_recon[0] = reconstruct_fn(data, **kwargs)
+                    loss = _compute_loss(closure_recon[0])
                     if use_gradients:
                         loss.backward()
                     return loss
 
                 loss = optimizer.step(closure)
-                kwargs = dict(fixed_params)
-                kwargs.update(param_tensors)
-                with torch.no_grad():
-                    with contextlib.redirect_stdout(io.StringIO()):
-                        recon = reconstruct_fn(data, **kwargs)
+                recon = closure_recon[0]
             else:
                 optimizer.zero_grad()
                 kwargs = dict(fixed_params)
