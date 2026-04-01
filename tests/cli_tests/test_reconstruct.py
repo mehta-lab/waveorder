@@ -429,8 +429,8 @@ def test_pixel_size_mismatch_warning(tmp_path):
     assert len(mismatch_warnings) > 0, "Expected pixel size mismatch warning"
 
 
-def test_overwrite_scale(tmp_path):
-    """--overwrite-scale should use config pixel sizes in the output."""
+def test_write_config_scale_to_output(tmp_path):
+    """--write-config-scale-to-output should use config pixel sizes in the output."""
     input_path = tmp_path / "overwrite_input.zarr"
     output_path = tmp_path / "overwrite_output.zarr"
 
@@ -467,7 +467,7 @@ def test_overwrite_scale(tmp_path):
             str(config_path),
             "-o",
             str(output_path),
-            "--overwrite-scale",
+            "--write-config-scale-to-output",
         ],
         catch_exceptions=False,
     )

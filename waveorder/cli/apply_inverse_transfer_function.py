@@ -24,9 +24,9 @@ from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,
-    overwrite_scale,
     processes_option,
     transfer_function_dirpath,
+    write_config_scale_to_output,
 )
 from waveorder.cli.printing import echo_headline, echo_settings
 from waveorder.cli.settings import ReconstructionSettings
@@ -147,7 +147,7 @@ def _warn_pixel_size_mismatch(input_scale, config_pixel_sizes):
             f"Input pixel sizes do not match reconstruction config "
             f"(>{rel_tol:.0%} relative difference):\n{detail}\n"
             f"The input zarr's pixel sizes will be used in the output. "
-            f"Use --overwrite-scale to use the config's pixel sizes instead.",
+            f"Use --write-config-scale-to-output to use the config's pixel sizes instead.",
             UserWarning,
             stacklevel=2,
         )
@@ -156,7 +156,7 @@ def _warn_pixel_size_mismatch(input_scale, config_pixel_sizes):
 def get_reconstruction_output_metadata(
     position_path: Path,
     config_path: Path,
-    overwrite_scale: bool = False,
+    write_config_scale_to_output: bool = False,
 ):
     # Get non-OME-Zarr plate-level metadata if it's available
     plate_metadata = {}
@@ -185,7 +185,7 @@ def get_reconstruction_output_metadata(
     scale = input_dataset.scale
     config_pixel_sizes = _get_config_pixel_sizes(settings)
     if config_pixel_sizes is not None:
-        if overwrite_scale:
+        if write_config_scale_to_output:
             z_pixel_size, yx_pixel_size = config_pixel_sizes
             scale = (scale[0], scale[1], z_pixel_size, yx_pixel_size, yx_pixel_size)
         else:
@@ -367,10 +367,12 @@ def apply_inverse_transfer_function_cli(
     config_filepath: Path,
     output_dirpath: Path,
     num_processes,
-    overwrite_scale: bool = False,
+    write_config_scale_to_output: bool = False,
 ) -> None:
     # Prepare output store
-    output_metadata = get_reconstruction_output_metadata(input_position_dirpaths[0], config_filepath, overwrite_scale)
+    output_metadata = get_reconstruction_output_metadata(
+        input_position_dirpaths[0], config_filepath, write_config_scale_to_output
+    )
 
     # Generate position keys - use valid HCS keys for single-position stores
     position_keys = []
@@ -419,14 +421,14 @@ def apply_inverse_transfer_function_cli(
 @config_filepath()
 @output_dirpath()
 @processes_option(default=1)
-@overwrite_scale()
+@write_config_scale_to_output()
 def _apply_inverse_transfer_function_cli(
     input_position_dirpaths: list[Path],
     transfer_function_dirpath: Path,
     config_filepath: Path,
     output_dirpath: Path,
     num_processes,
-    overwrite_scale: bool,
+    write_config_scale_to_output: bool,
 ) -> None:
     """
     Apply an inverse transfer function to a dataset using a configuration file.
@@ -446,5 +448,5 @@ def _apply_inverse_transfer_function_cli(
         config_filepath,
         output_dirpath,
         num_processes,
-        overwrite_scale,
+        write_config_scale_to_output,
     )
