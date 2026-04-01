@@ -339,6 +339,7 @@ def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
             Path(tmp_config_yml),
             Path(result_path),
             1,
+            False,
         )
         assert result_inv.exit_code == 0
 
@@ -375,3 +376,109 @@ def test_cli_apply_inv_tf_output(tmp_input_path_zarr, capsys):
 
         # Check scale transformations pass through
         assert input_scale == result_dataset.scale
+
+
+def test_pixel_size_mismatch_warning(tmp_path):
+    """Warn when input zarr scale and config pixel sizes differ by >5%."""
+    import warnings as _warnings
+
+    input_path = tmp_path / "mismatch_input.zarr"
+    output_path = tmp_path / "mismatch_output.zarr"
+
+    channel_names = ["Brightfield"]
+    # Input scale with pixel sizes that differ from default config values
+    mismatched_scale = [1, 1, 0.5, 0.2, 0.2]  # z=0.5, yx=0.2
+    dataset = open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=channel_names)
+    position = dataset.create_position("0", "0", "0")
+    position.create_zeros(
+        "0",
+        (1, 1, 4, 5, 6),
+        dtype=np.uint16,
+        transform=[TransformationMeta(type="scale", scale=mismatched_scale)],
+    )
+    dataset.close()
+
+    # Config with default pixel sizes (z=0.25, yx=0.1) — differ from input by 100%
+    recon_settings = settings.ReconstructionSettings(
+        input_channel_names=channel_names,
+        time_indices="all",
+        reconstruction_dimension=3,
+        phase=settings.PhaseSettings(),
+    )
+    config_path = tmp_path / "mismatch.yml"
+    utils.model_to_yaml(recon_settings, config_path)
+
+    runner = CliRunner()
+    with _warnings.catch_warnings(record=True) as caught:
+        _warnings.simplefilter("always")
+        runner.invoke(
+            cli,
+            [
+                "reconstruct",
+                "-i",
+                str(input_path / "0" / "0" / "0"),
+                "-c",
+                str(config_path),
+                "-o",
+                str(output_path),
+            ],
+            catch_exceptions=False,
+        )
+
+    mismatch_warnings = [w for w in caught if "do not match" in str(w.message).lower()]
+    assert len(mismatch_warnings) > 0, "Expected pixel size mismatch warning"
+
+
+def test_overwrite_scale(tmp_path):
+    """--overwrite-scale should use config pixel sizes in the output."""
+    input_path = tmp_path / "overwrite_input.zarr"
+    output_path = tmp_path / "overwrite_output.zarr"
+
+    channel_names = ["Brightfield"]
+    original_scale = [1, 1, 0.5, 0.2, 0.2]
+    dataset = open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=channel_names)
+    position = dataset.create_position("0", "0", "0")
+    position.create_zeros(
+        "0",
+        (1, 1, 4, 5, 6),
+        dtype=np.uint16,
+        transform=[TransformationMeta(type="scale", scale=original_scale)],
+    )
+    dataset.close()
+
+    # Config with z=0.25, yx=0.1
+    recon_settings = settings.ReconstructionSettings(
+        input_channel_names=channel_names,
+        time_indices="all",
+        reconstruction_dimension=3,
+        phase=settings.PhaseSettings(),
+    )
+    config_path = tmp_path / "overwrite.yml"
+    utils.model_to_yaml(recon_settings, config_path)
+
+    runner = CliRunner()
+    runner.invoke(
+        cli,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+            "--overwrite-scale",
+        ],
+        catch_exceptions=False,
+    )
+
+    assert output_path.exists()
+    with open_ome_zarr(output_path) as result:
+        result_scale = result["0/0/0"].scale
+        # T and C scales should be unchanged
+        assert result_scale[0] == original_scale[0]
+        assert result_scale[1] == original_scale[1]
+        # Z, Y, X should match config pixel sizes
+        assert result_scale[2] == 0.25  # z_pixel_size default
+        assert result_scale[3] == 0.1  # yx_pixel_size default
+        assert result_scale[4] == 0.1
