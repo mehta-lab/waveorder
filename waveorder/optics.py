@@ -177,7 +177,9 @@ def generate_tilted_pupil(
     Returns
     -------
     torch.Tensor
-        Tilted pupil function (Ny, Nx), values in [0, 1].
+        Tilted pupil function with shape ``(Ny, Nx)`` or
+        ``(B, Ny, Nx)`` when tilt angles have a leading batch
+        dimension (e.g. ``(B, 1, 1)``). Values in [0, 1].
     """
     NA = torch.as_tensor(NA, dtype=torch.float32)
     tilt_angle_zenith = torch.as_tensor(tilt_angle_zenith, dtype=torch.float32)
@@ -764,25 +766,28 @@ def generate_greens_tensor_spectrum(
 
 def compute_weak_object_transfer_function_2d(illumination_pupil, detection_pupil):
     """
+    Compute 2D weak object transfer function (2D WOTF).
 
-    compute 2D weak object transfer function (2D WOTF)
+    Supports broadcasting: e.g. illumination ``(B, 1, Y, X)`` against
+    detection ``(1, Z, Y, X)`` produces ``(B, Z, Y, X)`` transfer functions.
 
     Parameters
     ----------
         illumination_pupil  : torch.tensor
-                  illumination source pattern with the size of (Y, X)
+                  illumination source pattern, broadcastable against
+                  detection_pupil in all dims except the last two (Y, X)
 
         detection_pupil   : torch.tensor
-                  pupil function with the size of (Y, X)
+                  pupil function, broadcastable against illumination_pupil
 
     Returns
     -------
 
         absorption_transfer_function      : torch.tensor
-                  absorption transfer function with size of (Y, X)
+                  absorption transfer function
 
         phase_transfer_function      : torch.tensor
-                  phase transfer function with size of (Y, X)
+                  phase transfer function
 
     """
 
@@ -910,26 +915,39 @@ def compute_weak_object_transfer_function_3D(
 
     """
 
-    # NOTE: To match numpy's hanning window, I needed `periodic=False. I think
-    # I would prefer `periodic=True` so that window[0] == 1, but the difference
-    # should be marginal.
-    window = torch.fft.ifftshift(torch.hann_window(propagation_kernel.shape[0], periodic=False))
+    # Supports both scalar (Y, X) and batched (B, Y, X) illumination pupils.
+    # When batched, all intermediates and outputs have shape (B, Z, Y, X).
+    # Uses negative indexing so the same code handles both cases.
 
-    SPHz_hat = torch.fft.fft2(
-        (illumination_pupil * detection_pupil)[None, :, :] * propagation_kernel,
-        dim=(1, 2),
+    window = torch.fft.ifftshift(
+        torch.hann_window(propagation_kernel.shape[0], periodic=False, device=propagation_kernel.device)
     )
-    PG_hat = torch.fft.fft2(detection_pupil[None, :, :] * greens_function_z, dim=(1, 2))
 
-    H1 = torch.fft.ifft2(torch.conj(SPHz_hat) * PG_hat, dim=(1, 2))
-    H1 = H1 * window[:, None, None]
-    H1 = torch.fft.fft(H1, dim=0)
+    # ill * det: (..., Y, X) where ... is empty or (B,)
+    ill_det = illumination_pupil * detection_pupil
 
-    H2 = torch.fft.ifft2(SPHz_hat * torch.conj(PG_hat), dim=(1, 2))
-    H2 = H2 * window[:, None, None]
-    H2 = torch.fft.fft(H2, dim=0)
+    # Add Z dim: (..., 1, Y, X) * (Z, Y, X) -> (..., Z, Y, X)
+    SPHz = ill_det.unsqueeze(-3) * propagation_kernel
+    # PG is shared: (Z, Y, X), broadcasts against (..., Z, Y, X)
+    PG = detection_pupil.unsqueeze(0) * greens_function_z
 
-    direct_intensity = torch.sum(illumination_pupil_support * detection_pupil * torch.conj(detection_pupil))
+    SPHz_hat = torch.fft.fft2(SPHz, dim=(-2, -1))
+    PG_hat = torch.fft.fft2(PG, dim=(-2, -1))
+
+    H1 = torch.fft.ifft2(torch.conj(SPHz_hat) * PG_hat, dim=(-2, -1))
+    H1 = H1 * window.reshape((1,) * (H1.ndim - 3) + (-1, 1, 1))
+    H1 = torch.fft.fft(H1, dim=-3)
+
+    H2 = torch.fft.ifft2(SPHz_hat * torch.conj(PG_hat), dim=(-2, -1))
+    H2 = H2 * window.reshape((1,) * (H2.ndim - 3) + (-1, 1, 1))
+    H2 = torch.fft.fft(H2, dim=-3)
+
+    # direct_intensity: sum over Y,X with keepdim for broadcast
+    det_sq = detection_pupil * torch.conj(detection_pupil)
+    direct_intensity = torch.sum(illumination_pupil_support * det_sq, dim=(-2, -1), keepdim=True)
+    # Add Z dim(s) to match H1/H2: (..., 1, 1) -> (..., 1, 1, 1)
+    direct_intensity = direct_intensity.unsqueeze(-3)
+
     real_potential_transfer_function = (H1 + H2) / direct_intensity
     imag_potential_transfer_function = 1j * (H1 - H2) / direct_intensity
 

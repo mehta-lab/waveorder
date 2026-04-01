@@ -7,9 +7,12 @@ from waveorder.optim._types import (
     has_optimizable_params,
 )
 from waveorder.optim.logging import NullLogger, OptimLogger, PrintLogger, TensorBoardLogger
+from waveorder.optim.losses import LossSettings, build_loss_fn
 from waveorder.optim.optimize import OptimizationResult, optimize_reconstruction
 
 __all__ = [
+    "build_loss_fn",
+    "LossSettings",
     "OptimizableFloat",
     "OptimizableValue",
     "OptimizationResult",

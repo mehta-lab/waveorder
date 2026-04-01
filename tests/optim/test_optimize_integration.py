@@ -2,6 +2,7 @@
 
 from waveorder.api import fluorescence, phase
 from waveorder.optim import OptimizableFloat
+from waveorder.optim.losses import MidbandPowerLossSettings
 
 
 def test_phase_2d_optimize_z_focus_offset():
@@ -18,8 +19,8 @@ def test_phase_2d_optimize_z_focus_offset():
     optimized, recon = phase.optimize(
         data,
         settings=opt_settings,
-        num_iterations=50,
-        midband_fractions=(0.1, 0.5),
+        max_iterations=50,
+        loss_settings=MidbandPowerLossSettings(midband_fractions=[0.1, 0.5]),
     )
 
     assert abs(optimized.transfer_function.z_focus_offset - gt_offset) < 0.5
@@ -46,8 +47,8 @@ def test_phase_2d_optimize_with_tilt_loss_improves():
     optimized, recon = phase.optimize(
         data,
         settings=opt_settings,
-        num_iterations=20,
-        midband_fractions=(0.1, 0.5),
+        max_iterations=20,
+        loss_settings=MidbandPowerLossSettings(midband_fractions=[0.1, 0.5]),
     )
 
     # Just verify the optimization ran and produced a result
@@ -71,8 +72,8 @@ def test_fluorescence_2d_optimize_z_focus_offset():
     optimized, recon = fluorescence.optimize(
         data,
         settings=opt_settings,
-        num_iterations=50,
-        midband_fractions=(0.1, 0.5),
+        max_iterations=50,
+        loss_settings=MidbandPowerLossSettings(midband_fractions=[0.1, 0.5]),
     )
 
     assert abs(optimized.transfer_function.z_focus_offset - gt_offset) < 1.0
@@ -96,7 +97,7 @@ def test_phase_3d_optimize_na_detection():
         data,
         recon_dim=3,
         settings=opt_settings,
-        num_iterations=5,
+        max_iterations=5,
     )
 
     assert recon is not None
@@ -121,7 +122,7 @@ def test_fluorescence_3d_optimize_na_detection():
         data,
         recon_dim=3,
         settings=opt_settings,
-        num_iterations=5,
+        max_iterations=5,
     )
 
     assert recon is not None
@@ -148,7 +149,7 @@ def test_phase_3d_optimize_with_tilt():
         data,
         recon_dim=3,
         settings=opt_settings,
-        num_iterations=5,
+        max_iterations=5,
     )
 
     assert recon is not None
@@ -162,7 +163,7 @@ def test_phase_2d_no_optimizable_params_runs_standard():
     settings = phase.Settings()
     _, data = phase.simulate(settings, recon_dim=2, zyx_shape=(11, 128, 128))
 
-    returned_settings, recon = phase.optimize(data, settings=settings, num_iterations=10)
+    returned_settings, recon = phase.optimize(data, settings=settings, max_iterations=10)
 
     assert returned_settings.transfer_function.z_focus_offset == 0
     assert recon is not None

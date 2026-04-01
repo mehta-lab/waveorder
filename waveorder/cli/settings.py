@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Union
+from typing import Any, List, Literal, Optional, Union
 
 from pydantic import Field, NonNegativeInt, PositiveInt, model_validator
 
@@ -15,19 +15,46 @@ from waveorder.api.fluorescence import (  # noqa: F401
     Settings as FluorescenceSettings,
 )
 from waveorder.api.phase import Settings as PhaseSettings  # noqa: F401
+from waveorder.optim.losses import MidbandPowerLossSettings, _LossBaseModel
+
+_LOSS_TYPE_MAP = {
+    "midband_power": "MidbandPowerLossSettings",
+    "total_variation": "TotalVariationLossSettings",
+    "laplacian_variance": "LaplacianVarianceLossSettings",
+    "normalized_variance": "NormalizedVarianceLossSettings",
+    "spectral_flatness": "SpectralFlatnessLossSettings",
+}
 
 
-class MidbandPowerLoss(MyBaseModel):
-    type: Literal["midband_power"] = "midband_power"
-    midband_fractions: List[float] = Field(
-        default=[0.125, 0.25], description="inner/outer fractions of cutoff frequency"
-    )
+def _parse_loss(v: Any):
+    """Parse a loss config dict or instance into a LossSettings object."""
+    if isinstance(v, dict):
+        from waveorder.optim import losses
+
+        loss_type = v.get("type", "midband_power")
+        cls_name = _LOSS_TYPE_MAP.get(loss_type)
+        if cls_name is None:
+            raise ValueError(f"Unknown loss type: {loss_type}")
+        return getattr(losses, cls_name)(**v)
+    return v
 
 
 class OptimizationSettings(MyBaseModel):
-    num_iterations: PositiveInt = Field(default=10, description="number of Adam optimizer steps")
-    loss: MidbandPowerLoss = Field(default_factory=MidbandPowerLoss, description="loss function configuration")
+    max_iterations: PositiveInt = Field(default=10, description="maximum optimizer steps (ignored by grid_search)")
+    method: str = Field(default="adam", description="optimizer method: adam, lbfgs, nelder_mead, grid_search")
+    convergence_tol: Optional[float] = Field(default=None, description="early stopping tolerance")
+    convergence_patience: Optional[PositiveInt] = Field(default=5, description="patience for early stopping")
+    use_gradients: Optional[bool] = Field(default=None, description="auto-detect from method if null")
+    grid_points: int = Field(default=7, description="grid points per parameter (grid_search only)")
+    loss: _LossBaseModel = Field(default_factory=MidbandPowerLossSettings, description="loss function configuration")
     log_dir: Optional[str] = Field(default=None, description="TensorBoard log directory (null = no logging)")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _parse_loss_config(cls, data: Any) -> Any:
+        if isinstance(data, dict) and "loss" in data:
+            data["loss"] = _parse_loss(data["loss"])
+        return data
 
 
 # Top level settings (CLI-specific)

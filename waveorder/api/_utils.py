@@ -139,3 +139,27 @@ def _build_output_xarray(
         dims=("c", "z", "y", "x"),
         coords=coords,
     )
+
+
+def _wrap_output_tensor(tensor, channel_names, ref_data, singleton_z):
+    """Pad a tensor to CZYX and wrap as xr.DataArray.
+
+    Parameters
+    ----------
+    tensor : torch.Tensor
+        Output tensor with 2-4 dimensions (will be unsqueezed to 4D)
+    channel_names : list[str]
+        Channel names for the C dimension
+    ref_data : xr.DataArray
+        CZYX input DataArray (for inheriting coords)
+    singleton_z : bool
+        If True, use [0.0] for Z coords
+    """
+    while tensor.ndim < 4:
+        tensor = tensor.unsqueeze(0)
+    return _build_output_xarray(
+        tensor.cpu().numpy(),
+        channel_names,
+        ref_data,
+        singleton_z=singleton_z,
+    )

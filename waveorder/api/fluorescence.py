@@ -16,15 +16,14 @@ from waveorder.api._settings import (
     OptimizableFourierTransferFunctionSettings,
 )
 from waveorder.api._utils import (
-    _build_output_xarray,
     _named_dataarray,
     _output_channel_names,
     _position_list_from_shape_scale_offset,
     _to_singular_system,
     _to_tensor,
+    _wrap_output_tensor,
 )
 from waveorder.device import resolve_device
-from waveorder.focus import compute_midband_power
 from waveorder.models import (
     isotropic_fluorescent_thick_3d,
     isotropic_fluorescent_thin_3d,
@@ -35,6 +34,7 @@ from waveorder.optim import (
     extract_optimizable_params,
     optimize_reconstruction,
 )
+from waveorder.optim.losses import MidbandPowerLossSettings, build_loss_fn
 
 # --- Settings ---
 
@@ -246,19 +246,21 @@ def compute_transfer_function(
 
 
 def apply_inverse_transfer_function(
-    czyx_data: xr.DataArray,
+    czyx_data: xr.DataArray | list[xr.DataArray],
     transfer_function: xr.Dataset,
     recon_dim: Literal[2, 3],
     settings: Settings = None,
     fluor_channel_name: str = "",
     device: str | torch.device | None = None,
-) -> xr.DataArray:
+) -> xr.DataArray | list[xr.DataArray]:
     """Reconstruct fluorescence density.
 
     Parameters
     ----------
-    czyx_data : xr.DataArray
-        Input CZYX fluorescence data.
+    czyx_data : xr.DataArray or list[xr.DataArray]
+        Input CZYX fluorescence data. When a list is provided, tiles are
+        stacked into a batch for efficient GPU processing and the result
+        is returned as a list of xr.DataArrays.
     transfer_function : xr.Dataset
         Transfer function from ``compute_transfer_function``.
     recon_dim : {2, 3}
@@ -267,48 +269,57 @@ def apply_inverse_transfer_function(
         Fluorescence reconstruction settings. Uses defaults if None.
     fluor_channel_name : str
         Name for the output fluorescence channel.
+    device : str, torch.device, or None
+        Compute device.
 
     Returns
     -------
-    xr.DataArray
-        CZYX array with a single fluorescence density channel.
+    xr.DataArray or list[xr.DataArray]
+        CZYX array(s) with a single fluorescence density channel.
     """
     if settings is None:
         settings = Settings()
     device = resolve_device(device)
 
-    czyx_tensor = torch.tensor(czyx_data.values, dtype=torch.float32, device=device)
+    channel_names = _output_channel_names(
+        recon_fluo=True,
+        recon_dim=recon_dim,
+        fluor_channel_name=fluor_channel_name,
+    )
 
+    # Normalize input: list -> (B,Z,Y,X), single -> (Z,Y,X)
+    is_list = isinstance(czyx_data, list)
+    if is_list:
+        data_list = czyx_data
+        zyx_tensor = torch.stack(
+            [torch.tensor(d.values[0], dtype=torch.float32, device=device) for d in data_list]
+        )  # (B, Z, Y, X)
+    else:
+        zyx_tensor = torch.tensor(czyx_data.values[0], dtype=torch.float32, device=device)  # (Z, Y, X)
+
+    # Single model call — handles both (Z,Y,X) and (B,Z,Y,X)
     # [fluo, 2]
     if recon_dim == 2:
         U, S, Vh = _to_singular_system(transfer_function)
         output = isotropic_fluorescent_thin_3d.apply_inverse_transfer_function(
-            czyx_tensor[0],
+            zyx_tensor,
             (U.to(device), S.to(device), Vh.to(device)),
             **settings.apply_inverse.model_dump(),
         )
     # [fluo, 3]
     elif recon_dim == 3:
         output = isotropic_fluorescent_thick_3d.apply_inverse_transfer_function(
-            czyx_tensor[0],
+            zyx_tensor,
             _to_tensor(transfer_function, "optical_transfer_function").to(device),
             settings.transfer_function.z_padding,
             **settings.apply_inverse.model_dump(),
         )
-    # Pad to CZYX
-    while output.ndim != 4:
-        output = torch.unsqueeze(output, 0)
 
-    return _build_output_xarray(
-        output.cpu().numpy(),
-        _output_channel_names(
-            recon_fluo=True,
-            recon_dim=recon_dim,
-            fluor_channel_name=fluor_channel_name,
-        ),
-        czyx_data,
-        singleton_z=(recon_dim == 2),
-    )
+    # Wrap output tensor(s) back into xr.DataArray(s)
+    sz = recon_dim == 2
+    if is_list:
+        return [_wrap_output_tensor(output[i], channel_names, data_list[i], sz) for i in range(len(data_list))]
+    return _wrap_output_tensor(output, channel_names, czyx_data, sz)
 
 
 def reconstruct(
@@ -350,8 +361,13 @@ def optimize(
     czyx_data: xr.DataArray,
     recon_dim: Literal[2, 3] = 2,
     settings: Settings = None,
-    num_iterations: int = 10,
-    midband_fractions: tuple[float, float] = (0.125, 0.25),
+    max_iterations: int = 10,
+    method: str = "adam",
+    convergence_tol: float | None = None,
+    convergence_patience: int | None = 5,
+    use_gradients: bool | None = None,
+    grid_points: int = 7,
+    loss_settings=None,
     log_dir: str | None = None,
     log_images: bool = False,
     device: str | torch.device | None = None,
@@ -366,17 +382,27 @@ def optimize(
         Reconstruction dimensionality (2 or 3).
     settings : Settings
         Fluorescence settings with OptimizableFloat fields.
-    num_iterations : int
-        Number of Adam optimizer steps.
-    midband_fractions : tuple[float, float]
-        Inner and outer fractions of cutoff frequency for the loss annulus.
+    max_iterations : int
+        Maximum optimizer steps (ignored by grid_search).
+    method : str
+        Optimizer method: "adam", "lbfgs", "nelder_mead", "grid_search".
+    convergence_tol : float, optional
+        Stop early if loss does not improve by at least this amount.
+    convergence_patience : int, optional
+        Iterations without improvement before early stopping.
+    use_gradients : bool, optional
+        Whether to compute gradients. Auto-detected from method if None.
+    grid_points : int
+        Number of grid points per parameter (grid_search only).
+    loss_settings : LossSettings, optional
+        Loss function configuration. Defaults to MidbandPowerLossSettings.
     log_dir : str, optional
         TensorBoard log directory. None = print-only logging.
 
     Returns
     -------
     tuple[Settings, xr.DataArray]
-        Updated settings with optimized parameter values, and the final reconstruction.
+        Updated settings with optimized values, and the final reconstruction.
     """
     if settings is None:
         settings = Settings()
@@ -422,26 +448,35 @@ def optimize(
                 regularization_strength=settings.apply_inverse.regularization_strength,
             )
 
-    def loss_fn(recon):
-        loss = -compute_midband_power(
-            recon,
-            NA_det=s.numerical_aperture_detection,
-            lambda_ill=s.wavelength_emission,
-            pixel_size=s.yx_pixel_size,
-            midband_fractions=midband_fractions,
-        )
-        if loss.ndim > 0:
-            loss = loss.mean()
-        return loss
+    if loss_settings is None:
+        loss_settings = MidbandPowerLossSettings()
+
+    loss_fn = build_loss_fn(
+        loss_settings,
+        NA_det=s.numerical_aperture_detection,
+        wavelength=s.wavelength_emission,
+        pixel_size=s.yx_pixel_size,
+    )
+
+    optim_kwargs = dict(
+        max_iterations=max_iterations,
+        method=method,
+        use_gradients=use_gradients,
+        grid_points=grid_points,
+        log_images=log_images,
+    )
+    if convergence_tol is not None:
+        optim_kwargs["convergence_tol"] = convergence_tol
+    if convergence_patience is not None:
+        optim_kwargs["convergence_patience"] = convergence_patience
 
     result = optimize_reconstruction(
         data=zyx_data,
         reconstruct_fn=reconstruct_fn,
         loss_fn=loss_fn,
         optimizable_params=opt_params,
-        num_iterations=num_iterations,
         logger=logger,
-        log_images=log_images,
+        **optim_kwargs,
     )
 
     new_tf_dict = settings.transfer_function.model_dump()
