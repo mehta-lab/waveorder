@@ -111,13 +111,13 @@ def processes_option(default: int = None) -> Callable:
     return decorator
 
 
-def overwrite_scale() -> Callable:
+def write_config_scale_to_output() -> Callable:
     def decorator(f: Callable) -> Callable:
         return click.option(
-            "--overwrite-scale",
+            "--write-config-scale-to-output",
             is_flag=True,
             default=False,
-            help="Overwrite output pixel sizes with values from the reconstruction config.",
+            help="Write the reconstruction config's pixel sizes to the output zarr instead of copying from the input.",
         )(f)
 
     return decorator
