@@ -483,7 +483,7 @@ def _optimize_grid_search(
     for name in param_names:
         center, step = optimizable_params[name]
         half = (grid_points // 2) * step
-        grids.append(np.arange(center - half, center + half + step / 2, step))
+        grids.append(np.linspace(center - half, center + half, grid_points))
 
     loss_history: list[float] = []
     wall_times: list[float] = []
