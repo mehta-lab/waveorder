@@ -184,6 +184,12 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
         assert dataset.channel_names[-1] == "GFP_Density3D"
         assert dataset.channel_names[-2] == "Depolarization"
 
+        # Check that both reconstructions have separate metadata entries (#206)
+        position = dataset["0/0/0"]
+        waveorder_meta = dict(position.zattrs["waveorder"])
+        assert "Retardance,Orientation,Transmittance,Depolarization" in waveorder_meta
+        assert "GFP_Density3D" in waveorder_meta
+
 
 def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
     """Test 2D fluorescence reconstruction through CLI"""
