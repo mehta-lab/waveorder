@@ -123,6 +123,10 @@ def optimize_reconstruction(
         Optimized parameter values, loss history, and final
         reconstruction.
     """
+    valid_methods = ("adam", "nadam", "lbfgs", "nelder_mead", "grid_search")
+    if method not in valid_methods:
+        raise ValueError(f"Unknown method {method!r}. Must be one of {valid_methods}.")
+
     if use_gradients is None:
         use_gradients = method in ("adam", "nadam", "lbfgs")
 
