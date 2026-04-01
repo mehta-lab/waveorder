@@ -1,0 +1,27 @@
+name: regression
+cases:
+  phase_3d_beads:
+    type: synthetic
+    phantom:
+      function: single_bead
+      shape: [64, 128, 128]
+      pixel_sizes: [0.25, 0.1, 0.1]
+      bead_radius_um: 2.5
+      refractive_index_diff: 0.05
+    config: ../configs/phase_3d_beads.yml
+
+  fluor_3d_beads:
+    type: synthetic
+    phantom:
+      function: single_bead
+      shape: [64, 128, 128]
+      pixel_sizes: [0.25, 0.1, 0.1]
+      bead_radius_um: 2.5
+      fluorescence_intensity: 1.0
+    config: ../configs/fluor_3d_beads.yml
+
+  ops_pheno_center:
+    type: hpc
+    input: /hpc/projects/intracellular_dashboard/ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
+    position: A/1/029029
+    config: ../configs/ops_pheno_phase_2d.yml

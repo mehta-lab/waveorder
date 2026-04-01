@@ -8,6 +8,7 @@ from torch import Tensor
 
 from waveorder import optics, sampling, util
 from waveorder.models import isotropic_fluorescent_thick_3d
+from waveorder.phantoms import single_bead
 from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
@@ -100,20 +101,18 @@ def generate_test_phantom(
         acquires when passing through that voxel. This matches the units
         returned by apply_inverse_transfer_function().
     """
-    sphere, _, _ = util.generate_sphere_target(
-        zyx_shape,
-        yx_pixel_size,
-        z_pixel_size,
-        radius=sphere_radius,
-        blur_size=2 * yx_pixel_size,
+    delta_n = index_of_refraction_sample - index_of_refraction_media
+    phantom = single_bead(
+        shape=zyx_shape,
+        pixel_sizes=(z_pixel_size, yx_pixel_size, yx_pixel_size),
+        bead_radius_um=sphere_radius,
+        refractive_index_diff=delta_n,
+        blur_size_um=2 * yx_pixel_size,
     )
 
-    # Compute refractive index difference
-    delta_n = sphere * (index_of_refraction_sample - index_of_refraction_media)
-
-    # Convert to phase in cycles per voxel
+    # Convert dn to phase in cycles per voxel
     wavelength_medium = wavelength_illumination / index_of_refraction_media
-    zyx_phase = delta_n * z_pixel_size / wavelength_medium
+    zyx_phase = phantom.phase * z_pixel_size / wavelength_medium
 
     return zyx_phase
 

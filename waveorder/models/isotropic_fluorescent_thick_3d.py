@@ -5,6 +5,7 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
+from waveorder.phantoms import single_bead
 from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
@@ -15,9 +16,14 @@ def generate_test_phantom(
     z_pixel_size: float,
     sphere_radius: float,
 ) -> Tensor:
-    sphere, _, _ = util.generate_sphere_target(zyx_shape, yx_pixel_size, z_pixel_size, sphere_radius)
+    phantom = single_bead(
+        shape=zyx_shape,
+        pixel_sizes=(z_pixel_size, yx_pixel_size, yx_pixel_size),
+        bead_radius_um=sphere_radius,
+        fluorescence_intensity=1.0,
+    )
 
-    return sphere
+    return phantom.fluorescence
 
 
 def calculate_transfer_function(

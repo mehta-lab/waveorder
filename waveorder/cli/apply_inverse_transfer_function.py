@@ -1,24 +1,9 @@
-import itertools
 import warnings
-from functools import partial
 from pathlib import Path
 from typing import Literal
 
 import click
-import numpy as np
-import torch
-import torch.multiprocessing as mp
-import xarray as xr
-from iohub import open_ome_zarr
-from iohub.ngff import Position
 
-from waveorder.api import (
-    birefringence,
-    birefringence_and_phase,
-    fluorescence,
-    phase,
-)
-from waveorder.api._utils import _named_dataarray
 from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
@@ -26,16 +11,6 @@ from waveorder.cli.parsing import (
     processes_option,
     transfer_function_dirpath,
 )
-from waveorder.cli.printing import echo_headline, echo_settings
-from waveorder.cli.settings import ReconstructionSettings
-from waveorder.cli.utils import (
-    apply_inverse_to_zyx_and_save,
-    create_empty_hcs_zarr,
-    generate_valid_position_key,
-    is_single_position_store,
-    resolve_time_indices,
-)
-from waveorder.io import utils
 
 
 def _check_background_consistency(background_shape, data_shape, input_channel_names):
@@ -45,18 +20,24 @@ def _check_background_consistency(background_shape, data_shape, input_channel_na
 
 
 def _load_transfer_function_dataset(
-    transfer_function_dataset: Position,
+    transfer_function_dataset,
     recon_biref: bool,
     recon_phase: bool,
     recon_fluo: bool,
     recon_dim: Literal[2, 3],
-) -> xr.Dataset:
+):
     """Load transfer function arrays from a zarr store into an xr.Dataset.
 
     Returns an xr.Dataset with the same variable names as produced by
     compute_transfer_function, so it can be passed directly to
     apply_inverse functions.
     """
+
+    # Deferred imports for fast CLI help
+    import numpy as np
+    import xarray as xr
+
+    from waveorder.api._utils import _named_dataarray
 
     def _load(key, idx):
         return _named_dataarray(np.array(transfer_function_dataset[key][idx]), key)
@@ -99,6 +80,13 @@ def _load_transfer_function_dataset(
 
 
 def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
+    # Deferred imports for fast CLI help
+    import numpy as np
+    from iohub import open_ome_zarr
+
+    from waveorder.cli.settings import ReconstructionSettings
+    from waveorder.io import utils
+
     # Get non-OME-Zarr plate-level metadata if it's available
     plate_metadata = {}
     input_version = "0.4"
@@ -143,6 +131,28 @@ def apply_inverse_transfer_function_single_position(
     output_channel_names: list[str],
     verbose: bool = True,
 ) -> None:
+
+    # Deferred imports for fast CLI help
+    import itertools
+    from functools import partial
+
+    import numpy as np
+    import torch.multiprocessing as mp
+    from iohub import open_ome_zarr
+
+    from waveorder.api import (
+        birefringence,
+        birefringence_and_phase,
+        fluorescence,
+        phase,
+    )
+    from waveorder.cli.printing import echo_headline, echo_settings
+    from waveorder.cli.settings import ReconstructionSettings
+    from waveorder.cli.utils import (
+        apply_inverse_to_zyx_and_save,
+        resolve_time_indices,
+    )
+    from waveorder.io import utils
 
     if verbose:
         echo_headline("\nStarting reconstruction...")
@@ -300,6 +310,15 @@ def apply_inverse_transfer_function_cli(
     output_dirpath: Path,
     num_processes,
 ) -> None:
+    # Deferred imports for fast CLI help
+    import torch
+
+    from waveorder.cli.utils import (
+        create_empty_hcs_zarr,
+        generate_valid_position_key,
+        is_single_position_store,
+    )
+
     # Prepare output store
     output_metadata = get_reconstruction_output_metadata(input_position_dirpaths[0], config_filepath)
 
@@ -344,7 +363,7 @@ def apply_inverse_transfer_function_cli(
         )
 
 
-@click.command("apply-inv-tf")
+@click.command("apply-inv-tf", no_args_is_help=True)
 @input_position_dirpaths()
 @transfer_function_dirpath()
 @config_filepath()
@@ -357,17 +376,14 @@ def _apply_inverse_transfer_function_cli(
     output_dirpath: Path,
     num_processes,
 ) -> None:
-    """
-    Apply an inverse transfer function to a dataset using a configuration file.
+    """Apply an inverse transfer function to a dataset.
 
-    Applies a transfer function to all positions in the list `input-position-dirpaths`,
-    so all positions must have the same TCZYX shape.
+    Applies a transfer function to all positions in the list
+    `input-position-dirpaths`, so all positions must have the same TCZYX shape.
 
-    Appends channels to ./output.zarr, so multiple reconstructions can fill a single store.
-
-    See /examples for example configuration files.
-
-    >> waveorder apply-inv-tf -i ./input.zarr/*/*/* -t ./transfer-function.zarr -c /examples/birefringence.yml -o ./output.zarr
+    \b
+    Example:
+      \033[92mwo apply-inv-tf -i ./input.zarr/*/*/* -t ./tf.zarr -c ./config.yml -o ./output.zarr\033[0m
     """
     apply_inverse_transfer_function_cli(
         input_position_dirpaths,
