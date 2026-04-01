@@ -111,6 +111,18 @@ def processes_option(default: int = None) -> Callable:
     return decorator
 
 
+def overwrite_scale() -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--overwrite-scale",
+            is_flag=True,
+            default=False,
+            help="Overwrite output pixel sizes with values from the reconstruction config.",
+        )(f)
+
+    return decorator
+
+
 def unique_id() -> Callable:
     def decorator(f: Callable) -> Callable:
         return click.option(

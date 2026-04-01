@@ -1,3 +1,4 @@
+import math
 import warnings
 from pathlib import Path
 from typing import Literal
@@ -8,6 +9,7 @@ from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,
+    overwrite_scale,
     processes_option,
     transfer_function_dirpath,
 )
@@ -79,7 +81,64 @@ def _load_transfer_function_dataset(
     return xr.Dataset(variables)
 
 
-def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
+def _get_config_pixel_sizes(settings):
+    """Return (z_pixel_size, yx_pixel_size) from config, or None for birefringence-only.
+
+    Parameters
+    ----------
+    settings : ReconstructionSettings
+        Top-level reconstruction settings.
+
+    Returns
+    -------
+    tuple[float, float] or None
+        (z_pixel_size, yx_pixel_size) if available, None otherwise.
+    """
+    for attr in ("phase", "fluorescence"):
+        sub = getattr(settings, attr, None)
+        if sub is not None:
+            tf = sub.transfer_function
+            return tf.z_pixel_size, tf.yx_pixel_size
+    return None
+
+
+def _warn_pixel_size_mismatch(input_scale, config_pixel_sizes):
+    """Warn if input zarr scale and config pixel sizes differ by more than 5%.
+
+    Parameters
+    ----------
+    input_scale : tuple[float, ...]
+        TCZYX scale from the input dataset.
+    config_pixel_sizes : tuple[float, float]
+        (z_pixel_size, yx_pixel_size) from the reconstruction config.
+    """
+    rel_tol = 0.05
+    z_pixel_size, yx_pixel_size = config_pixel_sizes
+    _, _, z_scale, yx_scale, _ = input_scale
+
+    mismatches = []
+    if not math.isclose(z_scale, z_pixel_size, rel_tol=rel_tol):
+        mismatches.append(f"  z: input={z_scale}, config={z_pixel_size}")
+    if not math.isclose(yx_scale, yx_pixel_size, rel_tol=rel_tol):
+        mismatches.append(f"  yx: input={yx_scale}, config={yx_pixel_size}")
+
+    if mismatches:
+        detail = "\n".join(mismatches)
+        warnings.warn(
+            f"Input pixel sizes do not match reconstruction config "
+            f"(>{rel_tol:.0%} relative difference):\n{detail}\n"
+            f"The input zarr's pixel sizes will be used in the output. "
+            f"Use --overwrite-scale to use the config's pixel sizes instead.",
+            UserWarning,
+            stacklevel=2,
+        )
+
+
+def get_reconstruction_output_metadata(
+    position_path: Path,
+    config_path: Path,
+    overwrite_scale: bool = False,
+):
     # Deferred imports for fast CLI help
     import numpy as np
     from iohub import open_ome_zarr
@@ -111,10 +170,19 @@ def get_reconstruction_output_metadata(position_path: Path, config_path: Path):
     channel_names = settings.output_channel_names
     output_z_shape = 1 if settings.output_z_is_singleton else Z
 
+    scale = input_dataset.scale
+    config_pixel_sizes = _get_config_pixel_sizes(settings)
+    if config_pixel_sizes is not None:
+        if overwrite_scale:
+            z_pixel_size, yx_pixel_size = config_pixel_sizes
+            scale = (scale[0], scale[1], z_pixel_size, yx_pixel_size, yx_pixel_size)
+        else:
+            _warn_pixel_size_mismatch(scale, config_pixel_sizes)
+
     return {
         "shape": (T, len(channel_names), output_z_shape, Y, X),
         "chunks": (1, 1, 1, Y, X),
-        "scale": input_dataset.scale,
+        "scale": scale,
         "channel_names": channel_names,
         "dtype": np.float32,
         "plate_metadata": plate_metadata,
@@ -309,6 +377,7 @@ def apply_inverse_transfer_function_cli(
     config_filepath: Path,
     output_dirpath: Path,
     num_processes,
+    overwrite_scale: bool = False,
 ) -> None:
     # Deferred imports for fast CLI help
     import torch
@@ -320,7 +389,7 @@ def apply_inverse_transfer_function_cli(
     )
 
     # Prepare output store
-    output_metadata = get_reconstruction_output_metadata(input_position_dirpaths[0], config_filepath)
+    output_metadata = get_reconstruction_output_metadata(input_position_dirpaths[0], config_filepath, overwrite_scale)
 
     # Generate position keys - use valid HCS keys for single-position stores
     position_keys = []
@@ -369,12 +438,14 @@ def apply_inverse_transfer_function_cli(
 @config_filepath()
 @output_dirpath()
 @processes_option(default=1)
+@overwrite_scale()
 def _apply_inverse_transfer_function_cli(
     input_position_dirpaths: list[Path],
     transfer_function_dirpath: Path,
     config_filepath: Path,
     output_dirpath: Path,
     num_processes,
+    overwrite_scale: bool,
 ) -> None:
     """Apply an inverse transfer function to a dataset.
 
@@ -391,4 +462,5 @@ def _apply_inverse_transfer_function_cli(
         config_filepath,
         output_dirpath,
         num_processes,
+        overwrite_scale,
     )
