@@ -106,6 +106,18 @@ def processes_option(default: int = None) -> Callable:
     return decorator
 
 
+def write_config_scale_to_output() -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--write-config-scale-to-output",
+            is_flag=True,
+            default=False,
+            help="Write the reconstruction config's pixel sizes to the output zarr instead of copying from the input.",
+        )(f)
+
+    return decorator
+
+
 def unique_id() -> Callable:
     def decorator(f: Callable) -> Callable:
         return click.option(
