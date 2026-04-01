@@ -227,10 +227,9 @@ def _optimize_gradient(
 
     if method == "lbfgs":
         all_params = list(param_tensors.values())
-        max_lr = max(lr for _, lr in optimizable_params.values())
         optimizer = torch.optim.LBFGS(
             all_params,
-            lr=max_lr,
+            lr=1.0,
             max_iter=1,
         )
     elif method == "nadam":
