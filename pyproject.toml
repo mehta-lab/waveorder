@@ -125,6 +125,7 @@ vcs = "git"
 style = "pep440"
 bump = true
 fallback-version = "0.0.0"
+pattern = "(?P<base>\\d+\\.\\d+\\.\\d+)"
 
 [tool.ruff]
 line-length = 120
