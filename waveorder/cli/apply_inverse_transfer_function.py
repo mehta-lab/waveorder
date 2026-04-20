@@ -81,6 +81,15 @@ def _load_transfer_function_dataset(
     return xr.Dataset(variables)
 
 
+class PixelSizeMismatchWarning(UserWarning):
+    """Input zarr pixel sizes disagree with the reconstruction config."""
+
+
+# The CLI suppresses UserWarning at startup to silence torch/CUDA noise;
+# carve out this subclass so the mismatch warning is still shown to the user.
+warnings.filterwarnings("always", category=PixelSizeMismatchWarning)
+
+
 def _get_config_pixel_sizes(settings):
     """Return (z_pixel_size, yx_pixel_size) from config, or None for birefringence-only.
 
@@ -129,7 +138,7 @@ def _warn_pixel_size_mismatch(input_scale, config_pixel_sizes):
             f"(>{rel_tol:.0%} relative difference):\n{detail}\n"
             f"The input zarr's pixel sizes will be used in the output. "
             f"Use --write-config-scale-to-output to use the config's pixel sizes instead.",
-            UserWarning,
+            PixelSizeMismatchWarning,
             stacklevel=2,
         )
 
