@@ -43,17 +43,6 @@ class TestHistory:
         assert "2026-04-20T10-00-00_regression" in result.output
         assert "2026-04-20T11-00-00_regression" in result.output
 
-    def test_excludes_annotated_references(self, tmp_path):
-        _make_run_dir(tmp_path, "annotated_references")
-        _make_run_dir(
-            tmp_path,
-            "2026-04-20T10-00-00_regression",
-            metadata={"git_hash": "abc"},
-            summary={},
-        )
-        result = CliRunner().invoke(benchmark, ["history", "-o", str(tmp_path)])
-        assert "annotated_references" not in result.output
-
 
 class TestLatest:
     def test_empty(self, tmp_path):
@@ -97,27 +86,6 @@ class TestCompare:
         assert result.exit_code == 0
         assert "case_a" in result.output
         assert "ssim" in result.output
-
-
-class TestMark:
-    def test_no_runs(self, tmp_path):
-        result = CliRunner().invoke(benchmark, ["mark", "case_x", "-o", str(tmp_path)])
-        assert "No benchmark runs found" in result.output
-
-    def test_missing_case(self, tmp_path):
-        _make_run_dir(tmp_path, "2026-04-20T10-00-00_regression", metadata={}, summary={})
-        result = CliRunner().invoke(benchmark, ["mark", "case_x", "-o", str(tmp_path)])
-        assert "No reconstruction found" in result.output
-
-    def test_copies_reconstruction(self, tmp_path):
-        run_dir = _make_run_dir(tmp_path, "2026-04-20T10-00-00_regression", metadata={}, summary={})
-        recon_dir = run_dir / "cases" / "case_x" / "reconstruction.zarr"
-        recon_dir.mkdir(parents=True)
-        (recon_dir / "0").write_bytes(b"fake-zarr")
-
-        result = CliRunner().invoke(benchmark, ["mark", "case_x", "-o", str(tmp_path)])
-        assert result.exit_code == 0
-        assert (tmp_path / "annotated_references" / "case_x.zarr" / "0").read_bytes() == b"fake-zarr"
 
 
 class TestOutputDirResolution:

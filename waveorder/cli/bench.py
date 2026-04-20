@@ -221,17 +221,12 @@ def history(output_dir, limit):
         click.echo(f"  {run_dir.name:50s} {n_cases} cases  git={meta.get('git_hash', '?')}")
 
 
-_NON_RUN_DIRS = {"annotated_references"}
-
-
 def _list_run_dirs(output_dir: str | Path) -> list[Path]:
     """Return all run directories under output_dir (oldest first)."""
     root = Path(output_dir)
     if not root.exists():
         return []
-    candidates = [
-        p for p in root.iterdir() if p.is_dir() and p.name not in _NON_RUN_DIRS and not p.name.startswith(".")
-    ]
+    candidates = [p for p in root.iterdir() if p.is_dir() and not p.name.startswith(".")]
     return sorted(candidates, key=lambda p: p.stat().st_mtime)
 
 
@@ -454,41 +449,6 @@ def _input_channel_names(case_dir: Path) -> list[str] | None:
     cfg = yaml.safe_load(cfg_path.read_text())
     names = cfg.get("input_channel_names")
     return list(names) if names else None
-
-
-@benchmark.command()
-@click.argument("case_name")
-@_output_dir_option()
-def mark(case_name, output_dir):
-    """Mark the latest run's reconstruction as the annotated reference.
-
-    Copies the reconstruction zarr to annotated_references/.
-
-    \b
-    Example:
-      \033[92mwo bm mark phase_3d_beads\033[0m
-    """
-    output_dir = _resolve_output_dir(output_dir)
-    runs = _find_runs(output_dir, n=1)
-    if not runs:
-        click.echo("No benchmark runs found.")
-        return
-
-    run_dir = runs[0]
-    recon_path = run_dir / "cases" / case_name / "reconstruction.zarr"
-    if not recon_path.exists():
-        click.echo(f"No reconstruction found for case '{case_name}' in {run_dir.name}")
-        return
-
-    ref_dir = output_dir / "annotated_references"
-    ref_dir.mkdir(parents=True, exist_ok=True)
-    dest = ref_dir / f"{case_name}.zarr"
-
-    if dest.exists():
-        shutil.rmtree(dest)
-
-    shutil.copytree(recon_path, dest)
-    click.echo(click.style(f"Marked {case_name} reference: {dest}", fg="green"))
 
 
 def _fmt(value, width=10):
