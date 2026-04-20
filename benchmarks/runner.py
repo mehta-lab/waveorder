@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import logging
 import os
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -24,10 +23,10 @@ import yaml
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
-from benchmarks.config import PhantomConfig, load_experiment, resolve_recon_config
+from benchmarks.config import PhantomConfig
 from benchmarks.metrics import compute_metrics
 from benchmarks.simulate import simulate_fluorescence_3d, simulate_phase_3d
-from benchmarks.utils import TimingTree, collect_metadata
+from benchmarks.utils import TimingTree
 from waveorder import phantoms
 
 # Map phantom function names to callables
@@ -35,6 +34,34 @@ _PHANTOM_FUNCTIONS = {
     "single_bead": phantoms.single_bead,
     "random_beads": phantoms.random_beads,
 }
+
+
+def _extract_optics(tf_settings: dict) -> tuple[float, float, float]:
+    """Pull ``(NA_det, wavelength, pixel_size)`` from a transfer_function block.
+
+    Falls back to values appropriate for a typical microscope when keys
+    are missing. Covers both illumination and emission wavelength keys.
+    """
+    NA_det = tf_settings.get("numerical_aperture_detection", 1.2)
+    wavelength = tf_settings.get(
+        "wavelength_illumination",
+        tf_settings.get("wavelength_emission", 0.532),
+    )
+    pixel_size = tf_settings.get("yx_pixel_size", 0.1)
+    return NA_det, wavelength, pixel_size
+
+
+def _run_wo_rec(position_path: Path, config_path: Path, recon_path: Path) -> None:
+    """Invoke ``wo rec`` as a subprocess, raising on non-zero exit."""
+    env = {**os.environ, "PYTHONWARNINGS": "ignore::UserWarning,ignore::DeprecationWarning"}
+    result = subprocess.run(
+        ["wo", "rec", "-i", str(position_path), "-c", str(config_path), "-o", str(recon_path)],
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"wo rec failed:\n{result.stderr}")
 
 
 def _build_phantom(phantom_config: PhantomConfig | dict) -> phantoms.Phantom:
@@ -183,15 +210,7 @@ def run_synthetic_case(
 
         # Reconstruct via wo rec
         with tt.time("reconstruct"):
-            env = {**os.environ, "PYTHONWARNINGS": "ignore::UserWarning,ignore::DeprecationWarning"}
-            result = subprocess.run(
-                ["wo", "rec", "-i", str(position_path), "-c", str(config_path), "-o", str(recon_path)],
-                capture_output=True,
-                text=True,
-                env=env,
-            )
-            if result.returncode != 0:
-                raise RuntimeError(f"wo rec failed:\n{result.stderr}")
+            _run_wo_rec(position_path, config_path, recon_path)
 
         # Load reconstruction and compute metrics
         with tt.time("metrics"):
@@ -200,13 +219,7 @@ def run_synthetic_case(
             while recon_data.ndim > 3:
                 recon_data = recon_data[0]
 
-            NA_det = tf_settings.get("numerical_aperture_detection", 1.2)
-            wavelength = tf_settings.get(
-                "wavelength_illumination",
-                tf_settings.get("wavelength_emission", 0.532),
-            )
-            pixel_size = tf_settings.get("yx_pixel_size", 0.1)
-
+            NA_det, wavelength, pixel_size = _extract_optics(tf_settings)
             ground_truth = phantom.phase if modality == "phase" else phantom.fluorescence
 
             metrics = compute_metrics(
@@ -267,15 +280,7 @@ def run_hpc_case(
 
         # Reconstruct via wo rec
         with tt.time("reconstruct"):
-            env = {**os.environ, "PYTHONWARNINGS": "ignore::UserWarning,ignore::DeprecationWarning"}
-            result = subprocess.run(
-                ["wo", "rec", "-i", str(position_path), "-c", str(config_path), "-o", str(recon_path)],
-                capture_output=True,
-                text=True,
-                env=env,
-            )
-            if result.returncode != 0:
-                raise RuntimeError(f"wo rec failed:\n{result.stderr}")
+            _run_wo_rec(position_path, config_path, recon_path)
 
         # Load reconstruction and compute metrics (image_quality only, no phantom)
         with tt.time("metrics"):
@@ -283,12 +288,7 @@ def run_hpc_case(
             while recon_data.ndim > 3:
                 recon_data = recon_data[0]
 
-            NA_det = tf_settings.get("numerical_aperture_detection", 1.2)
-            wavelength = tf_settings.get(
-                "wavelength_illumination",
-                tf_settings.get("wavelength_emission", 0.532),
-            )
-            pixel_size = tf_settings.get("yx_pixel_size", 0.1)
+            NA_det, wavelength, pixel_size = _extract_optics(tf_settings)
 
             metrics = compute_metrics(
                 recon_data,
@@ -301,60 +301,3 @@ def run_hpc_case(
     (case_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
 
     return metrics
-
-
-def run_experiment(
-    experiment_path: str | Path,
-    output_dir: str | Path | None = None,
-) -> dict:
-    """Run all cases in an experiment.
-
-    Parameters
-    ----------
-    experiment_path : str or Path
-        Path to experiment YAML.
-    output_dir : str or Path
-        Root output directory.
-
-    Returns
-    -------
-    dict
-        Per-case metrics keyed by case name.
-    """
-    experiment_path = Path(experiment_path)
-    experiment = load_experiment(experiment_path)
-    if output_dir is None:
-        output_dir = Path(os.environ.get("WAVEORDER_BENCH_OUTPUT", "."))
-    output_dir = Path(output_dir)
-
-    metadata = collect_metadata()
-    from datetime import datetime
-
-    timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-    run_name = f"{timestamp}_{experiment.name}"
-    run_dir = output_dir / run_name
-    run_dir.mkdir(parents=True, exist_ok=True)
-
-    (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
-    shutil.copy2(experiment_path, run_dir / "experiment.yml")
-
-    results = {}
-    for case_name, case in experiment.cases.items():
-        if case.type != "synthetic":
-            print(f"Skipping non-synthetic case: {case_name}")
-            continue
-
-        case_dir = run_dir / "cases" / case_name
-        recon_config = resolve_recon_config(case, experiment_path.parent)
-        modality = "phase" if "phase" in recon_config else "fluorescence"
-
-        results[case_name] = run_synthetic_case(
-            phantom_config=case.phantom,
-            recon_config=recon_config,
-            case_dir=case_dir,
-            modality=modality,
-        )
-
-    (run_dir / "summary.json").write_text(json.dumps(results, indent=2))
-
-    return results

@@ -6,9 +6,12 @@ Available as ``wo benchmark`` / ``wo bm``.
 import json
 import os
 import shutil
+from datetime import datetime
 from pathlib import Path
 
 import click
+import numpy as np
+import yaml
 
 _DEFAULT_EXPERIMENT = Path(__file__).parent.parent.parent / "benchmarks" / "experiments" / "regression.yml"
 
@@ -92,7 +95,6 @@ def run(experiment, scope, output_dir):
     n_unsupported = sum(1 for c in exp.cases.values() if c.type not in ("synthetic", "hpc"))
 
     metadata = collect_metadata()
-    from datetime import datetime
 
     timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     run_name = f"{timestamp}_{exp.name}"
@@ -411,8 +413,6 @@ def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr, channels=None):
     Handles both HCS (multi-position) and single-position (FOV) stores.
     If ``channels`` is given, only channels whose names match are added.
     """
-    import numpy as np
-
     dataset = open_ome_zarr(path, mode="r")
     try:
         positions = [pos for _, pos in dataset.positions()]
@@ -433,8 +433,6 @@ def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr, channels=None):
 
 def _input_channel_names(case_dir: Path) -> list[str] | None:
     """Read ``input_channel_names`` from the case's saved config.yml."""
-    import yaml
-
     cfg_path = case_dir / "config.yml"
     if not cfg_path.exists():
         return None
@@ -488,8 +486,6 @@ def _fmt(value, width=10):
 
 def _sparkline(hist, n_bins=10):
     """Render a small inline sparkline (bars only)."""
-    import numpy as np
-
     counts = np.array(hist["counts"], dtype=float)
     if len(counts) > n_bins:
         factor = len(counts) // n_bins
@@ -527,8 +523,6 @@ def _print_row(case_name: str, metrics: dict, elapsed: float | None = None):
 
     hist = iq.get("histogram", {})
     if hist:
-        import numpy as np
-
         edges = np.array(hist["bin_edges"])
         min_str = _fmt(edges[0], _H)
         max_str = _fmt(edges[-1], _H)
