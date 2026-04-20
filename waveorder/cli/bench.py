@@ -64,12 +64,29 @@ def benchmark():
     default=None,
     help=_output_dir_help(),
 )
-def run(experiment, scope, output_dir):
+@click.option(
+    "--save-all",
+    is_flag=True,
+    default=False,
+    help=(
+        "Keep every intermediate output. By default transfer function "
+        "zarrs are always deleted and reconstruction/simulated zarrs "
+        "larger than 25 MB are deleted after metrics are computed."
+    ),
+)
+def run(experiment, scope, output_dir, save_all):
     """Run benchmark cases.
+
+    By default only metrics, timing, configs, and small (<25 MB) output
+    zarrs are kept — transfer function zarrs and oversized
+    reconstruction/simulation zarrs are deleted after metrics are
+    computed to keep the benchmarks folder small. Pass --save-all to
+    keep every intermediate.
 
     \b
     Example:
       \033[92mwo bm run --scope synthetic\033[0m
+      \033[92mwo bm run --save-all\033[0m
     """
     click.echo(click.style("Starting benchmark run...", fg="green"))
 
@@ -133,6 +150,7 @@ def run(experiment, scope, output_dir):
                     recon_config=recon_config,
                     case_dir=case_dir,
                     modality=modality,
+                    save_all=save_all,
                 )
             elif case.type == "hpc":
                 metrics = run_hpc_case(
@@ -140,6 +158,7 @@ def run(experiment, scope, output_dir):
                     position=case.position,
                     recon_config=recon_config,
                     case_dir=case_dir,
+                    save_all=save_all,
                 )
 
             results[case_name] = metrics

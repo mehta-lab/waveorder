@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -62,6 +63,39 @@ def _run_wo_rec(position_path: Path, config_path: Path, recon_path: Path) -> Non
     )
     if result.returncode != 0:
         raise RuntimeError(f"wo rec failed:\n{result.stderr}")
+
+
+# Storage cap applied to per-case output zarrs. Small synthetic outputs
+# (~4 MB for a bead phantom) pass through; large HPC 3D recons and big
+# simulations are deleted after their metrics are computed. Override
+# with ``save_all=True``.
+SIZE_LIMIT_BYTES = 25 * 1024 * 1024
+
+
+def _dir_size_bytes(path: Path) -> int:
+    """Sum the sizes of all files under ``path`` (recursive)."""
+    if not path.exists():
+        return 0
+    return sum(p.stat().st_size for p in path.rglob("*") if p.is_file())
+
+
+def _cleanup_large_outputs(case_dir: Path, save_all: bool) -> None:
+    """Remove transfer-function zarrs and oversized output zarrs.
+
+    Transfer-function zarrs are always deleted when ``save_all`` is
+    False — they can be regenerated from config and are typically the
+    largest intermediate. ``simulated.zarr`` and ``reconstruction.zarr``
+    are deleted only if they exceed :data:`SIZE_LIMIT_BYTES`.
+    """
+    if save_all:
+        return
+    for p in case_dir.glob("transfer_function_*.zarr"):
+        if p.is_dir():
+            shutil.rmtree(p)
+    for name in ("simulated.zarr", "reconstruction.zarr"):
+        p = case_dir / name
+        if p.is_dir() and _dir_size_bytes(p) > SIZE_LIMIT_BYTES:
+            shutil.rmtree(p)
 
 
 def _build_phantom(phantom_config: PhantomConfig | dict) -> phantoms.Phantom:
@@ -142,6 +176,7 @@ def run_synthetic_case(
     recon_config: dict,
     case_dir: Path,
     modality: str = "phase",
+    save_all: bool = False,
 ) -> dict:
     """Run a single synthetic benchmark case via ``wo rec``.
 
@@ -155,6 +190,11 @@ def run_synthetic_case(
         Output directory for this case.
     modality : str
         "phase" or "fluorescence".
+    save_all : bool
+        Keep all intermediate outputs. When False (default), transfer
+        function zarrs are deleted and ``simulated.zarr`` /
+        ``reconstruction.zarr`` larger than
+        :data:`SIZE_LIMIT_BYTES` are deleted after metrics are computed.
 
     Returns
     -------
@@ -232,6 +272,7 @@ def run_synthetic_case(
 
     tt.save(case_dir / "timing.json")
     (case_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
+    _cleanup_large_outputs(case_dir, save_all)
 
     return metrics
 
@@ -241,6 +282,7 @@ def run_hpc_case(
     position: str,
     recon_config: dict,
     case_dir: Path,
+    save_all: bool = False,
 ) -> dict:
     """Run a single HPC benchmark case on existing data via ``wo rec``.
 
@@ -254,6 +296,11 @@ def run_hpc_case(
         Reconstruction config dict.
     case_dir : Path
         Output directory for this case.
+    save_all : bool
+        Keep all intermediate outputs. When False (default), the
+        transfer function zarr is deleted and ``reconstruction.zarr``
+        is deleted if it exceeds :data:`SIZE_LIMIT_BYTES` after metrics
+        are computed.
 
     Returns
     -------
@@ -299,5 +346,6 @@ def run_hpc_case(
 
     tt.save(case_dir / "timing.json")
     (case_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
+    _cleanup_large_outputs(case_dir, save_all)
 
     return metrics
