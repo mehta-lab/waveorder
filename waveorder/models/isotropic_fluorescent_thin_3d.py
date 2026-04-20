@@ -8,6 +8,7 @@ from torch import Tensor
 
 from waveorder import optics, sampling, util
 from waveorder.filter import apply_filter_bank
+from waveorder.phantoms import single_bead
 
 
 def generate_test_phantom(
@@ -20,27 +21,27 @@ def generate_test_phantom(
     Parameters
     ----------
     yx_shape : tuple[int, int]
-        Shape of YX dimensions
+        Shape of YX dimensions.
     yx_pixel_size : float
-        Pixel size in YX plane
+        Pixel size in YX plane.
     sphere_radius : float
-        Radius of spherical phantom
+        Radius of spherical phantom.
 
     Returns
     -------
     Tensor
-        YX fluorescence density map
+        YX fluorescence density map.
     """
-    sphere, _, _ = util.generate_sphere_target(
-        (3,) + yx_shape,
-        yx_pixel_size,
-        z_pixel_size=1.0,
-        radius=sphere_radius,
-        blur_size=2 * yx_pixel_size,
+    phantom = single_bead(
+        shape=(3,) + yx_shape,
+        pixel_sizes=(1.0, yx_pixel_size, yx_pixel_size),
+        bead_radius_um=sphere_radius,
+        fluorescence_intensity=1.0,
+        blur_size_um=2 * yx_pixel_size,
     )
 
     # Use middle slice as thin fluorescent object
-    yx_fluorescence_density = sphere[1]
+    yx_fluorescence_density = phantom.fluorescence[1]
 
     return yx_fluorescence_density
 

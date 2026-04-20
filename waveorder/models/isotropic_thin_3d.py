@@ -9,6 +9,7 @@ from torch import Tensor
 
 from waveorder import optics, sampling, util
 from waveorder.filter import apply_filter_bank
+from waveorder.phantoms import single_bead
 
 
 def generate_test_phantom(
@@ -19,17 +20,17 @@ def generate_test_phantom(
     index_of_refraction_sample: float,
     sphere_radius: float,
 ) -> Tuple[Tensor, Tensor]:
-    sphere, _, _ = util.generate_sphere_target(
-        (3,) + yx_shape,
-        yx_pixel_size,
-        z_pixel_size=1.0,
-        radius=sphere_radius,
-        blur_size=2 * yx_pixel_size,
+    delta_n = index_of_refraction_sample - index_of_refraction_media
+    phantom = single_bead(
+        shape=(3,) + yx_shape,
+        pixel_sizes=(1.0, yx_pixel_size, yx_pixel_size),
+        bead_radius_um=sphere_radius,
+        refractive_index_diff=delta_n,
+        blur_size_um=2 * yx_pixel_size,
     )
-    yx_phase = (
-        sphere[1] * (index_of_refraction_sample - index_of_refraction_media) * 0.1 / wavelength_illumination
-    )  # phase in radians
 
+    # Use middle slice as thin object; convert dn to phase in radians
+    yx_phase = phantom.phase[1] * 0.1 / wavelength_illumination
     yx_absorption = torch.clone(yx_phase)
 
     return yx_absorption, yx_phase

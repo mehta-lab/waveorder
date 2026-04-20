@@ -96,8 +96,14 @@ docs = [
   "matplotlib",
   "importlib_metadata",
 ]
+bench = [
+  { include-group = "test" },
+  "pyyaml",
+  "scikit-image",
+]
 dev = [
   { include-group = "test" },
+  { include-group = "bench" },
   { include-group = "docs" },
   "pre-commit",
 ]
