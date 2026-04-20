@@ -92,6 +92,16 @@ class TestSingleBead:
         phantom = single_bead(shape=(16, 32, 32))
         assert phantom.absorption.max().item() == 0.0
 
+    def test_fluorescence_background(self):
+        phantom = single_bead(
+            shape=(16, 32, 32),
+            fluorescence_intensity=1.0,
+            fluorescence_background=5.0,
+        )
+        assert abs(phantom.fluorescence.min().item() - 5.0) < 1e-5
+        assert phantom.fluorescence.max().item() > 5.0
+        assert phantom.metadata["fluorescence_background"] == 5.0
+
     def test_finite(self):
         phantom = single_bead(shape=(16, 32, 32))
         assert torch.all(torch.isfinite(phantom.phase))
