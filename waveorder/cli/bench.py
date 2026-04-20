@@ -306,13 +306,15 @@ def compare(output_dir, run_a, run_b):
 def view(output_dir, path):
     """Open benchmark results in napari.
 
-    PATH selects what to view: a run name, a case name (run/case),
-    or nothing for the latest run.
+    PATH selects what to view: ``latest`` or a run name, optionally
+    followed by ``/case_name``. Nothing opens the most recent run.
+    Raw input and reconstruction are loaded as separate layers and
+    tiled side-by-side via napari's grid mode.
 
     \b
     Example:
       \033[92mwo bm view\033[0m
-      \033[92mwo bm view 2026-03-27T11-00-10_regression\033[0m
+      \033[92mwo bm view latest/phase_3d_beads\033[0m
       \033[92mwo bm view 2026-03-27T11-00-10_regression/reg_1e-3\033[0m
     """
     click.echo(click.style("Opening benchmark results...", fg="green"))
@@ -320,6 +322,8 @@ def view(output_dir, path):
     # Deferred imports
     import napari
     from iohub.ngff import open_ome_zarr
+
+    from benchmarks.config import load_experiment
 
     # Parse path: nothing, "run_name", or "run_name/case_name"
     run_name = None
@@ -331,21 +335,26 @@ def view(output_dir, path):
             case = parts[1]
 
     output_dir = _resolve_output_dir(output_dir)
-    if run_name:
-        run_dir = output_dir / run_name
-        if not run_dir.exists():
-            click.echo(f"Run not found: {run_dir}")
-            return
-    else:
+    if run_name in (None, "latest"):
         runs = _find_runs(output_dir, n=1)
         if not runs:
             click.echo("No benchmark runs found.")
             return
         run_dir = runs[0]
+    else:
+        run_dir = output_dir / run_name
+        if not run_dir.exists():
+            click.echo(f"Run not found: {run_dir}")
+            return
+
     cases_dir = run_dir / "cases"
     if not cases_dir.exists():
-        click.echo("No cases in latest run.")
+        click.echo(f"No cases in run {run_dir.name}.")
         return
+
+    # Load the experiment YAML saved with this run to locate raw inputs
+    exp_path = run_dir / "experiment.yml"
+    experiment = load_experiment(exp_path) if exp_path.exists() else None
 
     viewer = napari.Viewer(title=f"wo bm view — {run_dir.name}")
 
@@ -355,33 +364,83 @@ def view(output_dir, path):
             continue
         case_name = case_dir.name
 
-        # Load reconstruction
+        # Raw input: simulated.zarr for synthetic, {input}/{position} for hpc
+        raw_path = _resolve_raw_path(case_dir, case_name, experiment)
+        channel_filter = _input_channel_names(case_dir)
+        if raw_path and raw_path.exists():
+            _add_zarr_to_viewer(
+                viewer,
+                raw_path,
+                f"{case_name}/raw",
+                open_ome_zarr,
+                channels=channel_filter,
+            )
+        else:
+            click.echo(f"  {case_name}: no raw input found")
+
+        # Reconstruction
         recon_path = case_dir / "reconstruction.zarr"
         if recon_path.exists():
             _add_zarr_to_viewer(viewer, recon_path, f"{case_name}/recon", open_ome_zarr)
 
-        # Load simulated data (synthetic cases)
-        sim_path = case_dir / "simulated.zarr"
-        if sim_path.exists():
-            _add_zarr_to_viewer(viewer, sim_path, f"{case_name}/simulated", open_ome_zarr)
-
+    viewer.grid.enabled = True
     napari.run()
 
 
-def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr):
-    """Add all channels from an OME-Zarr to the viewer."""
+def _resolve_raw_path(case_dir: Path, case_name: str, experiment) -> Path | None:
+    """Locate the raw input for a case.
+
+    Synthetic cases store their simulated measurement as ``simulated.zarr``
+    in the case directory. HPC cases point at an external position, which
+    is reconstructed from the experiment YAML as ``{input}/{position}``.
+    """
+    sim_path = case_dir / "simulated.zarr"
+    if sim_path.exists():
+        return sim_path
+    if experiment is None or case_name not in experiment.cases:
+        return None
+    case_cfg = experiment.cases[case_name]
+    if case_cfg.type == "hpc" and case_cfg.input and case_cfg.position:
+        return Path(case_cfg.input) / case_cfg.position
+    return None
+
+
+def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr, channels=None):
+    """Add channels from an OME-Zarr to the viewer.
+
+    Handles both HCS (multi-position) and single-position (FOV) stores.
+    If ``channels`` is given, only channels whose names match are added.
+    """
     import numpy as np
 
     dataset = open_ome_zarr(path, mode="r")
-    for _, position in dataset.positions():
-        data = np.array(position["0"][0])  # CZYX
+    try:
+        positions = [pos for _, pos in dataset.positions()]
+    except (AttributeError, TypeError):
+        positions = [dataset]
+
+    for position in positions:
+        data = np.array(position["0"][0])  # CZYX at T=0
         for c_idx, ch_name in enumerate(position.channel_names):
+            if channels is not None and ch_name not in channels:
+                continue
             ch_data = data[c_idx]
-            # Squeeze singleton Z
             if ch_data.shape[0] == 1:
                 ch_data = ch_data[0]
             viewer.add_image(ch_data, name=f"{prefix}/{ch_name}")
     dataset.close()
+
+
+def _input_channel_names(case_dir: Path) -> list[str] | None:
+    """Read ``input_channel_names`` from the case's saved config.yml."""
+    import yaml
+
+    cfg_path = case_dir / "config.yml"
+    if not cfg_path.exists():
+        return None
+    cfg = yaml.safe_load(cfg_path.read_text())
+    names = cfg.get("input_channel_names") if isinstance(cfg, dict) else None
+    return list(names) if names else None
 
 
 @benchmark.command()
