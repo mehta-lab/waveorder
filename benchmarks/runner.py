@@ -193,6 +193,52 @@ def _read_zarr(path: Path) -> torch.Tensor:
     return data
 
 
+def _run_and_measure(
+    position_path: Path,
+    recon_config: dict,
+    case_dir: Path,
+    tt: TimingTree,
+    ground_truth: torch.Tensor | None = None,
+) -> dict:
+    """Write config, shell out to ``wo rec``, read output, compute metrics.
+
+    Must be called from inside a ``with tt.time("total"):`` block — it
+    adds ``reconstruct`` and ``metrics`` sub-timings.
+    """
+    modality = infer_modality(recon_config)
+    tf_settings = recon_config.get(modality, {}).get("transfer_function", {})
+
+    config_path = case_dir / "config.yml"
+    config_path.write_text(yaml.dump(recon_config, default_flow_style=False))
+
+    recon_path = case_dir / "reconstruction.zarr"
+    cli_cmd = f"wo rec -i {position_path} -c {config_path} -o {recon_path}"
+    (case_dir / "cli_command.sh").write_text(f"#!/bin/bash\n{cli_cmd}\n")
+
+    with tt.time("reconstruct"):
+        _run_wo_rec(position_path, config_path, recon_path)
+
+    with tt.time("metrics"):
+        recon_data = _read_zarr(recon_path)
+        while recon_data.ndim > 3:
+            recon_data = recon_data[0]
+        NA_det, wavelength, pixel_size = _extract_optics(tf_settings)
+        return compute_metrics(
+            recon_data,
+            NA_det=NA_det,
+            wavelength=wavelength,
+            pixel_size=pixel_size,
+            phantom=ground_truth,
+        )
+
+
+def _finalize_case(case_dir: Path, tt: TimingTree, metrics: dict, save_all: bool) -> None:
+    """Persist timing + metrics and run the storage-cap cleanup."""
+    tt.save(case_dir / "timing.json")
+    (case_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
+    _cleanup_large_outputs(case_dir, save_all)
+
+
 def run_synthetic_case(
     phantom_config: dict,
     recon_config: dict,
@@ -227,10 +273,8 @@ def run_synthetic_case(
     tt = TimingTree()
 
     with tt.time("total"):
-        # Generate phantom
         with tt.time("phantom"):
             phantom = _build_phantom(phantom_config)
-
         (case_dir / "phantom_config.json").write_text(json.dumps(phantom.metadata, indent=2))
 
         with tt.time("simulate"):
@@ -244,46 +288,19 @@ def run_synthetic_case(
                 raise ValueError(f"Unknown modality: {modality}")
             channel_name = recon_config.get("input_channel_names", [_DEFAULT_CHANNEL[modality]])[0]
 
-        # Write simulated data as OME-Zarr
         simulated_path = case_dir / "simulated.zarr"
         _write_zarr(data, simulated_path, channel_name, phantom.pixel_sizes)
 
-        # Write reconstruction config
-        config_path = case_dir / "config.yml"
-        config_path.write_text(yaml.dump(recon_config, default_flow_style=False))
+        ground_truth = phantom.phase if modality == "phase" else phantom.fluorescence
+        metrics = _run_and_measure(
+            position_path=simulated_path / "0" / "0" / "0",
+            recon_config=recon_config,
+            case_dir=case_dir,
+            tt=tt,
+            ground_truth=ground_truth,
+        )
 
-        # Build and save CLI command
-        position_path = simulated_path / "0" / "0" / "0"
-        recon_path = case_dir / "reconstruction.zarr"
-        cli_cmd = f"wo rec -i {position_path} -c {config_path} -o {recon_path}"
-        (case_dir / "cli_command.sh").write_text(f"#!/bin/bash\n{cli_cmd}\n")
-
-        # Reconstruct via wo rec
-        with tt.time("reconstruct"):
-            _run_wo_rec(position_path, config_path, recon_path)
-
-        # Load reconstruction and compute metrics
-        with tt.time("metrics"):
-            recon_data = _read_zarr(recon_path)
-            # Remove batch dims — get to (Z, Y, X)
-            while recon_data.ndim > 3:
-                recon_data = recon_data[0]
-
-            NA_det, wavelength, pixel_size = _extract_optics(tf_settings)
-            ground_truth = phantom.phase if modality == "phase" else phantom.fluorescence
-
-            metrics = compute_metrics(
-                recon_data,
-                NA_det=NA_det,
-                wavelength=wavelength,
-                pixel_size=pixel_size,
-                phantom=ground_truth,
-            )
-
-    tt.save(case_dir / "timing.json")
-    (case_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
-    _cleanup_large_outputs(case_dir, save_all)
-
+    _finalize_case(case_dir, tt, metrics, save_all)
     return metrics
 
 
@@ -320,42 +337,13 @@ def run_hpc_case(
     case_dir.mkdir(parents=True, exist_ok=True)
     tt = TimingTree()
 
-    # Determine modality and optics from config
-    modality = infer_modality(recon_config)
-    tf_settings = recon_config.get(modality, {}).get("transfer_function", {})
-
     with tt.time("total"):
-        # Write reconstruction config
-        config_path = case_dir / "config.yml"
-        config_path.write_text(yaml.dump(recon_config, default_flow_style=False))
+        metrics = _run_and_measure(
+            position_path=Path(input_path) / position,
+            recon_config=recon_config,
+            case_dir=case_dir,
+            tt=tt,
+        )
 
-        # Build CLI command
-        position_path = Path(input_path) / position
-        recon_path = case_dir / "reconstruction.zarr"
-        cli_cmd = f"wo rec -i {position_path} -c {config_path} -o {recon_path}"
-        (case_dir / "cli_command.sh").write_text(f"#!/bin/bash\n{cli_cmd}\n")
-
-        # Reconstruct via wo rec
-        with tt.time("reconstruct"):
-            _run_wo_rec(position_path, config_path, recon_path)
-
-        # Load reconstruction and compute metrics (image_quality only, no phantom)
-        with tt.time("metrics"):
-            recon_data = _read_zarr(recon_path)
-            while recon_data.ndim > 3:
-                recon_data = recon_data[0]
-
-            NA_det, wavelength, pixel_size = _extract_optics(tf_settings)
-
-            metrics = compute_metrics(
-                recon_data,
-                NA_det=NA_det,
-                wavelength=wavelength,
-                pixel_size=pixel_size,
-            )
-
-    tt.save(case_dir / "timing.json")
-    (case_dir / "metrics.json").write_text(json.dumps(metrics, indent=2))
-    _cleanup_large_outputs(case_dir, save_all)
-
+    _finalize_case(case_dir, tt, metrics, save_all)
     return metrics
