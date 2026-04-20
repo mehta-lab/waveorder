@@ -8,6 +8,7 @@ from waveorder.cli.parsing import (
     output_dirpath,
     processes_option,
     unique_id,
+    write_config_scale_to_output,
 )
 
 
@@ -17,12 +18,14 @@ from waveorder.cli.parsing import (
 @output_dirpath()
 @processes_option(default=1)
 @unique_id()
+@write_config_scale_to_output()
 def _reconstruct_cli(
     input_position_dirpaths,
     config_filepath,
     output_dirpath,
     num_processes,
     unique_id,
+    write_config_scale_to_output,
 ):
     """
     Reconstruct a dataset using a configuration file. This is a
@@ -76,6 +79,7 @@ def _reconstruct_cli(
         config_filepath,
         output_dirpath,
         num_processes,
+        write_config_scale_to_output,
     )
 
 
