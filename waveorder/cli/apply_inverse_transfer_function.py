@@ -370,8 +370,11 @@ def apply_inverse_transfer_function_single_position(
         for t_idx in time_indices:
             partial_apply_inverse_to_zyx_and_save(t_idx)
 
-    # Save metadata at position level
-    output_dataset.zattrs["settings"] = settings.model_dump()
+    # Save metadata at position level, keyed by output channel names
+    waveorder_meta = dict(output_dataset.zattrs.get("waveorder", {}))
+    channel_key = ",".join(output_channel_names)
+    waveorder_meta[channel_key] = settings.model_dump()
+    output_dataset.zattrs["waveorder"] = waveorder_meta
 
     if verbose:
         echo_headline(f"Closing {output_position_dirpath}\n")
