@@ -156,3 +156,6 @@ waveorder/_version.py
 /examples/data_temp/*
 /logs/*
 scripts/
+
+# benchmark results
+runs/
