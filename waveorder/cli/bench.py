@@ -6,6 +6,7 @@ Available as ``wo benchmark`` / ``wo bm``.
 import json
 import os
 import shutil
+import traceback
 from datetime import datetime
 from pathlib import Path
 
@@ -164,7 +165,9 @@ def run(experiment, scope, output_dir, save_all):
         except Exception as e:
             click.echo("\033[2K\r", nl=False)
             click.echo(f"  {case_name:24s} " + click.style(f"FAILED: {e}", fg="red"))
-            results[case_name] = {"error": str(e)}
+            tb = traceback.format_exc()
+            click.echo(tb, err=True)
+            results[case_name] = {"error": str(e), "traceback": tb}
 
     # Save summary
     (run_dir / "summary.json").write_text(json.dumps(results, indent=2))
@@ -185,13 +188,11 @@ def latest(output_dir):
     run_dir = run_dirs[-1]
     click.echo(click.style(f"Latest run: {run_dir.name}", fg="green", bold=True))
 
-    # Metadata
     meta_path = run_dir / "metadata.json"
     if meta_path.exists():
         meta = json.loads(meta_path.read_text())
-        click.echo(f"  Git: {meta.get('git_hash', '?')} ({meta.get('git_branch', '?')})")
+        click.echo(f"  Git: {meta['git_hash']} ({meta['git_branch']})")
 
-    # Summary
     summary_path = run_dir / "summary.json"
     if summary_path.exists():
         results = json.loads(summary_path.read_text())
@@ -449,7 +450,7 @@ def _input_channel_names(case_dir: Path) -> list[str] | None:
     if not cfg_path.exists():
         return None
     cfg = yaml.safe_load(cfg_path.read_text())
-    names = cfg.get("input_channel_names") if isinstance(cfg, dict) else None
+    names = cfg.get("input_channel_names")
     return list(names) if names else None
 
 

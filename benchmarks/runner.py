@@ -30,7 +30,6 @@ from benchmarks.simulate import simulate_fluorescence_3d, simulate_phase_3d
 from benchmarks.utils import TimingTree
 from waveorder import phantoms
 
-# Map phantom function names to callables
 _PHANTOM_FUNCTIONS = {
     "single_bead": phantoms.single_bead,
     "random_beads": phantoms.random_beads,

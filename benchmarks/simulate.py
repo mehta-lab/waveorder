@@ -8,11 +8,6 @@ from waveorder.models import isotropic_fluorescent_thick_3d, phase_thick_3d
 from waveorder.phantoms import Phantom
 
 
-def _pixel_sizes(phantom: Phantom) -> tuple[float, float]:
-    """Extract (z_pixel_size, yx_pixel_size) from a phantom."""
-    return phantom.pixel_sizes[0], phantom.pixel_sizes[1]
-
-
 def simulate_phase_3d(
     phantom: Phantom,
     wavelength_illumination: float = 0.532,
@@ -46,7 +41,7 @@ def simulate_phase_3d(
     Tensor
         Simulated 3D brightfield data, shape (Z, Y, X).
     """
-    z_pixel_size, yx_pixel_size = _pixel_sizes(phantom)
+    z_pixel_size, yx_pixel_size, _ = phantom.pixel_sizes
     zyx_shape = tuple(phantom.phase.shape)
 
     # Convert dn to phase in cycles per voxel
@@ -97,7 +92,7 @@ def simulate_fluorescence_3d(
     Tensor
         Simulated 3D fluorescence data, shape (Z, Y, X).
     """
-    z_pixel_size, yx_pixel_size = _pixel_sizes(phantom)
+    z_pixel_size, yx_pixel_size, _ = phantom.pixel_sizes
     zyx_shape = tuple(phantom.fluorescence.shape)
 
     otf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
