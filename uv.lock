@@ -5264,6 +5264,7 @@ bench = [
     { name = "pytest-cov" },
     { name = "pytest-qt" },
     { name = "pyyaml" },
+    { name = "scikit-image" },
 ]
 dev = [
     { name = "click" },
@@ -5281,6 +5282,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-qt" },
     { name = "pyyaml" },
+    { name = "scikit-image" },
     { name = "sphinx-copybutton" },
     { name = "sphinx-gallery" },
     { name = "sphinx-mdinclude" },
@@ -5354,6 +5356,7 @@ bench = [
     { name = "pytest-cov" },
     { name = "pytest-qt" },
     { name = "pyyaml" },
+    { name = "scikit-image" },
 ]
 dev = [
     { name = "click", specifier = ">=8.2.0" },
@@ -5371,6 +5374,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-qt" },
     { name = "pyyaml" },
+    { name = "scikit-image" },
     { name = "sphinx-copybutton" },
     { name = "sphinx-gallery" },
     { name = "sphinx-mdinclude" },

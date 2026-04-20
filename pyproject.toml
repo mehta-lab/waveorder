@@ -99,6 +99,7 @@ docs = [
 bench = [
   { include-group = "test" },
   "pyyaml",
+  "scikit-image",
 ]
 dev = [
   { include-group = "test" },
