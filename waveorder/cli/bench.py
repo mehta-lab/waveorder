@@ -415,9 +415,11 @@ def _resolve_raw_path(case_dir: Path, case_name: str, experiment) -> Path | None
     if experiment is None or case_name not in experiment.cases:
         return None
     case_cfg = experiment.cases[case_name]
-    if case_cfg.type == "hpc" and case_cfg.input and case_cfg.position:
-        return Path(case_cfg.input) / case_cfg.position
-    return None
+    if case_cfg.type != "hpc":
+        return None
+    if not case_cfg.input or not case_cfg.position:
+        raise ValueError(f"hpc case '{case_name}' missing input or position in experiment.yml")
+    return Path(case_cfg.input) / case_cfg.position
 
 
 def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr, channels=None):

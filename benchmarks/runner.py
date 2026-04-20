@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import shlex
 import shutil
 import subprocess
 from pathlib import Path
@@ -73,15 +74,15 @@ def _sim_kwargs(modality: str, tf_settings: dict) -> dict:
     return {k: v for k, v in tf_settings.items() if k in _SIM_KWARGS[modality]}
 
 
-def _run_wo_rec(position_path: Path, config_path: Path, recon_path: Path) -> None:
-    """Invoke ``wo rec`` as a subprocess, raising on non-zero exit."""
+def _wo_rec_argv(position_path: Path, config_path: Path, recon_path: Path) -> list[str]:
+    """Build the ``wo rec`` argv list shared by subprocess exec and cli_command.sh."""
+    return ["wo", "rec", "-i", str(position_path), "-c", str(config_path), "-o", str(recon_path)]
+
+
+def _run_wo_rec(argv: list[str]) -> None:
+    """Invoke ``wo rec`` via ``argv``, raising on non-zero exit."""
     env = {**os.environ, "PYTHONWARNINGS": "ignore::UserWarning,ignore::DeprecationWarning"}
-    result = subprocess.run(
-        ["wo", "rec", "-i", str(position_path), "-c", str(config_path), "-o", str(recon_path)],
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    result = subprocess.run(argv, capture_output=True, text=True, env=env)
     if result.returncode != 0:
         raise RuntimeError(f"wo rec failed:\n{result.stderr}")
 
@@ -211,11 +212,11 @@ def _run_and_measure(
     config_path.write_text(yaml.dump(recon_config, default_flow_style=False))
 
     recon_path = case_dir / "reconstruction.zarr"
-    cli_cmd = f"wo rec -i {position_path} -c {config_path} -o {recon_path}"
-    (case_dir / "cli_command.sh").write_text(f"#!/bin/bash\n{cli_cmd}\n")
+    argv = _wo_rec_argv(position_path, config_path, recon_path)
+    (case_dir / "cli_command.sh").write_text(f"#!/bin/bash\n{shlex.join(argv)}\n")
 
     with tt.time("reconstruct"):
-        _run_wo_rec(position_path, config_path, recon_path)
+        _run_wo_rec(argv)
 
     with tt.time("metrics"):
         recon_data = _read_zarr(recon_path)
