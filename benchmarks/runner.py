@@ -332,7 +332,7 @@ def run_experiment(
 
     timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     run_name = f"{timestamp}_{experiment.name}"
-    run_dir = output_dir / "runs" / run_name
+    run_dir = output_dir / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
 
     (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))

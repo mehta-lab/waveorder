@@ -11,7 +11,27 @@ from pathlib import Path
 import click
 
 _DEFAULT_EXPERIMENT = Path(__file__).parent.parent.parent / "benchmarks" / "experiments" / "regression.yml"
-_DEFAULT_OUTPUT_DIR = os.environ.get("WAVEORDER_BENCH_OUTPUT", ".")
+
+
+def _resolve_output_dir(cli_value: str | None) -> Path:
+    """Resolve the output directory.
+
+    Precedence: CLI argument > ``WAVEORDER_BENCH_OUTPUT`` env var > ``"."``.
+    """
+    if cli_value is not None:
+        return Path(cli_value)
+    env_value = os.environ.get("WAVEORDER_BENCH_OUTPUT")
+    if env_value:
+        return Path(env_value)
+    return Path(".")
+
+
+def _output_dir_help() -> str:
+    """Build --output-dir help text showing current env var value."""
+    env_value = os.environ.get("WAVEORDER_BENCH_OUTPUT")
+    if env_value:
+        return f"Root output directory. [default: $WAVEORDER_BENCH_OUTPUT = {env_value}]"
+    return "Root output directory. [default: $WAVEORDER_BENCH_OUTPUT if set, else '.']"
 
 
 @click.group("benchmark")
@@ -38,8 +58,8 @@ def benchmark():
     "--output-dir",
     "-o",
     type=click.Path(),
-    default=".",
-    help="Root output directory for benchmark runs.",
+    default=None,
+    help=_output_dir_help(),
 )
 def run(experiment, scope, output_dir):
     """Run benchmark cases.
@@ -59,34 +79,46 @@ def run(experiment, scope, output_dir):
         experiment = str(_DEFAULT_EXPERIMENT)
 
     experiment_path = Path(experiment)
-    output_dir = Path(output_dir)
+    output_dir = _resolve_output_dir(output_dir)
     exp = load_experiment(experiment_path)
+
+    # Filter cases to those this scope will actually execute
+    selected = {
+        name: case
+        for name, case in exp.cases.items()
+        if not (case.type == "hpc" and scope == "synthetic") and case.type in ("synthetic", "hpc")
+    }
+    n_skipped_hpc = sum(1 for c in exp.cases.values() if c.type == "hpc" and scope == "synthetic")
+    n_unsupported = sum(1 for c in exp.cases.values() if c.type not in ("synthetic", "hpc"))
 
     metadata = collect_metadata()
     from datetime import datetime
 
     timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     run_name = f"{timestamp}_{exp.name}"
-    run_dir = output_dir / "runs" / run_name
+    run_dir = output_dir / run_name
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2))
     shutil.copy2(experiment_path, run_dir / "experiment.yml")
 
+    summary = f"{len(selected)} case{'s' if len(selected) != 1 else ''}"
+    extras = []
+    if n_skipped_hpc:
+        extras.append(f"skipping {n_skipped_hpc} hpc")
+    if n_unsupported:
+        extras.append(f"skipping {n_unsupported} unsupported")
+    if extras:
+        summary += f"; {', '.join(extras)}"
+
     click.echo(click.style(f"WaveOrder Benchmark — {exp.name}", fg="green", bold=True))
     click.echo(f"  Git: {metadata['git_hash']} ({metadata['git_branch']}){' dirty' if metadata['git_dirty'] else ''}")
-    click.echo(f"  Experiment: {exp.name} ({len(exp.cases)} cases)")
+    click.echo(f"  Experiment: {exp.name} ({summary})")
     click.echo(f"  Output: {run_dir}")
     click.echo()
     _print_header()
 
     results = {}
-    for case_name, case in exp.cases.items():
-        if case.type == "hpc" and scope == "synthetic":
-            continue
-        if case.type not in ("synthetic", "hpc"):
-            click.echo(f"  {case_name:24s} skipped ({case.type} not yet supported)")
-            continue
-
+    for case_name, case in selected.items():
         case_dir = run_dir / "cases" / case_name
         recon_config = resolve_recon_config(case, experiment_path.parent)
 
@@ -125,17 +157,13 @@ def run(experiment, scope, output_dir):
 
 
 @benchmark.command()
-@click.option("--output-dir", "-o", type=click.Path(), default=_DEFAULT_OUTPUT_DIR, help="Root output directory.")
+@click.option("--output-dir", "-o", type=click.Path(), default=None, help=_output_dir_help())
 def latest(output_dir):
     """Show summary of the most recent benchmark run."""
     click.echo(click.style("Loading latest benchmark...", fg="green"))
 
-    runs_dir = Path(output_dir) / "runs"
-    if not runs_dir.exists():
-        click.echo("No benchmark runs found.")
-        return
-
-    run_dirs = sorted(runs_dir.iterdir(), key=lambda p: p.stat().st_mtime)
+    output_dir = _resolve_output_dir(output_dir)
+    run_dirs = _list_run_dirs(output_dir)
     if not run_dirs:
         click.echo("No benchmark runs found.")
         return
@@ -158,16 +186,16 @@ def latest(output_dir):
 
 
 @benchmark.command()
-@click.option("--output-dir", "-o", type=click.Path(), default=_DEFAULT_OUTPUT_DIR, help="Root output directory.")
+@click.option("--output-dir", "-o", type=click.Path(), default=None, help=_output_dir_help())
 @click.option("--limit", "-n", type=int, default=10, help="Number of runs to show.")
 def history(output_dir, limit):
     """List recent benchmark runs."""
-    runs_dir = Path(output_dir) / "runs"
-    if not runs_dir.exists():
+    output_dir = _resolve_output_dir(output_dir)
+    run_dirs = _list_run_dirs(output_dir)
+    if not run_dirs:
         click.echo("No benchmark runs found.")
         return
 
-    run_dirs = sorted(runs_dir.iterdir(), key=lambda p: p.stat().st_mtime)
     for run_dir in run_dirs[-limit:]:
         meta_path = run_dir / "metadata.json"
         meta = json.loads(meta_path.read_text()) if meta_path.exists() else {}
@@ -178,12 +206,23 @@ def history(output_dir, limit):
         click.echo(f"  {run_dir.name:50s} {n_cases} cases  git={meta.get('git_hash', '?')}")
 
 
+_NON_RUN_DIRS = {"annotated_references"}
+
+
+def _list_run_dirs(output_dir: str | Path) -> list[Path]:
+    """Return all run directories under output_dir (oldest first)."""
+    root = Path(output_dir)
+    if not root.exists():
+        return []
+    candidates = [
+        p for p in root.iterdir() if p.is_dir() and p.name not in _NON_RUN_DIRS and not p.name.startswith(".")
+    ]
+    return sorted(candidates, key=lambda p: p.stat().st_mtime)
+
+
 def _find_runs(output_dir: str | Path, n: int = 1) -> list[Path]:
     """Return the N most recent run directories, newest first."""
-    runs_dir = Path(output_dir) / "runs"
-    if not runs_dir.exists():
-        return []
-    return sorted(runs_dir.iterdir(), key=lambda p: p.stat().st_mtime, reverse=True)[:n]
+    return list(reversed(_list_run_dirs(output_dir)))[:n]
 
 
 def _load_summary(run_dir: Path) -> dict:
@@ -195,7 +234,7 @@ def _load_summary(run_dir: Path) -> dict:
 
 
 @benchmark.command()
-@click.option("--output-dir", "-o", type=click.Path(), default=_DEFAULT_OUTPUT_DIR, help="Root output directory.")
+@click.option("--output-dir", "-o", type=click.Path(), default=None, help=_output_dir_help())
 @click.argument("run_a", required=False)
 @click.argument("run_b", required=False)
 def compare(output_dir, run_a, run_b):
@@ -207,10 +246,10 @@ def compare(output_dir, run_a, run_b):
     Example:
       \033[92mwo bm compare\033[0m
     """
-    runs_dir = Path(output_dir) / "runs"
+    output_dir = _resolve_output_dir(output_dir)
 
     if run_a and run_b:
-        dirs = [runs_dir / run_a, runs_dir / run_b]
+        dirs = [output_dir / run_a, output_dir / run_b]
     else:
         dirs = _find_runs(output_dir, n=2)
 
@@ -262,7 +301,7 @@ def compare(output_dir, run_a, run_b):
 
 
 @benchmark.command()
-@click.option("--output-dir", "-o", type=click.Path(), default=_DEFAULT_OUTPUT_DIR, help="Root output directory.")
+@click.option("--output-dir", "-o", type=click.Path(), default=None, help=_output_dir_help())
 @click.argument("path", required=False, default=None)
 def view(output_dir, path):
     """Open benchmark results in napari.
@@ -291,8 +330,9 @@ def view(output_dir, path):
         if len(parts) > 1:
             case = parts[1]
 
+    output_dir = _resolve_output_dir(output_dir)
     if run_name:
-        run_dir = Path(output_dir) / "runs" / run_name
+        run_dir = output_dir / run_name
         if not run_dir.exists():
             click.echo(f"Run not found: {run_dir}")
             return
@@ -346,7 +386,7 @@ def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr):
 
 @benchmark.command()
 @click.argument("case_name")
-@click.option("--output-dir", "-o", type=click.Path(), default=_DEFAULT_OUTPUT_DIR, help="Root output directory.")
+@click.option("--output-dir", "-o", type=click.Path(), default=None, help=_output_dir_help())
 def mark(case_name, output_dir):
     """Mark the latest run's reconstruction as the annotated reference.
 
@@ -356,6 +396,7 @@ def mark(case_name, output_dir):
     Example:
       \033[92mwo bm mark phase_3d_beads\033[0m
     """
+    output_dir = _resolve_output_dir(output_dir)
     runs = _find_runs(output_dir, n=1)
     if not runs:
         click.echo("No benchmark runs found.")
@@ -367,7 +408,7 @@ def mark(case_name, output_dir):
         click.echo(f"No reconstruction found for case '{case_name}' in {run_dir.name}")
         return
 
-    ref_dir = Path(output_dir) / "annotated_references"
+    ref_dir = output_dir / "annotated_references"
     ref_dir.mkdir(parents=True, exist_ok=True)
     dest = ref_dir / f"{case_name}.zarr"
 
