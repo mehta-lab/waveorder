@@ -37,6 +37,17 @@ def _output_dir_help() -> str:
     return "Root output directory. [default: $WAVEORDER_BENCH_OUTPUT if set, else '.']"
 
 
+def _output_dir_option():
+    """The shared ``--output-dir`` click option used by every bm command."""
+    return click.option(
+        "--output-dir",
+        "-o",
+        type=click.Path(),
+        default=None,
+        help=_output_dir_help(),
+    )
+
+
 @click.group("benchmark")
 def benchmark():
     """Run and inspect reconstruction benchmarks."""
@@ -57,13 +68,7 @@ def benchmark():
     default="synthetic",
     help="Which cases to run.",
 )
-@click.option(
-    "--output-dir",
-    "-o",
-    type=click.Path(),
-    default=None,
-    help=_output_dir_help(),
-)
+@_output_dir_option()
 @click.option(
     "--save-all",
     is_flag=True,
@@ -91,7 +96,7 @@ def run(experiment, scope, output_dir, save_all):
     click.echo(click.style("Starting benchmark run...", fg="green"))
 
     # Deferred imports: benchmarks.runner pulls in torch, iohub, etc.
-    from benchmarks.config import load_experiment, resolve_recon_config
+    from benchmarks.config import infer_modality, load_experiment, resolve_recon_config
     from benchmarks.runner import run_hpc_case, run_synthetic_case
     from benchmarks.utils import collect_metadata
 
@@ -102,14 +107,8 @@ def run(experiment, scope, output_dir, save_all):
     output_dir = _resolve_output_dir(output_dir)
     exp = load_experiment(experiment_path)
 
-    # Filter cases to those this scope will actually execute
-    selected = {
-        name: case
-        for name, case in exp.cases.items()
-        if not (case.type == "hpc" and scope == "synthetic") and case.type in ("synthetic", "hpc")
-    }
-    n_skipped_hpc = sum(1 for c in exp.cases.values() if c.type == "hpc" and scope == "synthetic")
-    n_unsupported = sum(1 for c in exp.cases.values() if c.type not in ("synthetic", "hpc"))
+    selected = {name: case for name, case in exp.cases.items() if not (case.type == "hpc" and scope == "synthetic")}
+    n_skipped_hpc = len(exp.cases) - len(selected)
 
     metadata = collect_metadata()
 
@@ -121,13 +120,8 @@ def run(experiment, scope, output_dir, save_all):
     shutil.copy2(experiment_path, run_dir / "experiment.yml")
 
     summary = f"{len(selected)} case{'s' if len(selected) != 1 else ''}"
-    extras = []
     if n_skipped_hpc:
-        extras.append(f"skipping {n_skipped_hpc} hpc")
-    if n_unsupported:
-        extras.append(f"skipping {n_unsupported} unsupported")
-    if extras:
-        summary += f"; {', '.join(extras)}"
+        summary += f"; skipping {n_skipped_hpc} hpc"
 
     click.echo(click.style(f"WaveOrder Benchmark — {exp.name}", fg="green", bold=True))
     click.echo(f"  Git: {metadata['git_hash']} ({metadata['git_branch']}){' dirty' if metadata['git_dirty'] else ''}")
@@ -144,12 +138,11 @@ def run(experiment, scope, output_dir, save_all):
         click.echo(f"  {case_name:24s} running...", nl=False)
         try:
             if case.type == "synthetic":
-                modality = "phase" if "phase" in recon_config else "fluorescence"
                 metrics = run_synthetic_case(
                     phantom_config=case.phantom,
                     recon_config=recon_config,
                     case_dir=case_dir,
-                    modality=modality,
+                    modality=infer_modality(recon_config),
                     save_all=save_all,
                 )
             elif case.type == "hpc":
@@ -178,7 +171,7 @@ def run(experiment, scope, output_dir, save_all):
 
 
 @benchmark.command()
-@click.option("--output-dir", "-o", type=click.Path(), default=None, help=_output_dir_help())
+@_output_dir_option()
 def latest(output_dir):
     """Show summary of the most recent benchmark run."""
     click.echo(click.style("Loading latest benchmark...", fg="green"))
@@ -207,7 +200,7 @@ def latest(output_dir):
 
 
 @benchmark.command()
-@click.option("--output-dir", "-o", type=click.Path(), default=None, help=_output_dir_help())
+@_output_dir_option()
 @click.option("--limit", "-n", type=int, default=10, help="Number of runs to show.")
 def history(output_dir, limit):
     """List recent benchmark runs."""
@@ -255,7 +248,7 @@ def _load_summary(run_dir: Path) -> dict:
 
 
 @benchmark.command()
-@click.option("--output-dir", "-o", type=click.Path(), default=None, help=_output_dir_help())
+@_output_dir_option()
 @click.argument("run_a", required=False)
 @click.argument("run_b", required=False)
 def compare(output_dir, run_a, run_b):
@@ -322,7 +315,7 @@ def compare(output_dir, run_a, run_b):
 
 
 @benchmark.command()
-@click.option("--output-dir", "-o", type=click.Path(), default=None, help=_output_dir_help())
+@_output_dir_option()
 @click.argument("path", required=False, default=None)
 def view(output_dir, path):
     """Open benchmark results in napari.
@@ -462,7 +455,7 @@ def _input_channel_names(case_dir: Path) -> list[str] | None:
 
 @benchmark.command()
 @click.argument("case_name")
-@click.option("--output-dir", "-o", type=click.Path(), default=None, help=_output_dir_help())
+@_output_dir_option()
 def mark(case_name, output_dir):
     """Mark the latest run's reconstruction as the annotated reference.
 

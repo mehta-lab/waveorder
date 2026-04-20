@@ -39,7 +39,7 @@ class CaseConfig(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    type: Literal["synthetic", "hpc", "script"] = "synthetic"
+    type: Literal["synthetic", "hpc"] = "synthetic"
     phantom: PhantomConfig | None = None
     config: str | None = None
     overrides: dict[str, Any] | None = None
@@ -139,6 +139,11 @@ def resolve_recon_config(case: CaseConfig, experiment_dir: Path) -> dict:
             _deep_set(config, dotted_key.split("."), value)
 
     return config
+
+
+def infer_modality(recon_config: dict) -> str:
+    """Return ``"phase"`` if the recon config has a phase block, else ``"fluorescence"``."""
+    return "phase" if "phase" in recon_config else "fluorescence"
 
 
 def _deep_set(d: dict, keys: list[str], value: Any):

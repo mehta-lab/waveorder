@@ -24,7 +24,7 @@ import yaml
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
-from benchmarks.config import PhantomConfig
+from benchmarks.config import PhantomConfig, infer_modality
 from benchmarks.metrics import compute_metrics
 from benchmarks.simulate import simulate_fluorescence_3d, simulate_phase_3d
 from benchmarks.utils import TimingTree
@@ -50,6 +50,28 @@ def _extract_optics(tf_settings: dict) -> tuple[float, float, float]:
     )
     pixel_size = tf_settings.get("yx_pixel_size", 0.1)
     return NA_det, wavelength, pixel_size
+
+
+_SIM_KWARGS = {
+    "phase": {
+        "wavelength_illumination",
+        "index_of_refraction_media",
+        "numerical_aperture_illumination",
+        "numerical_aperture_detection",
+    },
+    "fluorescence": {
+        "wavelength_emission",
+        "index_of_refraction_media",
+        "numerical_aperture_detection",
+    },
+}
+
+_DEFAULT_CHANNEL = {"phase": "Brightfield", "fluorescence": "GFP"}
+
+
+def _sim_kwargs(modality: str, tf_settings: dict) -> dict:
+    """Filter ``tf_settings`` to kwargs accepted by ``simulate_{modality}_3d``."""
+    return {k: v for k, v in tf_settings.items() if k in _SIM_KWARGS[modality]}
 
 
 def _run_wo_rec(position_path: Path, config_path: Path, recon_path: Path) -> None:
@@ -211,29 +233,16 @@ def run_synthetic_case(
 
         (case_dir / "phantom_config.json").write_text(json.dumps(phantom.metadata, indent=2))
 
-        # Simulate measurement
         with tt.time("simulate"):
             tf_settings = recon_config.get(modality, {}).get("transfer_function", {})
+            sim_kwargs = _sim_kwargs(modality, tf_settings)
             if modality == "phase":
-                data = simulate_phase_3d(
-                    phantom,
-                    wavelength_illumination=tf_settings.get("wavelength_illumination", 0.532),
-                    index_of_refraction_media=tf_settings.get("index_of_refraction_media", 1.3),
-                    numerical_aperture_illumination=tf_settings.get("numerical_aperture_illumination", 0.9),
-                    numerical_aperture_detection=tf_settings.get("numerical_aperture_detection", 1.2),
-                )
-                channel_name = recon_config.get("input_channel_names", ["Brightfield"])[0]
+                data = simulate_phase_3d(phantom, **sim_kwargs)
             elif modality == "fluorescence":
-                data = simulate_fluorescence_3d(
-                    phantom,
-                    wavelength_emission=tf_settings.get("wavelength_emission", 0.532),
-                    index_of_refraction_media=tf_settings.get("index_of_refraction_media", 1.3),
-                    numerical_aperture_detection=tf_settings.get("numerical_aperture_detection", 1.2),
-                    background=0,
-                )
-                channel_name = recon_config.get("input_channel_names", ["GFP"])[0]
+                data = simulate_fluorescence_3d(phantom, background=0, **sim_kwargs)
             else:
                 raise ValueError(f"Unknown modality: {modality}")
+            channel_name = recon_config.get("input_channel_names", [_DEFAULT_CHANNEL[modality]])[0]
 
         # Write simulated data as OME-Zarr
         simulated_path = case_dir / "simulated.zarr"
@@ -312,7 +321,7 @@ def run_hpc_case(
     tt = TimingTree()
 
     # Determine modality and optics from config
-    modality = "phase" if "phase" in recon_config else "fluorescence"
+    modality = infer_modality(recon_config)
     tf_settings = recon_config.get(modality, {}).get("transfer_function", {})
 
     with tt.time("total"):
