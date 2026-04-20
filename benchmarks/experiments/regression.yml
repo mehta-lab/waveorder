@@ -18,6 +18,7 @@ cases:
       pixel_sizes: [0.25, 0.1, 0.1]
       bead_radius_um: 2.5
       fluorescence_intensity: 1.0
+      fluorescence_background: 10.0
     config: ../configs/fluor_3d_beads.yml
 
   ops_pheno_center:

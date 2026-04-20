@@ -46,6 +46,7 @@ def single_bead(
     refractive_index_diff: float = 0.05,
     absorption_coefficient: float = 0.0,
     fluorescence_intensity: float = 1.0,
+    fluorescence_background: float = 0.0,
     center: tuple[float, float, float] | None = None,
     blur_size_um: float = 0.1,
 ) -> Phantom:
@@ -69,6 +70,8 @@ def single_bead(
         Peak absorption coefficient inside the bead.
     fluorescence_intensity : float
         Peak fluorophore concentration inside the bead.
+    fluorescence_background : float
+        Constant baseline added to the fluorescence channel everywhere
     center : tuple[float, float, float] or None
         Bead center in um, relative to volume center. None = (0, 0, 0).
     blur_size_um : float
@@ -98,6 +101,7 @@ def single_bead(
         "refractive_index_diff": refractive_index_diff,
         "absorption_coefficient": absorption_coefficient,
         "fluorescence_intensity": fluorescence_intensity,
+        "fluorescence_background": fluorescence_background,
         "center": list(center),
         "blur_size_um": blur_size_um,
     }
@@ -107,7 +111,7 @@ def single_bead(
 
     phase = blurred * refractive_index_diff
     absorption = blurred * absorption_coefficient
-    fluorescence = blurred * fluorescence_intensity
+    fluorescence = blurred * fluorescence_intensity + fluorescence_background
 
     return Phantom(
         phase=phase,
@@ -126,6 +130,7 @@ def random_beads(
     refractive_index_diff: float = 0.03,
     absorption_coefficient: float = 0.0,
     fluorescence_intensity: float = 1.0,
+    fluorescence_background: float = 0.0,
     blur_size_um: float = 0.1,
     seed: int = 42,
 ) -> Phantom:
@@ -151,6 +156,8 @@ def random_beads(
         Peak absorption coefficient inside each bead.
     fluorescence_intensity : float
         Peak fluorophore concentration inside each bead.
+    fluorescence_background : float
+        Constant baseline added to the fluorescence channel everywhere
     blur_size_um : float
         Gaussian blur standard deviation in um.
         This blur softens the edges of the object e.g. from motion.
@@ -180,6 +187,7 @@ def random_beads(
         "refractive_index_diff": refractive_index_diff,
         "absorption_coefficient": absorption_coefficient,
         "fluorescence_intensity": fluorescence_intensity,
+        "fluorescence_background": fluorescence_background,
         "blur_size_um": blur_size_um,
         "seed": seed,
     }
@@ -236,7 +244,7 @@ def random_beads(
 
     phase = blurred * refractive_index_diff
     absorption = blurred * absorption_coefficient
-    fluorescence = blurred * fluorescence_intensity
+    fluorescence = blurred * fluorescence_intensity + fluorescence_background
 
     return Phantom(
         phase=phase,

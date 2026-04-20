@@ -229,6 +229,7 @@ def run_synthetic_case(
                     wavelength_emission=tf_settings.get("wavelength_emission", 0.532),
                     index_of_refraction_media=tf_settings.get("index_of_refraction_media", 1.3),
                     numerical_aperture_detection=tf_settings.get("numerical_aperture_detection", 1.2),
+                    background=0,
                 )
                 channel_name = recon_config.get("input_channel_names", ["GFP"])[0]
             else:
