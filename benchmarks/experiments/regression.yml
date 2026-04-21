@@ -31,4 +31,11 @@ cases:
     type: hpc
     input: /hpc/projects/intracellular_dashboard/ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
     position: A/1/029029
+    crop:
+      y: [768, 1280]
+      x: [768, 1280]
     config: ../configs/ops_pheno_phase_2d_opt.yml
+    reference_parameters:
+      z_focus_offset:     {value: 0.0, tolerance: 0.25}
+      tilt_angle_zenith:  {value: 0.0, tolerance: 0.1}
+      tilt_angle_azimuth: {value: 0.0, tolerance: 3.14}
