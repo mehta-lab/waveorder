@@ -26,3 +26,9 @@ cases:
     input: /hpc/projects/intracellular_dashboard/ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
     position: A/1/029029
     config: ../configs/ops_pheno_phase_2d.yml
+
+  ops_pheno_center_opt:
+    type: hpc
+    input: /hpc/projects/intracellular_dashboard/ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
+    position: A/1/029029
+    config: ../configs/ops_pheno_phase_2d_opt.yml
