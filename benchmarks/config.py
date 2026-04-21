@@ -47,6 +47,21 @@ class ReferenceParameter(BaseModel):
     tolerance: PositiveFloat
 
 
+class CropConfig(BaseModel):
+    """Optional bbox to crop the input zarr before reconstruction.
+
+    Each axis is ``[start, stop]`` in pixel indices. Omitted axes take
+    the full range. Only ``hpc`` cases use this; synthetic cases already
+    generate data at the requested shape.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    z: tuple[int, int] | None = None
+    y: tuple[int, int] | None = None
+    x: tuple[int, int] | None = None
+
+
 class CaseConfig(BaseModel):
     """Configuration for a single benchmark case."""
 
@@ -58,6 +73,7 @@ class CaseConfig(BaseModel):
     overrides: dict[str, Any] | None = None
     input: str | None = None
     position: str | None = None
+    crop: CropConfig | None = None
     reference_parameters: dict[str, ReferenceParameter] | None = None
 
 

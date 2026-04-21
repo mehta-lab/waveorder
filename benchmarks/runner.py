@@ -25,7 +25,7 @@ import yaml
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
-from benchmarks.config import PhantomConfig, ReferenceParameter, infer_modality
+from benchmarks.config import CropConfig, PhantomConfig, ReferenceParameter, infer_modality
 from benchmarks.metrics import compute_metrics
 from benchmarks.simulate import simulate_fluorescence_3d, simulate_phase_3d
 from benchmarks.utils import TimingTree
@@ -239,6 +239,45 @@ def _finalize_case(case_dir: Path, tt: TimingTree, metrics: dict, save_all: bool
     _cleanup_large_outputs(case_dir, save_all)
 
 
+def crop_input_position(
+    input_path: str | Path,
+    position: str,
+    crop: CropConfig,
+    case_dir: Path,
+) -> Path:
+    """Write a cropped copy of an HCS input position into ``case_dir``.
+
+    Returns the path to the written zarr. The position key inside the
+    cropped store matches the source (``row/col/fov``) so
+    ``{cropped_zarr} / position`` is directly usable by ``wo rec -i``.
+    """
+    src_path = Path(input_path) / position
+    src = open_ome_zarr(src_path, layout="fov", mode="r")
+    data = np.array(src.data[0])  # (C, Z, Y, X)
+
+    def _slice(r):
+        return slice(r[0], r[1]) if r else slice(None)
+
+    cropped = data[:, _slice(crop.z), _slice(crop.y), _slice(crop.x)]
+
+    out_path = case_dir / "cropped_input.zarr"
+    if out_path.exists():
+        shutil.rmtree(out_path)
+    row, col, fov = position.split("/")
+    dst = open_ome_zarr(out_path, layout="hcs", mode="w", channel_names=list(src.channel_names))
+    pos = dst.create_position(row, col, fov)
+    pos.create_zeros(
+        "0",
+        (1, *cropped.shape),
+        dtype=np.float32,
+        transform=[TransformationMeta(type="scale", scale=src.scale)],
+    )
+    pos["0"][0] = cropped
+    dst.close()
+    src.close()
+    return out_path
+
+
 def check_reference_parameters(
     case_dir: Path,
     reference_parameters: dict[str, ReferenceParameter] | None,
@@ -375,6 +414,7 @@ def run_hpc_case(
     case_dir: Path,
     save_all: bool = False,
     reference_parameters: dict[str, ReferenceParameter] | None = None,
+    crop: CropConfig | None = None,
 ) -> dict:
     """Run a single HPC benchmark case on existing data via ``wo rec``.
 
@@ -393,6 +433,11 @@ def run_hpc_case(
         transfer function zarr is deleted and ``reconstruction.zarr``
         is deleted if it exceeds :data:`SIZE_LIMIT_BYTES` after metrics
         are computed.
+    reference_parameters : dict, optional
+        Per-parameter expected values + tolerances for the optimizer.
+    crop : CropConfig, optional
+        If given, crop the input to this bbox before reconstructing.
+        Speeds up iteration on large FOVs.
 
     Returns
     -------
@@ -403,8 +448,14 @@ def run_hpc_case(
     tt = TimingTree()
 
     with tt.time("total"):
+        if crop is not None:
+            cropped_root = crop_input_position(input_path, position, crop, case_dir)
+            position_path = cropped_root / position
+        else:
+            position_path = Path(input_path) / position
+
         metrics = _run_and_measure(
-            position_path=Path(input_path) / position,
+            position_path=position_path,
             recon_config=recon_config,
             case_dir=case_dir,
             tt=tt,

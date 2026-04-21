@@ -155,6 +155,7 @@ def run(experiment, scope, output_dir, save_all):
                     case_dir=case_dir,
                     save_all=save_all,
                     reference_parameters=case.reference_parameters,
+                    crop=case.crop,
                 )
 
             results[case_name] = metrics
@@ -474,12 +475,18 @@ def _resolve_raw_path(case_dir: Path, case_name: str, experiment) -> Path | None
     """Locate the raw input for a case.
 
     Synthetic cases store their simulated measurement as ``simulated.zarr``
-    in the case directory. HPC cases point at an external position, which
-    is reconstructed from the experiment YAML as ``{input}/{position}``.
+    in the case directory. HPC cases with a ``crop`` block store their
+    cropped input as ``cropped_input.zarr``. HPC cases without a crop
+    are reconstructed from the experiment YAML as ``{input}/{position}``.
     """
     sim_path = case_dir / "simulated.zarr"
     if sim_path.exists():
         return sim_path
+    cropped_path = case_dir / "cropped_input.zarr"
+    if cropped_path.exists() and experiment and case_name in experiment.cases:
+        case_cfg = experiment.cases[case_name]
+        if case_cfg.position:
+            return cropped_path / case_cfg.position
     if experiment is None or case_name not in experiment.cases:
         return None
     case_cfg = experiment.cases[case_name]
