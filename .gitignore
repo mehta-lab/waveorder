@@ -159,3 +159,6 @@ scripts/
 
 # benchmark results
 runs/
+
+# Claude Code session state
+.claude/
