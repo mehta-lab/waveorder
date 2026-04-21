@@ -136,7 +136,7 @@ def run(experiment, scope, output_dir, save_all):
         case_dir = run_dir / "cases" / case_name
         recon_config = resolve_recon_config(case, experiment_path.parent)
 
-        click.echo(f"  {case_name:24s} running...", nl=False)
+        click.echo(f"  {case_name:21s} running...", nl=False)
         try:
             if case.type == "synthetic":
                 metrics = run_synthetic_case(
@@ -145,6 +145,7 @@ def run(experiment, scope, output_dir, save_all):
                     case_dir=case_dir,
                     modality=infer_modality(recon_config),
                     save_all=save_all,
+                    reference=case.reference,
                 )
             elif case.type == "hpc":
                 metrics = run_hpc_case(
@@ -153,6 +154,8 @@ def run(experiment, scope, output_dir, save_all):
                     recon_config=recon_config,
                     case_dir=case_dir,
                     save_all=save_all,
+                    reference=case.reference,
+                    crop=case.crop,
                 )
 
             results[case_name] = metrics
@@ -164,7 +167,7 @@ def run(experiment, scope, output_dir, save_all):
             _print_row(case_name, metrics, elapsed=elapsed)
         except Exception as e:
             click.echo("\033[2K\r", nl=False)
-            click.echo(f"  {case_name:24s} " + click.style(f"FAILED: {e}", fg="red"))
+            click.echo(f"  {case_name:21s} " + click.style(f"FAILED: {e}", fg="red"))
             tb = traceback.format_exc()
             click.echo(tb, err=True)
             results[case_name] = {"error": str(e), "traceback": tb}
@@ -283,7 +286,7 @@ def compare(output_dir, run_a, run_b):
         return
 
     # Header
-    click.echo(f"  {'case':24s} {'metric':>10s} {'A':>10s} {'B':>10s} {'delta':>10s}")
+    click.echo(f"  {'case':21s} {'metric':>10s} {'A':>10s} {'B':>10s} {'delta':>10s}")
     click.echo("  " + "─" * 66)
 
     for case_name in sorted(common):
@@ -306,26 +309,28 @@ def compare(output_dir, run_a, run_b):
 
         for metric, va, vb in pairs:
             delta = vb - va
-            click.echo(f"  {case_name:24s} {metric:>10s} {_fmt(va)} {_fmt(vb)} {_fmt(delta)}")
+            click.echo(f"  {case_name:21s} {metric:>10s} {_fmt(va)} {_fmt(vb)} {_fmt(delta)}")
             case_name = ""  # only show name on first row
 
 
 @benchmark.command()
 @_output_dir_option()
 @click.argument("path", required=False, default=None)
-def view(output_dir, path):
+@click.argument("path_b", required=False, default=None)
+def view(output_dir, path, path_b):
     """Open benchmark results in napari.
 
-    PATH selects what to view: ``latest`` or a run name, optionally
-    followed by ``/case_name``. Nothing opens the most recent run.
-    Raw input and reconstruction are loaded as separate layers and
-    tiled side-by-side via napari's grid mode.
+    With one PATH: view that run (or case). With two PATHs: compare them
+    side-by-side — raw input is loaded once from the first path, both
+    reconstructions are loaded as separate layers with contrast limits
+    linked between them. PATH is ``latest`` or a run name, optionally
+    followed by ``/case_name``.
 
     \b
     Example:
       \033[92mwo bm view\033[0m
       \033[92mwo bm view latest/phase_3d_beads\033[0m
-      \033[92mwo bm view 2026-03-27T11-00-10_regression/reg_1e-3\033[0m
+      \033[92mwo bm view RUN_A/case RUN_B/case\033[0m
     """
     click.echo(click.style("Opening benchmark results...", fg="green"))
 
@@ -335,7 +340,47 @@ def view(output_dir, path):
 
     from benchmarks.config import load_experiment
 
-    # Parse path: nothing, "run_name", or "run_name/case_name"
+    output_dir = _resolve_output_dir(output_dir)
+
+    target_a = _resolve_view_target(output_dir, path)
+    if target_a is None:
+        return
+    run_a, case_a = target_a
+
+    if path_b is None:
+        viewer = napari.Viewer(title=f"wo bm view — {run_a.name}")
+        _load_case_into_viewer(viewer, run_a, case_a, open_ome_zarr, load_experiment)
+        viewer.grid.enabled = True
+        napari.run()
+        return
+
+    target_b = _resolve_view_target(output_dir, path_b)
+    if target_b is None:
+        return
+    run_b, case_b = target_b
+
+    viewer = napari.Viewer(title=f"wo bm view — compare {run_a.name} vs {run_b.name}")
+
+    # Raw + recon from A
+    recon_layers_a = _load_case_into_viewer(viewer, run_a, case_a, open_ome_zarr, load_experiment, recon_label="a")
+    # Recon from B only (raw is identical; don't duplicate)
+    recon_layers_b = _load_case_into_viewer(
+        viewer, run_b, case_b, open_ome_zarr, load_experiment, recon_label="b", skip_raw=True
+    )
+
+    _link_contrast_limits(recon_layers_a, recon_layers_b)
+
+    viewer.grid.enabled = True
+    napari.run()
+
+
+def _resolve_view_target(output_dir: Path, path: str | None) -> tuple[Path, str | None] | None:
+    """Resolve a ``path`` argument into ``(run_dir, case_name)``.
+
+    Accepts ``None`` or ``"latest"`` for the newest run, a bare run name,
+    or ``run_name/case_name``. Echoes an error and returns None if the run
+    or its cases directory can't be found.
+    """
     run_name = None
     case = None
     if path:
@@ -344,69 +389,107 @@ def view(output_dir, path):
         if len(parts) > 1:
             case = parts[1]
 
-    output_dir = _resolve_output_dir(output_dir)
     if run_name in (None, "latest"):
         runs = _find_runs(output_dir, n=1)
         if not runs:
             click.echo("No benchmark runs found.")
-            return
+            return None
         run_dir = runs[0]
     else:
         run_dir = output_dir / run_name
         if not run_dir.exists():
             click.echo(f"Run not found: {run_dir}")
-            return
+            return None
 
-    cases_dir = run_dir / "cases"
-    if not cases_dir.exists():
+    if not (run_dir / "cases").exists():
         click.echo(f"No cases in run {run_dir.name}.")
-        return
+        return None
 
-    # Load the experiment YAML saved with this run to locate raw inputs
+    return run_dir, case
+
+
+def _load_case_into_viewer(
+    viewer,
+    run_dir: Path,
+    case: str | None,
+    open_ome_zarr,
+    load_experiment,
+    recon_label: str | None = None,
+    skip_raw: bool = False,
+) -> list:
+    """Load raw + recon for one or more cases in ``run_dir`` into ``viewer``.
+
+    Returns the list of napari layers added for the reconstruction(s),
+    so the caller can link contrast limits between paired layers.
+    """
+    cases_dir = run_dir / "cases"
     exp_path = run_dir / "experiment.yml"
     experiment = load_experiment(exp_path) if exp_path.exists() else None
 
-    viewer = napari.Viewer(title=f"wo bm view — {run_dir.name}")
-
     case_dirs = [cases_dir / case] if case else sorted(cases_dir.iterdir())
+    recon_layers = []
     for case_dir in case_dirs:
         if not case_dir.is_dir():
             continue
         case_name = case_dir.name
+        tag = f"{recon_label}/" if recon_label else ""
 
-        # Raw input: simulated.zarr for synthetic, {input}/{position} for hpc
-        raw_path = _resolve_raw_path(case_dir, case_name, experiment)
-        channel_filter = _input_channel_names(case_dir)
-        if raw_path and raw_path.exists():
-            _add_zarr_to_viewer(
-                viewer,
-                raw_path,
-                f"{case_name}/raw",
-                open_ome_zarr,
-                channels=channel_filter,
-            )
-        else:
-            click.echo(f"  {case_name}: no raw input found")
+        if not skip_raw:
+            source = _resolve_raw_source(case_dir, case_name, experiment)
+            channel_filter = _input_channel_names(case_dir)
+            if source and source[0].exists():
+                raw_path, crop = source
+                _add_zarr_to_viewer(
+                    viewer,
+                    raw_path,
+                    f"{tag}{case_name}/raw",
+                    open_ome_zarr,
+                    channels=channel_filter,
+                    crop=crop,
+                )
+            else:
+                click.echo(f"  {case_name}: no raw input found")
 
-        # Reconstruction
         recon_path = case_dir / "reconstruction.zarr"
         if recon_path.exists():
-            _add_zarr_to_viewer(viewer, recon_path, f"{case_name}/recon", open_ome_zarr)
+            before = len(viewer.layers)
+            _add_zarr_to_viewer(viewer, recon_path, f"{tag}{case_name}/recon", open_ome_zarr)
+            recon_layers.extend(viewer.layers[before:])
+    return recon_layers
 
-    viewer.grid.enabled = True
-    napari.run()
+
+def _link_contrast_limits(layers_a: list, layers_b: list) -> None:
+    """Link contrast-limit edits between paired layers.
+
+    Uses napari's ``link_layers`` so dragging the contrast slider on
+    either side adjusts both. Also sets a common initial range.
+    """
+    if not layers_a or not layers_b:
+        return
+
+    from napari.experimental import link_layers
+
+    for la, lb in zip(layers_a, layers_b):
+        import numpy as np
+
+        lo = min(float(np.asarray(la.data).min()), float(np.asarray(lb.data).min()))
+        hi = max(float(np.asarray(la.data).max()), float(np.asarray(lb.data).max()))
+        la.contrast_limits = (lo, hi)
+        lb.contrast_limits = (lo, hi)
+        link_layers([la, lb], ("contrast_limits",))
 
 
-def _resolve_raw_path(case_dir: Path, case_name: str, experiment) -> Path | None:
-    """Locate the raw input for a case.
+def _resolve_raw_source(case_dir: Path, case_name: str, experiment):
+    """Resolve where raw data comes from for viewing.
 
-    Synthetic cases store their simulated measurement as ``simulated.zarr``
-    in the case directory. HPC cases point at an external position, which
-    is reconstructed from the experiment YAML as ``{input}/{position}``.
+    Returns ``(path, crop)`` where ``path`` is a zarr position path and
+    ``crop`` is either None (use the whole FOV) or a CropConfig (slice
+    in-memory at view time — no intermediate zarr is written). Returns
+    None when no raw data can be located.
     """
     sim_path = case_dir / "simulated.zarr"
     if sim_path.exists():
-        return sim_path
+        return sim_path, None
     if experiment is None or case_name not in experiment.cases:
         return None
     case_cfg = experiment.cases[case_name]
@@ -414,14 +497,16 @@ def _resolve_raw_path(case_dir: Path, case_name: str, experiment) -> Path | None
         return None
     if not case_cfg.input or not case_cfg.position:
         raise ValueError(f"hpc case '{case_name}' missing input or position in experiment.yml")
-    return Path(case_cfg.input) / case_cfg.position
+    return Path(case_cfg.input) / case_cfg.position, case_cfg.crop
 
 
-def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr, channels=None):
+def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr, channels=None, crop=None):
     """Add channels from an OME-Zarr to the viewer.
 
     Handles both HCS (multi-position) and single-position (FOV) stores.
     If ``channels`` is given, only channels whose names match are added.
+    If ``crop`` is given, slices Z/Y/X in-memory before adding — no
+    intermediate zarr is written.
     """
     dataset = open_ome_zarr(path, mode="r")
     try:
@@ -430,7 +515,11 @@ def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr, channels=None):
         positions = [dataset]
 
     for position in positions:
-        data = np.array(position["0"][0])  # CZYX at T=0
+        if crop is None:
+            data = np.array(position["0"][0])
+        else:
+            z_sl, y_sl, x_sl = crop.slices()
+            data = np.array(position["0"][0, :, z_sl, y_sl, x_sl])
         for c_idx, ch_name in enumerate(position.channel_names):
             if channels is not None and ch_name not in channels:
                 continue
@@ -479,12 +568,37 @@ _H = 10  # min/max column width
 def _print_header():
     """Print the summary table header."""
     header = (
-        f"  {'case':24s} {'time':>6s}"
+        f"  {'case':21s} {'ref':>3s} {'time':>6s}"
         f" {'midband':>{_W}s} {'mse':>{_W}s} {'ssim':>{_W}s}"
         f"  {'min':>{_H}s} {'histogram':^12s} {'max':>{_H}s}"
     )
     click.echo(header)
     click.echo("  " + "─" * (len(header) - 2))
+
+
+def _ref_badge(metrics: dict) -> str:
+    """Return an emoji badge for the reference check: ✅ / ❌ / —."""
+    check = metrics.get("reference_check")
+    if not check:
+        return " — "
+    return " ✅" if check.get("all_pass") else " ❌"
+
+
+def _print_reference_failures(case_name: str, metrics: dict) -> None:
+    """If the case's reference check failed, print each failing bound."""
+    check = metrics.get("reference_check")
+    if not check or check.get("all_pass"):
+        return
+    for path, entry in check.get("per_ref", {}).items():
+        if entry.get("pass"):
+            continue
+        bounds = []
+        if entry.get("min") is not None:
+            bounds.append(f"min={entry['min']}")
+        if entry.get("max") is not None:
+            bounds.append(f"max={entry['max']}")
+        msg = f"    ❌ {case_name}.{path}: value={entry['value']:.4g}  ({', '.join(bounds)})"
+        click.echo(click.style(msg, fg="red"))
 
 
 def _print_row(case_name: str, metrics: dict, elapsed: float | None = None):
@@ -495,6 +609,7 @@ def _print_row(case_name: str, metrics: dict, elapsed: float | None = None):
     phantom = metrics.get("with_phantom", {})
     ssim_str = f"{phantom['ssim']:>{_W}.3f}" if "ssim" in phantom else f"{'—':>{_W}s}"
     mse_str = _fmt(phantom["mse"], _W) if "mse" in phantom else f"{'—':>{_W}s}"
+    ref_str = _ref_badge(metrics)
 
     hist = iq.get("histogram", {})
     if hist:
@@ -509,7 +624,8 @@ def _print_row(case_name: str, metrics: dict, elapsed: float | None = None):
 
     time_str = f"{elapsed:5.1f}s" if elapsed is not None else f"{'—':>6s}"
 
-    click.echo(f"  {case_name:24s} {time_str} {mbp} {mse_str} {ssim_str}  {min_str} {spark:^12s} {max_str}")
+    click.echo(f"  {case_name:21s} {ref_str} {time_str} {mbp} {mse_str} {ssim_str}  {min_str} {spark:^12s} {max_str}")
+    _print_reference_failures(case_name, metrics)
 
 
 def _print_summary(results: dict):
@@ -517,6 +633,6 @@ def _print_summary(results: dict):
     _print_header()
     for case_name, metrics in results.items():
         if "error" in metrics:
-            click.echo(f"  {case_name:24s} " + click.style("ERROR", fg="red"))
+            click.echo(f"  {case_name:21s} " + click.style("ERROR", fg="red"))
             continue
         _print_row(case_name, metrics, elapsed=metrics.get("elapsed_s"))

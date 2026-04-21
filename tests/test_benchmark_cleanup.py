@@ -14,15 +14,22 @@ class TestCleanupLargeOutputs:
         _make_zarr_dir(tmp_path / "transfer_function_cfg.zarr", 100)
         _make_zarr_dir(tmp_path / "reconstruction.zarr", SIZE_LIMIT_BYTES * 2)
         _make_zarr_dir(tmp_path / "simulated.zarr", SIZE_LIMIT_BYTES * 2)
+        _make_zarr_dir(tmp_path / "cropped_input.zarr", 100)
         _cleanup_large_outputs(tmp_path, save_all=True)
         assert (tmp_path / "transfer_function_cfg.zarr").exists()
         assert (tmp_path / "reconstruction.zarr").exists()
         assert (tmp_path / "simulated.zarr").exists()
+        assert (tmp_path / "cropped_input.zarr").exists()
 
     def test_default_deletes_tf(self, tmp_path):
         _make_zarr_dir(tmp_path / "transfer_function_cfg.zarr", 100)
         _cleanup_large_outputs(tmp_path, save_all=False)
         assert not (tmp_path / "transfer_function_cfg.zarr").exists()
+
+    def test_default_deletes_cropped_input(self, tmp_path):
+        _make_zarr_dir(tmp_path / "cropped_input.zarr", 100)
+        _cleanup_large_outputs(tmp_path, save_all=False)
+        assert not (tmp_path / "cropped_input.zarr").exists()
 
     def test_default_keeps_small_recon(self, tmp_path):
         _make_zarr_dir(tmp_path / "reconstruction.zarr", 100)

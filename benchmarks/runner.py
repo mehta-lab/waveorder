@@ -25,7 +25,12 @@ import yaml
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
-from benchmarks.config import PhantomConfig, infer_modality
+from benchmarks.config import (
+    CropConfig,
+    PhantomConfig,
+    ReferenceBound,
+    infer_modality,
+)
 from benchmarks.metrics import compute_metrics
 from benchmarks.simulate import simulate_fluorescence_3d, simulate_phase_3d
 from benchmarks.utils import TimingTree
@@ -35,6 +40,8 @@ _PHANTOM_FUNCTIONS = {
     "single_bead": phantoms.single_bead,
     "random_beads": phantoms.random_beads,
 }
+
+CROPPED_INPUT_FILENAME = "cropped_input.zarr"
 
 
 def _extract_optics(tf_settings: dict) -> tuple[float, float, float]:
@@ -102,18 +109,21 @@ def _dir_size_bytes(path: Path) -> int:
 
 
 def _cleanup_large_outputs(case_dir: Path, save_all: bool) -> None:
-    """Remove transfer-function zarrs and oversized output zarrs.
+    """Remove derived and oversized output zarrs when ``save_all`` is False.
 
-    Transfer-function zarrs are always deleted when ``save_all`` is
-    False — they can be regenerated from config and are typically the
-    largest intermediate. ``simulated.zarr`` and ``reconstruction.zarr``
-    are deleted only if they exceed :data:`SIZE_LIMIT_BYTES`.
+    Transfer-function zarrs and ``cropped_input.zarr`` are always deleted
+    (both are cheap to regenerate from config + source). ``simulated.zarr``
+    and ``reconstruction.zarr`` are deleted only if they exceed
+    :data:`SIZE_LIMIT_BYTES`.
     """
     if save_all:
         return
     for p in case_dir.glob("transfer_function_*.zarr"):
         if p.is_dir():
             shutil.rmtree(p)
+    cropped = case_dir / CROPPED_INPUT_FILENAME
+    if cropped.is_dir():
+        shutil.rmtree(cropped)
     for name in ("simulated.zarr", "reconstruction.zarr"):
         p = case_dir / name
         if p.is_dir() and _dir_size_bytes(p) > SIZE_LIMIT_BYTES:
@@ -239,12 +249,133 @@ def _finalize_case(case_dir: Path, tt: TimingTree, metrics: dict, save_all: bool
     _cleanup_large_outputs(case_dir, save_all)
 
 
+def crop_input_position(
+    input_path: str | Path,
+    position: str,
+    crop: CropConfig,
+    case_dir: Path,
+) -> Path:
+    """Write a cropped copy of an HCS input position into ``case_dir``.
+
+    Returns the path to the written zarr. The position key inside the
+    cropped store matches the source (``row/col/fov``) so
+    ``{cropped_zarr} / position`` is directly usable by ``wo rec -i``.
+    """
+    src_path = Path(input_path) / position
+    src = open_ome_zarr(src_path, layout="fov", mode="r")
+    data = np.array(src.data[0])  # (C, Z, Y, X)
+
+    z_sl, y_sl, x_sl = crop.slices()
+    cropped = data[:, z_sl, y_sl, x_sl]
+
+    out_path = case_dir / CROPPED_INPUT_FILENAME
+    if out_path.exists():
+        shutil.rmtree(out_path)
+    row, col, fov = position.split("/")
+    dst = open_ome_zarr(out_path, layout="hcs", mode="w", channel_names=list(src.channel_names))
+    pos = dst.create_position(row, col, fov)
+    pos.create_zeros(
+        "0",
+        (1, *cropped.shape),
+        dtype=np.float32,
+        transform=[TransformationMeta(type="scale", scale=src.scale)],
+    )
+    pos["0"][0] = cropped
+    dst.close()
+    src.close()
+    return out_path
+
+
+def _get_by_dotted_path(d: dict, path: str):
+    """Return ``d[k1][k2]...`` for a dot-separated ``path`` or None if missing."""
+    for key in path.split("."):
+        if not isinstance(d, dict) or key not in d:
+            return None
+        d = d[key]
+    return d
+
+
+PARAMETER_PREFIX = "parameter."
+
+
+def _load_optimized_parameters(case_dir: Path) -> dict[str, float]:
+    """Return optimized ``{param_name: value}`` from config_optimized.yml.
+
+    Raises ValueError if the file is missing or has no transfer_function.
+    """
+    optimized_path = case_dir / "config_optimized.yml"
+    if not optimized_path.exists():
+        raise ValueError(
+            f"reference includes parameter.* keys for case '{case_dir.name}' "
+            f"but {optimized_path.name} was not written. Add an optimization "
+            f"block to the recon config and make at least one transfer_function "
+            f"field optimizable (e.g. z_focus_offset: {{init: 0.0, lr: 0.05}})."
+        )
+    data = yaml.safe_load(optimized_path.read_text())
+    for modality in ("phase", "fluorescence"):
+        block = data.get(modality)
+        if block and block.get("transfer_function"):
+            return {k: float(v) for k, v in block["transfer_function"].items() if isinstance(v, (int, float))}
+    raise ValueError(f"No transfer_function block found in {optimized_path}")
+
+
+def check_reference(
+    case_dir: Path,
+    metrics: dict,
+    reference: dict[str, ReferenceBound] | None,
+) -> dict | None:
+    """Check min/max bounds against metrics and optimizer parameters.
+
+    Paths with the ``parameter.`` prefix are looked up in the optimizer's
+    final parameter values (from ``config_optimized.yml``). All other
+    paths are resolved as dotted keys into the ``metrics`` dict.
+    Returns None when no reference bounds are set.
+    """
+    if not reference:
+        return None
+
+    parameter_values: dict[str, float] | None = None
+    per_ref = {}
+    all_pass = True
+    for path, bound in reference.items():
+        if path.startswith(PARAMETER_PREFIX):
+            if parameter_values is None:
+                parameter_values = _load_optimized_parameters(case_dir)
+            param_name = path[len(PARAMETER_PREFIX) :]
+            if param_name not in parameter_values:
+                raise ValueError(
+                    f"reference['{path}'] does not appear in config_optimized.yml's transfer_function block"
+                )
+            value = parameter_values[param_name]
+        else:
+            value = _get_by_dotted_path(metrics, path)
+            if value is None:
+                raise ValueError(f"reference['{path}'] not found in computed metrics")
+
+        passed = True
+        if bound.min is not None and value < bound.min:
+            passed = False
+        if bound.max is not None and value > bound.max:
+            passed = False
+        per_ref[path] = {
+            "value": float(value),
+            "min": bound.min,
+            "max": bound.max,
+            "pass": passed,
+        }
+        if not passed:
+            all_pass = False
+
+    return {"per_ref": per_ref, "all_pass": all_pass}
+
+
 def run_synthetic_case(
     phantom_config: dict,
     recon_config: dict,
     case_dir: Path,
     modality: str = "phase",
     save_all: bool = False,
+    reference: dict[str, ReferenceBound] | None = None,
 ) -> dict:
     """Run a single synthetic benchmark case via ``wo rec``.
 
@@ -299,6 +430,9 @@ def run_synthetic_case(
             tt=tt,
             ground_truth=ground_truth,
         )
+        ref_check = check_reference(case_dir, metrics, reference)
+        if ref_check is not None:
+            metrics["reference_check"] = ref_check
 
     _finalize_case(case_dir, tt, metrics, save_all)
     return metrics
@@ -310,6 +444,8 @@ def run_hpc_case(
     recon_config: dict,
     case_dir: Path,
     save_all: bool = False,
+    reference: dict[str, ReferenceBound] | None = None,
+    crop: CropConfig | None = None,
 ) -> dict:
     """Run a single HPC benchmark case on existing data via ``wo rec``.
 
@@ -328,6 +464,11 @@ def run_hpc_case(
         transfer function zarr is deleted and ``reconstruction.zarr``
         is deleted if it exceeds :data:`SIZE_LIMIT_BYTES` after metrics
         are computed.
+    reference_parameters : dict, optional
+        Per-parameter expected values + tolerances for the optimizer.
+    crop : CropConfig, optional
+        If given, crop the input to this bbox before reconstructing.
+        Speeds up iteration on large FOVs.
 
     Returns
     -------
@@ -338,12 +479,21 @@ def run_hpc_case(
     tt = TimingTree()
 
     with tt.time("total"):
+        if crop is not None:
+            cropped_root = crop_input_position(input_path, position, crop, case_dir)
+            position_path = cropped_root / position
+        else:
+            position_path = Path(input_path) / position
+
         metrics = _run_and_measure(
-            position_path=Path(input_path) / position,
+            position_path=position_path,
             recon_config=recon_config,
             case_dir=case_dir,
             tt=tt,
         )
+        ref_check = check_reference(case_dir, metrics, reference)
+        if ref_check is not None:
+            metrics["reference_check"] = ref_check
 
     _finalize_case(case_dir, tt, metrics, save_all)
     return metrics

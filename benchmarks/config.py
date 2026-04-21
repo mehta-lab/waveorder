@@ -34,6 +34,54 @@ class PhantomConfig(BaseModel):
     pixel_sizes: tuple[PositiveFloat, PositiveFloat, PositiveFloat] = (0.25, 0.1, 0.1)
 
 
+class ReferenceBound(BaseModel):
+    """One-sided or two-sided bound on a referenced value.
+
+    Used to gate benchmark regressions. Each key in a case's
+    ``reference`` dict is a dotted path into the computed metrics (e.g.
+    ``image_quality.midband_power``, ``with_phantom.ssim``) or into the
+    optimizer's final parameters under the ``parameter.`` prefix (e.g.
+    ``parameter.z_focus_offset``). At least one of ``min`` or ``max``
+    must be provided.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    min: float | None = None
+    max: float | None = None
+
+    @model_validator(mode="after")
+    def _validate(self):
+        if self.min is None and self.max is None:
+            raise ValueError("ReferenceBound requires at least one of 'min' or 'max'")
+        if self.min is not None and self.max is not None and self.min > self.max:
+            raise ValueError("ReferenceBound 'min' must be <= 'max'")
+        return self
+
+
+class CropConfig(BaseModel):
+    """Optional bbox to crop the input zarr before reconstruction.
+
+    Each axis is ``[start, stop]`` in pixel indices. Omitted axes take
+    the full range. Only ``hpc`` cases use this; synthetic cases already
+    generate data at the requested shape.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    z: tuple[int, int] | None = None
+    y: tuple[int, int] | None = None
+    x: tuple[int, int] | None = None
+
+    def slices(self) -> tuple[slice, slice, slice]:
+        """Return ``(z_slice, y_slice, x_slice)`` ready to index a ZYX array."""
+
+        def _sl(r):
+            return slice(r[0], r[1]) if r else slice(None)
+
+        return _sl(self.z), _sl(self.y), _sl(self.x)
+
+
 class CaseConfig(BaseModel):
     """Configuration for a single benchmark case."""
 
@@ -45,6 +93,8 @@ class CaseConfig(BaseModel):
     overrides: dict[str, Any] | None = None
     input: str | None = None
     position: str | None = None
+    crop: CropConfig | None = None
+    reference: dict[str, ReferenceBound] | None = None
 
 
 class ExperimentConfig(BaseModel):
