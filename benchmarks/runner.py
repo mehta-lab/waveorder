@@ -36,6 +36,8 @@ _PHANTOM_FUNCTIONS = {
     "random_beads": phantoms.random_beads,
 }
 
+CROPPED_INPUT_FILENAME = "cropped_input.zarr"
+
 
 def _extract_optics(tf_settings: dict) -> tuple[float, float, float]:
     """Pull ``(NA_det, wavelength, pixel_size)`` from a transfer_function block.
@@ -114,7 +116,7 @@ def _cleanup_large_outputs(case_dir: Path, save_all: bool) -> None:
     for p in case_dir.glob("transfer_function_*.zarr"):
         if p.is_dir():
             shutil.rmtree(p)
-    cropped = case_dir / "cropped_input.zarr"
+    cropped = case_dir / CROPPED_INPUT_FILENAME
     if cropped.is_dir():
         shutil.rmtree(cropped)
     for name in ("simulated.zarr", "reconstruction.zarr"):
@@ -258,12 +260,10 @@ def crop_input_position(
     src = open_ome_zarr(src_path, layout="fov", mode="r")
     data = np.array(src.data[0])  # (C, Z, Y, X)
 
-    def _slice(r):
-        return slice(r[0], r[1]) if r else slice(None)
+    z_sl, y_sl, x_sl = crop.slices()
+    cropped = data[:, z_sl, y_sl, x_sl]
 
-    cropped = data[:, _slice(crop.z), _slice(crop.y), _slice(crop.x)]
-
-    out_path = case_dir / "cropped_input.zarr"
+    out_path = case_dir / CROPPED_INPUT_FILENAME
     if out_path.exists():
         shutil.rmtree(out_path)
     row, col, fov = position.split("/")

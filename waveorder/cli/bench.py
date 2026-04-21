@@ -514,14 +514,12 @@ def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr, channels=None, crop
     except (AttributeError, TypeError):
         positions = [dataset]
 
-    def _sl(r):
-        return slice(r[0], r[1]) if r else slice(None)
-
     for position in positions:
         if crop is None:
             data = np.array(position["0"][0])
         else:
-            data = np.array(position["0"][0, :, _sl(crop.z), _sl(crop.y), _sl(crop.x)])
+            z_sl, y_sl, x_sl = crop.slices()
+            data = np.array(position["0"][0, :, z_sl, y_sl, x_sl])
         for c_idx, ch_name in enumerate(position.channel_names):
             if channels is not None and ch_name not in channels:
                 continue

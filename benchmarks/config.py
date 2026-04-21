@@ -61,6 +61,14 @@ class CropConfig(BaseModel):
     y: tuple[int, int] | None = None
     x: tuple[int, int] | None = None
 
+    def slices(self) -> tuple[slice, slice, slice]:
+        """Return ``(z_slice, y_slice, x_slice)`` ready to index a ZYX array."""
+
+        def _sl(r):
+            return slice(r[0], r[1]) if r else slice(None)
+
+        return _sl(self.z), _sl(self.y), _sl(self.x)
+
 
 class CaseConfig(BaseModel):
     """Configuration for a single benchmark case."""
