@@ -25,7 +25,13 @@ import yaml
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
-from benchmarks.config import CropConfig, PhantomConfig, ReferenceParameter, infer_modality
+from benchmarks.config import (
+    CropConfig,
+    PhantomConfig,
+    ReferenceMetric,
+    ReferenceParameter,
+    infer_modality,
+)
 from benchmarks.metrics import compute_metrics
 from benchmarks.simulate import simulate_fluorescence_3d, simulate_phase_3d
 from benchmarks.utils import TimingTree
@@ -281,6 +287,52 @@ def crop_input_position(
     return out_path
 
 
+def _get_by_dotted_path(d: dict, path: str):
+    """Return ``d[k1][k2]...`` for a dot-separated ``path`` or None if missing."""
+    for key in path.split("."):
+        if not isinstance(d, dict) or key not in d:
+            return None
+        d = d[key]
+    return d
+
+
+def check_reference_metrics(
+    metrics: dict,
+    reference_metrics: dict[str, ReferenceMetric] | None,
+) -> dict | None:
+    """Compare computed metric values against per-metric min/max bounds.
+
+    ``reference_metrics`` is keyed by dotted paths into the ``metrics``
+    dict (e.g. ``with_phantom.ssim``, ``image_quality.midband_power``).
+    Returns None when no reference metrics are set. Raises ValueError
+    when a referenced metric is not present in ``metrics``.
+    """
+    if not reference_metrics:
+        return None
+
+    per_metric = {}
+    all_pass = True
+    for path, ref in reference_metrics.items():
+        value = _get_by_dotted_path(metrics, path)
+        if value is None:
+            raise ValueError(f"reference_metrics['{path}'] not found in computed metrics")
+        passed = True
+        if ref.min is not None and value < ref.min:
+            passed = False
+        if ref.max is not None and value > ref.max:
+            passed = False
+        per_metric[path] = {
+            "value": float(value),
+            "min": ref.min,
+            "max": ref.max,
+            "pass": passed,
+        }
+        if not passed:
+            all_pass = False
+
+    return {"per_metric": per_metric, "all_pass": all_pass}
+
+
 def check_reference_parameters(
     case_dir: Path,
     reference_parameters: dict[str, ReferenceParameter] | None,
@@ -348,6 +400,7 @@ def run_synthetic_case(
     modality: str = "phase",
     save_all: bool = False,
     reference_parameters: dict[str, ReferenceParameter] | None = None,
+    reference_metrics: dict[str, ReferenceMetric] | None = None,
 ) -> dict:
     """Run a single synthetic benchmark case via ``wo rec``.
 
@@ -402,9 +455,12 @@ def run_synthetic_case(
             tt=tt,
             ground_truth=ground_truth,
         )
-        ref_check = check_reference_parameters(case_dir, reference_parameters)
-        if ref_check is not None:
-            metrics["reference_parameters_check"] = ref_check
+        params_check = check_reference_parameters(case_dir, reference_parameters)
+        if params_check is not None:
+            metrics["reference_parameters_check"] = params_check
+        metrics_check = check_reference_metrics(metrics, reference_metrics)
+        if metrics_check is not None:
+            metrics["reference_metrics_check"] = metrics_check
 
     _finalize_case(case_dir, tt, metrics, save_all)
     return metrics
@@ -417,6 +473,7 @@ def run_hpc_case(
     case_dir: Path,
     save_all: bool = False,
     reference_parameters: dict[str, ReferenceParameter] | None = None,
+    reference_metrics: dict[str, ReferenceMetric] | None = None,
     crop: CropConfig | None = None,
 ) -> dict:
     """Run a single HPC benchmark case on existing data via ``wo rec``.
@@ -463,9 +520,12 @@ def run_hpc_case(
             case_dir=case_dir,
             tt=tt,
         )
-        ref_check = check_reference_parameters(case_dir, reference_parameters)
-        if ref_check is not None:
-            metrics["reference_parameters_check"] = ref_check
+        params_check = check_reference_parameters(case_dir, reference_parameters)
+        if params_check is not None:
+            metrics["reference_parameters_check"] = params_check
+        metrics_check = check_reference_metrics(metrics, reference_metrics)
+        if metrics_check is not None:
+            metrics["reference_metrics_check"] = metrics_check
 
     _finalize_case(case_dir, tt, metrics, save_all)
     return metrics

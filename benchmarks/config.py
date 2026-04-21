@@ -47,6 +47,28 @@ class ReferenceParameter(BaseModel):
     tolerance: PositiveFloat
 
 
+class ReferenceMetric(BaseModel):
+    """One-sided or two-sided bound on a benchmark metric.
+
+    Use ``min``, ``max``, or both. The metric passes if the observed
+    value satisfies every specified bound. At least one of ``min`` or
+    ``max`` must be provided.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    min: float | None = None
+    max: float | None = None
+
+    @model_validator(mode="after")
+    def _at_least_one(self):
+        if self.min is None and self.max is None:
+            raise ValueError("ReferenceMetric requires at least one of 'min' or 'max'")
+        if self.min is not None and self.max is not None and self.min > self.max:
+            raise ValueError("ReferenceMetric 'min' must be <= 'max'")
+        return self
+
+
 class CropConfig(BaseModel):
     """Optional bbox to crop the input zarr before reconstruction.
 
@@ -83,6 +105,7 @@ class CaseConfig(BaseModel):
     position: str | None = None
     crop: CropConfig | None = None
     reference_parameters: dict[str, ReferenceParameter] | None = None
+    reference_metrics: dict[str, ReferenceMetric] | None = None
 
 
 class ExperimentConfig(BaseModel):
