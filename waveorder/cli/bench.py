@@ -435,10 +435,18 @@ def _load_case_into_viewer(
         tag = f"{recon_label}/" if recon_label else ""
 
         if not skip_raw:
-            raw_path = _resolve_raw_path(case_dir, case_name, experiment)
+            source = _resolve_raw_source(case_dir, case_name, experiment)
             channel_filter = _input_channel_names(case_dir)
-            if raw_path and raw_path.exists():
-                _add_zarr_to_viewer(viewer, raw_path, f"{tag}{case_name}/raw", open_ome_zarr, channels=channel_filter)
+            if source and source[0].exists():
+                raw_path, crop = source
+                _add_zarr_to_viewer(
+                    viewer,
+                    raw_path,
+                    f"{tag}{case_name}/raw",
+                    open_ome_zarr,
+                    channels=channel_filter,
+                    crop=crop,
+                )
             else:
                 click.echo(f"  {case_name}: no raw input found")
 
@@ -471,22 +479,17 @@ def _link_contrast_limits(layers_a: list, layers_b: list) -> None:
         link_layers([la, lb], ("contrast_limits",))
 
 
-def _resolve_raw_path(case_dir: Path, case_name: str, experiment) -> Path | None:
-    """Locate the raw input for a case.
+def _resolve_raw_source(case_dir: Path, case_name: str, experiment):
+    """Resolve where raw data comes from for viewing.
 
-    Synthetic cases store their simulated measurement as ``simulated.zarr``
-    in the case directory. HPC cases with a ``crop`` block store their
-    cropped input as ``cropped_input.zarr``. HPC cases without a crop
-    are reconstructed from the experiment YAML as ``{input}/{position}``.
+    Returns ``(path, crop)`` where ``path`` is a zarr position path and
+    ``crop`` is either None (use the whole FOV) or a CropConfig (slice
+    in-memory at view time — no intermediate zarr is written). Returns
+    None when no raw data can be located.
     """
     sim_path = case_dir / "simulated.zarr"
     if sim_path.exists():
-        return sim_path
-    cropped_path = case_dir / "cropped_input.zarr"
-    if cropped_path.exists() and experiment and case_name in experiment.cases:
-        case_cfg = experiment.cases[case_name]
-        if case_cfg.position:
-            return cropped_path / case_cfg.position
+        return sim_path, None
     if experiment is None or case_name not in experiment.cases:
         return None
     case_cfg = experiment.cases[case_name]
@@ -494,14 +497,16 @@ def _resolve_raw_path(case_dir: Path, case_name: str, experiment) -> Path | None
         return None
     if not case_cfg.input or not case_cfg.position:
         raise ValueError(f"hpc case '{case_name}' missing input or position in experiment.yml")
-    return Path(case_cfg.input) / case_cfg.position
+    return Path(case_cfg.input) / case_cfg.position, case_cfg.crop
 
 
-def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr, channels=None):
+def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr, channels=None, crop=None):
     """Add channels from an OME-Zarr to the viewer.
 
     Handles both HCS (multi-position) and single-position (FOV) stores.
     If ``channels`` is given, only channels whose names match are added.
+    If ``crop`` is given, slices Z/Y/X in-memory before adding — no
+    intermediate zarr is written.
     """
     dataset = open_ome_zarr(path, mode="r")
     try:
@@ -509,8 +514,14 @@ def _add_zarr_to_viewer(viewer, path, prefix, open_ome_zarr, channels=None):
     except (AttributeError, TypeError):
         positions = [dataset]
 
+    def _sl(r):
+        return slice(r[0], r[1]) if r else slice(None)
+
     for position in positions:
-        data = np.array(position["0"][0])  # CZYX at T=0
+        if crop is None:
+            data = np.array(position["0"][0])
+        else:
+            data = np.array(position["0"][0, :, _sl(crop.z), _sl(crop.y), _sl(crop.x)])
         for c_idx, ch_name in enumerate(position.channel_names):
             if channels is not None and ch_name not in channels:
                 continue
