@@ -25,7 +25,7 @@ import yaml
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
-from benchmarks.config import PhantomConfig, infer_modality
+from benchmarks.config import PhantomConfig, ReferenceParameter, infer_modality
 from benchmarks.metrics import compute_metrics
 from benchmarks.simulate import simulate_fluorescence_3d, simulate_phase_3d
 from benchmarks.utils import TimingTree
@@ -239,12 +239,73 @@ def _finalize_case(case_dir: Path, tt: TimingTree, metrics: dict, save_all: bool
     _cleanup_large_outputs(case_dir, save_all)
 
 
+def check_reference_parameters(
+    case_dir: Path,
+    reference_parameters: dict[str, ReferenceParameter] | None,
+) -> dict | None:
+    """Compare the optimizer's final values to the case's reference parameters.
+
+    Reads ``case_dir / config_optimized.yml`` (written by ``wo rec`` when an
+    optimization block is present) and computes per-parameter drift + pass/fail
+    against the reference values and tolerances.
+
+    Returns None when no reference parameters are set. Raises ValueError when
+    reference_parameters is set but the optimizer didn't run — either the
+    recon config is missing an ``optimization`` block, or none of its fields
+    were optimizable.
+    """
+    if not reference_parameters:
+        return None
+
+    optimized_path = case_dir / "config_optimized.yml"
+    if not optimized_path.exists():
+        raise ValueError(
+            f"reference_parameters set for case '{case_dir.name}' but no "
+            f"optimization ran (expected {optimized_path.name} in case directory). "
+            f"Add an optimization block to the recon config and make at least "
+            f"one field optimizable (e.g. z_focus_offset: {{init: 0.0, lr: 0.05}})."
+        )
+
+    data = yaml.safe_load(optimized_path.read_text())
+    tf = None
+    for modality in ("phase", "fluorescence"):
+        modality_block = data.get(modality)
+        if modality_block and modality_block.get("transfer_function"):
+            tf = modality_block["transfer_function"]
+            break
+    if tf is None:
+        raise ValueError(f"No transfer_function block found in {optimized_path}")
+
+    per_param = {}
+    all_pass = True
+    for name, ref in reference_parameters.items():
+        if name not in tf:
+            raise ValueError(
+                f"reference_parameters['{name}'] does not appear in {optimized_path.name}'s transfer_function block"
+            )
+        final = float(tf[name])
+        drift = abs(final - ref.value)
+        passed = drift <= ref.tolerance
+        per_param[name] = {
+            "value": final,
+            "reference": ref.value,
+            "tolerance": ref.tolerance,
+            "drift": drift,
+            "pass": passed,
+        }
+        if not passed:
+            all_pass = False
+
+    return {"per_param": per_param, "all_pass": all_pass}
+
+
 def run_synthetic_case(
     phantom_config: dict,
     recon_config: dict,
     case_dir: Path,
     modality: str = "phase",
     save_all: bool = False,
+    reference_parameters: dict[str, ReferenceParameter] | None = None,
 ) -> dict:
     """Run a single synthetic benchmark case via ``wo rec``.
 
@@ -299,6 +360,9 @@ def run_synthetic_case(
             tt=tt,
             ground_truth=ground_truth,
         )
+        ref_check = check_reference_parameters(case_dir, reference_parameters)
+        if ref_check is not None:
+            metrics["reference_parameters_check"] = ref_check
 
     _finalize_case(case_dir, tt, metrics, save_all)
     return metrics
@@ -310,6 +374,7 @@ def run_hpc_case(
     recon_config: dict,
     case_dir: Path,
     save_all: bool = False,
+    reference_parameters: dict[str, ReferenceParameter] | None = None,
 ) -> dict:
     """Run a single HPC benchmark case on existing data via ``wo rec``.
 
@@ -344,6 +409,9 @@ def run_hpc_case(
             case_dir=case_dir,
             tt=tt,
         )
+        ref_check = check_reference_parameters(case_dir, reference_parameters)
+        if ref_check is not None:
+            metrics["reference_parameters_check"] = ref_check
 
     _finalize_case(case_dir, tt, metrics, save_all)
     return metrics

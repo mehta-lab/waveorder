@@ -34,6 +34,19 @@ class PhantomConfig(BaseModel):
     pixel_sizes: tuple[PositiveFloat, PositiveFloat, PositiveFloat] = (0.25, 0.1, 0.1)
 
 
+class ReferenceParameter(BaseModel):
+    """Expected optimized value for a single parameter, with tolerance.
+
+    Used by cases that run parameter optimization to gate regressions —
+    if the optimizer drifts beyond ``tolerance``, the benchmark flags it.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    value: float
+    tolerance: PositiveFloat
+
+
 class CaseConfig(BaseModel):
     """Configuration for a single benchmark case."""
 
@@ -45,6 +58,7 @@ class CaseConfig(BaseModel):
     overrides: dict[str, Any] | None = None
     input: str | None = None
     position: str | None = None
+    reference_parameters: dict[str, ReferenceParameter] | None = None
 
 
 class ExperimentConfig(BaseModel):

@@ -136,7 +136,7 @@ def run(experiment, scope, output_dir, save_all):
         case_dir = run_dir / "cases" / case_name
         recon_config = resolve_recon_config(case, experiment_path.parent)
 
-        click.echo(f"  {case_name:24s} running...", nl=False)
+        click.echo(f"  {case_name:21s} running...", nl=False)
         try:
             if case.type == "synthetic":
                 metrics = run_synthetic_case(
@@ -145,6 +145,7 @@ def run(experiment, scope, output_dir, save_all):
                     case_dir=case_dir,
                     modality=infer_modality(recon_config),
                     save_all=save_all,
+                    reference_parameters=case.reference_parameters,
                 )
             elif case.type == "hpc":
                 metrics = run_hpc_case(
@@ -153,6 +154,7 @@ def run(experiment, scope, output_dir, save_all):
                     recon_config=recon_config,
                     case_dir=case_dir,
                     save_all=save_all,
+                    reference_parameters=case.reference_parameters,
                 )
 
             results[case_name] = metrics
@@ -164,7 +166,7 @@ def run(experiment, scope, output_dir, save_all):
             _print_row(case_name, metrics, elapsed=elapsed)
         except Exception as e:
             click.echo("\033[2K\r", nl=False)
-            click.echo(f"  {case_name:24s} " + click.style(f"FAILED: {e}", fg="red"))
+            click.echo(f"  {case_name:21s} " + click.style(f"FAILED: {e}", fg="red"))
             tb = traceback.format_exc()
             click.echo(tb, err=True)
             results[case_name] = {"error": str(e), "traceback": tb}
@@ -283,7 +285,7 @@ def compare(output_dir, run_a, run_b):
         return
 
     # Header
-    click.echo(f"  {'case':24s} {'metric':>10s} {'A':>10s} {'B':>10s} {'delta':>10s}")
+    click.echo(f"  {'case':21s} {'metric':>10s} {'A':>10s} {'B':>10s} {'delta':>10s}")
     click.echo("  " + "─" * 66)
 
     for case_name in sorted(common):
@@ -306,7 +308,7 @@ def compare(output_dir, run_a, run_b):
 
         for metric, va, vb in pairs:
             delta = vb - va
-            click.echo(f"  {case_name:24s} {metric:>10s} {_fmt(va)} {_fmt(vb)} {_fmt(delta)}")
+            click.echo(f"  {case_name:21s} {metric:>10s} {_fmt(va)} {_fmt(vb)} {_fmt(delta)}")
             case_name = ""  # only show name on first row
 
 
@@ -550,12 +552,20 @@ _H = 10  # min/max column width
 def _print_header():
     """Print the summary table header."""
     header = (
-        f"  {'case':24s} {'time':>6s}"
-        f" {'midband':>{_W}s} {'mse':>{_W}s} {'ssim':>{_W}s}"
+        f"  {'case':21s} {'time':>6s}"
+        f" {'midband':>{_W}s} {'mse':>{_W}s} {'ssim':>{_W}s} {'ref':>4s}"
         f"  {'min':>{_H}s} {'histogram':^12s} {'max':>{_H}s}"
     )
     click.echo(header)
     click.echo("  " + "─" * (len(header) - 2))
+
+
+def _ref_badge(metrics: dict) -> str:
+    """Return a 4-char ✓/✗/— badge for the reference_parameters_check."""
+    check = metrics.get("reference_parameters_check")
+    if not check:
+        return f"{'—':>4s}"
+    return f"{'✓':>4s}" if check.get("all_pass") else f"{'✗':>4s}"
 
 
 def _print_row(case_name: str, metrics: dict, elapsed: float | None = None):
@@ -566,6 +576,7 @@ def _print_row(case_name: str, metrics: dict, elapsed: float | None = None):
     phantom = metrics.get("with_phantom", {})
     ssim_str = f"{phantom['ssim']:>{_W}.3f}" if "ssim" in phantom else f"{'—':>{_W}s}"
     mse_str = _fmt(phantom["mse"], _W) if "mse" in phantom else f"{'—':>{_W}s}"
+    ref_str = _ref_badge(metrics)
 
     hist = iq.get("histogram", {})
     if hist:
@@ -580,7 +591,7 @@ def _print_row(case_name: str, metrics: dict, elapsed: float | None = None):
 
     time_str = f"{elapsed:5.1f}s" if elapsed is not None else f"{'—':>6s}"
 
-    click.echo(f"  {case_name:24s} {time_str} {mbp} {mse_str} {ssim_str}  {min_str} {spark:^12s} {max_str}")
+    click.echo(f"  {case_name:21s} {time_str} {mbp} {mse_str} {ssim_str} {ref_str}  {min_str} {spark:^12s} {max_str}")
 
 
 def _print_summary(results: dict):
@@ -588,6 +599,6 @@ def _print_summary(results: dict):
     _print_header()
     for case_name, metrics in results.items():
         if "error" in metrics:
-            click.echo(f"  {case_name:24s} " + click.style("ERROR", fg="red"))
+            click.echo(f"  {case_name:21s} " + click.style("ERROR", fg="red"))
             continue
         _print_row(case_name, metrics, elapsed=metrics.get("elapsed_s"))
