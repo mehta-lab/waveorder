@@ -34,25 +34,15 @@ class PhantomConfig(BaseModel):
     pixel_sizes: tuple[PositiveFloat, PositiveFloat, PositiveFloat] = (0.25, 0.1, 0.1)
 
 
-class ReferenceParameter(BaseModel):
-    """Expected optimized value for a single parameter, with tolerance.
+class ReferenceBound(BaseModel):
+    """One-sided or two-sided bound on a referenced value.
 
-    Used by cases that run parameter optimization to gate regressions —
-    if the optimizer drifts beyond ``tolerance``, the benchmark flags it.
-    """
-
-    model_config = ConfigDict(extra="forbid")
-
-    value: float
-    tolerance: PositiveFloat
-
-
-class ReferenceMetric(BaseModel):
-    """One-sided or two-sided bound on a benchmark metric.
-
-    Use ``min``, ``max``, or both. The metric passes if the observed
-    value satisfies every specified bound. At least one of ``min`` or
-    ``max`` must be provided.
+    Used to gate benchmark regressions. Each key in a case's
+    ``reference`` dict is a dotted path into the computed metrics (e.g.
+    ``image_quality.midband_power``, ``with_phantom.ssim``) or into the
+    optimizer's final parameters under the ``parameter.`` prefix (e.g.
+    ``parameter.z_focus_offset``). At least one of ``min`` or ``max``
+    must be provided.
     """
 
     model_config = ConfigDict(extra="forbid")
@@ -61,11 +51,11 @@ class ReferenceMetric(BaseModel):
     max: float | None = None
 
     @model_validator(mode="after")
-    def _at_least_one(self):
+    def _validate(self):
         if self.min is None and self.max is None:
-            raise ValueError("ReferenceMetric requires at least one of 'min' or 'max'")
+            raise ValueError("ReferenceBound requires at least one of 'min' or 'max'")
         if self.min is not None and self.max is not None and self.min > self.max:
-            raise ValueError("ReferenceMetric 'min' must be <= 'max'")
+            raise ValueError("ReferenceBound 'min' must be <= 'max'")
         return self
 
 
@@ -104,8 +94,7 @@ class CaseConfig(BaseModel):
     input: str | None = None
     position: str | None = None
     crop: CropConfig | None = None
-    reference_parameters: dict[str, ReferenceParameter] | None = None
-    reference_metrics: dict[str, ReferenceMetric] | None = None
+    reference: dict[str, ReferenceBound] | None = None
 
 
 class ExperimentConfig(BaseModel):

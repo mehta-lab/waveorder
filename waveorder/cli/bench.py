@@ -145,8 +145,7 @@ def run(experiment, scope, output_dir, save_all):
                     case_dir=case_dir,
                     modality=infer_modality(recon_config),
                     save_all=save_all,
-                    reference_parameters=case.reference_parameters,
-                    reference_metrics=case.reference_metrics,
+                    reference=case.reference,
                 )
             elif case.type == "hpc":
                 metrics = run_hpc_case(
@@ -155,8 +154,7 @@ def run(experiment, scope, output_dir, save_all):
                     recon_config=recon_config,
                     case_dir=case_dir,
                     save_all=save_all,
-                    reference_parameters=case.reference_parameters,
-                    reference_metrics=case.reference_metrics,
+                    reference=case.reference,
                     crop=case.crop,
                 )
 
@@ -570,7 +568,7 @@ _H = 10  # min/max column width
 def _print_header():
     """Print the summary table header."""
     header = (
-        f"  {'case':21s} {'ref':>4s} {'time':>6s}"
+        f"  {'case':21s} {'ref':>3s} {'time':>6s}"
         f" {'midband':>{_W}s} {'mse':>{_W}s} {'ssim':>{_W}s}"
         f"  {'min':>{_H}s} {'histogram':^12s} {'max':>{_H}s}"
     )
@@ -579,19 +577,28 @@ def _print_header():
 
 
 def _ref_badge(metrics: dict) -> str:
-    """Return a 4-char ✓/✗/— badge summarising all reference_* checks.
+    """Return an emoji badge for the reference check: ✅ / ❌ / —."""
+    check = metrics.get("reference_check")
+    if not check:
+        return " — "
+    return " ✅" if check.get("all_pass") else " ❌"
 
-    Shows ``—`` when no reference checks ran, ``✓`` when every check
-    (parameters AND metrics) passed, and ``✗`` when any failed.
-    """
-    checks = [
-        metrics.get("reference_parameters_check"),
-        metrics.get("reference_metrics_check"),
-    ]
-    checks = [c for c in checks if c is not None]
-    if not checks:
-        return f"{'—':>4s}"
-    return f"{'✓':>4s}" if all(c.get("all_pass") for c in checks) else f"{'✗':>4s}"
+
+def _print_reference_failures(case_name: str, metrics: dict) -> None:
+    """If the case's reference check failed, print each failing bound."""
+    check = metrics.get("reference_check")
+    if not check or check.get("all_pass"):
+        return
+    for path, entry in check.get("per_ref", {}).items():
+        if entry.get("pass"):
+            continue
+        bounds = []
+        if entry.get("min") is not None:
+            bounds.append(f"min={entry['min']}")
+        if entry.get("max") is not None:
+            bounds.append(f"max={entry['max']}")
+        msg = f"    ❌ {case_name}.{path}: value={entry['value']:.4g}  ({', '.join(bounds)})"
+        click.echo(click.style(msg, fg="red"))
 
 
 def _print_row(case_name: str, metrics: dict, elapsed: float | None = None):
@@ -618,6 +625,7 @@ def _print_row(case_name: str, metrics: dict, elapsed: float | None = None):
     time_str = f"{elapsed:5.1f}s" if elapsed is not None else f"{'—':>6s}"
 
     click.echo(f"  {case_name:21s} {ref_str} {time_str} {mbp} {mse_str} {ssim_str}  {min_str} {spark:^12s} {max_str}")
+    _print_reference_failures(case_name, metrics)
 
 
 def _print_summary(results: dict):

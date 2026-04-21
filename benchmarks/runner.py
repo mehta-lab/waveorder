@@ -28,8 +28,7 @@ from iohub.ngff.models import TransformationMeta
 from benchmarks.config import (
     CropConfig,
     PhantomConfig,
-    ReferenceMetric,
-    ReferenceParameter,
+    ReferenceBound,
     infer_modality,
 )
 from benchmarks.metrics import compute_metrics
@@ -296,101 +295,78 @@ def _get_by_dotted_path(d: dict, path: str):
     return d
 
 
-def check_reference_metrics(
-    metrics: dict,
-    reference_metrics: dict[str, ReferenceMetric] | None,
-) -> dict | None:
-    """Compare computed metric values against per-metric min/max bounds.
+PARAMETER_PREFIX = "parameter."
 
-    ``reference_metrics`` is keyed by dotted paths into the ``metrics``
-    dict (e.g. ``with_phantom.ssim``, ``image_quality.midband_power``).
-    Returns None when no reference metrics are set. Raises ValueError
-    when a referenced metric is not present in ``metrics``.
+
+def _load_optimized_parameters(case_dir: Path) -> dict[str, float]:
+    """Return optimized ``{param_name: value}`` from config_optimized.yml.
+
+    Raises ValueError if the file is missing or has no transfer_function.
     """
-    if not reference_metrics:
-        return None
-
-    per_metric = {}
-    all_pass = True
-    for path, ref in reference_metrics.items():
-        value = _get_by_dotted_path(metrics, path)
-        if value is None:
-            raise ValueError(f"reference_metrics['{path}'] not found in computed metrics")
-        passed = True
-        if ref.min is not None and value < ref.min:
-            passed = False
-        if ref.max is not None and value > ref.max:
-            passed = False
-        per_metric[path] = {
-            "value": float(value),
-            "min": ref.min,
-            "max": ref.max,
-            "pass": passed,
-        }
-        if not passed:
-            all_pass = False
-
-    return {"per_metric": per_metric, "all_pass": all_pass}
-
-
-def check_reference_parameters(
-    case_dir: Path,
-    reference_parameters: dict[str, ReferenceParameter] | None,
-) -> dict | None:
-    """Compare the optimizer's final values to the case's reference parameters.
-
-    Reads ``case_dir / config_optimized.yml`` (written by ``wo rec`` when an
-    optimization block is present) and computes per-parameter drift + pass/fail
-    against the reference values and tolerances.
-
-    Returns None when no reference parameters are set. Raises ValueError when
-    reference_parameters is set but the optimizer didn't run — either the
-    recon config is missing an ``optimization`` block, or none of its fields
-    were optimizable.
-    """
-    if not reference_parameters:
-        return None
-
     optimized_path = case_dir / "config_optimized.yml"
     if not optimized_path.exists():
         raise ValueError(
-            f"reference_parameters set for case '{case_dir.name}' but no "
-            f"optimization ran (expected {optimized_path.name} in case directory). "
-            f"Add an optimization block to the recon config and make at least "
-            f"one field optimizable (e.g. z_focus_offset: {{init: 0.0, lr: 0.05}})."
+            f"reference includes parameter.* keys for case '{case_dir.name}' "
+            f"but {optimized_path.name} was not written. Add an optimization "
+            f"block to the recon config and make at least one transfer_function "
+            f"field optimizable (e.g. z_focus_offset: {{init: 0.0, lr: 0.05}})."
         )
-
     data = yaml.safe_load(optimized_path.read_text())
-    tf = None
     for modality in ("phase", "fluorescence"):
-        modality_block = data.get(modality)
-        if modality_block and modality_block.get("transfer_function"):
-            tf = modality_block["transfer_function"]
-            break
-    if tf is None:
-        raise ValueError(f"No transfer_function block found in {optimized_path}")
+        block = data.get(modality)
+        if block and block.get("transfer_function"):
+            return {k: float(v) for k, v in block["transfer_function"].items() if isinstance(v, (int, float))}
+    raise ValueError(f"No transfer_function block found in {optimized_path}")
 
-    per_param = {}
+
+def check_reference(
+    case_dir: Path,
+    metrics: dict,
+    reference: dict[str, ReferenceBound] | None,
+) -> dict | None:
+    """Check min/max bounds against metrics and optimizer parameters.
+
+    Paths with the ``parameter.`` prefix are looked up in the optimizer's
+    final parameter values (from ``config_optimized.yml``). All other
+    paths are resolved as dotted keys into the ``metrics`` dict.
+    Returns None when no reference bounds are set.
+    """
+    if not reference:
+        return None
+
+    parameter_values: dict[str, float] | None = None
+    per_ref = {}
     all_pass = True
-    for name, ref in reference_parameters.items():
-        if name not in tf:
-            raise ValueError(
-                f"reference_parameters['{name}'] does not appear in {optimized_path.name}'s transfer_function block"
-            )
-        final = float(tf[name])
-        drift = abs(final - ref.value)
-        passed = drift <= ref.tolerance
-        per_param[name] = {
-            "value": final,
-            "reference": ref.value,
-            "tolerance": ref.tolerance,
-            "drift": drift,
+    for path, bound in reference.items():
+        if path.startswith(PARAMETER_PREFIX):
+            if parameter_values is None:
+                parameter_values = _load_optimized_parameters(case_dir)
+            param_name = path[len(PARAMETER_PREFIX) :]
+            if param_name not in parameter_values:
+                raise ValueError(
+                    f"reference['{path}'] does not appear in config_optimized.yml's transfer_function block"
+                )
+            value = parameter_values[param_name]
+        else:
+            value = _get_by_dotted_path(metrics, path)
+            if value is None:
+                raise ValueError(f"reference['{path}'] not found in computed metrics")
+
+        passed = True
+        if bound.min is not None and value < bound.min:
+            passed = False
+        if bound.max is not None and value > bound.max:
+            passed = False
+        per_ref[path] = {
+            "value": float(value),
+            "min": bound.min,
+            "max": bound.max,
             "pass": passed,
         }
         if not passed:
             all_pass = False
 
-    return {"per_param": per_param, "all_pass": all_pass}
+    return {"per_ref": per_ref, "all_pass": all_pass}
 
 
 def run_synthetic_case(
@@ -399,8 +375,7 @@ def run_synthetic_case(
     case_dir: Path,
     modality: str = "phase",
     save_all: bool = False,
-    reference_parameters: dict[str, ReferenceParameter] | None = None,
-    reference_metrics: dict[str, ReferenceMetric] | None = None,
+    reference: dict[str, ReferenceBound] | None = None,
 ) -> dict:
     """Run a single synthetic benchmark case via ``wo rec``.
 
@@ -455,12 +430,9 @@ def run_synthetic_case(
             tt=tt,
             ground_truth=ground_truth,
         )
-        params_check = check_reference_parameters(case_dir, reference_parameters)
-        if params_check is not None:
-            metrics["reference_parameters_check"] = params_check
-        metrics_check = check_reference_metrics(metrics, reference_metrics)
-        if metrics_check is not None:
-            metrics["reference_metrics_check"] = metrics_check
+        ref_check = check_reference(case_dir, metrics, reference)
+        if ref_check is not None:
+            metrics["reference_check"] = ref_check
 
     _finalize_case(case_dir, tt, metrics, save_all)
     return metrics
@@ -472,8 +444,7 @@ def run_hpc_case(
     recon_config: dict,
     case_dir: Path,
     save_all: bool = False,
-    reference_parameters: dict[str, ReferenceParameter] | None = None,
-    reference_metrics: dict[str, ReferenceMetric] | None = None,
+    reference: dict[str, ReferenceBound] | None = None,
     crop: CropConfig | None = None,
 ) -> dict:
     """Run a single HPC benchmark case on existing data via ``wo rec``.
@@ -520,12 +491,9 @@ def run_hpc_case(
             case_dir=case_dir,
             tt=tt,
         )
-        params_check = check_reference_parameters(case_dir, reference_parameters)
-        if params_check is not None:
-            metrics["reference_parameters_check"] = params_check
-        metrics_check = check_reference_metrics(metrics, reference_metrics)
-        if metrics_check is not None:
-            metrics["reference_metrics_check"] = metrics_check
+        ref_check = check_reference(case_dir, metrics, reference)
+        if ref_check is not None:
+            metrics["reference_check"] = ref_check
 
     _finalize_case(case_dir, tt, metrics, save_all)
     return metrics
