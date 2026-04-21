@@ -313,19 +313,21 @@ def compare(output_dir, run_a, run_b):
 @benchmark.command()
 @_output_dir_option()
 @click.argument("path", required=False, default=None)
-def view(output_dir, path):
+@click.argument("path_b", required=False, default=None)
+def view(output_dir, path, path_b):
     """Open benchmark results in napari.
 
-    PATH selects what to view: ``latest`` or a run name, optionally
-    followed by ``/case_name``. Nothing opens the most recent run.
-    Raw input and reconstruction are loaded as separate layers and
-    tiled side-by-side via napari's grid mode.
+    With one PATH: view that run (or case). With two PATHs: compare them
+    side-by-side — raw input is loaded once from the first path, both
+    reconstructions are loaded as separate layers with contrast limits
+    linked between them. PATH is ``latest`` or a run name, optionally
+    followed by ``/case_name``.
 
     \b
     Example:
       \033[92mwo bm view\033[0m
       \033[92mwo bm view latest/phase_3d_beads\033[0m
-      \033[92mwo bm view 2026-03-27T11-00-10_regression/reg_1e-3\033[0m
+      \033[92mwo bm view RUN_A/case RUN_B/case\033[0m
     """
     click.echo(click.style("Opening benchmark results...", fg="green"))
 
@@ -335,7 +337,47 @@ def view(output_dir, path):
 
     from benchmarks.config import load_experiment
 
-    # Parse path: nothing, "run_name", or "run_name/case_name"
+    output_dir = _resolve_output_dir(output_dir)
+
+    target_a = _resolve_view_target(output_dir, path)
+    if target_a is None:
+        return
+    run_a, case_a = target_a
+
+    if path_b is None:
+        viewer = napari.Viewer(title=f"wo bm view — {run_a.name}")
+        _load_case_into_viewer(viewer, run_a, case_a, open_ome_zarr, load_experiment)
+        viewer.grid.enabled = True
+        napari.run()
+        return
+
+    target_b = _resolve_view_target(output_dir, path_b)
+    if target_b is None:
+        return
+    run_b, case_b = target_b
+
+    viewer = napari.Viewer(title=f"wo bm view — compare {run_a.name} vs {run_b.name}")
+
+    # Raw + recon from A
+    recon_layers_a = _load_case_into_viewer(viewer, run_a, case_a, open_ome_zarr, load_experiment, recon_label="a")
+    # Recon from B only (raw is identical; don't duplicate)
+    recon_layers_b = _load_case_into_viewer(
+        viewer, run_b, case_b, open_ome_zarr, load_experiment, recon_label="b", skip_raw=True
+    )
+
+    _link_contrast_limits(recon_layers_a, recon_layers_b)
+
+    viewer.grid.enabled = True
+    napari.run()
+
+
+def _resolve_view_target(output_dir: Path, path: str | None) -> tuple[Path, str | None] | None:
+    """Resolve a ``path`` argument into ``(run_dir, case_name)``.
+
+    Accepts ``None`` or ``"latest"`` for the newest run, a bare run name,
+    or ``run_name/case_name``. Echoes an error and returns None if the run
+    or its cases directory can't be found.
+    """
     run_name = None
     case = None
     if path:
@@ -344,57 +386,86 @@ def view(output_dir, path):
         if len(parts) > 1:
             case = parts[1]
 
-    output_dir = _resolve_output_dir(output_dir)
     if run_name in (None, "latest"):
         runs = _find_runs(output_dir, n=1)
         if not runs:
             click.echo("No benchmark runs found.")
-            return
+            return None
         run_dir = runs[0]
     else:
         run_dir = output_dir / run_name
         if not run_dir.exists():
             click.echo(f"Run not found: {run_dir}")
-            return
+            return None
 
-    cases_dir = run_dir / "cases"
-    if not cases_dir.exists():
+    if not (run_dir / "cases").exists():
         click.echo(f"No cases in run {run_dir.name}.")
-        return
+        return None
 
-    # Load the experiment YAML saved with this run to locate raw inputs
+    return run_dir, case
+
+
+def _load_case_into_viewer(
+    viewer,
+    run_dir: Path,
+    case: str | None,
+    open_ome_zarr,
+    load_experiment,
+    recon_label: str | None = None,
+    skip_raw: bool = False,
+) -> list:
+    """Load raw + recon for one or more cases in ``run_dir`` into ``viewer``.
+
+    Returns the list of napari layers added for the reconstruction(s),
+    so the caller can link contrast limits between paired layers.
+    """
+    cases_dir = run_dir / "cases"
     exp_path = run_dir / "experiment.yml"
     experiment = load_experiment(exp_path) if exp_path.exists() else None
 
-    viewer = napari.Viewer(title=f"wo bm view — {run_dir.name}")
-
     case_dirs = [cases_dir / case] if case else sorted(cases_dir.iterdir())
+    recon_layers = []
     for case_dir in case_dirs:
         if not case_dir.is_dir():
             continue
         case_name = case_dir.name
+        tag = f"{recon_label}/" if recon_label else ""
 
-        # Raw input: simulated.zarr for synthetic, {input}/{position} for hpc
-        raw_path = _resolve_raw_path(case_dir, case_name, experiment)
-        channel_filter = _input_channel_names(case_dir)
-        if raw_path and raw_path.exists():
-            _add_zarr_to_viewer(
-                viewer,
-                raw_path,
-                f"{case_name}/raw",
-                open_ome_zarr,
-                channels=channel_filter,
-            )
-        else:
-            click.echo(f"  {case_name}: no raw input found")
+        if not skip_raw:
+            raw_path = _resolve_raw_path(case_dir, case_name, experiment)
+            channel_filter = _input_channel_names(case_dir)
+            if raw_path and raw_path.exists():
+                _add_zarr_to_viewer(viewer, raw_path, f"{tag}{case_name}/raw", open_ome_zarr, channels=channel_filter)
+            else:
+                click.echo(f"  {case_name}: no raw input found")
 
-        # Reconstruction
         recon_path = case_dir / "reconstruction.zarr"
         if recon_path.exists():
-            _add_zarr_to_viewer(viewer, recon_path, f"{case_name}/recon", open_ome_zarr)
+            before = len(viewer.layers)
+            _add_zarr_to_viewer(viewer, recon_path, f"{tag}{case_name}/recon", open_ome_zarr)
+            recon_layers.extend(viewer.layers[before:])
+    return recon_layers
 
-    viewer.grid.enabled = True
-    napari.run()
+
+def _link_contrast_limits(layers_a: list, layers_b: list) -> None:
+    """Link contrast-limit edits between paired layers.
+
+    Uses napari's ``link_layers`` so dragging the contrast slider on
+    either side adjusts both. Also sets a common initial range.
+    """
+    if not layers_a or not layers_b:
+        return
+
+    from napari.experimental import link_layers
+
+    for la, lb in zip(layers_a, layers_b):
+        import numpy as np
+
+        lo = min(float(np.asarray(la.data).min()), float(np.asarray(lb.data).min()))
+        hi = max(float(np.asarray(la.data).max()), float(np.asarray(lb.data).max()))
+        la.contrast_limits = (lo, hi)
+        lb.contrast_limits = (lo, hi)
+        link_layers([la, lb], ("contrast_limits",))
 
 
 def _resolve_raw_path(case_dir: Path, case_name: str, experiment) -> Path | None:
