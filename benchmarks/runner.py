@@ -102,18 +102,21 @@ def _dir_size_bytes(path: Path) -> int:
 
 
 def _cleanup_large_outputs(case_dir: Path, save_all: bool) -> None:
-    """Remove transfer-function zarrs and oversized output zarrs.
+    """Remove derived and oversized output zarrs when ``save_all`` is False.
 
-    Transfer-function zarrs are always deleted when ``save_all`` is
-    False — they can be regenerated from config and are typically the
-    largest intermediate. ``simulated.zarr`` and ``reconstruction.zarr``
-    are deleted only if they exceed :data:`SIZE_LIMIT_BYTES`.
+    Transfer-function zarrs and ``cropped_input.zarr`` are always deleted
+    (both are cheap to regenerate from config + source). ``simulated.zarr``
+    and ``reconstruction.zarr`` are deleted only if they exceed
+    :data:`SIZE_LIMIT_BYTES`.
     """
     if save_all:
         return
     for p in case_dir.glob("transfer_function_*.zarr"):
         if p.is_dir():
             shutil.rmtree(p)
+    cropped = case_dir / "cropped_input.zarr"
+    if cropped.is_dir():
+        shutil.rmtree(cropped)
     for name in ("simulated.zarr", "reconstruction.zarr"):
         p = case_dir / name
         if p.is_dir() and _dir_size_bytes(p) > SIZE_LIMIT_BYTES:
