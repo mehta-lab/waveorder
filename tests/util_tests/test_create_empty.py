@@ -46,5 +46,3 @@ def test_single_position_detection(tmp_path):
 
     # This should detect as single position because 3 levels up doesn't exist as plate
     assert is_single_position_store(fake_single_pos), "Should detect as single position"
-
-

@@ -15,13 +15,13 @@ import pytest
 from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
+from iohub.ngff.utils import create_empty_plate
 
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
     get_reconstruction_output_metadata,
 )
 from waveorder.cli.main import cli
-from iohub.ngff.utils import create_empty_plate
 from waveorder.io import utils
 
 INPUT_SCALE = [1, 1, 2.0, 6.5, 6.5]
