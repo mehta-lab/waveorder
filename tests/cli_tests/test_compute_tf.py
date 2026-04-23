@@ -107,7 +107,7 @@ def test_absorption_and_phase_write(birefringence_phase_recon_settings_function,
     recon_settings, dataset = birefringence_phase_recon_settings_function
     czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     tf_ds = phase.compute_transfer_function(czyx_data, 3, recon_settings.phase)
-    _write_phase_tf(dataset, tf_ds, (3, 4, 5), 3)
+    _write_phase_tf(dataset, tf_ds, 3)
     assert dataset["real_potential_transfer_function"]
     assert dataset["imaginary_potential_transfer_function"]
     assert dataset["imaginary_potential_transfer_function"].shape == (
@@ -126,7 +126,7 @@ def test_phase_3dim_write(birefringence_phase_recon_settings_function, make_czyx
     recon_settings.reconstruction_dimension = 2
     czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=4)
     tf_ds = phase.compute_transfer_function(czyx_data, 2, recon_settings.phase)
-    _write_phase_tf(dataset, tf_ds, (3, 4, 5), 2)
+    _write_phase_tf(dataset, tf_ds, 2)
     assert dataset["singular_system_U"]
     assert dataset["singular_system_U"].shape == (1, 2, 2, 4, 5)
     assert dataset["singular_system_S"]
@@ -139,7 +139,7 @@ def test_fluorescence_write(fluorescence_recon_settings_function, make_czyx):
     recon_settings, dataset = fluorescence_recon_settings_function
     czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = fluorescence.compute_transfer_function(czyx_data, 3, recon_settings.fluorescence)
-    _write_fluorescence_tf(dataset, tf_ds, (3, 4, 5), 3)
+    _write_fluorescence_tf(dataset, tf_ds, 3)
     assert dataset["optical_transfer_function"]
     assert dataset["optical_transfer_function"].shape == (1, 1, 3, 4, 5)
     assert "real_potential_transfer_function" not in dataset
@@ -152,7 +152,7 @@ def test_fluorescence_2d_write(fluorescence_recon_settings_function, make_czyx):
     recon_settings.reconstruction_dimension = 2
     czyx_data = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
     tf_ds = fluorescence.compute_transfer_function(czyx_data, 2, recon_settings.fluorescence)
-    _write_fluorescence_tf(dataset, tf_ds, (3, 4, 5), 2)
+    _write_fluorescence_tf(dataset, tf_ds, 2)
     # Should generate singular system components, not optical transfer function
     assert dataset["singular_system_U"]
     assert dataset["singular_system_S"]

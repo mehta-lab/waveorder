@@ -190,7 +190,6 @@ def get_reconstruction_output_metadata(
 
     return {
         "shape": (T, len(channel_names), output_z_shape, Y, X),
-        "chunks": (1, 1, 1, Y, X),
         "scale": scale,
         "channel_names": channel_names,
         "dtype": np.float32,
