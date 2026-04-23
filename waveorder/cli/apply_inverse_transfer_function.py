@@ -393,9 +393,10 @@ def apply_inverse_transfer_function_cli(
 ) -> None:
     # Deferred imports for fast CLI help
     import torch
+    from iohub import open_ome_zarr
+    from iohub.ngff.utils import create_empty_plate
 
     from waveorder.cli.utils import (
-        create_empty_hcs_zarr,
         generate_valid_position_key,
         is_single_position_store,
     )
@@ -404,6 +405,12 @@ def apply_inverse_transfer_function_cli(
     output_metadata = get_reconstruction_output_metadata(
         input_position_dirpaths[0], config_filepath, write_config_scale_to_output
     )
+
+    # `plate_metadata` is not a `create_empty_plate` parameter; write it to
+    # the plate's zattrs after creation. `output_metadata["version"]` is read
+    # from the input plate by `get_reconstruction_output_metadata`, so the
+    # output preserves the input's OME-Zarr version.
+    plate_metadata = output_metadata.pop("plate_metadata", {})
 
     # Generate position keys - use valid HCS keys for single-position stores
     position_keys = []
@@ -415,11 +422,15 @@ def apply_inverse_transfer_function_cli(
             position_key = input_path.parts[-3:]
         position_keys.append(position_key)
 
-    create_empty_hcs_zarr(
+    create_empty_plate(
         store_path=output_dirpath,
         position_keys=position_keys,
         **output_metadata,
     )
+
+    if plate_metadata:
+        with open_ome_zarr(str(output_dirpath), mode="r+") as output_plate:
+            output_plate.zattrs.update(plate_metadata)
 
     # Initialize torch threads
     if num_processes > 1:
