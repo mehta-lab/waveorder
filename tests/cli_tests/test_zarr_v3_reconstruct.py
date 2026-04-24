@@ -15,13 +15,13 @@ import pytest
 from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
+from iohub.ngff.utils import create_empty_plate
 
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
     get_reconstruction_output_metadata,
 )
 from waveorder.cli.main import cli
-from waveorder.cli.utils import create_empty_hcs_zarr
 from waveorder.io import utils
 
 INPUT_SCALE = [1, 1, 2.0, 6.5, 6.5]
@@ -129,10 +129,10 @@ class TestPlateMetadataExtraction:
 class TestOutputVersionPreservation:
     """Test that output zarr format matches input version."""
 
-    def test_create_empty_hcs_zarr_version(self, tmp_path):
+    def test_create_empty_plate_version(self, tmp_path):
         for version in _versions():
             out_path = tmp_path / f"output_{version}.zarr"
-            create_empty_hcs_zarr(
+            create_empty_plate(
                 store_path=out_path,
                 position_keys=[("A", "1", "0")],
                 shape=(1, 4, 4, 5, 6),
