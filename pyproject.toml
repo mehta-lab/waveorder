@@ -6,7 +6,7 @@ requires = ["hatchling", "uv-dynamic-versioning>=0.7.0"]
 name = "waveorder"
 description = "Wave-optical simulations and deconvolution of optical properties"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { file = "LICENSE" }
 authors = [{ name = "CZ Biohub SF", email = "compmicro@czbiohub.org" }]
 maintainers = [
@@ -31,7 +31,6 @@ classifiers = [
   "Intended Audience :: Science/Research",
   "License :: OSI Approved :: BSD License",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
   "Topic :: Scientific/Engineering",
@@ -45,7 +44,9 @@ dependencies = [
   "click>=8.0.1",
   "colorspacious>=1.1.2",
   "importlib-metadata",
-  "iohub>=0.3.0a7,<0.4",
+  # TODO: revert to a released iohub version once feat/sharding_in_utils
+  # is merged and released (https://github.com/czbiohub-sf/iohub).
+  "iohub @ git+https://github.com/czbiohub-sf/iohub@feat/sharding_in_utils",
   "ipywidgets>=7.5.1",
   "matplotlib>=3.1.1",
   "natsort>=7.1.1",
