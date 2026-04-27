@@ -45,7 +45,6 @@ subprocess.check_call(
         "git+https://github.com/mehta-lab/waveorder.git@main",
     ]
 )
-!pip install iohub==0.2.0
 
 # %%
 import matplotlib.pyplot as plt
@@ -96,7 +95,7 @@ zyx_recon = phase_thick_3d.apply_inverse_transfer_function(
     real_potential_transfer_function,
     imag_potential_transfer_function,
     transfer_function_arguments["z_padding"],
-    regularization_parameter=0.01,
+    regularization_strength=0.01,
 )
 # %% Compared data and reconstruction
 z_slices = [1, 3, 5, 7, 9]
@@ -111,3 +110,5 @@ for i, z in enumerate(z_slices):
     axes[1, i].axis("off")
 plt.tight_layout()
 plt.show()
+
+# %%
