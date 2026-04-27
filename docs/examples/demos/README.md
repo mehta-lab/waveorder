@@ -11,11 +11,11 @@ The demos are provided in two formats:
 
 ## QPI (Quantitative Phase Imaging) from defocus
 - [Python script](./QPI_defocus/QPI_defocus_simulation.py)
-- [Jupyter Notebook on Google Colab](https://colab.research.google.com/github/mehta-lab/waveorder/blob/demos-aqlm/docs/examples/demos/QPI_defocus/QPI_defocus_simulation.ipynb)
+- [Jupyter Notebook on Google Colab](https://colab.research.google.com/github/mehta-lab/waveorder/blob/main/docs/examples/demos/QPI_defocus/QPI_defocus_simulation.ipynb)
 
 ## QLIPP (Quantitative label-free imaging with phase and polarization)
 - [Python script](./QLIPP/QLIPP_simulation.py)
-- [Jupyter Notebook on Google Colab](https://colab.research.google.com/github/mehta-lab/waveorder/blob/demos-aqlm/docs/examples/demos/QLIPP/QLIPP_simulation.ipynb)
+- [Jupyter Notebook on Google Colab](https://colab.research.google.com/github/mehta-lab/waveorder/blob/main/docs/examples/demos/QLIPP/QLIPP_simulation.ipynb)
 
 
 ## Developer notes:
