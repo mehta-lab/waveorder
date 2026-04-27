@@ -39,6 +39,35 @@ def test_maintenance_examples(example):
     plt.close("all")
 
 
+@pytest.mark.parametrize(
+    "example",
+    [
+        EXAMPLES / "demos/QPI_defocus/QPI_defocus_simulation.py",
+        EXAMPLES / "demos/QLIPP/QLIPP_simulation.py",
+    ],
+    ids=lambda p: p.name,
+)
+def test_demo_examples(example):
+    """Run Colab demo scripts so renamed APIs in waveorder are caught early.
+
+    The pip-install cell at the top of each demo is bypassed via
+    ``patch("subprocess.check_call")``; we test against the working tree, not
+    a fresh install from ``main``.
+    """
+    with (
+        patch("subprocess.check_call"),
+        patch("matplotlib.pyplot.show"),
+        patch("matplotlib.pyplot.imshow"),
+    ):
+        try:
+            runpy.run_path(str(example), run_name="__main__")
+        except SystemExit as e:
+            if e.code != 0:
+                pytest.fail(f"Script {example.name} exited with code {e.code}")
+
+    plt.close("all")
+
+
 @pytest.mark.skipif(
     os.getenv("GITHUB_ACTIONS") == "true" and sys.platform != "linux",
     reason="Skip on GitHub Actions non-Linux platforms, napari requires headless display",

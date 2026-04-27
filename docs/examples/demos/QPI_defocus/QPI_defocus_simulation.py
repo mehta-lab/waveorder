@@ -67,6 +67,7 @@ simulation_arguments = {
     "yx_pixel_size": 6.5 / 63,  # Lateral pixel size
     "z_pixel_size": 0.25,  # Axial pixel size
     "index_of_refraction_media": 1.3,  # Refractive index of medium
+    "wavelength_illumination": 0.532,  # Wavelength in microns
 }
 
 phantom_arguments = {
@@ -76,7 +77,6 @@ phantom_arguments = {
 
 transfer_function_arguments = {
     "z_padding": 0,  # Padding in z direction
-    "wavelength_illumination": 0.532,  # Wavelength in microns
     "numerical_aperture_illumination": 0.9,  # Illumination NA
     "numerical_aperture_detection": 1.2,  # Detection NA
 }
