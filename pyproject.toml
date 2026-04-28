@@ -44,9 +44,7 @@ dependencies = [
   "click>=8.0.1",
   "colorspacious>=1.1.2",
   "importlib-metadata",
-  # TODO: revert to a released iohub version once feat/sharding_in_utils
-  # is merged and released (https://github.com/czbiohub-sf/iohub).
-  "iohub @ git+https://github.com/czbiohub-sf/iohub@feat/sharding_in_utils",
+  "iohub>=0.3.4",
   "ipywidgets>=7.5.1",
   "matplotlib>=3.1.1",
   "natsort>=7.1.1",
