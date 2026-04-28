@@ -1,0 +1,22 @@
+reconstruction_dimension: 2
+input_channel_names: [BF]
+phase:
+  transfer_function:
+    yx_pixel_size: 0.325
+    z_pixel_size: 2.0
+    wavelength_illumination: 0.45
+    index_of_refraction_media: 1.0
+    numerical_aperture_illumination: 0.4
+    numerical_aperture_detection: 0.55
+    invert_phase_contrast: false
+    z_focus_offset: {init: 0.0, lr: 0.05}
+    tilt_angle_zenith: {init: 0.0, lr: 0.05}
+    tilt_angle_azimuth: {init: 0.0, lr: 0.05}
+  apply_inverse:
+    regularization_strength: 0.001
+optimization:
+  max_iterations: 50
+  method: adam
+  loss:
+    type: midband_power
+    midband_fractions: [0.25, 0.5]

@@ -9,6 +9,8 @@ cases:
       bead_radius_um: 2.5
       refractive_index_diff: 0.05
     config: ../configs/phase_3d_beads.yml
+    reference:
+      with_phantom.ssim: {min: 0.7}
 
   fluor_3d_beads:
     type: synthetic
@@ -20,9 +22,26 @@ cases:
       fluorescence_intensity: 1.0
       fluorescence_background: 10.0
     config: ../configs/fluor_3d_beads.yml
+    reference:
+      with_phantom.ssim: {min: 0.8}
 
   ops_pheno_center:
     type: hpc
     input: /hpc/projects/intracellular_dashboard/ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
     position: A/1/029029
     config: ../configs/ops_pheno_phase_2d.yml
+    reference:
+      image_quality.midband_power: {min: 1.5e2}
+
+  ops_pheno_center_opt:
+    type: hpc
+    input: /hpc/projects/intracellular_dashboard/ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
+    position: A/1/029029
+    crop:
+      y: [768, 1280]
+      x: [768, 1280]
+    config: ../configs/ops_pheno_phase_2d_opt.yml
+    reference:
+      parameter.z_focus_offset:     {min: -0.25, max: 0.25}
+      parameter.tilt_angle_zenith:  {min: -0.1,  max: 0.1}
+      parameter.tilt_angle_azimuth: {min: -3.14, max: 3.14}
