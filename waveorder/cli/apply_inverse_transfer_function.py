@@ -367,13 +367,8 @@ def apply_inverse_transfer_function_single_position(
         # (e.g. cgroup OOM-kill) surfaces as BrokenProcessPool instead
         # of hanging indefinitely on pool.starmap.
         context = mp.get_context("spawn")
-        with ProcessPoolExecutor(
-            max_workers=num_processes, mp_context=context
-        ) as p:
-            futures = [
-                p.submit(partial_apply_inverse_to_zyx_and_save, t_idx)
-                for t_idx in time_indices
-            ]
+        with ProcessPoolExecutor(max_workers=num_processes, mp_context=context) as p:
+            futures = [p.submit(partial_apply_inverse_to_zyx_and_save, t_idx) for t_idx in time_indices]
             for fut in as_completed(futures):
                 fut.result()
     else:
