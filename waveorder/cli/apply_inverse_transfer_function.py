@@ -209,7 +209,7 @@ def apply_inverse_transfer_function_single_position(
 ) -> None:
 
     # Deferred imports for fast CLI help
-    import itertools
+    from concurrent.futures import ProcessPoolExecutor, as_completed
     from functools import partial
 
     import numpy as np
@@ -360,11 +360,17 @@ def apply_inverse_transfer_function_single_position(
     if num_processes > 1:
         if verbose:
             click.echo(f"\nStarting multiprocess pool with {num_processes} processes")
-        with mp.Pool(num_processes) as p:
-            p.starmap(
-                partial_apply_inverse_to_zyx_and_save,
-                itertools.product(time_indices),
-            )
+        # NOTE: spawn (not fork) — tensorstore runs internal C++ threads
+        # that are not fork-safe, so a forked worker can deadlock or
+        # segfault before our code runs. See google/tensorstore#61.
+        # NOTE: ProcessPoolExecutor (not mp.Pool) so silent worker death
+        # (e.g. cgroup OOM-kill) surfaces as BrokenProcessPool instead
+        # of hanging indefinitely on pool.starmap.
+        context = mp.get_context("spawn")
+        with ProcessPoolExecutor(max_workers=num_processes, mp_context=context) as p:
+            futures = [p.submit(partial_apply_inverse_to_zyx_and_save, t_idx) for t_idx in time_indices]
+            for fut in as_completed(futures):
+                fut.result()
     else:
         for t_idx in time_indices:
             partial_apply_inverse_to_zyx_and_save(t_idx)
