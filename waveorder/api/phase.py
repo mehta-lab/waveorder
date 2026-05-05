@@ -65,6 +65,10 @@ ApplyInverseSettings = FourierApplyInverseSettings
 
 
 class Settings(MyBaseModel):
+    kind: Literal["phase"] = Field(
+        default="phase",
+        description="discriminator selecting phase reconstruction in tile-stitch settings",
+    )
     transfer_function: TransferFunctionSettings = TransferFunctionSettings()
     apply_inverse: ApplyInverseSettings = ApplyInverseSettings()
 
