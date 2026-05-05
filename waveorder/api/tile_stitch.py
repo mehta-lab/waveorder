@@ -14,7 +14,6 @@ recon settings already need. Distributed orchestration happens in the
 biahub package.
 """
 
-from __future__ import annotations
 
 from typing import TYPE_CHECKING, Annotated, Literal, Union
 
