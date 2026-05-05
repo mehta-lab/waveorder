@@ -14,8 +14,7 @@ recon settings already need. Distributed orchestration happens in the
 biahub package.
 """
 
-
-from typing import TYPE_CHECKING, Annotated, Literal, Union
+from typing import TYPE_CHECKING, Annotated, Literal, Self, Union
 
 import numpy as np
 import xarray as xr
@@ -25,8 +24,16 @@ from waveorder.api._settings import MyBaseModel
 from waveorder.api.birefringence import Settings as BirefringenceSettings
 from waveorder.api.fluorescence import Settings as FluorescenceSettings
 from waveorder.api.phase import Settings as PhaseSettings
-from waveorder.tile_stitch.blend import (
+from waveorder.tile_stitch._engine import (  # noqa: F401  (public re-exports)
+    TileStitchPlan,
+    blend_output_tile,
+    build_plan,
+    reconstruct_tile,
+    tile_stitch_reconstruction,
+)
+from waveorder.tile_stitch.blend import (  # noqa: F401  (public re-exports)
     Blend,
+    clipped_mean,
     gaussian_mean,
     max_blend,
     min_blend,
@@ -63,7 +70,7 @@ class BlendSettings(MyBaseModel):
     )
 
     @model_validator(mode="after")
-    def _sigma_only_when_gaussian(self) -> BlendSettings:
+    def _sigma_only_when_gaussian(self) -> Self:
         if self.kind != "gaussian_mean" and self.sigma_fraction is not None:
             raise ValueError(f"sigma_fraction is only valid when kind='gaussian_mean'; got kind={self.kind!r}")
         return self
@@ -98,7 +105,7 @@ class TileSettings(MyBaseModel):
     )
 
     @model_validator(mode="after")
-    def _overlap_dims_subset_of_tile(self) -> TileSettings:
+    def _overlap_dims_subset_of_tile(self) -> Self:
         extra = set(self.overlap) - set(self.tile_size)
         if extra:
             raise ValueError(f"overlap has dims {sorted(extra)} not present in tile_size {sorted(self.tile_size)}")
@@ -106,6 +113,34 @@ class TileSettings(MyBaseModel):
             if ov >= self.tile_size[d]:
                 raise ValueError(f"overlap[{d!r}]={ov} must be strictly less than tile_size[{d!r}]={self.tile_size[d]}")
         return self
+
+
+# --- TileStitchSettings (top-level config) ---------------------------------
+
+
+class TileStitchSettings(MyBaseModel):
+    """User-facing config: tiling geometry + blend + per-modality recon settings.
+
+    ``schema_version`` is bumped on a backward-incompatible change to this
+    schema. v0.5 only emits / reads ``"1"``; downstream tools that read
+    serialized configs should validate the version on load and refuse to
+    proceed silently on mismatch.
+    """
+
+    schema_version: Literal["1"] = Field(
+        default="1",
+        description="schema version of this settings document (bumped on breaking changes)",
+    )
+    tile: TileSettings = Field(
+        description="spatial tiling geometry (tile_size, overlap)",
+    )
+    blend: BlendSettings = Field(
+        default_factory=BlendSettings,
+        description="overlap-blend reduction kernel selection",
+    )
+    recon: ReconSettings = Field(
+        description="per-modality reconstruction settings; discriminated by 'kind'",
+    )
 
 
 # --- Worker-cache contract --------------------------------------------------
@@ -202,31 +237,3 @@ def clear_transfer_function_cache() -> None:
     let the cache persist for the lifetime of the worker process.
     """
     _TF_CACHE.clear()
-
-
-# --- Settings ---------------------------------------------------------------
-
-
-class TileStitchSettings(MyBaseModel):
-    """User-facing config: tiling geometry + blend + per-modality recon settings.
-
-    ``schema_version`` is bumped on a backward-incompatible change to this
-    schema. v0.5 only emits / reads ``"1"``; downstream tools that read
-    serialized configs should validate the version on load and refuse to
-    proceed silently on mismatch.
-    """
-
-    schema_version: Literal["1"] = Field(
-        default="1",
-        description="schema version of this settings document (bumped on breaking changes)",
-    )
-    tile: TileSettings = Field(
-        description="spatial tiling geometry (tile_size, overlap, output_chunk)",
-    )
-    blend: BlendSettings = Field(
-        default_factory=BlendSettings,
-        description="overlap-blend reduction kernel selection",
-    )
-    recon: ReconSettings = Field(
-        description="per-modality reconstruction settings; discriminated by 'kind'",
-    )
