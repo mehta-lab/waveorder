@@ -46,7 +46,7 @@ def tile_stitch_cli(
 
     settings = utils.yaml_to_model(config_filepath_arg, TileStitchSettings)
 
-    echo_headline(f"Tile-stitching with settings:")
+    echo_headline("Tile-stitching with settings:")
     echo_settings(settings)
 
     input_dataset = open_ome_zarr(input_position_dirpath, layout="fov", mode="r")
@@ -54,21 +54,12 @@ def tile_stitch_cli(
 
     if channel is None:
         if len(input_dataset.channel_names) != 1:
-            raise click.UsageError(
-                f"Input has multiple channels {input_dataset.channel_names}; "
-                "specify --channel."
-            )
+            raise click.UsageError(f"Input has multiple channels {input_dataset.channel_names}; specify --channel.")
         channel = input_dataset.channel_names[0]
     elif channel not in input_dataset.channel_names:
-        raise click.UsageError(
-            f"--channel {channel!r} not in dataset channels {input_dataset.channel_names}"
-        )
+        raise click.UsageError(f"--channel {channel!r} not in dataset channels {input_dataset.channel_names}")
 
-    czyx_data = (
-        input_dataset.to_xarray()
-        .isel(t=timepoint)
-        .sel(c=[channel])
-    )
+    czyx_data = input_dataset.to_xarray().isel(t=timepoint).sel(c=[channel])
 
     transfer_function = prepare_transfer_function(settings, device=device)
 

@@ -26,13 +26,6 @@ from waveorder.api._settings import MyBaseModel
 from waveorder.api.birefringence import Settings as BirefringenceSettings
 from waveorder.api.fluorescence import Settings as FluorescenceSettings
 from waveorder.api.phase import Settings as PhaseSettings
-from waveorder.tile_stitch._engine import (
-    TileStitchPlan,
-    blend_output_tile,
-    build_plan,
-    reconstruct_tile,
-    tile_stitch_reconstruction,
-)
 from waveorder.tile_stitch.blend import (
     Blend,
     gaussian_mean,
@@ -73,10 +66,7 @@ class BlendSettings(MyBaseModel):
     @model_validator(mode="after")
     def _sigma_only_when_gaussian(self) -> BlendSettings:
         if self.kind != "gaussian_mean" and self.sigma_fraction is not None:
-            raise ValueError(
-                "sigma_fraction is only valid when kind='gaussian_mean'; "
-                f"got kind={self.kind!r}"
-            )
+            raise ValueError(f"sigma_fraction is only valid when kind='gaussian_mean'; got kind={self.kind!r}")
         return self
 
     def build(self) -> Blend:
@@ -112,14 +102,10 @@ class TileSettings(MyBaseModel):
     def _overlap_dims_subset_of_tile(self) -> TileSettings:
         extra = set(self.overlap) - set(self.tile_size)
         if extra:
-            raise ValueError(
-                f"overlap has dims {sorted(extra)} not present in tile_size {sorted(self.tile_size)}"
-            )
+            raise ValueError(f"overlap has dims {sorted(extra)} not present in tile_size {sorted(self.tile_size)}")
         for d, ov in self.overlap.items():
             if ov >= self.tile_size[d]:
-                raise ValueError(
-                    f"overlap[{d!r}]={ov} must be strictly less than tile_size[{d!r}]={self.tile_size[d]}"
-                )
+                raise ValueError(f"overlap[{d!r}]={ov} must be strictly less than tile_size[{d!r}]={self.tile_size[d]}")
         return self
 
 
@@ -194,15 +180,11 @@ def prepare_transfer_function(
     if recon_kind == "phase":
         from waveorder.api import phase
 
-        tf = phase.compute_transfer_function(
-            sample, recon_dim=recon_dim, settings=settings.recon, device=device
-        )
+        tf = phase.compute_transfer_function(sample, recon_dim=recon_dim, settings=settings.recon, device=device)
     elif recon_kind == "fluorescence":
         from waveorder.api import fluorescence
 
-        tf = fluorescence.compute_transfer_function(
-            sample, recon_dim=recon_dim, settings=settings.recon, device=device
-        )
+        tf = fluorescence.compute_transfer_function(sample, recon_dim=recon_dim, settings=settings.recon, device=device)
     elif recon_kind == "birefringence":
         from waveorder.api import birefringence
 
