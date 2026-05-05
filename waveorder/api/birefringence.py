@@ -57,6 +57,10 @@ class ApplyInverseSettings(WavelengthIllumination):
 
 
 class Settings(MyBaseModel):
+    kind: Literal["birefringence"] = Field(
+        default="birefringence",
+        description="discriminator selecting birefringence reconstruction in tile-stitch settings",
+    )
     transfer_function: TransferFunctionSettings = TransferFunctionSettings()
     apply_inverse: ApplyInverseSettings = ApplyInverseSettings()
 
