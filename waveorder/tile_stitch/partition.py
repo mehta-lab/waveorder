@@ -13,8 +13,6 @@ output tile, accumulates a weighted contribution, divides by total
 weight, and writes the output tile.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from itertools import product
 
@@ -91,17 +89,11 @@ def generate_tiles(
             raise ValueError(f"tile_size dim {d!r} not found in data.dims={data.dims}")
     tile_dims = tuple(str(d) for d in data.dims if d in tile_size)
 
-    positions = {
-        d: _squeeze_positions(int(data.sizes[d]), tile_size[d], overlap.get(d, 0))
-        for d in tile_dims
-    }
+    positions = {d: _squeeze_positions(int(data.sizes[d]), tile_size[d], overlap.get(d, 0)) for d in tile_dims}
 
     tiles: list[InputTile] = []
     for tile_id, coord in enumerate(product(*(positions[d] for d in tile_dims))):
-        slices = {
-            d: slice(start, start + tile_size[d])
-            for d, start in zip(tile_dims, coord, strict=True)
-        }
+        slices = {d: slice(start, start + tile_size[d]) for d, start in zip(tile_dims, coord, strict=True)}
         tiles.append(InputTile(tile_id=tile_id, slices=slices))
     return tiles, tile_dims
 
@@ -131,8 +123,7 @@ def generate_output_tiles(
     tiles: list[OutputTile] = []
     for tile_id, coord in enumerate(product(*(starts[d] for d in tile_dims))):
         slices = {
-            d: slice(start, min(start + tile_size[d], full_shape[d]))
-            for d, start in zip(tile_dims, coord, strict=True)
+            d: slice(start, min(start + tile_size[d], full_shape[d])) for d, start in zip(tile_dims, coord, strict=True)
         }
         tiles.append(OutputTile(tile_id=tile_id, slices=slices))
     return tiles
@@ -151,8 +142,7 @@ def input_tiles_for_output(
     contributors: list[int] = []
     for it in input_tiles:
         if all(
-            it.slices[d].start < out_tile.slices[d].stop
-            and out_tile.slices[d].start < it.slices[d].stop
+            it.slices[d].start < out_tile.slices[d].stop and out_tile.slices[d].start < it.slices[d].stop
             for d in tile_dims
         ):
             contributors.append(it.tile_id)

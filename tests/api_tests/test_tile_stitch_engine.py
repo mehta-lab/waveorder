@@ -5,10 +5,7 @@ the non-tiled reconstruction within a tolerance derived from the
 expected accumulation error.
 """
 
-from __future__ import annotations
-
 import numpy as np
-import pytest
 import xarray as xr
 
 from waveorder.api.phase import Settings as PhaseSettings
@@ -26,7 +23,6 @@ from waveorder.api.tile_stitch import (
     uniform_mean,
 )
 from waveorder.tile_stitch.partition import InputTile, OutputTile
-
 
 # --- build_plan ---
 
@@ -235,24 +231,20 @@ def test_tile_stitch_reconstruction_identity_recon_reproduces_input():
     # We can't use the real phase recon (requires a TF), so we invoke the
     # primitives directly with an identity recon.
     from waveorder.tile_stitch._engine import build_plan as _build_plan
+
     plan = _build_plan(data, settings)
     blend_kernel = settings.blend.build()
     tiles_by_id = {it.tile_id: it for it in plan.input_tiles}
 
     # Identity recon: each input tile's content == input slice.
     recon_by_tile = {
-        it.tile_id: np.asarray(
-            data.isel({d: it.slices[d] for d in plan.tile_dims}).values, dtype=np.float32
-        )
+        it.tile_id: np.asarray(data.isel({d: it.slices[d] for d in plan.tile_dims}).values, dtype=np.float32)
         for it in plan.input_tiles
     }
 
     output = np.full(data_np.shape, blend_kernel.fill_value, dtype=np.float32)
     for ot in plan.output_tiles:
-        contributors = [
-            (tiles_by_id[tid], recon_by_tile[tid])
-            for tid in plan.output_to_inputs[ot.tile_id]
-        ]
+        contributors = [(tiles_by_id[tid], recon_by_tile[tid]) for tid in plan.output_to_inputs[ot.tile_id]]
         tile_result = blend_output_tile(
             ot,
             contributors,
@@ -292,9 +284,7 @@ def test_tile_stitch_reconstruction_orchestrator_calls_modality_apply_inverse(mo
     )
     fake_tf = xr.Dataset()  # Not used by the fake apply
 
-    out = _eng.tile_stitch_reconstruction(
-        data, settings, transfer_function=fake_tf, device="cpu"
-    )
+    out = _eng.tile_stitch_reconstruction(data, settings, transfer_function=fake_tf, device="cpu")
 
     assert len(calls) == len(_eng.build_plan(data, settings).input_tiles)
     assert out.shape == data.shape

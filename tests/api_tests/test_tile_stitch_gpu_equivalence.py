@@ -6,8 +6,6 @@ lands. Tolerance is derived from f32 accumulation error scaled by
 the number of contributors at the worst-case interior cell.
 """
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 import xarray as xr
@@ -21,7 +19,6 @@ from waveorder.api.tile_stitch import (
     prepare_transfer_function,
 )
 from waveorder.tile_stitch._engine import tile_stitch_reconstruction
-
 
 pytestmark = pytest.mark.gpu
 
@@ -59,15 +56,11 @@ def test_tile_stitch_phase_cpu_vs_cuda_equivalence():
     )
 
     tf_cpu = prepare_transfer_function(settings, recon_dim=3, device="cpu")
-    out_cpu = tile_stitch_reconstruction(
-        data, settings, transfer_function=tf_cpu, recon_dim=3, device="cpu"
-    )
+    out_cpu = tile_stitch_reconstruction(data, settings, transfer_function=tf_cpu, recon_dim=3, device="cpu")
 
     clear_transfer_function_cache()
     tf_gpu = prepare_transfer_function(settings, recon_dim=3, device="cuda")
-    out_gpu = tile_stitch_reconstruction(
-        data, settings, transfer_function=tf_gpu, recon_dim=3, device="cuda"
-    )
+    out_gpu = tile_stitch_reconstruction(data, settings, transfer_function=tf_gpu, recon_dim=3, device="cuda")
 
     cpu = np.asarray(out_cpu.values)
     gpu = np.asarray(out_gpu.values)

@@ -1,7 +1,5 @@
 """Tests for ``prepare_transfer_function`` — worker-cache contract."""
 
-from __future__ import annotations
-
 import pytest
 import xarray as xr
 
@@ -59,7 +57,9 @@ def test_prepare_tf_different_settings_misses():
     s1 = _phase_settings_3d()
     s2 = TileStitchSettings(
         tile=TileSettings(tile_size={"z": 4, "y": 32, "x": 32}),
-        recon=PhaseSettings(transfer_function=PhaseSettings().transfer_function.model_copy(update={"yx_pixel_size": 0.2})),
+        recon=PhaseSettings(
+            transfer_function=PhaseSettings().transfer_function.model_copy(update={"yx_pixel_size": 0.2})
+        ),
     )
     tf1 = prepare_transfer_function(s1, recon_dim=3, device="cpu")
     tf2 = prepare_transfer_function(s2, recon_dim=3, device="cpu")

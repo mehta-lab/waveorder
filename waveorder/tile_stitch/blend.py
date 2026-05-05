@@ -20,8 +20,6 @@ else tree-reduction changes the result. Non-associative reductions
 and reduce at ``finalize`` — documented as O(N) memory.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from functools import lru_cache, reduce
@@ -53,9 +51,7 @@ def _broadcast_weights(values: np.ndarray, weights: np.ndarray) -> np.ndarray:
     """Promote spatial weights to full leading+spatial shape."""
     extra = values.ndim - weights.ndim
     if extra < 0:
-        raise ValueError(
-            f"weights have more dims ({weights.ndim}) than values ({values.ndim})"
-        )
+        raise ValueError(f"weights have more dims ({weights.ndim}) than values ({values.ndim})")
     if extra:
         weights = weights.reshape((1,) * extra + weights.shape)
     return np.broadcast_to(weights, values.shape)

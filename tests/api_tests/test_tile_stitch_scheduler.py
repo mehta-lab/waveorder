@@ -1,7 +1,5 @@
 """Scheduler tests — coverage-greedy ordering + co-occurrence batching."""
 
-from __future__ import annotations
-
 import pytest
 
 from waveorder.tile_stitch.scheduler import (
@@ -9,7 +7,6 @@ from waveorder.tile_stitch.scheduler import (
     output_to_batches_map,
     schedule_coverage_greedy,
 )
-
 
 # --- schedule_coverage_greedy ---
 

@@ -17,8 +17,6 @@ work for any bipartite dependency graph regardless of dataset shape or
 partitioning.
 """
 
-from __future__ import annotations
-
 from collections import defaultdict
 
 
@@ -50,9 +48,7 @@ def schedule_coverage_greedy(
 
     popularity = {tid: len(inputs_to_outputs[tid]) for tid in input_tile_ids}
 
-    remaining: dict[int, set[int]] = {
-        ot_id: set(deps) for ot_id, deps in output_to_inputs.items()
-    }
+    remaining: dict[int, set[int]] = {ot_id: set(deps) for ot_id, deps in output_to_inputs.items()}
 
     pending = set(input_tile_ids)
     schedule: list[int] = []
@@ -62,11 +58,7 @@ def schedule_coverage_greedy(
         best_pop = -1
         best_tid = -1
         for tid in pending:
-            last_count = sum(
-                1
-                for ot_id in inputs_to_outputs[tid]
-                if remaining[ot_id] == {tid}
-            )
+            last_count = sum(1 for ot_id in inputs_to_outputs[tid] if remaining[ot_id] == {tid})
             pop = popularity[tid]
             if (last_count, pop) > (best_score, best_pop):
                 best_score = last_count

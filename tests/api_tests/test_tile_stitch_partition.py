@@ -5,8 +5,6 @@ the last tile past the volume edge (squeeze redistribution), output-grid
 clamping at the high-coordinate edge.
 """
 
-from __future__ import annotations
-
 import numpy as np
 import pytest
 import xarray as xr

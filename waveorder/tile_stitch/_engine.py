@@ -19,8 +19,6 @@ Three primitives, plus one orchestrator:
   ties everything together for in-memory single-process execution.
 """
 
-from __future__ import annotations
-
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Literal
@@ -129,9 +127,7 @@ def build_plan(
     output_to_inputs: dict[int, list[int]] = {
         ot.tile_id: input_tiles_for_output(ot, input_tiles, tile_dims) for ot in output_tiles
     }
-    input_order = schedule_coverage_greedy(
-        [it.tile_id for it in input_tiles], output_to_inputs
-    )
+    input_order = schedule_coverage_greedy([it.tile_id for it in input_tiles], output_to_inputs)
 
     input_batches: list[list[int]] | None = None
     output_to_batches: dict[int, list[int]] | None = None
@@ -171,8 +167,13 @@ def reconstruct_tile(
     .. code-block:: python
 
         from waveorder.api import phase
+
         recon_fn = lambda czyx: phase.apply_inverse_transfer_function(
-            czyx, tf, recon_dim=3, settings=phase_settings, device="cpu",
+            czyx,
+            tf,
+            recon_dim=3,
+            settings=phase_settings,
+            device="cpu",
         )
     """
     return np.asarray(recon_fn(czyx_block).values, dtype=np.float32)
@@ -239,9 +240,7 @@ def blend_output_tile(
     tile_dims : tuple[str, ...]
     output_dtype : numpy dtype, default ``np.float32``
     """
-    out_spatial_shape = tuple(
-        out_tile.slices[d].stop - out_tile.slices[d].start for d in tile_dims
-    )
+    out_spatial_shape = tuple(out_tile.slices[d].stop - out_tile.slices[d].start for d in tile_dims)
     output_shape = leading_shape + out_spatial_shape
     n_lead = len(leading_shape)
 
@@ -356,9 +355,7 @@ def tile_stitch_reconstruction(
     leading_shape_in = tuple(int(czyx_data.sizes[d]) for d in leading_dims)
     recon_by_tile: dict[int, np.ndarray] = {}
     for in_tile in plan.input_tiles:
-        sub = czyx_data.isel(
-            {d: in_tile.slices[d] for d in plan.tile_dims}
-        )
+        sub = czyx_data.isel({d: in_tile.slices[d] for d in plan.tile_dims})
         recon = reconstruct_tile(sub, recon_fn)
         recon_by_tile[in_tile.tile_id] = recon
 
@@ -368,19 +365,13 @@ def tile_stitch_reconstruction(
     output_leading_shape = first.shape[: first.ndim - len(plan.tile_dims)]
 
     # Stage B: blend each output tile.
-    full_output_shape = output_leading_shape + tuple(
-        plan.full_shape[d] for d in plan.tile_dims
-    )
-    output_arr = np.full(
-        full_output_shape, blend_kernel.fill_value, dtype=np.float32
-    )
+    full_output_shape = output_leading_shape + tuple(plan.full_shape[d] for d in plan.tile_dims)
+    output_arr = np.full(full_output_shape, blend_kernel.fill_value, dtype=np.float32)
     tiles_by_id = {it.tile_id: it for it in plan.input_tiles}
 
     for out_tile in plan.output_tiles:
         contributor_ids = plan.output_to_inputs.get(out_tile.tile_id, [])
-        contributors = [
-            (tiles_by_id[tid], recon_by_tile[tid]) for tid in contributor_ids
-        ]
+        contributors = [(tiles_by_id[tid], recon_by_tile[tid]) for tid in contributor_ids]
         tile_result = blend_output_tile(
             out_tile,
             contributors,
@@ -389,9 +380,7 @@ def tile_stitch_reconstruction(
             tile_dims=plan.tile_dims,
         )
         n_lead = len(output_leading_shape)
-        write_idx = (slice(None),) * n_lead + tuple(
-            out_tile.slices[d] for d in plan.tile_dims
-        )
+        write_idx = (slice(None),) * n_lead + tuple(out_tile.slices[d] for d in plan.tile_dims)
         output_arr[write_idx] = tile_result
 
     # Wrap result with the same leading dim names; spatial dims keep input names.

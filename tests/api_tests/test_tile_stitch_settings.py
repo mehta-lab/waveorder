@@ -1,7 +1,5 @@
 """Unit tests for ``waveorder.api.tile_stitch`` settings + the kind discriminator."""
 
-from __future__ import annotations
-
 import pytest
 from pydantic import ValidationError
 
@@ -14,7 +12,6 @@ from waveorder.api.tile_stitch import (
     TileStitchSettings,
 )
 from waveorder.tile_stitch.blend import Blend
-
 
 # --- BlendSettings ---
 
