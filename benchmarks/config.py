@@ -29,9 +29,37 @@ class PhantomConfig(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    function: Literal["single_bead", "random_beads"]
+    function: Literal["single_bead", "random_beads", "grid_beads", "grid_beads_gaussian"]
     shape: tuple[PositiveInt, PositiveInt, PositiveInt] = (64, 128, 128)
     pixel_sizes: tuple[PositiveFloat, PositiveFloat, PositiveFloat] = (0.25, 0.1, 0.1)
+
+
+class SimulationConfig(BaseModel):
+    """Optional forward-model override for a synthetic case.
+
+    By default a synthetic case uses the shift-invariant
+    ``isotropic_fluorescent_thick_3d`` / ``phase_thick_3d`` simulators.
+    Set ``forward_model: shift_variant`` to use the spatial-polynomial
+    pupil simulator from
+    :mod:`waveorder.models.shift_variant_fluorescent_3d`.
+
+    Parameters
+    ----------
+    forward_model : str
+        ``"shift_invariant"`` (default) or ``"shift_variant"``.
+    spatial_pupil_coefficients : dict
+        Mapping ``"j_m_n": c`` (waves, RMS) defining the spatial
+        polynomial pupil.
+    n_tiles_yx : tuple[int, int]
+        Number of partition tiles along ``(Y, X)`` for the shift-variant
+        forward model.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    forward_model: Literal["shift_invariant", "shift_variant"] = "shift_invariant"
+    spatial_pupil_coefficients: dict[str, float] = Field(default_factory=dict)
+    n_tiles_yx: tuple[PositiveInt, PositiveInt] = (8, 8)
 
 
 class ReferenceBound(BaseModel):
@@ -95,6 +123,7 @@ class CaseConfig(BaseModel):
     position: str | None = None
     crop: CropConfig | None = None
     reference: dict[str, ReferenceBound] | None = None
+    simulation: SimulationConfig | None = None
 
 
 class ExperimentConfig(BaseModel):

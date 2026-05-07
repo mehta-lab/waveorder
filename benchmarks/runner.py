@@ -29,16 +29,23 @@ from benchmarks.config import (
     CropConfig,
     PhantomConfig,
     ReferenceBound,
+    SimulationConfig,
     infer_modality,
 )
 from benchmarks.metrics import compute_metrics
-from benchmarks.simulate import simulate_fluorescence_3d, simulate_phase_3d
+from benchmarks.simulate import (
+    simulate_fluorescence_3d,
+    simulate_phase_3d,
+    simulate_shift_variant_fluorescence_3d,
+)
 from benchmarks.utils import TimingTree
 from waveorder import phantoms
 
 _PHANTOM_FUNCTIONS = {
     "single_bead": phantoms.single_bead,
     "random_beads": phantoms.random_beads,
+    "grid_beads": phantoms.grid_beads,
+    "grid_beads_gaussian": phantoms.grid_beads_gaussian,
 }
 
 CROPPED_INPUT_FILENAME = "cropped_input.zarr"
@@ -376,6 +383,7 @@ def run_synthetic_case(
     modality: str = "phase",
     save_all: bool = False,
     reference: dict[str, ReferenceBound] | None = None,
+    simulation: SimulationConfig | None = None,
 ) -> dict:
     """Run a single synthetic benchmark case via ``wo rec``.
 
@@ -407,14 +415,28 @@ def run_synthetic_case(
         with tt.time("phantom"):
             phantom = _build_phantom(phantom_config)
         (case_dir / "phantom_config.json").write_text(json.dumps(phantom.metadata, indent=2))
+        if simulation is not None:
+            (case_dir / "simulation_config.json").write_text(simulation.model_dump_json(indent=2))
 
         with tt.time("simulate"):
             tf_settings = recon_config.get(modality, {}).get("transfer_function", {})
             sim_kwargs = _sim_kwargs(modality, tf_settings)
+            forward_model = simulation.forward_model if simulation is not None else "shift_invariant"
             if modality == "phase":
+                if forward_model != "shift_invariant":
+                    raise ValueError(f"forward_model={forward_model!r} is not supported for phase modality")
                 data = simulate_phase_3d(phantom, **sim_kwargs)
             elif modality == "fluorescence":
-                data = simulate_fluorescence_3d(phantom, background=0, **sim_kwargs)
+                if forward_model == "shift_variant":
+                    data = simulate_shift_variant_fluorescence_3d(
+                        phantom,
+                        spatial_pupil_coefficients=simulation.spatial_pupil_coefficients,
+                        n_tiles_yx=simulation.n_tiles_yx,
+                        background=0,
+                        **sim_kwargs,
+                    )
+                else:
+                    data = simulate_fluorescence_3d(phantom, background=0, **sim_kwargs)
             else:
                 raise ValueError(f"Unknown modality: {modality}")
             channel_name = recon_config.get("input_channel_names", [_DEFAULT_CHANNEL[modality]])[0]
