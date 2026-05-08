@@ -22,6 +22,7 @@ _LAZY_COMMANDS = {
     "reconstruct": "waveorder.cli.reconstruct:_reconstruct_cli",
     "compute-transfer-function": "waveorder.cli.compute_transfer_function:_compute_transfer_function_cli",
     "apply-inverse-transfer-function": "waveorder.cli.apply_inverse_transfer_function:_apply_inverse_transfer_function_cli",
+    "tile-stitch": "waveorder.cli.tile_stitch:_tile_stitch_cli",
     "view": "waveorder.cli.view:_view_cli",
 }
 
@@ -37,6 +38,7 @@ _ALIASES = {
     "v": "view",
     "compute-tf": "compute-transfer-function",
     "apply-inv-tf": "apply-inverse-transfer-function",
+    "ts": "tile-stitch",
     "gui": "interactive",
     "bm": "benchmark",
 }
@@ -45,6 +47,7 @@ _DISPLAY_ORDER = [
     ("reconstruct", 0),
     ("compute-transfer-function", 2),
     ("apply-inverse-transfer-function", 2),
+    ("tile-stitch", 0),
     ("simulate", 0),
     ("view", 0),
     ("interactive", 0),
