@@ -497,6 +497,7 @@ def _run_recovery_and_measure(
         evaluate_recovery_against_truth,
         evaluate_truth_at_tile_centers,
         recover_zernikes,
+        render_recovery_summary,
     )
 
     z_pix, yx_pix, _ = phantom.pixel_sizes
@@ -597,6 +598,27 @@ def _run_recovery_and_measure(
 
     config_path = case_dir / "config.yml"
     config_path.write_text(yaml.dump(recon_config, default_flow_style=False))
+
+    truth_for_plot = None
+    if truth_metrics is not None:
+        truth_for_plot = torch.from_numpy(np.array(eval_result.truth_coefs))
+    fov_um = (Y * yx_pix, X * yx_pix)
+    nx_grid = ny_grid = int(np.sqrt(result.coefs.shape[0]))
+    suptitle = f"Per-tile Zernike recovery — {result.coefs.shape[1]} modes recovered" + (
+        f"; recovery_score={truth_metrics['recovery_score']:.3f}" if truth_metrics else ""
+    )
+    for path in (case_dir / "recovery_summary.png", case_dir / "recovery_summary.pdf"):
+        render_recovery_summary(
+            coefs=result.coefs,
+            truth_coefs=truth_for_plot,
+            per_tile_loss_history=result.per_tile_loss_history,
+            tile_centers_um=result.tile_centers_um,
+            grid_yx=(ny_grid, nx_grid),
+            noll_indices=result.noll_indices,
+            fov_um=fov_um,
+            out_path=path,
+            title=suptitle,
+        )
 
     return metrics
 

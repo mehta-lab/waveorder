@@ -25,37 +25,11 @@ cases:
     reference:
       with_phantom.ssim: {min: 0.8}
 
-  shift_variant_grid_beads_fluor:
-    type: synthetic
-    phantom:
-      function: grid_beads
-      shape: [32, 256, 256]
-      pixel_sizes: [0.25, 0.1, 0.1]
-      grid_shape: [5, 5]
-      bead_radius_um: 0.5
-      fluorescence_intensity: 1.0
-      fluorescence_background: 0.0
-    simulation:
-      forward_model: shift_variant
-      n_tiles_yx: [8, 8]
-      spatial_pupil_coefficients:
-        # j_m_n: c (waves RMS).  m, n are spatial polynomial orders in (x_o, y_o).
-        # Quadratic radial defocus + linear astigmatism + linear coma.
-        "4_2_0": 0.20
-        "4_0_2": 0.20
-        "5_1_0": 0.10
-        "6_0_1": 0.10
-        "7_1_0": 0.05
-        "8_0_1": 0.05
-    config: ../configs/shift_variant_grid_beads_fluor.yml
-    reference:
-      image_quality.midband_power: {min: 1.0e-6}
-
-  shift_variant_grid_beads_recovery:
-    # Same phantom + sim as above, but the reconstruction step replaces
-    # `wo rec` with per-tile Zernike recovery + tile-stitched Wiener
-    # deconvolution.  Reports `zernike_recovery.recovery_score` (1 =
-    # perfect Zernike vector recovery, 0 = no better than zeros).
+  shift_variant_grid_beads:
+    # Shift-variant fluorescence forward model + per-tile Zernike
+    # recovery + tile-stitched Wiener deconvolution. Recovers the
+    # spatial-polynomial pupil coefficients used by the simulator and
+    # reports recovery_score (1 = perfect, 0 = no better than zeros).
     type: synthetic
     phantom:
       function: grid_beads_gaussian
@@ -68,6 +42,8 @@ cases:
     simulation:
       forward_model: shift_variant
       n_tiles_yx: [8, 8]
+      # j_m_n: c (waves RMS).  m, n are spatial polynomial orders in (x_o, y_o).
+      # Quadratic radial defocus + linear astigmatism + linear coma.
       spatial_pupil_coefficients:
         "4_2_0": 0.20
         "4_0_2": 0.20
@@ -84,7 +60,7 @@ cases:
       midband_fractions: [0.2, 0.4]
       optimizer: sgd
       n_iter: 250
-    config: ../configs/shift_variant_grid_beads_fluor.yml
+    config: ../configs/shift_variant_grid_beads.yml
     reference:
       zernike_recovery.recovery_score: {min: 0.30}
 

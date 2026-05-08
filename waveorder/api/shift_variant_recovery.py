@@ -512,6 +512,181 @@ def evaluate_recovery_against_truth(
     )
 
 
+def render_recovery_summary(
+    coefs: Tensor,
+    truth_coefs: Tensor | None,
+    per_tile_loss_history: np.ndarray,
+    tile_centers_um: list[tuple[float, float]],
+    grid_yx: tuple[int, int],
+    noll_indices: tuple[int, ...],
+    fov_um: tuple[float, float],
+    out_path,
+    title: str | None = None,
+) -> None:
+    """Render a single-page Zernike-pyramid recovery summary.
+
+    Layout: top row centred (color key + per-tile loss curves on a
+    square axis); below, one row per Zernike radial order n with
+    truth-vs-recovered scatter plots.
+
+    Parameters
+    ----------
+    coefs : Tensor
+        ``(T, M)`` recovered coefficients.
+    truth_coefs : Tensor or None
+        ``(T, M)`` truth coefficients, when known. Pass ``None`` to skip
+        the diagonal lines and just plot recovered values vs index.
+    per_tile_loss_history : ndarray
+        ``(n_iter, T)`` per-tile loss history (any sign).
+    tile_centers_um : list of (y_um, x_um)
+        One per tile.
+    grid_yx : tuple[int, int]
+        Tile lattice shape (used for the colour key).
+    noll_indices : tuple[int, ...]
+        Noll indices in the order they sit along axis 1 of ``coefs``.
+    fov_um : tuple[float, float]
+        ``(Y_extent, X_extent)`` in microns, used to lay the colour key.
+    out_path : Path or str
+        Output file path. ``.png``, ``.pdf``, or ``.svg``.
+    title : str, optional
+        Figure suptitle.
+    """
+    import matplotlib.pyplot as plt
+    from matplotlib.gridspec import GridSpec
+
+    from waveorder.zernike import _noll_to_nm
+
+    T, M = coefs.shape
+    coefs_np = coefs.numpy()
+    tru_np = truth_coefs.numpy() if truth_coefs is not None else None
+
+    rows_by_n: dict[int, list[int]] = {}
+    j_to_idx: dict[int, int] = {}
+    for i, j in enumerate(noll_indices):
+        n, _ = _noll_to_nm(int(j))
+        rows_by_n.setdefault(n, []).append(int(j))
+        j_to_idx[int(j)] = i
+    rows_by_n = {n: sorted(js) for n, js in sorted(rows_by_n.items())}
+    n_rows_pyramid = len(rows_by_n)
+    cols_max = max(len(js) for js in rows_by_n.values())
+    if cols_max % 2 == 0:
+        cols_max += 1
+
+    nrows = 1 + n_rows_pyramid
+    ncols = cols_max
+
+    tile_colors = _two_axis_color_map(tile_centers_um, grid_yx)
+
+    with plt.rc_context({"font.family": "monospace"}):
+        fig = plt.figure(figsize=(ncols * 1.5, nrows * 2.5), constrained_layout=True)
+        gs = GridSpec(nrows, ncols, figure=fig)
+
+        top_block_width = 4
+        top_start = (ncols - top_block_width) // 2
+        legend_ax = fig.add_subplot(gs[0, top_start : top_start + 2])
+        loss_ax = fig.add_subplot(gs[0, top_start + 2 : top_start + 4])
+
+        _draw_color_legend(legend_ax, tile_centers_um, tile_colors, fov_um)
+
+        for t in range(T):
+            loss_ax.plot(per_tile_loss_history[:, t], color=tile_colors[t], linewidth=1.0, alpha=0.9)
+        if (per_tile_loss_history > 0).all():
+            loss_ax.set_yscale("log")
+        else:
+            loss_ax.axhline(0, color="black", linewidth=0.5, linestyle=":")
+        loss_ax.set_xlabel("iteration", fontsize=11)
+        loss_ax.set_ylabel("loss", fontsize=11)
+        loss_ax.set_title("per-tile loss", fontsize=11)
+        loss_ax.set_box_aspect(1)
+
+        labels = _noll_labels()
+        for r, (_n, js) in enumerate(rows_by_n.items()):
+            margin = (cols_max - len(js)) // 2
+            for k, j in enumerate(js):
+                col_start = margin + k
+                ax = fig.add_subplot(gs[1 + r, col_start])
+                rec_i = coefs_np[:, j_to_idx[j]]
+                tru_i = tru_np[:, j_to_idx[j]] if tru_np is not None else np.zeros_like(rec_i)
+                lim = float(max(abs(rec_i).max(), abs(tru_i).max(), 0.05) * 1.1)
+                ax.scatter(tru_i, rec_i, s=40, c=tile_colors, alpha=0.95, linewidths=0)
+                ax.plot([-lim, lim], [-lim, lim], "k--", linewidth=0.5)
+                tick = round(lim / 1.1, 2)
+                ax.set_xticks([-tick, 0, tick])
+                ax.set_yticks([-tick, 0, tick])
+                ax.set_xlim(-lim, lim)
+                ax.set_ylim(-lim, lim)
+                ax.set_aspect("equal")
+                ax.set_title(f"Z{j} {labels.get(j, '')}".strip(), fontsize=11)
+                for spine in ax.spines.values():
+                    spine.set_visible(False)
+
+        if title:
+            fig.suptitle(title, fontsize=13)
+        fig.savefig(out_path, dpi=140 if str(out_path).lower().endswith(".pdf") is False else 200)
+        plt.close(fig)
+
+
+def _noll_labels() -> dict[int, str]:
+    return {
+        4: "defocus",
+        5: "astig 0",
+        6: "astig 45",
+        7: "coma x",
+        8: "coma y",
+        9: "trefoil 0",
+        10: "trefoil 30",
+        11: "spherical",
+        12: "sec astig 0",
+        13: "sec astig 45",
+        14: "tetrafoil 0",
+        15: "tetrafoil 22.5",
+    }
+
+
+def _two_axis_color_map(tile_centers_um, grid_yx) -> np.ndarray:
+    """RG colour-coded tile palette: row -> R, col -> G, B fixed."""
+    rows = sorted({round(c[0], 3) for c in tile_centers_um})
+    cols = sorted({round(c[1], 3) for c in tile_centers_um})
+    nr = max(len(rows) - 1, 1)
+    nc = max(len(cols) - 1, 1)
+    out = np.zeros((len(tile_centers_um), 4))
+    for i, (cy, cx) in enumerate(tile_centers_um):
+        ri = rows.index(round(cy, 3))
+        ci = cols.index(round(cx, 3))
+        out[i] = (0.2 + 0.8 * (ri / nr), 0.2 + 0.8 * (ci / nc), 0.5, 1.0)
+    return out
+
+
+def _draw_color_legend(ax, tile_centers_um, tile_colors, fov_um) -> None:
+    """Render a 2D colour key at axis-aligned bead positions, microns."""
+    import matplotlib.pyplot as plt
+
+    half_y, half_x = fov_um[0] / 2, fov_um[1] / 2
+    if len(tile_centers_um) > 1:
+        sy = abs(tile_centers_um[1][0] - tile_centers_um[0][0]) or half_y / max(len(tile_centers_um), 1)
+        sx = abs(tile_centers_um[1][1] - tile_centers_um[0][1]) or half_x / max(len(tile_centers_um), 1)
+    else:
+        sy = sx = half_y
+    side = 0.85 * min(sy, sx) if min(sy, sx) > 0 else min(half_y, half_x) / 5
+    for (cy, cx), color in zip(tile_centers_um, tile_colors):
+        ax.add_patch(
+            plt.Rectangle(
+                (cx - side / 2, cy - side / 2),
+                side,
+                side,
+                facecolor=color,
+                edgecolor="white",
+                linewidth=0.5,
+            )
+        )
+    ax.set_xlim(-half_x, half_x)
+    ax.set_ylim(half_y, -half_y)
+    ax.set_aspect("equal")
+    ax.set_xlabel("x (um)")
+    ax.set_ylabel("y (um)")
+    ax.set_title("tile color key", fontsize=11)
+
+
 def evaluate_truth_at_tile_centers(
     tile_centers_um: list[tuple[float, float]],
     field_extent_um: tuple[float, float],

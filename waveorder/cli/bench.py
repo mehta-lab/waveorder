@@ -350,6 +350,7 @@ def view(output_dir, path, path_b):
     run_a, case_a = target_a
 
     if path_b is None:
+        _open_recovery_summary_if_present(run_a, case_a)
         viewer = napari.Viewer(title=f"wo bm view — {run_a.name}")
         _load_case_into_viewer(viewer, run_a, case_a, open_ome_zarr, load_experiment)
         viewer.grid.enabled = True
@@ -374,6 +375,40 @@ def view(output_dir, path, path_b):
 
     viewer.grid.enabled = True
     napari.run()
+
+
+def _open_recovery_summary_if_present(run_dir: Path, case_name: str | None) -> None:
+    """Open ``recovery_summary.pdf`` in the system PDF viewer when present.
+
+    Only fires for the recovery case (and only if a single case is being
+    viewed) — this is a side-channel that lets ``wo bm view`` surface the
+    Zernike-recovery summary alongside the napari raw/recon layers.
+    """
+    import shutil
+    import subprocess
+
+    if case_name is None:
+        # When no case is specified, fall back to scanning every case in the run.
+        candidates = list((run_dir / "cases").glob("*/recovery_summary.pdf"))
+    else:
+        candidates = [run_dir / "cases" / case_name / "recovery_summary.pdf"]
+        candidates = [p for p in candidates if p.exists()]
+    if not candidates:
+        return
+    opener = shutil.which("xdg-open") or shutil.which("evince")
+    if opener is None:
+        click.echo(f"  (no PDF viewer found; recovery_summary.pdf at {candidates[0]})")
+        return
+    for path in candidates:
+        try:
+            subprocess.Popen(
+                [opener, str(path)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except OSError:
+            pass
 
 
 def _resolve_view_target(output_dir: Path, path: str | None) -> tuple[Path, str | None] | None:
