@@ -29,9 +29,73 @@ class PhantomConfig(BaseModel):
 
     model_config = ConfigDict(extra="allow")
 
-    function: Literal["single_bead", "random_beads"]
+    function: Literal["single_bead", "random_beads", "grid_beads", "grid_beads_gaussian"]
     shape: tuple[PositiveInt, PositiveInt, PositiveInt] = (64, 128, 128)
     pixel_sizes: tuple[PositiveFloat, PositiveFloat, PositiveFloat] = (0.25, 0.1, 0.1)
+
+
+class SimulationConfig(BaseModel):
+    """Optional forward-model override for a synthetic case.
+
+    By default a synthetic case uses the shift-invariant
+    ``isotropic_fluorescent_thick_3d`` / ``phase_thick_3d`` simulators.
+    Set ``forward_model: shift_variant`` to use the spatial-polynomial
+    pupil simulator from
+    :mod:`waveorder.models.shift_variant_fluorescent_3d`.
+
+    Parameters
+    ----------
+    forward_model : str
+        ``"shift_invariant"`` (default) or ``"shift_variant"``.
+    spatial_pupil_coefficients : dict
+        Mapping ``"j_m_n": c`` (waves, RMS) defining the spatial
+        polynomial pupil.
+    n_tiles_yx : tuple[int, int]
+        Number of partition tiles along ``(Y, X)`` for the shift-variant
+        forward model.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    forward_model: Literal["shift_invariant", "shift_variant"] = "shift_invariant"
+    spatial_pupil_coefficients: dict[str, float] = Field(default_factory=dict)
+    n_tiles_yx: tuple[PositiveInt, PositiveInt] = (8, 8)
+
+
+class RecoveryConfig(BaseModel):
+    """Optional shift-variant Zernike recovery, executed in place of ``wo rec``.
+
+    When set on a synthetic case, the runner replaces the standard
+    inverse-transfer-function reconstruction with the per-tile Zernike
+    optimisation from :mod:`waveorder.api.shift_variant_recovery`. The
+    case writes ``recovered_coefs.npy``, ``truth_coefs.npy``, and a
+    ``zernike_recovery`` block into ``metrics.json`` containing the
+    recovery_score FoM and per-mode RMSE/correlation.
+
+    Tile geometry mirrors ``waveorder.tile_stitch``; the sim's
+    ``n_tiles_yx`` is independent — the recovery's ``tile_size_yx`` is
+    aligned with the bead grid.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = True
+    noll_indices: list[PositiveInt] = Field(default_factory=lambda: list(range(4, 16)))
+    tile_size_yx: dict[str, PositiveInt] = Field(default_factory=lambda: {"y": 26, "x": 26})
+    tile_overlap_yx: dict[str, int] = Field(default_factory=lambda: {"y": 0, "x": 0})
+    bead_template_sigma_um: tuple[PositiveFloat, PositiveFloat, PositiveFloat] = (0.15, 0.1, 0.1)
+    loss: Literal["mse", "midband", "midband_3d", "tv", "laplacian_var", "normalized_var", "spectral_flatness"] = (
+        "midband"
+    )
+    midband_fractions: tuple[float, float] = (0.2, 0.4)
+    l1_strength: float = 0.0
+    smooth_strength: float = 0.0
+    scale_fit: bool = True
+    optimizer: Literal["adam", "adamw", "nadam", "sgd", "lbfgs"] = "sgd"
+    lr_schedule: Literal["constant", "cosine", "step", "warmup"] = "constant"
+    lr_mult: PositiveFloat = 1.0
+    n_iter: PositiveInt = 250
+    wiener_regularization: PositiveFloat = 1.0e-3
 
 
 class ReferenceBound(BaseModel):
@@ -95,6 +159,8 @@ class CaseConfig(BaseModel):
     position: str | None = None
     crop: CropConfig | None = None
     reference: dict[str, ReferenceBound] | None = None
+    simulation: SimulationConfig | None = None
+    recovery: RecoveryConfig | None = None
 
 
 class ExperimentConfig(BaseModel):

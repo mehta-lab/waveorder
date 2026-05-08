@@ -255,6 +255,249 @@ def random_beads(
     )
 
 
+def grid_beads(
+    shape: tuple[int, int, int] = (32, 256, 256),
+    pixel_sizes: tuple[float, float, float] = (0.25, 0.1, 0.1),
+    grid_shape: tuple[int, int] = (5, 5),
+    bead_radius_um: float = 0.5,
+    refractive_index_diff: float = 0.03,
+    absorption_coefficient: float = 0.0,
+    fluorescence_intensity: float = 1.0,
+    fluorescence_background: float = 0.0,
+    z_plane_um: float = 0.0,
+    margin_um: float | None = None,
+    blur_size_um: float = 0.05,
+) -> Phantom:
+    """Generate a regular 2D grid of beads in a single Z plane.
+
+    All beads share radius and optical properties; centers are placed on
+    a uniformly spaced ``grid_shape`` lattice in the YX plane at axial
+    position ``z_plane_um``. The resulting phantom is "thin" — all
+    contrast lies on the requested plane.
+
+    Parameters
+    ----------
+    shape : tuple[int, int, int]
+        Volume shape ``(Z, Y, X)`` in pixels.
+    pixel_sizes : tuple[float, float, float]
+        ``(z, y, x)`` pixel sizes in microns.
+    grid_shape : tuple[int, int]
+        Number of beads along ``(Y, X)``.
+    bead_radius_um : float
+        Bead radius in microns. Default 0.5 um (1 um diameter).
+    refractive_index_diff : float
+        RI difference from background (dn).
+    absorption_coefficient : float
+        Peak absorption inside each bead.
+    fluorescence_intensity : float
+        Peak fluorophore concentration inside each bead.
+    fluorescence_background : float
+        Constant baseline added to the fluorescence channel.
+    z_plane_um : float
+        Axial position of the bead plane, relative to volume center.
+    margin_um : float, optional
+        Margin between beads and the FOV boundary (in microns). If
+        ``None``, half a tile is used so beads sit at tile centers.
+    blur_size_um : float
+        Gaussian blur standard deviation in microns to soften edges.
+
+    Returns
+    -------
+    Phantom
+        Phase, absorption, and fluorescence ground truth with metadata
+        including the bead-center grid (``centers_um``).
+
+    Examples
+    --------
+    >>> phantom = grid_beads(grid_shape=(3, 3))
+    >>> len(phantom.metadata["centers_um"]) == 9
+    True
+    """
+    metadata = {
+        "type": "grid_beads",
+        "shape": list(shape),
+        "pixel_sizes": list(pixel_sizes),
+        "grid_shape": list(grid_shape),
+        "bead_radius_um": bead_radius_um,
+        "refractive_index_diff": refractive_index_diff,
+        "absorption_coefficient": absorption_coefficient,
+        "fluorescence_intensity": fluorescence_intensity,
+        "fluorescence_background": fluorescence_background,
+        "z_plane_um": z_plane_um,
+        "blur_size_um": blur_size_um,
+    }
+
+    y_extent = shape[1] * pixel_sizes[1]
+    x_extent = shape[2] * pixel_sizes[2]
+
+    ny, nx = grid_shape
+    if margin_um is None:
+        margin_y = y_extent / (2 * ny)
+        margin_x = x_extent / (2 * nx)
+    else:
+        margin_y = margin_x = float(margin_um)
+
+    if ny == 1:
+        ys = np.array([0.0])
+    else:
+        ys = np.linspace(-y_extent / 2 + margin_y, y_extent / 2 - margin_y, ny)
+    if nx == 1:
+        xs = np.array([0.0])
+    else:
+        xs = np.linspace(-x_extent / 2 + margin_x, x_extent / 2 - margin_x, nx)
+
+    centers = []
+    for y in ys:
+        for x in xs:
+            centers.append((float(z_plane_um), float(y), float(x)))
+    metadata["centers_um"] = [list(c) for c in centers]
+
+    combined_mask = torch.zeros(shape, dtype=torch.float32)
+    for c in centers:
+        combined_mask = torch.maximum(combined_mask, _sphere_mask(shape, pixel_sizes, bead_radius_um, c))
+
+    blurred = _gaussian_blur(combined_mask, pixel_sizes, blur_size_um)
+
+    phase = blurred * refractive_index_diff
+    absorption = blurred * absorption_coefficient
+    fluorescence = blurred * fluorescence_intensity + fluorescence_background
+
+    return Phantom(
+        phase=phase,
+        absorption=absorption,
+        fluorescence=fluorescence,
+        pixel_sizes=pixel_sizes,
+        metadata=metadata,
+    )
+
+
+def grid_beads_gaussian(
+    shape: tuple[int, int, int] = (32, 256, 256),
+    pixel_sizes: tuple[float, float, float] = (0.25, 0.1, 0.1),
+    grid_shape: tuple[int, int] = (5, 5),
+    sigma_um: tuple[float, float, float] = (0.15, 0.1, 0.1),
+    fluorescence_intensity: float = 1.0,
+    fluorescence_background: float = 0.0,
+    refractive_index_diff: float = 0.0,
+    z_plane_um: float = 0.0,
+    margin_um: float | None = None,
+) -> Phantom:
+    """Pixel-aligned 2D grid of 3D Gaussian beads.
+
+    Replaces the sphere-mask + blur composition used by ``grid_beads``
+    with a direct anisotropic Gaussian intensity profile centered on the
+    nearest *integer pixel* of each grid position. Both choices remove
+    sub-pixel sampling artefacts (octagonal beads, peak-intensity drift
+    across the grid) that surface when bead radii are close to one voxel.
+
+    Each bead contributes ``exp(-(z² + y² + x²) / (2 σ²))`` (with
+    independent σ per axis) and beads add together where they overlap.
+
+    Parameters
+    ----------
+    shape : tuple[int, int, int]
+        Volume shape ``(Z, Y, X)`` in pixels.
+    pixel_sizes : tuple[float, float, float]
+        ``(z, y, x)`` pixel sizes in microns.
+    grid_shape : tuple[int, int]
+        Number of beads along ``(Y, X)``.
+    sigma_um : tuple[float, float, float]
+        Gaussian σ along ``(z, y, x)`` in microns. Default ``(0.15, 0.1,
+        0.1)`` matches a sub-diffraction bead at 100 nm pixels.
+    fluorescence_intensity : float
+        Peak fluorophore concentration at each bead center.
+    fluorescence_background : float
+        Constant baseline added to the fluorescence channel.
+    refractive_index_diff : float
+        RI difference from background (dn). Phase channel uses the same
+        Gaussian profile multiplied by ``refractive_index_diff``.
+    z_plane_um : float
+        Axial position of the bead plane, relative to volume center.
+    margin_um : float, optional
+        Margin between beads and the FOV boundary in microns. If None,
+        defaults to half a tile cell so beads sit at tile centers for
+        the matching ``grid_shape`` tile partition.
+
+    Returns
+    -------
+    Phantom
+        Phase, absorption, and fluorescence ground truth, plus metadata
+        with the snapped pixel centers (``centers_pix`` and ``centers_um``).
+    """
+    Z, Y, X = shape
+    pz, py, px = pixel_sizes
+    sz, sy, sx = sigma_um
+    ny, nx = grid_shape
+
+    y_extent = Y * py
+    x_extent = X * px
+    if margin_um is None:
+        margin_y = y_extent / (2 * ny)
+        margin_x = x_extent / (2 * nx)
+    else:
+        margin_y = margin_x = float(margin_um)
+
+    if ny == 1:
+        ys_um = np.array([0.0])
+    else:
+        ys_um = np.linspace(-y_extent / 2 + margin_y, y_extent / 2 - margin_y, ny)
+    if nx == 1:
+        xs_um = np.array([0.0])
+    else:
+        xs_um = np.linspace(-x_extent / 2 + margin_x, x_extent / 2 - margin_x, nx)
+    z_pix = int(np.round(z_plane_um / pz)) + Z // 2
+
+    ys_pix = (np.round(ys_um / py) + Y // 2).astype(int)
+    xs_pix = (np.round(xs_um / px) + X // 2).astype(int)
+    centers_pix = [(int(z_pix), int(yp), int(xp)) for yp in ys_pix for xp in xs_pix]
+    centers_um = [
+        (
+            (cz - Z // 2) * pz,
+            (cy - Y // 2) * py,
+            (cx - X // 2) * px,
+        )
+        for cz, cy, cx in centers_pix
+    ]
+
+    metadata = {
+        "type": "grid_beads_gaussian",
+        "shape": list(shape),
+        "pixel_sizes": list(pixel_sizes),
+        "grid_shape": list(grid_shape),
+        "sigma_um": list(sigma_um),
+        "fluorescence_intensity": fluorescence_intensity,
+        "fluorescence_background": fluorescence_background,
+        "refractive_index_diff": refractive_index_diff,
+        "z_plane_um": z_plane_um,
+        "centers_pix": [list(c) for c in centers_pix],
+        "centers_um": [list(c) for c in centers_um],
+    }
+
+    z = (torch.arange(Z) - Z // 2) * pz
+    y = (torch.arange(Y) - Y // 2) * py
+    x = (torch.arange(X) - X // 2) * px
+    zz, yy, xx = torch.meshgrid(z, y, x, indexing="ij")
+
+    accum = torch.zeros(shape, dtype=torch.float32)
+    for cz_um, cy_um, cx_um in centers_um:
+        bead = torch.exp(
+            -(((zz - cz_um) ** 2) / (2 * sz**2) + ((yy - cy_um) ** 2) / (2 * sy**2) + ((xx - cx_um) ** 2) / (2 * sx**2))
+        )
+        accum = accum + bead
+
+    fluorescence = accum * fluorescence_intensity + fluorescence_background
+    phase = accum * refractive_index_diff
+    absorption = torch.zeros_like(accum)
+
+    return Phantom(
+        phase=phase,
+        absorption=absorption,
+        fluorescence=fluorescence,
+        pixel_sizes=pixel_sizes,
+        metadata=metadata,
+    )
+
+
 def _sphere_mask(
     shape: tuple[int, int, int],
     pixel_sizes: tuple[float, float, float],
