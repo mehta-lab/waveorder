@@ -147,6 +147,7 @@ def run(experiment, scope, output_dir, save_all):
                     save_all=save_all,
                     reference=case.reference,
                     simulation=case.simulation,
+                    recovery=case.recovery,
                 )
             elif case.type == "hpc":
                 metrics = run_hpc_case(

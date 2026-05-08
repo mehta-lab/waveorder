@@ -28,6 +28,7 @@ from iohub.ngff.models import TransformationMeta
 from benchmarks.config import (
     CropConfig,
     PhantomConfig,
+    RecoveryConfig,
     ReferenceBound,
     SimulationConfig,
     infer_modality,
@@ -384,6 +385,7 @@ def run_synthetic_case(
     save_all: bool = False,
     reference: dict[str, ReferenceBound] | None = None,
     simulation: SimulationConfig | None = None,
+    recovery: RecoveryConfig | None = None,
 ) -> dict:
     """Run a single synthetic benchmark case via ``wo rec``.
 
@@ -445,18 +447,157 @@ def run_synthetic_case(
         _write_zarr(data, simulated_path, channel_name, phantom.pixel_sizes)
 
         ground_truth = phantom.phase if modality == "phase" else phantom.fluorescence
-        metrics = _run_and_measure(
-            position_path=simulated_path / "0" / "0" / "0",
-            recon_config=recon_config,
-            case_dir=case_dir,
-            tt=tt,
-            ground_truth=ground_truth,
-        )
+        if recovery is not None and recovery.enabled:
+            if modality != "fluorescence":
+                raise ValueError("recovery: is only supported for fluorescence modality")
+            metrics = _run_recovery_and_measure(
+                data=data,
+                phantom=phantom,
+                recon_config=recon_config,
+                simulation=simulation,
+                recovery=recovery,
+                case_dir=case_dir,
+                tt=tt,
+                ground_truth=ground_truth,
+            )
+        else:
+            metrics = _run_and_measure(
+                position_path=simulated_path / "0" / "0" / "0",
+                recon_config=recon_config,
+                case_dir=case_dir,
+                tt=tt,
+                ground_truth=ground_truth,
+            )
         ref_check = check_reference(case_dir, metrics, reference)
         if ref_check is not None:
             metrics["reference_check"] = ref_check
 
     _finalize_case(case_dir, tt, metrics, save_all)
+    return metrics
+
+
+def _run_recovery_and_measure(
+    data: torch.Tensor,
+    phantom,
+    recon_config: dict,
+    simulation: SimulationConfig | None,
+    recovery: RecoveryConfig,
+    case_dir: Path,
+    tt: TimingTree,
+    ground_truth: torch.Tensor,
+) -> dict:
+    """Run shift-variant Zernike recovery in place of ``wo rec``.
+
+    Writes ``recovered_coefs.npy``, ``truth_coefs.npy``,
+    ``zernike_recovery.json`` (per-mode RMSE/correlation + recovery_score
+    FoM), and a stitched ``reconstruction.zarr``.
+    """
+    from waveorder.api.shift_variant_recovery import (
+        RecoverySettings,
+        evaluate_recovery_against_truth,
+        evaluate_truth_at_tile_centers,
+        recover_zernikes,
+    )
+
+    z_pix, yx_pix, _ = phantom.pixel_sizes
+    fl = recon_config.get("fluorescence", {}).get("transfer_function", {})
+    NA_det = fl.get("numerical_aperture_detection", 1.2)
+    wavelength = fl.get("wavelength_emission", 0.532)
+    n_index = fl.get("index_of_refraction_media", 1.3)
+
+    settings = RecoverySettings(
+        noll_indices=tuple(recovery.noll_indices),
+        tile_size_yx=dict(recovery.tile_size_yx),
+        tile_overlap_yx={k: float(v) for k, v in recovery.tile_overlap_yx.items()},
+        bead_template_sigma_um=tuple(recovery.bead_template_sigma_um),
+        loss=recovery.loss,
+        midband_fractions=tuple(recovery.midband_fractions),
+        l1_strength=recovery.l1_strength,
+        smooth_strength=recovery.smooth_strength,
+        scale_fit=recovery.scale_fit,
+        optimizer=recovery.optimizer,
+        lr_schedule=recovery.lr_schedule,
+        lr_mult=recovery.lr_mult,
+        n_iter=recovery.n_iter,
+        wiener_regularization=recovery.wiener_regularization,
+    )
+    (case_dir / "recovery_config.json").write_text(settings.model_dump_json(indent=2))
+
+    with tt.time("reconstruct"):
+        result = recover_zernikes(
+            sim_zyx=data.numpy() if isinstance(data, torch.Tensor) else data,
+            yx_pixel_size_um=yx_pix,
+            z_pixel_size_um=z_pix,
+            wavelength_emission_um=wavelength,
+            numerical_aperture_detection=NA_det,
+            index_of_refraction_media=n_index,
+            settings=settings,
+        )
+
+    Z, Y, X = data.shape
+    recon_path = case_dir / "reconstruction.zarr"
+    _write_zarr(
+        torch.from_numpy(result.reconstruction_zyx),
+        recon_path,
+        recon_config.get("input_channel_names", ["GFP"])[0],
+        phantom.pixel_sizes,
+    )
+    np.save(case_dir / "recovered_coefs.npy", result.coefs.numpy())
+    np.save(case_dir / "per_tile_loss_history.npy", result.per_tile_loss_history)
+    np.save(case_dir / "tile_centers_um.npy", np.array(result.tile_centers_um))
+
+    truth_metrics: dict | None = None
+    if simulation is not None and simulation.spatial_pupil_coefficients:
+        coef_dict_tuples = {}
+        for key, c in simulation.spatial_pupil_coefficients.items():
+            j, m, n = (int(s) for s in str(key).split("_"))
+            coef_dict_tuples[(j, m, n)] = float(c)
+        field_extent_um = (Y * yx_pix / 2, X * yx_pix / 2)
+        truth = evaluate_truth_at_tile_centers(
+            tile_centers_um=result.tile_centers_um,
+            field_extent_um=field_extent_um,
+            spatial_pupil_coefficients=coef_dict_tuples,
+            noll_indices=result.noll_indices,
+        )
+        np.save(case_dir / "truth_coefs.npy", truth.numpy())
+        eval_result = evaluate_recovery_against_truth(result.coefs, truth, result.noll_indices)
+        truth_metrics = {
+            "recovery_score": eval_result.recovery_score,
+            "per_mode_rmse": eval_result.per_mode_rmse,
+            "per_mode_correlation": eval_result.per_mode_correlation,
+        }
+
+    # Save the optimizer-side recovery summary alongside metrics.
+    (case_dir / "zernike_recovery.json").write_text(
+        json.dumps(
+            {
+                "noll_indices": list(result.noll_indices),
+                "settings": result.settings,
+                "tile_centers_um": result.tile_centers_um,
+                "input_tile_bboxes": result.input_tile_bboxes,
+                "loss_history": result.loss_history,
+                "truth_metrics": truth_metrics,
+            },
+            indent=2,
+        )
+    )
+
+    with tt.time("metrics"):
+        recon_t = torch.from_numpy(result.reconstruction_zyx).float()
+        metrics = compute_metrics(
+            recon_t,
+            NA_det=NA_det,
+            wavelength=wavelength,
+            pixel_size=yx_pix,
+            phantom=ground_truth,
+        )
+
+    if truth_metrics is not None:
+        metrics["zernike_recovery"] = truth_metrics
+
+    config_path = case_dir / "config.yml"
+    config_path.write_text(yaml.dump(recon_config, default_flow_style=False))
+
     return metrics
 
 

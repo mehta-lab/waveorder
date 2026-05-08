@@ -51,6 +51,43 @@ cases:
     reference:
       image_quality.midband_power: {min: 1.0e-6}
 
+  shift_variant_grid_beads_recovery:
+    # Same phantom + sim as above, but the reconstruction step replaces
+    # `wo rec` with per-tile Zernike recovery + tile-stitched Wiener
+    # deconvolution.  Reports `zernike_recovery.recovery_score` (1 =
+    # perfect Zernike vector recovery, 0 = no better than zeros).
+    type: synthetic
+    phantom:
+      function: grid_beads_gaussian
+      shape: [32, 128, 128]
+      pixel_sizes: [0.25, 0.1, 0.1]
+      grid_shape: [5, 5]
+      sigma_um: [0.15, 0.1, 0.1]
+      fluorescence_intensity: 1.0
+      fluorescence_background: 0.0
+    simulation:
+      forward_model: shift_variant
+      n_tiles_yx: [8, 8]
+      spatial_pupil_coefficients:
+        "4_2_0": 0.20
+        "4_0_2": 0.20
+        "5_1_0": 0.10
+        "6_0_1": 0.10
+        "7_1_0": 0.05
+        "8_0_1": 0.05
+    recovery:
+      enabled: true
+      noll_indices: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+      tile_size_yx: {y: 26, x: 26}
+      bead_template_sigma_um: [0.15, 0.1, 0.1]
+      loss: midband
+      midband_fractions: [0.2, 0.4]
+      optimizer: sgd
+      n_iter: 250
+    config: ../configs/shift_variant_grid_beads_fluor.yml
+    reference:
+      zernike_recovery.recovery_score: {min: 0.30}
+
   ops_pheno_center:
     type: hpc
     input: /hpc/projects/intracellular_dashboard/ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
