@@ -487,6 +487,12 @@ def _load_case_into_viewer(
             else:
                 click.echo(f"  {case_name}: no raw input found")
 
+        # Synthetic cases also persist the ground-truth phantom; show it
+        # as a third layer when present.
+        phantom_path = case_dir / "phantom.zarr"
+        if phantom_path.exists():
+            _add_zarr_to_viewer(viewer, phantom_path, f"{tag}{case_name}/phantom", open_ome_zarr)
+
         recon_path = case_dir / "reconstruction.zarr"
         if recon_path.exists():
             before = len(viewer.layers)

@@ -132,7 +132,7 @@ def _cleanup_large_outputs(case_dir: Path, save_all: bool) -> None:
     cropped = case_dir / CROPPED_INPUT_FILENAME
     if cropped.is_dir():
         shutil.rmtree(cropped)
-    for name in ("simulated.zarr", "reconstruction.zarr"):
+    for name in ("simulated.zarr", "reconstruction.zarr", "phantom.zarr"):
         p = case_dir / name
         if p.is_dir() and _dir_size_bytes(p) > SIZE_LIMIT_BYTES:
             shutil.rmtree(p)
@@ -445,6 +445,12 @@ def run_synthetic_case(
 
         simulated_path = case_dir / "simulated.zarr"
         _write_zarr(data, simulated_path, channel_name, phantom.pixel_sizes)
+
+        # Save the ground-truth phantom alongside the simulation so
+        # ``wo bm view`` can show it as a third layer.
+        phantom_zarr_path = case_dir / "phantom.zarr"
+        gt_for_zarr = phantom.phase if modality == "phase" else phantom.fluorescence
+        _write_zarr(gt_for_zarr, phantom_zarr_path, f"{channel_name}_phantom", phantom.pixel_sizes)
 
         ground_truth = phantom.phase if modality == "phase" else phantom.fluorescence
         if recovery is not None and recovery.enabled:
