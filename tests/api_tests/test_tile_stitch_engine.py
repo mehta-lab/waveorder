@@ -22,6 +22,7 @@ from waveorder.api.tile_stitch import (
     reconstruct_tile,
     uniform_mean,
 )
+from waveorder.cli.settings import ReconstructionSettings
 from waveorder.tile_stitch.partition import InputTile, OutputTile
 
 # --- build_plan ---
@@ -31,7 +32,7 @@ def test_build_plan_simple_2d_no_overlap():
     data = xr.DataArray(np.zeros((1, 64, 64)), dims=("c", "y", "x"))
     settings = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 32, "x": 32}),
-        recon=PhaseSettings(),
+        recon=ReconstructionSettings(input_channel_names=["BF"], phase=PhaseSettings()),
     )
     plan = build_plan(data, settings)
     assert isinstance(plan, TileStitchPlan)
@@ -45,7 +46,7 @@ def test_build_plan_with_overlap_reaches_volume_edge():
     data = xr.DataArray(np.zeros((100, 100)), dims=("y", "x"))
     settings = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 32, "x": 32}, overlap={"y": 8, "x": 8}),
-        recon=PhaseSettings(),
+        recon=ReconstructionSettings(input_channel_names=["BF"], phase=PhaseSettings()),
     )
     plan = build_plan(data, settings)
     max_y = max(t.slices["y"].stop for t in plan.input_tiles)
@@ -58,7 +59,7 @@ def test_build_plan_input_order_is_a_permutation():
     data = xr.DataArray(np.zeros((1, 96, 96)), dims=("c", "y", "x"))
     settings = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 32, "x": 32}),
-        recon=PhaseSettings(),
+        recon=ReconstructionSettings(input_channel_names=["BF"], phase=PhaseSettings()),
     )
     plan = build_plan(data, settings)
     assert sorted(plan.input_order) == sorted(it.tile_id for it in plan.input_tiles)
@@ -68,7 +69,7 @@ def test_build_plan_no_batching_by_default():
     data = xr.DataArray(np.zeros((64, 64)), dims=("y", "x"))
     settings = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 32, "x": 32}),
-        recon=PhaseSettings(),
+        recon=ReconstructionSettings(input_channel_names=["BF"], phase=PhaseSettings()),
     )
     plan = build_plan(data, settings)
     assert plan.input_batches is None
@@ -79,7 +80,7 @@ def test_build_plan_with_batching_partitions_inputs():
     data = xr.DataArray(np.zeros((128, 128)), dims=("y", "x"))
     settings = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 32, "x": 32}, overlap={"y": 8, "x": 8}),
-        recon=PhaseSettings(),
+        recon=ReconstructionSettings(input_channel_names=["BF"], phase=PhaseSettings()),
     )
     plan = build_plan(data, settings, batch_size=2)
     assert plan.input_batches is not None
@@ -225,7 +226,7 @@ def test_tile_stitch_reconstruction_identity_recon_reproduces_input():
     settings = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 32, "x": 32}, overlap={"y": 8, "x": 8}),
         blend=BlendSettings(kind="uniform_mean"),
-        recon=PhaseSettings(),
+        recon=ReconstructionSettings(input_channel_names=["BF"], phase=PhaseSettings()),
     )
 
     # We can't use the real phase recon (requires a TF), so we invoke the
@@ -280,7 +281,7 @@ def test_tile_stitch_reconstruction_orchestrator_calls_modality_apply_inverse(mo
     data = xr.DataArray(np.ones((1, 64, 64), dtype=np.float32), dims=("c", "y", "x"))
     settings = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 32, "x": 32}),
-        recon=PhaseSettings(),
+        recon=ReconstructionSettings(input_channel_names=["BF"], phase=PhaseSettings()),
     )
     fake_tf = xr.Dataset()  # Not used by the fake apply
 

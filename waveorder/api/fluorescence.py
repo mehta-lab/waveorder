@@ -61,10 +61,6 @@ ApplyInverseSettings = FourierApplyInverseSettings
 
 
 class Settings(MyBaseModel):
-    kind: Literal["fluorescence"] = Field(
-        default="fluorescence",
-        description="discriminator selecting fluorescence reconstruction in tile-stitch settings",
-    )
     transfer_function: TransferFunctionSettings = TransferFunctionSettings()
     apply_inverse: ApplyInverseSettings = ApplyInverseSettings()
 

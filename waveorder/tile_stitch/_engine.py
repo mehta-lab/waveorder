@@ -21,7 +21,6 @@ Three primitives, plus one orchestrator:
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Literal
 
 import numpy as np
 import torch
@@ -297,14 +296,15 @@ def tile_stitch_reconstruction(
     settings,  # waveorder.api.tile_stitch.TileStitchSettings
     *,
     transfer_function: xr.Dataset,
-    recon_dim: Literal[2, 3] = 3,
     device: str | torch.device | None = None,
 ) -> xr.DataArray:
     """End-to-end tile-stitching reconstruction (single-process, in-memory).
 
     Builds the plan, reconstructs each input tile with the modality
-    selected by ``settings.recon.kind``, then blends contributions into
-    each output tile and returns the assembled volume.
+    populated in ``settings.recon`` (one of ``phase`` / ``fluorescence``
+    / ``birefringence``) at the dimensionality
+    ``settings.recon.reconstruction_dimension``, then blends contributions
+    into each output tile and returns the assembled volume.
 
     For distributed execution, biahub uses :func:`build_plan` plus
     :func:`reconstruct_tile` and :func:`blend_output_tile` directly,
@@ -316,9 +316,8 @@ def tile_stitch_reconstruction(
         Input volume.
     settings : TileStitchSettings
     transfer_function : xr.Dataset
-        Pre-computed transfer function for the modality in
+        Pre-computed transfer function for the populated modality in
         ``settings.recon``.
-    recon_dim : {2, 3}, default 3
     device : torch device, optional
 
     Returns
@@ -327,26 +326,28 @@ def tile_stitch_reconstruction(
         Output volume with the same dim names as the input.
     """
     from waveorder.api import birefringence, fluorescence, phase
+    from waveorder.api.tile_stitch import select_recon_modality
 
     plan = build_plan(czyx_data, settings)
     blend_kernel = settings.blend.build()
-    recon_kind = settings.recon.kind
+    recon_dim = settings.recon.reconstruction_dimension
+    name, modality_settings = select_recon_modality(settings.recon)
 
-    if recon_kind == "phase":
+    if name == "phase":
         recon_module = phase
-    elif recon_kind == "fluorescence":
+    elif name == "fluorescence":
         recon_module = fluorescence
-    elif recon_kind == "birefringence":
+    elif name == "birefringence":
         recon_module = birefringence
-    else:  # pragma: no cover - exhaustive over the discriminated union
-        raise ValueError(f"unknown recon kind: {recon_kind!r}")
+    else:  # pragma: no cover - exhaustive over select_recon_modality
+        raise ValueError(f"unknown recon modality: {name!r}")
 
     def recon_fn(block: xr.DataArray) -> xr.DataArray:
         return recon_module.apply_inverse_transfer_function(
             block,
             transfer_function,
             recon_dim=recon_dim,
-            settings=settings.recon,
+            settings=modality_settings,
             device=device,
         )
 

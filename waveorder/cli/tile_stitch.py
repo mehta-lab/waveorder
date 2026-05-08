@@ -28,11 +28,13 @@ def tile_stitch_cli(
     config_filepath_arg: Path,
     output_dirpath_arg: Path,
     *,
-    timepoint: int = 0,
-    channel: str | None = None,
     device: str | None = None,
 ) -> None:
-    """Single-process tile-stitch reconstruction driven by a YAML config."""
+    """Single-process tile-stitch reconstruction driven by a YAML config.
+
+    All run-time selectors (channel(s), timepoint(s), 2D vs 3D) live in
+    the YAML under ``recon``. ``--device`` is the only CLI override.
+    """
     import numpy as np
     from iohub.ngff import open_ome_zarr
 
@@ -45,6 +47,7 @@ def tile_stitch_cli(
     from waveorder.tile_stitch._engine import tile_stitch_reconstruction
 
     settings = utils.yaml_to_model(config_filepath_arg, TileStitchSettings)
+    effective_device = device if device is not None else settings.recon.device
 
     echo_headline("Tile-stitching with settings:")
     echo_settings(settings)
@@ -52,33 +55,48 @@ def tile_stitch_cli(
     input_dataset = open_ome_zarr(input_position_dirpath, layout="fov", mode="r")
     input_version = input_dataset.version
 
-    if channel is None:
-        if len(input_dataset.channel_names) != 1:
-            raise click.UsageError(f"Input has multiple channels {input_dataset.channel_names}; specify --channel.")
-        channel = input_dataset.channel_names[0]
-    elif channel not in input_dataset.channel_names:
-        raise click.UsageError(f"--channel {channel!r} not in dataset channels {input_dataset.channel_names}")
+    requested_channels = list(settings.recon.input_channel_names)
+    available = list(input_dataset.channel_names)
+    missing = [c for c in requested_channels if c not in available]
+    if missing:
+        raise click.UsageError(
+            f"recon.input_channel_names={requested_channels} not all present in dataset channels {available}: missing {missing}"
+        )
 
-    czyx_data = input_dataset.to_xarray().isel(t=timepoint).sel(c=[channel])
+    requested_t = settings.recon.time_indices
+    if requested_t == "all":
+        time_idxs = list(range(input_dataset.data.shape[0]))
+    elif isinstance(requested_t, int):
+        time_idxs = [requested_t]
+    else:
+        time_idxs = list(requested_t)
+    if len(time_idxs) != 1:
+        raise click.UsageError(
+            f"wo tile-stitch processes one timepoint at a time; recon.time_indices selected {len(time_idxs)}"
+        )
+    timepoint = time_idxs[0]
 
-    transfer_function = prepare_transfer_function(settings, device=device)
+    czyx_data = input_dataset.to_xarray().isel(t=timepoint).sel(c=requested_channels)
+
+    transfer_function = prepare_transfer_function(settings, device=effective_device)
 
     output = tile_stitch_reconstruction(
         czyx_data,
         settings,
         transfer_function=transfer_function,
-        device=device,
+        device=effective_device,
     )
 
     echo_headline(f"Writing output to {output_dirpath_arg}\n")
     out_arr = np.asarray(output.values, dtype=np.float32)
     out_5d = out_arr[None, ...]  # add t axis: (T, C, Z, Y, X) for FOV layout
+    out_channel_names = [f"{c}_recon" for c in requested_channels]
 
     output_dataset = open_ome_zarr(
         output_dirpath_arg,
         layout="fov",
         mode="w",
-        channel_names=[f"{channel}_recon"],
+        channel_names=out_channel_names,
         version=input_version,
     )
     output_dataset.create_image("0", out_5d)
@@ -96,30 +114,15 @@ def tile_stitch_cli(
 @config_filepath()
 @output_dirpath()
 @click.option(
-    "--timepoint",
-    type=int,
-    default=0,
-    show_default=True,
-    help="Timepoint index to reconstruct.",
-)
-@click.option(
-    "--channel",
-    type=str,
-    default=None,
-    help="Channel name to reconstruct (auto-selected when input has one channel).",
-)
-@click.option(
     "--device",
     type=str,
     default=None,
-    help='Compute device ("cpu", "cuda", or None for default).',
+    help='Override ``recon.device`` from the YAML ("cpu", "cuda", "mps", ...).',
 )
 def _tile_stitch_cli(
     input_position_dirpaths: list[Path],
     config_filepath: Path,
     output_dirpath: Path,
-    timepoint: int,
-    channel: str | None,
     device: str | None,
 ) -> None:
     """Single-process tiled reconstruction.
@@ -127,6 +130,9 @@ def _tile_stitch_cli(
     Reconstructs an input OME-Zarr volume by partitioning into overlapping
     input tiles, applying the configured reconstruction per tile, then
     blending contributions over each non-overlapping output tile.
+
+    Channel selection, timepoint, and 2D vs 3D reconstruction all live in
+    the YAML config under ``recon`` (the same schema used by ``wo rec``).
 
     For distributed (multi-node, multi-GPU) execution, use biahub's
     ``biahub tile-stitch`` command — it drives the same waveorder
@@ -140,7 +146,5 @@ def _tile_stitch_cli(
         input_position_dirpaths[0],
         config_filepath,
         output_dirpath,
-        timepoint=timepoint,
-        channel=channel,
         device=device,
     )

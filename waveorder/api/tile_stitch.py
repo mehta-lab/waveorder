@@ -1,9 +1,12 @@
 """Tile-stitching settings — public surface for configuring tiled reconstruction.
 
 ``TileStitchSettings`` is the single user-facing config object. The
-``recon`` field is a discriminated union over per-modality reconstruction
-settings (``phase.Settings``, ``fluorescence.Settings``,
-``birefringence.Settings``) keyed by the ``kind`` literal each carries.
+``recon`` field embeds the full ``ReconstructionSettings`` schema used
+by ``wo rec`` — same shape, same fields. The modality is selected by
+populating exactly one of ``recon.phase`` / ``recon.fluorescence`` /
+``recon.birefringence`` (or ``birefringence`` + ``phase`` together);
+``recon.reconstruction_dimension`` picks 2D vs 3D and
+``recon.input_channel_names`` selects which channel(s) to process.
 
 The blend factory is itself declarative — ``BlendSettings.kind`` selects
 one of the built-in reductions, ``.build()`` materializes the
@@ -14,16 +17,14 @@ recon settings already need. Distributed orchestration happens in the
 biahub package.
 """
 
-from typing import TYPE_CHECKING, Annotated, Literal, Self, Union
+from typing import TYPE_CHECKING, Literal, Self
 
 import numpy as np
 import xarray as xr
 from pydantic import Field, NonNegativeInt, PositiveInt, model_validator
 
 from waveorder.api._settings import MyBaseModel
-from waveorder.api.birefringence import Settings as BirefringenceSettings
-from waveorder.api.fluorescence import Settings as FluorescenceSettings
-from waveorder.api.phase import Settings as PhaseSettings
+from waveorder.cli.settings import ReconstructionSettings
 from waveorder.tile_stitch._engine import (  # noqa: F401  (public re-exports)
     TileStitchPlan,
     blend_output_tile,
@@ -43,12 +44,23 @@ from waveorder.tile_stitch.blend import (  # noqa: F401  (public re-exports)
 if TYPE_CHECKING:  # pragma: no cover
     import torch
 
-# Discriminated union of the per-modality recon settings. The ``kind``
-# literal on each ``Settings`` class is the discriminator key.
-ReconSettings = Annotated[
-    Union[PhaseSettings, FluorescenceSettings, BirefringenceSettings],
-    Field(discriminator="kind"),
-]
+
+def select_recon_modality(recon: ReconstructionSettings):
+    """Return ``(name, settings)`` for the populated modality block.
+
+    ``ReconstructionSettings`` enforces that exactly one of ``phase`` or
+    ``fluorescence`` is set, optionally alongside ``birefringence``.
+    Tile-stitch dispatches on whichever non-None block is present, with
+    ``birefringence + phase`` resolving to the birefringence block since
+    that's the joint-recovery pathway.
+    """
+    if recon.fluorescence is not None:
+        return "fluorescence", recon.fluorescence
+    if recon.birefringence is not None:
+        return "birefringence", recon.birefringence
+    if recon.phase is not None:
+        return "phase", recon.phase
+    raise ValueError("ReconstructionSettings must populate one of phase / fluorescence / birefringence")
 
 
 class BlendSettings(MyBaseModel):
@@ -119,12 +131,18 @@ class TileSettings(MyBaseModel):
 
 
 class TileStitchSettings(MyBaseModel):
-    """User-facing config: tiling geometry + blend + per-modality recon settings.
+    """User-facing config: tiling geometry + blend + the full ``wo rec`` schema.
 
-    ``schema_version`` is bumped on a backward-incompatible change to this
-    schema. v0.5 only emits / reads ``"1"``; downstream tools that read
-    serialized configs should validate the version on load and refuse to
-    proceed silently on mismatch.
+    ``recon`` is the same ``ReconstructionSettings`` consumed by
+    ``wo rec`` — including ``input_channel_names``,
+    ``reconstruction_dimension`` (2 or 3), ``time_indices``, and one of
+    ``phase`` / ``fluorescence`` (optionally with ``birefringence``). A
+    tile-stitch run is therefore fully described by the YAML alone; the
+    CLI only adds ``--device`` as a runtime override.
+
+    ``schema_version`` is bumped on a backward-incompatible change.
+    Downstream tools that read serialized configs should validate the
+    version on load and refuse to proceed silently on mismatch.
     """
 
     schema_version: Literal["1"] = Field(
@@ -138,8 +156,8 @@ class TileStitchSettings(MyBaseModel):
         default_factory=BlendSettings,
         description="overlap-blend reduction kernel selection",
     )
-    recon: ReconSettings = Field(
-        description="per-modality reconstruction settings; discriminated by 'kind'",
+    recon: ReconstructionSettings = Field(
+        description="full ``wo rec`` reconstruction settings (channels, dims, modality block)",
     )
 
 
@@ -160,42 +178,25 @@ _TF_CACHE: dict[tuple, xr.Dataset] = {}
 def prepare_transfer_function(
     settings: TileStitchSettings,
     *,
-    recon_dim: Literal[2, 3] = 3,
     device: "str | torch.device | None" = None,
 ) -> xr.Dataset:
     """Compute (or return cached) transfer function for the modality in
     ``settings.recon`` at the spatial shape implied by ``settings.tile.tile_size``.
 
+    The reconstruction dimensionality is taken from
+    ``settings.recon.reconstruction_dimension``. ``device`` may override
+    ``settings.recon.device`` for the TF compute step (useful for
+    distributed runs where the worker chooses its own device).
+
     **Worker-cache contract.** Distributed pipelines call this on each
     worker process once per task; the second and subsequent calls with
-    identical ``(settings, recon_dim, device)`` return the cached
-    ``xr.Dataset`` without recomputing. The cache is a plain module-level
-    dict — there is no eviction. Workers should call
-    :func:`prepare_transfer_function` exactly once at the start of each
-    task.
-
-    The cache key is the JSON serialization of ``settings`` plus
-    ``recon_dim`` plus ``str(device)``. Mutating the returned ``xr.Dataset``
-    will mutate the cache; treat it as read-only.
-
-    Parameters
-    ----------
-    settings : TileStitchSettings
-        Full tile-stitch config — the modality is selected by
-        ``settings.recon.kind``; the spatial shape is taken from
-        ``settings.tile.tile_size``.
-    recon_dim : {2, 3}, default 3
-    device : str, torch.device, or None
-        Forwarded to the modality's ``compute_transfer_function``.
-
-    Returns
-    -------
-    xr.Dataset
-        The transfer function dataset for the selected modality.
+    identical ``(settings, device)`` return the cached ``xr.Dataset``
+    without recomputing. The cache is a plain module-level dict — there
+    is no eviction. Workers should call :func:`prepare_transfer_function`
+    exactly once at the start of each task.
     """
     key = (
         settings.model_dump_json(),
-        recon_dim,
         str(device) if device is not None else None,
     )
     cached = _TF_CACHE.get(key)
@@ -210,21 +211,24 @@ def prepare_transfer_function(
         dims=("c",) + spatial_dims,
     )
 
-    recon_kind = settings.recon.kind
-    if recon_kind == "phase":
+    recon_dim = settings.recon.reconstruction_dimension
+    name, modality_settings = select_recon_modality(settings.recon)
+    if name == "phase":
         from waveorder.api import phase
 
-        tf = phase.compute_transfer_function(sample, recon_dim=recon_dim, settings=settings.recon, device=device)
-    elif recon_kind == "fluorescence":
+        tf = phase.compute_transfer_function(sample, recon_dim=recon_dim, settings=modality_settings, device=device)
+    elif name == "fluorescence":
         from waveorder.api import fluorescence
 
-        tf = fluorescence.compute_transfer_function(sample, recon_dim=recon_dim, settings=settings.recon, device=device)
-    elif recon_kind == "birefringence":
+        tf = fluorescence.compute_transfer_function(
+            sample, recon_dim=recon_dim, settings=modality_settings, device=device
+        )
+    elif name == "birefringence":
         from waveorder.api import birefringence
 
-        tf = birefringence.compute_transfer_function(sample, settings.recon)
-    else:  # pragma: no cover - exhaustive over the discriminated union
-        raise ValueError(f"unknown recon kind: {recon_kind!r}")
+        tf = birefringence.compute_transfer_function(sample, modality_settings)
+    else:  # pragma: no cover - exhaustive over select_recon_modality
+        raise ValueError(f"unknown recon modality: {name!r}")
 
     _TF_CACHE[key] = tf
     return tf

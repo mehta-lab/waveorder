@@ -28,13 +28,18 @@ def phantom_input(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def tile_stitch_config(tmp_path: Path) -> Path:
-    """Minimal phase tile-stitch settings YAML."""
+    """Minimal phase tile-stitch settings YAML using the full ``wo rec`` recon block."""
     cfg = tmp_path / "tile_stitch.yml"
     settings = {
         "schema_version": "1",
         "tile": {"tile_size": {"z": 4, "y": 16, "x": 16}, "overlap": {"y": 4, "x": 4}},
         "blend": {"kind": "uniform_mean"},
-        "recon": {"kind": "phase"},
+        "recon": {
+            "input_channel_names": ["BF"],
+            "reconstruction_dimension": 3,
+            "time_indices": 0,
+            "phase": {},
+        },
     }
     cfg.write_text(yaml.safe_dump(settings))
     return cfg

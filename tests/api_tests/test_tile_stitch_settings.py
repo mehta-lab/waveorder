@@ -1,4 +1,4 @@
-"""Unit tests for ``waveorder.api.tile_stitch`` settings + the kind discriminator."""
+"""Unit tests for ``waveorder.api.tile_stitch`` settings."""
 
 import pytest
 from pydantic import ValidationError
@@ -10,8 +10,25 @@ from waveorder.api.tile_stitch import (
     BlendSettings,
     TileSettings,
     TileStitchSettings,
+    select_recon_modality,
 )
+from waveorder.cli.settings import ReconstructionSettings
 from waveorder.tile_stitch.blend import Blend
+
+
+def _phase_recon():
+    return ReconstructionSettings(input_channel_names=["BF"], phase=PhaseSettings())
+
+
+def _fluor_recon():
+    return ReconstructionSettings(input_channel_names=["GFP"], fluorescence=FluorescenceSettings())
+
+
+def _bire_recon():
+    return ReconstructionSettings(
+        input_channel_names=["State0", "State1", "State2", "State3"], birefringence=BirefringenceSettings()
+    )
+
 
 # --- BlendSettings ---
 
@@ -83,86 +100,90 @@ def test_tile_settings_overlap_defaults_to_zero_per_dim():
     assert s.overlap == {}
 
 
-# --- TileStitchSettings + recon discriminator ---
+# --- TileStitchSettings + recon dispatch ---
 
 
 def test_tilestitch_schema_version_pinned_to_one():
     s = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 64, "x": 64}),
-        recon=PhaseSettings(),
+        recon=_phase_recon(),
     )
     assert s.schema_version == "1"
     with pytest.raises(ValidationError):
         TileStitchSettings(
             schema_version="2",
             tile=TileSettings(tile_size={"y": 64, "x": 64}),
-            recon=PhaseSettings(),
+            recon=_phase_recon(),
         )
 
 
-def test_tilestitch_recon_phase():
+def test_tilestitch_recon_phase_dispatch():
     s = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 64, "x": 64}),
-        recon=PhaseSettings(),
+        recon=_phase_recon(),
     )
-    assert isinstance(s.recon, PhaseSettings)
-    assert s.recon.kind == "phase"
+    name, settings = select_recon_modality(s.recon)
+    assert name == "phase"
+    assert isinstance(settings, PhaseSettings)
 
 
-def test_tilestitch_recon_fluorescence():
+def test_tilestitch_recon_fluorescence_dispatch():
     s = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 64, "x": 64}),
-        recon=FluorescenceSettings(),
+        recon=_fluor_recon(),
     )
-    assert isinstance(s.recon, FluorescenceSettings)
-    assert s.recon.kind == "fluorescence"
+    name, settings = select_recon_modality(s.recon)
+    assert name == "fluorescence"
+    assert isinstance(settings, FluorescenceSettings)
 
 
-def test_tilestitch_recon_birefringence():
+def test_tilestitch_recon_birefringence_dispatch():
     s = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 64, "x": 64}),
-        recon=BirefringenceSettings(),
+        recon=_bire_recon(),
     )
-    assert isinstance(s.recon, BirefringenceSettings)
-    assert s.recon.kind == "birefringence"
+    name, settings = select_recon_modality(s.recon)
+    assert name == "birefringence"
+    assert isinstance(settings, BirefringenceSettings)
 
 
-def test_tilestitch_recon_discriminator_round_trip():
-    """Dict-form recon (as it would arrive from YAML) selects the right Settings via 'kind'."""
+def test_tilestitch_recon_dict_yaml_round_trip():
+    """Dict-form recon (as it would arrive from YAML) constructs the right modality."""
     payload = {
         "tile": {"tile_size": {"y": 64, "x": 64}},
-        "recon": {"kind": "phase"},
+        "recon": {"input_channel_names": ["BF"], "phase": {}},
     }
     s = TileStitchSettings.model_validate(payload)
-    assert isinstance(s.recon, PhaseSettings)
+    name, settings = select_recon_modality(s.recon)
+    assert name == "phase"
+    assert isinstance(settings, PhaseSettings)
 
-    payload["recon"]["kind"] = "fluorescence"
+    payload["recon"] = {"input_channel_names": ["GFP"], "fluorescence": {}}
     s = TileStitchSettings.model_validate(payload)
-    assert isinstance(s.recon, FluorescenceSettings)
+    name, _ = select_recon_modality(s.recon)
+    assert name == "fluorescence"
 
-    payload["recon"]["kind"] = "birefringence"
+
+def test_tilestitch_recon_2d_vs_3d_picked_from_yaml():
+    payload = {
+        "tile": {"tile_size": {"y": 64, "x": 64}},
+        "recon": {"input_channel_names": ["BF"], "reconstruction_dimension": 2, "phase": {}},
+    }
     s = TileStitchSettings.model_validate(payload)
-    assert isinstance(s.recon, BirefringenceSettings)
-
-
-def test_tilestitch_recon_discriminator_unknown_kind_rejected():
-    with pytest.raises(ValidationError):
-        TileStitchSettings.model_validate(
-            {"tile": {"tile_size": {"y": 64, "x": 64}}, "recon": {"kind": "diffraction-tomography"}}
-        )
+    assert s.recon.reconstruction_dimension == 2
 
 
 def test_tilestitch_blend_default_then_override():
     s = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 64, "x": 64}),
-        recon=PhaseSettings(),
+        recon=_phase_recon(),
     )
     assert s.blend.kind == "uniform_mean"
 
     s2 = TileStitchSettings(
         tile=TileSettings(tile_size={"y": 64, "x": 64}),
         blend=BlendSettings(kind="gaussian_mean", sigma_fraction=0.05),
-        recon=PhaseSettings(),
+        recon=_phase_recon(),
     )
     assert s2.blend.kind == "gaussian_mean"
     assert s2.blend.sigma_fraction == 0.05

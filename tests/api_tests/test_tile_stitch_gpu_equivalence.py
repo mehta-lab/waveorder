@@ -18,6 +18,7 @@ from waveorder.api.tile_stitch import (
     clear_transfer_function_cache,
     prepare_transfer_function,
 )
+from waveorder.cli.settings import ReconstructionSettings
 from waveorder.tile_stitch._engine import tile_stitch_reconstruction
 
 pytestmark = pytest.mark.gpu
@@ -52,15 +53,15 @@ def test_tile_stitch_phase_cpu_vs_cuda_equivalence():
             overlap={"y": 4, "x": 4},
         ),
         blend=BlendSettings(kind="uniform_mean"),
-        recon=PhaseSettings(),
+        recon=ReconstructionSettings(input_channel_names=["BF"], phase=PhaseSettings()),
     )
 
-    tf_cpu = prepare_transfer_function(settings, recon_dim=3, device="cpu")
-    out_cpu = tile_stitch_reconstruction(data, settings, transfer_function=tf_cpu, recon_dim=3, device="cpu")
+    tf_cpu = prepare_transfer_function(settings, device="cpu")
+    out_cpu = tile_stitch_reconstruction(data, settings, transfer_function=tf_cpu, device="cpu")
 
     clear_transfer_function_cache()
-    tf_gpu = prepare_transfer_function(settings, recon_dim=3, device="cuda")
-    out_gpu = tile_stitch_reconstruction(data, settings, transfer_function=tf_gpu, recon_dim=3, device="cuda")
+    tf_gpu = prepare_transfer_function(settings, device="cuda")
+    out_gpu = tile_stitch_reconstruction(data, settings, transfer_function=tf_gpu, device="cuda")
 
     cpu = np.asarray(out_cpu.values)
     gpu = np.asarray(out_gpu.values)
