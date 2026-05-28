@@ -498,6 +498,281 @@ def grid_beads_gaussian(
     )
 
 
+def ring_beads_gaussian(
+    shape: tuple[int, int, int] = (32, 256, 256),
+    pixel_sizes: tuple[float, float, float] = (0.25, 0.1, 0.1),
+    n_rings: int = 8,
+    beads_per_unit: int = 6,
+    include_center: bool = True,
+    r_max_frac: float = 0.94,
+    sigma_um: tuple[float, float, float] = (0.15, 0.1, 0.1),
+    fluorescence_intensity: float = 1.0,
+    fluorescence_background: float = 0.0,
+    refractive_index_diff: float = 0.0,
+    z_plane_um: float = 0.0,
+) -> Phantom:
+    """Beads arranged on concentric rings in a single Z plane.
+
+    Reproduces the RDM Fig. 5d-right layout: ``n_rings`` concentric rings
+    of beads, with ring ``k`` carrying ``beads_per_unit * k`` beads so the
+    angular density stays roughly constant. Ring radii are evenly spaced
+    out to ``r_max_frac`` of the inscribed-circle radius
+    ``min(Y * py, X * px) / 2``. Beads are 3D Gaussians with anisotropic
+    ``sigma_um``, snapped to integer pixels in the same style as
+    :func:`grid_beads_gaussian`.
+
+    Parameters
+    ----------
+    shape : tuple[int, int, int]
+        Volume shape ``(Z, Y, X)`` in pixels.
+    pixel_sizes : tuple[float, float, float]
+        ``(z, y, x)`` pixel sizes in microns.
+    n_rings : int
+        Number of rings (excluding the center bead).
+    beads_per_unit : int
+        Beads on ring ``k`` is ``beads_per_unit * k``. Constant angular
+        density: outer rings get more beads than inner rings.
+    include_center : bool
+        Place a single bead at the optical axis.
+    r_max_frac : float
+        Outermost ring radius as a fraction of the inscribed-circle
+        radius. Stay below 1.0 so beads remain inside the FOV.
+    sigma_um : tuple[float, float, float]
+        Gaussian sigma along ``(z, y, x)`` in microns.
+    fluorescence_intensity : float
+        Peak fluorophore concentration at each bead center.
+    fluorescence_background : float
+        Constant baseline added to the fluorescence channel.
+    refractive_index_diff : float
+        RI difference from background (dn) applied to the phase channel.
+    z_plane_um : float
+        Axial position of the bead plane, relative to volume center.
+
+    Returns
+    -------
+    Phantom
+        Phase, absorption (zero), and fluorescence ground truth, plus
+        metadata with ``centers_pix``, ``centers_um``, and
+        ``beads_per_ring``.
+
+    Examples
+    --------
+    >>> phantom = ring_beads_gaussian(shape=(8, 64, 64), n_rings=2, beads_per_unit=4)
+    >>> phantom.fluorescence.shape
+    torch.Size([8, 64, 64])
+    >>> 1 + 4 + 8 == len(phantom.metadata["centers_pix"])
+    True
+    """
+    Z, Y, X = shape
+    pz, py, px = pixel_sizes
+    sz, sy, sx = sigma_um
+
+    inscribed_radius_um = min(Y * py, X * px) / 2
+    radii_um = np.linspace(0.0, inscribed_radius_um * r_max_frac, n_rings + 1)[1:]
+    beads_per_ring = [int(beads_per_unit * (k + 1)) for k in range(n_rings)]
+
+    centers_um: list[tuple[float, float, float]] = []
+    if include_center:
+        centers_um.append((float(z_plane_um), 0.0, 0.0))
+
+    for r_um, n_beads in zip(radii_um, beads_per_ring):
+        # Start ring k at angle pi/(2*n_beads) so beads aren't on the axes
+        offset = np.pi / (2 * n_beads)
+        angles = offset + np.linspace(0.0, 2 * np.pi, n_beads, endpoint=False)
+        for theta in angles:
+            centers_um.append(
+                (
+                    float(z_plane_um),
+                    float(r_um * np.sin(theta)),
+                    float(r_um * np.cos(theta)),
+                )
+            )
+
+    centers_pix: list[tuple[int, int, int]] = []
+    for cz_um, cy_um, cx_um in centers_um:
+        centers_pix.append(
+            (
+                int(np.round(cz_um / pz)) + Z // 2,
+                int(np.round(cy_um / py)) + Y // 2,
+                int(np.round(cx_um / px)) + X // 2,
+            )
+        )
+
+    metadata = {
+        "type": "ring_beads_gaussian",
+        "shape": list(shape),
+        "pixel_sizes": list(pixel_sizes),
+        "n_rings": n_rings,
+        "beads_per_unit": beads_per_unit,
+        "include_center": include_center,
+        "r_max_frac": r_max_frac,
+        "sigma_um": list(sigma_um),
+        "fluorescence_intensity": fluorescence_intensity,
+        "fluorescence_background": fluorescence_background,
+        "refractive_index_diff": refractive_index_diff,
+        "z_plane_um": z_plane_um,
+        "beads_per_ring": beads_per_ring,
+        "centers_pix": [list(c) for c in centers_pix],
+        "centers_um": [list(c) for c in centers_um],
+    }
+
+    z_axis = (torch.arange(Z) - Z // 2) * pz
+    y_axis = (torch.arange(Y) - Y // 2) * py
+    x_axis = (torch.arange(X) - X // 2) * px
+    zz, yy, xx = torch.meshgrid(z_axis, y_axis, x_axis, indexing="ij")
+
+    accum = torch.zeros(shape, dtype=torch.float32)
+    # Center each bead at its snapped pixel position so beads with the
+    # same r_um are placed identically up to rotation.
+    for cz_pix, cy_pix, cx_pix in centers_pix:
+        cz_um = (cz_pix - Z // 2) * pz
+        cy_um = (cy_pix - Y // 2) * py
+        cx_um = (cx_pix - X // 2) * px
+        bead = torch.exp(
+            -(((zz - cz_um) ** 2) / (2 * sz**2) + ((yy - cy_um) ** 2) / (2 * sy**2) + ((xx - cx_um) ** 2) / (2 * sx**2))
+        )
+        accum = accum + bead
+
+    fluorescence = accum * fluorescence_intensity + fluorescence_background
+    phase = accum * refractive_index_diff
+    absorption = torch.zeros_like(accum)
+
+    return Phantom(
+        phase=phase,
+        absorption=absorption,
+        fluorescence=fluorescence,
+        pixel_sizes=pixel_sizes,
+        metadata=metadata,
+    )
+
+
+def ring_beads_2d_gaussian(
+    shape: tuple[int, int, int] = (32, 192, 192),
+    pixel_sizes: tuple[float, float, float] = (0.25, 0.1, 0.1),
+    n_rings: int = 6,
+    beads_per_unit: int = 6,
+    include_center: bool = True,
+    r_max_frac: float = 0.94,
+    sigma_um: tuple[float, float] = (0.1, 0.1),
+    fluorescence_intensity: float = 1.0,
+    fluorescence_background: float = 0.0,
+    refractive_index_diff: float = 0.0,
+) -> Phantom:
+    """Truly 2D phantom of beads on concentric rings.
+
+    Returns a :class:`Phantom` whose ``fluorescence`` and ``phase``
+    arrays are 2D ``(Y, X)``. Use with ``simulate_*_2d_to_3d`` forward
+    models that take a 2D source and emit a 3D defocus stack.
+
+    Parameters
+    ----------
+    shape : tuple[int, int, int]
+        ``(Z, Y, X)`` shape. Only ``Y, X`` define the 2D phantom array;
+        ``Z`` is recorded in metadata so the simulator knows how many
+        defocus planes to render.
+    pixel_sizes : tuple[float, float, float]
+        ``(z, y, x)`` pixel sizes in microns.
+    n_rings : int
+        Number of rings (excluding the center bead).
+    beads_per_unit : int
+        Beads on ring ``k`` = ``beads_per_unit * k``.
+    include_center : bool
+        Place one bead at the optical axis.
+    r_max_frac : float
+        Outermost ring radius as a fraction of the inscribed-circle
+        radius ``min(Y * py, X * px) / 2``.
+    sigma_um : tuple[float, float]
+        Gaussian sigma along ``(y, x)`` in microns.
+    fluorescence_intensity : float
+        Peak fluorophore concentration at each bead center.
+    fluorescence_background : float
+        Constant baseline added to the fluorescence channel.
+    refractive_index_diff : float
+        RI difference from background applied to the phase channel.
+
+    Returns
+    -------
+    Phantom
+        ``fluorescence``, ``phase``, and ``absorption`` are 2D tensors
+        of shape ``(Y, X)``. ``pixel_sizes`` retains the 3-tuple form so
+        downstream simulators can read the z-spacing.
+
+    Examples
+    --------
+    >>> phantom = ring_beads_2d_gaussian(shape=(8, 64, 64), n_rings=2, beads_per_unit=4)
+    >>> phantom.fluorescence.shape
+    torch.Size([64, 64])
+    >>> 1 + 4 + 8 == len(phantom.metadata["centers_pix"])
+    True
+    """
+    Z, Y, X = shape
+    sy, sx = sigma_um
+    pz, py, px = (float(v) for v in pixel_sizes)
+
+    inscribed_radius_um = min(Y * py, X * px) / 2
+    radii_um = np.linspace(0.0, inscribed_radius_um * r_max_frac, n_rings + 1)[1:]
+    beads_per_ring = [int(beads_per_unit * (k + 1)) for k in range(n_rings)]
+
+    centers_um: list[tuple[float, float]] = []
+    if include_center:
+        centers_um.append((0.0, 0.0))
+    for r_um, n_beads in zip(radii_um, beads_per_ring):
+        offset = np.pi / (2 * n_beads)
+        angles = offset + np.linspace(0.0, 2 * np.pi, n_beads, endpoint=False)
+        for theta in angles:
+            centers_um.append((float(r_um * np.sin(theta)), float(r_um * np.cos(theta))))
+
+    centers_pix: list[tuple[int, int]] = []
+    for cy_um, cx_um in centers_um:
+        centers_pix.append(
+            (
+                int(np.round(cy_um / py)) + Y // 2,
+                int(np.round(cx_um / px)) + X // 2,
+            )
+        )
+
+    metadata = {
+        "type": "ring_beads_2d_gaussian",
+        "shape": list(shape),
+        "pixel_sizes": list(pixel_sizes),
+        "Z_stack": Z,
+        "n_rings": n_rings,
+        "beads_per_unit": beads_per_unit,
+        "include_center": include_center,
+        "r_max_frac": r_max_frac,
+        "sigma_um": list(sigma_um),
+        "fluorescence_intensity": fluorescence_intensity,
+        "fluorescence_background": fluorescence_background,
+        "refractive_index_diff": refractive_index_diff,
+        "beads_per_ring": beads_per_ring,
+        "centers_pix": [list(c) for c in centers_pix],
+        "centers_um": [list(c) for c in centers_um],
+    }
+
+    y_axis = (torch.arange(Y) - Y // 2) * py
+    x_axis = (torch.arange(X) - X // 2) * px
+    yy, xx = torch.meshgrid(y_axis, x_axis, indexing="ij")
+
+    accum = torch.zeros((Y, X), dtype=torch.float32)
+    for cy_pix, cx_pix in centers_pix:
+        cy_um = (cy_pix - Y // 2) * py
+        cx_um = (cx_pix - X // 2) * px
+        bead = torch.exp(-(((yy - cy_um) ** 2) / (2 * sy**2) + ((xx - cx_um) ** 2) / (2 * sx**2)))
+        accum = accum + bead
+
+    fluorescence = accum * fluorescence_intensity + fluorescence_background
+    phase = accum * refractive_index_diff
+    absorption = torch.zeros_like(accum)
+
+    return Phantom(
+        phase=phase,
+        absorption=absorption,
+        fluorescence=fluorescence,
+        pixel_sizes=(pz, py, px),
+        metadata=metadata,
+    )
+
+
 def _sphere_mask(
     shape: tuple[int, int, int],
     pixel_sizes: tuple[float, float, float],

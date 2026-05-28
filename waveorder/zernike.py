@@ -260,6 +260,124 @@ class SpatialPolynomialPupil:
         return amplitude.to(torch.complex64) * torch.exp(2j * math.pi * phi.to(torch.complex64))
 
 
+class SeidelPupil:
+    """Rotationally symmetric field-dependent pupil from primary Seidel coefficients.
+
+    The wavefront aberration is
+
+    .. math::
+
+        \\Phi(\\rho, \\theta; r_o) =\\;
+            & W_d\\,\\rho^2
+            + W_{040}\\,\\rho^4 \\\\
+            & + W_{131}\\,\\eta\\,\\rho^3\\,\\cos(\\theta - \\phi)
+            + W_{222}\\,\\eta^2\\,\\rho^2\\,\\cos^2(\\theta - \\phi) \\\\
+            & + W_{220}\\,\\eta^2\\,\\rho^2
+            + W_{311}\\,\\eta^3\\,\\rho\\,\\cos(\\theta - \\phi),
+
+    where :math:`(\\rho, \\theta)` are normalized pupil polar coordinates,
+    :math:`\\eta = \\sqrt{x_o^2 + y_o^2}` is the normalized field radius,
+    and :math:`\\phi = \\mathrm{atan2}(y_o, x_o)` is the field azimuth.
+    All coefficients are in waves of optical path difference.
+
+    Because the wavefront depends on :math:`\\theta - \\phi`, the system is
+    rotationally symmetric: PSFs at the same :math:`\\eta` are rotations of
+    one another. This is the "linear revolution invariance" (LRI)
+    property exploited by Ring Deconvolution Microscopy.
+
+    Parameters
+    ----------
+    coefficients : dict
+        Mapping from coefficient name to value in waves. Accepted names:
+        ``"sphere"`` (:math:`W_{040}`), ``"coma"`` (:math:`W_{131}`),
+        ``"astigmatism"`` (:math:`W_{222}`), ``"field_curvature"``
+        (:math:`W_{220}`), ``"distortion"`` (:math:`W_{311}`),
+        ``"defocus"`` (:math:`W_d`). Unspecified entries are zero.
+    field_extent_um : tuple[float, float]
+        Half-extent of the field in microns, ``(half_y, half_x)``. Field
+        positions are normalised so the FOV corner is at
+        :math:`\\eta = \\sqrt{2}`.
+
+    Examples
+    --------
+    >>> pupil = SeidelPupil({"sphere": 0.2, "coma": 0.5}, field_extent_um=(12.8, 12.8))
+    >>> import torch
+    >>> rho = torch.linspace(0, 1, 4)[:, None].expand(4, 4)
+    >>> theta = torch.zeros(4, 4)
+    >>> w_on_axis = pupil.aberration_waves(rho, theta, 0.0, 0.0)
+    >>> torch.allclose(w_on_axis, 0.2 * rho ** 4)
+    True
+    """
+
+    COEFFICIENT_NAMES: tuple[str, ...] = (
+        "sphere",
+        "coma",
+        "astigmatism",
+        "field_curvature",
+        "distortion",
+        "defocus",
+    )
+
+    def __init__(
+        self,
+        coefficients: dict[str, float],
+        field_extent_um: tuple[float, float],
+    ):
+        unknown = set(coefficients) - set(self.COEFFICIENT_NAMES)
+        if unknown:
+            raise ValueError(
+                f"Unknown Seidel coefficient name(s): {sorted(unknown)}. Accepted: {self.COEFFICIENT_NAMES}"
+            )
+        self.coefficients = {name: float(coefficients.get(name, 0.0)) for name in self.COEFFICIENT_NAMES}
+        self.field_extent_um = tuple(float(v) for v in field_extent_um)
+
+    def aberration_waves(
+        self,
+        rho: Tensor,
+        theta: Tensor,
+        x_o_um: float,
+        y_o_um: float,
+    ) -> Tensor:
+        """Evaluate the Seidel wavefront aberration (in waves) on a pupil grid.
+
+        Parameters
+        ----------
+        rho : Tensor
+            Normalized pupil radius, shape ``(Ny, Nx)``.
+        theta : Tensor
+            Azimuthal pupil angle in radians, shape ``(Ny, Nx)``.
+        x_o_um, y_o_um : float
+            Field position relative to the FOV center, in microns.
+
+        Returns
+        -------
+        Tensor
+            Wavefront aberration in waves, same shape as ``rho``.
+        """
+        x_norm = x_o_um / self.field_extent_um[1]
+        y_norm = y_o_um / self.field_extent_um[0]
+        eta = math.sqrt(x_norm * x_norm + y_norm * y_norm)
+        phi_field = math.atan2(y_norm, x_norm) if eta > 0 else 0.0
+
+        c = self.coefficients
+        out = torch.zeros_like(rho)
+        if c["defocus"]:
+            out = out + c["defocus"] * rho**2
+        if c["sphere"]:
+            out = out + c["sphere"] * rho**4
+        if eta > 0:
+            cos_dtheta = torch.cos(theta - phi_field)
+            if c["coma"]:
+                out = out + c["coma"] * eta * rho**3 * cos_dtheta
+            if c["astigmatism"]:
+                out = out + c["astigmatism"] * (eta**2) * (rho**2) * (cos_dtheta**2)
+            if c["field_curvature"]:
+                out = out + c["field_curvature"] * (eta**2) * (rho**2)
+            if c["distortion"]:
+                out = out + c["distortion"] * (eta**3) * rho * cos_dtheta
+        return out
+
+
 def make_pupil_grid(
     yx_shape: tuple[int, int],
     yx_pixel_size: float,
