@@ -1,6 +1,5 @@
 """Tests for waveorder.phantoms.ring_beads_gaussian and ring_beads_2d_gaussian."""
 
-import pytest
 import torch
 
 from waveorder.phantoms import (

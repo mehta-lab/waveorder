@@ -34,10 +34,17 @@ class TestSeidelPupilConstruction:
         assert sp.coefficients["astigmatism"] == 0.0
 
     def test_all_coefficient_names_accepted(self):
-        sp = SeidelPupil({
-            "sphere": 0.1, "coma": 0.2, "astigmatism": 0.3,
-            "field_curvature": 0.4, "distortion": 0.5, "defocus": 0.6,
-        }, field_extent_um=(8.0, 12.0))
+        sp = SeidelPupil(
+            {
+                "sphere": 0.1,
+                "coma": 0.2,
+                "astigmatism": 0.3,
+                "field_curvature": 0.4,
+                "distortion": 0.5,
+                "defocus": 0.6,
+            },
+            field_extent_um=(8.0, 12.0),
+        )
         for name in SeidelPupil.COEFFICIENT_NAMES:
             assert sp.coefficients[name] != 0.0
 
@@ -47,12 +54,19 @@ class TestSeidelPupilOnAxis:
 
     def test_on_axis_only_sphere_and_defocus_survive(self, pupil_grid):
         rho, theta = pupil_grid
-        sp = SeidelPupil({
-            "sphere": 0.2, "coma": 0.3, "astigmatism": 0.4,
-            "field_curvature": 0.5, "distortion": 0.6, "defocus": 0.7,
-        }, field_extent_um=(10.0, 10.0))
+        sp = SeidelPupil(
+            {
+                "sphere": 0.2,
+                "coma": 0.3,
+                "astigmatism": 0.4,
+                "field_curvature": 0.5,
+                "distortion": 0.6,
+                "defocus": 0.7,
+            },
+            field_extent_um=(10.0, 10.0),
+        )
         phi = sp.aberration_waves(rho, theta, x_o_um=0.0, y_o_um=0.0)
-        expected = 0.7 * rho ** 2 + 0.2 * rho ** 4
+        expected = 0.7 * rho**2 + 0.2 * rho**4
         assert torch.allclose(phi, expected, atol=1e-6)
 
     def test_zero_aberration_returns_zero(self, pupil_grid):
@@ -108,10 +122,6 @@ class TestSeidelPupilPSF:
             sp_neg = SeidelPupil({"sphere": -sphere_val}, field_extent_um=(10.0, 10.0))
             phi_pos = sp_pos.aberration_waves(rho, theta, 0.0, 0.0)
             phi_neg = sp_neg.aberration_waves(rho, theta, 0.0, 0.0)
-            psf_pos = torch.abs(torch.fft.ifft2(
-                pupil_amp * torch.exp(2j * math.pi * phi_pos.to(torch.complex64))
-            )) ** 2
-            psf_neg = torch.abs(torch.fft.ifft2(
-                pupil_amp * torch.exp(2j * math.pi * phi_neg.to(torch.complex64))
-            )) ** 2
+            psf_pos = torch.abs(torch.fft.ifft2(pupil_amp * torch.exp(2j * math.pi * phi_pos.to(torch.complex64)))) ** 2
+            psf_neg = torch.abs(torch.fft.ifft2(pupil_amp * torch.exp(2j * math.pi * phi_neg.to(torch.complex64)))) ** 2
             assert torch.allclose(psf_pos, psf_neg, atol=1e-7)
