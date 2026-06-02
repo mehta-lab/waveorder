@@ -188,8 +188,13 @@ def calculate_transfer_function(
     up_z = z_pixel_size / z_factor
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
 
-    # Shared optics (computed once, moved to input device)
-    # Pass original tensors (not floats) to preserve gradient graph
+    # Build shared optics directly on the caller's device. The legacy
+    # CPU-build-then-``.to(device)`` pattern wasted ~7 s/position on
+    # ``_compute_shared_optics`` (CPU ``torch.exp`` dominates). The
+    # trailing ``.to(device)`` calls are kept as a guard for any custom
+    # ``_compute_shared_optics`` override that doesn't honor ``device=``;
+    # they are no-ops when the tensors are already on ``device``.
+    device = zen.device
     fyy, fxx, det_pupil, propagation_kernel, greens_function_z = _compute_shared_optics(
         up_shape,
         up_yx,
@@ -200,9 +205,9 @@ def calculate_transfer_function(
         na_det[0],
         invert_phase_contrast,
         pupil_steepness,
+        device=device,
     )
 
-    device = zen.device
     fyy = fyy.to(device)
     fxx = fxx.to(device)
     det_pupil = det_pupil.to(device)
@@ -238,12 +243,25 @@ def _compute_shared_optics(
     numerical_aperture_detection,
     invert_phase_contrast=False,
     pupil_steepness=1e4,
+    device: torch.device | str | None = None,
 ):
-    """Compute optical components independent of illumination tilt."""
-    fyy, fxx = util.generate_frequencies(zyx_shape[1:], yx_pixel_size)
+    """Compute optical components independent of illumination tilt.
+
+    Parameters
+    ----------
+    device : torch.device, str, or None
+        Device on which to materialize the optics tensors. When ``None``
+        (default) the tensors are built on CPU — back-compat with the
+        legacy ``.to(device)``-after-the-fact pattern. Pass the target
+        device (e.g. ``zen.device``) to avoid the CPU ``torch.exp`` step
+        that dominates wall time on GPUs.
+    """
+    fyy, fxx = util.generate_frequencies(zyx_shape[1:], yx_pixel_size, device=device)
     radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
     z_total = zyx_shape[0] + 2 * z_padding
-    z_position_list = torch.fft.ifftshift((torch.arange(z_total) - z_total // 2) * z_pixel_size)
+    z_position_list = torch.fft.ifftshift(
+        (torch.arange(z_total, device=device) - z_total // 2) * z_pixel_size
+    )
     if invert_phase_contrast:
         z_position_list = torch.flip(z_position_list, dims=(0,))
 
@@ -277,6 +295,7 @@ def _calculate_wrap_unsafe_transfer_function(
     tilt_angle_zenith=0.0,
     tilt_angle_azimuth=0.0,
     pupil_steepness=1e4,
+    device: torch.device | str | None = None,
 ):
     fyy, fxx, det_pupil, propagation_kernel, greens_function_z = _compute_shared_optics(
         zyx_shape,
@@ -288,6 +307,7 @@ def _calculate_wrap_unsafe_transfer_function(
         numerical_aperture_detection,
         invert_phase_contrast,
         pupil_steepness,
+        device=device,
     )
 
     ill_pupil = optics.generate_tilted_pupil(
