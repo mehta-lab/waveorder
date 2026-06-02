@@ -73,9 +73,19 @@ def optimize_reconstruction(
         reconstruction.
     loss_fn : callable
         Function that takes a reconstruction and returns a scalar loss.
-    optimizable_params : dict[str, tuple[float, float]]
+    optimizable_params : dict[str, tuple[float | Tensor, float]]
         ``{param_name: (initial_value, learning_rate)}`` for each
-        parameter. For grid_search, the learning_rate is the grid step.
+        parameter. For ``grid_search``, the learning_rate is the grid
+        step.
+
+        For Adam / L-BFGS in batched mode (``data.ndim == 4``),
+        ``initial_value`` may be a scalar (broadcast to ``(B,)``) or a
+        tensor of shape ``(B,)`` for per-tile warm-starts.
+
+        ``learning_rate == 0`` marks the parameter as frozen: its
+        initial value is still passed to ``reconstruct_fn`` but the
+        parameter is held fixed across iterations. At least one
+        parameter must be free.
     fixed_params : dict, optional
         Additional fixed parameters to pass to ``reconstruct_fn``.
     method : str
@@ -195,6 +205,21 @@ def _optimize_gradient(
     tensor so that every tile is optimized independently. Standard Adam
     maintains per-element momentum and variance, so this is equivalent
     to running B independent Adam optimizers with a single backward pass.
+
+    Per-tile initial values
+    -----------------------
+    ``init_val`` may be either a scalar or a tensor. A tensor must be
+    broadcastable to ``(B,)`` (batched) or to a 0-d tensor (unbatched);
+    this enables per-tile warm-starts from a calibration map.
+
+    Frozen parameters
+    -----------------
+    ``lr == 0`` marks a parameter as frozen: its initial value is still
+    passed to ``reconstruct_fn`` (so per-tile init tensors land in the
+    forward model), but the parameter is excluded from the optimizer's
+    parameter groups and does not require gradients. Useful for the
+    z-only tilt refinement recipe, where zenith and azimuth are pinned
+    to map-derived priors and only ``z_focus_offset`` moves.
     """
     if logger is None:
         logger = NullLogger()
@@ -205,25 +230,57 @@ def _optimize_gradient(
     B = data.shape[0] if batched else 1
 
     param_tensors: dict[str, Tensor] = {}
+    frozen_names: set[str] = set()
     param_groups: list[dict] = []
 
     for name, (init_val, lr) in optimizable_params.items():
-        if batched:
-            # Per-tile parameter: (B,) tensor with independent gradients
+        is_frozen = (lr == 0)
+        requires_grad = use_gradients and not is_frozen
+        if isinstance(init_val, Tensor):
+            src = init_val.detach().to(dtype=torch.float32)
+            if batched:
+                if src.ndim == 0:
+                    t = src.expand((B,)).clone()
+                elif src.shape == (B,):
+                    t = src.clone()
+                else:
+                    raise ValueError(
+                        f"per-tile init for {name!r} has shape {tuple(src.shape)}, expected scalar or ({B},)"
+                    )
+            else:
+                if src.ndim == 0:
+                    t = src.clone()
+                elif src.numel() == 1:
+                    t = src.flatten()[0].clone()
+                else:
+                    raise ValueError(
+                        f"unbatched init for {name!r} must be scalar, got shape {tuple(src.shape)}"
+                    )
+            t.requires_grad_(requires_grad)
+        elif batched:
             t = torch.full(
                 (B,),
                 init_val,
                 dtype=torch.float32,
-                requires_grad=use_gradients,
+                requires_grad=requires_grad,
             )
         else:
             t = torch.tensor(
                 init_val,
                 dtype=torch.float32,
-                requires_grad=use_gradients,
+                requires_grad=requires_grad,
             )
         param_tensors[name] = t
-        param_groups.append({"params": [t], "lr": lr})
+        if is_frozen:
+            frozen_names.add(name)
+        else:
+            param_groups.append({"params": [t], "lr": lr})
+
+    if not param_groups:
+        raise ValueError(
+            "optimize_reconstruction: every parameter has lr=0 (all frozen). "
+            "At least one parameter must be free to optimize."
+        )
 
     if method == "lbfgs":
         all_params = list(param_tensors.values())
