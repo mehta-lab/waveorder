@@ -258,6 +258,97 @@ def _wotf_from_split_optics(angle_optics: dict, det_prop: Tensor) -> Tuple[Tenso
     )
 
 
+class CachedTiltOptics:
+    """Per-position cache of the angle-fixed half of the tilt-recon optics.
+
+    Designed for the OPS ``FREEZE_ANGLES=1`` tilt-recon recipe (and any
+    similar workload that holds zenith / azimuth / NA / wavelength fixed
+    across the optimizer's z-only inner loop). Builds the
+    angle-dependent optics ONCE at construction and reuses them
+    across every :meth:`transfer_functions` call.
+
+    Construct once per position with the per-position calibration
+    parameters; call ``transfer_functions(z_positions)`` per optimizer
+    iteration with the updated z list. Output is bit-identical to the
+    single-shot :func:`isotropic_thin_3d.calculate_transfer_function`
+    given the same inputs (validated by the test suite).
+
+    Parameters
+    ----------
+    yx_shape : tuple[int, int]
+        Transverse shape (Y, X) of the upsampled grid.
+    yx_pixel_size : float
+        Pixel size in the transverse dimensions.
+    wavelength_illumination, index_of_refraction_media, numerical_aperture_illumination,
+    numerical_aperture_detection, tilt_angle_zenith, tilt_angle_azimuth, pupil_steepness :
+        Optics parameters. All fixed for the lifetime of the cache.
+        Tilt angles may be scalars or batched ``(B,)`` tensors.
+    device : torch.device, str, or None
+        Where to materialize the cached tensors. ``None`` keeps the
+        legacy CPU build behavior.
+
+    Examples
+    --------
+    >>> cache = CachedTiltOptics(  # doctest: +SKIP
+    ...     yx_shape=(64, 64),
+    ...     yx_pixel_size=0.16,
+    ...     wavelength_illumination=0.532,
+    ...     index_of_refraction_media=1.33,
+    ...     numerical_aperture_illumination=0.4,
+    ...     numerical_aperture_detection=0.55,
+    ...     tilt_angle_zenith=0.05,
+    ...     tilt_angle_azimuth=0.2,
+    ...     device="cuda",
+    ... )
+    >>> for z_iter in optimizer_iters:                       # doctest: +SKIP
+    ...     z_positions = (z_idx + z_p.mean()) * z_pixel_size
+    ...     Hu, Hp = cache.transfer_functions(z_positions)
+    ...     # reconstruct using Hu, Hp ...
+    """
+
+    def __init__(
+        self,
+        yx_shape: Tuple[int, int],
+        yx_pixel_size: float,
+        wavelength_illumination: float,
+        index_of_refraction_media: float,
+        numerical_aperture_illumination: Union[float, Tensor],
+        numerical_aperture_detection: Union[float, Tensor],
+        tilt_angle_zenith: Union[float, Tensor] = 0.0,
+        tilt_angle_azimuth: Union[float, Tensor] = 0.0,
+        pupil_steepness: float = 10000.0,
+        device: Union[torch.device, str, None] = None,
+    ):
+        self._angle_optics = _compute_angle_optics(
+            yx_shape,
+            yx_pixel_size,
+            wavelength_illumination,
+            index_of_refraction_media,
+            numerical_aperture_illumination,
+            numerical_aperture_detection,
+            tilt_angle_zenith=tilt_angle_zenith,
+            tilt_angle_azimuth=tilt_angle_azimuth,
+            pupil_steepness=pupil_steepness,
+            device=device,
+        )
+
+    def transfer_functions(
+        self,
+        z_position_list: Union[list, Tensor],
+        invert_phase_contrast: bool = False,
+    ) -> Tuple[Tensor, Tensor]:
+        """Compute ``(absorption_TF, phase_TF)`` for the current z list.
+
+        Reuses the cached angle optics; rebuilds only the z-dependent
+        propagation kernel and composes the WOTF. This is the per-iter
+        call the optimizer's inner loop makes.
+        """
+        det_prop = _compute_z_propagation(
+            self._angle_optics, z_position_list, invert_phase_contrast=invert_phase_contrast
+        )
+        return _wotf_from_split_optics(self._angle_optics, det_prop)
+
+
 def _calculate_wrap_unsafe_transfer_function(
     yx_shape: Tuple[int, int],
     yx_pixel_size: float,

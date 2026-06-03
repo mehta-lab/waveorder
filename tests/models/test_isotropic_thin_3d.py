@@ -141,3 +141,55 @@ def test_thin_3d_angle_optics_batched_tilt():
     Hu, Hp = isotropic_thin_3d._wotf_from_split_optics(angle_optics, det_prop)
     assert torch.equal(legacy_Hu, Hu)
     assert torch.equal(legacy_Hp, Hp)
+
+
+def test_cached_tilt_optics_matches_legacy():
+    """CachedTiltOptics produces bit-identical TFs to the legacy fresh build.
+
+    The FREEZE_ANGLES workflow: build cache once, call transfer_functions()
+    each iter. The output must match what a fresh single-shot
+    `_calculate_wrap_unsafe_transfer_function` would produce for the same
+    inputs.
+    """
+    cache = isotropic_thin_3d.CachedTiltOptics(
+        yx_shape=_WRAP_KWARGS["yx_shape"],
+        yx_pixel_size=_WRAP_KWARGS["yx_pixel_size"],
+        wavelength_illumination=_WRAP_KWARGS["wavelength_illumination"],
+        index_of_refraction_media=_WRAP_KWARGS["index_of_refraction_media"],
+        numerical_aperture_illumination=_WRAP_KWARGS["numerical_aperture_illumination"],
+        numerical_aperture_detection=_WRAP_KWARGS["numerical_aperture_detection"],
+        tilt_angle_zenith=_WRAP_KWARGS["tilt_angle_zenith"],
+        tilt_angle_azimuth=_WRAP_KWARGS["tilt_angle_azimuth"],
+        pupil_steepness=_WRAP_KWARGS["pupil_steepness"],
+    )
+    legacy_Hu, legacy_Hp = isotropic_thin_3d._calculate_wrap_unsafe_transfer_function(
+        **_WRAP_KWARGS
+    )
+    Hu, Hp = cache.transfer_functions(
+        _WRAP_KWARGS["z_position_list"],
+        invert_phase_contrast=_WRAP_KWARGS["invert_phase_contrast"],
+    )
+    assert torch.equal(legacy_Hu, Hu)
+    assert torch.equal(legacy_Hp, Hp)
+
+
+def test_cached_tilt_optics_reusable_across_z_iterations():
+    """Calling transfer_functions() repeatedly with different z lists works
+    and produces the same outputs as legacy fresh builds each time."""
+    cache = isotropic_thin_3d.CachedTiltOptics(
+        yx_shape=_WRAP_KWARGS["yx_shape"],
+        yx_pixel_size=_WRAP_KWARGS["yx_pixel_size"],
+        wavelength_illumination=_WRAP_KWARGS["wavelength_illumination"],
+        index_of_refraction_media=_WRAP_KWARGS["index_of_refraction_media"],
+        numerical_aperture_illumination=_WRAP_KWARGS["numerical_aperture_illumination"],
+        numerical_aperture_detection=_WRAP_KWARGS["numerical_aperture_detection"],
+        tilt_angle_zenith=_WRAP_KWARGS["tilt_angle_zenith"],
+        tilt_angle_azimuth=_WRAP_KWARGS["tilt_angle_azimuth"],
+        pupil_steepness=_WRAP_KWARGS["pupil_steepness"],
+    )
+    for z_list in ([-1.0, 0.0, 1.0], [-2.0, 0.0, 2.0], [-0.5, 0.0, 0.5]):
+        kw = {**_WRAP_KWARGS, "z_position_list": z_list}
+        legacy_Hu, legacy_Hp = isotropic_thin_3d._calculate_wrap_unsafe_transfer_function(**kw)
+        Hu, Hp = cache.transfer_functions(z_list)
+        assert torch.equal(legacy_Hu, Hu), f"abs TF mismatch at z={z_list}"
+        assert torch.equal(legacy_Hp, Hp), f"phase TF mismatch at z={z_list}"
