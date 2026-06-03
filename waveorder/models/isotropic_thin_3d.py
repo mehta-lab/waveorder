@@ -122,19 +122,43 @@ def calculate_transfer_function(
     )
 
 
-def _calculate_wrap_unsafe_transfer_function(
+def _compute_angle_optics(
     yx_shape: Tuple[int, int],
     yx_pixel_size: float,
-    z_position_list: Union[list, Tensor],
     wavelength_illumination: float,
     index_of_refraction_media: float,
     numerical_aperture_illumination: Union[float, Tensor],
     numerical_aperture_detection: Union[float, Tensor],
-    invert_phase_contrast: bool = False,
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 10000.0,
-) -> Tuple[Tensor, Tensor]:
+    device: Union[torch.device, str, None] = None,
+) -> dict:
+    """Compute the angle-fixed parts of the 2D-from-3D thin-sample optics.
+
+    Companion to :func:`_compute_z_propagation` -- the split exists so
+    iterative callers that hold zenith / azimuth / NA fixed (e.g. the OPS
+    ``FREEZE_ANGLES=1`` tilt-recon recipe driving
+    :func:`isotropic_thin_3d.reconstruct` inside its z-only Adam loop)
+    can build the illumination pupil + detection pupil + frequency
+    grids ONCE per position and reuse them across every optimizer
+    iteration that only changes ``z_position_list``.
+
+    Returns a dict with the cached tensors:
+
+    - ``"fyy"``, ``"fxx"`` -- transverse frequency grids
+    - ``"radial_frequencies"`` -- ``sqrt(fyy**2 + fxx**2)``
+    - ``"detection_pupil"`` -- aperture mask
+    - ``"illumination_pupil"`` -- tilted illumination on the Ewald sphere
+    - ``"wavelength_illumination"``, ``"index_of_refraction_media"`` --
+      parroted back so the caller can pass the dict straight to
+      :func:`_compute_z_propagation`
+    - ``"batched"`` -- whether tilt-angle inputs were batched (caller
+      uses this to choose the WOTF shape contract)
+
+    The dict is intended to be opaque to callers; pair the value with
+    :func:`_compute_z_propagation` to assemble the WOTF.
+    """
     na_ill = torch.as_tensor(numerical_aperture_illumination, dtype=torch.float32)
     na_det = torch.as_tensor(numerical_aperture_detection, dtype=torch.float32)
 
@@ -152,12 +176,8 @@ def _calculate_wrap_unsafe_transfer_function(
             "numerical_aperture_detection to avoid singularities."
         )
 
-    z_positions = torch.as_tensor(z_position_list, dtype=torch.float32)
-    if invert_phase_contrast:
-        z_positions = -z_positions
-
     with torch.no_grad():
-        fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size, device=z_positions.device)
+        fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size, device=device)
         radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
 
     # Detect batched tilt angles
@@ -171,19 +191,7 @@ def _calculate_wrap_unsafe_transfer_function(
         wavelength_illumination,
         steepness=pupil_steepness,
     )
-    propagation_kernel = optics.generate_propagation_kernel(
-        radial_frequencies,
-        detection_pupil,
-        wavelength_illumination / index_of_refraction_media,
-        z_positions,
-    )
 
-    # det_prop: (Z, Yos, Xos)
-    det_prop = detection_pupil.unsqueeze(0) * propagation_kernel
-
-    # Generate tilted illumination pupil
-    # For batched (B,) tilt angles, reshape to (B, 1, 1) so
-    # generate_tilted_pupil broadcasts against (Yos, Xos) grids
     if batched:
         tilt_angle_zenith = tilt_zenith_t[:, None, None]
         tilt_angle_azimuth = tilt_azimuth_t[:, None, None]
@@ -198,13 +206,97 @@ def _calculate_wrap_unsafe_transfer_function(
         tilt_angle_azimuth,
     )  # (Yos, Xos) or (B, Yos, Xos)
 
-    if not batched:
-        # Unbatched WOTF: ill (Yos, Xos) broadcasts against det_prop (Z, Yos, Xos)
-        return optics.compute_weak_object_transfer_function_2d(illumination_pupil, det_prop)
+    return {
+        "fyy": fyy,
+        "fxx": fxx,
+        "radial_frequencies": radial_frequencies,
+        "detection_pupil": detection_pupil,
+        "illumination_pupil": illumination_pupil,
+        "batched": batched,
+        "wavelength_illumination": wavelength_illumination,
+        "index_of_refraction_media": index_of_refraction_media,
+    }
 
-    # Batched WOTF: ill (B, 1, Yos, Xos) broadcasts against
-    # det_prop (1, Z, Yos, Xos) -> (B, Z, Yos, Xos)
-    return optics.compute_weak_object_transfer_function_2d(illumination_pupil[:, None], det_prop[None])
+
+def _compute_z_propagation(
+    angle_optics: dict,
+    z_position_list: Union[list, Tensor],
+    invert_phase_contrast: bool = False,
+) -> Tensor:
+    """Compute the z-dependent half of the 2D-from-3D thin-sample optics.
+
+    Companion to :func:`_compute_angle_optics`. Given the cached angle
+    optics dict and a (possibly updated) ``z_position_list``, returns
+    ``det_prop = detection_pupil * propagation_kernel`` -- the only
+    z-dependent piece of the transfer-function build.
+    """
+    z_positions = torch.as_tensor(z_position_list, dtype=torch.float32)
+    if invert_phase_contrast:
+        z_positions = -z_positions
+
+    propagation_kernel = optics.generate_propagation_kernel(
+        angle_optics["radial_frequencies"],
+        angle_optics["detection_pupil"],
+        angle_optics["wavelength_illumination"] / angle_optics["index_of_refraction_media"],
+        z_positions,
+    )
+    return angle_optics["detection_pupil"].unsqueeze(0) * propagation_kernel
+
+
+def _wotf_from_split_optics(angle_optics: dict, det_prop: Tensor) -> Tuple[Tensor, Tensor]:
+    """Final assembly: WOTF from cached angle optics + per-iter det_prop.
+
+    Returns the same ``(absorption_2d_to_3d_TF, phase_2d_to_3d_TF)`` pair
+    that :func:`_calculate_wrap_unsafe_transfer_function` would return.
+    """
+    illumination_pupil = angle_optics["illumination_pupil"]
+    if not angle_optics["batched"]:
+        return optics.compute_weak_object_transfer_function_2d(illumination_pupil, det_prop)
+    # Batched: ill (B, 1, Yos, Xos) broadcasts against det_prop (1, Z, Yos, Xos)
+    return optics.compute_weak_object_transfer_function_2d(
+        illumination_pupil[:, None], det_prop[None]
+    )
+
+
+def _calculate_wrap_unsafe_transfer_function(
+    yx_shape: Tuple[int, int],
+    yx_pixel_size: float,
+    z_position_list: Union[list, Tensor],
+    wavelength_illumination: float,
+    index_of_refraction_media: float,
+    numerical_aperture_illumination: Union[float, Tensor],
+    numerical_aperture_detection: Union[float, Tensor],
+    invert_phase_contrast: bool = False,
+    tilt_angle_zenith: Union[float, Tensor] = 0.0,
+    tilt_angle_azimuth: Union[float, Tensor] = 0.0,
+    pupil_steepness: float = 10000.0,
+) -> Tuple[Tensor, Tensor]:
+    """Back-compat wrapper around the angle/z split helpers.
+
+    Output is unchanged. The split helpers
+    (:func:`_compute_angle_optics` + :func:`_compute_z_propagation` +
+    :func:`_wotf_from_split_optics`) are the entry points for callers
+    that want to cache the angle half across optimizer iterations.
+    """
+    z_positions_for_device = torch.as_tensor(z_position_list, dtype=torch.float32)
+    angle_optics = _compute_angle_optics(
+        yx_shape,
+        yx_pixel_size,
+        wavelength_illumination,
+        index_of_refraction_media,
+        numerical_aperture_illumination,
+        numerical_aperture_detection,
+        tilt_angle_zenith=tilt_angle_zenith,
+        tilt_angle_azimuth=tilt_angle_azimuth,
+        pupil_steepness=pupil_steepness,
+        device=z_positions_for_device.device,
+    )
+    det_prop = _compute_z_propagation(
+        angle_optics,
+        z_position_list,
+        invert_phase_contrast=invert_phase_contrast,
+    )
+    return _wotf_from_split_optics(angle_optics, det_prop)
 
 
 def calculate_singular_system(
