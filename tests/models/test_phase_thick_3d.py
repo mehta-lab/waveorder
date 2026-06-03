@@ -175,6 +175,82 @@ def _pearson_complex(a: torch.Tensor, b: torch.Tensor) -> float:
     return ((a_c * b_c).sum() / den).item()
 
 
+def test_angle_z_split_composes_to_shared_optics():
+    """The angle/z optics split composes back to bit-identical _compute_shared_optics output.
+
+    Validates that callers using the split helpers
+    (:func:`_compute_angle_optics` + :func:`_compute_z_optics`) for the
+    FREEZE_ANGLES tilt-recon recipe get the same numbers as the
+    legacy single-call path.
+    """
+    legacy = phase_thick_3d._compute_shared_optics(**_SHARED_OPTICS_KWARGS)
+    legacy_fyy, legacy_fxx, legacy_det_pupil, legacy_prop, legacy_green = legacy
+
+    fyy, fxx, radial_frequencies, det_pupil = phase_thick_3d._compute_angle_optics(
+        _SHARED_OPTICS_KWARGS["zyx_shape"][1:],
+        _SHARED_OPTICS_KWARGS["yx_pixel_size"],
+        _SHARED_OPTICS_KWARGS["wavelength_illumination"],
+        _SHARED_OPTICS_KWARGS["numerical_aperture_detection"],
+        pupil_steepness=_SHARED_OPTICS_KWARGS["pupil_steepness"],
+    )
+    z_position_list = phase_thick_3d._compute_z_position_list(
+        _SHARED_OPTICS_KWARGS["zyx_shape"][0],
+        _SHARED_OPTICS_KWARGS["z_pixel_size"],
+        _SHARED_OPTICS_KWARGS["z_padding"],
+        invert_phase_contrast=_SHARED_OPTICS_KWARGS["invert_phase_contrast"],
+    )
+    prop, green = phase_thick_3d._compute_z_optics(
+        radial_frequencies,
+        det_pupil,
+        z_position_list,
+        _SHARED_OPTICS_KWARGS["wavelength_illumination"],
+        _SHARED_OPTICS_KWARGS["index_of_refraction_media"],
+    )
+    assert torch.equal(legacy_fyy, fyy)
+    assert torch.equal(legacy_fxx, fxx)
+    assert torch.equal(legacy_det_pupil, det_pupil)
+    assert torch.equal(legacy_prop, prop)
+    assert torch.equal(legacy_green, green)
+
+
+def test_angle_optics_cached_across_z_changes():
+    """Angle optics tensors don't depend on z_pixel_size or z_padding.
+
+    Concrete check: build angle optics once, then build z optics with two
+    different z configurations and confirm the angle outputs are unchanged
+    (caller can hold them as a cache).
+    """
+    angle_kwargs = dict(
+        yx_shape=(64, 64),
+        yx_pixel_size=6.5 / 40,
+        wavelength_illumination=0.532,
+        numerical_aperture_detection=1.2,
+        pupil_steepness=1e4,
+    )
+    fyy_a, fxx_a, rf_a, det_a = phase_thick_3d._compute_angle_optics(**angle_kwargs)
+    fyy_b, fxx_b, rf_b, det_b = phase_thick_3d._compute_angle_optics(**angle_kwargs)
+    assert torch.equal(fyy_a, fyy_b)
+    assert torch.equal(fxx_a, fxx_b)
+    assert torch.equal(rf_a, rf_b)
+    assert torch.equal(det_a, det_b)
+
+    z_list_1 = phase_thick_3d._compute_z_position_list(20, 0.25, 5)
+    z_list_2 = phase_thick_3d._compute_z_position_list(20, 0.30, 5)
+    prop_1, green_1 = phase_thick_3d._compute_z_optics(
+        rf_a, det_a, z_list_1,
+        wavelength_illumination=0.532,
+        index_of_refraction_media=1.33,
+    )
+    prop_2, green_2 = phase_thick_3d._compute_z_optics(
+        rf_a, det_a, z_list_2,
+        wavelength_illumination=0.532,
+        index_of_refraction_media=1.33,
+    )
+    # Different z → different propagation kernels & Green's functions
+    assert not torch.equal(prop_1, prop_2)
+    assert not torch.equal(green_1, green_2)
+
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
 def test_compute_shared_optics_cuda_matches_cpu():
     """Building on CUDA must yield numerically equivalent tensors to CPU.
