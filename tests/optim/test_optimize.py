@@ -348,6 +348,134 @@ def test_per_tile_init_with_frozen_param():
         assert abs(got - want) < 0.3, f"tile {b}: got {got:.3f}, want {want:.3f}"
 
 
+def test_newton_converges_on_quadratic():
+    """Newton converges in 1-2 iters on an exact quadratic."""
+    data, reconstruct_fn, loss_fn = _make_quadratic_problem()
+
+    result = optimize_reconstruction(
+        data=data,
+        reconstruct_fn=reconstruct_fn,
+        loss_fn=loss_fn,
+        optimizable_params={"offset": (0.0, 0.1)},  # lr = damping floor + max-step
+        method="newton",
+        max_iterations=5,
+    )
+
+    # Quadratic: Newton should land exactly at target in 1 step.
+    assert abs(result.optimized_values["offset"] - 3.0) < 0.05
+    # Loss should drop substantially in the first iteration.
+    assert result.loss_history[0] > result.loss_history[-1] * 2  # at least 2x reduction
+
+
+def test_newton_batched_independent_quadratics():
+    """Each tile in a batched Newton run converges to its own target."""
+    B = 4
+    target_per_tile = torch.tensor([1.0, 2.0, 3.0, 4.0])
+    target = target_per_tile.view(B, 1, 1, 1).expand(B, 1, 8, 8)
+    data = torch.zeros(B, 1, 8, 8)
+
+    def reconstruct_fn(data, **params):
+        offset = params["offset"]
+        return data + offset.view(B, 1, 1, 1)
+
+    call_idx = [0]
+
+    def loss_fn(recon_b):
+        b = call_idx[0] % B
+        call_idx[0] += 1
+        return ((recon_b - target[b]) ** 2).sum()
+
+    result = optimize_reconstruction(
+        data=data,
+        reconstruct_fn=reconstruct_fn,
+        loss_fn=loss_fn,
+        optimizable_params={"offset": (0.0, 0.1)},
+        method="newton",
+        max_iterations=5,
+    )
+
+    assert isinstance(result.optimized_values["offset"], list)
+    assert len(result.optimized_values["offset"]) == B
+    for b, (got, want) in enumerate(zip(result.optimized_values["offset"], target_per_tile.tolist())):
+        assert abs(got - want) < 0.1, f"tile {b}: got {got:.3f}, want {want:.3f}"
+
+
+def test_newton_frozen_axis_does_not_move():
+    """lr=0 marks a parameter as frozen — Newton honors it."""
+    target = torch.ones(8, 8) * 5.0
+    data = torch.zeros(2, 8, 8)
+
+    def reconstruct_fn(data, **params):
+        return data[0] + params["free"] + params["frozen"]
+
+    def loss_fn(recon):
+        return ((recon - target) ** 2).sum()
+
+    result = optimize_reconstruction(
+        data=data,
+        reconstruct_fn=reconstruct_fn,
+        loss_fn=loss_fn,
+        optimizable_params={
+            "free": (0.0, 0.5),
+            "frozen": (1.0, 0.0),
+        },
+        method="newton",
+        max_iterations=5,
+    )
+
+    assert result.optimized_values["frozen"] == 1.0
+    assert abs(result.optimized_values["free"] - 4.0) < 0.1
+
+
+def test_newton_per_tile_init_tensor():
+    """Newton accepts per-tile tensor initial values (matches Adam path semantics)."""
+    B = 3
+    target_per_tile = torch.tensor([1.0, 2.0, 3.0])
+    target = target_per_tile.view(B, 1, 1, 1).expand(B, 1, 4, 4)
+    data = torch.zeros(B, 1, 4, 4)
+
+    def reconstruct_fn(data, **params):
+        return data + params["offset"].view(B, 1, 1, 1)
+
+    call_idx = [0]
+
+    def loss_fn(recon_b):
+        b = call_idx[0] % B
+        call_idx[0] += 1
+        return ((recon_b - target[b]) ** 2).sum()
+
+    init = torch.tensor([0.9, 1.9, 2.9])  # close per-tile warmstart
+    result = optimize_reconstruction(
+        data=data,
+        reconstruct_fn=reconstruct_fn,
+        loss_fn=loss_fn,
+        optimizable_params={"offset": (init, 0.1)},
+        method="newton",
+        max_iterations=3,
+    )
+
+    for b, (got, want) in enumerate(zip(result.optimized_values["offset"], target_per_tile.tolist())):
+        assert abs(got - want) < 0.1, f"tile {b}: got {got:.3f}, want {want:.3f}"
+
+
+def test_newton_all_frozen_raises():
+    data, reconstruct_fn, loss_fn = _make_quadratic_problem()
+
+    try:
+        optimize_reconstruction(
+            data=data,
+            reconstruct_fn=reconstruct_fn,
+            loss_fn=loss_fn,
+            optimizable_params={"offset": (0.0, 0.0)},
+            method="newton",
+            max_iterations=3,
+        )
+    except ValueError as e:
+        assert "frozen" in str(e).lower()
+        return
+    raise AssertionError("expected ValueError when every Newton param is frozen")
+
+
 def test_per_tile_init_shape_mismatch_raises():
     """Wrong-shape per-tile init in batched mode is rejected."""
     B = 4
