@@ -1,24 +1,27 @@
 from pathlib import Path
 
 import click
+import numpy as np
+from iohub.ngff import Position, open_ome_zarr
 
-from waveorder.cli.parsing import (
-    config_filepath,
-    input_position_dirpaths,
-    output_dirpath,
-)
+from waveorder import focus
+from waveorder.api import (birefringence, birefringence_and_phase,
+                           fluorescence, phase)
+from waveorder.cli.parsing import (config_filepath, input_position_dirpaths,
+                                   output_dirpath)
+from waveorder.cli.printing import echo_headline, echo_settings
+from waveorder.cli.settings import ReconstructionSettings
+from waveorder.cli.utils import (check_folder_for_ometiff, run_convert,
+                                 validate_and_process_paths)
+from waveorder.io import utils
 
 
-def _write_birefringence_tf(dataset, tf_ds):
+def _write_birefringence_tf(dataset: Position, tf_ds):
     """Write birefringence TF arrays to zarr."""
     dataset["intensity_to_stokes_matrix"] = tf_ds["intensity_to_stokes_matrix"].values[None, None, None, ...]
 
 
-# Chunk sizes are left to iohub's default (`shape[-3:]` padded with leading 1s,
-# i.e. one ZYX volume per chunk for a standard TCZYX array).
-
-
-def _write_phase_tf(dataset, tf_ds, recon_dim):
+def _write_phase_tf(dataset: Position, tf_ds, zyx_shape, recon_dim):
     """Write phase TF arrays to zarr."""
     if recon_dim == 2:
         dataset.create_image(
@@ -34,55 +37,73 @@ def _write_phase_tf(dataset, tf_ds, recon_dim):
             tf_ds["singular_system_Vh"].values[None],
         )
     elif recon_dim == 3:
+        chunks = (1, 1, 1, zyx_shape[1], zyx_shape[2])
         dataset.create_image(
             "real_potential_transfer_function",
             tf_ds["real_potential_transfer_function"].values[None, None, ...],
+            chunks=chunks,
         )
         dataset.create_image(
             "imaginary_potential_transfer_function",
             tf_ds["imaginary_potential_transfer_function"].values[None, None, ...],
+            chunks=chunks,
         )
 
 
-def _write_fluorescence_tf(dataset, tf_ds, recon_dim):
+def _write_fluorescence_tf(dataset: Position, tf_ds, zyx_shape, recon_dim):
     """Write fluorescence TF arrays to zarr."""
+    yx_shape = zyx_shape[1:]
     if recon_dim == 2:
         dataset.create_image(
             "singular_system_U",
             tf_ds["singular_system_U"].values[None, ...],
+            chunks=(1, 1, 1, yx_shape[0], yx_shape[1]),
         )
         dataset.create_image(
             "singular_system_S",
             tf_ds["singular_system_S"].values[None, None, ...],
+            chunks=(1, 1, 1, yx_shape[0], yx_shape[1]),
         )
         dataset.create_image(
             "singular_system_Vh",
             tf_ds["singular_system_Vh"].values[None, ...],
+            chunks=(1, 1, zyx_shape[0], yx_shape[0], yx_shape[1]),
         )
     elif recon_dim == 3:
         dataset.create_image(
             "optical_transfer_function",
             tf_ds["optical_transfer_function"].values[None, None, ...],
+            chunks=(1, 1, 1, zyx_shape[1], zyx_shape[2]),
         )
 
 
-def _write_vector_birefringence_tf(dataset, tf_ds):
+def _write_vector_birefringence_tf(dataset: Position, tf_ds, zyx_shape):
     """Write vector birefringence TF arrays to zarr."""
+    chunks = (1, 1, 1, zyx_shape[1], zyx_shape[2])
+
     # Add dummy channels needed by iohub for additional images
     for i in range(3):
         dataset.append_channel(f"ch{i}")
 
     dataset.create_image(
+        "vector_transfer_function",
+        tf_ds["vector_transfer_function"].values,
+        chunks=chunks,
+    )
+    dataset.create_image(
         "vector_singular_system_U",
         tf_ds["vector_singular_system_U"].values,
+        chunks=chunks,
     )
     dataset.create_image(
         "vector_singular_system_S",
         tf_ds["vector_singular_system_S"].values[None],
+        chunks=chunks,
     )
     dataset.create_image(
         "vector_singular_system_Vh",
         tf_ds["vector_singular_system_Vh"].values,
+        chunks=chunks,
     )
 
 
@@ -94,25 +115,18 @@ def compute_transfer_function_cli(
     """CLI command to compute the transfer function given a configuration file path
     and a desired output path.
     """
-    # Deferred imports: these pull in torch, iohub, numpy, etc.
-    # Only loaded when the command runs, keeping wo compute-tf -h fast.
-    import numpy as np
-    from iohub.ngff import open_ome_zarr
-
-    from waveorder.api import (
-        birefringence,
-        birefringence_and_phase,
-        fluorescence,
-        phase,
-    )
-    from waveorder.cli.printing import echo_headline, echo_settings
-    from waveorder.cli.settings import ReconstructionSettings
-    from waveorder.io import utils
 
     # Load config file
     settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
 
     echo_headline(f"Generating transfer functions and storing in {output_dirpath}\n")
+
+    # Detect and Convert Micro-Manager ome-tiff
+    if check_folder_for_ometiff(Path(input_position_dirpath)):
+        file_path = Path(input_position_dirpaths)
+        # Convert to zarr
+        converted_filepath = run_convert(file_path)
+        input_position_dirpaths = validate_and_process_paths(converted_filepath)
 
     # Read shape from input dataset
     input_dataset = open_ome_zarr(input_position_dirpath, layout="fov", mode="r")
@@ -124,6 +138,28 @@ def compute_transfer_function_cli(
         raise ValueError(
             f"Each of the input_channel_names = {settings.input_channel_names} in {config_filepath} must appear in the dataset {input_position_dirpath} which currently contains channel_names = {input_dataset.channel_names}."
         )
+
+    # Find in-focus slices for 2D reconstruction in "auto" mode
+    if (
+        settings.phase is not None
+        and settings.reconstruction_dimension == 2
+        and settings.phase.transfer_function.z_focus_offset == "auto"
+    ):
+        c_idx = input_dataset.get_channel_index(settings.input_channel_names[0])
+        zyx_array = input_dataset["0"][0, c_idx]
+
+        in_focus_index = focus.focus_from_transverse_band(
+            zyx_array,
+            NA_det=settings.phase.transfer_function.numerical_aperture_detection,
+            lambda_ill=settings.phase.transfer_function.wavelength_illumination,
+            pixel_size=settings.phase.transfer_function.yx_pixel_size,
+            mode="min",
+            polynomial_fit_order=4,
+        )
+
+        z_focus_offset = in_focus_index - (zyx_shape[0] // 2)
+        settings.phase.transfer_function.z_focus_offset = z_focus_offset
+        print("Found z_focus_offset:", z_focus_offset)
 
     # Get input data as CZYX xarray for the API
     czyx_data = input_dataset.to_xarray().isel(t=0)
@@ -158,12 +194,12 @@ def compute_transfer_function_cli(
 
         # Write phase TFs (only for 3D; 2D phase uses vector singular system)
         if recon_dim == 3:
-            _write_phase_tf(output_dataset, tf_ds, recon_dim)
+            _write_phase_tf(output_dataset, tf_ds, zyx_shape, recon_dim)
 
         echo_headline(
             f"Downsampling transfer function in X and Y by {int(np.ceil(np.sqrt(np.array(zyx_shape).prod() / 1e7)))}x"
         )
-        _write_vector_birefringence_tf(output_dataset, tf_ds)
+        _write_vector_birefringence_tf(output_dataset, tf_ds, zyx_shape)
 
     else:
         if settings.birefringence is not None:
@@ -182,14 +218,14 @@ def compute_transfer_function_cli(
             echo_settings(settings.phase.transfer_function)
 
             tf_ds = phase.compute_transfer_function(czyx_data, recon_dim, settings.phase)
-            _write_phase_tf(output_dataset, tf_ds, recon_dim)
+            _write_phase_tf(output_dataset, tf_ds, zyx_shape, recon_dim)
 
         if settings.fluorescence is not None:
             echo_headline("Generating fluorescence transfer function with settings:")
             echo_settings(settings.fluorescence.transfer_function)
 
             tf_ds = fluorescence.compute_transfer_function(czyx_data, recon_dim, settings.fluorescence)
-            _write_fluorescence_tf(output_dataset, tf_ds, recon_dim)
+            _write_fluorescence_tf(output_dataset, tf_ds, zyx_shape, recon_dim)
 
     # Write settings to metadata
     output_dataset.zattrs["settings"] = settings.model_dump()
@@ -202,7 +238,7 @@ def compute_transfer_function_cli(
     )
 
 
-@click.command("compute-tf", no_args_is_help=True)
+@click.command("compute-tf")
 @input_position_dirpaths()
 @config_filepath()
 @output_dirpath()
@@ -211,13 +247,14 @@ def _compute_transfer_function_cli(
     config_filepath: Path,
     output_dirpath: Path,
 ) -> None:
-    """Compute a transfer function using a dataset and configuration file.
+    """
+    Compute a transfer function using a dataset and configuration file.
 
     Calculates the transfer function based on the shape of the first position
     in the list `input-position-dirpaths`.
 
-    \b
-    Example:
-      \033[92mwo compute-tf -i ./input.zarr/0/0/0 -c ./config.yml -o ./tf.zarr\033[0m
+    See /examples for example configuration files.
+
+    >> waveorder compute-tf -i ./input.zarr/0/0/0 -c ./examples/birefringence.yml -o ./transfer_function.zarr
     """
     compute_transfer_function_cli(input_position_dirpaths[0], config_filepath, output_dirpath)
