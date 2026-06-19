@@ -2,14 +2,11 @@ from pathlib import Path
 
 import click
 
-from waveorder.cli.parsing import (
-    config_filepath,
-    input_position_dirpaths,
-    output_dirpath,
-    processes_option,
-    unique_id,
-    write_config_scale_to_output,
-)
+from waveorder.cli.parsing import (config_filepath, input_position_dirpaths,
+                                   output_dirpath, processes_option, unique_id,
+                                   write_config_scale_to_output)
+from waveorder.cli.utils import (check_folder_for_ometiff, run_convert,
+                                 validate_and_process_paths)
 
 
 @click.command("reconstruct", no_args_is_help=True)
@@ -45,18 +42,28 @@ def _reconstruct_cli(
     \b
     Example:
       \033[92mwo rec -i ./input.zarr/*/*/* -c ./config.yml -o ./output.zarr\033[0m
+      \033[92mwo rec -i ./input.ome.tif_folder/*/*/* -c ./config.yml -o ./output.zarr\033[0m
     """
     click.echo(click.style("Starting reconstruction...", fg="green"))
 
     # Deferred imports: these pull in torch, iohub, numpy, etc.
     # Only loaded when the command runs, keeping wo rec -h fast.
-    from waveorder.cli.apply_inverse_transfer_function import apply_inverse_transfer_function_cli
-    from waveorder.cli.compute_transfer_function import compute_transfer_function_cli
+    from waveorder.cli.apply_inverse_transfer_function import \
+        apply_inverse_transfer_function_cli
+    from waveorder.cli.compute_transfer_function import \
+        compute_transfer_function_cli
     from waveorder.cli.settings import ReconstructionSettings
     from waveorder.io import utils
     from waveorder.optim import has_optimizable_params
 
     settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
+
+    # Detect and Convert Micro-Manager ome-tiff
+    if len(input_position_dirpaths) > 0 and check_folder_for_ometiff(Path(input_position_dirpaths[0])):
+        file_path = Path(input_position_dirpaths[0])
+        # Convert to zarr
+        converted_filepath = run_convert(file_path)
+        input_position_dirpaths = validate_and_process_paths(converted_filepath)
 
     # Check for optimizable parameters and run optimization if needed
     if has_optimizable_params(settings):

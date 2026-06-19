@@ -5,14 +5,12 @@ from typing import Literal
 
 import click
 
-from waveorder.cli.parsing import (
-    config_filepath,
-    input_position_dirpaths,
-    output_dirpath,
-    processes_option,
-    transfer_function_dirpath,
-    write_config_scale_to_output,
-)
+from waveorder.cli.parsing import (config_filepath, input_position_dirpaths,
+                                   output_dirpath, processes_option,
+                                   transfer_function_dirpath,
+                                   write_config_scale_to_output)
+from waveorder.cli.utils import (check_folder_for_ometiff, run_convert,
+                                 validate_and_process_paths)
 
 
 def _check_background_consistency(background_shape, data_shape, input_channel_names):
@@ -216,22 +214,23 @@ def apply_inverse_transfer_function_single_position(
     import torch.multiprocessing as mp
     from iohub import open_ome_zarr
 
-    from waveorder.api import (
-        birefringence,
-        birefringence_and_phase,
-        fluorescence,
-        phase,
-    )
+    from waveorder.api import (birefringence, birefringence_and_phase,
+                               fluorescence, phase)
     from waveorder.cli.printing import echo_headline, echo_settings
     from waveorder.cli.settings import ReconstructionSettings
-    from waveorder.cli.utils import (
-        apply_inverse_to_zyx_and_save,
-        resolve_time_indices,
-    )
+    from waveorder.cli.utils import (apply_inverse_to_zyx_and_save,
+                                     resolve_time_indices)
     from waveorder.io import utils
 
     if verbose:
         echo_headline("\nStarting reconstruction...")
+
+    # Detect and Convert Micro-Manager ome-tiff
+    if check_folder_for_ometiff(Path(input_position_dirpath)):
+        file_path = Path(input_position_dirpaths)
+        # Convert to zarr
+        converted_filepath = run_convert(file_path)
+        input_position_dirpaths = validate_and_process_paths(converted_filepath)
 
     # Load datasets
     transfer_function_dataset = open_ome_zarr(transfer_function_dirpath)
@@ -401,10 +400,8 @@ def apply_inverse_transfer_function_cli(
     from iohub import open_ome_zarr
     from iohub.ngff.utils import create_empty_plate
 
-    from waveorder.cli.utils import (
-        generate_valid_position_key,
-        is_single_position_store,
-    )
+    from waveorder.cli.utils import (generate_valid_position_key,
+                                     is_single_position_store)
 
     # Prepare output store
     output_metadata = get_reconstruction_output_metadata(
