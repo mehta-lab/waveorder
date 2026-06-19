@@ -7,9 +7,7 @@ from waveorder.cli.option_eat_all import OptionEatAll
 from waveorder.cli.utils import check_folder_for_ometiff
 
 
-def _validate_and_process_paths(
-    ctx: click.Context, opt: click.Option, value: str
-) -> list[Path]:
+def _validate_and_process_paths(ctx: click.Context, opt: click.Option, value: str) -> list[Path]:
     # Deferred imports: iohub and natsort are heavy (pull in torch via zarr/numpy chain).
     # Only needed when the command actually runs, not for --help.
     from iohub.ngff import Plate, open_ome_zarr
