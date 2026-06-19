@@ -2,11 +2,19 @@ from pathlib import Path
 
 import click
 
-from waveorder.cli.parsing import (config_filepath, input_position_dirpaths,
-                                   output_dirpath, processes_option, unique_id,
-                                   write_config_scale_to_output)
-from waveorder.cli.utils import (check_folder_for_ometiff, run_convert,
-                                 validate_and_process_paths)
+from waveorder.cli.parsing import (
+    config_filepath,
+    input_position_dirpaths,
+    output_dirpath,
+    processes_option,
+    unique_id,
+    write_config_scale_to_output,
+)
+from waveorder.cli.utils import (
+    check_folder_for_ometiff,
+    run_convert,
+    validate_and_process_paths,
+)
 
 
 @click.command("reconstruct", no_args_is_help=True)
@@ -48,10 +56,10 @@ def _reconstruct_cli(
 
     # Deferred imports: these pull in torch, iohub, numpy, etc.
     # Only loaded when the command runs, keeping wo rec -h fast.
-    from waveorder.cli.apply_inverse_transfer_function import \
-        apply_inverse_transfer_function_cli
-    from waveorder.cli.compute_transfer_function import \
-        compute_transfer_function_cli
+    from waveorder.cli.apply_inverse_transfer_function import (
+        apply_inverse_transfer_function_cli,
+    )
+    from waveorder.cli.compute_transfer_function import compute_transfer_function_cli
     from waveorder.cli.settings import ReconstructionSettings
     from waveorder.io import utils
     from waveorder.optim import has_optimizable_params
