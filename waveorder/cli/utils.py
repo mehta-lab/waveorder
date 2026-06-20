@@ -8,10 +8,8 @@ from iohub import read_images
 from iohub.convert import TIFFConverter
 from iohub.fov import BaseFOVMapping
 from iohub.ngff import open_ome_zarr
-from iohub.ngff.models import TransformationMeta
-from iohub.ngff.nodes import NGFFNode, Plate, open_ome_zarr
+from iohub.ngff.nodes import NGFFNode, Plate
 from iohub.reader import _infer_format, sizeof_fmt
-from numpy.typing import DTypeLike
 
 
 def resolve_time_indices(time_indices, num_timepoints: int) -> list[int]:
@@ -228,9 +226,7 @@ def get_dataset_info(path: str):
     msgs = []
     if isinstance(reader, BaseFOVMapping):
         _, first_fov = next(iter(reader))
-        shape_msg = ", ".join(
-            [f"{a}={s}" for s, a in zip(first_fov.shape, ("T", "C", "Z", "Y", "X"))]
-        )
+        shape_msg = ", ".join([f"{a}={s}" for s, a in zip(first_fov.shape, ("T", "C", "Z", "Y", "X"))])
         msgs.extend(
             [
                 sum_msg,
@@ -242,10 +238,7 @@ def get_dataset_info(path: str):
             ]
         )
         if reader.micromanager_summary:
-            result_string = "\n".join(
-                f"{key}:\t\t {value}"
-                for key, value in reader.micromanager_summary.items()
-            )
+            result_string = "\n".join(f"{key}:\t\t {value}" for key, value in reader.micromanager_summary.items())
             msgs.append("============")
             msgs.append(result_string)
     elif isinstance(reader, NGFFNode):
@@ -253,9 +246,7 @@ def get_dataset_info(path: str):
             [
                 sum_msg,
                 fmt_msg,
-                "".join(
-                    ["Axes:\t\t\t "] + [f"{a.name} ({a.type}); " for a in reader.axes]
-                ),
+                "".join(["Axes:\t\t\t "] + [f"{a.name} ({a.type}); " for a in reader.axes]),
                 ch_msg,
             ]
         )
