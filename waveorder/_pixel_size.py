@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveFloat
+from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, model_serializer
 
 
 class YXPixelSize(BaseModel):
@@ -77,3 +77,14 @@ class YXPixelSize(BaseModel):
     def is_isotropic(self) -> bool:
         """True if y and x spacings are equal."""
         return self.y == self.x
+
+    @model_serializer
+    def _serialize(self):
+        """Serialize as a scalar when isotropic, else as ``{'y': ..., 'x': ...}``.
+
+        Both forms round-trip through :meth:`from_value`, so YAML configs
+        for square pixels stay readable as a single number.
+        """
+        if self.y == self.x:
+            return self.y
+        return {"y": self.y, "x": self.x}

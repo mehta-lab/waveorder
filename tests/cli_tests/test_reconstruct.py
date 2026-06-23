@@ -10,6 +10,7 @@ from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
 from waveorder._pixel_size import YXPixelSize
+from waveorder.api import fluorescence as fluorescence_api
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
     _warn_pixel_size_mismatch,
@@ -502,6 +503,60 @@ def test_warn_pixel_size_mismatch_separate_y_and_x():
     text = "\n".join(str(w.message) for w in record)
     assert "y: input=0.4" in text and "config=0.3" in text
     assert "x:" not in text  # x matches, so should be omitted
+
+
+def test_write_config_scale_to_output_anisotropic(tmp_path):
+    """An anisotropic yx_pixel_size config writes distinct y and x scales to the output."""
+    input_path = tmp_path / "aniso_input.zarr"
+    output_path = tmp_path / "aniso_output.zarr"
+
+    channel_names = ["GFP"]
+    original_scale = [1, 1, 0.5, 0.4, 0.4]
+    dataset = open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=channel_names)
+    position = dataset.create_position("0", "0", "0")
+    position.create_zeros(
+        "0",
+        (1, 1, 4, 5, 6),
+        dtype=np.uint16,
+        transform=[TransformationMeta(type="scale", scale=original_scale)],
+    )
+    dataset.close()
+
+    fluor_tf = fluorescence_api.TransferFunctionSettings(
+        yx_pixel_size={"y": 0.3, "x": 0.25},
+        z_pixel_size=0.5,
+        wavelength_emission=0.532,
+    )
+    recon_settings = settings.ReconstructionSettings(
+        input_channel_names=channel_names,
+        time_indices="all",
+        reconstruction_dimension=3,
+        fluorescence=settings.FluorescenceSettings(transfer_function=fluor_tf),
+    )
+    config_path = tmp_path / "aniso.yml"
+    utils.model_to_yaml(recon_settings, config_path)
+
+    runner = CliRunner()
+    runner.invoke(
+        cli,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+            "--write-config-scale-to-output",
+        ],
+        catch_exceptions=False,
+    )
+
+    with open_ome_zarr(output_path) as result:
+        result_scale = result["0/0/0"].scale
+        assert result_scale[2] == 0.5  # z
+        assert result_scale[3] == 0.3  # y
+        assert result_scale[4] == 0.25  # x
 
 
 def test_warn_pixel_size_mismatch_isotropic_silent_when_equal():

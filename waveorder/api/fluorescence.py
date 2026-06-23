@@ -49,12 +49,16 @@ class TransferFunctionSettings(OptimizableFourierTransferFunctionSettings):
 
     @model_validator(mode="after")
     def warn_wavelength_consistency(self):
-        ratio = self.yx_pixel_size / self.wavelength_emission
-        if ratio < 1.0 / 20 or ratio > 20:
-            warnings.warn(
-                f"yx_pixel_size ({self.yx_pixel_size}) / wavelength_emission ({self.wavelength_emission}) = {ratio}. Did you use consistent units?",
-                UserWarning,
-            )
+        # Normalize defensively for the model_copy(update=...) path that
+        # bypasses field validators.
+        yx = YXPixelSize.from_value(self.yx_pixel_size)
+        for axis, ps in (("y", yx.y), ("x", yx.x)):
+            ratio = ps / self.wavelength_emission
+            if ratio < 1.0 / 20 or ratio > 20:
+                warnings.warn(
+                    f"{axis}_pixel_size ({ps}) / wavelength_emission ({self.wavelength_emission}) = {ratio}. Did you use consistent units?",
+                    UserWarning,
+                )
         return self
 
 
