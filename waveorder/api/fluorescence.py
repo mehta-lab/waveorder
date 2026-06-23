@@ -10,6 +10,7 @@ import torch
 import xarray as xr
 from pydantic import Field, PositiveFloat, model_validator
 
+from waveorder._pixel_size import YXPixelSize
 from waveorder.api._settings import (
     FourierApplyInverseSettings,
     MyBaseModel,
@@ -104,23 +105,24 @@ def simulate(
         settings = Settings()
 
     s = settings.transfer_function.resolve_floats()
+    yx_pixel_size = YXPixelSize.from_value(s.yx_pixel_size)
     Z, Y, X = zyx_shape
     zyx_coords = {
         "z": np.arange(Z) * s.z_pixel_size,
-        "y": np.arange(Y) * s.yx_pixel_size,
-        "x": np.arange(X) * s.yx_pixel_size,
+        "y": np.arange(Y) * yx_pixel_size.y,
+        "x": np.arange(X) * yx_pixel_size.x,
     }
 
     if recon_dim == 3:
         zyx_fluorescence = isotropic_fluorescent_thick_3d.generate_test_phantom(
             zyx_shape,
-            s.yx_pixel_size,
+            yx_pixel_size,
             s.z_pixel_size,
             sphere_radius=sphere_radius,
         )
         otf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
             zyx_shape,
-            s.yx_pixel_size,
+            yx_pixel_size,
             s.z_pixel_size,
             wavelength_emission=s.wavelength_emission,
             z_padding=0,

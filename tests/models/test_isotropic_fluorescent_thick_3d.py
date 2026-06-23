@@ -2,6 +2,7 @@ import numpy as np
 import torch
 
 from waveorder import util
+from waveorder._pixel_size import YXPixelSize
 from waveorder.models import isotropic_fluorescent_thick_3d
 
 
@@ -94,6 +95,55 @@ def test_apply_inverse_transfer_function():
     #    itr=10,
     # )
     # assert result_tv.shape == (10, 5, 5)
+
+
+def test_calculate_transfer_function_isotropic_yx_pixel_size_equivalence():
+    """Anisotropic YXPixelSize with y == x reproduces the legacy scalar output."""
+    common = dict(
+        zyx_shape=(10, 32, 32),
+        z_pixel_size=0.5,
+        wavelength_emission=0.507,
+        z_padding=0,
+        index_of_refraction_media=1.3,
+        numerical_aperture_detection=1.2,
+    )
+    otf_scalar = isotropic_fluorescent_thick_3d.calculate_transfer_function(yx_pixel_size=0.2, **common)
+    otf_model = isotropic_fluorescent_thick_3d.calculate_transfer_function(
+        yx_pixel_size=YXPixelSize.isotropic(0.2), **common
+    )
+    assert torch.allclose(otf_scalar, otf_model)
+
+
+def test_calculate_transfer_function_anisotropic_runs():
+    """y != x produces a finite OTF of the expected shape."""
+    otf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
+        zyx_shape=(10, 32, 32),
+        yx_pixel_size=YXPixelSize(y=0.3, x=0.2),
+        z_pixel_size=0.5,
+        wavelength_emission=0.507,
+        z_padding=0,
+        index_of_refraction_media=1.3,
+        numerical_aperture_detection=1.2,
+    )
+    assert otf.shape == (10, 32, 32)
+    assert torch.isfinite(otf).all()
+
+
+def test_reconstruct_anisotropic_smoke():
+    """End-to-end reconstruct on random data with anisotropic yx pixel size runs."""
+    zyx_shape = (10, 32, 32)
+    zyx_data = torch.rand(zyx_shape)
+    result = isotropic_fluorescent_thick_3d.reconstruct(
+        zyx_data,
+        yx_pixel_size=YXPixelSize(y=0.3, x=0.2),
+        z_pixel_size=0.5,
+        wavelength_emission=0.507,
+        z_padding=0,
+        index_of_refraction_media=1.3,
+        numerical_aperture_detection=1.2,
+    )
+    assert result.shape == zyx_shape
+    assert np.all(np.isfinite(result.numpy()))
 
 
 def test_reconstruct():
