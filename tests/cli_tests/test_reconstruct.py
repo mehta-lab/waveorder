@@ -1,3 +1,4 @@
+import warnings
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
@@ -8,8 +9,10 @@ from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 
+from waveorder._pixel_size import YXPixelSize
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
+    _warn_pixel_size_mismatch,
     apply_inverse_transfer_function_cli,
 )
 from waveorder.cli.main import cli
@@ -488,3 +491,24 @@ def test_write_config_scale_to_output(tmp_path):
         assert result_scale[2] == 0.25  # z_pixel_size default
         assert result_scale[3] == 0.1  # yx_pixel_size default
         assert result_scale[4] == 0.1
+
+
+def test_warn_pixel_size_mismatch_separate_y_and_x():
+    """An anisotropic YXPixelSize raises separate y and x mismatches in the warning."""
+    input_scale = (1.0, 1.0, 0.5, 0.4, 0.2)  # T, C, Z, Y, X
+    config_pixel_sizes = (0.5, YXPixelSize(y=0.3, x=0.2))
+    with pytest.warns(UserWarning) as record:
+        _warn_pixel_size_mismatch(input_scale, config_pixel_sizes)
+    text = "\n".join(str(w.message) for w in record)
+    assert "y: input=0.4" in text and "config=0.3" in text
+    assert "x:" not in text  # x matches, so should be omitted
+
+
+def test_warn_pixel_size_mismatch_isotropic_silent_when_equal():
+    """No warning when input scale matches the config (isotropic case)."""
+    input_scale = (1.0, 1.0, 0.5, 0.1, 0.1)
+    config_pixel_sizes = (0.5, 0.1)
+    with warnings.catch_warnings(record=True) as record:
+        warnings.simplefilter("always")
+        _warn_pixel_size_mismatch(input_scale, config_pixel_sizes)
+    assert all("Input pixel sizes" not in str(w.message) for w in record)
