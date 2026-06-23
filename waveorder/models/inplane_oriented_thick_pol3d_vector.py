@@ -6,6 +6,7 @@ from torch import Tensor
 from torch.nn.functional import avg_pool3d
 
 from waveorder import optics, sampling, stokes, util
+from waveorder._pixel_size import YXPixelSize
 from waveorder.filter import apply_filter_bank
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
@@ -45,6 +46,15 @@ def calculate_transfer_function(
     if z_padding != 0:
         raise NotImplementedError("Padding not implemented for this model")
 
+    yx_pixel_size = YXPixelSize.from_value(yx_pixel_size)
+    if not yx_pixel_size.is_isotropic:
+        raise NotImplementedError(
+            "Anisotropic yx_pixel_size is not supported by the birefringence "
+            "vector model. Pass an isotropic yx_pixel_size or use a phase-only "
+            "or fluorescence-only reconstruction."
+        )
+    yx_pixel_size_scalar = yx_pixel_size.y
+
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
         numerical_aperture_illumination,
@@ -56,7 +66,7 @@ def calculate_transfer_function(
         index_of_refraction_media,
     )
 
-    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
+    yx_factor = int(np.ceil(yx_pixel_size_scalar / transverse_nyquist))
     z_factor = int(np.ceil(z_pixel_size / axial_nyquist))
 
     tf_calculation_shape = (
@@ -72,7 +82,7 @@ def calculate_transfer_function(
         swing,
         scheme,
         tf_calculation_shape,
-        yx_pixel_size / yx_factor,
+        yx_pixel_size_scalar / yx_factor,
         z_pixel_size / z_factor,
         wavelength_illumination,
         z_padding,
