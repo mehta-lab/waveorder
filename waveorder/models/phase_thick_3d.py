@@ -7,6 +7,7 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
+from waveorder._pixel_size import YXPixelSize
 from waveorder.models import isotropic_fluorescent_thick_3d
 from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
@@ -100,12 +101,13 @@ def generate_test_phantom(
         acquires when passing through that voxel. This matches the units
         returned by apply_inverse_transfer_function().
     """
+    yx_pixel_size = YXPixelSize.from_value(yx_pixel_size)
     sphere, _, _ = util.generate_sphere_target(
         zyx_shape,
         yx_pixel_size,
         z_pixel_size,
         radius=sphere_radius,
-        blur_size=2 * yx_pixel_size,
+        blur_size=2 * min(yx_pixel_size.y, yx_pixel_size.x),
     )
 
     # Compute refractive index difference
@@ -171,20 +173,25 @@ def calculate_transfer_function(
     zen = _to_batch(tilt_angle_zenith)
     azi = _to_batch(tilt_angle_azimuth)
 
-    # Nyquist upsampling
+    yx_pixel_size = YXPixelSize.from_value(yx_pixel_size)
+
+    # Nyquist upsampling, computed independently for y and x so that anisotropic
+    # spacing is upsampled by an axis-specific factor.
     na_ill_0 = float(na_ill[0])
     na_det_0 = float(na_det[0])
-    yx_factor = int(np.ceil(yx_pixel_size / sampling.transverse_nyquist(wavelength_illumination, na_ill_0, na_det_0)))
+    transverse_nyquist = sampling.transverse_nyquist(wavelength_illumination, na_ill_0, na_det_0)
+    y_factor = int(np.ceil(yx_pixel_size.y / transverse_nyquist))
+    x_factor = int(np.ceil(yx_pixel_size.x / transverse_nyquist))
     z_factor = int(
         np.ceil(z_pixel_size / sampling.axial_nyquist(wavelength_illumination, na_det_0, index_of_refraction_media))
     )
 
     up_shape = (
         zyx_shape[0] * z_factor,
-        zyx_shape[1] * yx_factor,
-        zyx_shape[2] * yx_factor,
+        zyx_shape[1] * y_factor,
+        zyx_shape[2] * x_factor,
     )
-    up_yx = yx_pixel_size / yx_factor
+    up_yx = YXPixelSize(y=yx_pixel_size.y / y_factor, x=yx_pixel_size.x / x_factor)
     up_z = z_pixel_size / z_factor
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
 
