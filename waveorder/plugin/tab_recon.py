@@ -21,6 +21,7 @@ from typing import (
 )
 
 from iohub.ngff import open_ome_zarr
+from iohub.reader import _infer_format
 from magicgui import widgets
 from magicgui.type_map import get_widget_class
 
@@ -33,7 +34,7 @@ from qtpy import QtCore
 from qtpy.QtCore import QEvent, Qt, QThread, Signal
 from qtpy.QtWidgets import *
 
-from waveorder.cli.utils import check_folder_for_ometiff, get_dataset_info
+from waveorder.cli.utils import get_dataset_info
 from waveorder.plugin import job_manager
 
 if TYPE_CHECKING:
@@ -486,7 +487,15 @@ class Ui_ReconTab_Form(QWidget):
             self.data_input_Label.value = "Input Store"
             input_paths = Path(input_data_folder)
 
-            if check_folder_for_ometiff(input_paths):
+            # Micro-Manager OME-TIFF:
+            # The conversion to OME-Zarr
+            # happens later when the reconstruction CLI runs.
+            try:
+                fmt, _ = _infer_format(input_paths)
+            except (ValueError, RuntimeError):
+                fmt = None
+
+            if fmt == "ometiff":
                 self.data_input_Label.value = "Input Store" + " " + _info_icon
                 tooltip = get_dataset_info(input_paths.absolute())
                 if tooltip:

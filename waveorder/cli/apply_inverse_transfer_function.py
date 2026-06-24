@@ -13,11 +13,6 @@ from waveorder.cli.parsing import (
     transfer_function_dirpath,
     write_config_scale_to_output,
 )
-from waveorder.cli.utils import (
-    check_folder_for_ometiff,
-    run_convert,
-    validate_and_process_paths,
-)
 
 
 def _check_background_consistency(background_shape, data_shape, input_channel_names):
@@ -234,13 +229,6 @@ def apply_inverse_transfer_function_single_position(
 
     if verbose:
         echo_headline("\nStarting reconstruction...")
-
-    # Detect and Convert Micro-Manager ome-tiff
-    if check_folder_for_ometiff(Path(input_position_dirpath)):
-        file_path = Path(input_position_dirpath)
-        # Convert to zarr
-        converted_filepath = run_convert(file_path)
-        input_position_dirpath = validate_and_process_paths(converted_filepath)
 
     # Load datasets
     transfer_function_dataset = open_ome_zarr(transfer_function_dirpath)

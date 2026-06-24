@@ -7,11 +7,6 @@ from waveorder.cli.parsing import (
     input_position_dirpaths,
     output_dirpath,
 )
-from waveorder.cli.utils import (
-    check_folder_for_ometiff,
-    run_convert,
-    validate_and_process_paths,
-)
 
 
 def _write_birefringence_tf(dataset, tf_ds):
@@ -118,13 +113,6 @@ def compute_transfer_function_cli(
     settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
 
     echo_headline(f"Generating transfer functions and storing in {output_dirpath}\n")
-
-    # Detect and Convert Micro-Manager ome-tiff
-    if check_folder_for_ometiff(Path(input_position_dirpath)):
-        file_path = Path(input_position_dirpath)
-        # Convert to zarr
-        converted_filepath = run_convert(file_path)
-        input_position_dirpath = validate_and_process_paths(converted_filepath)
 
     # Read shape from input dataset
     input_dataset = open_ome_zarr(input_position_dirpath, layout="fov", mode="r")

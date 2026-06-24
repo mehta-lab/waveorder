@@ -1,11 +1,9 @@
-import os
 from pathlib import Path
 
 import click
 import numpy as np
 import xarray as xr
 from iohub import read_images
-from iohub.convert import TIFFConverter
 from iohub.fov import BaseFOVMapping
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.nodes import NGFFNode, Plate
@@ -138,64 +136,6 @@ def _check_nan_n_zeros(input_array):
     Checks if data are all zeros or nan
     """
     return np.all(np.isnan(input_array)) or np.all(input_array == 0)
-
-
-def convert_data(tif_path, latest_out_path, prefix=""):
-    """
-    Converts Micro-Manager ome-tif to .zarr
-    """
-    converter = TIFFConverter(
-        os.path.join(tif_path, prefix),
-        latest_out_path,
-    )
-    converter()
-
-
-def run_convert(ome_tif_path):
-    """
-    Converts Micro-Manager ome-tif to .zarr and returns output path
-    """
-    ome_tif_folder_path = Path(ome_tif_path).absolute()
-    out_path = os.path.join(
-        ome_tif_folder_path.parent.absolute(),
-        ome_tif_folder_path.name + "_converted" + ".zarr",
-    )
-    if not Path(out_path).exists():
-        convert_data(ome_tif_folder_path, out_path)
-    else:
-        print("Not converting ome-tif to zarr: Destination folder exists.")
-    return out_path
-
-
-def validate_and_process_paths(value: str) -> list[Path]:
-    """
-    Validates and Processes Converted Micro-Manager ome-tif zarr paths
-    """
-    # Sort and validate the input paths, expanding plates into lists of positions
-    input_paths = [Path(value)]
-    # Filter out non-directories (e.g., zarr.json files from glob expansion)
-    input_paths = [path for path in input_paths if path.is_dir()]
-    for path in input_paths:
-        with open_ome_zarr(path, mode="r") as dataset:
-            if isinstance(dataset, Plate):
-                plate_path = input_paths.pop()
-                for position in dataset.positions():
-                    input_paths.append(plate_path / position[0])
-
-    return input_paths
-
-
-def check_folder_for_ometiff(input_data_folder: Path) -> bool:
-    """
-    Checks for Micro-Manager ome-tif folder
-    """
-    try:
-        data_type, extra_info = _infer_format(input_data_folder)
-    except (ValueError, RuntimeError):
-        return False
-    if data_type == "ometiff":
-        return True
-    return False
 
 
 def get_dataset_info(path: str):
