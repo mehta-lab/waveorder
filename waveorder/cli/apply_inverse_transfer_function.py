@@ -9,7 +9,7 @@ from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,
-    processes_option,
+    threads_option,
     transfer_function_dirpath,
     write_config_scale_to_output,
 )
@@ -203,17 +203,16 @@ def apply_inverse_transfer_function_single_position(
     transfer_function_dirpath: Path,
     config_filepath: Path,
     output_position_dirpath: Path,
-    num_processes,
+    num_threads,
     output_channel_names: list[str],
     verbose: bool = True,
 ) -> None:
 
     # Deferred imports for fast CLI help
-    from concurrent.futures import ProcessPoolExecutor, as_completed
+    from concurrent.futures import ThreadPoolExecutor, as_completed
     from functools import partial
 
     import numpy as np
-    import torch.multiprocessing as mp
     from iohub import open_ome_zarr
 
     from waveorder.api import (
@@ -356,18 +355,11 @@ def apply_inverse_transfer_function_single_position(
         **apply_inverse_args,
     )
 
-    # Multiprocessing logic
-    if num_processes > 1:
+    # Threading logic
+    if num_threads > 1:
         if verbose:
-            click.echo(f"\nStarting multiprocess pool with {num_processes} processes")
-        # NOTE: spawn (not fork) — tensorstore runs internal C++ threads
-        # that are not fork-safe, so a forked worker can deadlock or
-        # segfault before our code runs. See google/tensorstore#61.
-        # NOTE: ProcessPoolExecutor (not mp.Pool) so silent worker death
-        # (e.g. cgroup OOM-kill) surfaces as BrokenProcessPool instead
-        # of hanging indefinitely on pool.starmap.
-        context = mp.get_context("spawn")
-        with ProcessPoolExecutor(max_workers=num_processes, mp_context=context) as p:
+            click.echo(f"\nStarting thread pool with {num_threads} threads")
+        with ThreadPoolExecutor(max_workers=num_threads) as p:
             futures = [p.submit(partial_apply_inverse_to_zyx_and_save, t_idx) for t_idx in time_indices]
             for fut in as_completed(futures):
                 fut.result()
@@ -393,7 +385,7 @@ def apply_inverse_transfer_function_cli(
     transfer_function_dirpath: Path,
     config_filepath: Path,
     output_dirpath: Path,
-    num_processes,
+    num_threads,
     write_config_scale_to_output: bool = False,
 ) -> None:
     # Deferred imports for fast CLI help
@@ -437,10 +429,6 @@ def apply_inverse_transfer_function_cli(
         with open_ome_zarr(str(output_dirpath), mode="r+") as output_plate:
             output_plate.zattrs.update(plate_metadata)
 
-    # Initialize torch threads
-    if num_processes > 1:
-        torch.set_num_threads(1)
-        torch.set_num_interop_threads(1)
 
     # Loop through positions
     for i, input_position_dirpath in enumerate(input_position_dirpaths):
@@ -457,7 +445,7 @@ def apply_inverse_transfer_function_cli(
             transfer_function_dirpath,
             config_filepath,
             output_position_path,
-            num_processes,
+            num_threads,
             output_metadata["channel_names"],
         )
 
@@ -467,14 +455,14 @@ def apply_inverse_transfer_function_cli(
 @transfer_function_dirpath()
 @config_filepath()
 @output_dirpath()
-@processes_option(default=1)
+@threads_option(default=1)
 @write_config_scale_to_output()
 def _apply_inverse_transfer_function_cli(
     input_position_dirpaths: list[Path],
     transfer_function_dirpath: Path,
     config_filepath: Path,
     output_dirpath: Path,
-    num_processes,
+    num_threads,
     write_config_scale_to_output: bool,
 ) -> None:
     """Apply an inverse transfer function to a dataset.
@@ -491,6 +479,6 @@ def _apply_inverse_transfer_function_cli(
         transfer_function_dirpath,
         config_filepath,
         output_dirpath,
-        num_processes,
+        num_threads,
         write_config_scale_to_output,
     )
