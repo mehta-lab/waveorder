@@ -26,8 +26,8 @@ class YXPixelSize(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    y: PositiveFloat = Field(description="pixel size along y in micrometers")
-    x: PositiveFloat = Field(description="pixel size along x in micrometers")
+    y: PositiveFloat = Field(default=0.1, description="pixel size along y in micrometers")
+    x: PositiveFloat = Field(default=0.1, description="pixel size along x in micrometers")
 
     @classmethod
     def isotropic(cls, value: float) -> YXPixelSize:
