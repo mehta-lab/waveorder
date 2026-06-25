@@ -44,9 +44,13 @@ class YXPixelSize(BaseModel):
     def from_value(cls, value: Any) -> YXPixelSize:
         """Normalize a scalar, mapping, or YXPixelSize into a YXPixelSize.
 
+        Accepts any float-castable scalar (Python ``float`` / ``int``, numpy
+        scalars, 0-d ``ndarray``, 0-d tensors with ``__float__``), a mapping
+        with keys ``y`` and ``x``, or an existing :class:`YXPixelSize`.
+
         Parameters
         ----------
-        value : float or dict or YXPixelSize
+        value : float-like, dict, or YXPixelSize
             Scalar (isotropic shorthand), mapping with keys ``y`` and ``x``,
             or an existing YXPixelSize (returned unchanged).
 
@@ -64,14 +68,21 @@ class YXPixelSize(BaseModel):
             return value
         if isinstance(value, bool):
             raise TypeError("cannot convert bool to YXPixelSize")
-        if isinstance(value, (int, float)):
-            return cls.isotropic(float(value))
+        if isinstance(value, str):
+            raise TypeError("cannot convert str to YXPixelSize")
         if isinstance(value, dict):
             return cls(**value)
-        raise TypeError(
-            f"cannot convert {type(value).__name__} to YXPixelSize; "
-            "expected float, mapping with keys 'y' and 'x', or YXPixelSize"
-        )
+        # Accept any float-castable scalar: Python numbers, numpy scalars,
+        # 0-d ndarrays, 0-d tensors. ``float()`` raises TypeError for
+        # multi-element arrays and non-numeric inputs.
+        try:
+            as_float = float(value)
+        except (TypeError, ValueError):
+            raise TypeError(
+                f"cannot convert {type(value).__name__} to YXPixelSize; "
+                "expected float, mapping with keys 'y' and 'x', or YXPixelSize"
+            ) from None
+        return cls.isotropic(as_float)
 
     @property
     def is_isotropic(self) -> bool:

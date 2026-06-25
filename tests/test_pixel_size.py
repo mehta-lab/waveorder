@@ -1,6 +1,8 @@
 """Tests for the YXPixelSize value type."""
 
+import numpy as np
 import pytest
+import torch
 from pydantic import ValidationError
 
 from waveorder._pixel_size import YXPixelSize
@@ -56,6 +58,28 @@ def test_from_value_rejects_unknown_type():
     """Unknown types raise a clear TypeError."""
     with pytest.raises(TypeError, match="cannot convert"):
         YXPixelSize.from_value("0.3")
+
+
+def test_from_value_accepts_numpy_scalar():
+    """from_value accepts a numpy float scalar (e.g. zarr metadata reads)."""
+    assert YXPixelSize.from_value(np.float64(0.3)) == YXPixelSize.isotropic(0.3)
+
+
+def test_from_value_accepts_zero_d_ndarray():
+    """from_value accepts a 0-d ndarray (numpy may produce these from scale reads)."""
+    assert YXPixelSize.from_value(np.array(0.3)) == YXPixelSize.isotropic(0.3)
+
+
+def test_from_value_accepts_zero_d_tensor():
+    """from_value accepts a 0-d torch tensor."""
+    p = YXPixelSize.from_value(torch.tensor(0.3, dtype=torch.float64))
+    assert p == YXPixelSize.isotropic(0.3)
+
+
+def test_from_value_rejects_multi_element_array():
+    """A 1-D or higher ndarray is not a scalar pixel size."""
+    with pytest.raises(TypeError, match="cannot convert"):
+        YXPixelSize.from_value(np.array([0.3, 0.25]))
 
 
 def test_from_value_rejects_negative_via_mapping():
