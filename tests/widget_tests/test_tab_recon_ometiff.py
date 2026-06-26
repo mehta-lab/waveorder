@@ -25,6 +25,6 @@ def test_validate_input_data_autopopulates_from_ometiff(recon_tab, mm_ome_tiff_d
     """Pointing the GUI at an MM ome-tif shows metadata in infobox, with no zarr conversion needed."""
     ok, _msg = recon_tab.validate_input_data(str(mm_ome_tiff_dir), BG=True)
     assert ok is True
-    assert "Micro-Manager OME-TIFF" in recon_tab.data_input_Label.tooltip
+    assert "ometiff" in recon_tab.data_input_Label.tooltip
     # GUI must not trigger a conversion just from path selection.
     assert not (mm_ome_tiff_dir.parent / (mm_ome_tiff_dir.name + "_converted.zarr")).exists()
