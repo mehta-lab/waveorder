@@ -141,6 +141,9 @@ def _check_nan_n_zeros(input_array):
 def get_dataset_info(path: str):
     """Retrieve summary information for a dataset.
 
+    Tighter variant of iohub.reader.print_info, returns a string instead of printing to stdout.
+    TODO: useful for printing on e.g. incorrect channel name errors.
+
     Parameters
     ----------
     path : StrOrBytesPath
