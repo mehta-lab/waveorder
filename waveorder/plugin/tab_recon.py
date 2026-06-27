@@ -502,6 +502,7 @@ class Ui_ReconTab_Form(QWidget):
             dataset_info = get_dataset_info(input_paths.absolute())
 
             if dataset_info:
+                self.pollData = False  # set to False on valid data until Live acquisition status is established
                 self.data_input_Label.tooltip = dataset_info["summary"]
                 self.data_channel_names = dataset_info["channel_names"]
                 self.data_yx_pixel_size = dataset_info["yx_pixel_size"]
@@ -509,7 +510,6 @@ class Ui_ReconTab_Form(QWidget):
 
                 if fmt == "omezarr":
                     if not BG:
-                        self.pollData = False
                         zattrs = dataset_info["zattrs"]
                         if self.is_dataset_acq_running(zattrs):
                             if self.confirm_dialog(
@@ -518,7 +518,7 @@ class Ui_ReconTab_Form(QWidget):
                                 self.pollData = True
 
                 return True, MSG_SUCCESS
-            raise Exception("Dataset does not appear to be a valid ome-zarr storage")
+            raise Exception("Dataset does not appear to be a valid ome-zarr or MM ome-tiff storage")
         except Exception as exc:
             return False, exc.args
 
