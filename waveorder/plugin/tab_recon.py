@@ -164,8 +164,6 @@ class Ui_ReconTab_Form(QWidget):
             self.model_directory = str(Path.cwd())
             self.yaml_model_file = str(Path.cwd())
 
-        self.input_directory_dataset = None
-        self.input_directory_datasetMeta = None
         self.input_channel_names = []
 
         # Parent (Widget) which holds the GUI ##############################
@@ -195,6 +193,9 @@ class Ui_ReconTab_Form(QWidget):
         self.data_input_widget.setLayout(self.data_input_widget_layout)
 
         self.data_input_Label = widgets.Label(value="Input Store")
+        self.data_yx_pixel_size = 0.1
+        self.data_z_pixel_size = 0.25
+        self.data_channel_names = ""
         # self.data_input_Label.native.setMinimumWidth(97)
         self.data_input_LineEdit = widgets.LineEdit(value=self.input_directory)
         self.data_input_PushButton = widgets.PushButton(label="Browse")
@@ -487,65 +488,36 @@ class Ui_ReconTab_Form(QWidget):
             self.data_input_Label.value = "Input Store"
             input_paths = Path(input_data_folder)
 
-            # Micro-Manager OME-TIFF:
-            # The conversion to OME-Zarr
-            # happens later when the reconstruction CLI runs.
             try:
                 fmt, _ = _infer_format(input_paths)
             except (ValueError, RuntimeError):
                 fmt = None
 
-            if fmt == "ometiff":
-                self.data_input_Label.value = "Input Store" + " " + _info_icon
-                tooltip = get_dataset_info(input_paths.absolute())
-                if tooltip:
-                    self.data_input_Label.tooltip = tooltip
-                return True, MSG_SUCCESS
-            else:
-                self.data_input_Label.value = "Input Store" + " " + _info_icon
-                tooltip = get_dataset_info(input_paths.absolute())
-                if tooltip:
-                    self.data_input_Label.tooltip = tooltip
+            self.data_input_Label.value = "Input Store" + " " + _info_icon
 
-                with open_ome_zarr(input_paths, mode="r") as dataset:
-                    try:
-                        string_pos = []
-                        i = 0
-                        for pos_paths, pos in dataset.positions():
-                            string_pos.append(pos_paths)
-                            if i == 0:
-                                axes = pos.zgroup.attrs["multiscales"][0]["axes"]
-                                string_array_n = [str(x["name"]) for x in axes]
-                                string_array = [
-                                    str(x)
-                                    for x in pos.zgroup.attrs["multiscales"][0]["datasets"][0][
-                                        "coordinateTransformations"
-                                    ][0]["scale"]
-                                ]
-                                string_scale = []
-                                for i in range(len(string_array_n)):
-                                    string_scale.append("{n}={d}".format(n=string_array_n[i], d=string_array[i]))
-                                txt = "\n\nScale: " + ", ".join(string_scale)
-                                self.data_input_Label.tooltip += txt
-                            i += 1
-                        txt = "\n\nFOV: " + ", ".join(string_pos)
-                        self.data_input_Label.tooltip += txt
-                    except Exception as exc:
-                        print(exc.args)
+            # get_dataset_info parses for both Micro-Manager OME-TIFF & OME-ZARR:
+            # data is aggregated for both types and populated in place-holders used later
+            # when models are being defined
+            # The zattrs provides a check if this is a Live OME-ZARR data acquisition
+            dataset_info = get_dataset_info(input_paths.absolute())
 
-                    if not BG and metadata:
-                        self.input_directory_dataset = dataset
+            if dataset_info:
+                self.data_input_Label.tooltip = dataset_info["summary"]
+                self.data_channel_names = dataset_info["channel_names"]
+                self.data_yx_pixel_size = dataset_info["yx_pixel_size"]
+                self.data_z_pixel_size = dataset_info["z_pixel_size"]
 
+                if fmt == "omezarr":
                     if not BG:
                         self.pollData = False
-                        zattrs = dataset.zattrs
+                        zattrs = dataset_info["zattrs"]
                         if self.is_dataset_acq_running(zattrs):
                             if self.confirm_dialog(
                                 msg="This seems like an in-process Acquisition. Would you like to process data on-the-fly ?"
                             ):
                                 self.pollData = True
 
-                    return True, MSG_SUCCESS
+                return True, MSG_SUCCESS
             raise Exception("Dataset does not appear to be a valid ome-zarr storage")
         except Exception as exc:
             return False, exc.args
@@ -2082,6 +2054,14 @@ class Ui_ReconTab_Form(QWidget):
                     if isinstance(def_val, PydanticUndefinedType):
                         def_val = None
                 ftype = field_def.annotation
+
+                # auto-populating fields based on dataset metadata
+                if field == "input_channel_names":
+                    pass  # def_val = self.data_channel_names
+                elif field == "yx_pixel_size":
+                    def_val = float(self.data_yx_pixel_size)
+                elif field == "z_pixel_size":
+                    def_val = float(self.data_z_pixel_size)
 
                 # Build tooltip from field metadata
                 tooltip_parts = []
