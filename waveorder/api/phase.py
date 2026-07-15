@@ -188,32 +188,16 @@ def simulate(
     return phantom, data
 
 
-def compute_transfer_function(
+def compute_transfer_function_tensors(
     czyx_data: xr.DataArray,
     recon_dim: Literal[2, 3],
     settings: Settings = None,
     device: str | torch.device | None = None,
-) -> xr.Dataset:
-    """Compute phase transfer function.
+) -> dict[str, torch.Tensor]:
+    """Compute phase transfer-function tensors on ``device``.
 
-    Parameters
-    ----------
-    czyx_data : xr.DataArray
-        Input CZYX data array (shape is used to determine ZYX dimensions).
-    recon_dim : {2, 3}
-        Reconstruction dimensionality.
-    settings : Settings, optional
-        Phase reconstruction settings. Uses defaults if None.
-    device : str, torch.device, or None
-        Compute device. None = CPU, "auto" = best available.
-
-    Returns
-    -------
-    xr.Dataset
-        For 2D: contains ``singular_system_U``, ``singular_system_S``,
-        ``singular_system_Vh``.
-        For 3D: contains ``real_potential_transfer_function``,
-        ``imaginary_potential_transfer_function``.
+    Unlike :func:`compute_transfer_function`, this API keeps both the result
+    and all large 3D shared-optics intermediates on the selected device.
     """
     if settings is None:
         settings = Settings()
@@ -221,7 +205,6 @@ def compute_transfer_function(
 
     zyx_shape = czyx_data.shape[1:]  # CZYX -> ZYX
     s = settings.transfer_function.resolve_floats()
-
     if recon_dim == 2:
         z_position_list = torch.tensor(
             _position_list_from_shape_scale_offset(
@@ -232,7 +215,6 @@ def compute_transfer_function(
             dtype=torch.float32,
             device=device,
         )
-
         absorption_tf, phase_tf = isotropic_thin_3d.calculate_transfer_function(
             yx_shape=[zyx_shape[1], zyx_shape[2]],
             yx_pixel_size=s.yx_pixel_size,
@@ -246,42 +228,60 @@ def compute_transfer_function(
             tilt_angle_azimuth=s.tilt_angle_azimuth,
         )
         U, S, Vh = isotropic_thin_3d.calculate_singular_system(absorption_tf, phase_tf)
+        return {
+            "singular_system_U": U,
+            "singular_system_S": S,
+            "singular_system_Vh": Vh,
+        }
 
-        return xr.Dataset(
-            {
-                "singular_system_U": _named_dataarray(U.cpu().numpy(), "singular_system_U"),
-                "singular_system_S": _named_dataarray(S.cpu().numpy(), "singular_system_S"),
-                "singular_system_Vh": _named_dataarray(Vh.cpu().numpy(), "singular_system_Vh"),
-            }
-        )
+    real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(
+        zyx_shape=zyx_shape,
+        yx_pixel_size=s.yx_pixel_size,
+        z_pixel_size=s.z_pixel_size,
+        wavelength_illumination=s.wavelength_illumination,
+        z_padding=s.z_padding,
+        index_of_refraction_media=s.index_of_refraction_media,
+        numerical_aperture_illumination=s.numerical_aperture_illumination,
+        numerical_aperture_detection=s.numerical_aperture_detection,
+        invert_phase_contrast=s.invert_phase_contrast,
+        tilt_angle_zenith=s.tilt_angle_zenith,
+        tilt_angle_azimuth=s.tilt_angle_azimuth,
+        device=device,
+    )
+    return {
+        "real_potential_transfer_function": real_tf,
+        "imaginary_potential_transfer_function": imag_tf,
+    }
 
-    elif recon_dim == 3:
-        real_tf, imag_tf = phase_thick_3d.calculate_transfer_function(
-            zyx_shape=zyx_shape,
-            yx_pixel_size=s.yx_pixel_size,
-            z_pixel_size=s.z_pixel_size,
-            wavelength_illumination=s.wavelength_illumination,
-            z_padding=s.z_padding,
-            index_of_refraction_media=s.index_of_refraction_media,
-            numerical_aperture_illumination=s.numerical_aperture_illumination,
-            numerical_aperture_detection=s.numerical_aperture_detection,
-            invert_phase_contrast=s.invert_phase_contrast,
-            tilt_angle_zenith=s.tilt_angle_zenith,
-            tilt_angle_azimuth=s.tilt_angle_azimuth,
-        )
 
-        return xr.Dataset(
-            {
-                "real_potential_transfer_function": _named_dataarray(
-                    real_tf.cpu().numpy(),
-                    "real_potential_transfer_function",
-                ),
-                "imaginary_potential_transfer_function": _named_dataarray(
-                    imag_tf.cpu().numpy(),
-                    "imaginary_potential_transfer_function",
-                ),
-            }
-        )
+def compute_transfer_function(
+    czyx_data: xr.DataArray,
+    recon_dim: Literal[2, 3],
+    settings: Settings = None,
+    device: str | torch.device | None = None,
+) -> xr.Dataset:
+    """Compute a host-backed phase transfer-function dataset.
+
+    Parameters
+    ----------
+    czyx_data : xr.DataArray
+        Input CZYX data array; only its shape is read.
+    recon_dim : {2, 3}
+        Reconstruction dimensionality.
+    settings : Settings, optional
+        Phase reconstruction settings.
+    device : str, torch.device, or None
+        Compute device. The completed tensors are copied to the host for the
+        xarray result. Use :func:`compute_transfer_function_tensors` to retain
+        device residency.
+    """
+    tensors = compute_transfer_function_tensors(
+        czyx_data,
+        recon_dim,
+        settings,
+        device,
+    )
+    return xr.Dataset({name: _named_dataarray(value.detach().cpu().numpy(), name) for name, value in tensors.items()})
 
 
 def apply_inverse_transfer_function(

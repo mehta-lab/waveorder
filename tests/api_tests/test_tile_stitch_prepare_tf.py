@@ -1,6 +1,7 @@
 """Tests for ``prepare_transfer_function`` — worker-cache contract."""
 
 import pytest
+import torch
 import xarray as xr
 
 from waveorder.api.phase import Settings as PhaseSettings
@@ -9,6 +10,7 @@ from waveorder.api.tile_stitch import (
     TileStitchSettings,
     clear_transfer_function_cache,
     prepare_transfer_function,
+    prepare_transfer_function_tensors,
 )
 from waveorder.cli.settings import ReconstructionSettings
 
@@ -77,3 +79,21 @@ def test_clear_cache_drops_entries():
     tf2 = prepare_transfer_function(settings, device="cpu")
     # Different objects after cache clear
     assert tf1 is not tf2
+
+
+def test_prepare_tf_tensors_are_device_resident_and_cached():
+    settings = _phase_settings_3d()
+    tf1 = prepare_transfer_function_tensors(settings, device="cpu")
+    tf2 = prepare_transfer_function_tensors(settings, device="cpu")
+    assert tf1 is tf2
+    assert set(tf1) == {
+        "real_potential_transfer_function",
+        "imaginary_potential_transfer_function",
+    }
+    assert all(value.device.type == "cpu" for value in tf1.values())
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA unavailable")
+def test_prepare_tf_tensors_retains_cuda_residency():
+    tf = prepare_transfer_function_tensors(_phase_settings_3d(), device="cuda")
+    assert all(value.device.type == "cuda" for value in tf.values())

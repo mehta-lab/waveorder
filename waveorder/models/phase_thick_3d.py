@@ -133,6 +133,7 @@ def calculate_transfer_function(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 1e4,
+    device: str | torch.device | None = None,
 ) -> tuple[Tensor, Tensor]:
     """Compute the 3D phase transfer function.
 
@@ -140,9 +141,9 @@ def calculate_transfer_function(
     parameters are broadcast to length B and the output is
     ``(B, Z, Y, X)``.  Scalar parameters are shared across the batch.
     Shared optical components (detection pupil, propagation kernel,
-    Green's function) are computed once regardless of batch size.
-
-    Returns ``(Z, Y, X)`` when all parameters are scalar.
+    Green's function) are computed once regardless of batch size. ``device``
+    selects where every intermediate is allocated; when omitted, the device
+    is inferred from the first tensor-valued optical parameter.
     """
     # Detect batch size (1 = scalar)
     batchable = {
@@ -162,10 +163,16 @@ def calculate_transfer_function(
                     f"Batched parameters must have the same length, got {batch_size} and {t.shape[0]} for '{name}'"
                 )
     unbatched = batch_size == 1
+    if device is None:
+        device = next(
+            (value.device for value in batchable.values() if torch.is_tensor(value)),
+            torch.device("cpu"),
+        )
+    device = torch.device(device)
 
-    # Broadcast all batchable params to (B,)
+    # Broadcast all batchable params to (B,) directly on the target device.
     def _to_batch(val):
-        t = torch.as_tensor(val, dtype=torch.float32)
+        t = torch.as_tensor(val, dtype=torch.float32, device=device)
         return t.expand(batch_size) if t.ndim == 0 else t
 
     na_ill = _to_batch(numerical_aperture_illumination)
@@ -207,14 +214,8 @@ def calculate_transfer_function(
         na_det[0],
         invert_phase_contrast,
         pupil_steepness,
+        device=device,
     )
-
-    device = zen.device
-    fyy = fyy.to(device)
-    fxx = fxx.to(device)
-    det_pupil = det_pupil.to(device)
-    propagation_kernel = propagation_kernel.to(device)
-    greens_function_z = greens_function_z.to(device)
 
     # Batched illumination pupils: (B, Y, X) or (1, Y, X)
     ill_pupils = optics.generate_tilted_pupil(
@@ -245,12 +246,13 @@ def _compute_shared_optics(
     numerical_aperture_detection,
     invert_phase_contrast=False,
     pupil_steepness=1e4,
+    device=None,
 ):
     """Compute optical components independent of illumination tilt."""
-    fyy, fxx = util.generate_frequencies(zyx_shape[1:], yx_pixel_size)
+    fyy, fxx = (value.to(device) for value in util.generate_frequencies(zyx_shape[1:], yx_pixel_size))
     radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
     z_total = zyx_shape[0] + 2 * z_padding
-    z_position_list = torch.fft.ifftshift((torch.arange(z_total) - z_total // 2) * z_pixel_size)
+    z_position_list = torch.fft.ifftshift((torch.arange(z_total, device=device) - z_total // 2) * z_pixel_size)
     if invert_phase_contrast:
         z_position_list = torch.flip(z_position_list, dims=(0,))
 

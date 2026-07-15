@@ -40,6 +40,7 @@ from waveorder.tile_stitch.blend import (  # noqa: F401  (public re-exports)
     min_blend,
     uniform_mean,
 )
+from waveorder.tile_stitch.partition import InputTile, OutputTile  # noqa: F401
 
 if TYPE_CHECKING:  # pragma: no cover
     import torch
@@ -173,6 +174,7 @@ class TileStitchSettings(MyBaseModel):
 # so a 5s TF build amortizes across hundreds of subsequent reconstructions.
 
 _TF_CACHE: dict[tuple, xr.Dataset] = {}
+_TF_TENSOR_CACHE: dict[tuple, dict[str, "torch.Tensor"]] = {}
 
 
 def prepare_transfer_function(
@@ -234,6 +236,55 @@ def prepare_transfer_function(
     return tf
 
 
+def prepare_transfer_function_tensors(
+    settings: TileStitchSettings,
+    *,
+    device: "str | torch.device",
+) -> dict[str, "torch.Tensor"]:
+    """Return cached transfer-function tensors resident on ``device``.
+
+    Three-dimensional phase optics are constructed entirely on the selected
+    device, avoiding a host-sized shared-optics allocation and a subsequent
+    host-to-device copy. Other modalities retain their established compute
+    path, then transfer the completed arrays.
+    """
+    import torch
+
+    from waveorder.device import resolve_device
+
+    resolved_device = resolve_device(device)
+    key = (settings.model_dump_json(), str(resolved_device))
+    cached = _TF_TENSOR_CACHE.get(key)
+    if cached is not None:
+        return cached
+
+    tile_size = dict(settings.tile.tile_size)
+    spatial_dims = ("z", "y", "x") if "z" in tile_size else ("y", "x")
+    sample = xr.DataArray(
+        np.empty((1,) + tuple(tile_size.get(d, 1) for d in spatial_dims), dtype=np.float32),
+        dims=("c",) + spatial_dims,
+    )
+    recon_dim = settings.recon.reconstruction_dimension
+    name, modality_settings = select_recon_modality(settings.recon)
+    if name == "phase":
+        from waveorder.api import phase
+
+        tensors = phase.compute_transfer_function_tensors(
+            sample,
+            recon_dim,
+            modality_settings,
+            resolved_device,
+        )
+    else:
+        dataset = prepare_transfer_function(settings, device=resolved_device)
+        tensors = {
+            key: torch.as_tensor(value.values, device=resolved_device) for key, value in dataset.data_vars.items()
+        }
+
+    _TF_TENSOR_CACHE[key] = tensors
+    return tensors
+
+
 def clear_transfer_function_cache() -> None:
     """Clear the process-local TF cache.
 
@@ -241,3 +292,4 @@ def clear_transfer_function_cache() -> None:
     let the cache persist for the lifetime of the worker process.
     """
     _TF_CACHE.clear()
+    _TF_TENSOR_CACHE.clear()
