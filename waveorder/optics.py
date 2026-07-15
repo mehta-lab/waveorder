@@ -932,7 +932,9 @@ def compute_weak_object_transfer_function_3D(
     PG = detection_pupil.unsqueeze(0) * greens_function_z
 
     SPHz_hat = torch.fft.fft2(SPHz, dim=(-2, -1))
+    del SPHz
     PG_hat = torch.fft.fft2(PG, dim=(-2, -1))
+    del PG
 
     H1 = torch.fft.ifft2(torch.conj(SPHz_hat) * PG_hat, dim=(-2, -1))
     H1 = H1 * window.reshape((1,) * (H1.ndim - 3) + (-1, 1, 1))
@@ -941,6 +943,7 @@ def compute_weak_object_transfer_function_3D(
     H2 = torch.fft.ifft2(SPHz_hat * torch.conj(PG_hat), dim=(-2, -1))
     H2 = H2 * window.reshape((1,) * (H2.ndim - 3) + (-1, 1, 1))
     H2 = torch.fft.fft(H2, dim=-3)
+    del SPHz_hat, PG_hat
 
     # direct_intensity: sum over Y,X with keepdim for broadcast
     det_sq = detection_pupil * torch.conj(detection_pupil)
