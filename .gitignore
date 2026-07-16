@@ -160,5 +160,7 @@ scripts/
 # benchmark results
 runs/
 
-# Claude Code session state
-.claude/
+# Claude Code session state (but keep shared project skills)
+.claude/*
+!.claude/skills/
+!.claude/skills/**
