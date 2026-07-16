@@ -1,37 +1,72 @@
 import click
 
 
+def _add_transfer_function_image(viewer, name, arr, shift_axes=None):
+    """Add one transfer function array to the viewer as real/imag bwr layers."""
+    import numpy as np
+
+    # Remove leading singleton dims (T, C)
+    while arr.ndim > 3 and arr.shape[0] == 1:
+        arr = arr[0]
+
+    # ifftshift to center the DC component (all axes by default)
+    arr = np.fft.ifftshift(arr, axes=shift_axes)
+
+    lim = np.max(np.abs(arr))
+    if lim == 0:
+        lim = 1.0
+
+    viewer.add_image(arr.real, name=f"Re({name})", colormap="bwr", contrast_limits=(-lim, lim))
+    if np.iscomplexobj(arr):
+        viewer.add_image(arr.imag, name=f"Im({name})", colormap="bwr", contrast_limits=(-lim, lim))
+
+
 def _open_transfer_function(viewer, path):
-    """Open a transfer function zarr, displaying real/imag parts with bwr colormap."""
+    """Open a transfer function zarr in napari.
+
+    2D reconstructions store a singular system (``U``, ``S``, ``Vh``) instead of
+    a direct transfer function. In that case the transfer function is
+    reconstructed from the SVD, ``H = U @ diag(S) @ Vh`` at every lateral
+    frequency, and the resulting transfer function(s) are shown rather than the
+    raw singular vectors. All arrays are displayed as real/imag parts with a
+    diverging ``bwr`` colormap.
+    """
     import numpy as np
     import zarr
 
     root = zarr.open(path, mode="r")
-    for name in root.keys():
-        arr = np.array(root[name])
-        # Remove leading singleton dims (T, C)
-        while arr.ndim > 3 and arr.shape[0] == 1:
-            arr = arr[0]
+    names = list(root.keys())
 
-        # ifftshift to center the DC component
-        arr = np.fft.ifftshift(arr)
+    svd_components = {"singular_system_U", "singular_system_S", "singular_system_Vh"}
+    if svd_components.issubset(names):
+        # Reconstruct the transfer function from the singular system.
+        # Stored shapes: U (1, s, k, Vy, Vx), S (1, 1, k, Vy, Vx),
+        # Vh (1, k, Z, Vy, Vx). H[s, z] = sum_k U[s, k] * S[k] * Vh[k, z].
+        U = np.asarray(root["singular_system_U"])[0]  # (s, k, Vy, Vx)
+        S = np.asarray(root["singular_system_S"])[0, 0]  # (k, Vy, Vx)
+        Vh = np.asarray(root["singular_system_Vh"])[0]  # (k, Z, Vy, Vx)
+        H = np.einsum("skyx,kyx,kzyx->szyx", U, S.astype(U.dtype), Vh)  # (s, Z, Vy, Vx)
 
-        lim = np.max(np.abs(arr))
-        if lim == 0:
-            lim = 1.0
-        viewer.add_image(
-            arr.real,
-            name=f"Re({name})",
-            colormap="bwr",
-            contrast_limits=(-lim, lim),
-        )
-        if np.iscomplexobj(arr):
-            viewer.add_image(
-                arr.imag,
-                name=f"Im({name})",
-                colormap="bwr",
-                contrast_limits=(-lim, lim),
-            )
+        # Name the output transfer functions by object type.
+        labels = {
+            1: ["transfer_function"],
+            2: ["absorption_transfer_function", "phase_transfer_function"],
+        }.get(H.shape[0], [f"transfer_function_{i}" for i in range(H.shape[0])])
+
+        for component, label in zip(H, labels):
+            # Z is a real-space defocus axis, so only ifftshift the lateral
+            # frequency axes.
+            _add_transfer_function_image(viewer, label, component, shift_axes=(-2, -1))
+
+        # Show any remaining (non-SVD) transfer function arrays, if present.
+        for name in names:
+            if name.startswith("singular_system_"):
+                continue
+            _add_transfer_function_image(viewer, name, np.asarray(root[name]))
+        return
+
+    for name in names:
+        _add_transfer_function_image(viewer, name, np.asarray(root[name]))
 
 
 def _is_transfer_function(path):

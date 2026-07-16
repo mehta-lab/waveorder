@@ -34,8 +34,12 @@ Notes:
 - The subcommand is `compute-tf` (alias for `compute-transfer-function`) — there
   is no `calc-tf`.
 - `wo view` auto-detects a transfer function (it has `settings` in its zarr
-  attrs) and shows each component's real/imag parts with a diverging `bwr`
-  colormap, `ifftshift`-ed so DC is centered.
+  attrs) and shows real/imag parts with a diverging `bwr` colormap, `ifftshift`-ed
+  so DC is centered. **3D** reconstructions store the transfer function directly.
+  **2D** reconstructions store a singular system (`U`, `S`, `Vh`); `wo view`
+  reconstructs the transfer function from the SVD (`H = U @ diag(S) @ Vh`) and
+  shows that (e.g. the absorption and phase transfer functions for 2D phase)
+  rather than the raw singular vectors.
 - `wo view` starts napari's event loop and **blocks the terminal until closed**.
   When you run it, launch it in the background (`&`, or the Bash tool's
   `run_in_background: true`), tell the user the window is open, and let them
