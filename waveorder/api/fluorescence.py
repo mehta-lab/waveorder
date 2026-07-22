@@ -222,6 +222,7 @@ def compute_transfer_function(
             wavelength_emission=s.wavelength_emission,
             index_of_refraction_media=s.index_of_refraction_media,
             numerical_aperture_detection=s.numerical_aperture_detection,
+            confocal_pinhole_diameter=s.confocal_pinhole_diameter,
         )
         U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_tf)
 
@@ -242,6 +243,7 @@ def compute_transfer_function(
             z_padding=s.z_padding,
             index_of_refraction_media=s.index_of_refraction_media,
             numerical_aperture_detection=s.numerical_aperture_detection,
+            confocal_pinhole_diameter=s.confocal_pinhole_diameter,
         )
 
         return xr.Dataset(
