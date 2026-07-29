@@ -5,6 +5,7 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
+from waveorder._pixel_size import YXPixelSize
 from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
@@ -79,16 +80,18 @@ def calculate_transfer_function(
         transverse_nyquist = transverse_nyquist / 2
         axial_nyquist = axial_nyquist / 2
 
-    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
+    yx_pixel_size = YXPixelSize.from_value(yx_pixel_size)
+    y_factor = int(np.ceil(yx_pixel_size.y / transverse_nyquist))
+    x_factor = int(np.ceil(yx_pixel_size.x / transverse_nyquist))
     z_factor = int(np.ceil(z_pixel_size / axial_nyquist))
 
     optical_transfer_function = _calculate_wrap_unsafe_transfer_function(
         (
             zyx_shape[0] * z_factor,
-            zyx_shape[1] * yx_factor,
-            zyx_shape[2] * yx_factor,
+            zyx_shape[1] * y_factor,
+            zyx_shape[2] * x_factor,
         ),
-        yx_pixel_size / yx_factor,
+        YXPixelSize(y=yx_pixel_size.y / y_factor, x=yx_pixel_size.x / x_factor),
         z_pixel_size / z_factor,
         wavelength_emission,
         z_padding,

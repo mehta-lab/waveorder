@@ -4,7 +4,7 @@ time_indices: all                           # time points to reconstruct
 reconstruction_dimension: 2                 # 2 for thin samples, 3 for thick
 fluorescence:
   transfer_function:
-    yx_pixel_size: 0.1                      # lateral pixel size in micrometers
+    yx_pixel_size: 0.1                      # lateral pixel size in micrometers; scalar for isotropic, or {y, x} mapping for anisotropic
     z_pixel_size: 0.25                      # axial pixel size in micrometers
     z_padding: 0                            # z slices to pad for axial boundary effects
     z_focus_offset: 0                       # (optimizable) offset from center slice in slice units

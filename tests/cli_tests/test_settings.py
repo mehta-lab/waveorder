@@ -1,8 +1,10 @@
 from pathlib import Path
 
 import pytest
+import yaml
 from pydantic import ValidationError
 
+from waveorder._pixel_size import YXPixelSize
 from waveorder.api import birefringence, fluorescence, phase
 from waveorder.cli import settings
 from waveorder.io import utils
@@ -118,3 +120,59 @@ def test_generate_example_settings():
         utils.model_to_commented_yaml(settings_obj, config_path)
         settings_roundtrip = utils.yaml_to_model(config_path, settings.ReconstructionSettings)
         assert settings_obj.model_dump() == settings_roundtrip.model_dump()
+
+
+def test_phase_yx_pixel_size_scalar_form():
+    """The legacy scalar form parses into an isotropic YXPixelSize."""
+    tf = phase.TransferFunctionSettings(yx_pixel_size=0.3)
+    assert isinstance(tf.yx_pixel_size, YXPixelSize)
+    assert tf.yx_pixel_size.y == 0.3
+    assert tf.yx_pixel_size.x == 0.3
+
+
+def test_phase_yx_pixel_size_dict_form():
+    """The {y, x} mapping form parses into an anisotropic YXPixelSize."""
+    tf = phase.TransferFunctionSettings(yx_pixel_size={"y": 0.3, "x": 0.25})
+    assert isinstance(tf.yx_pixel_size, YXPixelSize)
+    assert tf.yx_pixel_size.y == 0.3
+    assert tf.yx_pixel_size.x == 0.25
+
+
+def test_phase_yx_pixel_size_scalar_equals_isotropic_mapping():
+    """Scalar and isotropic mapping forms produce equal settings."""
+    a = phase.TransferFunctionSettings(yx_pixel_size=0.3)
+    b = phase.TransferFunctionSettings(yx_pixel_size={"y": 0.3, "x": 0.3})
+    assert a.yx_pixel_size == b.yx_pixel_size
+
+
+def test_yaml_roundtrip_anisotropic_yx_pixel_size(tmp_path):
+    """An anisotropic config round-trips through YAML losslessly."""
+    s = phase.TransferFunctionSettings(yx_pixel_size={"y": 0.3, "x": 0.25})
+    path = tmp_path / "phase_aniso.yml"
+    utils.model_to_yaml(s, path)
+    parsed = yaml.safe_load(path.read_text())
+    assert parsed["yx_pixel_size"] == {"y": 0.3, "x": 0.25}
+    reparsed = utils.yaml_to_model(path, phase.TransferFunctionSettings)
+    assert reparsed.yx_pixel_size.y == 0.3
+    assert reparsed.yx_pixel_size.x == 0.25
+
+
+def test_yaml_roundtrip_isotropic_yx_pixel_size_stays_scalar(tmp_path):
+    """An isotropic config serializes back as a scalar (not as {y: 0.3, x: 0.3})."""
+    s = phase.TransferFunctionSettings(yx_pixel_size=0.3)
+    path = tmp_path / "phase_iso.yml"
+    utils.model_to_yaml(s, path)
+    parsed = yaml.safe_load(path.read_text())
+    assert parsed["yx_pixel_size"] == 0.3
+
+
+def test_invalid_yx_pixel_size_mapping_rejected():
+    """A typo in the mapping form fails validation, not silently."""
+    with pytest.raises(ValidationError):
+        phase.TransferFunctionSettings(yx_pixel_size={"Y": 0.3, "x": 0.25})
+
+
+def test_negative_yx_pixel_size_rejected():
+    """Negative spacings are rejected."""
+    with pytest.raises(ValidationError):
+        phase.TransferFunctionSettings(yx_pixel_size={"y": -0.3, "x": 0.25})

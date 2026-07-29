@@ -1,6 +1,7 @@
 import numpy as np
 import torch
 
+from waveorder._pixel_size import YXPixelSize
 from waveorder.models import isotropic_fluorescent_thin_3d
 
 
@@ -167,6 +168,54 @@ def test_end_to_end_simulation():
     recon_max = torch.max(yx_fluorescence_recon)
     # More lenient test - just check reconstruction is non-zero
     assert recon_max > 0.01 * original_max  # Very lenient scale preservation
+
+
+def test_calculate_transfer_function_isotropic_yx_pixel_size_equivalence():
+    """Anisotropic YXPixelSize with y == x reproduces the legacy scalar output."""
+    common = dict(
+        yx_shape=(64, 64),
+        z_position_list=[-1.0, 0.0, 1.0],
+        wavelength_emission=0.532,
+        index_of_refraction_media=1.3,
+        numerical_aperture_detection=1.2,
+    )
+    tf_scalar = isotropic_fluorescent_thin_3d.calculate_transfer_function(yx_pixel_size=0.1, **common)
+    tf_model = isotropic_fluorescent_thin_3d.calculate_transfer_function(
+        yx_pixel_size=YXPixelSize.isotropic(0.1), **common
+    )
+    assert torch.allclose(tf_scalar, tf_model)
+
+
+def test_calculate_transfer_function_anisotropic_runs():
+    """y != x produces a finite transfer function of the expected shape."""
+    tf = isotropic_fluorescent_thin_3d.calculate_transfer_function(
+        yx_shape=(64, 64),
+        yx_pixel_size=YXPixelSize(y=0.15, x=0.1),
+        z_position_list=[-1.0, 0.0, 1.0],
+        wavelength_emission=0.532,
+        index_of_refraction_media=1.3,
+        numerical_aperture_detection=1.2,
+    )
+    assert tf.shape == (3, 64, 64)
+    assert torch.isfinite(tf.real).all()
+    assert torch.isfinite(tf.imag).all()
+
+
+def test_reconstruct_anisotropic_smoke():
+    """End-to-end reconstruct on random data with anisotropic yx pixel size runs."""
+    yx_shape = (32, 32)
+    z_position_list = [-1.0, 0.0, 1.0]
+    zyx_data = torch.rand((len(z_position_list),) + yx_shape)
+    result = isotropic_fluorescent_thin_3d.reconstruct(
+        zyx_data,
+        yx_pixel_size=YXPixelSize(y=0.15, x=0.1),
+        z_position_list=z_position_list,
+        wavelength_emission=0.507,
+        index_of_refraction_media=1.3,
+        numerical_aperture_detection=1.2,
+    )
+    assert result.shape == yx_shape
+    assert np.all(np.isfinite(result.numpy()))
 
 
 def test_reconstruct():

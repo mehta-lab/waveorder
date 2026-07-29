@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import xarray as xr
 
+from waveorder._pixel_size import YXPixelSize
 from waveorder.api import birefringence, phase
 from waveorder.api._utils import (
     _biref_inverse_kwargs,
@@ -81,6 +82,13 @@ def simulate(
     Z, Y, X = zyx_shape
     yx_shape = (Y, X)
     s = settings_phase.transfer_function
+    yx_pixel_size = YXPixelSize.from_value(s.yx_pixel_size)
+    if not yx_pixel_size.is_isotropic:
+        raise NotImplementedError(
+            "Anisotropic yx_pixel_size is not supported by the combined "
+            "birefringence + phase reconstruction. Pass an isotropic "
+            "yx_pixel_size."
+        )
 
     # --- 2D star phantom (birefringence + phase) ---
     retardance, orientation, transmittance, depolarization = inplane_oriented_thick_pol3d.generate_test_phantom(
@@ -193,8 +201,8 @@ def simulate(
     # --- Build phantom (all properties localized to central slices) ---
     zyx_coords = {
         "z": np.arange(Z) * s.z_pixel_size,
-        "y": np.arange(Y) * s.yx_pixel_size,
-        "x": np.arange(X) * s.yx_pixel_size,
+        "y": np.arange(Y) * yx_pixel_size.y,
+        "x": np.arange(X) * yx_pixel_size.x,
     }
 
     zyx_ret = np.zeros((Z, Y, X), dtype=np.float32)

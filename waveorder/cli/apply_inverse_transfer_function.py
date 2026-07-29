@@ -5,6 +5,7 @@ from typing import Literal
 
 import click
 
+from waveorder._pixel_size import YXPixelSize
 from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
@@ -118,18 +119,23 @@ def _warn_pixel_size_mismatch(input_scale, config_pixel_sizes):
     ----------
     input_scale : tuple[float, ...]
         TCZYX scale from the input dataset.
-    config_pixel_sizes : tuple[float, float]
-        (z_pixel_size, yx_pixel_size) from the reconstruction config.
+    config_pixel_sizes : tuple[float, YXPixelSize]
+        (z_pixel_size, yx_pixel_size) from the reconstruction config. The
+        lateral entry is a :class:`YXPixelSize` with ``.y`` and ``.x``
+        spacings.
     """
     rel_tol = 0.05
     z_pixel_size, yx_pixel_size = config_pixel_sizes
-    _, _, z_scale, yx_scale, _ = input_scale
+    yx_pixel_size = YXPixelSize.from_value(yx_pixel_size)
+    _, _, z_scale, y_scale, x_scale = input_scale
 
     mismatches = []
     if not math.isclose(z_scale, z_pixel_size, rel_tol=rel_tol):
         mismatches.append(f"  z: input={z_scale}, config={z_pixel_size}")
-    if not math.isclose(yx_scale, yx_pixel_size, rel_tol=rel_tol):
-        mismatches.append(f"  yx: input={yx_scale}, config={yx_pixel_size}")
+    if not math.isclose(y_scale, yx_pixel_size.y, rel_tol=rel_tol):
+        mismatches.append(f"  y: input={y_scale}, config={yx_pixel_size.y}")
+    if not math.isclose(x_scale, yx_pixel_size.x, rel_tol=rel_tol):
+        mismatches.append(f"  x: input={x_scale}, config={yx_pixel_size.x}")
 
     if mismatches:
         detail = "\n".join(mismatches)
@@ -184,7 +190,8 @@ def get_reconstruction_output_metadata(
     if config_pixel_sizes is not None:
         if write_config_scale_to_output:
             z_pixel_size, yx_pixel_size = config_pixel_sizes
-            scale = (scale[0], scale[1], z_pixel_size, yx_pixel_size, yx_pixel_size)
+            yx_pixel_size = YXPixelSize.from_value(yx_pixel_size)
+            scale = (scale[0], scale[1], z_pixel_size, yx_pixel_size.y, yx_pixel_size.x)
         else:
             _warn_pixel_size_mismatch(scale, config_pixel_sizes)
 

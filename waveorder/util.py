@@ -8,6 +8,7 @@ import torch
 from numpy.fft import fft, fft2, fftn, fftshift, ifft, ifftn, ifftshift
 from scipy.ndimage import uniform_filter
 
+from ._pixel_size import YXPixelSize
 from .optics import scattering_potential_tensor_to_3D_orientation_PN
 
 numbers = re.compile(r"(\d+)")
@@ -213,44 +214,37 @@ def genStarTarget_3D(
 
 
 def generate_sphere_target(zyx_shape, yx_pixel_size, z_pixel_size, radius, blur_size=0.1):
-    """
-
-    generate 3D sphere target for simulation
+    """Generate a 3D sphere target for simulation.
 
     Parameters
     ----------
-        zyx_shape   : tuple
-                    shape of the computed 3D space with size of (Z, Y, X)
-
-        yx_pixel_size        : float
-                    transverse pixel size of the image space
-
-        z_pixel_size       : float
-                    axial step size of the image space
-
-        radius    : float
-                    radius of the generated sphere
-
-        blur_size : float
-                    the standard deviation of the imposed 3D Gaussian blur on the simulated image
-
+    zyx_shape : tuple of int
+        Shape of the computed 3D space as ``(Z, Y, X)``.
+    yx_pixel_size : YXPixelSize or float
+        Lateral pixel size in micrometers. A scalar is treated as isotropic
+        spacing in y and x; pass a :class:`YXPixelSize` for anisotropic.
+    z_pixel_size : float
+        Axial step size of the image space.
+    radius : float
+        Radius of the generated sphere in micrometers.
+    blur_size : float
+        Standard deviation of the 3D Gaussian blur applied to the sphere.
 
     Returns
     -------
-        sphere    : torch.tensor
-                    3D star image with the size of (Z, Y, X)
-
-        azimuth   : torch.tensor
-                    azimuthal angle of the 3D polar coordinate with the size of (Z, Y, X)
-
-        inc_angle : torch.tensor
-                    theta angle of the 3D polar coordinate with the size of (Z, Y, X)
-
+    sphere : torch.Tensor
+        3D image of shape ``(Z, Y, X)``.
+    azimuth : torch.Tensor
+        Azimuthal angle of the 3D polar coordinate, shape ``(Z, Y, X)``.
+    inc_angle : torch.Tensor
+        Polar (inclination) angle of the 3D polar coordinate, shape
+        ``(Z, Y, X)``.
     """
+    yx_pixel_size = YXPixelSize.from_value(yx_pixel_size)
 
     Z, Y, X = zyx_shape
-    x = (torch.arange(X) - X // 2) * yx_pixel_size
-    y = (torch.arange(Y) - Y // 2) * yx_pixel_size
+    x = (torch.arange(X) - X // 2) * yx_pixel_size.x
+    y = (torch.arange(Y) - Y // 2) * yx_pixel_size.y
     z = (torch.arange(Z) - Z // 2) * z_pixel_size
 
     zz, yy, xx = torch.meshgrid(z, y, x, indexing="ij")
@@ -275,7 +269,7 @@ def generate_sphere_target(zyx_shape, yx_pixel_size, z_pixel_size, radius, blur_
 
 def gen_coordinate(
     img_dim: tuple[int, int],
-    ps: float,
+    ps,
     device: str | torch.device | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """Generate spatial and spatial frequency coordinate arrays.
@@ -284,8 +278,10 @@ def gen_coordinate(
     ----------
     img_dim : tuple of int
         Shape of the computed 2D space ``(Ny, Nx)``.
-    ps : float
-        Transverse pixel size of the image space.
+    ps : YXPixelSize or float
+        Transverse pixel size of the image space. A scalar is treated as
+        isotropic spacing in y and x; pass a :class:`YXPixelSize` for
+        anisotropic.
     device : str, torch.device, or None
         Output tensor device.
 
@@ -301,12 +297,12 @@ def gen_coordinate(
         y spatial frequency array with shape ``(Ny, Nx)``.
     """
     N, M = img_dim
-    ps = float(ps)
+    ps = YXPixelSize.from_value(ps)
 
-    fx = torch.fft.fftfreq(M, ps, device=device)
-    fy = torch.fft.fftfreq(N, ps, device=device)
-    x = torch.fft.ifftshift((torch.arange(M, dtype=torch.float32, device=device) - M / 2) * ps)
-    y = torch.fft.ifftshift((torch.arange(N, dtype=torch.float32, device=device) - N / 2) * ps)
+    fx = torch.fft.fftfreq(M, ps.x, device=device)
+    fy = torch.fft.fftfreq(N, ps.y, device=device)
+    x = torch.fft.ifftshift((torch.arange(M, dtype=torch.float32, device=device) - M / 2) * ps.x)
+    y = torch.fft.ifftshift((torch.arange(N, dtype=torch.float32, device=device) - N / 2) * ps.y)
 
     xx, yy = torch.meshgrid(x, y, indexing="xy")
     fxx, fyy = torch.meshgrid(fx, fy, indexing="xy")
@@ -315,13 +311,56 @@ def gen_coordinate(
 
 
 def generate_frequencies(img_dim, ps, device=None):
-    fy = torch.fft.fftfreq(img_dim[0], ps, device=device)
-    fx = torch.fft.fftfreq(img_dim[1], ps, device=device)
+    """Generate 2D spatial-frequency grids in ``ij`` (y, x) order.
+
+    Parameters
+    ----------
+    img_dim : tuple of int
+        Shape of the computed 2D space ``(Ny, Nx)``.
+    ps : YXPixelSize or float
+        Transverse pixel size of the image space. A scalar is treated as
+        isotropic spacing in y and x; pass a :class:`YXPixelSize` for
+        anisotropic.
+    device : str, torch.device, or None
+        Output tensor device.
+
+    Returns
+    -------
+    fyy : torch.Tensor
+        Spatial frequencies along y, broadcast to shape ``(Ny, Nx)``.
+    fxx : torch.Tensor
+        Spatial frequencies along x, broadcast to shape ``(Ny, Nx)``.
+    """
+    ps = YXPixelSize.from_value(ps)
+    fy = torch.fft.fftfreq(img_dim[0], ps.y, device=device)
+    fx = torch.fft.fftfreq(img_dim[1], ps.x, device=device)
     fyy, fxx = torch.meshgrid(fy, fx, indexing="ij")
     return fyy, fxx
 
 
 def generate_radial_frequencies(img_dim, ps, device=None):
+    """Generate the radial spatial-frequency magnitude ``sqrt(fy^2 + fx^2)``.
+
+    The output is in physical 1/length units (e.g. 1/micrometer) regardless
+    of whether the pixel size is isotropic or anisotropic, since ``fy`` and
+    ``fx`` are both produced in physical units.
+
+    Parameters
+    ----------
+    img_dim : tuple of int
+        Shape of the computed 2D space ``(Ny, Nx)``.
+    ps : YXPixelSize or float
+        Transverse pixel size of the image space. A scalar is treated as
+        isotropic spacing in y and x; pass a :class:`YXPixelSize` for
+        anisotropic.
+    device : str, torch.device, or None
+        Output tensor device.
+
+    Returns
+    -------
+    torch.Tensor
+        Radial spatial-frequency magnitude, shape ``(Ny, Nx)``.
+    """
     fyy, fxx = generate_frequencies(img_dim, ps, device=device)
     return torch.sqrt(fyy**2 + fxx**2)
 

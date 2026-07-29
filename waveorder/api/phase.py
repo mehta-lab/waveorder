@@ -10,6 +10,7 @@ import xarray as xr
 from pydantic import Field, NonNegativeFloat, model_validator
 
 from waveorder import optics, util
+from waveorder._pixel_size import YXPixelSize
 from waveorder.api._settings import (
     FourierApplyInverseSettings,
     MyBaseModel,
@@ -108,17 +109,18 @@ def simulate(
         settings = Settings()
 
     s = settings.transfer_function.resolve_floats()
+    yx_pixel_size = YXPixelSize.from_value(s.yx_pixel_size)
     Z, Y, X = zyx_shape
     zyx_coords = {
         "z": np.arange(Z) * s.z_pixel_size,
-        "y": np.arange(Y) * s.yx_pixel_size,
-        "x": np.arange(X) * s.yx_pixel_size,
+        "y": np.arange(Y) * yx_pixel_size.y,
+        "x": np.arange(X) * yx_pixel_size.x,
     }
 
     if recon_dim == 3:
         zyx_phase = phase_thick_3d.generate_test_phantom(
             zyx_shape,
-            s.yx_pixel_size,
+            yx_pixel_size,
             s.z_pixel_size,
             wavelength_illumination=s.wavelength_illumination,
             index_of_refraction_media=s.index_of_refraction_media,
@@ -127,7 +129,7 @@ def simulate(
         )
         real_tf, _ = phase_thick_3d.calculate_transfer_function(
             zyx_shape,
-            s.yx_pixel_size,
+            yx_pixel_size,
             s.z_pixel_size,
             wavelength_illumination=s.wavelength_illumination,
             z_padding=0,

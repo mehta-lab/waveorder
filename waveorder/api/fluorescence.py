@@ -10,6 +10,7 @@ import torch
 import xarray as xr
 from pydantic import Field, PositiveFloat, model_validator
 
+from waveorder._pixel_size import YXPixelSize
 from waveorder.api._settings import (
     FourierApplyInverseSettings,
     MyBaseModel,
@@ -48,12 +49,16 @@ class TransferFunctionSettings(OptimizableFourierTransferFunctionSettings):
 
     @model_validator(mode="after")
     def warn_wavelength_consistency(self):
-        ratio = self.yx_pixel_size / self.wavelength_emission
-        if ratio < 1.0 / 20 or ratio > 20:
-            warnings.warn(
-                f"yx_pixel_size ({self.yx_pixel_size}) / wavelength_emission ({self.wavelength_emission}) = {ratio}. Did you use consistent units?",
-                UserWarning,
-            )
+        # Normalize defensively for the model_copy(update=...) path that
+        # bypasses field validators.
+        yx = YXPixelSize.from_value(self.yx_pixel_size)
+        for axis, ps in (("y", yx.y), ("x", yx.x)):
+            ratio = ps / self.wavelength_emission
+            if ratio < 1.0 / 20 or ratio > 20:
+                warnings.warn(
+                    f"{axis}_pixel_size ({ps}) / wavelength_emission ({self.wavelength_emission}) = {ratio}. Did you use consistent units?",
+                    UserWarning,
+                )
         return self
 
 
@@ -104,23 +109,24 @@ def simulate(
         settings = Settings()
 
     s = settings.transfer_function.resolve_floats()
+    yx_pixel_size = YXPixelSize.from_value(s.yx_pixel_size)
     Z, Y, X = zyx_shape
     zyx_coords = {
         "z": np.arange(Z) * s.z_pixel_size,
-        "y": np.arange(Y) * s.yx_pixel_size,
-        "x": np.arange(X) * s.yx_pixel_size,
+        "y": np.arange(Y) * yx_pixel_size.y,
+        "x": np.arange(X) * yx_pixel_size.x,
     }
 
     if recon_dim == 3:
         zyx_fluorescence = isotropic_fluorescent_thick_3d.generate_test_phantom(
             zyx_shape,
-            s.yx_pixel_size,
+            yx_pixel_size,
             s.z_pixel_size,
             sphere_radius=sphere_radius,
         )
         otf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
             zyx_shape,
-            s.yx_pixel_size,
+            yx_pixel_size,
             s.z_pixel_size,
             wavelength_emission=s.wavelength_emission,
             z_padding=0,
@@ -216,6 +222,7 @@ def compute_transfer_function(
             wavelength_emission=s.wavelength_emission,
             index_of_refraction_media=s.index_of_refraction_media,
             numerical_aperture_detection=s.numerical_aperture_detection,
+            confocal_pinhole_diameter=s.confocal_pinhole_diameter,
         )
         U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_tf)
 
@@ -236,6 +243,7 @@ def compute_transfer_function(
             z_padding=s.z_padding,
             index_of_refraction_media=s.index_of_refraction_media,
             numerical_aperture_detection=s.numerical_aperture_detection,
+            confocal_pinhole_diameter=s.confocal_pinhole_diameter,
         )
 
         return xr.Dataset(

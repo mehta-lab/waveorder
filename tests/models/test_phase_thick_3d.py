@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 import torch
 
+from waveorder._pixel_size import YXPixelSize
 from waveorder.models import phase_thick_3d
 
 
@@ -114,6 +115,61 @@ def test_phase_invariance(z_pixel_size_um, yx_pixel_size_um, tolerance):
 
     # The physical property Δn should be invariant to voxel size
     assert np.abs((recon_delta_n - baseline_delta_n) / baseline_delta_n) < tolerance
+
+
+def test_calculate_transfer_function_isotropic_yx_pixel_size_equivalence():
+    """Anisotropic YXPixelSize with y == x reproduces the legacy scalar output."""
+    common = dict(
+        zyx_shape=(10, 32, 32),
+        z_pixel_size=0.5,
+        z_padding=0,
+        wavelength_illumination=0.532,
+        index_of_refraction_media=1.3,
+        numerical_aperture_illumination=0.5,
+        numerical_aperture_detection=1.2,
+    )
+    H_re_scalar, H_im_scalar = phase_thick_3d.calculate_transfer_function(yx_pixel_size=0.2, **common)
+    H_re_model, H_im_model = phase_thick_3d.calculate_transfer_function(
+        yx_pixel_size=YXPixelSize.isotropic(0.2), **common
+    )
+    assert torch.allclose(H_re_scalar, H_re_model)
+    assert torch.allclose(H_im_scalar, H_im_model)
+
+
+def test_calculate_transfer_function_anisotropic_runs():
+    """y != x produces finite transfer functions of the expected shape."""
+    H_re, H_im = phase_thick_3d.calculate_transfer_function(
+        zyx_shape=(10, 32, 32),
+        yx_pixel_size=YXPixelSize(y=0.3, x=0.2),
+        z_pixel_size=0.5,
+        z_padding=0,
+        wavelength_illumination=0.532,
+        index_of_refraction_media=1.3,
+        numerical_aperture_illumination=0.5,
+        numerical_aperture_detection=1.2,
+    )
+    assert H_re.shape == (10, 32, 32)
+    assert H_im.shape == (10, 32, 32)
+    assert torch.isfinite(H_re).all()
+    assert torch.isfinite(H_im).all()
+
+
+def test_reconstruct_anisotropic_smoke():
+    """End-to-end reconstruct on random data with anisotropic yx pixel size runs."""
+    zyx_shape = (10, 32, 32)
+    zyx_data = torch.rand(zyx_shape)
+    result = phase_thick_3d.reconstruct(
+        zyx_data,
+        yx_pixel_size=YXPixelSize(y=0.3, x=0.2),
+        z_pixel_size=0.5,
+        wavelength_illumination=0.532,
+        z_padding=0,
+        index_of_refraction_media=1.3,
+        numerical_aperture_illumination=0.5,
+        numerical_aperture_detection=1.2,
+    )
+    assert result.shape == zyx_shape
+    assert np.all(np.isfinite(result.numpy()))
 
 
 def test_reconstruct():
