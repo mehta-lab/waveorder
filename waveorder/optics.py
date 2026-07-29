@@ -172,7 +172,9 @@ def generate_tilted_pupil(
     tilt_angle_azimuth : float or Tensor
         Azimuth angle (radians) of the tilt direction in the xy-plane.
     slope : float
-        Sigmoid roll-off in units of pixels (~90% change per `slope` pixels).
+        Sigmoid roll-off in units of frequency-grid steps (~90% change per
+        `slope` steps). When y and x sampling differ, the finer of the two
+        steps sets the width, so the roll-off matches along both axes.
 
     Returns
     -------
@@ -192,7 +194,7 @@ def generate_tilted_pupil(
 
     # Grid-derived quantities don't need gradients
     with torch.no_grad():
-        df = torch.abs(fxx[0, 1] - fxx[0, 0])
+        df = torch.min(torch.abs(fxx[0, 1] - fxx[0, 0]), torch.abs(fyy[1, 0] - fyy[0, 0]))
         pixel_slope = slope / df
         fz_sq = K**2 - fxx**2 - fyy**2
         inside_sphere = (fz_sq >= 0).to(fxx.dtype)

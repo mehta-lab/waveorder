@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, model_serializer
+from pydantic import BaseModel, ConfigDict, Field, PositiveFloat, model_serializer, model_validator
 
 
 class YXPixelSize(BaseModel):
@@ -26,8 +26,24 @@ class YXPixelSize(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    y: PositiveFloat = Field(default=0.1, description="pixel size along y in micrometers")
-    x: PositiveFloat = Field(default=0.1, description="pixel size along x in micrometers")
+    y: PositiveFloat = Field(default=0.1, allow_inf_nan=False, description="pixel size along y in micrometers")
+    x: PositiveFloat = Field(default=0.1, allow_inf_nan=False, description="pixel size along x in micrometers")
+
+    @model_validator(mode="before")
+    @classmethod
+    def _require_both_axes(cls, data: Any) -> Any:
+        """Reject a mapping that names one axis but not the other.
+
+        The fields carry defaults so the napari plugin can seed its form
+        widgets, but a config that spells out one axis is a mistake rather
+        than a request for the default on the other.
+        """
+        if isinstance(data, dict):
+            given = {"y", "x"} & set(data)
+            if given and len(given) == 1:
+                missing = ({"y", "x"} - given).pop()
+                raise ValueError(f"anisotropic yx_pixel_size needs both 'y' and 'x'; {missing!r} is missing")
+        return data
 
     @classmethod
     def isotropic(cls, value: float) -> YXPixelSize:
@@ -46,7 +62,7 @@ class YXPixelSize(BaseModel):
 
         Accepts any float-castable scalar (Python ``float`` / ``int``, numpy
         scalars, 0-d ``ndarray``, 0-d tensors with ``__float__``), a mapping
-        with keys ``y`` and ``x``, or an existing :class:`YXPixelSize`.
+        with both keys ``y`` and ``x``, or an existing :class:`YXPixelSize`.
 
         Parameters
         ----------
@@ -61,24 +77,26 @@ class YXPixelSize(BaseModel):
 
         Raises
         ------
-        TypeError
-            If ``value`` is not one of the accepted forms.
+        ValueError
+            If ``value`` is not one of the accepted forms. Pydantic converts
+            ``ValueError`` into a ``ValidationError``, so callers validating a
+            model see a field error rather than an escaping exception.
         """
         if isinstance(value, cls):
             return value
         if isinstance(value, bool):
-            raise TypeError("cannot convert bool to YXPixelSize")
+            raise ValueError("cannot convert bool to YXPixelSize")
         if isinstance(value, str):
-            raise TypeError("cannot convert str to YXPixelSize")
+            raise ValueError("cannot convert str to YXPixelSize")
         if isinstance(value, dict):
-            return cls(**value)
+            return cls.model_validate(value)
         # Accept any float-castable scalar: Python numbers, numpy scalars,
         # 0-d ndarrays, 0-d tensors. ``float()`` raises TypeError for
         # multi-element arrays and non-numeric inputs.
         try:
             as_float = float(value)
         except (TypeError, ValueError):
-            raise TypeError(
+            raise ValueError(
                 f"cannot convert {type(value).__name__} to YXPixelSize; "
                 "expected float, mapping with keys 'y' and 'x', or YXPixelSize"
             ) from None
@@ -96,6 +114,6 @@ class YXPixelSize(BaseModel):
         Both forms round-trip through :meth:`from_value`, so YAML configs
         for square pixels stay readable as a single number.
         """
-        if self.y == self.x:
+        if self.is_isotropic:
             return self.y
         return {"y": self.y, "x": self.x}
