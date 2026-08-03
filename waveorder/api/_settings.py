@@ -124,7 +124,9 @@ class OptimizableFourierTransferFunctionSettings(FourierTransferFunctionSettings
 
 
 class FourierApplyInverseSettings(MyBaseModel):
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = Field(
+    # "RL"/"RLGC" are accepted here but only implemented for 3D fluorescence
+    # (see waveorder.api.fluorescence); other modalities raise NotImplementedError.
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = Field(
         default="Tikhonov",
         description="'Tikhonov' or 'TV' regularization",
     )

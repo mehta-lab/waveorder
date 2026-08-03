@@ -359,7 +359,7 @@ def apply_inverse_transfer_function(
     imaginary_potential_transfer_function: Tensor,
     z_padding: int,
     absorption_ratio: float = 0.0,
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
@@ -436,6 +436,9 @@ def apply_inverse_transfer_function(
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
 
+    elif reconstruction_algorithm in ("RL", "RLGC"):
+        raise NotImplementedError("RL/RLGC reconstruction is only implemented for 3D fluorescence")
+
     # Unpad
     if z_padding != 0:
         f_real = f_real[:, z_padding:-z_padding]
@@ -457,7 +460,7 @@ def reconstruct(
     numerical_aperture_detection: Union[float, Tensor] = 1.2,
     invert_phase_contrast: bool = False,
     absorption_ratio: float = 0.0,
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,

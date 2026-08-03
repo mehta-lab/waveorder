@@ -8,7 +8,7 @@ from typing import Literal, Optional
 import numpy as np
 import torch
 import xarray as xr
-from pydantic import Field, PositiveFloat, model_validator
+from pydantic import Field, NonNegativeFloat, PositiveFloat, PositiveInt, model_validator
 
 from waveorder._pixel_size import YXPixelSize
 from waveorder.api._settings import (
@@ -62,7 +62,27 @@ class TransferFunctionSettings(OptimizableFourierTransferFunctionSettings):
         return self
 
 
-ApplyInverseSettings = FourierApplyInverseSettings
+class ApplyInverseSettings(FourierApplyInverseSettings):
+    """Fluorescence inverse settings.
+
+    Extends the shared Fourier (Tikhonov / TV) settings with the iterative
+    Richardson-Lucy ("RL") and Gradient-Consensus ("RLGC") options, which are
+    available for 3D fluorescence reconstruction only.
+    """
+
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = Field(
+        default="Tikhonov",
+        description="'Tikhonov'/'TV' filters or 'RL'/'RLGC' iterative deconvolution",
+    )
+    rl_iterations: PositiveInt = Field(default=25, description="maximum RL / RLGC iterations")
+    rl_background: NonNegativeFloat = Field(
+        default=0.0,
+        description="constant background folded into the RL / RLGC Poisson forward model",
+    )
+    rl_stopping_tolerance: Optional[NonNegativeFloat] = Field(
+        default=None,
+        description="relative-change early-stop threshold for RL / RLGC (null = run all iterations)",
+    )
 
 
 class Settings(MyBaseModel):

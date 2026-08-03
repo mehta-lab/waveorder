@@ -15,7 +15,10 @@ fluorescence:
     wavelength_emission: 0.532              # emission wavelength in micrometers
     confocal_pinhole_diameter: null         # confocal pinhole diameter (null = widefield)
   apply_inverse:
-    reconstruction_algorithm: Tikhonov      # 'Tikhonov' or 'TV' regularization
+    reconstruction_algorithm: Tikhonov      # 'Tikhonov'/'TV' filters or 'RL'/'RLGC' iterative deconvolution
     regularization_strength: 0.001          # strength of regularization
     TV_rho_strength: 0.001                  # ADMM rho parameter for TV regularization
     TV_iterations: 1                        # ADMM iterations for TV regularization
+    rl_iterations: 25                       # maximum RL / RLGC iterations
+    rl_background: 0.0                      # constant background folded into the RL / RLGC Poisson forward model
+    rl_stopping_tolerance: null             # relative-change early-stop threshold for RL / RLGC (null = run all iterations)

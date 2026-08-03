@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from waveorder import optics, sampling, util
+from waveorder import optics, rlgc, sampling, util
 from waveorder._pixel_size import YXPixelSize
 from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
@@ -238,10 +238,13 @@ def apply_inverse_transfer_function(
     zyx_data: Tensor,
     optical_transfer_function: Tensor,
     z_padding: int,
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
+    rl_iterations: int = 25,
+    rl_background: float = 0.0,
+    rl_stopping_tolerance: float | None = None,
 ) -> Tensor:
     """Reconstructs fluorescence density from defocus data.
 
@@ -254,14 +257,24 @@ def apply_inverse_transfer_function(
     z_padding : int
         Padding for axial dimension. Use zero for defocus stacks that
         extend ~3 PSF widths beyond the sample. Pad by ~3 PSF widths otherwise.
-    reconstruction_algorithm : {"Tikhonov", "TV"}, optional
-        By default "Tikhonov". "TV" is not implemented.
+    reconstruction_algorithm : {"Tikhonov", "TV", "RL", "RLGC"}, optional
+        By default "Tikhonov". "TV" is not implemented. "RL" is
+        Richardson-Lucy deconvolution and "RLGC" is its Gradient-Consensus
+        variant, which resists overfitting noise (see :mod:`waveorder.rlgc`).
     regularization_strength : float, optional
-        Regularization parameter, by default 1e-3
+        Regularization parameter (Tikhonov), by default 1e-3
     TV_rho_strength : float, optional
         TV-specific regularization parameter, by default 1e-3
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
+    rl_iterations : int, optional
+        Maximum RL / RLGC iterations, by default 25
+    rl_background : float, optional
+        Constant background (dark counts / offset) folded into the RL / RLGC
+        Poisson forward model, by default 0.0
+    rl_stopping_tolerance : float, optional
+        If set, RL / RLGC stop early once the relative change of the estimate
+        falls below this value, by default None (run all iterations)
 
     Returns
     -------
@@ -286,6 +299,29 @@ def apply_inverse_transfer_function(
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
 
+    elif reconstruction_algorithm in ("RL", "RLGC"):
+        # The OTF (shared, shape (Z,Y,X)) broadcasts over the batch axis.
+        otf = optical_transfer_function
+
+        def forward(x: Tensor) -> Tensor:
+            return torch.real(torch.fft.ifftn(torch.fft.fftn(x, dim=(-3, -2, -1)) * otf, dim=(-3, -2, -1)))
+
+        def transpose(y: Tensor) -> Tensor:
+            return torch.real(torch.fft.ifftn(torch.fft.fftn(y, dim=(-3, -2, -1)) * torch.conj(otf), dim=(-3, -2, -1)))
+
+        f_real = rlgc.richardson_lucy(
+            torch.clamp(zyx_padded, min=0.0),
+            forward,
+            transpose,
+            num_iterations=rl_iterations,
+            method=reconstruction_algorithm,
+            background=rl_background,
+            stopping_tolerance=rl_stopping_tolerance,
+        )
+
+    else:
+        raise NotImplementedError(f"Unknown reconstruction_algorithm: {reconstruction_algorithm}")
+
     # Unpad
     if z_padding != 0:
         f_real = f_real[:, z_padding:-z_padding]
@@ -305,10 +341,13 @@ def reconstruct(
     index_of_refraction_media: float,
     numerical_aperture_detection: float,
     confocal_pinhole_diameter: float | None = None,
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
+    rl_iterations: int = 25,
+    rl_background: float = 0.0,
+    rl_stopping_tolerance: float | None = None,
 ) -> Tensor:
     """Reconstruct 3D fluorescence density from a defocus stack.
 
@@ -330,14 +369,21 @@ def reconstruct(
         Detection numerical aperture
     confocal_pinhole_diameter : float | None, optional
         Confocal pinhole diameter, by default None (widefield)
-    reconstruction_algorithm : {"Tikhonov", "TV"}, optional
-        By default "Tikhonov".
+    reconstruction_algorithm : {"Tikhonov", "TV", "RL", "RLGC"}, optional
+        By default "Tikhonov". "RL"/"RLGC" are Richardson-Lucy and its
+        Gradient-Consensus variant.
     regularization_strength : float, optional
-        Regularization parameter, by default 1e-3
+        Regularization parameter (Tikhonov), by default 1e-3
     TV_rho_strength : float, optional
         TV-specific regularization parameter, by default 1e-3
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
+    rl_iterations : int, optional
+        Maximum RL / RLGC iterations, by default 25
+    rl_background : float, optional
+        Constant background folded into the RL / RLGC forward model, by default 0.0
+    rl_stopping_tolerance : float, optional
+        Relative-change early-stop threshold for RL / RLGC, by default None
 
     Returns
     -------
@@ -364,4 +410,7 @@ def reconstruct(
         regularization_strength=regularization_strength,
         TV_rho_strength=TV_rho_strength,
         TV_iterations=TV_iterations,
+        rl_iterations=rl_iterations,
+        rl_background=rl_background,
+        rl_stopping_tolerance=rl_stopping_tolerance,
     )
