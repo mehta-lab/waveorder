@@ -6,6 +6,7 @@ import subprocess
 import time
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from importlib.resources import as_file, files
 from pathlib import Path
 
 import numpy as np
@@ -82,19 +83,17 @@ class TimingTree:
 # --- Metadata collection ---
 
 
-# Path to the waveorder repo root (two levels up from this file)
-_REPO_ROOT = str(Path(__file__).resolve().parent.parent)
-
-
 def _run_git(*args: str) -> str:
     """Run a git command in the waveorder repo and return stripped stdout, or '' on failure."""
     try:
-        result = subprocess.run(
-            ["git", "-C", _REPO_ROOT, *args],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
+        with as_file(files("benchmarks")) as benchmark_root:
+            result = subprocess.run(
+                ["git", *args],
+                cwd=benchmark_root.parent,
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
         return result.stdout.strip()
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return ""

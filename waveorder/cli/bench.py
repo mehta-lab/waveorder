@@ -8,13 +8,12 @@ import os
 import shutil
 import traceback
 from datetime import datetime
+from importlib.resources import as_file, files
 from pathlib import Path
 
 import click
 import numpy as np
 import yaml
-
-_DEFAULT_EXPERIMENT = Path(__file__).parent.parent.parent / "benchmarks" / "experiments" / "regression.yml"
 
 
 def _resolve_output_dir(cli_value: str | None) -> Path:
@@ -102,9 +101,10 @@ def run(experiment, scope, output_dir, save_all):
     from benchmarks.utils import collect_metadata
 
     if experiment is None:
-        experiment = str(_DEFAULT_EXPERIMENT)
-
-    experiment_path = Path(experiment)
+        benchmark_root = click.get_current_context().with_resource(as_file(files("benchmarks")))
+        experiment_path = benchmark_root / "experiments" / "regression.yml"
+    else:
+        experiment_path = Path(experiment)
     output_dir = _resolve_output_dir(output_dir)
     exp = load_experiment(experiment_path)
 

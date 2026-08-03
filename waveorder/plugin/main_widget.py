@@ -4,7 +4,7 @@ import json
 import logging
 import os
 import textwrap
-from os.path import dirname
+from importlib.resources import files
 from pathlib import Path, PurePath
 
 # type hint/check
@@ -50,6 +50,15 @@ from waveorder.plugin import gui
 # avoid runtime import error
 if TYPE_CHECKING:
     pass
+
+
+def _load_asset_pixmap(name: str) -> QPixmap:
+    """Load a bundled image from ``waveorder/assets`` as a ``QPixmap``."""
+    data = (files("waveorder") / "assets" / name).read_bytes()
+    pixmap = QPixmap()
+    if not pixmap.loadFromData(data):
+        raise ValueError(f"Unable to load bundled image: {name}")
+    return pixmap
 
 
 class MainWidget(QWidget):
@@ -173,7 +182,6 @@ class MainWidget(QWidget):
         self.reconstruction_data = None
         self.calib_assessment_level = None
         self.ret_max = 25
-        waveorder_dir = dirname(dirname(dirname(os.path.abspath(__file__))))
         self.worker = None
 
         ## Initialize calibration plot
@@ -185,15 +193,10 @@ class MainWidget(QWidget):
 
         ## Initialize visuals
         # Initialize GUI Images (plotting legends, waveorder logo)
-        assets_dir = Path(__file__).parent.parent / "assets"
-        jch_legend_path = assets_dir / "JCh_legend.png"
-        hsv_legend_path = assets_dir / "HSV_legend.png"
-        logo_path = assets_dir / "waveorder_plugin_logo.png"
-
-        self.jch_pixmap = QPixmap(str(jch_legend_path))
-        self.hsv_pixmap = QPixmap(str(hsv_legend_path))
+        self.jch_pixmap = _load_asset_pixmap("JCh_legend.png")
+        self.hsv_pixmap = _load_asset_pixmap("HSV_legend.png")
         self.ui.label_orientation_image.setPixmap(self.hsv_pixmap)
-        logo_pixmap = QPixmap(str(logo_path))
+        logo_pixmap = _load_asset_pixmap("waveorder_plugin_logo.png")
         self.ui.label_logo.setPixmap(logo_pixmap)
 
         # Hide UI elements for popups
