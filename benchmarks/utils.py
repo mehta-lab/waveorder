@@ -89,7 +89,7 @@ def _run_git(*args: str) -> str:
         with as_file(files("benchmarks")) as benchmark_root:
             result = subprocess.run(
                 ["git", *args],
-                cwd=benchmark_root.parent,
+                cwd=benchmark_root,
                 capture_output=True,
                 text=True,
                 timeout=5,
