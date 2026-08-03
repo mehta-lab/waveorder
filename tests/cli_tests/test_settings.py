@@ -1,5 +1,3 @@
-from pathlib import Path
-
 import pytest
 import yaml
 from pydantic import ValidationError
@@ -79,9 +77,8 @@ def test_fluor_tf_settings():
         fluorescence.TransferFunctionSettings(wavelength_emission=0.500, yx_pixel_size=2000)
 
 
-def test_generate_example_settings():
-    project_root = Path(__file__).parent.parent.parent
-    example_path = project_root / "docs" / "examples" / "cli" / "configs"
+def test_generate_example_settings(pytestconfig):
+    example_path = pytestconfig.rootpath / "docs" / "examples" / "cli" / "configs"
 
     # 2D configs override regularization_strength for better 2D defaults
     phase_2d_apply_inverse = phase.ApplyInverseSettings(regularization_strength=1e-2)
