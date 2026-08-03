@@ -238,10 +238,12 @@ def apply_inverse_transfer_function(
     zyx_data: Tensor,
     optical_transfer_function: Tensor,
     z_padding: int,
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "FISTA"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
+    FISTA_max_iter: int = 100,
+    FISTA_rel_change_tol: float = 1e-3,
 ) -> Tensor:
     """Reconstructs fluorescence density from defocus data.
 
@@ -254,14 +256,22 @@ def apply_inverse_transfer_function(
     z_padding : int
         Padding for axial dimension. Use zero for defocus stacks that
         extend ~3 PSF widths beyond the sample. Pad by ~3 PSF widths otherwise.
-    reconstruction_algorithm : {"Tikhonov", "TV"}, optional
-        By default "Tikhonov". "TV" is not implemented.
+    reconstruction_algorithm : {"Tikhonov", "TV", "FISTA"}, optional
+        By default "Tikhonov". "TV" is not implemented. "FISTA" solves
+        ``min 0.5||Hx - y||^2 + 0.5 lambda ||x||^2  s.t.  x >= 0`` via
+        FISTA with a non-negativity proximal step.
     regularization_strength : float, optional
-        Regularization parameter, by default 1e-3
+        Regularization parameter (lambda), by default 1e-3. Used by both
+        Tikhonov and FISTA (shared L2 penalty).
     TV_rho_strength : float, optional
         TV-specific regularization parameter, by default 1e-3
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
+    FISTA_max_iter : int, optional
+        FISTA maximum iteration count, by default 100
+    FISTA_rel_change_tol : float, optional
+        FISTA early-stop tolerance on ``||x_{k+1} - x_k|| / ||x_k||``,
+        by default 1e-3
 
     Returns
     -------
@@ -285,6 +295,40 @@ def apply_inverse_transfer_function(
 
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
+
+    elif reconstruction_algorithm == "FISTA":
+        # FISTA on  0.5 ||H x - y||^2 + 0.5 lambda ||x||^2  s.t.  x >= 0.
+        # H is the convolution by the PSF whose OTF is `optical_transfer_function`,
+        # so Hx = IFFT(FFT(x) * OTF). The smooth-part Lipschitz constant is
+        # L = max(|OTF|^2) + lambda, giving a constant step 1/L.
+        otf = optical_transfer_function
+        otf_conj = torch.conj(otf)
+        # `otf_sq` is real and shared across the batch.
+        otf_sq = torch.real(otf_conj * otf)
+        L = float(otf_sq.max().item() + regularization_strength)
+        step = 1.0 / L
+
+        y_fft = torch.fft.fftn(zyx_padded, dim=(-3, -2, -1))
+        x = torch.zeros_like(zyx_padded)
+        z = x.clone()
+        t = 1.0
+
+        for k in range(FISTA_max_iter):
+            z_fft = torch.fft.fftn(z, dim=(-3, -2, -1))
+            residual_fft = z_fft * otf - y_fft  # FFT of (H z - y)
+            grad = torch.real(torch.fft.ifftn(residual_fft * otf_conj, dim=(-3, -2, -1))) + regularization_strength * z
+            x_new = torch.clamp(z - step * grad, min=0.0)
+            t_new = 0.5 * (1.0 + (1.0 + 4.0 * t * t) ** 0.5)
+            z = x_new + ((t - 1.0) / t_new) * (x_new - x)
+
+            denom = torch.linalg.norm(x).item() + 1e-12
+            rc = torch.linalg.norm(x_new - x).item() / denom
+            x = x_new
+            t = t_new
+            if k > 0 and rc < FISTA_rel_change_tol:
+                break
+
+        f_real = x
 
     # Unpad
     if z_padding != 0:

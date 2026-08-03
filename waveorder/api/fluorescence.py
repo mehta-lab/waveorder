@@ -8,7 +8,7 @@ from typing import Literal, Optional
 import numpy as np
 import torch
 import xarray as xr
-from pydantic import Field, PositiveFloat, model_validator
+from pydantic import Field, NonNegativeFloat, PositiveFloat, PositiveInt, model_validator
 
 from waveorder._pixel_size import YXPixelSize
 from waveorder.api._settings import (
@@ -62,7 +62,27 @@ class TransferFunctionSettings(OptimizableFourierTransferFunctionSettings):
         return self
 
 
-ApplyInverseSettings = FourierApplyInverseSettings
+class ApplyInverseSettings(FourierApplyInverseSettings):
+    """Fluorescence-specific apply-inverse settings.
+
+    Extends ``FourierApplyInverseSettings`` with a ``FISTA`` option and
+    FISTA-specific knobs. FISTA solves the non-negativity-constrained
+    Tikhonov objective via accelerated proximal gradient — same Gaussian
+    data term + L2 penalty as Tikhonov, but with a ReLU prox at every iter
+    so the reconstruction is guaranteed non-negative. ``regularization_strength``
+    is shared between Tikhonov and FISTA.
+    """
+
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "FISTA"] = Field(
+        default="Tikhonov",
+        description="'Tikhonov' (closed form), 'TV' (not implemented), or "
+        "'FISTA' (accelerated proximal gradient with non-negativity).",
+    )
+    FISTA_max_iter: PositiveInt = Field(default=100, description="FISTA maximum iteration count")
+    FISTA_rel_change_tol: NonNegativeFloat = Field(
+        default=1e-3,
+        description="FISTA early-stop tolerance on ||x_{k+1}-x_k|| / ||x_k||",
+    )
 
 
 class Settings(MyBaseModel):
@@ -306,13 +326,23 @@ def apply_inverse_transfer_function(
         zyx_tensor = torch.tensor(czyx_data.values[0], dtype=torch.float32, device=device)  # (Z, Y, X)
 
     # Single model call — handles both (Z,Y,X) and (B,Z,Y,X)
+    inverse_kwargs = settings.apply_inverse.model_dump()
     # [fluo, 2]
     if recon_dim == 2:
+        # 2D fluorescence uses a singular-system inverse and does not (yet)
+        # support FISTA. Strip the FISTA-only fields before calling the 2D
+        # entry-point, and reject if the user explicitly asked for FISTA.
+        if inverse_kwargs.get("reconstruction_algorithm") == "FISTA":
+            raise NotImplementedError(
+                "FISTA reconstruction is currently only implemented for 3D fluorescence (recon_dim=3)."
+            )
+        inverse_kwargs.pop("FISTA_max_iter", None)
+        inverse_kwargs.pop("FISTA_rel_change_tol", None)
         U, S, Vh = _to_singular_system(transfer_function)
         output = isotropic_fluorescent_thin_3d.apply_inverse_transfer_function(
             zyx_tensor,
             (U.to(device), S.to(device), Vh.to(device)),
-            **settings.apply_inverse.model_dump(),
+            **inverse_kwargs,
         )
     # [fluo, 3]
     elif recon_dim == 3:
@@ -320,7 +350,7 @@ def apply_inverse_transfer_function(
             zyx_tensor,
             _to_tensor(transfer_function, "optical_transfer_function").to(device),
             settings.transfer_function.z_padding,
-            **settings.apply_inverse.model_dump(),
+            **inverse_kwargs,
         )
 
     # Wrap output tensor(s) back into xr.DataArray(s)
