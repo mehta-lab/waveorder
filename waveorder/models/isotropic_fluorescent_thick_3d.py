@@ -100,7 +100,34 @@ def calculate_transfer_function(
         confocal_pinhole_diameter,
     )
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
-    return sampling.nd_fourier_central_cuboid(optical_transfer_function, zyx_out_shape)
+    optical_transfer_function = sampling.nd_fourier_central_cuboid(optical_transfer_function, zyx_out_shape)
+    return _enforce_nonnegative_psf(optical_transfer_function)
+
+
+def _enforce_nonnegative_psf(optical_transfer_function: Tensor) -> Tensor:
+    """Return an OTF whose real-space incoherent PSF is nonnegative.
+
+    The intensity PSF is built as ``|field|**2`` and so is nonnegative, but
+    cropping the OTF to the working resolution (``nd_fourier_central_cuboid``,
+    an ideal Fourier-domain low-pass) makes the PSF ring below zero. A physical
+    fluorescence PSF cannot be negative, and Richardson-Lucy's convergence
+    guarantee requires a nonnegative forward operator, so we clip the (small,
+    sub-percent) negative lobes and rebuild the normalized OTF.
+
+    Parameters
+    ----------
+    optical_transfer_function : Tensor
+        3D OTF, shape ``(Z, Y, X)``.
+
+    Returns
+    -------
+    Tensor
+        OTF whose inverse transform is nonnegative, normalized to unit peak.
+    """
+    psf = torch.real(torch.fft.ifftn(optical_transfer_function, dim=(-3, -2, -1)))
+    psf = torch.clamp(psf, min=0)
+    otf = torch.fft.fftn(psf, dim=(-3, -2, -1))
+    return otf / torch.clamp(torch.max(torch.abs(otf)), min=1e-12)
 
 
 def _calculate_pinhole_aperture_otf(

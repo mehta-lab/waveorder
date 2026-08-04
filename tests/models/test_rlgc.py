@@ -187,6 +187,39 @@ def test_overiteration_starry_night_rl_vs_rlgc():
     assert float(gc[empty].max()) < 10.0
 
 
+@pytest.mark.parametrize("algorithm", ["RL", "RLGC"])
+def test_rl_stable_on_coarse_sampling(algorithm):
+    """Coarse (sub-Nyquist) sampling is where the OTF crop used to leave
+    negative PSF lobes that can destabilize Richardson-Lucy. The forward PSF
+    must be nonnegative and RL/RLGC must stay finite and bounded."""
+    zyx_shape = (20, 48, 48)
+    otf = thick.calculate_transfer_function(
+        zyx_shape,
+        yx_pixel_size=0.65,
+        z_pixel_size=0.65,
+        wavelength_emission=0.515,
+        z_padding=0,
+        index_of_refraction_media=1.4,
+        numerical_aperture_detection=0.8,
+    )
+    psf = torch.real(torch.fft.ifftn(otf, dim=(-3, -2, -1)))
+    assert psf.min() >= -1e-6 * psf.max()
+
+    obj = torch.zeros(zyx_shape)
+    for z, y, x in [(10, 16, 16), (10, 16, 32), (8, 30, 24)]:
+        obj[z, y, x] = 8000.0
+    torch.manual_seed(0)
+    data = torch.poisson(thick.apply_transfer_function(obj, otf, z_padding=0, background=0).clamp(min=0))
+
+    torch.manual_seed(1)
+    recon = thick.apply_inverse_transfer_function(
+        data, otf, z_padding=0, reconstruction_algorithm=algorithm, rl_iterations=800
+    )
+    assert torch.all(torch.isfinite(recon))
+    # No divergence: total recovered signal stays on the order of the input.
+    assert float(recon.sum()) < 10 * float(data.sum())
+
+
 def test_stopping_tolerance_stops_early():
     """A loose stopping tolerance should halt before the iteration cap and
     return a result close to the fully-iterated one."""
