@@ -1,11 +1,13 @@
+import warnings
 from typing import Literal
 
 import numpy as np
 import torch
 from torch import Tensor
 
-from waveorder import optics, rlgc, sampling, util
+from waveorder import backprojector, optics, rlgc, sampling, util
 from waveorder._pixel_size import YXPixelSize
+from waveorder.backprojector import BackProjectorType
 from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
@@ -272,6 +274,11 @@ def apply_inverse_transfer_function(
     rl_iterations: int = 25,
     rl_background: float = 0.0,
     rl_stopping_tolerance: float | None = None,
+    rl_back_projector: BackProjectorType = "matched",
+    rl_bp_alpha: float | None = None,
+    rl_bp_beta: float | None = None,
+    rl_bp_order: int = 8,
+    rl_bp_resolution_mode: Literal["fwhm", "fwhm_over_sqrt2"] = "fwhm",
 ) -> Tensor:
     """Reconstructs fluorescence density from defocus data.
 
@@ -302,6 +309,25 @@ def apply_inverse_transfer_function(
     rl_stopping_tolerance : float, optional
         If set, RL / RLGC stop early once the relative change of the estimate
         falls below this value, by default None (run all iterations)
+    rl_back_projector : str, optional
+        Back projector for RL, by default "matched" (the matched transpose,
+        i.e. classic Richardson-Lucy). The unmatched alternatives "gaussian",
+        "butterworth", "wiener" and "wiener_butterworth" flatten the spectral
+        product and so converge in far fewer iterations; see
+        :mod:`waveorder.backprojector`. Unmatched choices are RL-only, and one
+        iteration is a good rule of thumb for them.
+    rl_bp_alpha : float, optional
+        Wiener regularization for the "wiener"/"wiener_butterworth" back
+        projectors, by default None (use the matched cutoff gain)
+    rl_bp_beta : float, optional
+        Cutoff gain for the "butterworth"/"wiener_butterworth" back projectors,
+        by default None (use the matched cutoff gain)
+    rl_bp_order : int, optional
+        Butterworth order for the "butterworth"/"wiener_butterworth" back
+        projectors, by default 8
+    rl_bp_resolution_mode : str, optional
+        How the back projector sets its cutoff frequency, by default "fwhm".
+        Use "fwhm_over_sqrt2" for iSIM.
 
     Returns
     -------
@@ -330,11 +356,46 @@ def apply_inverse_transfer_function(
         # The OTF (shared, shape (Z,Y,X)) broadcasts over the batch axis.
         otf = optical_transfer_function
 
+        # RLGC reads the sign of transpose(forward(.)) to ask whether the two
+        # photon halves agree. Only a true adjoint makes that question
+        # meaningful: an unmatched back projector's negative lobes flip the
+        # sign on their own, freezing good voxels.
+        if reconstruction_algorithm == "RLGC" and rl_back_projector != "matched":
+            raise NotImplementedError(
+                f"rl_back_projector={rl_back_projector!r} is only supported with "
+                f"reconstruction_algorithm='RL'; RLGC requires the matched "
+                f"back projector for its gradient-consensus test."
+            )
+
+        # An unmatched back projector abandons Richardson-Lucy's fixed point at
+        # the maximum-likelihood solution, so past a few iterations the estimate
+        # degrades instead of settling. Guo et al. recommend a single iteration,
+        # or up to five at low filter orders.
+        if rl_back_projector != "matched" and rl_iterations > 5:
+            warnings.warn(
+                f"rl_iterations={rl_iterations} with rl_back_projector={rl_back_projector!r}: "
+                f"unmatched back projectors reach a resolution-limited result in 1-5 iterations "
+                f"and introduce artifacts beyond that. Consider rl_iterations=1.",
+                UserWarning,
+                stacklevel=2,
+            )
+
+        back_projector_otf = backprojector.calculate_back_projector(
+            otf,
+            rl_back_projector,
+            alpha=rl_bp_alpha,
+            beta=rl_bp_beta,
+            order=rl_bp_order,
+            resolution_mode=rl_bp_resolution_mode,
+        )
+
         def forward(x: Tensor) -> Tensor:
             return torch.real(torch.fft.ifftn(torch.fft.fftn(x, dim=(-3, -2, -1)) * otf, dim=(-3, -2, -1)))
 
         def transpose(y: Tensor) -> Tensor:
-            return torch.real(torch.fft.ifftn(torch.fft.fftn(y, dim=(-3, -2, -1)) * torch.conj(otf), dim=(-3, -2, -1)))
+            return torch.real(
+                torch.fft.ifftn(torch.fft.fftn(y, dim=(-3, -2, -1)) * back_projector_otf, dim=(-3, -2, -1))
+            )
 
         f_real = rlgc.richardson_lucy(
             torch.clamp(zyx_padded, min=0.0),
@@ -375,6 +436,11 @@ def reconstruct(
     rl_iterations: int = 25,
     rl_background: float = 0.0,
     rl_stopping_tolerance: float | None = None,
+    rl_back_projector: BackProjectorType = "matched",
+    rl_bp_alpha: float | None = None,
+    rl_bp_beta: float | None = None,
+    rl_bp_order: int = 8,
+    rl_bp_resolution_mode: Literal["fwhm", "fwhm_over_sqrt2"] = "fwhm",
 ) -> Tensor:
     """Reconstruct 3D fluorescence density from a defocus stack.
 
@@ -411,6 +477,25 @@ def reconstruct(
         Constant background folded into the RL / RLGC forward model, by default 0.0
     rl_stopping_tolerance : float, optional
         Relative-change early-stop threshold for RL / RLGC, by default None
+    rl_back_projector : str, optional
+        Back projector for RL, by default "matched" (the matched transpose,
+        i.e. classic Richardson-Lucy). The unmatched alternatives "gaussian",
+        "butterworth", "wiener" and "wiener_butterworth" flatten the spectral
+        product and so converge in far fewer iterations; see
+        :mod:`waveorder.backprojector`. Unmatched choices are RL-only, and one
+        iteration is a good rule of thumb for them.
+    rl_bp_alpha : float, optional
+        Wiener regularization for the "wiener"/"wiener_butterworth" back
+        projectors, by default None (use the matched cutoff gain)
+    rl_bp_beta : float, optional
+        Cutoff gain for the "butterworth"/"wiener_butterworth" back projectors,
+        by default None (use the matched cutoff gain)
+    rl_bp_order : int, optional
+        Butterworth order for the "butterworth"/"wiener_butterworth" back
+        projectors, by default 8
+    rl_bp_resolution_mode : str, optional
+        How the back projector sets its cutoff frequency, by default "fwhm".
+        Use "fwhm_over_sqrt2" for iSIM.
 
     Returns
     -------
@@ -440,4 +525,9 @@ def reconstruct(
         rl_iterations=rl_iterations,
         rl_background=rl_background,
         rl_stopping_tolerance=rl_stopping_tolerance,
+        rl_back_projector=rl_back_projector,
+        rl_bp_alpha=rl_bp_alpha,
+        rl_bp_beta=rl_bp_beta,
+        rl_bp_order=rl_bp_order,
+        rl_bp_resolution_mode=rl_bp_resolution_mode,
     )

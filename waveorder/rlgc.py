@@ -74,8 +74,8 @@ def _coinflip(counts: Tensor, probability: float, generator: Optional[torch.Gene
     Equivalent to placing a beam splitter in the detection path: each photon
     independently lands in the "heads" arm with the given probability.
     """
-    counts = torch.round(clip(counts, 0.0))
-    probs = torch.full_like(counts, probability)
+    counts = counts.clamp_min(0.0).round_()
+    probs = counts.new_tensor(probability).expand_as(counts)
     return torch.binomial(counts, probs, generator=generator)
 
 
@@ -138,7 +138,7 @@ def scaled_gradient_step(
         # same detector pixels; a nonpositive local dot product means the
         # two photon halves (locally) disagree, so we freeze those voxels.
         local_dot_product = transpose(forward(heads_gradient * tails_gradient))
-        step_size = torch.where(local_dot_product <= 0, torch.zeros_like(step_size), step_size)
+        step_size = torch.where(local_dot_product <= 0, 0.0, step_size)
     return estimate + gradient * step_size, step_size
 
 
@@ -196,7 +196,7 @@ def richardson_lucy(
     if guess is None:
         estimate = torch.ones_like(transpose_ones)
     else:
-        estimate = clip(guess.clone())
+        estimate = clip(guess)
 
     for _ in range(num_iterations):
         updated, step_size = scaled_gradient_step(
@@ -210,7 +210,7 @@ def richardson_lucy(
             generator=generator,
         )
         updated = clip(updated)
-        if method == "RLGC" and torch.all(step_size == 0):
+        if method == "RLGC" and torch.count_nonzero(step_size) == 0:
             estimate = updated
             break
         if stopping_tolerance is not None:

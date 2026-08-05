@@ -24,6 +24,7 @@ from waveorder.api._utils import (
     _to_tensor,
     _wrap_output_tensor,
 )
+from waveorder.backprojector import BackProjectorType
 from waveorder.device import resolve_device
 from waveorder.models import (
     isotropic_fluorescent_thick_3d,
@@ -82,6 +83,32 @@ class ApplyInverseSettings(FourierApplyInverseSettings):
     rl_stopping_tolerance: Optional[NonNegativeFloat] = Field(
         default=None,
         description="relative-change early-stop threshold for RL / RLGC (null = run all iterations)",
+    )
+    rl_back_projector: BackProjectorType = Field(
+        default="matched",
+        description=(
+            "'matched' is the matched transpose (classic RL); the unmatched "
+            "'gaussian'/'butterworth'/'wiener'/'wiener_butterworth' converge in far fewer "
+            "iterations but are supported for 'RL' only, not 'RLGC'"
+        ),
+    )
+    rl_bp_alpha: Optional[PositiveFloat] = Field(
+        default=None,
+        description="Wiener regularization for the 'wiener'/'wiener_butterworth' back projectors "
+        "(null = matched cutoff gain)",
+    )
+    rl_bp_beta: Optional[PositiveFloat] = Field(
+        default=None,
+        description="cutoff gain for the 'butterworth'/'wiener_butterworth' back projectors "
+        "(null = matched cutoff gain)",
+    )
+    rl_bp_order: PositiveInt = Field(
+        default=8,
+        description="Butterworth order for the 'butterworth'/'wiener_butterworth' back projectors",
+    )
+    rl_bp_resolution_mode: Literal["fwhm", "fwhm_over_sqrt2"] = Field(
+        default="fwhm",
+        description="cutoff-frequency rule for the back projector ('fwhm_over_sqrt2' suits iSIM)",
     )
 
 

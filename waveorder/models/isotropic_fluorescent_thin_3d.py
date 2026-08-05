@@ -279,6 +279,11 @@ def apply_inverse_transfer_function(
     rl_iterations: int = 25,
     rl_background: float = 0.0,
     rl_stopping_tolerance: float | None = None,
+    rl_back_projector: str = "matched",
+    rl_bp_alpha: float | None = None,
+    rl_bp_beta: float | None = None,
+    rl_bp_order: int = 8,
+    rl_bp_resolution_mode: Literal["fwhm", "fwhm_over_sqrt2"] = "fwhm",
 ) -> Tensor:
     """Reconstruct fluorescence density from zyx_data and singular system.
 
@@ -303,6 +308,16 @@ def apply_inverse_transfer_function(
         Constant background for the RL / RLGC forward model (3D only), by default 0.0
     rl_stopping_tolerance : float, optional
         Relative-change early-stop threshold for RL / RLGC (3D only), by default None
+    rl_back_projector : str, optional
+        Back projector for RL (3D only), by default "matched"
+    rl_bp_alpha : float, optional
+        Wiener regularization for the RL back projector (3D only), by default None
+    rl_bp_beta : float, optional
+        Cutoff gain for the RL back projector (3D only), by default None
+    rl_bp_order : int, optional
+        Butterworth order for the RL back projector (3D only), by default 8
+    rl_bp_resolution_mode : str, optional
+        Cutoff-frequency rule for the RL back projector (3D only), by default "fwhm"
 
     Returns
     -------
