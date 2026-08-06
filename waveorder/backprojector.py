@@ -102,9 +102,11 @@ def calculate_back_projector(
     alpha : float, optional
         Wiener regularization, preventing division by a vanishing OTF. Read by
         ``"wiener"`` and ``"wiener_butterworth"``. ``None`` (default)
-        substitutes the matched back projector's mean cutoff gain, which is
-        what ``alpha=1`` means in the reference implementation. Guo et al.
-        report good results in 0.001-0.05; the reference defaults are smaller.
+        substitutes the SQUARE of the matched back projector's mean cutoff gain,
+        because alpha is added to ``|OTF|**2`` and so lives on the scale of a
+        squared amplitude, not of the gain itself (Eq. 28 returns the gain, and
+        is the right substitution for ``beta`` only). Guo et al. report good
+        results in 0.001-0.05; the reference defaults are smaller.
     beta : float, optional
         Cutoff gain, the spectral amplitude passed at the resolution limit.
         Read by ``"butterworth"`` and ``"wiener_butterworth"``. ``None``
@@ -221,7 +223,9 @@ def calculate_back_projector(
         normalized_magnitude = torch.abs(normalized_otf)
         if alpha_value is None or beta_value is None:
             matched_cutoff_gain = _matched_cutoff_gain(normalized_magnitude, cutoff_indices)
-            alpha_value = matched_cutoff_gain if alpha_value is None else alpha_value
+            # Eq. 28 returns a gain, which is beta's scale. alpha is added to
+            # |OTF|**2, so it needs that gain squared.
+            alpha_value = matched_cutoff_gain**2 if alpha_value is None else alpha_value
             beta_value = matched_cutoff_gain if beta_value is None else beta_value
 
     if alpha_value <= 0:
