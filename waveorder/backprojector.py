@@ -41,7 +41,6 @@ following ``BackProjector.m`` in
 `eguomin/regDeconProject <https://github.com/eguomin/regDeconProject>`_.
 """
 
-
 import math
 from typing import Literal, Optional
 
