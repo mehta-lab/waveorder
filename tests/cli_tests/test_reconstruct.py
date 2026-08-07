@@ -567,3 +567,136 @@ def test_warn_pixel_size_mismatch_isotropic_silent_when_equal():
         warnings.simplefilter("always")
         _warn_pixel_size_mismatch(input_scale, config_pixel_sizes)
     assert all("Input pixel sizes" not in str(w.message) for w in record)
+
+
+def _write_mixed_shape_plate(input_path, shapes):
+    """Write an HCS plate whose positions have the given TCZYX shapes."""
+    plate = open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=["GFP"])
+    rng = np.random.default_rng(0)
+    for position_key, shape in shapes.items():
+        position = plate.create_position(*position_key)
+        position.create_image(
+            "0",
+            rng.random(shape).astype(np.float32),
+            transform=[TransformationMeta(type="scale", scale=(1, 1, 0.25, 0.1, 0.1))],
+        )
+    plate.close()
+
+
+def _write_fluorescence_config(config_path):
+    recon_settings = settings.ReconstructionSettings(
+        input_channel_names=["GFP"],
+        time_indices="all",
+        reconstruction_dimension=3,
+        fluorescence=settings.FluorescenceSettings(),
+    )
+    utils.model_to_yaml(recon_settings, config_path)
+
+
+def test_reconstruct_fovs_with_different_zyx_shapes(tmp_path):
+    """Each distinct ZYX shape gets its own transfer function and output shape."""
+    input_path = tmp_path / "input.zarr"
+    config_path = tmp_path / "config.yml"
+    output_path = tmp_path / "output.zarr"
+
+    # "A/1/0" and "B/1/0" share a shape, so only two transfer functions are needed.
+    shapes = {
+        ("A", "1", "0"): (2, 1, 6, 32, 32),
+        ("A", "2", "0"): (2, 1, 6, 48, 48),
+        ("B", "1", "0"): (2, 1, 6, 32, 32),
+    }
+    _write_mixed_shape_plate(input_path, shapes)
+    _write_fluorescence_config(config_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "reconstruct",
+            "-i",
+            *[str(input_path / Path(*position_key)) for position_key in shapes],
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+
+    with open_ome_zarr(output_path) as output_plate:
+        for position_key, shape in shapes.items():
+            reconstructed = output_plate["/".join(position_key)]["0"]
+            assert reconstructed.shape[2:] == shape[2:]
+            assert not np.all(reconstructed[:] == 0)
+
+    transfer_functions = sorted(p.name for p in tmp_path.glob("transfer_function_*.zarr"))
+    assert transfer_functions == [
+        "transfer_function_config_6x32x32.zarr",
+        "transfer_function_config_6x48x48.zarr",
+    ]
+
+
+def test_reconstruct_uniform_shape_keeps_unsuffixed_transfer_function_name(tmp_path):
+    """A single ZYX shape still writes the plain transfer_function_<config>.zarr."""
+    input_path = tmp_path / "input.zarr"
+    config_path = tmp_path / "config.yml"
+    output_path = tmp_path / "output.zarr"
+
+    shapes = {
+        ("A", "1", "0"): (1, 1, 6, 32, 32),
+        ("A", "2", "0"): (1, 1, 6, 32, 32),
+    }
+    _write_mixed_shape_plate(input_path, shapes)
+    _write_fluorescence_config(config_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "reconstruct",
+            "-i",
+            *[str(input_path / Path(*position_key)) for position_key in shapes],
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert [p.name for p in tmp_path.glob("transfer_function_*.zarr")] == ["transfer_function_config.zarr"]
+
+
+def test_apply_inv_tf_rejects_fovs_with_different_zyx_shapes(tmp_path):
+    """apply-inv-tf holds one transfer function, so mixed shapes must error early."""
+    input_path = tmp_path / "input.zarr"
+    config_path = tmp_path / "config.yml"
+    tf_path = tmp_path / "tf.zarr"
+    output_path = tmp_path / "output.zarr"
+
+    shapes = {
+        ("A", "1", "0"): (1, 1, 6, 32, 32),
+        ("A", "2", "0"): (1, 1, 6, 48, 48),
+    }
+    _write_mixed_shape_plate(input_path, shapes)
+    _write_fluorescence_config(config_path)
+
+    result = CliRunner().invoke(
+        cli,
+        [
+            "apply-inv-tf",
+            "-i",
+            *[str(input_path / Path(*position_key)) for position_key in shapes],
+            "-t",
+            str(tf_path),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "all positions must have the same ZYX shape" in result.output
+    assert "Use `waveorder reconstruct`" in result.output
+    assert not output_path.exists()
