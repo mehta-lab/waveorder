@@ -452,8 +452,7 @@ def _resolve_transfer_function_dirpaths(
     missing_shapes = set(zyx_shapes) - transfer_function_dirpaths.keys()
     if missing_shapes:
         raise ValueError(
-            "No transfer function was provided for ZYX shape(s): "
-            + ", ".join(map(str, sorted(missing_shapes)))
+            "No transfer function was provided for ZYX shape(s): " + ", ".join(map(str, sorted(missing_shapes)))
         )
     return [Path(transfer_function_dirpaths[zyx_shape]) for zyx_shape in zyx_shapes]
 
