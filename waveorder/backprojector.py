@@ -1,46 +1,46 @@
 """Unmatched back projectors that accelerate Richardson-Lucy deconvolution.
 
-Richardson-Lucy traditionally uses a back projector ``b`` "matched" to the
-forward projector ``f``, i.e. its transpose, which in Fourier space is
-``conj(OTF)``. The back projector does not have to be the transpose, though.
-Convergence is governed by the eigenvalue spectrum of the operator product,
-which for a shift-invariant convolution is just ``DFT(f) * DFT(b)`` evaluated
-per spatial frequency: a mode whose product is close to one converges in a
-single iteration, while a mode with a small product needs roughly its
-reciprocal in iterations. The matched choice gives a product of ``|OTF|**2``,
-which spans orders of magnitude between DC and the resolution limit, so the
-iteration count ends up set by the slowest, highest-frequency mode.
+Richardson-Lucy usually back-projects with the transpose of the forward
+projector, ``conj(OTF)``. It does not have to. What sets the convergence rate
+is the **spectral product** ``|DFT(f) * DFT(b)|``, read per spatial frequency:
 
-Choosing ``b`` to flatten that product across the passband is therefore a
-preconditioner, and it is what lets Richardson-Lucy reach a resolution-limited
-result in one iteration instead of ten or more. This module builds the family
-of such back projectors described in Guo et al. 2020, Supplementary Note 2
-(`doi.org/10.1038/s41587-020-0560-x <https://doi.org/10.1038/s41587-020-0560-x>`_),
-following the authors' reference implementation ``BackProjector.m`` in
-`eguomin/regDeconProject <https://github.com/eguomin/regDeconProject>`_.
+- product near 1 -> that frequency is recovered in one iteration
+- product of 0.01 -> it needs roughly 100
 
-Every kind except ``"gaussian"`` factors into an inversion term times an
-apodization term:
+The transpose gives ``|OTF|**2``, which spans orders of magnitude between DC and
+the resolution limit, so the iteration count is set by the slowest, highest
+frequency. Choosing ``b`` to flatten that product instead is a preconditioner,
+and it is what turns "ten or more iterations" into one.
+
+Every kind except ``"gaussian"`` is an inversion term times an apodization term:
 
 ===================== ==================== ==========================
 inversion             apodization: none    apodization: Butterworth
 ===================== ==================== ==========================
-``conj(OTF)``         ``"matched"``    --
+``conj(OTF)``         ``"matched"``        --
 Wiener                ``"wiener"``         ``"wiener_butterworth"``
 ``1`` (Dirac delta)   (noise, unusable)    ``"butterworth"``
 ===================== ==================== ==========================
 
-``"gaussian"`` stands apart: it is designed in real space as a Gaussian whose
-FWHM matches the PSF, has no free parameters, and only ever attenuates. The
-Wiener term, by contrast, actively amplifies near the resolution limit, which
-is why it flattens the spectral product far more effectively.
+The inversion term (``alpha``) decides how flat the product is; the apodization
+term (``beta``, ``order``) decides how hard everything past the resolution limit
+is suppressed. Only the Wiener term amplifies, so only the kinds containing it
+flatten the product appreciably -- which is why ``"wiener_butterworth"``, with
+both, is the one Guo et al. recommend.
 
-Because these back projectors are not adjoints, they invalidate the usual
-Richardson-Lucy convergence guarantee, and over-iterating with them introduces
-artifacts. Guo et al. recommend a single iteration as a rule of thumb.
+``"gaussian"`` stands apart: designed in real space to match the PSF FWHM, no
+free parameters, and it only ever attenuates.
+
+Caveat: an unmatched ``b`` is not an adjoint, so Richardson-Lucy's convergence
+guarantee no longer holds and over-iterating introduces artifacts. Guo et al.
+suggest one iteration as a rule of thumb (up to five at low ``order``).
+
+Reference: Guo et al. 2020, Supplementary Note 2
+(`doi.org/10.1038/s41587-020-0560-x <https://doi.org/10.1038/s41587-020-0560-x>`_),
+following ``BackProjector.m`` in
+`eguomin/regDeconProject <https://github.com/eguomin/regDeconProject>`_.
 """
 
-from __future__ import annotations
 
 import math
 from typing import Literal, Optional
@@ -84,51 +84,69 @@ def calculate_back_projector(
 ) -> Tensor:
     """Build a back projector in Fourier space from a forward-projector OTF.
 
-    The returned tensor is a drop-in replacement for ``conj(OTF)`` in the
-    Richardson-Lucy back-projection step: it uses the same FFT convention as
-    the input (DC at index zero) and the same shape, device and dtype, so the
-    adjoint step stays ``ifftn(fftn(y) * back_projector)``.
+    Drop-in replacement for ``conj(OTF)`` in the Richardson-Lucy back-projection
+    step: same FFT convention (DC at index zero), same shape, device and dtype,
+    so the adjoint stays ``ifftn(fftn(y) * back_projector)``.
+
+    Which knobs each kind reads, and what turning them does:
+
+    ==================== ===== ==== ===== ==========================================
+    kind                 alpha beta order effect
+    ==================== ===== ==== ===== ==========================================
+    ``matched``          --    --   --    plain Richardson-Lucy, no free parameters
+    ``gaussian``         --    --   --    attenuates only; the mildest option
+    ``butterworth``      --    x    x     suppresses past the cutoff, no inversion
+    ``wiener``           x     --   --    inverts, but amplifies noise unchecked
+    ``wiener_butterworth`` x   x    x     inverts and suppresses; the recommended one
+    ==================== ===== ==== ===== ==========================================
+
+    Lower ``alpha`` -> flatter spectral product -> fewer iterations, more noise.
+    Lower ``beta`` / higher ``order`` -> harder suppression past the resolution
+    limit, at the cost of real-space ringing.
 
     Parameters
     ----------
     optical_transfer_function : Tensor
         Forward-projector OTF, complex, shape ``(Z, Y, X)``, DC at index zero.
-        Every kind except ``"matched"`` assumes a unit-peak OTF and
-        normalizes internally if needed.
+        Every kind except ``"matched"`` assumes a unit-peak OTF and normalizes
+        internally if needed.
     back_projector : {"matched", "gaussian", "butterworth", "wiener", \
 "wiener_butterworth"}, optional
-        Which back projector to build, by default ``"matched"`` (the
-        matched transpose, i.e. plain Richardson-Lucy).
+        Which one to build, by default ``"matched"``.
     alpha : float, optional
-        Wiener regularization, preventing division by a vanishing OTF. Read by
-        ``"wiener"`` and ``"wiener_butterworth"``. ``None`` (default)
-        substitutes the SQUARE of the matched back projector's mean cutoff gain,
-        because alpha is added to ``|OTF|**2`` and so lives on the scale of a
-        squared amplitude, not of the gain itself (Eq. 28 returns the gain, and
-        is the right substitution for ``beta`` only). Guo et al. report good
-        results in 0.001-0.05; the reference defaults are smaller.
+        Wiener regularization: the term added to ``|OTF|**2`` that keeps the
+        inversion from dividing by a vanishing OTF. It sets **how hard the
+        deconvolution inverts**, since the spectral product is
+        ``|OTF|**2 / (|OTF|**2 + alpha)`` -- flat (so one iteration) only when
+        ``alpha`` is near ``|OTF(cutoff)|**2``, and increasingly damped above
+        that. Guo et al. use 0.001-0.05.
+
+        ``None`` (default) substitutes the mean cutoff gain (Eq. 28) SQUARED --
+        that gain is ``beta``'s scale, and ``alpha`` is added to a squared
+        magnitude, so using it unsquared leaves ``alpha`` orders of magnitude
+        too large.
     beta : float, optional
-        Cutoff gain, the spectral amplitude passed at the resolution limit.
-        Read by ``"butterworth"`` and ``"wiener_butterworth"``. ``None``
-        (default) substitutes the matched back projector's mean cutoff
-        gain. Guo et al. use 0.001-0.05 (Table S2.1).
+        Cutoff gain: the spectral amplitude still passed **at** the resolution
+        limit, so smaller means sharper suppression beyond it. Enters as
+        ``eps**2``; see Notes. Guo et al. use 0.001-0.05 (Table S2.1). ``None``
+        (default) substitutes the mean cutoff gain (Eq. 28).
     order : int, optional
-        Butterworth filter order, setting the steepness of the transition at
-        the cutoff, by default 8. Read by ``"butterworth"`` and
-        ``"wiener_butterworth"``. This is coupled to iteration count: Guo et
-        al. pair ``order`` 8-10 with a single iteration for single- and
-        dual-view microscopes, but drop to 5 (needing 2-5 iterations) for
-        quad-view and reflective geometries, which ring more readily.
+        Butterworth order, the exponent that sets **how steep the transition
+        is** at the cutoff, by default 8. Higher is flatter in the passband but
+        closer to a brick wall, which rings in real space; lower is gentler but
+        gives up amplitude near the cutoff, so more iterations are needed. Guo
+        et al. pair 8-10 with a single iteration for single- and dual-view
+        microscopes, dropping to 5 (and 2-5 iterations) for quad-view and
+        reflective geometries, which ring more readily.
     resolution_mode : {"fwhm", "fwhm_over_sqrt2", "manual"}, optional
-        How to set the resolution limit that defines the cutoff frequencies.
-        ``"fwhm"`` (default) uses the measured PSF FWHM;
-        ``"fwhm_over_sqrt2"`` uses FWHM / sqrt(2), appropriate for iSIM;
-        ``"manual"`` uses ``resolution_zyx_px``. Ignored by ``"matched"``
-        and ``"gaussian"``, which always match the PSF FWHM.
+        Where the cutoff frequency sits. ``"fwhm"`` (default) uses the measured
+        PSF FWHM; ``"fwhm_over_sqrt2"`` puts the cutoff a factor sqrt(2) higher,
+        for resolution-doubling instruments such as iSIM; ``"manual"`` takes
+        ``resolution_zyx_px``. Ignored by ``"matched"`` and ``"gaussian"``.
     resolution_zyx_px : tuple of float, optional
-        Resolution limit per axis **in pixels**, required by and only valid
-        with ``resolution_mode="manual"``. Callers holding a physical
-        resolution should divide by their pixel size first.
+        Resolution limit per axis **in pixels**, required by and only valid with
+        ``resolution_mode="manual"``. Divide a physical resolution by the pixel
+        size first.
     beta_convention : {"reference", "paper"}, optional
         How ``beta`` calibrates the Wiener-Butterworth transition, by default
         ``"reference"``. See Notes. Ignored by every other kind.
@@ -140,21 +158,18 @@ def calculate_back_projector(
 
     Notes
     -----
-    Guo et al.'s text and their reference code disagree on how ``beta`` maps
-    onto the Butterworth transition width for the Wiener-Butterworth filter.
-    Both are members of one family, ``eps**2 = beta_w**p / beta**2 - 1``, where
-    ``beta_w`` is the Wiener term's own gain at the lateral cutoff: the paper's
-    Eq. 27 is ``p = 2`` and the reference code is ``p = 1``. They coincide only
-    when ``beta_w == 1``, which never happens in practice because the Wiener
-    term amplifies near the cutoff, making ``beta_w`` of order ten.
+    Guo et al.'s text and their reference code disagree on how ``beta`` maps to
+    the Butterworth transition width. Both belong to one family,
+    ``eps**2 = beta_w**p / beta**2 - 1``, with ``beta_w`` the Wiener term's own
+    gain at the lateral cutoff: Eq. 27 has ``p = 2``, the reference code
+    ``p = 1``. They agree only at ``beta_w == 1``, which never occurs -- the
+    Wiener term amplifies near the cutoff, putting ``beta_w`` around ten.
 
-    The two are exactly interconvertible. Under ``"paper"`` the filter's actual
-    gain at the cutoff is ``beta``, so ``beta`` means literally what it says;
-    under ``"reference"`` it is ``beta * sqrt(beta_w)``. This module implements
-    the paper's formula and, for ``"reference"``, first rescales ``beta`` by
-    ``sqrt(beta_w)`` to reproduce the reference code exactly. ``"reference"``
-    is the default so that the ``beta`` values published in Table S2.1 produce
-    the published results.
+    So the filter's actual gain at the cutoff is ``beta`` under ``"paper"`` and
+    ``beta * sqrt(beta_w)`` under ``"reference"``. This module implements the
+    paper's formula, rescaling ``beta`` by ``sqrt(beta_w)`` for ``"reference"``,
+    which is the default so published Table S2.1 values reproduce published
+    results.
 
     References
     ----------
