@@ -128,8 +128,7 @@ class FourierApplyInverseSettings(MyBaseModel):
     # (see waveorder.api.fluorescence); other modalities raise NotImplementedError.
     reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = Field(
         default="Tikhonov",
-        description="'Tikhonov'/'TV' regularization, or 'RL'/'RLGC' iterative deconvolution "
-        "(3D fluorescence only)",
+        description="'Tikhonov' or 'TV' regularization",
     )
     regularization_strength: NonNegativeFloat = Field(default=1e-3, description="strength of regularization")
     TV_rho_strength: PositiveFloat = Field(default=1e-3, description="ADMM rho parameter for TV regularization")
