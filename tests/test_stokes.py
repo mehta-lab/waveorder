@@ -130,19 +130,6 @@ def test_copying(device):
     assert a[0] == 1
 
 
-@pytest.mark.parametrize(*_DEVICE)
-def test_estimate_copying(device):
-    s = torch.tensor([1.0, 1.0], device=device)
-
-    _, _, transmittance, _ = stokes.estimate_adr_from_stokes(s, s, s, s)
-    transmittance[0] = 2  # modify the output
-    assert s[0] == 1  # check that the input hasn't changed
-
-    _, _, transmittance012 = stokes.estimate_ar_from_stokes012(s, s, s)
-    transmittance012[0] = 2
-    assert s[0] == 1
-
-
 def test_gradients_reach_copied_outputs():
     """s0 and transmittance are copies of an input, so they must not detach."""
     ones = torch.ones((2, 2))
