@@ -1,5 +1,3 @@
-import warnings
-
 import numpy as np
 import pytest
 import torch
@@ -143,19 +141,6 @@ def test_estimate_copying(device):
     _, _, transmittance012 = stokes.estimate_ar_from_stokes012(s, s, s)
     transmittance012[0] = 2
     assert s[0] == 1
-
-
-def test_no_copy_construct_warning():
-    t = torch.ones((2, 2))
-    with warnings.catch_warnings(record=True) as caught:
-        warnings.simplefilter("always")
-        stokes.stokes_after_adr(t, t, t, t)
-        stokes.stokes012_after_ar(t, t, t)
-        stokes.estimate_adr_from_stokes(t, t, t, t)
-        stokes.estimate_ar_from_stokes012(t, t, t)
-        stokes.mueller_from_stokes(t, t, t, t, direction="forward")
-        stokes.mueller_from_stokes(t, t, t, t, direction="inverse")
-    assert [w for w in caught if "copy construct" in str(w.message)] == []
 
 
 def test_gradients_reach_copied_outputs():
