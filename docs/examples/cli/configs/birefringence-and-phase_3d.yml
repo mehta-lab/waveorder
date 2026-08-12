@@ -28,7 +28,7 @@ phase:
     numerical_aperture_illumination: 0.9    # (optimizable) condenser numerical aperture
     invert_phase_contrast: false            # invert contrast for positive/negative phase
   apply_inverse:
-    reconstruction_algorithm: Tikhonov      # 'Tikhonov' or 'TV' regularization
+    reconstruction_algorithm: Tikhonov      # 'Tikhonov'/'TV' regularization, or 'RL'/'RLGC' iterative deconvolution (3D fluorescence only)
     regularization_strength: 0.001          # strength of regularization
     TV_rho_strength: 0.001                  # ADMM rho parameter for TV regularization
     TV_iterations: 1                        # ADMM iterations for TV regularization

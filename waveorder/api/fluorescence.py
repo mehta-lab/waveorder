@@ -63,6 +63,39 @@ class TransferFunctionSettings(OptimizableFourierTransferFunctionSettings):
         return self
 
 
+class RLSettings(MyBaseModel):
+    """Richardson-Lucy knobs, read only when ``reconstruction_algorithm`` is 'RL' or 'RLGC'."""
+
+    iterations: PositiveInt = Field(default=25, description="maximum RL / RLGC iterations")
+    background: NonNegativeFloat = Field(
+        default=0.0,
+        description="constant background folded into the RL / RLGC Poisson forward model",
+    )
+    stopping_tolerance: Optional[NonNegativeFloat] = Field(
+        default=None,
+        description="relative-change early-stop threshold (null = run all iterations)",
+    )
+    back_projector: BackProjectorType = Field(
+        default="matched",
+        description=(
+            "'matched' is the matched transpose (classic RL); the unmatched "
+            "'gaussian'/'butterworth'/'wiener'/'wiener_butterworth' converge in far fewer "
+            "iterations but are supported for 'RL' only, not 'RLGC'"
+        ),
+    )
+    bp_alpha: Optional[PositiveFloat] = Field(
+        default=None,
+        description="Wiener regularization for the 'wiener'/'wiener_butterworth' back projectors "
+        "(null = matched cutoff gain squared); lower inverts harder, converging in fewer "
+        "iterations but amplifying noise",
+    )
+    bp_beta: Optional[PositiveFloat] = Field(
+        default=None,
+        description="cutoff gain for the 'butterworth'/'wiener_butterworth' back projectors "
+        "(null = matched cutoff gain); lower suppresses harder past the resolution limit",
+    )
+
+
 class ApplyInverseSettings(FourierApplyInverseSettings):
     """Fluorescence inverse settings.
 
@@ -75,41 +108,34 @@ class ApplyInverseSettings(FourierApplyInverseSettings):
         default="Tikhonov",
         description="'Tikhonov'/'TV' filters or 'RL'/'RLGC' iterative deconvolution",
     )
-    rl_iterations: PositiveInt = Field(default=25, description="maximum RL / RLGC iterations")
-    rl_background: NonNegativeFloat = Field(
-        default=0.0,
-        description="constant background folded into the RL / RLGC Poisson forward model",
-    )
-    rl_stopping_tolerance: Optional[NonNegativeFloat] = Field(
+    rl: Optional[RLSettings] = Field(
         default=None,
-        description="relative-change early-stop threshold for RL / RLGC (null = run all iterations)",
+        description="Richardson-Lucy knobs; only valid with reconstruction_algorithm 'RL'/'RLGC', "
+        "and filled with defaults if omitted there",
     )
-    rl_back_projector: BackProjectorType = Field(
-        default="matched",
-        description=(
-            "'matched' is the matched transpose (classic RL); the unmatched "
-            "'gaussian'/'butterworth'/'wiener'/'wiener_butterworth' converge in far fewer "
-            "iterations but are supported for 'RL' only, not 'RLGC'"
-        ),
-    )
-    rl_bp_alpha: Optional[PositiveFloat] = Field(
-        default=None,
-        description="Wiener regularization for the 'wiener'/'wiener_butterworth' back projectors "
-        "(null = matched cutoff gain)",
-    )
-    rl_bp_beta: Optional[PositiveFloat] = Field(
-        default=None,
-        description="cutoff gain for the 'butterworth'/'wiener_butterworth' back projectors "
-        "(null = matched cutoff gain)",
-    )
-    rl_bp_order: PositiveInt = Field(
-        default=8,
-        description="Butterworth order for the 'butterworth'/'wiener_butterworth' back projectors",
-    )
-    rl_bp_resolution_mode: Literal["fwhm", "fwhm_over_sqrt2"] = Field(
-        default="fwhm",
-        description="cutoff-frequency rule for the back projector ('fwhm_over_sqrt2' suits iSIM)",
-    )
+
+    @model_validator(mode="after")
+    def _rl_block_matches_algorithm(self):
+        """Keep the block and the algorithm in step, so a config only carries what it reads."""
+        if self.reconstruction_algorithm in ("RL", "RLGC"):
+            if self.rl is None:
+                self.rl = RLSettings()
+        elif self.rl is not None:
+            # Dropped rather than rejected: the napari plugin builds its widgets from
+            # every field and so always submits a block, whatever the algorithm.
+            warnings.warn(
+                f"ignoring 'rl' settings: reconstruction_algorithm is "
+                f"{self.reconstruction_algorithm!r}, not 'RL' or 'RLGC'",
+                UserWarning,
+            )
+            self.rl = None
+        return self
+
+    def to_model_kwargs(self) -> dict:
+        kwargs = self.model_dump(exclude={"rl"})
+        if self.rl is not None:
+            kwargs.update({f"rl_{name}": value for name, value in self.rl.model_dump().items()})
+        return kwargs
 
 
 class Settings(MyBaseModel):
@@ -359,7 +385,7 @@ def apply_inverse_transfer_function(
         output = isotropic_fluorescent_thin_3d.apply_inverse_transfer_function(
             zyx_tensor,
             (U.to(device), S.to(device), Vh.to(device)),
-            **settings.apply_inverse.model_dump(),
+            **settings.apply_inverse.to_model_kwargs(),
         )
     # [fluo, 3]
     elif recon_dim == 3:
@@ -367,7 +393,7 @@ def apply_inverse_transfer_function(
             zyx_tensor,
             _to_tensor(transfer_function, "optical_transfer_function").to(device),
             settings.transfer_function.z_padding,
-            **settings.apply_inverse.model_dump(),
+            **settings.apply_inverse.to_model_kwargs(),
         )
 
     # Wrap output tensor(s) back into xr.DataArray(s)

@@ -128,8 +128,18 @@ class FourierApplyInverseSettings(MyBaseModel):
     # (see waveorder.api.fluorescence); other modalities raise NotImplementedError.
     reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = Field(
         default="Tikhonov",
-        description="'Tikhonov' or 'TV' regularization",
+        description="'Tikhonov'/'TV' regularization, or 'RL'/'RLGC' iterative deconvolution "
+        "(3D fluorescence only)",
     )
     regularization_strength: NonNegativeFloat = Field(default=1e-3, description="strength of regularization")
     TV_rho_strength: PositiveFloat = Field(default=1e-3, description="ADMM rho parameter for TV regularization")
     TV_iterations: NonNegativeInt = Field(default=1, description="ADMM iterations for TV regularization")
+
+    def to_model_kwargs(self) -> dict:
+        """Flatten to the keyword arguments of ``apply_inverse_transfer_function``.
+
+        The config groups related knobs into blocks so a YAML only carries the
+        ones its algorithm reads; the model functions take one flat signature.
+        This is the seam between the two.
+        """
+        return self.model_dump()

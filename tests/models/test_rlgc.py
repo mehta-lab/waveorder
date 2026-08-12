@@ -288,13 +288,11 @@ def test_fluorescence_config_accepts_rl(algorithm):
     settings = fluorescence.Settings(
         apply_inverse={
             "reconstruction_algorithm": algorithm,
-            "rl_iterations": 15,
-            "rl_background": 3.0,
-            "rl_stopping_tolerance": 1e-3,
+            "rl": {"iterations": 15, "background": 3.0, "stopping_tolerance": 1e-3},
         }
     )
-    dump = settings.apply_inverse.model_dump()
-    assert dump["reconstruction_algorithm"] == algorithm
-    assert dump["rl_iterations"] == 15
-    assert dump["rl_background"] == 3.0
-    assert dump["rl_stopping_tolerance"] == 1e-3
+    kwargs = settings.apply_inverse.to_model_kwargs()
+    assert kwargs["reconstruction_algorithm"] == algorithm
+    assert kwargs["rl_iterations"] == 15
+    assert kwargs["rl_background"] == 3.0
+    assert kwargs["rl_stopping_tolerance"] == 1e-3

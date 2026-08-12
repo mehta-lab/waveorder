@@ -324,35 +324,50 @@ def test_over_iterating_an_unmatched_back_projector_warns(otf):
 def test_default_settings_leave_existing_configs_unchanged():
     """Adding these knobs must not alter any reconstruction already in use."""
     settings = fluorescence.ApplyInverseSettings()
-    assert settings.rl_back_projector == "matched"
-    assert settings.rl_bp_alpha is None
-    assert settings.rl_bp_beta is None
+    assert settings.rl is None
+    assert "rl_back_projector" not in settings.to_model_kwargs()
+
+
+def test_rl_block_is_defaulted_in_and_rejected_out():
+    """The block follows the algorithm: filled for RL/RLGC, refused otherwise."""
+    settings = fluorescence.ApplyInverseSettings(reconstruction_algorithm="RL")
+    assert settings.rl.back_projector == "matched"
+    assert settings.rl.bp_alpha is None
+
+    with pytest.warns(UserWarning, match="ignoring 'rl' settings"):
+        dropped = fluorescence.ApplyInverseSettings(reconstruction_algorithm="Tikhonov", rl={"iterations": 5})
+    assert dropped.rl is None
 
 
 def test_settings_round_trip():
     settings = fluorescence.ApplyInverseSettings(
         reconstruction_algorithm="RL",
-        rl_iterations=1,
-        rl_back_projector="wiener_butterworth",
-        rl_bp_alpha=0.001,
-        rl_bp_beta=0.001,
-        rl_bp_order=10,
-        rl_bp_resolution_mode="fwhm_over_sqrt2",
+        rl={
+            "iterations": 1,
+            "back_projector": "wiener_butterworth",
+            "bp_alpha": 0.001,
+            "bp_beta": 0.001,
+        },
     )
-    dumped = settings.model_dump()
-    assert dumped["rl_back_projector"] == "wiener_butterworth"
-    assert dumped["rl_bp_order"] == 10
-    assert dumped["rl_bp_resolution_mode"] == "fwhm_over_sqrt2"
-    # The dump is splatted straight into the model function, so the keys must match.
+    assert fluorescence.ApplyInverseSettings(**settings.model_dump()) == settings
+
+    kwargs = settings.to_model_kwargs()
+    assert kwargs["rl_back_projector"] == "wiener_butterworth"
+    assert kwargs["rl_bp_alpha"] == 0.001
+    assert "rl" not in kwargs
+    # These kwargs are splatted straight into the model function, so the keys must match.
     zyx_shape = (16, 32, 32)
     thick.apply_inverse_transfer_function(
-        torch.rand(*zyx_shape), thick.calculate_transfer_function(zyx_shape, **_OTF_KWARGS), 0, **dumped
+        torch.rand(*zyx_shape), thick.calculate_transfer_function(zyx_shape, **_OTF_KWARGS), 0, **kwargs
     )
 
 
 def test_rejects_invalid_settings():
     for invalid_projector in ("nonsense", "traditional"):
         with pytest.raises(ValueError):
-            fluorescence.ApplyInverseSettings(rl_back_projector=invalid_projector)
+            fluorescence.RLSettings(back_projector=invalid_projector)
+    # order and resolution_mode are model-level only; the config must not accept them.
     with pytest.raises(ValueError):
-        fluorescence.ApplyInverseSettings(rl_bp_resolution_mode="manual")
+        fluorescence.RLSettings(bp_order=10)
+    with pytest.raises(ValueError):
+        fluorescence.RLSettings(bp_resolution_mode="fwhm_over_sqrt2")

@@ -19,11 +19,4 @@ fluorescence:
     regularization_strength: 0.001          # strength of regularization
     TV_rho_strength: 0.001                  # ADMM rho parameter for TV regularization
     TV_iterations: 1                        # ADMM iterations for TV regularization
-    rl_iterations: 25                       # maximum RL / RLGC iterations
-    rl_background: 0.0                      # constant background folded into the RL / RLGC Poisson forward model
-    rl_stopping_tolerance: null             # relative-change early-stop threshold for RL / RLGC (null = run all iterations)
-    rl_back_projector: matched              # 'matched' is the matched transpose (classic RL); the unmatched 'gaussian'/'butterworth'/'wiener'/'wiener_butterworth' converge in far fewer iterations but are supported for 'RL' only, not 'RLGC'
-    rl_bp_alpha: null                       # Wiener regularization for the 'wiener'/'wiener_butterworth' back projectors (null = matched cutoff gain)
-    rl_bp_beta: null                        # cutoff gain for the 'butterworth'/'wiener_butterworth' back projectors (null = matched cutoff gain)
-    rl_bp_order: 8                          # Butterworth order for the 'butterworth'/'wiener_butterworth' back projectors
-    rl_bp_resolution_mode: fwhm             # cutoff-frequency rule for the back projector ('fwhm_over_sqrt2' suits iSIM)
+    rl: null                                # Richardson-Lucy knobs; only valid with reconstruction_algorithm 'RL'/'RLGC', and filled with defaults if omitted there
