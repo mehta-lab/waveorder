@@ -195,8 +195,13 @@ def calculate_transfer_function(
     up_z = z_pixel_size / z_factor
     zyx_out_shape = (zyx_shape[0] + 2 * z_padding,) + zyx_shape[1:]
 
-    # Shared optics (computed once, moved to input device)
-    # Pass original tensors (not floats) to preserve gradient graph
+    # Build shared optics directly on the caller's device. The legacy
+    # CPU-build-then-``.to(device)`` pattern wasted ~7 s/position on
+    # ``_compute_shared_optics`` (CPU ``torch.exp`` dominates). The
+    # trailing ``.to(device)`` calls are kept as a guard for any custom
+    # ``_compute_shared_optics`` override that doesn't honor ``device=``;
+    # they are no-ops when the tensors are already on ``device``.
+    device = zen.device
     fyy, fxx, det_pupil, propagation_kernel, greens_function_z = _compute_shared_optics(
         up_shape,
         up_yx,
@@ -207,9 +212,9 @@ def calculate_transfer_function(
         na_det[0],
         invert_phase_contrast,
         pupil_steepness,
+        device=device,
     )
 
-    device = zen.device
     fyy = fyy.to(device)
     fxx = fxx.to(device)
     det_pupil = det_pupil.to(device)
@@ -235,6 +240,108 @@ def calculate_transfer_function(
     return real_tfs, imag_tfs
 
 
+def _compute_angle_optics(
+    yx_shape,
+    yx_pixel_size,
+    wavelength_illumination,
+    numerical_aperture_detection,
+    pupil_steepness=1e4,
+    device: torch.device | str | None = None,
+):
+    """Compute the parts of the shared optics that do NOT depend on z.
+
+    Splits the angle-independent half out of :func:`_compute_shared_optics`
+    so callers that hold zenith / azimuth / NA fixed (e.g. the OPS
+    ``FREEZE_ANGLES`` tilt-recon recipe) can build these once per
+    position and reuse them across every optimizer iteration that only
+    changes z. The z-dependent half lives in :func:`_compute_z_optics`.
+
+    Parameters
+    ----------
+    yx_shape : tuple[int, int]
+        Transverse shape ``(Y, X)`` of the (Nyquist-upsampled) grid.
+    yx_pixel_size : float
+        Pixel size in the transverse dimensions.
+    wavelength_illumination, numerical_aperture_detection, pupil_steepness :
+        Standard waveorder optics inputs.
+    device : torch.device, str, or None
+        Where to build the tensors. ``None`` keeps the legacy CPU behavior.
+
+    Returns
+    -------
+    tuple[Tensor, Tensor, Tensor, Tensor]
+        ``(fyy, fxx, radial_frequencies, det_pupil)``.
+    """
+    fyy, fxx = util.generate_frequencies(yx_shape, yx_pixel_size, device=device)
+    radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
+    det_pupil = optics.generate_pupil(
+        radial_frequencies,
+        numerical_aperture_detection,
+        wavelength_illumination,
+        steepness=pupil_steepness,
+    )
+    return fyy, fxx, radial_frequencies, det_pupil
+
+
+def _compute_z_position_list(
+    z_shape: int,
+    z_pixel_size,
+    z_padding,
+    invert_phase_contrast: bool = False,
+    device: torch.device | str | None = None,
+):
+    """Build the z_position_list used by the propagation kernel + Green's function.
+
+    Factored out of :func:`_compute_shared_optics` so the optics split
+    (:func:`_compute_angle_optics` + :func:`_compute_z_optics`) can rebuild
+    the z list independently when only the z parameters change.
+    """
+    z_total = z_shape + 2 * z_padding
+    z_position_list = torch.fft.ifftshift(
+        (torch.arange(z_total, device=device) - z_total // 2) * z_pixel_size
+    )
+    if invert_phase_contrast:
+        z_position_list = torch.flip(z_position_list, dims=(0,))
+    return z_position_list
+
+
+def _compute_z_optics(
+    radial_frequencies,
+    det_pupil,
+    z_position_list,
+    wavelength_illumination,
+    index_of_refraction_media,
+):
+    """Compute the parts of the shared optics that depend on z.
+
+    Companion to :func:`_compute_angle_optics`. Given the angle-fixed
+    ``radial_frequencies`` + ``det_pupil`` and the current
+    ``z_position_list``, returns the propagation kernel and Green's
+    function. Callers in the OPS ``FREEZE_ANGLES`` recipe re-call this
+    each optimizer iteration with the updated z list, while
+    :func:`_compute_angle_optics` is cached.
+
+    Returns
+    -------
+    tuple[Tensor, Tensor]
+        ``(propagation_kernel, greens_function_z)``.
+    """
+    propagation_kernel = optics.generate_propagation_kernel(
+        radial_frequencies,
+        det_pupil,
+        wavelength_illumination / index_of_refraction_media,
+        z_position_list,
+    )
+    greens_function_z = optics.generate_greens_function_z(
+        radial_frequencies,
+        det_pupil,
+        wavelength_illumination / index_of_refraction_media,
+        z_position_list,
+        axially_even=False,
+    )
+    return propagation_kernel, greens_function_z
+
+
 def _compute_shared_optics(
     zyx_shape,
     yx_pixel_size,
@@ -245,29 +352,47 @@ def _compute_shared_optics(
     numerical_aperture_detection,
     invert_phase_contrast=False,
     pupil_steepness=1e4,
+    device: torch.device | str | None = None,
 ):
-    """Compute optical components independent of illumination tilt."""
-    fyy, fxx = util.generate_frequencies(zyx_shape[1:], yx_pixel_size)
-    radial_frequencies = torch.sqrt(fyy**2 + fxx**2)
-    z_total = zyx_shape[0] + 2 * z_padding
-    z_position_list = torch.fft.ifftshift((torch.arange(z_total) - z_total // 2) * z_pixel_size)
-    if invert_phase_contrast:
-        z_position_list = torch.flip(z_position_list, dims=(0,))
+    """Compute optical components independent of illumination tilt.
 
-    det_pupil = optics.generate_pupil(
-        radial_frequencies, numerical_aperture_detection, wavelength_illumination, steepness=pupil_steepness
+    Back-compat wrapper around :func:`_compute_angle_optics` +
+    :func:`_compute_z_position_list` + :func:`_compute_z_optics`. The split
+    helpers exist so callers that hold zenith / azimuth / NA fixed across
+    optimizer iterations (e.g. OPS ``FREEZE_ANGLES`` tilt-recon) can cache
+    the angle half and re-call only the z half per iteration.
+
+    Parameters
+    ----------
+    device : torch.device, str, or None
+        Device on which to materialize the optics tensors. When ``None``
+        (default) the tensors are built on CPU — back-compat with the
+        legacy ``.to(device)``-after-the-fact pattern. Pass the target
+        device (e.g. ``zen.device``) to avoid the CPU ``torch.exp`` step
+        that dominates wall time on GPUs.
+    """
+    fyy, fxx, radial_frequencies, det_pupil = _compute_angle_optics(
+        zyx_shape[1:],
+        yx_pixel_size,
+        wavelength_illumination,
+        numerical_aperture_detection,
+        pupil_steepness=pupil_steepness,
+        device=device,
     )
-    propagation_kernel = optics.generate_propagation_kernel(
-        radial_frequencies, det_pupil, wavelength_illumination / index_of_refraction_media, z_position_list
+    z_position_list = _compute_z_position_list(
+        zyx_shape[0],
+        z_pixel_size,
+        z_padding,
+        invert_phase_contrast=invert_phase_contrast,
+        device=device,
     )
-    greens_function_z = optics.generate_greens_function_z(
+    propagation_kernel, greens_function_z = _compute_z_optics(
         radial_frequencies,
         det_pupil,
-        wavelength_illumination / index_of_refraction_media,
         z_position_list,
-        axially_even=False,
+        wavelength_illumination,
+        index_of_refraction_media,
     )
-
     return fyy, fxx, det_pupil, propagation_kernel, greens_function_z
 
 
@@ -284,6 +409,7 @@ def _calculate_wrap_unsafe_transfer_function(
     tilt_angle_zenith=0.0,
     tilt_angle_azimuth=0.0,
     pupil_steepness=1e4,
+    device: torch.device | str | None = None,
 ):
     fyy, fxx, det_pupil, propagation_kernel, greens_function_z = _compute_shared_optics(
         zyx_shape,
@@ -295,6 +421,7 @@ def _calculate_wrap_unsafe_transfer_function(
         numerical_aperture_detection,
         invert_phase_contrast,
         pupil_steepness,
+        device=device,
     )
 
     ill_pupil = optics.generate_tilted_pupil(

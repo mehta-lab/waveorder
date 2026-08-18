@@ -73,9 +73,19 @@ def optimize_reconstruction(
         reconstruction.
     loss_fn : callable
         Function that takes a reconstruction and returns a scalar loss.
-    optimizable_params : dict[str, tuple[float, float]]
+    optimizable_params : dict[str, tuple[float | Tensor, float]]
         ``{param_name: (initial_value, learning_rate)}`` for each
-        parameter. For grid_search, the learning_rate is the grid step.
+        parameter. For ``grid_search``, the learning_rate is the grid
+        step.
+
+        For Adam / L-BFGS in batched mode (``data.ndim == 4``),
+        ``initial_value`` may be a scalar (broadcast to ``(B,)``) or a
+        tensor of shape ``(B,)`` for per-tile warm-starts.
+
+        ``learning_rate == 0`` marks the parameter as frozen: its
+        initial value is still passed to ``reconstruct_fn`` but the
+        parameter is held fixed across iterations. At least one
+        parameter must be free.
     fixed_params : dict, optional
         Additional fixed parameters to pass to ``reconstruct_fn``.
     method : str
@@ -123,12 +133,12 @@ def optimize_reconstruction(
         Optimized parameter values, loss history, and final
         reconstruction.
     """
-    valid_methods = ("adam", "nadam", "lbfgs", "nelder_mead", "grid_search")
+    valid_methods = ("adam", "nadam", "lbfgs", "newton", "nelder_mead", "grid_search")
     if method not in valid_methods:
         raise ValueError(f"Unknown method {method!r}. Must be one of {valid_methods}.")
 
     if use_gradients is None:
-        use_gradients = method in ("adam", "nadam", "lbfgs")
+        use_gradients = method in ("adam", "nadam", "lbfgs", "newton")
 
     if method == "nelder_mead":
         return _optimize_nelder_mead(
@@ -154,6 +164,21 @@ def optimize_reconstruction(
             fixed_params=fixed_params,
             grid_points=grid_points,
             logger=logger,
+        )
+
+    if method == "newton":
+        return _optimize_newton(
+            data,
+            reconstruct_fn,
+            loss_fn,
+            optimizable_params,
+            fixed_params=fixed_params,
+            max_iterations=max_iterations,
+            convergence_tol=convergence_tol,
+            convergence_patience=convergence_patience,
+            logger=logger,
+            log_images=log_images,
+            log_extras_fn=log_extras_fn,
         )
 
     # Gradient-based methods: adam, lbfgs
@@ -195,6 +220,21 @@ def _optimize_gradient(
     tensor so that every tile is optimized independently. Standard Adam
     maintains per-element momentum and variance, so this is equivalent
     to running B independent Adam optimizers with a single backward pass.
+
+    Per-tile initial values
+    -----------------------
+    ``init_val`` may be either a scalar or a tensor. A tensor must be
+    broadcastable to ``(B,)`` (batched) or to a 0-d tensor (unbatched);
+    this enables per-tile warm-starts from a calibration map.
+
+    Frozen parameters
+    -----------------
+    ``lr == 0`` marks a parameter as frozen: its initial value is still
+    passed to ``reconstruct_fn`` (so per-tile init tensors land in the
+    forward model), but the parameter is excluded from the optimizer's
+    parameter groups and does not require gradients. Useful for the
+    z-only tilt refinement recipe, where zenith and azimuth are pinned
+    to map-derived priors and only ``z_focus_offset`` moves.
     """
     if logger is None:
         logger = NullLogger()
@@ -205,25 +245,57 @@ def _optimize_gradient(
     B = data.shape[0] if batched else 1
 
     param_tensors: dict[str, Tensor] = {}
+    frozen_names: set[str] = set()
     param_groups: list[dict] = []
 
     for name, (init_val, lr) in optimizable_params.items():
-        if batched:
-            # Per-tile parameter: (B,) tensor with independent gradients
+        is_frozen = (lr == 0)
+        requires_grad = use_gradients and not is_frozen
+        if isinstance(init_val, Tensor):
+            src = init_val.detach().to(dtype=torch.float32)
+            if batched:
+                if src.ndim == 0:
+                    t = src.expand((B,)).clone()
+                elif src.shape == (B,):
+                    t = src.clone()
+                else:
+                    raise ValueError(
+                        f"per-tile init for {name!r} has shape {tuple(src.shape)}, expected scalar or ({B},)"
+                    )
+            else:
+                if src.ndim == 0:
+                    t = src.clone()
+                elif src.numel() == 1:
+                    t = src.flatten()[0].clone()
+                else:
+                    raise ValueError(
+                        f"unbatched init for {name!r} must be scalar, got shape {tuple(src.shape)}"
+                    )
+            t.requires_grad_(requires_grad)
+        elif batched:
             t = torch.full(
                 (B,),
                 init_val,
                 dtype=torch.float32,
-                requires_grad=use_gradients,
+                requires_grad=requires_grad,
             )
         else:
             t = torch.tensor(
                 init_val,
                 dtype=torch.float32,
-                requires_grad=use_gradients,
+                requires_grad=requires_grad,
             )
         param_tensors[name] = t
-        param_groups.append({"params": [t], "lr": lr})
+        if is_frozen:
+            frozen_names.add(name)
+        else:
+            param_groups.append({"params": [t], "lr": lr})
+
+    if not param_groups:
+        raise ValueError(
+            "optimize_reconstruction: every parameter has lr=0 (all frozen). "
+            "At least one parameter must be free to optimize."
+        )
 
     if method == "lbfgs":
         all_params = list(param_tensors.values())
@@ -320,6 +392,228 @@ def _optimize_gradient(
             img = recon.detach()
             if img.ndim == 4:
                 img = img[0]  # Show first tile
+            if img.ndim == 3:
+                img = img[img.shape[0] // 2]
+            logger.log_image("reconstruction", img, step)
+
+        if log_extras_fn is not None:
+            log_extras_fn(step, logger, param_tensors)
+
+        if convergence_tol is not None:
+            if loss_val < best_loss - convergence_tol:
+                best_loss = loss_val
+                patience_counter = 0
+            else:
+                patience_counter += 1
+            if patience_counter >= convergence_patience:
+                converged = True
+                final_recon = recon.detach()
+                break
+
+        if step == max_iterations - 1:
+            final_recon = recon.detach()
+
+    logger.close()
+
+    if batched:
+        optimized_values = {name: t.detach().cpu().tolist() for name, t in param_tensors.items()}
+    else:
+        optimized_values = {name: t.item() for name, t in param_tensors.items()}
+
+    return OptimizationResult(
+        optimized_values=optimized_values,
+        loss_history=loss_history,
+        final_reconstruction=final_recon,
+        converged=converged,
+        iterations_used=len(loss_history),
+        wall_times=wall_times,
+    )
+
+
+def _optimize_newton(
+    data,
+    reconstruct_fn,
+    loss_fn,
+    optimizable_params,
+    fixed_params=None,
+    max_iterations=10,
+    convergence_tol=None,
+    convergence_patience=5,
+    logger=None,
+    log_images=False,
+    log_extras_fn=None,
+) -> OptimizationResult:
+    """Damped Newton's method (1-D / diagonal-Hessian, LM-damped).
+
+    For each free parameter, computes the first and second derivatives of
+    the scalar loss via ``torch.autograd.grad`` and takes the Newton step
+
+        step = -grad / max(hessian, damping)
+
+    capped to ``±max_step``. Hessian is the diagonal (per-parameter
+    second derivative) — for batched ``(B,)`` parameters and a loss
+    that factorizes over the batch (``loss = sum_b loss_b``), this is
+    exact; for non-factorizing losses it is a Gauss-Newton approximation.
+
+    ``optimizable_params`` semantics for ``"newton"``:
+
+    - ``init`` — initial value (scalar or tensor, same shape rules as
+      Adam path).
+    - ``lr`` — used as both the LM damping floor and the
+      ``max_step`` cap. Typical values: 0.01–0.1 for radians, 0.5–1.0
+      for px-scale z offsets.
+
+    Frozen params (``lr == 0``) follow the same convention as the
+    gradient path: passed through to ``reconstruct_fn`` but not updated.
+
+    Why Newton, not Adam, for FREEZE_ANGLES tilt-recon
+    --------------------------------------------------
+    When zenith / azimuth are frozen and only z varies, the loss
+    surface near a warmstart-map init is dominated by the local
+    quadratic. Newton converges in 2–3 iterations to the precision Adam
+    reaches in 5–8, which directly cuts the per-position iter count
+    proportionally on the tilt-recon hot path. Same per-iter cost as
+    Adam (one forward + one backward), plus one additional
+    ``autograd.grad`` for the Hessian.
+
+    The implementation mirrors the gated ``OPS_TILT_OPTIMIZER=newton``
+    path prototyped in ``ops_process.reconstruct_tilt_corrected`` —
+    moving it upstream so any waveorder consumer can opt in.
+    """
+    if logger is None:
+        logger = NullLogger()
+    if fixed_params is None:
+        fixed_params = {}
+
+    batched = data.ndim == 4
+    B = data.shape[0] if batched else 1
+
+    param_tensors: dict[str, Tensor] = {}
+    free_names: list[str] = []
+    damping_and_max_step: dict[str, float] = {}
+
+    for name, (init_val, lr) in optimizable_params.items():
+        is_frozen = (lr == 0)
+        # Newton uses `lr` as the LM damping floor + max-step cap. Strict
+        # positive when free; 0 when frozen (same convention as the
+        # gradient path).
+        damping_and_max_step[name] = float(lr)
+        requires_grad = not is_frozen
+        if isinstance(init_val, Tensor):
+            src = init_val.detach().to(dtype=torch.float32)
+            if batched:
+                if src.ndim == 0:
+                    t = src.expand((B,)).clone()
+                elif src.shape == (B,):
+                    t = src.clone()
+                else:
+                    raise ValueError(
+                        f"per-tile init for {name!r} has shape {tuple(src.shape)}, expected scalar or ({B},)"
+                    )
+            else:
+                if src.ndim == 0:
+                    t = src.clone()
+                elif src.numel() == 1:
+                    t = src.flatten()[0].clone()
+                else:
+                    raise ValueError(
+                        f"unbatched init for {name!r} must be scalar, got shape {tuple(src.shape)}"
+                    )
+            t.requires_grad_(requires_grad)
+        elif batched:
+            t = torch.full((B,), init_val, dtype=torch.float32, requires_grad=requires_grad)
+        else:
+            t = torch.tensor(init_val, dtype=torch.float32, requires_grad=requires_grad)
+        param_tensors[name] = t
+        if not is_frozen:
+            free_names.append(name)
+
+    if not free_names:
+        raise ValueError(
+            "optimize_reconstruction(method='newton'): every parameter has lr=0 (all frozen)."
+            " At least one parameter must be free."
+        )
+
+    loss_history: list[float] = []
+    wall_times: list[float] = []
+    final_recon = None
+    converged = False
+    patience_counter = 0
+    best_loss = float("inf")
+
+    last_good = {name: t.detach().clone() for name, t in param_tensors.items()}
+
+    pbar = tqdm(range(max_iterations), desc="Newton")
+    for step in pbar:
+        t_start = time.monotonic()
+
+        kwargs = dict(fixed_params)
+        kwargs.update(param_tensors)
+
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                recon = reconstruct_fn(data, **kwargs)
+            if batched:
+                loss = torch.stack([loss_fn(recon[b]) for b in range(B)]).sum()
+            else:
+                loss = loss_fn(recon)
+
+            if torch.isnan(loss) or torch.isnan(recon).any():
+                raise ValueError("NaN in reconstruction or loss")
+
+            for name in free_names:
+                param = param_tensors[name]
+                # First derivative (keep graph for second backward)
+                grad = torch.autograd.grad(loss, param, create_graph=True, retain_graph=True)[0]
+                # Diagonal Hessian via grad-of-grad. For batched (B,)
+                # params and a loss that sums per-tile losses, this is
+                # the exact per-tile second derivative; off-diagonal
+                # entries are zero by independence.
+                try:
+                    hess = torch.autograd.grad(grad.sum(), param, retain_graph=True)[0]
+                except RuntimeError:
+                    # Hessian undefined (e.g. param disconnected this iter).
+                    # Fall back to gradient descent with the damping floor.
+                    hess = torch.zeros_like(param)
+
+                damping = damping_and_max_step[name]
+                with torch.no_grad():
+                    # LM-style denom: clamp to positive damping floor.
+                    denom = torch.where(
+                        hess > damping,
+                        hess,
+                        torch.full_like(hess, damping),
+                    )
+                    delta = -grad / denom
+                    delta = delta.clamp(-damping * 100.0, damping * 100.0) if damping > 0 else delta
+                    new = param.detach() + delta
+                    param.copy_(new)
+
+        except (RuntimeError, ValueError):
+            with torch.no_grad():
+                for name, t in param_tensors.items():
+                    t.copy_(last_good[name])
+            break
+
+        last_good = {name: t.detach().clone() for name, t in param_tensors.items()}
+
+        wall_times.append(time.monotonic() - t_start)
+        loss_val = loss.item()
+        loss_history.append(loss_val)
+
+        postfix = {"loss": f"{loss_val:.4f}"}
+        for name, t in param_tensors.items():
+            postfix[name] = f"{t.mean().item():.4f}"
+        pbar.set_postfix(postfix)
+
+        logger.log_scalar("loss", loss_val, step)
+        for name, t in param_tensors.items():
+            logger.log_scalar(name, t.mean().item(), step)
+
+        if log_images:
+            img = recon.detach()
+            if img.ndim == 4:
+                img = img[0]
             if img.ndim == 3:
                 img = img[img.shape[0] // 2]
             logger.log_image("reconstruction", img, step)
