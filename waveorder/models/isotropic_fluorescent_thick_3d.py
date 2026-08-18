@@ -506,16 +506,20 @@ def reconstruct(
     rl_bp_resolution_mode : str, optional
         How the back projector sets its cutoff frequency, by default "fwhm".
         Use "fwhm_over_sqrt2" for iSIM.
-    back_projector_otf : Tensor, optional
-        Prebuilt back projector, skipping the rl_bp_* construction. Building it
-        costs a few seconds on a large OTF, so callers reconstructing many tiles
-        should build it once with :func:`waveorder.backprojector.calculate_back_projector`
-        and pass it here. By default None (build it on every call).
 
     Returns
     -------
     Tensor
         Fluorescence density, shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
+
+    Notes
+    -----
+    This recomputes the transfer function on every call, so it does not take a
+    prebuilt back projector. Callers reconstructing many tiles with RL should
+    call :func:`calculate_transfer_function` and
+    :func:`apply_inverse_transfer_function` directly, building the back projector
+    once with :func:`waveorder.backprojector.calculate_back_projector` and
+    passing it as ``back_projector_otf``.
     """
     # Use last 3 dims as zyx_shape for TF computation
     zyx_shape = zyx_data.shape[-3:]
