@@ -129,6 +129,16 @@ class ApplyInverseSettings(FourierApplyInverseSettings):
                 UserWarning,
             )
             self.rl = None
+
+        # RLGC reads the sign of transpose(forward(.)) for its consensus test, which
+        # only means anything for a true adjoint. Catch it here so a config fails
+        # while parsing rather than after the transfer function has been computed.
+        if self.reconstruction_algorithm == "RLGC" and self.rl.back_projector != "matched":
+            raise ValueError(
+                f"reconstruction_algorithm 'RLGC' requires rl.back_projector 'matched', "
+                f"got {self.rl.back_projector!r}. The unmatched back projectors are "
+                f"supported for 'RL' only."
+            )
         return self
 
     def to_model_kwargs(self) -> dict:

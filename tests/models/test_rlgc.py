@@ -12,9 +12,11 @@ wiring into 3D fluorescence reconstruction:
 
 import pytest
 import torch
+from pydantic import ValidationError
 
 from waveorder import rlgc
 from waveorder.api import fluorescence, phase
+from waveorder.cli.settings import ReconstructionSettings
 from waveorder.models import (
     isotropic_fluorescent_thick_3d as thick,
 )
@@ -275,11 +277,50 @@ def test_phase_2d_not_implemented_for_rl(algorithm):
 
 
 @pytest.mark.parametrize("algorithm", ["RL", "RLGC"])
-def test_phase_config_accepts_rl_request(algorithm):
-    """RL/RLGC are valid config values everywhere (so the request reaches the
-    model), even though only fluorescence implements them."""
-    settings = phase.Settings(apply_inverse={"reconstruction_algorithm": algorithm})
-    assert settings.apply_inverse.reconstruction_algorithm == algorithm
+def test_phase_config_rejects_rl_request(algorithm):
+    """Only fluorescence implements RL/RLGC, so a phase config naming one is
+    rejected while parsing rather than mid-reconstruction."""
+    with pytest.raises(ValidationError):
+        phase.Settings(apply_inverse={"reconstruction_algorithm": algorithm})
+
+
+@pytest.mark.parametrize("algorithm", ["RL", "RLGC"])
+def test_fluorescence_2d_config_rejects_rl(algorithm):
+    """RL/RLGC need thick (3D) fluorescence, and that pairing is caught at parse time."""
+    with pytest.raises(ValidationError, match="reconstruction_dimension 3"):
+        ReconstructionSettings(
+            input_channel_names=["GFP"],
+            reconstruction_dimension=2,
+            fluorescence={"apply_inverse": {"reconstruction_algorithm": algorithm}},
+        )
+
+
+@pytest.mark.parametrize("algorithm", ["RL", "RLGC"])
+def test_fluorescence_3d_config_accepts_rl(algorithm):
+    """The supported pairing still parses."""
+    settings = ReconstructionSettings(
+        input_channel_names=["GFP"],
+        reconstruction_dimension=3,
+        fluorescence={"apply_inverse": {"reconstruction_algorithm": algorithm}},
+    )
+    assert settings.fluorescence.apply_inverse.reconstruction_algorithm == algorithm
+
+
+@pytest.mark.parametrize("back_projector", ["gaussian", "butterworth", "wiener", "wiener_butterworth"])
+def test_rlgc_config_rejects_unmatched_back_projector(back_projector):
+    """RLGC's consensus test needs a true adjoint, so the combination is refused at parse time."""
+    with pytest.raises(ValidationError, match="matched"):
+        fluorescence.ApplyInverseSettings(
+            reconstruction_algorithm="RLGC",
+            rl={"back_projector": back_projector},
+        )
+
+
+@pytest.mark.parametrize("back_projector", ["matched", "gaussian", "wiener_butterworth"])
+def test_rl_config_accepts_any_back_projector(back_projector):
+    """RL supports the unmatched back projectors."""
+    settings = fluorescence.ApplyInverseSettings(reconstruction_algorithm="RL", rl={"back_projector": back_projector})
+    assert settings.rl.back_projector == back_projector
 
 
 @pytest.mark.parametrize("algorithm", ["RL", "RLGC"])
