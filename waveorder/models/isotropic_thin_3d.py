@@ -366,7 +366,7 @@ def apply_transfer_function(
 def apply_inverse_transfer_function(
     zyx_data: Tensor,
     singular_system: Tuple[Tensor, Tensor, Tensor],
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     reg_p: float = 1e-6,  # TODO: use this parameter
     TV_rho_strength: float = 1e-3,
@@ -435,6 +435,9 @@ def apply_inverse_transfer_function(
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
 
+    elif reconstruction_algorithm in ("RL", "RLGC"):
+        raise NotImplementedError("RL/RLGC reconstruction is only implemented for 3D fluorescence")
+
     absorption_yx = output[:, 0]  # (B, Y, X)
     phase_yx = output[:, 1]  # (B, Y, X)
 
@@ -454,7 +457,7 @@ def reconstruct(
     numerical_aperture_illumination: Union[float, Tensor] = 0.9,
     numerical_aperture_detection: Union[float, Tensor] = 1.2,
     invert_phase_contrast: bool = False,
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     reg_p: float = 1e-6,
     TV_rho_strength: float = 1e-3,
