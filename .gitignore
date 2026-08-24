@@ -156,11 +156,12 @@ waveorder/_version.py
 /examples/data_temp/*
 /logs/*
 scripts/
+!.skills/**/scripts/
+!.skills/**/scripts/**
 
 # benchmark results
 runs/
 
-# Claude Code session state (but keep shared project skills)
+# Claude Code session state (but keep shared project skills symlink)
 .claude/*
-!.claude/skills/
-!.claude/skills/**
+!.claude/skills
