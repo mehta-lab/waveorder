@@ -67,6 +67,35 @@ def axial_nyquist(
     return 1 / (2 * cutoff_frequency)
 
 
+def raised_cosine_window(size, rolloff, device=None):
+    """1D raised-cosine apodization window in unshifted (fftfreq) order.
+
+    The window is 1 over the inner ``1 - rolloff`` fraction of the band
+    and rolls off smoothly (half-cosine) to 0 at the Nyquist frequency.
+
+    Parameters
+    ----------
+    size : int
+        Number of frequency samples.
+    rolloff : float
+        Fraction of the band (0 to 1] over which the window rolls off
+        from 1 to 0 at the band edge.
+    device : str, torch.device, or None
+        Output tensor device.
+
+    Returns
+    -------
+    torch.Tensor
+        Window of shape ``(size,)`` in fftfreq (unshifted) order.
+    """
+    normalized_frequency = torch.abs(torch.fft.fftfreq(size, device=device)) * 2  # 1.0 at Nyquist
+    rolloff_start = 1 - rolloff
+    window = torch.ones(size, device=device)
+    mask = normalized_frequency > rolloff_start
+    window[mask] = 0.5 * (1 + torch.cos(torch.pi * (normalized_frequency[mask] - rolloff_start) / rolloff))
+    return window
+
+
 def nd_fourier_central_cuboid(source, target_shape):
     """Central cuboid of an N-D Fourier transform.
 

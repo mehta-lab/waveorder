@@ -372,6 +372,7 @@ def apply_inverse_transfer_function(
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
     bg_filter: bool = False,
+    apodization_rolloff: float = 0.0,
 ) -> Tuple[Tensor, Tensor]:
     """Reconstructs absorption and phase from zyx_data.
 
@@ -395,6 +396,15 @@ def apply_inverse_transfer_function(
         TV-specific number of iterations, by default 10
     bg_filter : bool, optional
         Slow-varying 2D background normalization, by default False
+    apodization_rolloff : float, optional
+        Raised-cosine roll-off fraction applied to the inverse filter at
+        the transverse Nyquist edge. Suppresses Nyquist-rate checkerboard
+        artifacts in the reconstruction when the optical band limit
+        exceeds the sampling Nyquist frequency. Note that apodizing the
+        transfer function instead is counterproductive here: the
+        Tikhonov inverse divides the window back out and amplifies noise
+        where the windowed singular values cross ``sqrt(reg)``. By
+        default 0.0 (no apodization, previous behavior).
 
     Returns
     -------
@@ -414,10 +424,19 @@ def apply_inverse_transfer_function(
         U, S, Vh = singular_system
         batched_ss = S.ndim == 4  # (B, 2, Vy, Vx)
 
+        if apodization_rolloff > 0:
+            window = sampling.raised_cosine_window(S.shape[-2], apodization_rolloff, device=S.device)[
+                :, None
+            ] * sampling.raised_cosine_window(S.shape[-1], apodization_rolloff, device=S.device)
+        else:
+            window = None
+
         if not batched_ss:
             # Shared singular system: compute inverse filter once
             S_reg = S / (S**2 + regularization_strength)
             sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
+            if window is not None:
+                sfyx_inverse_filter = sfyx_inverse_filter * window
             results = []
             for b in range(zyx.shape[0]):
                 results.append(apply_filter_bank(sfyx_inverse_filter, zyx[b]))
@@ -428,6 +447,8 @@ def apply_inverse_transfer_function(
             results = []
             for b in range(zyx.shape[0]):
                 filt_b = torch.einsum("sj...,j...,jf...->fs...", U[b], S_reg[b], Vh[b])
+                if window is not None:
+                    filt_b = filt_b * window
                 results.append(apply_filter_bank(filt_b, zyx[b]))
             output = torch.stack(results, dim=0)  # (B, 2, Y, X)
 
@@ -466,6 +487,7 @@ def reconstruct(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 10000.0,
+    apodization_rolloff: float = 0.0,
 ) -> Tuple[Tensor, Tensor]:
     """Reconstruct 2D absorption and phase from a brightfield defocus stack.
 
@@ -507,6 +529,11 @@ def reconstruct(
         Scalar for shared tilt, ``(B,)`` tensor for per-tile tilt.
     pupil_steepness : float, optional
         Sigmoid steepness for smooth pupil cutoff, by default 10000.0
+    apodization_rolloff : float, optional
+        Raised-cosine roll-off fraction applied to the inverse filter at
+        the transverse Nyquist edge, by default 0.0 (no apodization).
+        Suppresses Nyquist-rate checkerboard artifacts. See
+        ``apply_inverse_transfer_function``.
 
     Returns
     -------
@@ -539,4 +566,5 @@ def reconstruct(
         TV_rho_strength=TV_rho_strength,
         TV_iterations=TV_iterations,
         bg_filter=bg_filter,
+        apodization_rolloff=apodization_rolloff,
     )
