@@ -404,7 +404,9 @@ def apply_inverse_transfer_function(
         transfer function instead is counterproductive here: the
         Tikhonov inverse divides the window back out and amplifies noise
         where the windowed singular values cross ``sqrt(reg)``. By
-        default 0.0 (no apodization, previous behavior).
+        default 0.0 (no apodization, previous behavior). Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25.
 
     Returns
     -------
@@ -532,7 +534,9 @@ def reconstruct(
     apodization_rolloff : float, optional
         Raised-cosine roll-off fraction applied to the inverse filter at
         the transverse Nyquist edge, by default 0.0 (no apodization).
-        Suppresses Nyquist-rate checkerboard artifacts. See
+        Suppresses Nyquist-rate checkerboard artifacts. Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25. See
         ``apply_inverse_transfer_function``.
 
     Returns

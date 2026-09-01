@@ -340,8 +340,9 @@ def apply_inverse_transfer_function(
         filter at the transverse Nyquist edge (Y and X only). Suppresses
         Nyquist-rate checkerboard artifacts in the reconstruction when
         the optical band limit exceeds the sampling Nyquist frequency.
-        Tikhonov only. By default 0.0 (no apodization, previous
-        behavior).
+        Tikhonov only. By default 0.0 (no apodization, previous behavior). Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25.
 
     Returns
     -------
@@ -527,7 +528,9 @@ def reconstruct(
         Raised-cosine roll-off fraction applied to the Tikhonov inverse
         filter at the transverse Nyquist edge, by default 0.0
         (no apodization). Suppresses Nyquist-rate checkerboard
-        artifacts. Tikhonov only. See ``apply_inverse_transfer_function``.
+        artifacts. Tikhonov only. Must be between 0 and 1; if you see
+        checkerboarding artifacts, start with 0.25. See
+        ``apply_inverse_transfer_function``.
 
     Returns
     -------

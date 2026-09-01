@@ -324,7 +324,9 @@ def apply_inverse_transfer_function(
         the transverse Nyquist edge. Suppresses Nyquist-rate checkerboard
         artifacts in the reconstruction when the optical band limit
         exceeds the sampling Nyquist frequency. By default 0.0
-        (no apodization, previous behavior).
+        (no apodization, previous behavior). Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25.
 
     Returns
     -------
@@ -407,7 +409,9 @@ def reconstruct(
     apodization_rolloff : float, optional
         Raised-cosine roll-off fraction applied to the inverse filter at
         the transverse Nyquist edge, by default 0.0 (no apodization).
-        Suppresses Nyquist-rate checkerboard artifacts. See
+        Suppresses Nyquist-rate checkerboard artifacts. Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25. See
         ``apply_inverse_transfer_function``.
 
     Returns

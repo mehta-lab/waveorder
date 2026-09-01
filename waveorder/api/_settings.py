@@ -139,8 +139,9 @@ class FourierApplyInverseSettings(MyBaseModel):
         ge=0.0,
         le=1.0,
         description="raised-cosine roll-off fraction applied to the inverse filter at the "
-        "transverse Nyquist edge (0 = off); suppresses checkerboard artifacts when the "
-        "optical band limit exceeds the sampling Nyquist frequency",
+        "transverse Nyquist edge; suppresses checkerboard artifacts when the optical band "
+        "limit exceeds the sampling Nyquist frequency. Must be between 0 and 1 (0 = off); "
+        "if you see checkerboarding artifacts, start with 0.25",
     )
 
     def to_model_kwargs(self) -> dict:
