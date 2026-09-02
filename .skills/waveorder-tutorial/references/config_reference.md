@@ -134,4 +134,19 @@ check the fitted value against the user's manually chosen value before
 trusting it. A 2D config with an optimizable `z_focus_offset` is waveorder's
 autofocus.
 
+Method semantics that matter in practice:
+
+- **Gradient methods (`adam`, `lbfgs`) are local.** Each iteration moves the
+  parameter by roughly `lr`, so 10 iterations at `lr: 0.1` can only travel
+  about one slice. They refine a good initialization; they do not recover
+  from a badly wrong one.
+- **`grid_search` uses `lr` as the grid step**, evaluating `grid_points`
+  values centered on `init` (`max_iterations` is ignored). A small `lr`
+  therefore searches a *narrow* window: `init: 2, lr: 0.1, grid_points: 7`
+  only covers 1.7 to 2.3.
+- **Coarse-to-fine recipe when a parameter may be far off:** first run
+  `grid_search` with `lr` set to a coarse step wide enough to bracket the
+  plausible range (e.g. `init: 0, lr: 1.0, grid_points: 11` covers -5 to +5
+  slices), then rerun with `adam` starting from the grid winner to refine.
+
 Full working example: `docs/examples/optimization/phase_2d_optimized.yml`.

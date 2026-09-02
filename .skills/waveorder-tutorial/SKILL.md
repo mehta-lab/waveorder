@@ -398,6 +398,14 @@ auto-tuning find the value the user picked by eye (on the tuned FOV) and fix
 the failed cases? If yes, keep that parameter optimizable in the production
 config. If not, keep it fixed at the manual value.
 
+Gradient methods are local: 10 iterations at `lr: 0.1` travel about one slice,
+so they refine a good initialization rather than recover from a badly wrong
+one. If a parameter may be far off, go coarse-to-fine: run
+`method: grid_search` first (its `lr` is the grid step and the grid is
+centered on `init`, so pick `lr` x `grid_points` wide enough to bracket the
+plausible range), then refine from the grid winner with `adam`. Details in
+`references/config_reference.md`.
+
 ---
 
 ## Stage 6: Scale the reconstruction
