@@ -6,7 +6,7 @@ defocus stack. It is already an **OME-Zarr**, so it plugs straight into
 ``wo view`` / ``wo rec`` with no conversion.
 
 The stack is a single ``BF`` channel, 11 defocus slices (yx = 0.325 µm,
-z = 2.0 µm) — ideal for a **2D phase-from-defocus** reconstruction. A ready-made
+z = 2.0 µm), ideal for a **2D phase-from-defocus** reconstruction. A ready-made
 config lives at ``references/example_qpi_2d.yml``.
 
 Examples
@@ -19,13 +19,13 @@ import io
 import zipfile
 from pathlib import Path
 
+import requests
+
 URL = "https://zenodo.org/record/8386856/files/recOrder_session.zip"
 
 
 def main() -> None:
     argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter).parse_args()
-
-    import requests
 
     data_dir = Path.home() / ".waveorder_tutorial_data"
     data_dir.mkdir(exist_ok=True)
@@ -46,7 +46,7 @@ def main() -> None:
 
     print(f"\nRaw OME-Zarr (BF defocus stack):  {raw_path}")
     print(f"\nInspect with:  wo view {raw_path}")
-    print("Already an OME-Zarr — skip conversion (Step 1, Case 1); channel 'BF', dim 2D.")
+    print("Already an OME-Zarr, so skip conversion (Stage 3, Case 1); channel 'BF', dim 2D.")
     print("\n2D phase-from-defocus reconstruction:")
     print(f"  wo rec -i {raw_path}/0/0/0 -c {config} -o ./qpi_2d_recon.zarr")
     print(f"  wo view {raw_path} ./qpi_2d_recon.zarr")

@@ -10,10 +10,10 @@ in napari. Exactly two CLI calls.
 
 ## Inputs
 
-- **config** — a reconstruction config YAML (the same kind used by `wo rec`; e.g.
+- **config**: a reconstruction config YAML (the same kind used by `wo rec`; e.g.
   a `phase:` or `fluorescence:` config). This defines the optics (NA, wavelength,
-  pixel sizes, RI, tilt, …) that shape the transfer function.
-- **input position** — a path to one OME-Zarr position (`.../row/col/fov`).
+  pixel sizes, RI, tilt, ...) that shape the transfer function.
+- **input position**: a path to one OME-Zarr position (`.../row/col/fov`).
   `wo compute-tf` needs it only to read the **array shape**; the values are not
   used, so any dataset with the right ZYX shape works.
 
@@ -31,7 +31,7 @@ wo view ./otf.zarr &
 ```
 
 Notes:
-- The subcommand is `compute-tf` (alias for `compute-transfer-function`) — there
+- The subcommand is `compute-tf` (alias for `compute-transfer-function`); there
   is no `calc-tf`.
 - `wo view` auto-detects a transfer function (it has `settings` in its zarr
   attrs) and shows real/imag parts with a diverging `bwr` colormap, `ifftshift`-ed
@@ -43,7 +43,7 @@ Notes:
 - `wo view` starts napari's event loop and **blocks the terminal until closed**.
   When you run it, launch it in the background (`&`, or the Bash tool's
   `run_in_background: true`), tell the user the window is open, and let them
-  inspect it — do not render a static PNG.
+  inspect it. Do not render a static PNG.
 - If `wo` isn't on PATH, prefix both calls with `uv run` from the repo.
 
-That's it — report the `./otf.zarr` path and that napari is open.
+That's it: report the `./otf.zarr` path and that napari is open.

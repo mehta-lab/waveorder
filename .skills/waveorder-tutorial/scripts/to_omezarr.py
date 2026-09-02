@@ -18,20 +18,20 @@ import argparse
 from pathlib import Path
 
 import numpy as np
+import tifffile
+import zarr
+from iohub.ngff import open_ome_zarr
+from iohub.ngff.models import TransformationMeta
 
 
 def _load(path: Path) -> np.ndarray:
     """Load a TIFF, .npy, or plain zarr array as a numpy array."""
     suffix = path.suffix.lower()
     if suffix in {".tif", ".tiff"}:
-        import tifffile
-
         return tifffile.imread(str(path))
     if suffix == ".npy":
         return np.load(path)
     # Assume a plain zarr array directory.
-    import zarr
-
     return np.asarray(zarr.open(str(path), mode="r"))
 
 
@@ -62,9 +62,6 @@ def main() -> None:
     p.add_argument("--yx-pixel-size", type=float, default=0.1, help="lateral pixel size (µm)")
     p.add_argument("--z-pixel-size", type=float, default=1.0, help="axial pixel size (µm)")
     args = p.parse_args()
-
-    from iohub.ngff import open_ome_zarr
-    from iohub.ngff.models import TransformationMeta
 
     arr = _to_tczyx(_load(args.input), args.axes)
     n_channels = arr.shape[1]

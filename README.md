@@ -12,6 +12,8 @@
 
 Label-agnostic computational microscopy of architectural order.
 
+> **New to waveorder?** Start with the [first-reconstruction tutorial](docs/guide/first-reconstruction.md), a six-stage guide from raw data to a tuned reconstruction. For a guided session, open an agent that supports skills (e.g. [Claude Code](https://claude.com/claude-code)) in this repository and run the [`/waveorder-tutorial`](.skills/waveorder-tutorial/SKILL.md) skill.
+
 # Overview
 
 `waveorder` is a generalist framework for label-agnostic computational microscopy of architectural order, i.e., density, alignment, and orientation of biomolecules with the spatial resolution down to the diffraction limit. The framework implements wave-optical simulations and corresponding reconstruction algorithms for diverse label-free and fluorescence computational imaging methods that enable quantitative imaging of the architecture of dynamic cell systems.
