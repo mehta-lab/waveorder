@@ -10,6 +10,7 @@ import xarray as xr
 from pydantic import Field, NonNegativeFloat, model_validator
 
 from waveorder import optics, util
+from waveorder._pixel_size import YXPixelSize
 from waveorder.api._settings import (
     FourierApplyInverseSettings,
     MyBaseModel,
@@ -108,17 +109,18 @@ def simulate(
         settings = Settings()
 
     s = settings.transfer_function.resolve_floats()
+    yx_pixel_size = YXPixelSize.from_value(s.yx_pixel_size)
     Z, Y, X = zyx_shape
     zyx_coords = {
         "z": np.arange(Z) * s.z_pixel_size,
-        "y": np.arange(Y) * s.yx_pixel_size,
-        "x": np.arange(X) * s.yx_pixel_size,
+        "y": np.arange(Y) * yx_pixel_size.y,
+        "x": np.arange(X) * yx_pixel_size.x,
     }
 
     if recon_dim == 3:
         zyx_phase = phase_thick_3d.generate_test_phantom(
             zyx_shape,
-            s.yx_pixel_size,
+            yx_pixel_size,
             s.z_pixel_size,
             wavelength_illumination=s.wavelength_illumination,
             index_of_refraction_media=s.index_of_refraction_media,
@@ -127,7 +129,7 @@ def simulate(
         )
         real_tf, _ = phase_thick_3d.calculate_transfer_function(
             zyx_shape,
-            s.yx_pixel_size,
+            yx_pixel_size,
             s.z_pixel_size,
             wavelength_illumination=s.wavelength_illumination,
             z_padding=0,
@@ -332,7 +334,7 @@ def apply_inverse_transfer_function(
         _, output = isotropic_thin_3d.apply_inverse_transfer_function(
             zyx_tensor,
             (U.to(device), S.to(device), Vh.to(device)),
-            **settings.apply_inverse.model_dump(),
+            **settings.apply_inverse.to_model_kwargs(),
         )
     # [phase only, 3]
     elif recon_dim == 3:
@@ -341,7 +343,7 @@ def apply_inverse_transfer_function(
             _to_tensor(transfer_function, "real_potential_transfer_function").to(device),
             _to_tensor(transfer_function, "imaginary_potential_transfer_function").to(device),
             z_padding=settings.transfer_function.z_padding,
-            **settings.apply_inverse.model_dump(),
+            **settings.apply_inverse.to_model_kwargs(),
         )
 
     # Wrap output tensor(s) back into xr.DataArray(s)

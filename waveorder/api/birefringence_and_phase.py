@@ -12,6 +12,7 @@ import numpy as np
 import torch
 import xarray as xr
 
+from waveorder._pixel_size import YXPixelSize
 from waveorder.api import birefringence, phase
 from waveorder.api._utils import (
     _biref_inverse_kwargs,
@@ -81,6 +82,13 @@ def simulate(
     Z, Y, X = zyx_shape
     yx_shape = (Y, X)
     s = settings_phase.transfer_function
+    yx_pixel_size = YXPixelSize.from_value(s.yx_pixel_size)
+    if not yx_pixel_size.is_isotropic:
+        raise NotImplementedError(
+            "Anisotropic yx_pixel_size is not supported by the combined "
+            "birefringence + phase reconstruction. Pass an isotropic "
+            "yx_pixel_size."
+        )
 
     # --- 2D star phantom (birefringence + phase) ---
     retardance, orientation, transmittance, depolarization = inplane_oriented_thick_pol3d.generate_test_phantom(
@@ -193,8 +201,8 @@ def simulate(
     # --- Build phantom (all properties localized to central slices) ---
     zyx_coords = {
         "z": np.arange(Z) * s.z_pixel_size,
-        "y": np.arange(Y) * s.yx_pixel_size,
-        "x": np.arange(X) * s.yx_pixel_size,
+        "y": np.arange(Y) * yx_pixel_size.y,
+        "x": np.arange(X) * yx_pixel_size.x,
     }
 
     zyx_ret = np.zeros((Z, Y, X), dtype=np.float32)
@@ -398,7 +406,7 @@ def apply_inverse_transfer_function(
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             brightfield_3d,
             _to_singular_system(transfer_function, "vector_singular_system"),
-            **settings_phase.apply_inverse.model_dump(),
+            **settings_phase.apply_inverse.to_model_kwargs(),
         )
 
         retardance = radians_to_nanometers(reconstructed_parameters_2d[0], wavelength)
@@ -422,7 +430,7 @@ def apply_inverse_transfer_function(
             _to_tensor(transfer_function, "real_potential_transfer_function"),
             _to_tensor(transfer_function, "imaginary_potential_transfer_function"),
             z_padding=settings_phase.transfer_function.z_padding,
-            **settings_phase.apply_inverse.model_dump(),
+            **settings_phase.apply_inverse.to_model_kwargs(),
         )
 
         retardance = radians_to_nanometers(reconstructed_parameters_3d[0], wavelength)
@@ -436,7 +444,7 @@ def apply_inverse_transfer_function(
             szyx_data=stokes,
             singular_system=_to_singular_system(transfer_function, "vector_singular_system"),
             intensity_to_stokes_matrix=None,
-            **settings_phase.apply_inverse.model_dump(),
+            **settings_phase.apply_inverse.to_model_kwargs(),
         )
 
         new_ret = (joint_recon_params[1] ** 2 + joint_recon_params[2] ** 2) ** (0.5)

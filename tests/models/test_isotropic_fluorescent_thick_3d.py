@@ -1,8 +1,42 @@
 import numpy as np
+import pytest
 import torch
 
 from waveorder import util
+from waveorder._pixel_size import YXPixelSize
 from waveorder.models import isotropic_fluorescent_thick_3d
+
+
+@pytest.mark.parametrize(
+    "yx_pixel_size, na, confocal_pinhole_diameter",
+    [
+        (0.1, 1.2, None),
+        (0.325, 0.8, None),
+        (0.65, 0.45, None),
+        (0.65, 1.2, None),
+        (1.3, 1.2, None),
+        (0.325, 0.8, 0.5),  # confocal
+    ],
+)
+def test_transfer_function_psf_nonnegative(yx_pixel_size, na, confocal_pinhole_diameter):
+    """The incoherent PSF must be nonnegative.
+
+    Upsampling to Nyquist and then cropping the OTF in Fourier space rings the
+    PSF below zero (worst near sub-Nyquist sampling). This is unphysical and
+    breaks Richardson-Lucy, so ``calculate_transfer_function`` clips it away.
+    """
+    otf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
+        zyx_shape=(24, 64, 64),
+        yx_pixel_size=yx_pixel_size,
+        z_pixel_size=0.5,
+        wavelength_emission=0.515,
+        z_padding=0,
+        index_of_refraction_media=1.4,
+        numerical_aperture_detection=na,
+        confocal_pinhole_diameter=confocal_pinhole_diameter,
+    )
+    psf = torch.real(torch.fft.ifftn(otf, dim=(-3, -2, -1)))
+    assert psf.min() >= -1e-6 * psf.max()
 
 
 def test_pinhole_aperture_otf_small_diameter():
@@ -94,6 +128,55 @@ def test_apply_inverse_transfer_function():
     #    itr=10,
     # )
     # assert result_tv.shape == (10, 5, 5)
+
+
+def test_calculate_transfer_function_isotropic_yx_pixel_size_equivalence():
+    """Anisotropic YXPixelSize with y == x reproduces the legacy scalar output."""
+    common = dict(
+        zyx_shape=(10, 32, 32),
+        z_pixel_size=0.5,
+        wavelength_emission=0.507,
+        z_padding=0,
+        index_of_refraction_media=1.3,
+        numerical_aperture_detection=1.2,
+    )
+    otf_scalar = isotropic_fluorescent_thick_3d.calculate_transfer_function(yx_pixel_size=0.2, **common)
+    otf_model = isotropic_fluorescent_thick_3d.calculate_transfer_function(
+        yx_pixel_size=YXPixelSize.isotropic(0.2), **common
+    )
+    assert torch.allclose(otf_scalar, otf_model)
+
+
+def test_calculate_transfer_function_anisotropic_runs():
+    """y != x produces a finite OTF of the expected shape."""
+    otf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
+        zyx_shape=(10, 32, 32),
+        yx_pixel_size=YXPixelSize(y=0.3, x=0.2),
+        z_pixel_size=0.5,
+        wavelength_emission=0.507,
+        z_padding=0,
+        index_of_refraction_media=1.3,
+        numerical_aperture_detection=1.2,
+    )
+    assert otf.shape == (10, 32, 32)
+    assert torch.isfinite(otf).all()
+
+
+def test_reconstruct_anisotropic_smoke():
+    """End-to-end reconstruct on random data with anisotropic yx pixel size runs."""
+    zyx_shape = (10, 32, 32)
+    zyx_data = torch.rand(zyx_shape)
+    result = isotropic_fluorescent_thick_3d.reconstruct(
+        zyx_data,
+        yx_pixel_size=YXPixelSize(y=0.3, x=0.2),
+        z_pixel_size=0.5,
+        wavelength_emission=0.507,
+        z_padding=0,
+        index_of_refraction_media=1.3,
+        numerical_aperture_detection=1.2,
+    )
+    assert result.shape == zyx_shape
+    assert np.all(np.isfinite(result.numpy()))
 
 
 def test_reconstruct():

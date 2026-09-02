@@ -132,11 +132,9 @@ class TestBuildPhantom:
 
 
 class TestLoadRegressionExperiment:
-    def test_regression_yml_valid(self):
+    def test_regression_yml_valid(self, pytestconfig):
         """Validate the committed regression.yml experiment."""
-        from pathlib import Path
-
-        regression_path = Path(__file__).parent.parent / "benchmarks" / "experiments" / "regression.yml"
+        regression_path = pytestconfig.rootpath / "benchmarks" / "experiments" / "regression.yml"
         if not regression_path.exists():
             pytest.skip("regression.yml not found")
         exp = load_experiment(regression_path)

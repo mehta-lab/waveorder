@@ -7,6 +7,7 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
+from waveorder._pixel_size import YXPixelSize
 from waveorder.filter import apply_filter_bank
 
 
@@ -31,12 +32,13 @@ def generate_test_phantom(
     Tensor
         YX fluorescence density map
     """
+    yx_pixel_size = YXPixelSize.from_value(yx_pixel_size)
     sphere, _, _ = util.generate_sphere_target(
         (3,) + yx_shape,
         yx_pixel_size,
         z_pixel_size=1.0,
         radius=sphere_radius,
-        blur_size=2 * yx_pixel_size,
+        blur_size=2 * min(yx_pixel_size.y, yx_pixel_size.x),
     )
 
     # Use middle slice as thin fluorescent object
@@ -89,19 +91,22 @@ def calculate_transfer_function(
     # Extract float value for Nyquist computation (not in gradient chain)
     na_det_val = float(torch.as_tensor(numerical_aperture_detection).detach())
 
+    yx_pixel_size = YXPixelSize.from_value(yx_pixel_size)
+
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_emission,
         na_det_val,  # ill = det for fluorescence
         na_det_val,
     )
-    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
+    y_factor = int(np.ceil(yx_pixel_size.y / transverse_nyquist))
+    x_factor = int(np.ceil(yx_pixel_size.x / transverse_nyquist))
 
     fluorescent_2d_to_3d_transfer_function = _calculate_wrap_unsafe_transfer_function(
         (
-            yx_shape[0] * yx_factor,
-            yx_shape[1] * yx_factor,
+            yx_shape[0] * y_factor,
+            yx_shape[1] * x_factor,
         ),
-        yx_pixel_size / yx_factor,
+        YXPixelSize(y=yx_pixel_size.y / y_factor, x=yx_pixel_size.x / x_factor),
         z_position_list,
         wavelength_emission,
         index_of_refraction_media,
@@ -267,10 +272,18 @@ def apply_transfer_function(
 def apply_inverse_transfer_function(
     zyx_data: Tensor,
     singular_system: Tuple[Tensor, Tensor, Tensor],
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
+    rl_iterations: int = 25,
+    rl_background: float = 0.0,
+    rl_stopping_tolerance: float | None = None,
+    rl_back_projector: str = "matched",
+    rl_bp_alpha: float | None = None,
+    rl_bp_beta: float | None = None,
+    rl_bp_order: int = 8,
+    rl_bp_resolution_mode: Literal["fwhm", "fwhm_over_sqrt2"] = "fwhm",
 ) -> Tensor:
     """Reconstruct fluorescence density from zyx_data and singular system.
 
@@ -280,20 +293,42 @@ def apply_inverse_transfer_function(
         Raw data of shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
     singular_system : Tuple[Tensor, Tensor, Tensor]
         Singular system ``(U, S, Vh)`` (shared, not batched).
-    reconstruction_algorithm : {"Tikhonov", "TV"}, optional
-        By default "Tikhonov". "TV" is not implemented.
+    reconstruction_algorithm : {"Tikhonov", "TV", "RL", "RLGC"}, optional
+        By default "Tikhonov". "TV" is not implemented. "RL"/"RLGC" are not
+        yet implemented for 2D (thin) fluorescence reconstruction.
     regularization_strength : float, optional
         Regularization parameter, by default 1e-3
     TV_rho_strength : float, optional
         TV-specific regularization parameter, by default 1e-3
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
+    rl_iterations : int, optional
+        Maximum RL / RLGC iterations (3D only), by default 25
+    rl_background : float, optional
+        Constant background for the RL / RLGC forward model (3D only), by default 0.0
+    rl_stopping_tolerance : float, optional
+        Relative-change early-stop threshold for RL / RLGC (3D only), by default None
+    rl_back_projector : str, optional
+        Back projector for RL (3D only), by default "matched"
+    rl_bp_alpha : float, optional
+        Wiener regularization for the RL back projector (3D only), by default None
+    rl_bp_beta : float, optional
+        Cutoff gain for the RL back projector (3D only), by default None
+    rl_bp_order : int, optional
+        Butterworth order for the RL back projector (3D only), by default 8
+    rl_bp_resolution_mode : str, optional
+        Cutoff-frequency rule for the RL back projector (3D only), by default "fwhm"
 
     Returns
     -------
     Tensor
         Fluorescence density with shape ``(Y, X)`` or ``(B, Y, X)``
     """
+    if reconstruction_algorithm in ("RL", "RLGC"):
+        raise NotImplementedError(
+            "RL/RLGC reconstruction is only implemented for 3D (thick) fluorescence; use reconstruction_dimension=3."
+        )
+
     batched = zyx_data.ndim == 4
     if not batched:
         zyx_data = zyx_data.unsqueeze(0)

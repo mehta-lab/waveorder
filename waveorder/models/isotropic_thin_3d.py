@@ -8,6 +8,7 @@ import torch
 from torch import Tensor
 
 from waveorder import optics, sampling, util
+from waveorder._pixel_size import YXPixelSize
 from waveorder.filter import apply_filter_bank
 
 
@@ -19,12 +20,13 @@ def generate_test_phantom(
     index_of_refraction_sample: float,
     sphere_radius: float,
 ) -> Tuple[Tensor, Tensor]:
+    yx_pixel_size = YXPixelSize.from_value(yx_pixel_size)
     sphere, _, _ = util.generate_sphere_target(
         (3,) + yx_shape,
         yx_pixel_size,
         z_pixel_size=1.0,
         radius=sphere_radius,
-        blur_size=2 * yx_pixel_size,
+        blur_size=2 * min(yx_pixel_size.y, yx_pixel_size.x),
     )
     yx_phase = (
         sphere[1] * (index_of_refraction_sample - index_of_refraction_media) * 0.1 / wavelength_illumination
@@ -88,22 +90,25 @@ def calculate_transfer_function(
     na_ill_val = float(torch.as_tensor(numerical_aperture_illumination).detach())
     na_det_val = float(torch.as_tensor(numerical_aperture_detection).detach())
 
+    yx_pixel_size = YXPixelSize.from_value(yx_pixel_size)
+
     transverse_nyquist = sampling.transverse_nyquist(
         wavelength_illumination,
         na_ill_val,
         na_det_val,
     )
-    yx_factor = int(np.ceil(yx_pixel_size / transverse_nyquist))
+    y_factor = int(np.ceil(yx_pixel_size.y / transverse_nyquist))
+    x_factor = int(np.ceil(yx_pixel_size.x / transverse_nyquist))
 
     (
         absorption_2d_to_3d_transfer_function,
         phase_2d_to_3d_transfer_function,
     ) = _calculate_wrap_unsafe_transfer_function(
         (
-            yx_shape[0] * yx_factor,
-            yx_shape[1] * yx_factor,
+            yx_shape[0] * y_factor,
+            yx_shape[1] * x_factor,
         ),
-        yx_pixel_size / yx_factor,
+        YXPixelSize(y=yx_pixel_size.y / y_factor, x=yx_pixel_size.x / x_factor),
         z_position_list,
         wavelength_illumination,
         index_of_refraction_media,
@@ -361,7 +366,7 @@ def apply_transfer_function(
 def apply_inverse_transfer_function(
     zyx_data: Tensor,
     singular_system: Tuple[Tensor, Tensor, Tensor],
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     reg_p: float = 1e-6,  # TODO: use this parameter
     TV_rho_strength: float = 1e-3,
@@ -430,6 +435,9 @@ def apply_inverse_transfer_function(
     elif reconstruction_algorithm == "TV":
         raise NotImplementedError
 
+    elif reconstruction_algorithm in ("RL", "RLGC"):
+        raise NotImplementedError("RL/RLGC reconstruction is only implemented for 3D fluorescence")
+
     absorption_yx = output[:, 0]  # (B, Y, X)
     phase_yx = output[:, 1]  # (B, Y, X)
 
@@ -449,7 +457,7 @@ def reconstruct(
     numerical_aperture_illumination: Union[float, Tensor] = 0.9,
     numerical_aperture_detection: Union[float, Tensor] = 1.2,
     invert_phase_contrast: bool = False,
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     reg_p: float = 1e-6,
     TV_rho_strength: float = 1e-3,

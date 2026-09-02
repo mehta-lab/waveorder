@@ -8,8 +8,9 @@ from typing import Literal, Optional
 import numpy as np
 import torch
 import xarray as xr
-from pydantic import Field, PositiveFloat, model_validator
+from pydantic import Field, NonNegativeFloat, PositiveFloat, PositiveInt, model_validator
 
+from waveorder._pixel_size import YXPixelSize
 from waveorder.api._settings import (
     FourierApplyInverseSettings,
     MyBaseModel,
@@ -23,6 +24,7 @@ from waveorder.api._utils import (
     _to_tensor,
     _wrap_output_tensor,
 )
+from waveorder.backprojector import BackProjectorType
 from waveorder.device import resolve_device
 from waveorder.models import (
     isotropic_fluorescent_thick_3d,
@@ -48,16 +50,102 @@ class TransferFunctionSettings(OptimizableFourierTransferFunctionSettings):
 
     @model_validator(mode="after")
     def warn_wavelength_consistency(self):
-        ratio = self.yx_pixel_size / self.wavelength_emission
-        if ratio < 1.0 / 20 or ratio > 20:
-            warnings.warn(
-                f"yx_pixel_size ({self.yx_pixel_size}) / wavelength_emission ({self.wavelength_emission}) = {ratio}. Did you use consistent units?",
-                UserWarning,
-            )
+        # Normalize defensively for the model_copy(update=...) path that
+        # bypasses field validators.
+        yx = YXPixelSize.from_value(self.yx_pixel_size)
+        for axis, ps in (("y", yx.y), ("x", yx.x)):
+            ratio = ps / self.wavelength_emission
+            if ratio < 1.0 / 20 or ratio > 20:
+                warnings.warn(
+                    f"{axis}_pixel_size ({ps}) / wavelength_emission ({self.wavelength_emission}) = {ratio}. Did you use consistent units?",
+                    UserWarning,
+                )
         return self
 
 
-ApplyInverseSettings = FourierApplyInverseSettings
+class RLSettings(MyBaseModel):
+    """Richardson-Lucy knobs, read only when ``reconstruction_algorithm`` is 'RL' or 'RLGC'."""
+
+    iterations: PositiveInt = Field(default=25, description="maximum RL / RLGC iterations")
+    background: NonNegativeFloat = Field(
+        default=0.0,
+        description="constant background folded into the RL / RLGC Poisson forward model",
+    )
+    stopping_tolerance: Optional[NonNegativeFloat] = Field(
+        default=None,
+        description="relative-change early-stop threshold (null = run all iterations)",
+    )
+    back_projector: BackProjectorType = Field(
+        default="matched",
+        description=(
+            "'matched' is the matched transpose (classic RL); the unmatched "
+            "'gaussian'/'butterworth'/'wiener'/'wiener_butterworth' converge in far fewer "
+            "iterations but are supported for 'RL' only, not 'RLGC'"
+        ),
+    )
+    bp_alpha: Optional[PositiveFloat] = Field(
+        default=None,
+        description="Wiener regularization for the 'wiener'/'wiener_butterworth' back projectors "
+        "(null = matched cutoff gain squared); lower inverts harder, converging in fewer "
+        "iterations but amplifying noise",
+    )
+    bp_beta: Optional[PositiveFloat] = Field(
+        default=None,
+        description="cutoff gain for the 'butterworth'/'wiener_butterworth' back projectors "
+        "(null = matched cutoff gain); lower suppresses harder past the resolution limit",
+    )
+
+
+class ApplyInverseSettings(FourierApplyInverseSettings):
+    """Fluorescence inverse settings.
+
+    Extends the shared Fourier (Tikhonov / TV) settings with the iterative
+    Richardson-Lucy ("RL") and Gradient-Consensus ("RLGC") options, which are
+    available for 3D fluorescence reconstruction only.
+    """
+
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = Field(
+        default="Tikhonov",
+        description="'Tikhonov'/'TV' filters or 'RL'/'RLGC' iterative deconvolution",
+    )
+    rl: Optional[RLSettings] = Field(
+        default=None,
+        description="Richardson-Lucy knobs; only valid with reconstruction_algorithm 'RL'/'RLGC', "
+        "and filled with defaults if omitted there",
+    )
+
+    @model_validator(mode="after")
+    def _rl_block_matches_algorithm(self):
+        """Keep the block and the algorithm in step, so a config only carries what it reads."""
+        if self.reconstruction_algorithm in ("RL", "RLGC"):
+            if self.rl is None:
+                self.rl = RLSettings()
+        elif self.rl is not None:
+            # Dropped rather than rejected: the napari plugin builds its widgets from
+            # every field and so always submits a block, whatever the algorithm.
+            warnings.warn(
+                f"ignoring 'rl' settings: reconstruction_algorithm is "
+                f"{self.reconstruction_algorithm!r}, not 'RL' or 'RLGC'",
+                UserWarning,
+            )
+            self.rl = None
+
+        # RLGC reads the sign of transpose(forward(.)) for its consensus test, which
+        # only means anything for a true adjoint. Catch it here so a config fails
+        # while parsing rather than after the transfer function has been computed.
+        if self.reconstruction_algorithm == "RLGC" and self.rl.back_projector != "matched":
+            raise ValueError(
+                f"reconstruction_algorithm 'RLGC' requires rl.back_projector 'matched', "
+                f"got {self.rl.back_projector!r}. The unmatched back projectors are "
+                f"supported for 'RL' only."
+            )
+        return self
+
+    def to_model_kwargs(self) -> dict:
+        kwargs = self.model_dump(exclude={"rl"})
+        if self.rl is not None:
+            kwargs.update({f"rl_{name}": value for name, value in self.rl.model_dump().items()})
+        return kwargs
 
 
 class Settings(MyBaseModel):
@@ -104,23 +192,24 @@ def simulate(
         settings = Settings()
 
     s = settings.transfer_function.resolve_floats()
+    yx_pixel_size = YXPixelSize.from_value(s.yx_pixel_size)
     Z, Y, X = zyx_shape
     zyx_coords = {
         "z": np.arange(Z) * s.z_pixel_size,
-        "y": np.arange(Y) * s.yx_pixel_size,
-        "x": np.arange(X) * s.yx_pixel_size,
+        "y": np.arange(Y) * yx_pixel_size.y,
+        "x": np.arange(X) * yx_pixel_size.x,
     }
 
     if recon_dim == 3:
         zyx_fluorescence = isotropic_fluorescent_thick_3d.generate_test_phantom(
             zyx_shape,
-            s.yx_pixel_size,
+            yx_pixel_size,
             s.z_pixel_size,
             sphere_radius=sphere_radius,
         )
         otf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
             zyx_shape,
-            s.yx_pixel_size,
+            yx_pixel_size,
             s.z_pixel_size,
             wavelength_emission=s.wavelength_emission,
             z_padding=0,
@@ -216,6 +305,7 @@ def compute_transfer_function(
             wavelength_emission=s.wavelength_emission,
             index_of_refraction_media=s.index_of_refraction_media,
             numerical_aperture_detection=s.numerical_aperture_detection,
+            confocal_pinhole_diameter=s.confocal_pinhole_diameter,
         )
         U, S, Vh = isotropic_fluorescent_thin_3d.calculate_singular_system(fluorescent_tf)
 
@@ -236,6 +326,7 @@ def compute_transfer_function(
             z_padding=s.z_padding,
             index_of_refraction_media=s.index_of_refraction_media,
             numerical_aperture_detection=s.numerical_aperture_detection,
+            confocal_pinhole_diameter=s.confocal_pinhole_diameter,
         )
 
         return xr.Dataset(
@@ -304,7 +395,7 @@ def apply_inverse_transfer_function(
         output = isotropic_fluorescent_thin_3d.apply_inverse_transfer_function(
             zyx_tensor,
             (U.to(device), S.to(device), Vh.to(device)),
-            **settings.apply_inverse.model_dump(),
+            **settings.apply_inverse.to_model_kwargs(),
         )
     # [fluo, 3]
     elif recon_dim == 3:
@@ -312,7 +403,7 @@ def apply_inverse_transfer_function(
             zyx_tensor,
             _to_tensor(transfer_function, "optical_transfer_function").to(device),
             settings.transfer_function.z_padding,
-            **settings.apply_inverse.model_dump(),
+            **settings.apply_inverse.to_model_kwargs(),
         )
 
     # Wrap output tensor(s) back into xr.DataArray(s)

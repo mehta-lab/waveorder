@@ -2,27 +2,43 @@ import os
 import runpy
 import subprocess
 import sys
-from pathlib import Path
 from unittest.mock import patch
 
 import matplotlib.pyplot as plt
 import pytest
 
-DOCS = Path(__file__).parent.parent / "docs"
-EXAMPLES = DOCS / "examples"
-
-
-@pytest.mark.parametrize(
-    "example",
-    [
-        EXAMPLES / "maintenance" / "QLIPP_simulation/2D_QLIPP_forward.py",
-        EXAMPLES / "maintenance" / "QLIPP_simulation/2D_QLIPP_recon.py",
-        EXAMPLES / "maintenance" / "PTI_simulation/PTI_Simulation_Forward_2D3D.py",
-        EXAMPLES / "maintenance" / "PTI_simulation/PTI_Simulation_Recon2D.py",
-        EXAMPLES / "maintenance" / "PTI_simulation/PTI_Simulation_Recon3D.py",
+# Examples per test, relative to docs/examples: either explicit files or a glob pattern.
+_EXAMPLES = {
+    "test_maintenance_examples": [
+        "maintenance/QLIPP_simulation/2D_QLIPP_forward.py",
+        "maintenance/QLIPP_simulation/2D_QLIPP_recon.py",
+        "maintenance/PTI_simulation/PTI_Simulation_Forward_2D3D.py",
+        "maintenance/PTI_simulation/PTI_Simulation_Recon2D.py",
+        "maintenance/PTI_simulation/PTI_Simulation_Recon3D.py",
     ],
-    ids=lambda p: p.name,
-)
+    "test_demo_examples": [
+        "demos/QPI_defocus/QPI_defocus_simulation.py",
+        "demos/QLIPP/QLIPP_simulation.py",
+    ],
+    "test_api_examples": "api/*.py",
+    "test_cli_examples": "cli/*.sh",
+}
+
+
+def pytest_generate_tests(metafunc):
+    """Resolve repository examples from pytest's configured project root."""
+    entry = _EXAMPLES.get(metafunc.function.__name__)
+    if entry is None:
+        return
+
+    examples_dir = metafunc.config.rootpath / "docs" / "examples"
+    if isinstance(entry, str):
+        examples = sorted(examples_dir.glob(entry))
+    else:
+        examples = [examples_dir / name for name in entry]
+    metafunc.parametrize("example", examples, ids=lambda path: path.name)
+
+
 def test_maintenance_examples(example):
     """Test maintenance examples (QLIPP, PTI) with mocked plotting"""
     with (
@@ -39,14 +55,6 @@ def test_maintenance_examples(example):
     plt.close("all")
 
 
-@pytest.mark.parametrize(
-    "example",
-    [
-        EXAMPLES / "demos/QPI_defocus/QPI_defocus_simulation.py",
-        EXAMPLES / "demos/QLIPP/QLIPP_simulation.py",
-    ],
-    ids=lambda p: p.name,
-)
 def test_demo_examples(example):
     """Run Colab demo scripts so renamed APIs in waveorder are caught early.
 
@@ -80,9 +88,9 @@ def test_demo_examples(example):
         "inplane_oriented_thick_pol3d.py",
     ],
 )
-def test_phase_examples(script):
+def test_phase_examples(script, pytestconfig):
     """Test phase model examples"""
-    path = EXAMPLES / "models" / script
+    path = pytestconfig.rootpath / "docs" / "examples" / "models" / script
     # examples needs two <enters>s so send input="e\ne"
     completed_process = subprocess.run(
         [sys.executable, str(path)],
@@ -93,21 +101,11 @@ def test_phase_examples(script):
     assert completed_process.returncode == 0
 
 
-@pytest.mark.parametrize(
-    "example",
-    sorted((EXAMPLES / "api").glob("*.py")),
-    ids=lambda p: p.name,
-)
 def test_api_examples(example):
     """Test API-level examples (no napari, no matplotlib)"""
     runpy.run_path(str(example), run_name="__main__")
 
 
-@pytest.mark.parametrize(
-    "example",
-    sorted((EXAMPLES / "cli").glob("*.sh")),
-    ids=lambda p: p.name,
-)
 def test_cli_examples(example, tmp_path, monkeypatch):
     """Test CLI-level shell script examples (skip 'wo view' lines)."""
     import shlex

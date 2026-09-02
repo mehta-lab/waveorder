@@ -4,7 +4,7 @@ time_indices: all                           # time points to reconstruct
 reconstruction_dimension: 2                 # 2 for thin samples, 3 for thick
 fluorescence:
   transfer_function:
-    yx_pixel_size: 0.1                      # lateral pixel size in micrometers
+    yx_pixel_size: 0.1                      # lateral pixel size in micrometers; scalar for isotropic, or {y, x} mapping for anisotropic
     z_pixel_size: 0.25                      # axial pixel size in micrometers
     z_padding: 0                            # z slices to pad for axial boundary effects
     z_focus_offset: 0                       # (optimizable) offset from center slice in slice units
@@ -15,7 +15,8 @@ fluorescence:
     wavelength_emission: 0.532              # emission wavelength in micrometers
     confocal_pinhole_diameter: null         # confocal pinhole diameter (null = widefield)
   apply_inverse:
-    reconstruction_algorithm: Tikhonov      # 'Tikhonov' or 'TV' regularization
+    reconstruction_algorithm: Tikhonov      # 'Tikhonov'/'TV' filters or 'RL'/'RLGC' iterative deconvolution
     regularization_strength: 0.01           # strength of regularization
     TV_rho_strength: 0.001                  # ADMM rho parameter for TV regularization
     TV_iterations: 1                        # ADMM iterations for TV regularization
+    rl: null                                # Richardson-Lucy knobs; only valid with reconstruction_algorithm 'RL'/'RLGC', and filled with defaults if omitted there
