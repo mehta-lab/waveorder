@@ -158,6 +158,7 @@ waveorder/_version.py
 scripts/
 !.skills/**/scripts/
 !.skills/**/scripts/**
+.skills/**/__pycache__/
 
 # benchmark results
 runs/
