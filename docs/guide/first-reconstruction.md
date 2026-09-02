@@ -1,5 +1,3 @@
-# Your first waveorder reconstruction
-
 This guide walks you through your first `waveorder` reconstruction, from raw
 imaging data to a tuned result you trust. It is organized as six stages:
 decide if waveorder fits your use case, identify your data and metadata,
