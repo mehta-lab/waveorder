@@ -1,3 +1,5 @@
+from pathlib import PurePath
+
 import click
 
 
@@ -21,7 +23,7 @@ def _add_transfer_function_image(viewer, name, arr, shift_axes=None):
         viewer.add_image(arr.imag, name=f"Im({name})", colormap="bwr", contrast_limits=(-lim, lim))
 
 
-def _open_transfer_function(viewer, path):
+def _open_transfer_function(viewer, path, prefix=""):
     """Open a transfer function zarr in napari.
 
     2D reconstructions store a singular system (``U``, ``S``, ``Vh``) instead of
@@ -56,17 +58,17 @@ def _open_transfer_function(viewer, path):
         for component, label in zip(H, labels):
             # Z is a real-space defocus axis, so only ifftshift the lateral
             # frequency axes.
-            _add_transfer_function_image(viewer, label, component, shift_axes=(-2, -1))
+            _add_transfer_function_image(viewer, f"{prefix}{label}", component, shift_axes=(-2, -1))
 
         # Show any remaining (non-SVD) transfer function arrays, if present.
         for name in names:
             if name.startswith("singular_system_"):
                 continue
-            _add_transfer_function_image(viewer, name, np.asarray(root[name]))
+            _add_transfer_function_image(viewer, f"{prefix}{name}", np.asarray(root[name]))
         return
 
     for name in names:
-        _add_transfer_function_image(viewer, name, np.asarray(root[name]))
+        _add_transfer_function_image(viewer, f"{prefix}{name}", np.asarray(root[name]))
 
 
 def _is_transfer_function(path):
@@ -80,7 +82,7 @@ def _is_transfer_function(path):
         return False
 
 
-def _open_ome_zarr(viewer, path):
+def _open_ome_zarr(viewer, path, prefix=""):
     """Open an OME-Zarr, squeezing singleton dims so 2D results always appear."""
     import numpy as np
     from iohub.ngff import open_ome_zarr
@@ -97,6 +99,7 @@ def _open_ome_zarr(viewer, path):
         for c_idx, ch_name in enumerate(position.channel_names):
             ch_data = data[:, c_idx]  # TZYX
             name = f"{ch_name} [{position_key}]" if multi_position else ch_name
+            name = f"{prefix}{name}"
 
             # Squeeze singleton T and Z so napari shows 2D results at every Z
             if T == 1:
@@ -148,9 +151,12 @@ def _view_cli(paths):
 
     viewer = napari.Viewer()
     for path in all_paths:
+        # With multiple stores open, prefix layer names with the store name so
+        # same-named channels (e.g. two reconstructions) stay distinguishable.
+        prefix = f"{PurePath(path).stem}: " if len(all_paths) > 1 else ""
         if _is_transfer_function(path):
-            _open_transfer_function(viewer, path)
+            _open_transfer_function(viewer, path, prefix=prefix)
         else:
-            _open_ome_zarr(viewer, path)
+            _open_ome_zarr(viewer, path, prefix=prefix)
     viewer.grid.enabled = True
     napari.run()
