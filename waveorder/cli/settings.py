@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, List, Literal, Optional, Union
 
 from pydantic import Field, NonNegativeInt, PositiveInt, model_validator
@@ -15,6 +16,7 @@ from waveorder.api.fluorescence import (  # noqa: F401
     Settings as FluorescenceSettings,
 )
 from waveorder.api.phase import Settings as PhaseSettings  # noqa: F401
+from waveorder.optim.autoreg import AutoRegularizationIgnoredWarning
 from waveorder.optim.losses import MidbandPowerLossSettings, _LossBaseModel
 
 _LOSS_TYPE_MAP = {
@@ -103,6 +105,49 @@ class ReconstructionSettings(MyBaseModel):
                 f"{self.fluorescence.apply_inverse.reconstruction_algorithm!r} requires "
                 f"reconstruction_dimension 3; it is not implemented for thin (2D) fluorescence."
             )
+
+        # Auto-regularization sweeps a single Tikhonov filter H*/(|H|^2 + lambda),
+        # so it is only defined where the reconstruction is that filter. Both
+        # limits are settled here, while parsing, rather than after the transfer
+        # function has been computed.
+        #
+        # Dropped rather than rejected, like the 'rl' block and unlike the
+        # reconstruction_algorithm checks above. The difference is what the guard
+        # keys on: the napari plugin unwraps Optional[Model] fields and always
+        # submits a populated block for them (see plugin/tab_recon.py
+        # get_pydantic_kwargs), so raising on a block's mere presence would break
+        # every 2D reconstruction started from the GUI. A leaf field like
+        # reconstruction_algorithm carries the user's actual choice and can raise.
+        for name in ("phase", "fluorescence"):
+            block = getattr(self, name)
+            if block is None or block.apply_inverse.auto_regularization is None:
+                continue
+
+            reason = None
+            if self.reconstruction_dimension == 2:
+                reason = (
+                    "reconstruction_dimension is 2; thin reconstructions regularize a "
+                    "singular system rather than a single transfer function"
+                )
+            elif self.birefringence is not None:
+                # A joint birefringence + phase reconstruction feeds one
+                # regularization_strength to both the phase filter and the vector
+                # singular system, so a value chosen from the phase filter alone
+                # would silently retune the birefringence too.
+                reason = (
+                    "a birefringence reconstruction is also configured, and it shares "
+                    "regularization_strength between the phase filter and the vector "
+                    "singular system"
+                )
+
+            if reason is not None:
+                warnings.warn(
+                    f"ignoring {name}.apply_inverse.auto_regularization: {reason}. "
+                    f"regularization_strength = "
+                    f"{block.apply_inverse.regularization_strength} will be used as given.",
+                    AutoRegularizationIgnoredWarning,
+                )
+                block.apply_inverse.auto_regularization = None
 
         return self
 
