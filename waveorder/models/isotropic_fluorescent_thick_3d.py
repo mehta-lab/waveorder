@@ -280,6 +280,7 @@ def apply_inverse_transfer_function(
     rl_bp_order: int = 8,
     rl_bp_resolution_mode: Literal["fwhm", "fwhm_over_sqrt2"] = "fwhm",
     back_projector_otf: Tensor | None = None,
+    apodization_rolloff: float = 0.0,
 ) -> Tensor:
     """Reconstructs fluorescence density from defocus data.
 
@@ -334,6 +335,14 @@ def apply_inverse_transfer_function(
         costs a few seconds on a large OTF, so callers reconstructing many tiles
         should build it once with :func:`waveorder.backprojector.calculate_back_projector`
         and pass it here. By default None (build it on every call).
+    apodization_rolloff : float, optional
+        Raised-cosine roll-off fraction applied to the Tikhonov inverse
+        filter at the transverse Nyquist edge (Y and X only). Suppresses
+        Nyquist-rate checkerboard artifacts in the reconstruction when
+        the optical band limit exceeds the sampling Nyquist frequency.
+        Tikhonov only. By default 0.0 (no apodization, previous behavior). Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25.
 
     Returns
     -------
@@ -350,6 +359,14 @@ def apply_inverse_transfer_function(
     # Reconstruct
     if reconstruction_algorithm == "Tikhonov":
         inverse_filter = tikhonov_regularized_inverse_filter(optical_transfer_function, regularization_strength)
+
+        if apodization_rolloff > 0:
+            window = sampling.raised_cosine_window(
+                inverse_filter.shape[-2], apodization_rolloff, device=inverse_filter.device
+            )[:, None] * sampling.raised_cosine_window(
+                inverse_filter.shape[-1], apodization_rolloff, device=inverse_filter.device
+            )
+            inverse_filter = inverse_filter * window
 
         # Batched FFT multiply: inverse_filter (Z,Y,X) broadcasts over B
         zyx_fft = torch.fft.fftn(zyx_padded, dim=(-3, -2, -1))
@@ -451,6 +468,7 @@ def reconstruct(
     rl_bp_beta: float | None = None,
     rl_bp_order: int = 8,
     rl_bp_resolution_mode: Literal["fwhm", "fwhm_over_sqrt2"] = "fwhm",
+    apodization_rolloff: float = 0.0,
 ) -> Tensor:
     """Reconstruct 3D fluorescence density from a defocus stack.
 
@@ -506,6 +524,13 @@ def reconstruct(
     rl_bp_resolution_mode : str, optional
         How the back projector sets its cutoff frequency, by default "fwhm".
         Use "fwhm_over_sqrt2" for iSIM.
+    apodization_rolloff : float, optional
+        Raised-cosine roll-off fraction applied to the Tikhonov inverse
+        filter at the transverse Nyquist edge, by default 0.0
+        (no apodization). Suppresses Nyquist-rate checkerboard
+        artifacts. Tikhonov only. Must be between 0 and 1; if you see
+        checkerboarding artifacts, start with 0.25. See
+        ``apply_inverse_transfer_function``.
 
     Returns
     -------
@@ -549,4 +574,5 @@ def reconstruct(
         rl_bp_beta=rl_bp_beta,
         rl_bp_order=rl_bp_order,
         rl_bp_resolution_mode=rl_bp_resolution_mode,
+        apodization_rolloff=apodization_rolloff,
     )

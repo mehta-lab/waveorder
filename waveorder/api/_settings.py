@@ -134,6 +134,15 @@ class FourierApplyInverseSettings(MyBaseModel):
     regularization_strength: NonNegativeFloat = Field(default=1e-3, description="strength of regularization")
     TV_rho_strength: PositiveFloat = Field(default=1e-3, description="ADMM rho parameter for TV regularization")
     TV_iterations: NonNegativeInt = Field(default=1, description="ADMM iterations for TV regularization")
+    apodization_rolloff: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="raised-cosine roll-off fraction applied to the inverse filter at the "
+        "transverse Nyquist edge; suppresses checkerboard artifacts when the optical band "
+        "limit exceeds the sampling Nyquist frequency. Must be between 0 and 1 (0 = off); "
+        "if you see checkerboarding artifacts, start with 0.25",
+    )
 
     def to_model_kwargs(self) -> dict:
         """Flatten to the keyword arguments of ``apply_inverse_transfer_function``.

@@ -363,6 +363,7 @@ def apply_inverse_transfer_function(
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
+    apodization_rolloff: float = 0.0,
 ) -> Tensor:
     """Reconstructs 3D phase from labelfree defocus data.
 
@@ -388,6 +389,14 @@ def apply_inverse_transfer_function(
         TV-specific regularization parameter, by default 1e-3
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
+    apodization_rolloff : float, optional
+        Raised-cosine roll-off fraction applied to the inverse filter at
+        the transverse Nyquist edge (Y and X only). Suppresses
+        Nyquist-rate checkerboard artifacts in the reconstruction when
+        the optical band limit exceeds the sampling Nyquist frequency.
+        By default 0.0 (no apodization, previous behavior). Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25.
 
     Returns
     -------
@@ -429,6 +438,14 @@ def apply_inverse_transfer_function(
     if reconstruction_algorithm == "Tikhonov":
         inverse_filter = tikhonov_regularized_inverse_filter(effective_transfer_function, regularization_strength)
 
+        if apodization_rolloff > 0:
+            window = sampling.raised_cosine_window(
+                inverse_filter.shape[-2], apodization_rolloff, device=inverse_filter.device
+            )[:, None] * sampling.raised_cosine_window(
+                inverse_filter.shape[-1], apodization_rolloff, device=inverse_filter.device
+            )
+            inverse_filter = inverse_filter * window
+
         # Batched FFT multiply: inverse_filter (Z,Y,X) broadcasts over B
         zyx_fft = torch.fft.fftn(zyx, dim=(-3, -2, -1))
         f_real = torch.real(torch.fft.ifftn(zyx_fft * inverse_filter, dim=(-3, -2, -1)))
@@ -467,6 +484,7 @@ def reconstruct(
     tilt_angle_zenith: Union[float, Tensor] = 0.0,
     tilt_angle_azimuth: Union[float, Tensor] = 0.0,
     pupil_steepness: float = 1e4,
+    apodization_rolloff: float = 0.0,
 ) -> Tensor:
     """Reconstruct 3D phase from a brightfield defocus stack.
 
@@ -506,6 +524,13 @@ def reconstruct(
         Illumination tilt azimuth angle in radians, by default 0.0
     pupil_steepness : float, optional
         Sigmoid steepness for smooth pupil cutoff, by default 1e4
+    apodization_rolloff : float, optional
+        Raised-cosine roll-off fraction applied to the inverse filter at
+        the transverse Nyquist edge, by default 0.0 (no apodization).
+        Suppresses Nyquist-rate checkerboard artifacts. Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25. See
+        ``apply_inverse_transfer_function``.
 
     Returns
     -------
@@ -538,4 +563,5 @@ def reconstruct(
         regularization_strength=regularization_strength,
         TV_rho_strength=TV_rho_strength,
         TV_iterations=TV_iterations,
+        apodization_rolloff=apodization_rolloff,
     )

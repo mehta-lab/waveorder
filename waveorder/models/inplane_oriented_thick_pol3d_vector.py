@@ -283,11 +283,22 @@ def apply_inverse_transfer_function(
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
+    apodization_rolloff: float = 0.0,
 ):
     # Key computation
     U, S, Vh = singular_system
     S_reg = S / (S**2 + regularization_strength)
     sfzyx_inverse_filter = torch.einsum("sjzyx,jzyx,jfzyx->sfzyx", U, S_reg, Vh)
+
+    if apodization_rolloff > 0:
+        # Raised-cosine roll-off of the inverse filter at the transverse
+        # Nyquist edge; suppresses Nyquist-rate checkerboard artifacts.
+        window = sampling.raised_cosine_window(
+            sfzyx_inverse_filter.shape[-2], apodization_rolloff, device=sfzyx_inverse_filter.device
+        )[:, None] * sampling.raised_cosine_window(
+            sfzyx_inverse_filter.shape[-1], apodization_rolloff, device=sfzyx_inverse_filter.device
+        )
+        sfzyx_inverse_filter = sfzyx_inverse_filter * window
 
     fzyx_recon = apply_filter_bank(sfzyx_inverse_filter, szyx_data)
 
