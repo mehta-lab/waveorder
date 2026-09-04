@@ -1,5 +1,6 @@
 import math
 import warnings
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal
 
@@ -165,9 +166,9 @@ def get_reconstruction_output_metadata(
     plate_metadata = {}
     input_version = "0.4"
     try:
-        input_plate = open_ome_zarr(position_path.parent.parent.parent, mode="r")
-        input_version = input_plate.version
-        plate_metadata = dict(input_plate.zattrs)
+        with open_ome_zarr(position_path.parent.parent.parent, mode="r") as input_plate:
+            input_version = input_plate.version
+            plate_metadata = dict(input_plate.zattrs)
         # In v0.5 (zarr v3), OME metadata is nested inside an "ome" key
         if "ome" in plate_metadata:
             plate_metadata.pop("ome")
@@ -176,16 +177,15 @@ def get_reconstruction_output_metadata(
     except (RuntimeError, FileNotFoundError):
         warnings.warn("Position is not part of a plate...no plate metadata will be copied.")
 
-    # Load the first position to infer dataset information
-    input_dataset = open_ome_zarr(str(position_path), mode="r")
-    T, _, Z, Y, X = input_dataset.data.shape
+    with open_ome_zarr(str(position_path), mode="r") as input_dataset:
+        T, _, Z, Y, X = input_dataset.data.shape
+        scale = input_dataset.scale
 
     settings = utils.yaml_to_model(config_path, ReconstructionSettings)
 
     channel_names = settings.output_channel_names
     output_z_shape = 1 if settings.output_z_is_singleton else Z
 
-    scale = input_dataset.scale
     config_pixel_sizes = _get_config_pixel_sizes(settings)
     if config_pixel_sizes is not None:
         if write_config_scale_to_output:
@@ -395,14 +395,82 @@ def apply_inverse_transfer_function_single_position(
     input_dataset.close()
 
 
+def _check_uniform_zyx_shapes(input_position_dirpaths: list[Path]) -> None:
+    """Raise if the positions do not all share one ZYX shape.
+
+    A transfer function is only valid for the ZYX shape it was computed from,
+    so a single transfer function cannot cover positions of mixed shapes.
+    """
+    # Deferred import for fast CLI help
+    from waveorder.cli.utils import read_zyx_shapes
+
+    positions_by_zyx_shape: dict[tuple[int, ...], list[Path]] = {}
+    for zyx_shape, position_dirpath in zip(
+        read_zyx_shapes(input_position_dirpaths), input_position_dirpaths, strict=True
+    ):
+        positions_by_zyx_shape.setdefault(zyx_shape, []).append(position_dirpath)
+
+    if len(positions_by_zyx_shape) == 1:
+        return
+
+    max_listed = 3
+    detail_lines = []
+    for zyx_shape, position_dirpaths in positions_by_zyx_shape.items():
+        listed = ", ".join(str(dirpath) for dirpath in position_dirpaths[:max_listed])
+        if len(position_dirpaths) > max_listed:
+            listed += f", and {len(position_dirpaths) - max_listed} more"
+        detail_lines.append(f"  ZYX {zyx_shape}: {listed}")
+    detail = "\n".join(detail_lines)
+
+    raise click.ClickException(
+        "apply-inv-tf applies one transfer function to every position, so all "
+        "positions must have the same ZYX shape, but the input positions have "
+        f"{len(positions_by_zyx_shape)} different shapes:\n{detail}\n"
+        "Use `waveorder reconstruct`, which computes a transfer function for "
+        "each distinct shape, or run apply-inv-tf once per shape."
+    )
+
+
+def _resolve_transfer_function_dirpaths(
+    transfer_function_dirpaths: str | Path | Mapping[tuple[int, ...], Path],
+    input_position_dirpaths: list[Path],
+) -> list[Path]:
+    """Return one transfer function dirpath per input position.
+
+    A single dirpath is reused for every position, which is only valid when the
+    positions share a ZYX shape. A mapping selects the transfer function by
+    each position's ZYX shape.
+    """
+    # Deferred import for fast CLI help
+    from waveorder.cli.utils import read_zyx_shapes
+
+    if isinstance(transfer_function_dirpaths, (str, Path)):
+        _check_uniform_zyx_shapes(input_position_dirpaths)
+        return [Path(transfer_function_dirpaths)] * len(input_position_dirpaths)
+
+    zyx_shapes = read_zyx_shapes(input_position_dirpaths)
+    missing_shapes = set(zyx_shapes) - transfer_function_dirpaths.keys()
+    if missing_shapes:
+        raise ValueError(
+            "No transfer function was provided for ZYX shape(s): " + ", ".join(map(str, sorted(missing_shapes)))
+        )
+    return [Path(transfer_function_dirpaths[zyx_shape]) for zyx_shape in zyx_shapes]
+
+
 def apply_inverse_transfer_function_cli(
     input_position_dirpaths: list[Path],
-    transfer_function_dirpath: Path,
+    transfer_function_dirpath: str | Path | Mapping[tuple[int, ...], Path],
     config_filepath: Path,
     output_dirpath: Path,
     num_processes,
     write_config_scale_to_output: bool = False,
 ) -> None:
+    """Reconstruct every position in ``input_position_dirpaths``.
+
+    ``transfer_function_dirpath`` is either a single transfer function, which
+    requires every position to share one ZYX shape, or a mapping from ZYX
+    shapes to transfer functions.
+    """
     # Deferred imports for fast CLI help
     import torch
     from iohub import open_ome_zarr
@@ -413,16 +481,23 @@ def apply_inverse_transfer_function_cli(
         is_single_position_store,
     )
 
-    # Prepare output store
-    output_metadata = get_reconstruction_output_metadata(
-        input_position_dirpaths[0], config_filepath, write_config_scale_to_output
+    per_position_transfer_function_dirpaths = _resolve_transfer_function_dirpaths(
+        transfer_function_dirpath, input_position_dirpaths
     )
+
+    # Positions may differ in shape and scale, so each gets its own metadata.
+    output_metadatas = [
+        get_reconstruction_output_metadata(position_dirpath, config_filepath, write_config_scale_to_output)
+        for position_dirpath in input_position_dirpaths
+    ]
 
     # `plate_metadata` is not a `create_empty_plate` parameter; write it to
     # the plate's zattrs after creation. `output_metadata["version"]` is read
     # from the input plate by `get_reconstruction_output_metadata`, so the
     # output preserves the input's OME-Zarr version.
-    plate_metadata = output_metadata.pop("plate_metadata", {})
+    plate_metadata = output_metadatas[0].pop("plate_metadata", {})
+    for output_metadata in output_metadatas[1:]:
+        output_metadata.pop("plate_metadata", None)
 
     # Generate position keys - use valid HCS keys for single-position stores
     position_keys = []
@@ -434,11 +509,13 @@ def apply_inverse_transfer_function_cli(
             position_key = input_path.parts[-3:]
         position_keys.append(position_key)
 
-    create_empty_plate(
-        store_path=output_dirpath,
-        position_keys=position_keys,
-        **output_metadata,
-    )
+    # `create_empty_plate` allocates one shape and scale per call.
+    for position_key, output_metadata in zip(position_keys, output_metadatas, strict=True):
+        create_empty_plate(
+            store_path=output_dirpath,
+            position_keys=[position_key],
+            **output_metadata,
+        )
 
     if plate_metadata:
         with open_ome_zarr(str(output_dirpath), mode="r+") as output_plate:
@@ -450,20 +527,18 @@ def apply_inverse_transfer_function_cli(
         torch.set_num_interop_threads(1)
 
     # Loop through positions
-    for i, input_position_dirpath in enumerate(input_position_dirpaths):
-        # Use the same position key generation logic
-        if is_single_position_store(input_position_dirpath):
-            position_key = generate_valid_position_key(i)
-        else:
-            position_key = input_position_dirpath.parts[-3:]
-
-        output_position_path = output_dirpath / Path(*position_key)
-
+    for input_position_dirpath, tf_dirpath, position_key, output_metadata in zip(
+        input_position_dirpaths,
+        per_position_transfer_function_dirpaths,
+        position_keys,
+        output_metadatas,
+        strict=True,
+    ):
         apply_inverse_transfer_function_single_position(
             input_position_dirpath,
-            transfer_function_dirpath,
+            tf_dirpath,
             config_filepath,
-            output_position_path,
+            output_dirpath / Path(*position_key),
             num_processes,
             output_metadata["channel_names"],
         )
@@ -487,7 +562,11 @@ def _apply_inverse_transfer_function_cli(
     """Apply an inverse transfer function to a dataset.
 
     Applies a transfer function to all positions in the list
-    `input-position-dirpaths`, so all positions must have the same TCZYX shape.
+    `input-position-dirpaths`. A transfer function is only valid for the ZYX
+    shape it was computed from, so this command errors out unless all
+    positions have the same ZYX shape. To reconstruct positions of mixed
+    shapes, use `waveorder reconstruct`, which computes a transfer function
+    for each distinct shape.
 
     \b
     Example:

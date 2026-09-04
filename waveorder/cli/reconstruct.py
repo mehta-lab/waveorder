@@ -32,10 +32,10 @@ def _reconstruct_cli(
     convenience function for a `compute-tf` call followed by a `apply-inv-tf`
     call.
 
-    Calculates the transfer function based on the shape of the first position
-    in the list `input-position-dirpaths`, then applies that transfer function
-    to all positions in the list `input-position-dirpaths`, so all positions
-    must have the same TCZYX shape.
+    A transfer function is only valid for the ZYX shape it was computed from,
+    so this command groups the positions in `input-position-dirpaths` by their
+    ZYX shape, calculates one transfer function per distinct shape, and applies
+    each transfer function to the positions it was computed for.
 
     If any parameter has an `lr` key (OptimizableFloat), an optimization loop
     runs before the standard reconstruction pipeline.
@@ -53,6 +53,7 @@ def _reconstruct_cli(
     from waveorder.cli.apply_inverse_transfer_function import apply_inverse_transfer_function_cli
     from waveorder.cli.compute_transfer_function import compute_transfer_function_cli
     from waveorder.cli.settings import ReconstructionSettings
+    from waveorder.cli.utils import read_zyx_shapes
     from waveorder.io import utils
     from waveorder.optim import has_optimizable_params
 
@@ -62,20 +63,36 @@ def _reconstruct_cli(
     if has_optimizable_params(settings):
         config_filepath = _run_optimization(settings, input_position_dirpaths[0], config_filepath)
 
-    # Handle transfer function path
-    transfer_function_path = output_dirpath.parent / Path("transfer_function_" + config_filepath.stem + ".zarr")
+    # Positions that share a ZYX shape can share a transfer function, so compute
+    # one per distinct shape, using the first position that has that shape.
+    position_zyx_shapes = read_zyx_shapes(input_position_dirpaths)
+    first_position_by_zyx_shape: dict[tuple[int, ...], Path] = {}
+    for zyx_shape, input_position_dirpath in zip(position_zyx_shapes, input_position_dirpaths, strict=True):
+        first_position_by_zyx_shape.setdefault(zyx_shape, input_position_dirpath)
 
-    # Compute transfer function
-    compute_transfer_function_cli(
-        input_position_dirpaths[0],
-        config_filepath,
-        transfer_function_path,
-    )
+    if len(first_position_by_zyx_shape) > 1:
+        click.echo(
+            click.style(
+                f"Found {len(first_position_by_zyx_shape)} distinct ZYX shapes across "
+                f"{len(input_position_dirpaths)} positions: computing one transfer "
+                "function per shape.",
+                fg="yellow",
+            )
+        )
 
-    # Apply inverse transfer function
+    transfer_function_paths = {}
+    for zyx_shape, input_position_dirpath in first_position_by_zyx_shape.items():
+        # Only disambiguate the filename when there is more than one shape, so
+        # single-shape runs keep writing the path users already expect.
+        suffix = "" if len(first_position_by_zyx_shape) == 1 else "_" + "x".join(str(size) for size in zyx_shape)
+        transfer_function_path = output_dirpath.parent / f"transfer_function_{config_filepath.stem}{suffix}.zarr"
+        compute_transfer_function_cli(input_position_dirpath, config_filepath, transfer_function_path)
+        transfer_function_paths[zyx_shape] = transfer_function_path
+
+    # Apply each position's matching inverse transfer function
     apply_inverse_transfer_function_cli(
         input_position_dirpaths,
-        transfer_function_path,
+        transfer_function_paths,
         config_filepath,
         output_dirpath,
         num_processes,
