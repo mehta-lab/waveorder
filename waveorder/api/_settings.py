@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Literal, Union
+from typing import Literal, Optional, Union
 
 from pydantic import (
     BaseModel,
@@ -19,6 +19,10 @@ from pydantic import (
 
 from waveorder._pixel_size import YXPixelSize
 from waveorder.optim._types import OptimizableFloat
+from waveorder.optim.autoreg import (
+    AutoRegularizationIgnoredWarning,
+    AutoRegularizationSettings,
+)
 
 
 def _float_val(v) -> float:
@@ -143,6 +147,27 @@ class FourierApplyInverseSettings(MyBaseModel):
         "limit exceeds the sampling Nyquist frequency. Must be between 0 and 1 (0 = off); "
         "if you see checkerboarding artifacts, start with 0.25",
     )
+    auto_regularization: Optional[AutoRegularizationSettings] = Field(
+        default=None,
+        description="choose regularization_strength from the data; 3D Tikhonov only",
+    )
+
+    @model_validator(mode="after")
+    def _auto_regularization_matches_algorithm(self):
+        """Auto-regularization only means anything for the Tikhonov filter.
+
+        Dropped rather than rejected, for the same reason as fluorescence's 'rl'
+        block: the napari plugin builds its widgets from every field and so always
+        submits one, whatever the algorithm.
+        """
+        if self.auto_regularization is not None and self.reconstruction_algorithm != "Tikhonov":
+            warnings.warn(
+                f"ignoring 'auto_regularization' settings: reconstruction_algorithm is "
+                f"{self.reconstruction_algorithm!r}, not 'Tikhonov'",
+                AutoRegularizationIgnoredWarning,
+            )
+            self.auto_regularization = None
+        return self
 
     def to_model_kwargs(self) -> dict:
         """Flatten to the keyword arguments of ``apply_inverse_transfer_function``.
@@ -151,4 +176,8 @@ class FourierApplyInverseSettings(MyBaseModel):
         ones its algorithm reads; the model functions take one flat signature.
         This is the seam between the two.
         """
-        return self.model_dump()
+        kwargs = self.model_dump()
+        # Consumed before the reconstruction, by the caller that resolves it into
+        # regularization_strength; not a parameter of the model functions.
+        kwargs.pop("auto_regularization", None)
+        return kwargs

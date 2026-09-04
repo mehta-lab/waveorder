@@ -21,4 +21,10 @@ phase:
     TV_rho_strength: 0.001                  # ADMM rho parameter for TV regularization
     TV_iterations: 1                        # ADMM iterations for TV regularization
     apodization_rolloff: 0.0                # raised-cosine roll-off fraction applied to the inverse filter at the transverse Nyquist edge; suppresses checkerboard artifacts when the optical band limit exceeds the sampling Nyquist frequency. Must be between 0 and 1 (0 = off); if you see checkerboarding artifacts, start with 0.25
-    auto_regularization: null               # choose regularization_strength from the data; 3D Tikhonov only
+    auto_regularization:                    # choose regularization_strength from the data; 3D Tikhonov only
+      rule: otsu_cnr                        # 'otsu_cnr' maximizes local-variance contrast; 'l_curve' finds the trade-off corner
+      search_min: -6.0                      # lower log10 bound of the sweep, interpreted per search_scale
+      search_max: 2.0                       # upper log10 bound of the sweep, interpreted per search_scale
+      num_samples: 9                        # regularization strengths to try
+      search_scale: relative                # 'relative' reads the search bounds as log10(lambda / |H|^2max); 'absolute' as log10(lambda)
+      report_path: ./autoreg_report.json    # write the full sweep (scores, norms, chosen index) to this JSON path; null = no report

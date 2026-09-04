@@ -6,11 +6,21 @@ from waveorder.optim._types import (
     extract_optimizable_params,
     has_optimizable_params,
 )
+from waveorder.optim.autoreg import (
+    AutoRegResult,
+    AutoRegularizationIgnoredWarning,
+    AutoRegularizationSettings,
+    select_crop,
+    select_regularization,
+)
 from waveorder.optim.logging import NullLogger, OptimLogger, PrintLogger, TensorBoardLogger
 from waveorder.optim.losses import LossSettings, build_loss_fn
 from waveorder.optim.optimize import OptimizationResult, optimize_reconstruction
 
 __all__ = [
+    "AutoRegResult",
+    "AutoRegularizationIgnoredWarning",
+    "AutoRegularizationSettings",
     "build_loss_fn",
     "LossSettings",
     "OptimizableFloat",
@@ -23,4 +33,6 @@ __all__ = [
     "extract_optimizable_params",
     "has_optimizable_params",
     "optimize_reconstruction",
+    "select_crop",
+    "select_regularization",
 ]
