@@ -170,7 +170,7 @@ def stokes_after_adr(retardance, orientation, transmittance, depolarization, inp
         raise NotImplementedError("input != cpl")
 
     # without copying transmittance, downstream changes to s0 will affect transmittance
-    s0 = torch.tensor(transmittance).clone()
+    s0 = torch.as_tensor(transmittance).clone()
     s1 = transmittance * depolarization * torch.sin(retardance) * torch.sin(2 * orientation)
     s2 = transmittance * depolarization * -torch.sin(retardance) * torch.cos(2 * orientation)
     s3 = transmittance * depolarization * torch.cos(retardance)
@@ -208,7 +208,7 @@ def stokes012_after_ar(retardance, orientation, transmittance, input="cpl"):
         raise NotImplementedError("input != cpl")
 
     # without copying transmittance, downstream changes to s0 will affect transmittance
-    s0 = torch.tensor(transmittance).clone()
+    s0 = torch.as_tensor(transmittance).clone()
     s1 = transmittance * torch.sin(retardance) * torch.sin(2 * orientation)
     s2 = transmittance * -torch.sin(retardance) * torch.cos(2 * orientation)
     return s0, s1, s2
@@ -273,7 +273,7 @@ def estimate_adr_from_stokes(s0, s1, s2, s3, input="cpl"):
     retardance = torch.arcsin(((s1**2 + s2**2) ** 0.5) / len_pol)
     orientation = _s12_to_orientation(s1, s2)
     # without copying s0, downstream changes to transmittance will affect s0
-    transmittance = torch.tensor(s0).clone()
+    transmittance = torch.as_tensor(s0).clone()
     depolarization = len_pol / s0
     return retardance, orientation, transmittance, depolarization
 
@@ -306,7 +306,7 @@ def estimate_ar_from_stokes012(s0, s1, s2, input="cpl"):
     retardance = torch.arcsin(((s1**2 + s2**2) ** 0.5) / s0)
     orientation = _s12_to_orientation(s1, s2)
     # without copying s0, downstream changes to transmittance will affect s0
-    transmittance = torch.tensor(s0).clone()
+    transmittance = torch.as_tensor(s0).clone()
     return retardance, orientation, transmittance
 
 
@@ -355,7 +355,7 @@ def mueller_from_stokes(
         raise NotImplementedError("direction must be `forward` or `inverse`")
 
     if direction == "forward":
-        M = torch.zeros((4, 4) + torch.tensor(s0).shape, device=s0.device)
+        M = torch.zeros((4, 4) + s0.shape, device=s0.device)
         denom = s1**2 + s2**2
         M[0, 0] = s0
         M[1, 1] = (s0 * s2**2 + s1**2 * s3) / denom

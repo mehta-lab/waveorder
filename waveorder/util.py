@@ -114,7 +114,7 @@ def generate_star_target(yx_shape, blur_px=2, margin=60):
     x = np.arange(X) - X // 2
     y = np.arange(Y) - Y // 2
 
-    xx, yy = torch.tensor(np.meshgrid(x, y))
+    xx, yy = torch.as_tensor(np.stack(np.meshgrid(x, y)))
 
     rho = torch.sqrt(xx**2 + yy**2)
     theta = torch.arctan2(yy, xx)
