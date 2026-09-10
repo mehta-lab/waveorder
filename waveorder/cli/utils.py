@@ -105,7 +105,7 @@ def apply_inverse_to_zyx_and_save(
         click.echo(f"Finished writing t={t_idx}")
 
 
-def estimate_resources(shape, settings, num_processes):
+def estimate_resources(shape, settings, num_threads):
     T, C, Z, Y, X = shape
 
     gb_ram_per_cpu = 0
@@ -122,7 +122,7 @@ def estimate_resources(shape, settings, num_processes):
         gb_ram_per_cpu += input_memory * fourier_resource_multiplier
     ram_multiplier = 1
     gb_ram_per_cpu = np.ceil(np.max([1, ram_multiplier * gb_ram_per_cpu])).astype(int)
-    num_cpus = np.min([32, num_processes])
+    num_cpus = np.min([32, num_threads])
 
     return num_cpus, gb_ram_per_cpu
 

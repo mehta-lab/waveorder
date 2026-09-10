@@ -87,28 +87,59 @@ def output_dirpath() -> Callable:
     return decorator
 
 
-# TODO: this setting will have to be collected from SLURM?
-def processes_option(default: int = None) -> Callable:
-    def check_processes_option(ctx, param, value):
-        # Deferred: torch.multiprocessing pulls in all of torch.
-        import torch.multiprocessing as mp
+def threads_option(default: int = None) -> Callable:
+    """CLI option for number of threads to run in parallel.
 
-        max_processes = mp.cpu_count()
-        if value > max_processes:
-            raise click.BadParameter(f"Maximum number of processes is {max_processes}")
+    Accepts --num-threads (canonical) or --num-processes / --num_processes
+    (deprecated aliases, kept for backward compatibility with existing scripts).
+    """
+    import os
+
+    def check_threads_option(ctx, param, value):
+        if value is None:
+            return default or 1
+        max_threads = os.cpu_count() or 1
+        if value > max_threads:
+            raise click.BadParameter(f"Maximum number of threads is {max_threads}")
+        return value
+
+    def deprecated_processes_callback(ctx, param, value):
+        if value is not None:
+            click.echo(
+                "Warning: --num-processes / --num_processes is deprecated. "
+                "Use --num-threads instead.",
+                err=True,
+            )
+            ctx.params["num_threads"] = check_threads_option(ctx, param, value)
         return value
 
     def decorator(f: Callable) -> Callable:
-        return click.option(
-            "--num_processes",
+        f = click.option(
+            "--num-threads",
             "-j",
             default=default or 1,
             type=int,
-            help="Number of processes to run in parallel.",
-            callback=check_processes_option,
+            help="Number of threads to run in parallel.",
+            callback=check_threads_option,
         )(f)
+        f = click.option(
+            "--num-processes",
+            "--num_processes",
+            default=None,
+            type=int,
+            is_eager=True,
+            expose_value=False,
+            hidden=True,
+            help="Deprecated: use --num-threads instead.",
+            callback=deprecated_processes_callback,
+        )(f)
+        return f
 
     return decorator
+
+
+# Keep old name as alias for backward compatibility with any direct Python imports
+processes_option = threads_option
 
 
 def write_config_scale_to_output() -> Callable:
