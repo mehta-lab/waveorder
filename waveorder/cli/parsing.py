@@ -9,8 +9,24 @@ from waveorder.cli.option_eat_all import OptionEatAll
 def _validate_and_process_paths(ctx: click.Context, opt: click.Option, value: str) -> list[Path]:
     # Deferred imports: iohub and natsort are heavy (pull in torch via zarr/numpy chain).
     # Only needed when the command actually runs, not for --help.
+    from iohub.convert import TIFFConverter
     from iohub.ngff import Plate, open_ome_zarr
+    from iohub.reader import _infer_format
     from natsort import natsorted
+
+    # If the user passed a Micro-Manager OME-TIFF folder, convert it to a
+    # sibling OME-Zarr plate first and then fall through to the normal
+    # plate-expansion logic below.
+    try:
+        fmt, _ = _infer_format(Path(value[0]))
+    except (ValueError, RuntimeError):
+        fmt = None
+    if fmt == "ometiff":
+        src = Path(value[0])
+        converted = src.parent / (src.name + "_converted.zarr")
+        if not converted.exists():
+            TIFFConverter(src, converted)()
+        value = (str(converted),)
 
     # Sort and validate the input paths, expanding plates into lists of positions
     input_paths = [Path(path) for path in natsorted(value)]
@@ -39,7 +55,12 @@ def input_position_dirpaths() -> Callable:
             type=tuple,
             required=True,
             callback=_validate_and_process_paths,
-            help="List of paths to input positions, each with the same TCZYX shape. Supports wildcards e.g. 'input.zarr/*/*/*'.",
+            help=(
+                "List of paths to input positions, each with the same TCZYX shape. "
+                "Supports wildcards e.g. 'input.zarr/*/*/*'. "
+                "A Micro-Manager OME-TIFF folder is also accepted and will be converted "
+                "to a sibling '<name>_converted.zarr' before reconstruction."
+            ),
         )(f)
 
     return decorator

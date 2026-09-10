@@ -86,11 +86,11 @@ It is normal to see background retardance and orientation. We will use these bac
 The advanced tab gives the user a log output which can be useful for debugging purposes. There is a log level “debugging” which serves as a verbose output. Look here for any hints as to what may have gone wrong during calibration or acquisition.
 
 ## Reconstruction Tab
-The **Reconstruction** tab is designed to reconstruct `birefriengence, phase, birefrignence with phase, and flurescenece` datasets that have been either acquired or coverted to `.zarr` store as well as acquisitions that are in progress.
+The **Reconstruction** tab is designed to reconstruct `birefriengence, phase, birefrignence with phase, and flurescenece` datasets that have been either acquired as Micro-Manager `.ome-tif` or coverted to `.zarr` store as well as acquisitions that are in progress.
 
 ![](../_static/images/reconstruction_data.png)
 
-The **Input Store** and **Output Directory** point to the input and output `.zarr` data locations. Once an Input Store is selected some metadata parameters can be viewed by hovering the cursor over the `info label` ⓘ.
+The **Input Store** and **Output Directory** point to the input and output (`.ome-tif`,`.zarr`) data locations. Once an Input Store is selected some metadata parameters can be viewed by hovering the cursor over the `info label` ⓘ.
 
 ![](../_static/images/reconstruction_models.png)
 

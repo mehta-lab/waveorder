@@ -231,10 +231,7 @@ def apply_inverse_transfer_function_single_position(
     )
     from waveorder.cli.printing import echo_headline, echo_settings
     from waveorder.cli.settings import ReconstructionSettings
-    from waveorder.cli.utils import (
-        apply_inverse_to_zyx_and_save,
-        resolve_time_indices,
-    )
+    from waveorder.cli.utils import apply_inverse_to_zyx_and_save, resolve_time_indices
     from waveorder.io import utils
 
     if verbose:
