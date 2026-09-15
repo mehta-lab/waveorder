@@ -5,9 +5,9 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from typer.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
+from typer.testing import CliRunner
 
 from waveorder._pixel_size import YXPixelSize
 from waveorder.api import fluorescence as fluorescence_api
@@ -82,16 +82,19 @@ def test_reconstruct(tmp_input_path_zarr):
         # Run CLI
         runner = CliRunner()
         tf_path = input_path.with_name(f"tf_{i}.zarr")
-        runner.invoke(app, [
-            "compute-tf",
-            "-i",
-            str(input_path / "0" / "0" / "0"),
-            "-c",
-            str(config_path),
-            "-o",
-            str(tf_path),
-        ],
-        catch_exceptions=False,)
+        runner.invoke(
+            app,
+            [
+                "compute-tf",
+                "-i",
+                str(input_path / "0" / "0" / "0"),
+                "-c",
+                str(config_path),
+                "-o",
+                str(tf_path),
+            ],
+            catch_exceptions=False,
+        )
         assert tf_path.exists()
 
 
@@ -141,36 +144,42 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
     # Apply birefringence reconstruction
 
     runner = CliRunner()
-    runner.invoke(app, [
-        "reconstruct",
-        "-i",
-        str(input_path / "0" / "0" / "0"),
-        "-c",
-        str(biref_config_path),
-        "-o",
-        str(output_path),
-        "-uid",
-        str("birefringence_reconstruction"),
-    ],
-    catch_exceptions=False,)
+    runner.invoke(
+        app,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(biref_config_path),
+            "-o",
+            str(output_path),
+            "-uid",
+            str("birefringence_reconstruction"),
+        ],
+        catch_exceptions=False,
+    )
 
     assert output_path.exists()
     with open_ome_zarr(output_path) as dataset:
         assert dataset["0/0/0"]["0"].shape[1] == 4
 
     # Append fluorescence reconstruction
-    runner.invoke(app, [
-        "reconstruct",
-        "-i",
-        str(input_path / "0" / "0" / "0"),
-        "-c",
-        str(fluor_config_path),
-        "-o",
-        str(output_path),
-        "-uid",
-        str("fluorescence_reconstruction"),
-    ],
-    catch_exceptions=False,)
+    runner.invoke(
+        app,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(fluor_config_path),
+            "-o",
+            str(output_path),
+            "-uid",
+            str("fluorescence_reconstruction"),
+        ],
+        catch_exceptions=False,
+    )
 
     assert output_path.exists()
 
@@ -221,16 +230,19 @@ def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
 
     # Run 2D fluorescence reconstruction
     runner = CliRunner()
-    runner.invoke(app, [
-        "reconstruct",
-        "-i",
-        str(input_path / "0" / "0" / "0"),
-        "-c",
-        str(fluor_2d_config_path),
-        "-o",
-        str(output_path),
-    ],
-    catch_exceptions=False,)
+    runner.invoke(
+        app,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(fluor_2d_config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
     assert output_path.exists()
 
     # Verify output structure
@@ -274,16 +286,19 @@ def test_optimization_cli(tmp_path):
     utils.model_to_yaml(recon_settings, config_path)
 
     runner = CliRunner()
-    result = runner.invoke(app, [
-        "reconstruct",
-        "-i",
-        str(input_path / "0" / "0" / "0"),
-        "-c",
-        str(config_path),
-        "-o",
-        str(output_path),
-    ],
-    catch_exceptions=False,)
+    result = runner.invoke(
+        app,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
     assert result.exit_code == 0
     assert output_path.exists()
 
@@ -324,8 +339,11 @@ def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
             "-j",
             str(1),
         ]
-        result_inv = runner.invoke(app, cmd,
-        catch_exceptions=False,)
+        result_inv = runner.invoke(
+            app,
+            cmd,
+            catch_exceptions=False,
+        )
         mock.assert_called_with(
             [input_path, input_path],
             Path(tf_path),
@@ -404,16 +422,19 @@ def test_pixel_size_mismatch_warning(tmp_path):
     runner = CliRunner()
     with _warnings.catch_warnings(record=True) as caught:
         _warnings.simplefilter("always")
-        runner.invoke(app, [
-            "reconstruct",
-            "-i",
-            str(input_path / "0" / "0" / "0"),
-            "-c",
-            str(config_path),
-            "-o",
-            str(output_path),
-        ],
-        catch_exceptions=False,)
+        runner.invoke(
+            app,
+            [
+                "reconstruct",
+                "-i",
+                str(input_path / "0" / "0" / "0"),
+                "-c",
+                str(config_path),
+                "-o",
+                str(output_path),
+            ],
+            catch_exceptions=False,
+        )
 
     mismatch_warnings = [w for w in caught if "do not match" in str(w.message).lower()]
     assert len(mismatch_warnings) > 0, "Expected pixel size mismatch warning"
@@ -447,17 +468,20 @@ def test_write_config_scale_to_output(tmp_path):
     utils.model_to_yaml(recon_settings, config_path)
 
     runner = CliRunner()
-    runner.invoke(app, [
-        "reconstruct",
-        "-i",
-        str(input_path / "0" / "0" / "0"),
-        "-c",
-        str(config_path),
-        "-o",
-        str(output_path),
-        "--write-config-scale-to-output",
-    ],
-    catch_exceptions=False,)
+    runner.invoke(
+        app,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+            "--write-config-scale-to-output",
+        ],
+        catch_exceptions=False,
+    )
 
     assert output_path.exists()
     with open_ome_zarr(output_path) as result:
@@ -514,17 +538,20 @@ def test_write_config_scale_to_output_anisotropic(tmp_path):
     utils.model_to_yaml(recon_settings, config_path)
 
     runner = CliRunner()
-    runner.invoke(app, [
-        "reconstruct",
-        "-i",
-        str(input_path / "0" / "0" / "0"),
-        "-c",
-        str(config_path),
-        "-o",
-        str(output_path),
-        "--write-config-scale-to-output",
-    ],
-    catch_exceptions=False,)
+    runner.invoke(
+        app,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+            "--write-config-scale-to-output",
+        ],
+        catch_exceptions=False,
+    )
 
     with open_ome_zarr(output_path) as result:
         result_scale = result["0/0/0"].scale

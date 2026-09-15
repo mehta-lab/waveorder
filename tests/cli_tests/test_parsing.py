@@ -2,10 +2,9 @@
 
 from contextlib import nullcontext
 
-from click.testing import CliRunner
-
 import numpy as np
 import pytest
+from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 from typer.main import get_command
@@ -45,6 +44,9 @@ def test_validate_paths_filters_zarr_json_from_glob(tmp_path):
 
     # Verify zarr.json files are in glob results
     assert len(zarr_jsons) > 0, "zarr.json files should be in glob results"
+    # Plate roots expand to their position directories.
+    root_result = _validate_and_process_paths([plate_path])
+    assert root_result == [plate_path / "A" / "1" / "0"]
 
     # Call the parsing function with glob results
     result = _validate_and_process_paths([str(p) for p in glob_paths])

@@ -7,8 +7,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 import yaml
-from typer.testing import CliRunner
 from iohub.ngff import open_ome_zarr
+from typer.testing import CliRunner
 
 from waveorder.cli.main import app
 
@@ -64,15 +64,18 @@ def test_cli_smoke_writes_output(phantom_input: Path, tile_stitch_config: Path, 
     """End-to-end: run the CLI, verify output zarr exists with expected shape."""
     output_path = tmp_path / "output.zarr"
     runner = CliRunner()
-    result = runner.invoke(app, [
-        "tile-stitch",
-        "-i",
-        str(phantom_input),
-        "-c",
-        str(tile_stitch_config),
-        "-o",
-        str(output_path),
-    ],)
+    result = runner.invoke(
+        app,
+        [
+            "tile-stitch",
+            "-i",
+            str(phantom_input),
+            "-c",
+            str(tile_stitch_config),
+            "-o",
+            str(output_path),
+        ],
+    )
     if result.exit_code != 0:
         pytest.fail(f"CLI exited {result.exit_code}\n{result.output}\n{result.exception!r}")
 

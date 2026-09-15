@@ -1,7 +1,7 @@
 from pathlib import Path
 
-import typer
 import numpy as np
+import typer
 import xarray as xr
 from iohub.ngff import open_ome_zarr
 

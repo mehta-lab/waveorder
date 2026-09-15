@@ -1,5 +1,4 @@
 import pytest
-
 from typer.testing import CliRunner
 
 from waveorder.cli.main import _COMMANDS, app

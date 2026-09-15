@@ -27,15 +27,18 @@ def test_compute_transfer(tmp_path, example_plate):
 
     plate_path, _ = example_plate
     runner = CliRunner()
-    result = runner.invoke(app, [
-        "compute-tf",
-        "-i",
-        str(plate_path / "A" / "1" / "0"),
-        "-c",
-        str(config_path),
-        "-o",
-        str(output_path),
-    ],)
+    result = runner.invoke(
+        app,
+        [
+            "compute-tf",
+            "-i",
+            str(plate_path / "A" / "1" / "0"),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+    )
     assert result.exit_code == 0
 
 
@@ -71,15 +74,18 @@ def test_compute_transfer_output_file(tmp_path, example_plate):
     for option in ("-o", "--output-dirpath"):
         for output_folder in ["test1.zarr", "test2/test.zarr"]:
             output_path = tmp_path.joinpath(output_folder)
-            result = runner.invoke(app, [
-                "compute-tf",
-                "-i",
-                str(plate_path / "A" / "1" / "0"),
-                "-c",
-                str(config_path),
-                str(option),
-                str(output_path),
-            ],)
+            result = runner.invoke(
+                app,
+                [
+                    "compute-tf",
+                    "-i",
+                    str(plate_path / "A" / "1" / "0"),
+                    "-c",
+                    str(config_path),
+                    str(option),
+                    str(output_path),
+                ],
+            )
             assert result.exit_code == 0
             assert str(output_path) in result.output
             assert output_path.exists()

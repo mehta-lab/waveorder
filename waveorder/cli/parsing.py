@@ -3,10 +3,8 @@ from typing import Annotated
 
 import typer
 
-
 INPUT_PATHS_HELP = (
-    "List of paths to input positions, each with the same TCZYX shape. "
-    "Supports wildcards e.g. 'input.zarr/*/*/*'."
+    "List of paths to input positions, each with the same TCZYX shape. Supports wildcards e.g. 'input.zarr/*/*/*'."
 )
 
 
@@ -20,7 +18,7 @@ def _validate_and_process_paths(value: list[Path]) -> list[Path]:
     for path in input_paths:
         with open_ome_zarr(path, mode="r") as dataset:
             if isinstance(dataset, Plate):
-                expanded_paths.extend(path / Path(*position_key) for position_key, _ in dataset.positions())
+                expanded_paths.extend(path / position_key for position_key, _ in dataset.positions())
             else:
                 expanded_paths.append(path)
     return expanded_paths
@@ -62,10 +60,7 @@ WriteConfigScaleToOutput = Annotated[
     bool,
     typer.Option(
         "--write-config-scale-to-output",
-        help=(
-            "Write the reconstruction config's pixel sizes to the output zarr "
-            "instead of copying from the input."
-        ),
+        help=("Write the reconstruction config's pixel sizes to the output zarr instead of copying from the input."),
     ),
 ]
 UniqueId = Annotated[

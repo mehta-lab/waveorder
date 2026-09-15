@@ -136,6 +136,7 @@ class TestRun:
         ):
             mock_syn.return_value = {"image_quality": {"midband_power": 0.01}}
             mock_hpc.return_value = {"image_quality": {"midband_power": 0.01}}
+
             # Create timing.json for the bench.run post-case readback.
             def _side_effect(**kwargs):
                 case_dir = kwargs["case_dir"]

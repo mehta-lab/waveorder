@@ -12,10 +12,10 @@ from tempfile import mkdtemp
 
 import numpy as np
 import pytest
-from typer.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 from iohub.ngff.utils import create_empty_plate
+from typer.testing import CliRunner
 
 from waveorder.cli import settings
 from waveorder.cli.apply_inverse_transfer_function import (
@@ -162,16 +162,19 @@ class TestReconstructCLI:
         utils.model_to_yaml(config, config_path)
 
         runner = CliRunner()
-        result = runner.invoke(app, [
-            "reconstruct",
-            "-i",
-            str(pos_path),
-            "-c",
-            str(config_path),
-            "-o",
-            str(output_path),
-        ],
-        catch_exceptions=False,)
+        result = runner.invoke(
+            app,
+            [
+                "reconstruct",
+                "-i",
+                str(pos_path),
+                "-c",
+                str(config_path),
+                "-o",
+                str(output_path),
+            ],
+            catch_exceptions=False,
+        )
         assert result.exit_code == 0
         assert output_path.exists()
 
