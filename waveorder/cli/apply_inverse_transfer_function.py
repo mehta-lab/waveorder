@@ -3,16 +3,16 @@ import warnings
 from pathlib import Path
 from typing import Literal
 
-import click
+import typer
 
 from waveorder._pixel_size import YXPixelSize
 from waveorder.cli.parsing import (
-    config_filepath,
-    input_position_dirpaths,
-    output_dirpath,
-    processes_option,
-    transfer_function_dirpath,
-    write_config_scale_to_output,
+    ConfigFilepath,
+    InputPositionDirpaths,
+    OutputDirpath,
+    ProcessesOption,
+    TransferFunctionDirpath,
+    WriteConfigScaleToOutput,
 )
 
 
@@ -366,7 +366,7 @@ def apply_inverse_transfer_function_single_position(
     # Multiprocessing logic
     if num_processes > 1:
         if verbose:
-            click.echo(f"\nStarting multiprocess pool with {num_processes} processes")
+            typer.echo(f"\nStarting multiprocess pool with {num_processes} processes")
         # NOTE: spawn (not fork) — tensorstore runs internal C++ threads
         # that are not fork-safe, so a forked worker can deadlock or
         # segfault before our code runs. See google/tensorstore#61.
@@ -469,20 +469,13 @@ def apply_inverse_transfer_function_cli(
         )
 
 
-@click.command("apply-inv-tf", no_args_is_help=True)
-@input_position_dirpaths()
-@transfer_function_dirpath()
-@config_filepath()
-@output_dirpath()
-@processes_option(default=1)
-@write_config_scale_to_output()
 def _apply_inverse_transfer_function_cli(
-    input_position_dirpaths: list[Path],
-    transfer_function_dirpath: Path,
-    config_filepath: Path,
-    output_dirpath: Path,
-    num_processes,
-    write_config_scale_to_output: bool,
+    input_position_dirpaths: InputPositionDirpaths,
+    transfer_function_dirpath: TransferFunctionDirpath,
+    config_filepath: ConfigFilepath,
+    output_dirpath: OutputDirpath,
+    num_processes: ProcessesOption = 1,
+    write_config_scale_to_output: WriteConfigScaleToOutput = False,
 ) -> None:
     """Apply an inverse transfer function to a dataset.
 

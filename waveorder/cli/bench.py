@@ -10,9 +10,10 @@ import traceback
 from datetime import datetime
 from importlib.resources import as_file, files
 from pathlib import Path
+from typing import Annotated, Literal
 
-import click
 import numpy as np
+import typer
 import yaml
 
 
@@ -37,49 +38,47 @@ def _output_dir_help() -> str:
     return "Root output directory. [default: $WAVEORDER_BENCH_OUTPUT if set, else '.']"
 
 
-def _output_dir_option():
-    """The shared ``--output-dir`` click option used by every bm command."""
-    return click.option(
-        "--output-dir",
-        "-o",
-        type=click.Path(),
-        default=None,
-        help=_output_dir_help(),
-    )
+OutputDir = Annotated[
+    Path | None,
+    typer.Option("--output-dir", "-o", help=_output_dir_help()),
+]
 
-
-@click.group("benchmark")
-def benchmark():
-    """Run and inspect reconstruction benchmarks."""
-    pass
+benchmark = typer.Typer(
+    name="benchmark",
+    help="Run and inspect reconstruction benchmarks.",
+    no_args_is_help=True,
+)
 
 
 @benchmark.command()
-@click.option(
-    "--experiment",
-    "-e",
-    type=click.Path(exists=True),
-    default=None,
-    help="Path to experiment YAML. Default: regression suite.",
-)
-@click.option(
-    "--scope",
-    type=click.Choice(["synthetic", "all"]),
-    default="synthetic",
-    help="Which cases to run.",
-)
-@_output_dir_option()
-@click.option(
-    "--save-all",
-    is_flag=True,
-    default=False,
-    help=(
-        "Keep every intermediate output. By default transfer function "
-        "zarrs are always deleted and reconstruction/simulated zarrs "
-        "larger than 25 MB are deleted after metrics are computed."
-    ),
-)
-def run(experiment, scope, output_dir, save_all):
+def run(
+    ctx: typer.Context,
+    experiment: Annotated[
+        Path | None,
+        typer.Option(
+            "--experiment",
+            "-e",
+            exists=True,
+            help="Path to experiment YAML. Default: regression suite.",
+        ),
+    ] = None,
+    scope: Annotated[
+        Literal["synthetic", "all"],
+        typer.Option("--scope", help="Which cases to run."),
+    ] = "synthetic",
+    output_dir: OutputDir = None,
+    save_all: Annotated[
+        bool,
+        typer.Option(
+            "--save-all",
+            help=(
+                "Keep every intermediate output. By default transfer function "
+                "zarrs are always deleted and reconstruction/simulated zarrs "
+                "larger than 25 MB are deleted after metrics are computed."
+            ),
+        ),
+    ] = False,
+):
     """Run benchmark cases.
 
     By default only metrics, timing, configs, and small (<25 MB) output
@@ -93,7 +92,7 @@ def run(experiment, scope, output_dir, save_all):
       \033[92mwo bm run --scope synthetic\033[0m
       \033[92mwo bm run --save-all\033[0m
     """
-    click.echo(click.style("Starting benchmark run...", fg="green"))
+    typer.echo(typer.style("Starting benchmark run...", fg="green"))
 
     # Deferred imports: benchmarks.runner pulls in torch, iohub, etc.
     from benchmarks.config import infer_modality, load_experiment, resolve_recon_config
@@ -101,7 +100,7 @@ def run(experiment, scope, output_dir, save_all):
     from benchmarks.utils import collect_metadata
 
     if experiment is None:
-        benchmark_root = click.get_current_context().with_resource(as_file(files("benchmarks")))
+        benchmark_root = ctx.with_resource(as_file(files("benchmarks")))
         experiment_path = benchmark_root / "experiments" / "regression.yml"
     else:
         experiment_path = Path(experiment)
@@ -124,11 +123,11 @@ def run(experiment, scope, output_dir, save_all):
     if n_skipped_hpc:
         summary += f"; skipping {n_skipped_hpc} hpc"
 
-    click.echo(click.style(f"WaveOrder Benchmark — {exp.name}", fg="green", bold=True))
-    click.echo(f"  Git: {metadata['git_hash']} ({metadata['git_branch']}){' dirty' if metadata['git_dirty'] else ''}")
-    click.echo(f"  Experiment: {exp.name} ({summary})")
-    click.echo(f"  Output: {run_dir}")
-    click.echo()
+    typer.echo(typer.style(f"WaveOrder Benchmark — {exp.name}", fg="green", bold=True))
+    typer.echo(f"  Git: {metadata['git_hash']} ({metadata['git_branch']}){' dirty' if metadata['git_dirty'] else ''}")
+    typer.echo(f"  Experiment: {exp.name} ({summary})")
+    typer.echo(f"  Output: {run_dir}")
+    typer.echo()
     _print_header()
 
     results = {}
@@ -136,7 +135,7 @@ def run(experiment, scope, output_dir, save_all):
         case_dir = run_dir / "cases" / case_name
         recon_config = resolve_recon_config(case, experiment_path.parent)
 
-        click.echo(f"  {case_name:21s} running...", nl=False)
+        typer.echo(f"  {case_name:21s} running...", nl=False)
         try:
             if case.type == "synthetic":
                 metrics = run_synthetic_case(
@@ -165,13 +164,13 @@ def run(experiment, scope, output_dir, save_all):
             timing = json.loads((case_dir / "timing.json").read_text())
             elapsed = timing.get("elapsed_s", 0)
             metrics["elapsed_s"] = elapsed
-            click.echo("\033[2K\r", nl=False)
+            typer.echo("\033[2K\r", nl=False)
             _print_row(case_name, metrics, elapsed=elapsed)
         except Exception as e:
-            click.echo("\033[2K\r", nl=False)
-            click.echo(f"  {case_name:21s} " + click.style(f"FAILED: {e}", fg="red"))
+            typer.echo("\033[2K\r", nl=False)
+            typer.echo(f"  {case_name:21s} " + typer.style(f"FAILED: {e}", fg="red"))
             tb = traceback.format_exc()
-            click.echo(tb, err=True)
+            typer.echo(tb, err=True)
             results[case_name] = {"error": str(e), "traceback": tb}
 
     # Save summary
@@ -179,41 +178,41 @@ def run(experiment, scope, output_dir, save_all):
 
 
 @benchmark.command()
-@_output_dir_option()
-def latest(output_dir):
+def latest(output_dir: OutputDir = None):
     """Show summary of the most recent benchmark run."""
-    click.echo(click.style("Loading latest benchmark...", fg="green"))
+    typer.echo(typer.style("Loading latest benchmark...", fg="green"))
 
     output_dir = _resolve_output_dir(output_dir)
     run_dirs = _list_run_dirs(output_dir)
     if not run_dirs:
-        click.echo("No benchmark runs found.")
+        typer.echo("No benchmark runs found.")
         return
 
     run_dir = run_dirs[-1]
-    click.echo(click.style(f"Latest run: {run_dir.name}", fg="green", bold=True))
+    typer.echo(typer.style(f"Latest run: {run_dir.name}", fg="green", bold=True))
 
     meta_path = run_dir / "metadata.json"
     if meta_path.exists():
         meta = json.loads(meta_path.read_text())
-        click.echo(f"  Git: {meta['git_hash']} ({meta['git_branch']})")
+        typer.echo(f"  Git: {meta['git_hash']} ({meta['git_branch']})")
 
     summary_path = run_dir / "summary.json"
     if summary_path.exists():
         results = json.loads(summary_path.read_text())
-        click.echo()
+        typer.echo()
         _print_summary(results)
 
 
 @benchmark.command()
-@_output_dir_option()
-@click.option("--limit", "-n", type=int, default=10, help="Number of runs to show.")
-def history(output_dir, limit):
+def history(
+    output_dir: OutputDir = None,
+    limit: Annotated[int, typer.Option("--limit", "-n", help="Number of runs to show.")] = 10,
+):
     """List recent benchmark runs."""
     output_dir = _resolve_output_dir(output_dir)
     run_dirs = _list_run_dirs(output_dir)
     if not run_dirs:
-        click.echo("No benchmark runs found.")
+        typer.echo("No benchmark runs found.")
         return
 
     for run_dir in run_dirs[-limit:]:
@@ -223,7 +222,7 @@ def history(output_dir, limit):
         n_cases = 0
         if summary_path.exists():
             n_cases = len(json.loads(summary_path.read_text()))
-        click.echo(f"  {run_dir.name:50s} {n_cases} cases  git={meta.get('git_hash', '?')}")
+        typer.echo(f"  {run_dir.name:50s} {n_cases} cases  git={meta.get('git_hash', '?')}")
 
 
 def _list_run_dirs(output_dir: str | Path) -> list[Path]:
@@ -249,10 +248,11 @@ def _load_summary(run_dir: Path) -> dict:
 
 
 @benchmark.command()
-@_output_dir_option()
-@click.argument("run_a", required=False)
-@click.argument("run_b", required=False)
-def compare(output_dir, run_a, run_b):
+def compare(
+    run_a: Annotated[str | None, typer.Argument()] = None,
+    run_b: Annotated[str | None, typer.Argument()] = None,
+    output_dir: OutputDir = None,
+):
     """Compare two benchmark runs side by side.
 
     If no run names given, compares the two most recent runs.
@@ -269,27 +269,27 @@ def compare(output_dir, run_a, run_b):
         dirs = _find_runs(output_dir, n=2)
 
     if len(dirs) < 2:
-        click.echo("Need at least 2 runs to compare.")
+        typer.echo("Need at least 2 runs to compare.")
         return
 
     dir_a, dir_b = dirs[1], dirs[0]  # older first
     summary_a = _load_summary(dir_a)
     summary_b = _load_summary(dir_b)
 
-    click.echo(click.style("Benchmark comparison", fg="green", bold=True))
-    click.echo(f"  A: {dir_a.name}")
-    click.echo(f"  B: {dir_b.name}")
-    click.echo()
+    typer.echo(typer.style("Benchmark comparison", fg="green", bold=True))
+    typer.echo(f"  A: {dir_a.name}")
+    typer.echo(f"  B: {dir_b.name}")
+    typer.echo()
 
     # Find common cases
     common = set(summary_a.keys()) & set(summary_b.keys())
     if not common:
-        click.echo("No common cases between runs.")
+        typer.echo("No common cases between runs.")
         return
 
     # Header
-    click.echo(f"  {'case':21s} {'metric':>10s} {'A':>10s} {'B':>10s} {'delta':>10s}")
-    click.echo("  " + "─" * 66)
+    typer.echo(f"  {'case':21s} {'metric':>10s} {'A':>10s} {'B':>10s} {'delta':>10s}")
+    typer.echo("  " + "─" * 66)
 
     for case_name in sorted(common):
         ma, mb = summary_a[case_name], summary_b[case_name]
@@ -311,15 +311,16 @@ def compare(output_dir, run_a, run_b):
 
         for metric, va, vb in pairs:
             delta = vb - va
-            click.echo(f"  {case_name:21s} {metric:>10s} {_fmt(va)} {_fmt(vb)} {_fmt(delta)}")
+            typer.echo(f"  {case_name:21s} {metric:>10s} {_fmt(va)} {_fmt(vb)} {_fmt(delta)}")
             case_name = ""  # only show name on first row
 
 
 @benchmark.command()
-@_output_dir_option()
-@click.argument("path", required=False, default=None)
-@click.argument("path_b", required=False, default=None)
-def view(output_dir, path, path_b):
+def view(
+    path: Annotated[str | None, typer.Argument()] = None,
+    path_b: Annotated[str | None, typer.Argument()] = None,
+    output_dir: OutputDir = None,
+):
     """Open benchmark results in napari.
 
     With one PATH: view that run (or case). With two PATHs: compare them
@@ -334,7 +335,7 @@ def view(output_dir, path, path_b):
       \033[92mwo bm view latest/phase_3d_beads\033[0m
       \033[92mwo bm view RUN_A/case RUN_B/case\033[0m
     """
-    click.echo(click.style("Opening benchmark results...", fg="green"))
+    typer.echo(typer.style("Opening benchmark results...", fg="green"))
 
     # Deferred imports
     import napari
@@ -397,7 +398,7 @@ def _open_recovery_summary_if_present(run_dir: Path, case_name: str | None) -> N
         return
     opener = shutil.which("xdg-open") or shutil.which("evince")
     if opener is None:
-        click.echo(f"  (no PDF viewer found; recovery_summary.pdf at {candidates[0]})")
+        typer.echo(f"  (no PDF viewer found; recovery_summary.pdf at {candidates[0]})")
         return
     for path in candidates:
         try:
@@ -429,17 +430,17 @@ def _resolve_view_target(output_dir: Path, path: str | None) -> tuple[Path, str 
     if run_name in (None, "latest"):
         runs = _find_runs(output_dir, n=1)
         if not runs:
-            click.echo("No benchmark runs found.")
+            typer.echo("No benchmark runs found.")
             return None
         run_dir = runs[0]
     else:
         run_dir = output_dir / run_name
         if not run_dir.exists():
-            click.echo(f"Run not found: {run_dir}")
+            typer.echo(f"Run not found: {run_dir}")
             return None
 
     if not (run_dir / "cases").exists():
-        click.echo(f"No cases in run {run_dir.name}.")
+        typer.echo(f"No cases in run {run_dir.name}.")
         return None
 
     return run_dir, case
@@ -485,7 +486,7 @@ def _load_case_into_viewer(
                     crop=crop,
                 )
             else:
-                click.echo(f"  {case_name}: no raw input found")
+                typer.echo(f"  {case_name}: no raw input found")
 
         # Synthetic cases also persist the ground-truth phantom; show it
         # as a third layer when present.
@@ -615,8 +616,8 @@ def _print_header():
         f" {'midband':>{_W}s} {'mse':>{_W}s} {'ssim':>{_W}s}"
         f"  {'min':>{_H}s} {'histogram':^12s} {'max':>{_H}s}"
     )
-    click.echo(header)
-    click.echo("  " + "─" * (len(header) - 2))
+    typer.echo(header)
+    typer.echo("  " + "─" * (len(header) - 2))
 
 
 def _ref_badge(metrics: dict) -> str:
@@ -641,7 +642,7 @@ def _print_reference_failures(case_name: str, metrics: dict) -> None:
         if entry.get("max") is not None:
             bounds.append(f"max={entry['max']}")
         msg = f"    ❌ {case_name}.{path}: value={entry['value']:.4g}  ({', '.join(bounds)})"
-        click.echo(click.style(msg, fg="red"))
+        typer.echo(typer.style(msg, fg="red"))
 
 
 def _print_row(case_name: str, metrics: dict, elapsed: float | None = None):
@@ -667,7 +668,7 @@ def _print_row(case_name: str, metrics: dict, elapsed: float | None = None):
 
     time_str = f"{elapsed:5.1f}s" if elapsed is not None else f"{'—':>6s}"
 
-    click.echo(f"  {case_name:21s} {ref_str} {time_str} {mbp} {mse_str} {ssim_str}  {min_str} {spark:^12s} {max_str}")
+    typer.echo(f"  {case_name:21s} {ref_str} {time_str} {mbp} {mse_str} {ssim_str}  {min_str} {spark:^12s} {max_str}")
     _print_reference_failures(case_name, metrics)
 
 
@@ -676,6 +677,6 @@ def _print_summary(results: dict):
     _print_header()
     for case_name, metrics in results.items():
         if "error" in metrics:
-            click.echo(f"  {case_name:21s} " + click.style("ERROR", fg="red"))
+            typer.echo(f"  {case_name:21s} " + typer.style("ERROR", fg="red"))
             continue
         _print_row(case_name, metrics, elapsed=metrics.get("elapsed_s"))

@@ -1,137 +1,90 @@
 from pathlib import Path
-from typing import Callable
+from typing import Annotated
 
-import click
+import typer
 
-from waveorder.cli.option_eat_all import OptionEatAll
+INPUT_PATHS_HELP = (
+    "List of paths to input positions, each with the same TCZYX shape. Supports wildcards e.g. 'input.zarr/*/*/*'."
+)
 
 
-def _validate_and_process_paths(ctx: click.Context, opt: click.Option, value: str) -> list[Path]:
-    # Deferred imports: iohub and natsort are heavy (pull in torch via zarr/numpy chain).
-    # Only needed when the command actually runs, not for --help.
+def _validate_and_process_paths(value: list[Path]) -> list[Path]:
+    # Deferred imports keep command help independent of the scientific stack.
     from iohub.ngff import Plate, open_ome_zarr
     from natsort import natsorted
 
-    # Sort and validate the input paths, expanding plates into lists of positions
-    input_paths = [Path(path) for path in natsorted(value)]
-    # Filter out non-directories (e.g., zarr.json files from glob expansion)
-    input_paths = [path for path in input_paths if path.is_dir()]
+    input_paths = [Path(path) for path in natsorted(value) if Path(path).is_dir()]
+    expanded_paths = []
     for path in input_paths:
         with open_ome_zarr(path, mode="r") as dataset:
             if isinstance(dataset, Plate):
-                plate_path = input_paths.pop()
-                for position in dataset.positions():
-                    input_paths.append(plate_path / position[0])
-
-    return input_paths
-
-
-def _str_to_path(ctx: click.Context, opt: click.Option, value: str) -> Path:
-    return Path(value)
+                expanded_paths.extend(path / position_key for position_key, _ in dataset.positions())
+            else:
+                expanded_paths.append(path)
+    return expanded_paths
 
 
-def input_position_dirpaths() -> Callable:
-    def decorator(f: Callable) -> Callable:
-        return click.option(
-            "--input-position-dirpaths",
-            "-i",
-            cls=OptionEatAll,
-            type=tuple,
-            required=True,
-            callback=_validate_and_process_paths,
-            help="List of paths to input positions, each with the same TCZYX shape. Supports wildcards e.g. 'input.zarr/*/*/*'.",
-        )(f)
-
-    return decorator
-
-
-def config_filepath() -> Callable:
-    def decorator(f: Callable) -> Callable:
-        return click.option(
-            "--config-filepath",
-            "-c",
-            required=True,
-            type=click.Path(exists=True, file_okay=True, dir_okay=False),
-            callback=_str_to_path,
-            help="Path to YAML configuration file.",
-        )(f)
-
-    return decorator
-
-
-def transfer_function_dirpath() -> Callable:
-    def decorator(f: Callable) -> Callable:
-        return click.option(
-            "--transfer-function-dirpath",
-            "-t",
-            required=True,
-            type=click.Path(exists=False),
-            callback=_str_to_path,
-            help="Path to transfer function .zarr.",
-        )(f)
-
-    return decorator
-
-
-def output_dirpath() -> Callable:
-    def decorator(f: Callable) -> Callable:
-        return click.option(
-            "--output-dirpath",
-            "-o",
-            required=True,
-            type=click.Path(exists=False),
-            callback=_str_to_path,
-            help="Path to output directory.",
-        )(f)
-
-    return decorator
+InputPositionDirpaths = Annotated[
+    list[Path],
+    typer.Option(
+        "--input-position-dirpaths",
+        "-i",
+        callback=_validate_and_process_paths,
+        help=INPUT_PATHS_HELP,
+    ),
+]
+ConfigFilepath = Annotated[
+    Path,
+    typer.Option(
+        "--config-filepath",
+        "-c",
+        exists=True,
+        file_okay=True,
+        dir_okay=False,
+        help="Path to YAML configuration file.",
+    ),
+]
+TransferFunctionDirpath = Annotated[
+    Path,
+    typer.Option(
+        "--transfer-function-dirpath",
+        "-t",
+        help="Path to transfer function .zarr.",
+    ),
+]
+OutputDirpath = Annotated[
+    Path,
+    typer.Option("--output-dirpath", "-o", help="Path to output directory."),
+]
+WriteConfigScaleToOutput = Annotated[
+    bool,
+    typer.Option(
+        "--write-config-scale-to-output",
+        help=("Write the reconstruction config's pixel sizes to the output zarr instead of copying from the input."),
+    ),
+]
+UniqueId = Annotated[
+    str,
+    typer.Option("--unique-id", "-uid", help="Unique ID."),
+]
 
 
-# TODO: this setting will have to be collected from SLURM?
-def processes_option(default: int = None) -> Callable:
-    def check_processes_option(ctx, param, value):
-        # Deferred: torch.multiprocessing pulls in all of torch.
-        import torch.multiprocessing as mp
+def check_processes_option(value: int) -> int:
+    # Deferred: torch.multiprocessing pulls in all of torch.
+    import torch.multiprocessing as mp
 
-        max_processes = mp.cpu_count()
-        if value > max_processes:
-            raise click.BadParameter(f"Maximum number of processes is {max_processes}")
-        return value
-
-    def decorator(f: Callable) -> Callable:
-        return click.option(
-            "--num_processes",
-            "-j",
-            default=default or 1,
-            type=int,
-            help="Number of processes to run in parallel.",
-            callback=check_processes_option,
-        )(f)
-
-    return decorator
+    max_processes = mp.cpu_count()
+    if value > max_processes:
+        raise typer.BadParameter(f"Maximum number of processes is {max_processes}")
+    return value
 
 
-def write_config_scale_to_output() -> Callable:
-    def decorator(f: Callable) -> Callable:
-        return click.option(
-            "--write-config-scale-to-output",
-            is_flag=True,
-            default=False,
-            help="Write the reconstruction config's pixel sizes to the output zarr instead of copying from the input.",
-        )(f)
-
-    return decorator
-
-
-def unique_id() -> Callable:
-    def decorator(f: Callable) -> Callable:
-        return click.option(
-            "--unique-id",
-            "-uid",
-            default="",
-            required=False,
-            type=str,
-            help="Unique ID.",
-        )(f)
-
-    return decorator
+ProcessesOption = Annotated[
+    int,
+    typer.Option(
+        "--num_processes",
+        "-j",
+        callback=check_processes_option,
+        help="Number of processes to run in parallel.",
+    ),
+]

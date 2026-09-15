@@ -1,11 +1,9 @@
 from pathlib import Path
 
-import click
-
 from waveorder.cli.parsing import (
-    config_filepath,
-    input_position_dirpaths,
-    output_dirpath,
+    ConfigFilepath,
+    InputPositionDirpaths,
+    OutputDirpath,
 )
 
 
@@ -202,14 +200,10 @@ def compute_transfer_function_cli(
     )
 
 
-@click.command("compute-tf", no_args_is_help=True)
-@input_position_dirpaths()
-@config_filepath()
-@output_dirpath()
 def _compute_transfer_function_cli(
-    input_position_dirpaths: list[Path],
-    config_filepath: Path,
-    output_dirpath: Path,
+    input_position_dirpaths: InputPositionDirpaths,
+    config_filepath: ConfigFilepath,
+    output_dirpath: OutputDirpath,
 ) -> None:
     """Compute a transfer function using a dataset and configuration file.
 
