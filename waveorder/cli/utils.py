@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import click
+import typer
 import numpy as np
 import xarray as xr
 from iohub.ngff import open_ome_zarr
@@ -77,14 +77,14 @@ def apply_inverse_to_zyx_and_save(
         Additional arguments passed to func.
     """
     if verbose:
-        click.echo(f"Reconstructing t={t_idx}")
+        typer.echo(f"Reconstructing t={t_idx}")
 
     # Extract CZYX xarray slice
     czyx_slice = input_data.isel(t=t_idx).sel(c=input_channel_names)
 
     # Check if all values are zeros or NaN
     if _check_nan_n_zeros(czyx_slice.values):
-        click.echo(f"All values at t={t_idx} are zero or Nan, skipping reconstruction.")
+        typer.echo(f"All values at t={t_idx} are zero or Nan, skipping reconstruction.")
         return
 
     # Apply transformation (returns xr.DataArray CZYX)
@@ -102,7 +102,7 @@ def apply_inverse_to_zyx_and_save(
         output_position.write_xarray(output_xa)
 
     if verbose:
-        click.echo(f"Finished writing t={t_idx}")
+        typer.echo(f"Finished writing t={t_idx}")
 
 
 def estimate_resources(shape, settings, num_processes):

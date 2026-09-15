@@ -1,4 +1,6 @@
-import click
+from typing import Annotated
+
+import typer
 
 
 def _open_transfer_function(viewer, path):
@@ -86,9 +88,12 @@ def _open_ome_zarr(viewer, path):
     plate.close()
 
 
-@click.command("view")
-@click.argument("paths", nargs=-1)
-def _view_cli(paths):
+def _view_cli(
+    paths: Annotated[
+        list[str],
+        typer.Argument(help="OME-Zarr datasets or transfer functions to open."),
+    ] = [],
+):
     """Open OME-Zarr datasets or transfer functions in napari.
 
     Accepts paths as arguments and/or from stdin (one per line).
@@ -109,7 +114,7 @@ def _view_cli(paths):
                 all_paths.append(line)
 
     if not all_paths:
-        raise click.UsageError("No paths provided.")
+        raise typer.BadParameter("No paths provided.")
 
     viewer = napari.Viewer()
     for path in all_paths:

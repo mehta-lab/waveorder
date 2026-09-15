@@ -1,4 +1,4 @@
-from click.testing import CliRunner
+from typer.testing import CliRunner
 
 from waveorder.api import birefringence, fluorescence, phase
 from waveorder.cli import settings
@@ -7,7 +7,7 @@ from waveorder.cli.compute_transfer_function import (
     _write_fluorescence_tf,
     _write_phase_tf,
 )
-from waveorder.cli.main import cli
+from waveorder.cli.main import app
 from waveorder.io import utils
 
 ZYX_SHAPE = (3, 4, 5)
@@ -27,18 +27,15 @@ def test_compute_transfer(tmp_path, example_plate):
 
     plate_path, _ = example_plate
     runner = CliRunner()
-    result = runner.invoke(
-        cli,
-        [
-            "compute-tf",
-            "-i",
-            str(plate_path / "A" / "1" / "0"),
-            "-c",
-            str(config_path),
-            "-o",
-            str(output_path),
-        ],
-    )
+    result = runner.invoke(app, [
+        "compute-tf",
+        "-i",
+        str(plate_path / "A" / "1" / "0"),
+        "-c",
+        str(config_path),
+        "-o",
+        str(output_path),
+    ],)
     assert result.exit_code == 0
 
 
@@ -46,7 +43,7 @@ def test_compute_transfer_blank_config():
     runner = CliRunner()
     for option in ("-c ", "--config-path "):
         cmd = "compute-tf " + option
-        result = runner.invoke(cli, cmd)
+        result = runner.invoke(app, cmd)
         assert result.exit_code == 2
         assert "Error" in result.output
 
@@ -55,7 +52,7 @@ def test_compute_transfer_blank_output():
     runner = CliRunner()
     for option in ("-o ", "--output-path "):
         cmd = "compute-tf " + option
-        result = runner.invoke(cli, cmd)
+        result = runner.invoke(app, cmd)
         assert result.exit_code == 2
         assert "Error" in result.output
 
@@ -74,18 +71,15 @@ def test_compute_transfer_output_file(tmp_path, example_plate):
     for option in ("-o", "--output-dirpath"):
         for output_folder in ["test1.zarr", "test2/test.zarr"]:
             output_path = tmp_path.joinpath(output_folder)
-            result = runner.invoke(
-                cli,
-                [
-                    "compute-tf",
-                    "-i",
-                    str(plate_path / "A" / "1" / "0"),
-                    "-c",
-                    str(config_path),
-                    str(option),
-                    str(output_path),
-                ],
-            )
+            result = runner.invoke(app, [
+                "compute-tf",
+                "-i",
+                str(plate_path / "A" / "1" / "0"),
+                "-c",
+                str(config_path),
+                str(option),
+                str(output_path),
+            ],)
             assert result.exit_code == 0
             assert str(output_path) in result.output
             assert output_path.exists()

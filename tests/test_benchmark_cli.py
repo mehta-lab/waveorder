@@ -1,10 +1,10 @@
-"""Tests for the ``wo bm`` click commands."""
+"""Tests for the ``wo bm`` Typer commands."""
 
 import json
 from unittest.mock import patch
 
 import yaml
-from click.testing import CliRunner
+from typer.testing import CliRunner
 
 from waveorder.cli.bench import benchmark
 
@@ -136,19 +136,18 @@ class TestRun:
         ):
             mock_syn.return_value = {"image_quality": {"midband_power": 0.01}}
             mock_hpc.return_value = {"image_quality": {"midband_power": 0.01}}
-            with CliRunner().isolated_filesystem():
-                # Need to create timing.json for the bench.run post-case readback
-                def _side_effect(**kwargs):
-                    case_dir = kwargs["case_dir"]
-                    case_dir.mkdir(parents=True, exist_ok=True)
-                    (case_dir / "timing.json").write_text(json.dumps({"elapsed_s": 0.1}))
-                    return {"image_quality": {"midband_power": 0.01}}
+            # Create timing.json for the bench.run post-case readback.
+            def _side_effect(**kwargs):
+                case_dir = kwargs["case_dir"]
+                case_dir.mkdir(parents=True, exist_ok=True)
+                (case_dir / "timing.json").write_text(json.dumps({"elapsed_s": 0.1}))
+                return {"image_quality": {"midband_power": 0.01}}
 
-                mock_syn.side_effect = _side_effect
-                result = CliRunner().invoke(
-                    benchmark,
-                    ["run", "-e", str(exp_yml), "--scope", "synthetic", "-o", str(tmp_path)],
-                )
+            mock_syn.side_effect = _side_effect
+            result = CliRunner().invoke(
+                benchmark,
+                ["run", "-e", str(exp_yml), "--scope", "synthetic", "-o", str(tmp_path)],
+            )
 
         assert result.exit_code == 0, result.output
         assert mock_syn.call_count == 1
