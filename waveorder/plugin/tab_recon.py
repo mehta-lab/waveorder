@@ -82,6 +82,11 @@ OPTION_TO_MODEL_DICT = {
     "fluorescence": {"enabled": False, "setting": None},
 }
 
+# Name of the checkbox that heads the sub-container built for an Optional[Model]
+# field such as apply_inverse.auto_regularization. Unchecked, the field is
+# submitted as None, which is how a config that omits the block reads.
+OPTIONAL_BLOCK_TOGGLE = "enable"
+
 CONTAINERS_INFO = {}
 
 # This keeps an instance of the MyWorker class
@@ -135,6 +140,15 @@ def is_subclass_of(
     if get_origin(inner) is Annotated:
         inner = get_args(inner)[0]
     return isinstance(inner, type) and issubclass(inner, base)
+
+
+def _is_toggled_block(field: str, ftype: Any) -> bool:
+    """Whether an Optional[Model] field gets an on/off checkbox in its container.
+
+    The reconstruction modes (birefringence, phase, fluorescence) are Optional too,
+    but they are switched by the mode checkboxes above the form, not from inside it.
+    """
+    return unwrap_optional(ftype) is not ftype and field not in OPTION_TO_MODEL_DICT
 
 
 # Main class for the Reconstruction tab
@@ -2085,6 +2099,17 @@ class Ui_ReconTab_Form(QWidget):
                     new_widget.tooltip = toolTip
                     # Unwrap Optional[Model] to get Model before recursing
                     unwrapped_ftype = unwrap_optional(ftype)
+                    if _is_toggled_block(field, ftype):
+                        # On only if the config being shown carries the block. Submitting
+                        # the sub-widgets' defaults for a block the config had as null
+                        # would switch the feature on.
+                        if json_dict is not None and field in json_dict:
+                            present = json_val is not None
+                        else:
+                            present = def_val is not None
+                        toggle = widgets.CheckBox(name=OPTIONAL_BLOCK_TOGGLE, value=present, text=f"enable {field}")
+                        toggle.tooltip = toolTip
+                        new_widget.append(toggle)
                     self.add_pydantic_to_container(unwrapped_ftype, new_widget, excludes, json_val)
                 elif isinstance(ftype, type(Union[NonNegativeInt, List, str])):
                     if field == "background_path":  # field == "background_path":
@@ -2107,12 +2132,13 @@ class Ui_ReconTab_Form(QWidget):
                             message=f"magicgui could not identify a widget for {py_model}.{field}, which has type {ftype}"
                         )
                 elif isinstance(def_val, float) or (
-                    def_val is None and is_subclass_of(ftype, (int, float), require_optional=True)
+                    def_val is None and is_subclass_of(ftype, (int, float, str), require_optional=True)
                 ):
                     # Handle float fields, including Optional[float] with None value
 
-                    # For Optional numeric types with None, use LineEdit instead of FloatSpinBox
-                    # This allows empty string to represent None
+                    # For Optional numeric and str types with None, use LineEdit instead of
+                    # FloatSpinBox. This allows empty string to represent None; a LineEdit
+                    # handed None directly would display and later submit the text "None".
                     # Note: if we entered via the is_subclass_of check, def_val is guaranteed None
                     if def_val is None:
                         new_widget_cls, ops = get_widget_class(
@@ -2205,10 +2231,18 @@ class Ui_ReconTab_Form(QWidget):
 
             ftype = field_def.annotation
             if is_subclass_of(ftype, BaseModel):
+                sub_container = getattr(container, field)
+                toggle = (
+                    getattr(sub_container, OPTIONAL_BLOCK_TOGGLE, None) if _is_toggled_block(field, ftype) else None
+                )
+                if toggle is not None and not toggle.value:
+                    # Optional block left off: submit None, as the config had it.
+                    pydantic_kwargs[field] = None
+                    continue
                 # Nested Pydantic model - recurse
                 pydantic_kwargs[field] = {}
                 self.get_pydantic_kwargs(
-                    getattr(container, field),
+                    sub_container,
                     unwrap_optional(ftype),
                     pydantic_kwargs[field],
                     excludes,
@@ -2217,11 +2251,12 @@ class Ui_ReconTab_Form(QWidget):
             else:
                 # Leaf field - extract value from container widget
                 value = getattr(container, field).value
-                # Handle Optional numeric types: convert empty string to None, parse numeric strings
-                if is_subclass_of(ftype, (int, float), require_optional=True) and isinstance(value, str):
+                # Optional leaf fields are shown as text so that empty can mean None:
+                # map that (and a literal "None"/"null") back, and parse numeric strings
+                if is_subclass_of(ftype, (int, float, str), require_optional=True) and isinstance(value, str):
                     if value == "" or value.lower() in ("none", "null"):
                         value = None
-                    else:
+                    elif is_subclass_of(ftype, (int, float), require_optional=True):
                         try:
                             value = float(value)
                         except (ValueError, TypeError):

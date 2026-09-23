@@ -10,6 +10,7 @@ from waveorder.optim.autoreg import (
     AutoRegResult,
     AutoRegularizationIgnoredWarning,
     AutoRegularizationSettings,
+    AutoRegularizationWarning,
     select_crop,
     select_regularization,
 )
@@ -21,6 +22,7 @@ __all__ = [
     "AutoRegResult",
     "AutoRegularizationIgnoredWarning",
     "AutoRegularizationSettings",
+    "AutoRegularizationWarning",
     "build_loss_fn",
     "LossSettings",
     "OptimizableFloat",

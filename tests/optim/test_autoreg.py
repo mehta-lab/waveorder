@@ -127,6 +127,86 @@ def test_sweep_applies_apodization_like_the_model():
     assert torch.allclose(expected, apodized, atol=1e-6)
 
 
+def _model_reconstructions(contrast, data, transfer_functions, z_padding, strengths, apodization_rolloff):
+    """What the production model returns at each strength, stacked along a sweep axis."""
+    if contrast == "phase":
+        real_tf, imag_tf = transfer_functions
+        return torch.stack(
+            [
+                phase_thick_3d.apply_inverse_transfer_function(
+                    data,
+                    real_tf,
+                    imag_tf,
+                    z_padding=z_padding,
+                    regularization_strength=float(strength),
+                    apodization_rolloff=apodization_rolloff,
+                )
+                for strength in strengths
+            ]
+        )
+    return torch.stack(
+        [
+            isotropic_fluorescent_thick_3d.apply_inverse_transfer_function(
+                data,
+                transfer_functions,
+                z_padding=z_padding,
+                regularization_strength=float(strength),
+                apodization_rolloff=apodization_rolloff,
+            )
+            for strength in strengths
+        ]
+    )
+
+
+@pytest.mark.parametrize("contrast", ["phase", "fluorescence"])
+@pytest.mark.parametrize(
+    "rule, z_padding",
+    # l_curve takes its norms on the padded grid, which the model API does not
+    # return, so its check is only exact without padding.
+    [("otsu_cnr", 0), ("otsu_cnr", 3), ("l_curve", 0)],
+)
+def test_select_regularization_scores_the_model_reconstructions(contrast, rule, z_padding):
+    """The sweep itself, not just its helpers, scores what the model would produce.
+
+    Undersampled so that apodization_rolloff reshapes the filter: had
+    select_regularization stopped passing it through, the scores would move.
+    """
+    zyx_shape, rolloff = (12, 64, 64), 0.25
+    data = _measurement(zyx_shape)
+    if contrast == "phase":
+        undersampled = {**PHASE_TF_KWARGS, "yx_pixel_size": 0.5}
+        transfer_functions = phase_thick_3d.calculate_transfer_function(
+            zyx_shape=zyx_shape, z_padding=z_padding, **undersampled
+        )
+        swept = transfer_functions[0]
+    else:
+        transfer_functions = swept = _fluor_tf(zyx_shape, z_padding)
+
+    result = autoreg.select_regularization(
+        data,
+        swept,
+        AutoRegularizationSettings(rule=rule, num_samples=5, search_min=-3.0, search_max=1.0),
+        contrast=contrast,
+        z_padding=z_padding,
+        apodization_rolloff=rolloff,
+    )
+    strengths = result.regularization_strengths
+    apodized = _model_reconstructions(contrast, data, transfer_functions, z_padding, strengths, rolloff)
+    unapodized = _model_reconstructions(contrast, data, transfer_functions, z_padding, strengths, 0.0)
+
+    if rule == "otsu_cnr":
+        expected = autoreg.otsu_cnr_scores(apodized).numpy()
+        control = autoreg.otsu_cnr_scores(unapodized).numpy()
+        np.testing.assert_allclose(result.scores, expected, rtol=1e-4)
+    else:
+        measurement = autoreg.preprocess_measurement(data, contrast, z_padding)
+        expected = np.stack(autoreg.compute_l_curve_norms(measurement, swept, apodized))
+        control = np.stack(autoreg.compute_l_curve_norms(measurement, swept, unapodized))
+        np.testing.assert_allclose(np.stack([result.residual_norms, result.solution_norms]), expected, rtol=1e-5)
+    # The window has to make a real difference, or the agreement above says nothing about it.
+    assert np.abs(control - expected).max() > 1e-3 * np.abs(expected).max()
+
+
 def test_preprocess_measurement_normalizes_phase_only():
     """Phase intensity-normalizes before its inverse filter; fluorescence does not."""
     data = _measurement((6, 16, 16))
@@ -335,8 +415,10 @@ def test_select_regularization_returns_a_swept_value(rule):
 
     if rule == "otsu_cnr":
         assert len(result.scores) == 7 and len(result.residual_norms) == 0
+        assert 0 <= result.scored_z_index < 12
     else:
         assert len(result.residual_norms) == 7 and len(result.scores) == 0
+        assert result.scored_z_index is None
 
 
 def test_relative_scale_anchors_to_the_transfer_function_peak():
@@ -364,26 +446,32 @@ def test_relative_scale_anchors_to_the_transfer_function_peak():
     assert relative.lambda_over_h2max == pytest.approx(relative.regularization_strength / h2max)
 
 
-def test_pick_on_the_sweep_edge_warns():
-    """A pick at either end means the optimum may be outside the search bounds."""
+def _edge_result():
+    """A sweep whose pick can only land on the top end.
+
+    The measurement is structureless noise and the whole range is heavily
+    over-regularized, so Otsu CNR climbs monotonically with smoothing and the
+    argmax has nowhere to sit but the top of the sweep.
+    """
     zyx_shape = (12, 64, 64)
     data = _measurement(zyx_shape)
     real_tf, _ = _phase_tfs(zyx_shape, 0)
-
-    # The measurement is structureless noise and the whole range is heavily
-    # over-regularized, so Otsu CNR climbs monotonically with smoothing and the
-    # argmax has nowhere to sit but the top of the sweep.
-    result = autoreg.select_regularization(
+    return autoreg.select_regularization(
         data,
         real_tf,
         AutoRegularizationSettings(rule="otsu_cnr", num_samples=5, search_min=3.0, search_max=4.0),
         contrast="phase",
     )
 
+
+def test_pick_on_the_sweep_edge_warns():
+    """A pick at either end means the optimum may be outside the search bounds."""
+    result = _edge_result()
+
     assert result.index == len(result.regularization_strengths) - 1
     assert any("end of the sweep" in message for message in result.warnings)
 
-    with pytest.warns(UserWarning, match="end of the sweep"):
+    with pytest.warns(autoreg.AutoRegularizationWarning, match="end of the sweep"):
         autoreg.warn_all(result)
 
 
@@ -405,4 +493,5 @@ def test_result_serializes_for_the_report(tmp_path):
     assert loaded["rule"] == "l_curve"
     assert loaded["regularization_strength"] == pytest.approx(result.regularization_strength)
     assert loaded["crop"] == {"y0": 0, "x0": 0, "size": 0}
+    assert loaded["scored_z_index"] is None
     assert len(loaded["residual_norms"]) == 7

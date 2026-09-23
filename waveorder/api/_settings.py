@@ -157,8 +157,9 @@ class FourierApplyInverseSettings(MyBaseModel):
         """Auto-regularization only means anything for the Tikhonov filter.
 
         Dropped rather than rejected, for the same reason as fluorescence's 'rl'
-        block: the napari plugin builds its widgets from every field and so always
-        submits one, whatever the algorithm.
+        block: a block can arrive alongside an algorithm it does not apply to,
+        from a copied config or an older GUI, and the algorithm is the user's
+        actual choice.
         """
         if self.auto_regularization is not None and self.reconstruction_algorithm != "Tikhonov":
             warnings.warn(

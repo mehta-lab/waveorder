@@ -113,11 +113,11 @@ class ReconstructionSettings(MyBaseModel):
         #
         # Dropped rather than rejected, like the 'rl' block and unlike the
         # reconstruction_algorithm checks above. The difference is what the guard
-        # keys on: the napari plugin unwraps Optional[Model] fields and always
-        # submits a populated block for them (see plugin/tab_recon.py
-        # get_pydantic_kwargs), so raising on a block's mere presence would break
-        # every 2D reconstruction started from the GUI. A leaf field like
-        # reconstruction_algorithm carries the user's actual choice and can raise.
+        # keys on: a block's mere presence is weak evidence of intent, since a
+        # config copied from the 3D phase example, or submitted by an older GUI
+        # that populated every Optional[Model] field, carries one regardless. A
+        # leaf field like reconstruction_algorithm is the user's actual choice
+        # and can raise.
         for name in ("phase", "fluorescence"):
             block = getattr(self, name)
             if block is None or block.apply_inverse.auto_regularization is None:

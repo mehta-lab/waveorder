@@ -92,9 +92,13 @@ def test_generate_example_settings(pytestconfig):
         "birefringence_3d.yml": settings.ReconstructionSettings(
             birefringence=settings.BirefringenceSettings(),
         ),
+        # The 3D phase example carries the auto_regularization block, so it is the
+        # one to copy for a regularization_strength chosen from the data.
         "phase_3d.yml": settings.ReconstructionSettings(
             input_channel_names=["Brightfield"],
-            phase=settings.PhaseSettings(),
+            phase=phase.Settings(
+                apply_inverse=phase.ApplyInverseSettings(auto_regularization=AutoRegularizationSettings())
+            ),
         ),
         "phase_2d.yml": settings.ReconstructionSettings(
             input_channel_names=["Brightfield"],
@@ -113,17 +117,6 @@ def test_generate_example_settings(pytestconfig):
         "birefringence-and-phase_3d.yml": settings.ReconstructionSettings(
             birefringence=settings.BirefringenceSettings(),
             phase=settings.PhaseSettings(),
-        ),
-        "phase_3d_autoreg.yml": settings.ReconstructionSettings(
-            input_channel_names=["Brightfield"],
-            phase=phase.Settings(
-                apply_inverse=phase.ApplyInverseSettings(
-                    auto_regularization=AutoRegularizationSettings(
-                        num_samples=9,
-                        report_path="./autoreg_report.json",
-                    )
-                )
-            ),
         ),
     }
 
@@ -259,12 +252,12 @@ def test_auto_regularization_dropped_alongside_birefringence():
 
 
 def test_auto_regularization_survives_a_plugin_shaped_submission():
-    """The napari plugin always submits a populated Optional[Model] block.
+    """A populated block alongside a 2D reconstruction warns and is dropped, not rejected.
 
-    plugin/tab_recon.py::get_pydantic_kwargs unwraps Optional and recurses, so it
-    emits a full auto_regularization dict even when the user never touched it.
-    Rejecting a block on its presence alone would break every 2D reconstruction
-    started from the GUI, so these must warn rather than raise.
+    Older versions of the napari plugin unwrapped every Optional[Model] field and
+    submitted a full auto_regularization dict whether or not the user touched it,
+    and a config copied from the 3D phase example carries one too. Rejecting a
+    block on its presence alone would break those, so these must warn rather than raise.
     """
     plugin_submission = _auto_reg_config(reconstruction_dimension=2)
     plugin_submission["phase"]["apply_inverse"]["auto_regularization"] = AutoRegularizationSettings().model_dump()

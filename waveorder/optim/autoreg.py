@@ -21,12 +21,14 @@ Two rules are available, both ported from the CZ Biohub weight-search scripts:
 
 Caveats worth knowing before trusting a pick
 --------------------------------------------
-Neither rule is an oracle, and on real brightfield phase data both have been
-observed to move a lot:
+Neither rule is an oracle. On the brightfield-phase and fluorescence volumes
+this was developed against:
 
-- The L-curves are often not L-shaped. A band-limited operator cannot fit
-  out-of-band data, so the residual floors well above zero and the curve never
-  flattens; the corner finder then locates a corner on what is nearly a line.
+- The L-curve is not always L-shaped. A band-limited operator cannot fit
+  out-of-band data, so the residual floors well above zero (2-15% of ``||y||``
+  on those volumes). One curve was a clean single-corner L; one had three bends,
+  where the corner finder falls back to the midpoint of the two most prominent;
+  one was nearly a straight line in log-log, where there is no corner to find.
 - The ``otsu_cnr`` pick shifts with the scoring crop and, less strongly, with
   the sweep endpoints.
 
@@ -67,19 +69,27 @@ _LOCAL_VAR_CLIP_QUANTILE = 0.99
 # torch.quantile rejects inputs beyond ~16M elements, which a full-frame volume
 # exceeds; sample down to this many values instead.
 _QUANTILE_MAX_ELEMENTS = 2**24
+# Slices per _otsu_cnr call: its histogram temporaries are several times the
+# input, so a deep volume is scored in pieces.
+_OTSU_SLICE_CHUNK = 64
 _L_CURVE_PROMINENCE_FRACTION = 0.10
 _L_CURVE_PLATEAU_FRACTION = 0.90
 
 
-class AutoRegularizationIgnoredWarning(UserWarning):
+class AutoRegularizationWarning(UserWarning):
+    """Something auto-regularization wants the user to see, e.g. a pick on the sweep edge."""
+
+
+class AutoRegularizationIgnoredWarning(AutoRegularizationWarning):
     """An ``auto_regularization`` block was dropped instead of being honoured."""
 
 
 # The CLI suppresses UserWarning at startup to silence torch/CUDA noise; carve out
-# this subclass, as PixelSizeMismatchWarning does, so a dropped sweep is not silent.
-# "default" rather than "always" because a config is parsed at several points in the
-# pipeline, and one copy of the message is the useful number.
-warnings.filterwarnings("default", category=AutoRegularizationIgnoredWarning)
+# this family, as PixelSizeMismatchWarning does, so neither a dropped sweep nor a
+# doubtful pick is silent. "default" rather than "always" because a config is
+# parsed at several points in the pipeline, and one copy of the message is the
+# useful number.
+warnings.filterwarnings("default", category=AutoRegularizationWarning)
 
 
 class AutoRegularizationSettings(BaseModel):
@@ -151,6 +161,9 @@ class AutoRegResult:
         ``||x||`` per strength; empty when the rule was ``otsu_cnr``.
     warnings : list[str]
         Non-fatal problems found while selecting, e.g. a pick on the sweep edge.
+    scored_z_index : int or None
+        The z slice (of the unpadded volume) that ``otsu_cnr`` scored every
+        reconstruction on; ``None`` when the rule was ``l_curve``.
     """
 
     regularization_strength: float
@@ -164,13 +177,10 @@ class AutoRegResult:
     residual_norms: np.ndarray = field(default_factory=lambda: np.array([]))
     solution_norms: np.ndarray = field(default_factory=lambda: np.array([]))
     warnings: list[str] = field(default_factory=list)
+    scored_z_index: Optional[int] = None
 
     def to_dict(self) -> dict:
         """JSON-serializable view, for ``report_path``."""
-
-        def _list(a):
-            return np.asarray(a).tolist()
-
         return {
             "rule": self.rule,
             "regularization_strength": self.regularization_strength,
@@ -178,10 +188,11 @@ class AutoRegResult:
             "lambda_over_h2max": self.lambda_over_h2max,
             "transfer_function_peak_squared": self.transfer_function_peak_squared,
             "crop": {"y0": self.crop[0], "x0": self.crop[1], "size": self.crop[2]},
-            "regularization_strengths": _list(self.regularization_strengths),
-            "scores": _list(self.scores),
-            "residual_norms": _list(self.residual_norms),
-            "solution_norms": _list(self.solution_norms),
+            "scored_z_index": self.scored_z_index,
+            "regularization_strengths": self.regularization_strengths.tolist(),
+            "scores": self.scores.tolist(),
+            "residual_norms": self.residual_norms.tolist(),
+            "solution_norms": self.solution_norms.tolist(),
             "warnings": list(self.warnings),
         }
 
@@ -292,6 +303,49 @@ def _otsu_cnr(flat: Tensor) -> Tensor:
     return torch.abs(mu_signal - mu_bg) / sigma_bg
 
 
+def _slice_statistics(volume: Tensor, window_size: int = OTSU_WINDOW_SIZE) -> tuple[Tensor, Tensor]:
+    """Per-slice Otsu CNR and per-slice spread of the local-variance map, for one volume.
+
+    Everything :func:`otsu_cnr_scores` needs from a reconstruction, so a sweep can
+    take these from each strength in turn and drop the volume, instead of holding
+    every reconstruction until the end.
+
+    Parameters
+    ----------
+    volume : Tensor
+        ``(Z, Y, X)`` reconstruction.
+    window_size : int
+        Local-variance window.
+
+    Returns
+    -------
+    tuple[Tensor, Tensor]
+        ``(cnr, spread)``, each ``(Z,)``: the Otsu CNR of every slice, and the
+        variance of every slice's local-variance map, which ranks the slices.
+    """
+    local_var = _local_variance(volume.unsqueeze(0), window_size)[0]
+    spread = local_var.var(dim=(-2, -1))
+    cnr = torch.cat([_otsu_cnr(chunk.reshape(chunk.shape[0], -1)) for chunk in local_var.split(_OTSU_SLICE_CHUNK)])
+    return cnr, spread
+
+
+def _shared_slice_scores(slice_cnr: Tensor, slice_spread: Tensor) -> tuple[Tensor, int]:
+    """Read every strength's score off the one z slice with the most structure.
+
+    Parameters
+    ----------
+    slice_cnr, slice_spread : Tensor
+        ``(N, Z)`` stacks of :func:`_slice_statistics` outputs, one row per strength.
+
+    Returns
+    -------
+    tuple[Tensor, int]
+        ``(N,)`` scores on that slice, and the slice index.
+    """
+    best_z = int(torch.argmax(slice_spread.mean(dim=0)))
+    return slice_cnr[:, best_z], best_z
+
+
 def otsu_cnr_scores(recons: Tensor, window_size: int = OTSU_WINDOW_SIZE) -> Tensor:
     """Score every reconstruction in a sweep by Otsu CNR of its local variance.
 
@@ -312,9 +366,12 @@ def otsu_cnr_scores(recons: Tensor, window_size: int = OTSU_WINDOW_SIZE) -> Tens
     Tensor
         ``(N,)`` scores; higher is better.
     """
-    local_var = _local_variance(recons, window_size)
-    best_z = torch.argmax(local_var.var(dim=(2, 3)).mean(dim=0))
-    return _otsu_cnr(local_var[:, best_z].reshape(recons.shape[0], -1))
+    statistics = [_slice_statistics(volume, window_size) for volume in recons]
+    scores, _ = _shared_slice_scores(
+        torch.stack([cnr for cnr, _ in statistics]),
+        torch.stack([spread for _, spread in statistics]),
+    )
+    return scores
 
 
 # --- l_curve ---
@@ -600,32 +657,47 @@ def select_regularization(
     anchor = h2max if settings.search_scale == "relative" else 1.0
     strengths = (10.0**powers) * anchor
 
+    if settings.rule not in ("otsu_cnr", "l_curve"):
+        raise ValueError(f"unknown rule {settings.rule!r}")
+
+    # One reconstruction at a time. Each rule keeps a few numbers per strength (two
+    # norms, or per-slice Otsu statistics), so the volume is dropped as soon as they
+    # are taken and peak memory is one reconstruction's FFT buffers rather than the
+    # whole sweep's: at 25 strengths, a 256x256 crop 2000 slices deep would
+    # otherwise hold 13 GB of reconstructions alone.
     measurement_fft = torch.fft.fftn(measurement, dim=(-3, -2, -1))
-    recons = torch.stack(
-        [
-            torch.real(
-                torch.fft.ifftn(
-                    measurement_fft * _inverse_filter(transfer_function, float(strength), apodization_rolloff),
-                    dim=(-3, -2, -1),
-                )
+    slice_cnr: list[Tensor] = []
+    slice_spread: list[Tensor] = []
+    residuals: list[float] = []
+    solutions: list[float] = []
+    for strength in strengths:
+        recon = torch.real(
+            torch.fft.ifftn(
+                measurement_fft * _inverse_filter(transfer_function, float(strength), apodization_rolloff),
+                dim=(-3, -2, -1),
             )
-            for strength in strengths
-        ]
-    )
+        )
+        if settings.rule == "otsu_cnr":
+            unpadded = recon[z_padding : recon.shape[0] - z_padding] if z_padding else recon
+            cnr, spread = _slice_statistics(unpadded, OTSU_WINDOW_SIZE)
+            slice_cnr.append(cnr)
+            slice_spread.append(spread)
+        else:
+            residual, solution = compute_l_curve_norms(measurement, transfer_function, recon.unsqueeze(0))
+            residuals.append(residual[0])
+            solutions.append(solution[0])
+        del recon
 
     scores = np.array([])
-    residual_norms = np.array([])
-    solution_norms = np.array([])
-
+    scored_z_index = None
+    residual_norms = np.array(residuals)
+    solution_norms = np.array(solutions)
     if settings.rule == "otsu_cnr":
-        unpadded = recons[:, z_padding : recons.shape[1] - z_padding] if z_padding else recons
-        scores = otsu_cnr_scores(unpadded, OTSU_WINDOW_SIZE).cpu().numpy()
+        shared, scored_z_index = _shared_slice_scores(torch.stack(slice_cnr), torch.stack(slice_spread))
+        scores = shared.cpu().numpy()
         index = int(np.argmax(scores))
-    elif settings.rule == "l_curve":
-        residual_norms, solution_norms = compute_l_curve_norms(measurement, transfer_function, recons)
-        index = find_l_curve_corner(residual_norms, solution_norms)
     else:
-        raise ValueError(f"unknown rule {settings.rule!r}")
+        index = find_l_curve_corner(residual_norms, solution_norms)
 
     if index in (0, len(powers) - 1):
         edge = "lower" if index == 0 else "upper"
@@ -647,10 +719,15 @@ def select_regularization(
         residual_norms=residual_norms,
         solution_norms=solution_norms,
         warnings=messages,
+        scored_z_index=scored_z_index,
     )
 
 
 def warn_all(result: AutoRegResult) -> None:
-    """Re-emit a result's collected messages as :class:`UserWarning`."""
+    """Re-emit a result's collected messages as :class:`AutoRegularizationWarning`.
+
+    That category rather than a bare ``UserWarning`` because the CLI silences the
+    latter wholesale, and these are the messages worth reading.
+    """
     for message in result.warnings:
-        warnings.warn(message, UserWarning, stacklevel=2)
+        warnings.warn(message, AutoRegularizationWarning, stacklevel=2)

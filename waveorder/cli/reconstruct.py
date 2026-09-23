@@ -212,17 +212,18 @@ def _run_auto_regularization(settings, input_position_dirpath, config_filepath):
         apodization_rolloff=block.apply_inverse.apodization_rolloff,
         # No full-frame peak is passed: |H|^2max is set by the optics and the pixel
         # size, not by the frame size, so the crop's own peak is the same number.
-        # Reading it back off the full transfer function measured 0.000000 decades
-        # of difference on a 2048x2048 frame and cost 10 s against a 0.4 s sweep.
+        # Reading it back off the full transfer function differed by under 0.01
+        # decades on a 2048x2048 frame and cost 10 s against a 0.4 s sweep.
     )
     autoreg.warn_all(result)
 
+    scored_z = f", z={result.scored_z_index}" if result.scored_z_index is not None else ""
     click.echo(
         click.style(
             f"    regularization_strength = {result.regularization_strength:.4g}\n"
             f"    lambda / |H|^2max       = {result.lambda_over_h2max:.4g}\n"
             f"    sweep index             = {result.index} of {len(result.regularization_strengths)}\n"
-            f"    scored crop             = {size}x{size} at (y={y0}, x={x0}), t={t_idx}",
+            f"    scored crop             = {size}x{size} at (y={y0}, x={x0}), t={t_idx}{scored_z}",
             fg="green",
         )
     )
