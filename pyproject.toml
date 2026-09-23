@@ -70,6 +70,7 @@ visual = [
   "jupyter",
   "jupytext",
 ]
+native = ["ninja>=1.11"]
 all = ["waveorder[visual]"]
 
 [dependency-groups]
