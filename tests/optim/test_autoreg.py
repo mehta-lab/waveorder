@@ -284,8 +284,6 @@ _NOISY_L_CURVE = _noisy_l_curve()
             np.concatenate([np.linspace(500, 60, 12), np.linspace(60, 55, 13)]),
             11,
         ),
-        # Nearly a straight line in log-log: no corner, so the search runs to an end.
-        (np.logspace(0, 1.5, 25), np.logspace(2.4, 1.0, 25), 24),
         # Noisy and only gently bent, which is what real data tends to look like.
         (*_NOISY_L_CURVE, 13),
     ],
@@ -299,6 +297,11 @@ def test_find_l_curve_corner_degenerate_inputs():
     # Constant norms carry no curvature at all.
     flat = np.ones(9)
     assert 0 <= autoreg.find_l_curve_corner(flat, flat) < 9
+    # A straight line in log-log has no corner either: its curvature is roundoff
+    # noise, whose argmax differs between platforms (24 on macOS, 16 on the Linux
+    # CI runner), so only the range is pinned.
+    residual, solution = np.logspace(0, 1.5, 25), np.logspace(2.4, 1.0, 25)
+    assert 0 <= autoreg.find_l_curve_corner(residual, solution) < 25
 
 
 def test_compute_l_curve_norms():
