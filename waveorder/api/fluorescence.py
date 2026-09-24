@@ -142,7 +142,7 @@ class ApplyInverseSettings(FourierApplyInverseSettings):
         return self
 
     def to_model_kwargs(self) -> dict:
-        kwargs = self.model_dump(exclude={"rl"})
+        kwargs = self.model_dump(exclude={"rl", "auto_regularization"})
         if self.rl is not None:
             kwargs.update({f"rl_{name}": value for name, value in self.rl.model_dump().items()})
         return kwargs

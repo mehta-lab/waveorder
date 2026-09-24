@@ -1,3 +1,4 @@
+import json
 import warnings
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -18,6 +19,7 @@ from waveorder.cli.apply_inverse_transfer_function import (
 )
 from waveorder.cli.main import cli
 from waveorder.io import utils
+from waveorder.optim.autoreg import AutoRegularizationSettings
 
 input_scale = [1, 2, 3, 4, 5]
 # Setup options
@@ -567,3 +569,67 @@ def test_warn_pixel_size_mismatch_isotropic_silent_when_equal():
         warnings.simplefilter("always")
         _warn_pixel_size_mismatch(input_scale, config_pixel_sizes)
     assert all("Input pixel sizes" not in str(w.message) for w in record)
+
+
+def test_auto_regularization_cli(tmp_path):
+    """Smoke test: reconstruct with auto_regularization sweeps then reconstructs."""
+    input_path = tmp_path / "autoreg_input.zarr"
+    output_path = tmp_path / "autoreg_output.zarr"
+    report_path = tmp_path / "autoreg_report.json"
+
+    # Create input dataset with a single channel, structured so the metrics have
+    # something to score: on featureless noise every rule pins to a sweep edge.
+    channel_names = ["Brightfield"]
+    dataset = open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=channel_names)
+    position = dataset.create_position("0", "0", "0")
+    data = np.random.default_rng(0).normal(1000, 20, size=(1, 1, 6, 32, 32)).astype(np.float32)
+    data[..., 10:22, 10:22] += 300
+    position.create_image("0", data, transform=[TransformationMeta(type="scale", scale=input_scale)])
+    dataset.close()
+
+    recon_settings = settings.ReconstructionSettings(
+        input_channel_names=channel_names,
+        time_indices=0,
+        reconstruction_dimension=3,
+        phase=settings.PhaseSettings(),
+    )
+    recon_settings.phase.apply_inverse.auto_regularization = AutoRegularizationSettings(
+        num_samples=5,
+        search_min=-4.0,
+        search_max=2.0,
+        report_path=str(report_path),
+    )
+    config_path = tmp_path / "autoreg.yml"
+    utils.model_to_yaml(recon_settings, config_path)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    assert output_path.exists()
+
+    # The pick is frozen into regularization_strength and the block is spent, so
+    # rerunning the resolved config reproduces the run without sweeping again.
+    resolved_config = config_path.with_name("autoreg_autoreg.yml")
+    assert resolved_config.exists()
+    resolved = utils.yaml_to_model(resolved_config, settings.ReconstructionSettings)
+    assert resolved.phase.apply_inverse.auto_regularization is None
+    assert resolved.phase.apply_inverse.regularization_strength != (
+        settings.PhaseSettings().apply_inverse.regularization_strength
+    )
+
+    # A report that disagreed with the config would be worse than no report.
+    report = json.loads(report_path.read_text())
+    assert report["regularization_strength"] == pytest.approx(resolved.phase.apply_inverse.regularization_strength)
+    assert report["regularization_strengths"][report["index"]] == pytest.approx(report["regularization_strength"])

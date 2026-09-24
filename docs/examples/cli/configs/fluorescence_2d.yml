@@ -20,4 +20,5 @@ fluorescence:
     TV_rho_strength: 0.001                  # ADMM rho parameter for TV regularization
     TV_iterations: 1                        # ADMM iterations for TV regularization
     apodization_rolloff: 0.0                # raised-cosine roll-off fraction applied to the inverse filter at the transverse Nyquist edge; suppresses checkerboard artifacts when the optical band limit exceeds the sampling Nyquist frequency. Must be between 0 and 1 (0 = off); if you see checkerboarding artifacts, start with 0.25
+    auto_regularization: null               # choose regularization_strength from the data; 3D Tikhonov only
     rl: null                                # Richardson-Lucy knobs; only valid with reconstruction_algorithm 'RL'/'RLGC', and filled with defaults if omitted there
