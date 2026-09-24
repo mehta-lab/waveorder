@@ -406,7 +406,7 @@ def apply_inverse_transfer_function(
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             brightfield_3d,
             _to_singular_system(transfer_function, "vector_singular_system"),
-            **settings_phase.apply_inverse.model_dump(),
+            **settings_phase.apply_inverse.to_model_kwargs(),
         )
 
         retardance = radians_to_nanometers(reconstructed_parameters_2d[0], wavelength)
@@ -430,7 +430,7 @@ def apply_inverse_transfer_function(
             _to_tensor(transfer_function, "real_potential_transfer_function"),
             _to_tensor(transfer_function, "imaginary_potential_transfer_function"),
             z_padding=settings_phase.transfer_function.z_padding,
-            **settings_phase.apply_inverse.model_dump(),
+            **settings_phase.apply_inverse.to_model_kwargs(),
         )
 
         retardance = radians_to_nanometers(reconstructed_parameters_3d[0], wavelength)
@@ -444,7 +444,7 @@ def apply_inverse_transfer_function(
             szyx_data=stokes,
             singular_system=_to_singular_system(transfer_function, "vector_singular_system"),
             intensity_to_stokes_matrix=None,
-            **settings_phase.apply_inverse.model_dump(),
+            **settings_phase.apply_inverse.to_model_kwargs(),
         )
 
         new_ret = (joint_recon_params[1] ** 2 + joint_recon_params[2] ** 2) ** (0.5)

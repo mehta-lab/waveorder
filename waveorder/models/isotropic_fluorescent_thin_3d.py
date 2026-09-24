@@ -272,10 +272,19 @@ def apply_transfer_function(
 def apply_inverse_transfer_function(
     zyx_data: Tensor,
     singular_system: Tuple[Tensor, Tensor, Tensor],
-    reconstruction_algorithm: Literal["Tikhonov", "TV"] = "Tikhonov",
+    reconstruction_algorithm: Literal["Tikhonov", "TV", "RL", "RLGC"] = "Tikhonov",
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
+    rl_iterations: int = 25,
+    rl_background: float = 0.0,
+    rl_stopping_tolerance: float | None = None,
+    rl_back_projector: str = "matched",
+    rl_bp_alpha: float | None = None,
+    rl_bp_beta: float | None = None,
+    rl_bp_order: int = 8,
+    rl_bp_resolution_mode: Literal["fwhm", "fwhm_over_sqrt2"] = "fwhm",
+    apodization_rolloff: float = 0.0,
 ) -> Tensor:
     """Reconstruct fluorescence density from zyx_data and singular system.
 
@@ -285,20 +294,50 @@ def apply_inverse_transfer_function(
         Raw data of shape ``(Z, Y, X)`` or ``(B, Z, Y, X)``
     singular_system : Tuple[Tensor, Tensor, Tensor]
         Singular system ``(U, S, Vh)`` (shared, not batched).
-    reconstruction_algorithm : {"Tikhonov", "TV"}, optional
-        By default "Tikhonov". "TV" is not implemented.
+    reconstruction_algorithm : {"Tikhonov", "TV", "RL", "RLGC"}, optional
+        By default "Tikhonov". "TV" is not implemented. "RL"/"RLGC" are not
+        yet implemented for 2D (thin) fluorescence reconstruction.
     regularization_strength : float, optional
         Regularization parameter, by default 1e-3
     TV_rho_strength : float, optional
         TV-specific regularization parameter, by default 1e-3
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
+    rl_iterations : int, optional
+        Maximum RL / RLGC iterations (3D only), by default 25
+    rl_background : float, optional
+        Constant background for the RL / RLGC forward model (3D only), by default 0.0
+    rl_stopping_tolerance : float, optional
+        Relative-change early-stop threshold for RL / RLGC (3D only), by default None
+    rl_back_projector : str, optional
+        Back projector for RL (3D only), by default "matched"
+    rl_bp_alpha : float, optional
+        Wiener regularization for the RL back projector (3D only), by default None
+    rl_bp_beta : float, optional
+        Cutoff gain for the RL back projector (3D only), by default None
+    rl_bp_order : int, optional
+        Butterworth order for the RL back projector (3D only), by default 8
+    rl_bp_resolution_mode : str, optional
+        Cutoff-frequency rule for the RL back projector (3D only), by default "fwhm"
+    apodization_rolloff : float, optional
+        Raised-cosine roll-off fraction applied to the inverse filter at
+        the transverse Nyquist edge. Suppresses Nyquist-rate checkerboard
+        artifacts in the reconstruction when the optical band limit
+        exceeds the sampling Nyquist frequency. By default 0.0
+        (no apodization, previous behavior). Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25.
 
     Returns
     -------
     Tensor
         Fluorescence density with shape ``(Y, X)`` or ``(B, Y, X)``
     """
+    if reconstruction_algorithm in ("RL", "RLGC"):
+        raise NotImplementedError(
+            "RL/RLGC reconstruction is only implemented for 3D (thick) fluorescence; use reconstruction_dimension=3."
+        )
+
     batched = zyx_data.ndim == 4
     if not batched:
         zyx_data = zyx_data.unsqueeze(0)
@@ -307,6 +346,14 @@ def apply_inverse_transfer_function(
         U, S, Vh = singular_system
         S_reg = S / (S**2 + regularization_strength)
         sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
+
+        if apodization_rolloff > 0:
+            window = sampling.raised_cosine_window(
+                sfyx_inverse_filter.shape[-2], apodization_rolloff, device=sfyx_inverse_filter.device
+            )[:, None] * sampling.raised_cosine_window(
+                sfyx_inverse_filter.shape[-1], apodization_rolloff, device=sfyx_inverse_filter.device
+            )
+            sfyx_inverse_filter = sfyx_inverse_filter * window
 
         results = []
         for b in range(zyx_data.shape[0]):
@@ -333,6 +380,7 @@ def reconstruct(
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
+    apodization_rolloff: float = 0.0,
 ) -> Tensor:
     """Reconstruct 2D fluorescence density from a defocus stack.
 
@@ -358,6 +406,13 @@ def reconstruct(
         TV-specific regularization parameter, by default 1e-3
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
+    apodization_rolloff : float, optional
+        Raised-cosine roll-off fraction applied to the inverse filter at
+        the transverse Nyquist edge, by default 0.0 (no apodization).
+        Suppresses Nyquist-rate checkerboard artifacts. Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25. See
+        ``apply_inverse_transfer_function``.
 
     Returns
     -------
@@ -380,4 +435,5 @@ def reconstruct(
         regularization_strength=regularization_strength,
         TV_rho_strength=TV_rho_strength,
         TV_iterations=TV_iterations,
+        apodization_rolloff=apodization_rolloff,
     )

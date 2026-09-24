@@ -334,7 +334,7 @@ def apply_inverse_transfer_function(
         _, output = isotropic_thin_3d.apply_inverse_transfer_function(
             zyx_tensor,
             (U.to(device), S.to(device), Vh.to(device)),
-            **settings.apply_inverse.model_dump(),
+            **settings.apply_inverse.to_model_kwargs(),
         )
     # [phase only, 3]
     elif recon_dim == 3:
@@ -343,7 +343,7 @@ def apply_inverse_transfer_function(
             _to_tensor(transfer_function, "real_potential_transfer_function").to(device),
             _to_tensor(transfer_function, "imaginary_potential_transfer_function").to(device),
             z_padding=settings.transfer_function.z_padding,
-            **settings.apply_inverse.model_dump(),
+            **settings.apply_inverse.to_model_kwargs(),
         )
 
     # Wrap output tensor(s) back into xr.DataArray(s)

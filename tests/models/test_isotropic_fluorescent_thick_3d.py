@@ -1,9 +1,42 @@
 import numpy as np
+import pytest
 import torch
 
 from waveorder import util
 from waveorder._pixel_size import YXPixelSize
 from waveorder.models import isotropic_fluorescent_thick_3d
+
+
+@pytest.mark.parametrize(
+    "yx_pixel_size, na, confocal_pinhole_diameter",
+    [
+        (0.1, 1.2, None),
+        (0.325, 0.8, None),
+        (0.65, 0.45, None),
+        (0.65, 1.2, None),
+        (1.3, 1.2, None),
+        (0.325, 0.8, 0.5),  # confocal
+    ],
+)
+def test_transfer_function_psf_nonnegative(yx_pixel_size, na, confocal_pinhole_diameter):
+    """The incoherent PSF must be nonnegative.
+
+    Upsampling to Nyquist and then cropping the OTF in Fourier space rings the
+    PSF below zero (worst near sub-Nyquist sampling). This is unphysical and
+    breaks Richardson-Lucy, so ``calculate_transfer_function`` clips it away.
+    """
+    otf = isotropic_fluorescent_thick_3d.calculate_transfer_function(
+        zyx_shape=(24, 64, 64),
+        yx_pixel_size=yx_pixel_size,
+        z_pixel_size=0.5,
+        wavelength_emission=0.515,
+        z_padding=0,
+        index_of_refraction_media=1.4,
+        numerical_aperture_detection=na,
+        confocal_pinhole_diameter=confocal_pinhole_diameter,
+    )
+    psf = torch.real(torch.fft.ifftn(otf, dim=(-3, -2, -1)))
+    assert psf.min() >= -1e-6 * psf.max()
 
 
 def test_pinhole_aperture_otf_small_diameter():
@@ -162,3 +195,27 @@ def test_reconstruct():
 
     assert result.shape == zyx_shape
     assert np.all(np.isfinite(result.numpy()))
+
+
+def test_reconstruct_apodization_rolloff_smoke():
+    """Inverse-filter apodization runs and zeroes the transverse Nyquist content."""
+    zyx_shape = (8, 32, 32)
+    zyx_data = torch.rand(zyx_shape)
+
+    kwargs = dict(
+        yx_pixel_size=0.325,
+        z_pixel_size=2.0,
+        wavelength_emission=0.45,
+        z_padding=0,
+        index_of_refraction_media=1.0,
+        numerical_aperture_detection=0.55,
+    )
+    density_hard = isotropic_fluorescent_thick_3d.reconstruct(zyx_data, **kwargs)
+    density_apod = isotropic_fluorescent_thick_3d.reconstruct(zyx_data, apodization_rolloff=0.25, **kwargs)
+
+    assert density_apod.shape == zyx_shape
+    assert np.all(np.isfinite(density_apod.numpy()))
+
+    nyquist_row_apod = np.abs(np.fft.fftn(density_apod.numpy())[:, 16, :])
+    nyquist_row_hard = np.abs(np.fft.fftn(density_hard.numpy())[:, 16, :])
+    assert nyquist_row_apod.max() < 1e-3 * nyquist_row_hard.max()

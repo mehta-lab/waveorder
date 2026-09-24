@@ -90,6 +90,20 @@ class ReconstructionSettings(MyBaseModel):
                     f"{num_channel_names} channels names provided. Please provide a single channel for fluorescence/phase reconstructions."
                 )
 
+        # RL/RLGC are implemented for thick (3D) fluorescence only. reconstruction_dimension
+        # lives here rather than on the fluorescence block, so this is the only place the
+        # pairing can be checked while parsing instead of mid-reconstruction.
+        if (
+            self.fluorescence is not None
+            and self.reconstruction_dimension == 2
+            and self.fluorescence.apply_inverse.reconstruction_algorithm in ("RL", "RLGC")
+        ):
+            raise ValueError(
+                f"reconstruction_algorithm "
+                f"{self.fluorescence.apply_inverse.reconstruction_algorithm!r} requires "
+                f"reconstruction_dimension 3; it is not implemented for thin (2D) fluorescence."
+            )
+
         return self
 
     @property
