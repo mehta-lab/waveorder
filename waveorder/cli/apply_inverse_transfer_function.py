@@ -82,6 +82,52 @@ def _load_transfer_function_dataset(
     return xr.Dataset(variables)
 
 
+def _load_transfer_function_tensors(
+    transfer_function_dirpath: Path,
+    recon_biref: bool,
+    recon_phase: bool,
+    recon_fluo: bool,
+    recon_dim: Literal[2, 3],
+) -> dict:
+    """Load transfer function arrays from a zarr store as torch tensors.
+
+    The apply_inverse API functions accept this dict in place of the
+    xr.Dataset and use the tensors without copying them, so the conversion
+    happens once rather than once per time point.
+    """
+
+    # Deferred imports for fast CLI help
+    import torch
+    from iohub import open_ome_zarr
+
+    with open_ome_zarr(transfer_function_dirpath, mode="r") as transfer_function_dataset:
+        tf_dataset = _load_transfer_function_dataset(
+            transfer_function_dataset,
+            recon_biref,
+            recon_phase,
+            recon_fluo,
+            recon_dim,
+        )
+    return {key: torch.from_numpy(array.values) for key, array in tf_dataset.data_vars.items()}
+
+
+# Transfer function of the current pool worker, loaded once by
+# _init_worker_transfer_function. It is not a per-task argument because
+# ProcessPoolExecutor pickles every task's arguments: a transfer function
+# bound into the task was re-serialised for every time point (~1.8 GB each
+# for a 3D phase transfer function), in both the parent and the worker.
+_worker_transfer_function = None
+
+
+def _init_worker_transfer_function(*load_args) -> None:
+    global _worker_transfer_function
+    _worker_transfer_function = _load_transfer_function_tensors(*load_args)
+
+
+def _apply_inverse_with_worker_transfer_function(apply_inverse_to_zyx_and_save, t_idx: int) -> None:
+    apply_inverse_to_zyx_and_save(t_idx, transfer_function=_worker_transfer_function)
+
+
 class PixelSizeMismatchWarning(UserWarning):
     """Input zarr pixel sizes disagree with the reconstruction config."""
 
@@ -241,7 +287,6 @@ def apply_inverse_transfer_function_single_position(
         echo_headline("\nStarting reconstruction...")
 
     # Load datasets
-    transfer_function_dataset = open_ome_zarr(transfer_function_dirpath)
     input_dataset = open_ome_zarr(input_position_dirpath)
     output_dataset = open_ome_zarr(output_position_dirpath, mode="r+")
 
@@ -273,17 +318,10 @@ def apply_inverse_transfer_function_single_position(
     recon_fluo = settings.fluorescence is not None
     recon_dim = settings.reconstruction_dimension
 
-    # Load transfer function as xr.Dataset
-    tf_dataset = _load_transfer_function_dataset(
-        transfer_function_dataset,
-        recon_biref,
-        recon_phase,
-        recon_fluo,
-        recon_dim,
-    )
-
-    # Close transfer function dataset early (no longer needed)
-    transfer_function_dataset.close()
+    # The transfer function is loaded where it is used -- once per pool
+    # worker, or once in this process when running serially -- and handed
+    # to each time point as `transfer_function`; see _worker_transfer_function.
+    tf_load_args = (transfer_function_dirpath, recon_biref, recon_phase, recon_fluo, recon_dim)
 
     # Resolve background data for birefringence
     cyx_no_sample_data = None
@@ -306,7 +344,6 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = birefringence.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
             "recon_dim": recon_dim,
             "settings": settings.birefringence,
             "cyx_no_sample_data": cyx_no_sample_data,
@@ -319,7 +356,6 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = phase.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
             "recon_dim": recon_dim,
             "settings": settings.phase,
         }
@@ -332,7 +368,6 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = birefringence_and_phase.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
             "recon_dim": recon_dim,
             "settings_biref": settings.birefringence,
             "settings_phase": settings.phase,
@@ -346,7 +381,6 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = fluorescence.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
             "recon_dim": recon_dim,
             "settings": settings.fluorescence,
             "fluor_channel_name": settings.input_channel_names[0],
@@ -374,13 +408,26 @@ def apply_inverse_transfer_function_single_position(
         # (e.g. cgroup OOM-kill) surfaces as BrokenProcessPool instead
         # of hanging indefinitely on pool.starmap.
         context = mp.get_context("spawn")
-        with ProcessPoolExecutor(max_workers=num_processes, mp_context=context) as p:
-            futures = [p.submit(partial_apply_inverse_to_zyx_and_save, t_idx) for t_idx in time_indices]
+        with ProcessPoolExecutor(
+            max_workers=num_processes,
+            mp_context=context,
+            initializer=_init_worker_transfer_function,
+            initargs=tf_load_args,
+        ) as p:
+            futures = [
+                p.submit(
+                    _apply_inverse_with_worker_transfer_function,
+                    partial_apply_inverse_to_zyx_and_save,
+                    t_idx,
+                )
+                for t_idx in time_indices
+            ]
             for fut in as_completed(futures):
                 fut.result()
     else:
+        transfer_function = _load_transfer_function_tensors(*tf_load_args)
         for t_idx in time_indices:
-            partial_apply_inverse_to_zyx_and_save(t_idx)
+            partial_apply_inverse_to_zyx_and_save(t_idx, transfer_function=transfer_function)
 
     # Save metadata at position level, keyed by output channel names
     waveorder_meta = dict(output_dataset.zattrs.get("waveorder", {}))

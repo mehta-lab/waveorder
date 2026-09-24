@@ -567,3 +567,44 @@ def test_warn_pixel_size_mismatch_isotropic_silent_when_equal():
         warnings.simplefilter("always")
         _warn_pixel_size_mismatch(input_scale, config_pixel_sizes)
     assert all("Input pixel sizes" not in str(w.message) for w in record)
+
+
+def test_apply_inv_tf_process_pool_matches_serial(tmp_path):
+    """Pool workers load the transfer function themselves; the result must
+    match the serial path, which loads it in-process."""
+    input_path = tmp_path / "input.zarr"
+    config_path = tmp_path / "phase.yml"
+    tf_path = tmp_path / "tf.zarr"
+
+    with open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=["BF"]) as dataset:
+        position = dataset.create_position("0", "0", "0")
+        position.create_image(
+            "0",
+            np.random.default_rng(0).uniform(1, 100, size=(3, 1, 6, 8, 10)).astype(np.float32),
+            transform=[TransformationMeta(type="scale", scale=[1, 1, 0.25, 0.1, 0.1])],
+        )
+    utils.model_to_yaml(
+        settings.ReconstructionSettings(
+            input_channel_names=["BF"],
+            reconstruction_dimension=3,
+            phase=settings.PhaseSettings(),
+        ),
+        config_path,
+    )
+    CliRunner().invoke(
+        cli,
+        ["compute-tf", "-i", str(input_path / "0" / "0" / "0"), "-c", str(config_path), "-o", str(tf_path)],
+        catch_exceptions=False,
+    )
+
+    results = {}
+    for num_processes in (1, 2):
+        result_path = tmp_path / f"result_{num_processes}.zarr"
+        apply_inverse_transfer_function_cli(
+            [input_path / "0" / "0" / "0"], tf_path, config_path, result_path, num_processes
+        )
+        with open_ome_zarr(result_path / "0" / "0" / "0") as result:
+            results[num_processes] = result["0"][:]
+
+    assert np.any(results[1] != 0)
+    np.testing.assert_array_equal(results[2], results[1])
