@@ -243,8 +243,6 @@ def _make_normalized_variance_loss():
 
 
 def _make_spectral_flatness_loss(NA_det, wavelength, pixel_size, midband_fractions):
-    import numpy as np
-
     from waveorder import util
 
     def _flatness_2d(img: Tensor) -> Tensor:
@@ -252,7 +250,7 @@ def _make_spectral_flatness_loss(NA_det, wavelength, pixel_size, midband_fractio
         device = img.device
 
         _, _, fxx, fyy = util.gen_coordinate((Y, X), pixel_size)
-        frr = torch.tensor(np.sqrt(fxx**2 + fyy**2), device=device)
+        frr = torch.sqrt(fxx**2 + fyy**2).to(device)
         cutoff = 2 * NA_det / wavelength
         mask = torch.logical_and(
             frr > cutoff * midband_fractions[0],
