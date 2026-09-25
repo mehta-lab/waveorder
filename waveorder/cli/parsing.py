@@ -123,6 +123,22 @@ def write_config_scale_to_output() -> Callable:
     return decorator
 
 
+def resume_option() -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--resume",
+            is_flag=True,
+            default=False,
+            help=(
+                "Skip timepoints that an interrupted previous run into the same output already finished. "
+                "Changed reconstruction settings or a recomputed transfer function are detected and "
+                "recomputed; changed input data is not. Needs an OME-Zarr v0.5 output."
+            ),
+        )(f)
+
+    return decorator
+
+
 def unique_id() -> Callable:
     def decorator(f: Callable) -> Callable:
         return click.option(

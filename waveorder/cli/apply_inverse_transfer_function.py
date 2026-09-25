@@ -11,6 +11,7 @@ from waveorder.cli.parsing import (
     input_position_dirpaths,
     output_dirpath,
     processes_option,
+    resume_option,
     transfer_function_dirpath,
     write_config_scale_to_output,
 )
@@ -212,15 +213,21 @@ def apply_inverse_transfer_function_single_position(
     num_processes,
     output_channel_names: list[str],
     verbose: bool = True,
+    resume: bool = False,
 ) -> None:
+    """Reconstruct one position, one timepoint per task, through iohub.
+
+    Timepoints and channels are addressed by index: channels are resolved by
+    name, in config order, against the input and output stores, so several
+    configs can write different channel groups into one plate. With
+    ``resume=True``, timepoints a previous interrupted run already finished
+    are skipped, unless the settings or the transfer function changed since.
+    """
 
     # Deferred imports for fast CLI help
-    from concurrent.futures import ProcessPoolExecutor, as_completed
-    from functools import partial
-
     import numpy as np
-    import torch.multiprocessing as mp
     from iohub import open_ome_zarr
+    from iohub.ngff.utils import process_single_position
 
     from waveorder.api import (
         birefringence,
@@ -231,7 +238,8 @@ def apply_inverse_transfer_function_single_position(
     from waveorder.cli.printing import echo_headline, echo_settings
     from waveorder.cli.settings import ReconstructionSettings
     from waveorder.cli.utils import (
-        apply_inverse_to_zyx_and_save,
+        apply_inverse_czyx,
+        reconstruction_fingerprint,
         resolve_time_indices,
     )
     from waveorder.io import utils
@@ -242,9 +250,9 @@ def apply_inverse_transfer_function_single_position(
     # Load datasets
     transfer_function_dataset = open_ome_zarr(transfer_function_dirpath)
     input_dataset = open_ome_zarr(input_position_dirpath)
-    output_dataset = open_ome_zarr(output_position_dirpath, mode="r+")
 
-    # Get input data as xarray
+    # Input coordinates, for labeling each volume iohub hands the model (the
+    # data itself is read by iohub, once per timepoint)
     input_xa = input_dataset.to_xarray()
 
     # Load config file
@@ -272,20 +280,30 @@ def apply_inverse_transfer_function_single_position(
     recon_fluo = settings.fluorescence is not None
     recon_dim = settings.reconstruction_dimension
 
-    # Load the transfer function once, as torch tensors, and bind it into
-    # every time point's task. ProcessPoolExecutor pickles each task's
-    # arguments, but importing torch.multiprocessing registers pickling
-    # reductions that move a CPU tensor into shared memory and send a handle to
-    # it instead of its data: every worker maps this one copy, and nothing
-    # large goes through the worker pipes. This relies on them being torch
-    # tensors -- numpy arrays (or an xr.Dataset of them) pickle by value, which
-    # re-sent the whole transfer function (~2-3 GB in 3D) for every time point.
+    # Load the transfer function once, as torch tensors, and pass it with
+    # every timepoint's task. iohub's process pool pickles each task's
+    # arguments, but importing torch registers pickling reductions (from
+    # torch.multiprocessing) that move a CPU tensor into shared memory and send
+    # a handle to it instead of its data: every worker maps this one copy, and
+    # nothing large goes through the worker pipes. This relies on them being
+    # torch tensors -- numpy arrays (or an xr.Dataset of them) pickle by value,
+    # which re-sent the whole transfer function (~2-3 GB in 3D) for every
+    # timepoint.
     transfer_function = _load_transfer_function(
         transfer_function_dataset,
         recon_biref,
         recon_phase,
         recon_fluo,
         recon_dim,
+    )
+
+    # Fingerprint what determines the output, so resuming after a settings
+    # change or a recomputed transfer function recomputes instead of reusing
+    # stale timepoints. Read before closing the transfer function dataset.
+    resume_token = reconstruction_fingerprint(
+        settings,
+        dict(transfer_function_dataset.zattrs.get("settings", {})),
+        transfer_function,
     )
 
     # Close transfer function dataset early (no longer needed)
@@ -358,47 +376,53 @@ def apply_inverse_transfer_function_single_position(
             "fluor_channel_name": settings.input_channel_names[0],
         }
 
-    # Make the partial function for apply inverse
-    partial_apply_inverse_to_zyx_and_save = partial(
-        apply_inverse_to_zyx_and_save,
-        apply_inverse_model_function,
-        input_xa,
-        output_position_dirpath,
-        settings.input_channel_names,
-        verbose=verbose,
+    # Label each CZYX volume with the input's own coordinates, taken once here
+    czyx_coords = {
+        "c": ("c", settings.input_channel_names),
+        **{dim: (dim, input_xa.coords[dim].values, dict(input_xa.coords[dim].attrs)) for dim in ("z", "y", "x")},
+    }
+
+    # Channels by name, in config order, as one group, so the model receives
+    # all input channels in one CZYX and writes the channels it owns -- not
+    # necessarily the plate's first ones
+    input_channel_indices = [[input_dataset.channel_names.index(name) for name in settings.input_channel_names]]
+    with open_ome_zarr(output_position_dirpath, mode="r") as output_dataset:
+        output_channel_indices = [[output_dataset.channel_names.index(name) for name in output_channel_names]]
+        if resume and output_dataset.version == "0.4":
+            # iohub also warns, but the CLI silences UserWarnings
+            click.echo(
+                "resume was requested, but progress can only be tracked in an OME-Zarr v0.5 output; "
+                "recomputing every timepoint."
+            )
+    input_dataset.close()
+
+    # The output plate has the input's full T, so input and output timepoints
+    # share indices, whatever the input's time coordinates
+    process_single_position(
+        apply_inverse_czyx,
+        input_position_path=input_position_dirpath,
+        output_position_path=output_position_dirpath,
+        input_channel_indices=input_channel_indices,
+        output_channel_indices=output_channel_indices,
+        input_time_indices=time_indices,
+        output_time_indices=time_indices,
+        num_workers=num_processes,
+        resume=resume,
+        resume_token=resume_token,
+        model_function=apply_inverse_model_function,
+        czyx_coords=czyx_coords,
         **apply_inverse_args,
     )
 
-    # Multiprocessing logic
-    if num_processes > 1:
-        if verbose:
-            click.echo(f"\nStarting multiprocess pool with {num_processes} processes")
-        # NOTE: spawn (not fork) — tensorstore runs internal C++ threads
-        # that are not fork-safe, so a forked worker can deadlock or
-        # segfault before our code runs. See google/tensorstore#61.
-        # NOTE: ProcessPoolExecutor (not mp.Pool) so silent worker death
-        # (e.g. cgroup OOM-kill) surfaces as BrokenProcessPool instead
-        # of hanging indefinitely on pool.starmap.
-        context = mp.get_context("spawn")
-        with ProcessPoolExecutor(max_workers=num_processes, mp_context=context) as p:
-            futures = [p.submit(partial_apply_inverse_to_zyx_and_save, t_idx) for t_idx in time_indices]
-            for fut in as_completed(futures):
-                fut.result()
-    else:
-        for t_idx in time_indices:
-            partial_apply_inverse_to_zyx_and_save(t_idx)
-
     # Save metadata at position level, keyed by output channel names
-    waveorder_meta = dict(output_dataset.zattrs.get("waveorder", {}))
-    channel_key = ",".join(output_channel_names)
-    waveorder_meta[channel_key] = settings.model_dump()
-    output_dataset.zattrs["waveorder"] = waveorder_meta
+    with open_ome_zarr(output_position_dirpath, mode="r+") as output_dataset:
+        waveorder_meta = dict(output_dataset.zattrs.get("waveorder", {}))
+        channel_key = ",".join(output_channel_names)
+        waveorder_meta[channel_key] = settings.model_dump()
+        output_dataset.zattrs["waveorder"] = waveorder_meta
 
     if verbose:
         echo_headline(f"Closing {output_position_dirpath}\n")
-
-    output_dataset.close()
-    input_dataset.close()
 
 
 def apply_inverse_transfer_function_cli(
@@ -408,6 +432,7 @@ def apply_inverse_transfer_function_cli(
     output_dirpath: Path,
     num_processes,
     write_config_scale_to_output: bool = False,
+    resume: bool = False,
 ) -> None:
     # Deferred imports for fast CLI help
     import torch
@@ -472,6 +497,7 @@ def apply_inverse_transfer_function_cli(
             output_position_path,
             num_processes,
             output_metadata["channel_names"],
+            resume=resume,
         )
 
 
@@ -482,6 +508,7 @@ def apply_inverse_transfer_function_cli(
 @output_dirpath()
 @processes_option(default=1)
 @write_config_scale_to_output()
+@resume_option()
 def _apply_inverse_transfer_function_cli(
     input_position_dirpaths: list[Path],
     transfer_function_dirpath: Path,
@@ -489,6 +516,7 @@ def _apply_inverse_transfer_function_cli(
     output_dirpath: Path,
     num_processes,
     write_config_scale_to_output: bool,
+    resume: bool,
 ) -> None:
     """Apply an inverse transfer function to a dataset.
 
@@ -506,4 +534,5 @@ def _apply_inverse_transfer_function_cli(
         output_dirpath,
         num_processes,
         write_config_scale_to_output,
+        resume,
     )

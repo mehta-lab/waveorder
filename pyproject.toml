@@ -44,7 +44,7 @@ dependencies = [
   "click>=8.0.1",
   "colorspacious>=1.1.2",
   "importlib-metadata",
-  "iohub>=0.3.4",
+  "iohub>=0.3.11",
   "ipywidgets>=7.5.1",
   "matplotlib>=3.1.1",
   "natsort>=7.1.1",
@@ -124,6 +124,12 @@ allow-direct-references = true
 
 [tool.hatch.version]
 source = "uv-dynamic-versioning"
+
+[tool.uv.sources]
+# apply-inv-tf's --resume relies on czbiohub-sf/iohub#476, which syncs a unit's
+# shards before recording it as done. Drop this pin for a PyPI floor once iohub
+# releases it; iohub>=0.3.11 above already has the process_single_position API.
+iohub = { git = "https://github.com/czbiohub-sf/iohub", rev = "ac4433985dcdf02603c395c3d51fffc4883a3c9a" }
 
 [tool.uv-dynamic-versioning]
 vcs = "git"
