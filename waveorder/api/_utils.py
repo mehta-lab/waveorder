@@ -37,13 +37,15 @@ def _to_tensor(ds: xr.Dataset | Mapping[str, torch.Tensor], key: str) -> torch.T
     """Extract a variable from an xr.Dataset as a torch.Tensor.
 
     ``ds`` may instead map names to tensors that are already converted;
-    those are returned as-is, without a copy, so a caller reusing one
-    transfer function across many volumes converts it only once.
+    those are returned as-is. Neither form is copied: an xr.Dataset variable
+    is wrapped with ``torch.from_numpy``, sharing its memory. That is safe
+    because the apply-inverse models never modify a transfer function in
+    place, and it avoids copying the transfer function on every call.
     """
     value = ds[key]
     if isinstance(value, torch.Tensor):
         return value
-    return torch.from_numpy(value.values.copy())
+    return torch.from_numpy(value.values)
 
 
 def _to_singular_system(
