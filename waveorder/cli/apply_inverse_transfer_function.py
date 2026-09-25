@@ -117,11 +117,12 @@ def _load_transfer_function_tensors(
 # bound into the task was re-serialised for every time point (~1.8-3 GB each
 # for a 3D phase transfer function), in both the parent and the worker.
 #
-# The parent moves the tensors into shared memory (``share_memory_()``) and
-# passes them as the initializer's argument. torch.multiprocessing registers
-# pickling reductions that send a shared tensor as a handle to its memory, not
-# its data, so every worker maps the same single copy: the store is read once
-# and nothing large goes through the worker pipes.
+# The parent passes the tensors as the initializer's argument. Importing
+# torch.multiprocessing registers pickling reductions that move a pickled CPU
+# tensor into shared memory and send a handle to it instead of its data, so
+# every worker maps the same single copy: the store is read once and nothing
+# large goes through the worker pipes. This only works because they are torch
+# tensors by then -- numpy arrays (or an xr.Dataset of them) pickle by value.
 _worker_transfer_function = None
 
 
@@ -415,8 +416,6 @@ def apply_inverse_transfer_function_single_position(
         # (e.g. cgroup OOM-kill) surfaces as BrokenProcessPool instead
         # of hanging indefinitely on pool.starmap.
         context = mp.get_context("spawn")
-        for tensor in transfer_function.values():
-            tensor.share_memory_()
         with ProcessPoolExecutor(
             max_workers=num_processes,
             mp_context=context,
