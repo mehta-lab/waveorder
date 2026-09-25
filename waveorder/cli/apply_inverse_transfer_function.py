@@ -111,17 +111,23 @@ def _load_transfer_function_tensors(
     return {key: torch.from_numpy(array.values) for key, array in tf_dataset.data_vars.items()}
 
 
-# Transfer function of the current pool worker, loaded once by
+# Transfer function of the current pool worker, set once by
 # _init_worker_transfer_function. It is not a per-task argument because
 # ProcessPoolExecutor pickles every task's arguments: a transfer function
-# bound into the task was re-serialised for every time point (~1.8 GB each
+# bound into the task was re-serialised for every time point (~1.8-3 GB each
 # for a 3D phase transfer function), in both the parent and the worker.
+#
+# The parent moves the tensors into shared memory (``share_memory_()``) and
+# passes them as the initializer's argument. torch.multiprocessing registers
+# pickling reductions that send a shared tensor as a handle to its memory, not
+# its data, so every worker maps the same single copy: the store is read once
+# and nothing large goes through the worker pipes.
 _worker_transfer_function = None
 
 
-def _init_worker_transfer_function(*load_args) -> None:
+def _init_worker_transfer_function(transfer_function: dict) -> None:
     global _worker_transfer_function
-    _worker_transfer_function = _load_transfer_function_tensors(*load_args)
+    _worker_transfer_function = transfer_function
 
 
 def _apply_inverse_with_worker_transfer_function(apply_inverse_to_zyx_and_save, t_idx: int) -> None:
@@ -318,10 +324,11 @@ def apply_inverse_transfer_function_single_position(
     recon_fluo = settings.fluorescence is not None
     recon_dim = settings.reconstruction_dimension
 
-    # The transfer function is loaded where it is used -- once per pool
-    # worker, or once in this process when running serially -- and handed
-    # to each time point as `transfer_function`; see _worker_transfer_function.
-    tf_load_args = (transfer_function_dirpath, recon_biref, recon_phase, recon_fluo, recon_dim)
+    # Loaded once and handed to each time point as `transfer_function`,
+    # in-process or via shared memory; see _worker_transfer_function.
+    transfer_function = _load_transfer_function_tensors(
+        transfer_function_dirpath, recon_biref, recon_phase, recon_fluo, recon_dim
+    )
 
     # Resolve background data for birefringence
     cyx_no_sample_data = None
@@ -408,11 +415,13 @@ def apply_inverse_transfer_function_single_position(
         # (e.g. cgroup OOM-kill) surfaces as BrokenProcessPool instead
         # of hanging indefinitely on pool.starmap.
         context = mp.get_context("spawn")
+        for tensor in transfer_function.values():
+            tensor.share_memory_()
         with ProcessPoolExecutor(
             max_workers=num_processes,
             mp_context=context,
             initializer=_init_worker_transfer_function,
-            initargs=tf_load_args,
+            initargs=(transfer_function,),
         ) as p:
             futures = [
                 p.submit(
@@ -425,7 +434,6 @@ def apply_inverse_transfer_function_single_position(
             for fut in as_completed(futures):
                 fut.result()
     else:
-        transfer_function = _load_transfer_function_tensors(*tf_load_args)
         for t_idx in time_indices:
             partial_apply_inverse_to_zyx_and_save(t_idx, transfer_function=transfer_function)
 
