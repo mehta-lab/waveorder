@@ -1,8 +1,10 @@
 import numpy as np
+import pytest
+import torch
 import xarray as xr
 
 from waveorder.api import birefringence, fluorescence, phase
-from waveorder.api._utils import _output_channel_names
+from waveorder.api._utils import _output_channel_names, _to_tensor
 
 ZYX_SHAPE = (3, 4, 5)
 
@@ -140,6 +142,43 @@ def test_phase_3d_returns_xarray(make_czyx):
     assert result.dims == ("c", "z", "y", "x")
     assert list(result.coords["c"].values) == ["Phase3D"]
     assert result.shape == (1, *ZYX_SHAPE)
+
+
+def test_to_tensor_returns_tensors_without_copy():
+    tensor = torch.zeros(2, 3)
+    assert _to_tensor({"tf": tensor}, "tf") is tensor
+
+
+def test_phase_3d_accepts_tensor_transfer_function(make_czyx):
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
+    settings = phase.Settings()
+    tf_ds = phase.compute_transfer_function(czyx, 3, settings)
+    tf_tensors = {key: torch.from_numpy(array.values) for key, array in tf_ds.data_vars.items()}
+
+    from_dataset = phase.apply_inverse_transfer_function(czyx, tf_ds, recon_dim=3, settings=settings)
+    from_tensors = phase.apply_inverse_transfer_function(czyx, tf_tensors, recon_dim=3, settings=settings)
+
+    np.testing.assert_array_equal(from_tensors.values, from_dataset.values)
+
+
+@pytest.mark.parametrize(
+    "module, kwargs",
+    [(phase, {}), (fluorescence, {"fluor_channel_name": "GFP"})],
+    ids=["phase", "fluorescence"],
+)
+def test_apply_inverse_leaves_dataset_transfer_function_unchanged(make_czyx, module, kwargs):
+    """_to_tensor wraps xr.Dataset variables without copying, so the models
+    must not write to the transfer function in place."""
+    czyx = make_czyx(zyx_shape=ZYX_SHAPE, n_channels=1)
+    settings = module.Settings()
+    tf_ds = module.compute_transfer_function(czyx, 3, settings)
+    before = {key: array.values.copy() for key, array in tf_ds.data_vars.items()}
+
+    module.apply_inverse_transfer_function(czyx, tf_ds, recon_dim=3, settings=settings, **kwargs)
+
+    for key, array in tf_ds.data_vars.items():
+        np.testing.assert_array_equal(array.values, before[key])
+        assert np.shares_memory(_to_tensor(tf_ds, key).numpy(), array.values)
 
 
 def test_phase_2d_returns_xarray(make_czyx):

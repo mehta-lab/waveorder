@@ -22,28 +22,27 @@ def _check_background_consistency(background_shape, data_shape, input_channel_na
         raise ValueError(f"Background shape {background_shape} does not match data shape {data_cyx_shape}")
 
 
-def _load_transfer_function_dataset(
+def _load_transfer_function(
     transfer_function_dataset,
     recon_biref: bool,
     recon_phase: bool,
     recon_fluo: bool,
     recon_dim: Literal[2, 3],
-):
-    """Load transfer function arrays from a zarr store into an xr.Dataset.
+) -> dict:
+    """Load transfer function arrays from a zarr store as torch tensors.
 
-    Returns an xr.Dataset with the same variable names as produced by
-    compute_transfer_function, so it can be passed directly to
-    apply_inverse functions.
+    Returns a dict keyed by the variable names produced by
+    compute_transfer_function. The apply_inverse API functions accept it in
+    place of compute_transfer_function's xr.Dataset and use the tensors
+    without copying them.
     """
 
     # Deferred imports for fast CLI help
     import numpy as np
-    import xarray as xr
-
-    from waveorder.api._utils import _named_dataarray
+    import torch
 
     def _load(key, idx):
-        return _named_dataarray(np.array(transfer_function_dataset[key][idx]), key)
+        return torch.from_numpy(np.array(transfer_function_dataset[key][idx]))
 
     variables = {}
 
@@ -79,7 +78,7 @@ def _load_transfer_function_dataset(
         elif recon_dim == 3:
             variables["optical_transfer_function"] = _load("optical_transfer_function", (0, 0))
 
-    return xr.Dataset(variables)
+    return variables
 
 
 class PixelSizeMismatchWarning(UserWarning):
@@ -273,8 +272,15 @@ def apply_inverse_transfer_function_single_position(
     recon_fluo = settings.fluorescence is not None
     recon_dim = settings.reconstruction_dimension
 
-    # Load transfer function as xr.Dataset
-    tf_dataset = _load_transfer_function_dataset(
+    # Load the transfer function once, as torch tensors, and bind it into
+    # every time point's task. ProcessPoolExecutor pickles each task's
+    # arguments, but importing torch.multiprocessing registers pickling
+    # reductions that move a CPU tensor into shared memory and send a handle to
+    # it instead of its data: every worker maps this one copy, and nothing
+    # large goes through the worker pipes. This relies on them being torch
+    # tensors -- numpy arrays (or an xr.Dataset of them) pickle by value, which
+    # re-sent the whole transfer function (~2-3 GB in 3D) for every time point.
+    transfer_function = _load_transfer_function(
         transfer_function_dataset,
         recon_biref,
         recon_phase,
@@ -306,7 +312,7 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = birefringence.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
+            "transfer_function": transfer_function,
             "recon_dim": recon_dim,
             "settings": settings.birefringence,
             "cyx_no_sample_data": cyx_no_sample_data,
@@ -319,7 +325,7 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = phase.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
+            "transfer_function": transfer_function,
             "recon_dim": recon_dim,
             "settings": settings.phase,
         }
@@ -332,7 +338,7 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = birefringence_and_phase.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
+            "transfer_function": transfer_function,
             "recon_dim": recon_dim,
             "settings_biref": settings.birefringence,
             "settings_phase": settings.phase,
@@ -346,7 +352,7 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = fluorescence.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
+            "transfer_function": transfer_function,
             "recon_dim": recon_dim,
             "settings": settings.fluorescence,
             "fluor_channel_name": settings.input_channel_names[0],
