@@ -1,6 +1,7 @@
+import hashlib
+import json
 from pathlib import Path
 
-import click
 import numpy as np
 import xarray as xr
 from iohub.ngff import open_ome_zarr
@@ -48,63 +49,57 @@ def is_single_position_store(position_path: Path) -> bool:
         return True  # Not a plate structure
 
 
-def apply_inverse_to_zyx_and_save(
-    func,
-    input_data: xr.DataArray,
-    output_path: Path,
-    input_channel_names: list[str],
-    t_idx: int = 0,
-    verbose: bool = True,
+def apply_inverse_czyx(
+    czyx: np.ndarray,
+    model_function,
+    czyx_coords: dict,
     **kwargs,
-) -> None:
-    """Load a zyx array from an xarray DataArray, apply a transformation and save the result to file.
+) -> np.ndarray:
+    """CZYX numpy in/out wrapper around a ``waveorder.api`` apply-inverse function.
+
+    iohub's ``process_single_position`` reads each CZYX volume once, hands it
+    to ``func`` as a numpy array, and writes back the array ``func`` returns.
+    The ``waveorder.api`` functions take and return a labeled
+    ``xr.DataArray``, so this labels the volume, calls ``model_function`` and
+    unwraps the result. Module-level so it pickles into iohub's spawn pool.
 
     Parameters
     ----------
-    func : callable
-        Model function: xr.DataArray CZYX in, xr.DataArray CZYX out.
-    input_data : xr.DataArray
-        5D TCZYX input data.
-    output_path : Path
-        Path to the output position.
-    input_channel_names : list[str]
-        Channel names to select from input_data.
-    t_idx : int
-        Time index to process.
-    verbose : bool
-        Print progress messages per time point.
+    czyx : np.ndarray
+        CZYX input volume, channels in ``input_channel_names`` order.
+    model_function : callable
+        One of the ``waveorder.api.*.apply_inverse_transfer_function``
+        functions: xr.DataArray CZYX in, xr.DataArray CZYX out.
+    czyx_coords : dict
+        Coordinates for the input volume, as ``{dim: (dim, values, attrs)}``,
+        taken once from the input store's ``Position.to_xarray()`` so they
+        come from the same store as the data.
     **kwargs
-        Additional arguments passed to func.
+        Passed to ``model_function``.
     """
-    if verbose:
-        click.echo(f"Reconstructing t={t_idx}")
+    czyx_data = xr.DataArray(czyx, dims=("c", "z", "y", "x"), coords=czyx_coords)
+    return model_function(czyx_data, **kwargs).values
 
-    # Extract CZYX xarray slice. Load it once: input_data is dask-backed, so
-    # every `.values` (the check below, then the model) would otherwise
-    # re-read and decompress the volume from the store.
-    czyx_slice = input_data.isel(t=t_idx).sel(c=input_channel_names).load()
 
-    # Check if all values are zeros or NaN
-    if _check_nan_n_zeros(czyx_slice.values):
-        click.echo(f"All values at t={t_idx} are zero or Nan, skipping reconstruction.")
-        return
+def reconstruction_fingerprint(settings, transfer_function_settings: dict, transfer_function: dict) -> str:
+    """Identify what determines a reconstruction's output, as an iohub resume token.
 
-    # Apply transformation (returns xr.DataArray CZYX)
-    output_czyx = func(czyx_slice, **kwargs)
-
-    # Add t dimension from input coords
-    t_coord = input_data.coords["t"].values[t_idx : t_idx + 1]
-    t_attrs = input_data.coords["t"].attrs
-
-    output_xa = output_czyx.expand_dims(dim={"t": t_coord}, axis=0)
-    output_xa["t"].attrs = t_attrs
-
-    # Write to file
-    with open_ome_zarr(output_path, mode="r+") as output_position:
-        output_position.write_xarray(output_xa)
-
-    if verbose:
-        click.echo(f"Finished writing t={t_idx}")
+    iohub mixes the token into each finished unit's record, so resuming after
+    any of these changed recomputes instead of reusing stale output: the
+    reconstruction settings, the settings the transfer function was computed
+    with, and the transfer function's array shapes. ``time_indices`` is left
+    out because it selects which timepoints run, not what each one produces.
+    """
+    payload = json.dumps(
+        {
+            "settings": settings.model_dump(mode="json", exclude={"time_indices"}),
+            "transfer_function_settings": transfer_function_settings,
+            "transfer_function_shapes": {key: list(tensor.shape) for key, tensor in transfer_function.items()},
+        },
+        sort_keys=True,
+        default=str,
+    )
+    return hashlib.sha256(payload.encode()).hexdigest()[:16]
 
 
 def estimate_resources(shape, settings, num_processes):
@@ -127,10 +122,3 @@ def estimate_resources(shape, settings, num_processes):
     num_cpus = np.min([32, num_processes])
 
     return num_cpus, gb_ram_per_cpu
-
-
-def _check_nan_n_zeros(input_array):
-    """
-    Checks if data are all zeros or nan
-    """
-    return np.all(np.isnan(input_array)) or np.all(input_array == 0)

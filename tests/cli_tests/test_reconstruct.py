@@ -188,11 +188,11 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
         assert dataset.channel_names[-1] == "GFP_Density3D"
         assert dataset.channel_names[-2] == "Depolarization"
 
-        # Check that both reconstructions have separate metadata entries (#206)
+        # Each reconstruction keeps its own top-level provenance key (#206)
         position = dataset["0/0/0"]
-        waveorder_meta = dict(position.zattrs["waveorder"])
-        assert "Retardance,Orientation,Transmittance,Depolarization" in waveorder_meta
-        assert "GFP_Density3D" in waveorder_meta
+        assert position.zattrs["waveorder-Birefringence"] == biref_settings.model_dump()
+        assert position.zattrs["waveorder-GFP_Density3D"] == fluor_settings.model_dump()
+        assert "waveorder" not in position.zattrs
 
 
 def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
@@ -349,6 +349,7 @@ def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
             Path(tmp_config_yml),
             Path(result_path),
             1,
+            False,
             False,
         )
         assert result_inv.exit_code == 0
@@ -569,75 +570,229 @@ def test_warn_pixel_size_mismatch_isotropic_silent_when_equal():
     assert all("Input pixel sizes" not in str(w.message) for w in record)
 
 
-def test_apply_inv_tf_process_pool_matches_serial(tmp_path):
-    """Pool workers load the transfer function themselves; the result must
-    match the serial path, which loads it in-process."""
-    input_path = tmp_path / "input.zarr"
-    config_path = tmp_path / "phase.yml"
-    tf_path = tmp_path / "tf.zarr"
+def _phase_inputs(
+    tmp_path,
+    data=None,
+    transform=None,
+    version="0.5",
+    name="input",
+    recon_settings=None,
+    tf_settings=None,
+):
+    """Write a one-position BF plate, a 3D phase config, and its transfer function.
 
-    with open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=["BF"]) as dataset:
-        position = dataset.create_position("0", "0", "0")
-        position.create_image(
-            "0",
-            np.random.default_rng(0).uniform(1, 100, size=(3, 1, 6, 8, 10)).astype(np.float32),
-            transform=[TransformationMeta(type="scale", scale=[1, 1, 0.25, 0.1, 0.1])],
+    ``tf_settings`` computes the transfer function from a different config than
+    the one returned, to fake a recomputed transfer function.
+    """
+    input_path = tmp_path / f"{name}.zarr"
+    if data is None:
+        data = np.random.default_rng(0).uniform(1, 100, size=(3, 1, 6, 8, 10)).astype(np.float32)
+    if transform is None:
+        transform = [TransformationMeta(type="scale", scale=[1, 1, 0.25, 0.1, 0.1])]
+    with open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=["BF"], version=version) as dataset:
+        dataset.create_position("0", "0", "0").create_image("0", data, transform=transform)
+
+    def write_config(path, phase_settings):
+        utils.model_to_yaml(
+            settings.ReconstructionSettings(
+                input_channel_names=["BF"], reconstruction_dimension=3, phase=phase_settings
+            ),
+            path,
         )
+        return path
+
+    config_path = write_config(tmp_path / f"{name}.yml", recon_settings or settings.PhaseSettings())
+    tf_config_path = config_path if tf_settings is None else write_config(tmp_path / f"{name}_tf.yml", tf_settings)
+    tf_path = tmp_path / f"{name}_tf.zarr"
+    CliRunner().invoke(
+        cli,
+        ["compute-tf", "-i", str(input_path / "0" / "0" / "0"), "-c", str(tf_config_path), "-o", str(tf_path)],
+        catch_exceptions=False,
+    )
+    return input_path / "0" / "0" / "0", config_path, tf_path
+
+
+def _reconstruct(position_path, tf_path, config_path, result_path, num_processes=1, resume=False):
+    apply_inverse_transfer_function_cli(
+        [position_path], tf_path, config_path, result_path, num_processes, resume=resume
+    )
+    with open_ome_zarr(result_path / "0" / "0" / "0") as result:
+        return result["0"][:]
+
+
+def test_apply_inv_tf_process_pool_matches_serial(tmp_path):
+    """Pool workers receive the transfer function as shared tensors; the result
+    must match the serial path."""
+    position_path, config_path, tf_path = _phase_inputs(tmp_path)
+
+    serial = _reconstruct(position_path, tf_path, config_path, tmp_path / "serial.zarr", num_processes=1)
+    pooled = _reconstruct(position_path, tf_path, config_path, tmp_path / "pooled.zarr", num_processes=2)
+
+    assert np.any(serial != 0)
+    np.testing.assert_array_equal(pooled, serial)
+
+
+def test_apply_inverse_czyx_labels_the_volume_for_the_model():
+    import xarray as xr
+
+    from waveorder.cli.utils import apply_inverse_czyx
+
+    czyx = np.arange(2 * 3 * 4 * 5, dtype=np.float32).reshape(2, 3, 4, 5)
+    coords = {
+        "c": ("c", ["a", "b"]),
+        "z": ("z", np.arange(3) * 0.5, {"units": "micrometer"}),
+        "y": ("y", np.arange(4) * 0.1, {}),
+        "x": ("x", np.arange(5) * 0.1, {}),
+    }
+    seen = {}
+
+    def model_function(czyx_data, scale):
+        seen["type"] = type(czyx_data)
+        seen["c"] = list(czyx_data.coords["c"].values)
+        seen["z_units"] = czyx_data.coords["z"].attrs["units"]
+        return czyx_data * scale
+
+    result = apply_inverse_czyx(czyx, model_function, coords, scale=2.0)
+
+    assert isinstance(result, np.ndarray)
+    np.testing.assert_array_equal(result, czyx * 2)
+    assert seen == {"type": xr.DataArray, "c": ["a", "b"], "z_units": "micrometer"}
+
+
+def test_apply_inv_tf_writes_its_channels_by_name(tmp_path):
+    """Output channels are looked up by name, so a config writing into a plate
+    whose first channel belongs to another config leaves that channel alone."""
+    from iohub.ngff.utils import create_empty_plate
+
+    from waveorder.cli.apply_inverse_transfer_function import apply_inverse_transfer_function_single_position
+
+    position_path, config_path, tf_path = _phase_inputs(tmp_path)
+    reference = _reconstruct(position_path, tf_path, config_path, tmp_path / "reference.zarr")
+
+    shared_path = tmp_path / "shared.zarr"
+    create_empty_plate(
+        store_path=shared_path,
+        position_keys=[("0", "0", "0")],
+        channel_names=["Other", "Phase3D"],
+        shape=(3, 2, 6, 8, 10),
+        scale=(1, 1, 0.25, 0.1, 0.1),
+    )
+    apply_inverse_transfer_function_single_position(
+        position_path, tf_path, config_path, shared_path / "0" / "0" / "0", 1, ["Phase3D"]
+    )
+
+    with open_ome_zarr(shared_path / "0" / "0" / "0") as shared:
+        np.testing.assert_array_equal(shared["0"][:, 0], 0)
+        np.testing.assert_array_equal(shared["0"][:, 1], reference[:, 0])
+
+
+def test_apply_inv_tf_addresses_timepoints_by_index(tmp_path):
+    """A time_indices subset lands on the same indices in the output, even when
+    the input's time axis carries a translation (which the old coordinate
+    round-trip turned into a shifted index)."""
+    data = np.random.default_rng(1).uniform(1, 100, size=(3, 1, 6, 8, 10)).astype(np.float32)
+    reference_path, config_path, tf_path = _phase_inputs(tmp_path, data=data, name="reference")
+    reference = _reconstruct(reference_path, tf_path, config_path, tmp_path / "reference_out.zarr")
+
+    translated_path, translated_config, translated_tf = _phase_inputs(
+        tmp_path,
+        data=data,
+        name="translated",
+        transform=[
+            TransformationMeta(type="scale", scale=[2.0, 1, 0.25, 0.1, 0.1]),
+            TransformationMeta(type="translation", translation=[5.0, 0, 0, 0, 0]),
+        ],
+    )
+    config = utils.yaml_to_model(translated_config, settings.ReconstructionSettings)
+    config.time_indices = [1, 2]
+    utils.model_to_yaml(config, translated_config)
+
+    result = _reconstruct(translated_path, translated_tf, translated_config, tmp_path / "translated_out.zarr")
+
+    np.testing.assert_array_equal(result[0], 0)
+    np.testing.assert_array_equal(result[1:], reference[1:])
+
+
+def test_apply_inv_tf_skips_a_timepoint_with_a_blank_channel(tmp_path):
+    """iohub's rule: a timepoint is skipped when any input channel is all zeros
+    or NaNs, not only when all of them are."""
+    input_path = tmp_path / "input.zarr"
+    channel_names = [f"State{i}" for i in range(4)]
+    data = np.random.default_rng(2).uniform(1, 100, size=(2, 4, 4, 8, 10)).astype(np.float32)
+    data[1, 2] = 0  # t=1: one blank polarization state, signal in the others
+    with open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=channel_names) as dataset:
+        dataset.create_position("0", "0", "0").create_image("0", data)
+    config_path = tmp_path / "biref.yml"
     utils.model_to_yaml(
         settings.ReconstructionSettings(
-            input_channel_names=["BF"],
+            input_channel_names=channel_names,
             reconstruction_dimension=3,
-            phase=settings.PhaseSettings(),
+            birefringence=settings.BirefringenceSettings(),
         ),
         config_path,
     )
+    tf_path = tmp_path / "tf.zarr"
+    position_path = input_path / "0" / "0" / "0"
     CliRunner().invoke(
         cli,
-        ["compute-tf", "-i", str(input_path / "0" / "0" / "0"), "-c", str(config_path), "-o", str(tf_path)],
+        ["compute-tf", "-i", str(position_path), "-c", str(config_path), "-o", str(tf_path)],
         catch_exceptions=False,
     )
 
-    results = {}
-    for num_processes in (1, 2):
-        result_path = tmp_path / f"result_{num_processes}.zarr"
-        apply_inverse_transfer_function_cli(
-            [input_path / "0" / "0" / "0"], tf_path, config_path, result_path, num_processes
-        )
-        with open_ome_zarr(result_path / "0" / "0" / "0") as result:
-            results[num_processes] = result["0"][:]
+    result = _reconstruct(position_path, tf_path, config_path, tmp_path / "out.zarr")
 
-    assert np.any(results[1] != 0)
-    np.testing.assert_array_equal(results[2], results[1])
+    assert np.any(result[0] != 0)
+    np.testing.assert_array_equal(result[1], 0)
 
 
-def test_apply_inverse_to_zyx_and_save_reads_input_once(tmp_path):
-    """The NaN/zero check and the model both need the slice's values; a
-    dask-backed input must be read from the store only once."""
-    import dask.array as da
-    import xarray as xr
+def test_apply_inv_tf_resume(tmp_path):
+    """resume skips finished timepoints, and recomputes after a settings change
+    or a recomputed transfer function."""
+    position_path, config_path, tf_path = _phase_inputs(tmp_path)
+    result_path = tmp_path / "out.zarr"
+    first = _reconstruct(position_path, tf_path, config_path, result_path)
 
-    from waveorder.cli.utils import apply_inverse_to_zyx_and_save
+    def mark_t0():
+        with open_ome_zarr(result_path / "0" / "0" / "0", mode="r+") as result:
+            result["0"][0] = 123.0
 
-    reads = []
+    # unchanged inputs: every timepoint is already finished
+    mark_t0()
+    resumed = _reconstruct(position_path, tf_path, config_path, result_path, resume=True)
+    np.testing.assert_array_equal(resumed[0], 123.0)
+    np.testing.assert_array_equal(resumed[1:], first[1:])
 
-    def count_reads(block):
-        if block.size:
-            reads.append(block.shape)
-        return block
+    # without resume, everything is recomputed
+    recomputed = _reconstruct(position_path, tf_path, config_path, result_path, resume=False)
+    np.testing.assert_array_equal(recomputed, first)
 
-    data = da.from_array(np.ones((2, 1, 3, 4, 5), dtype=np.float32), chunks=(1, 1, 3, 4, 5))
-    data = data.map_blocks(count_reads, meta=np.array((), dtype=np.float32))
-    input_xa = xr.DataArray(
-        data,
-        dims=("t", "c", "z", "y", "x"),
-        coords={"t": [0.0, 1.0], "c": ["BF"], "z": np.arange(3.0), "y": np.arange(4.0), "x": np.arange(5.0)},
-    )
-    output_path = tmp_path / "out.zarr"
-    with open_ome_zarr(output_path, layout="fov", mode="w", channel_names=["BF"]) as output:
-        output.create_zeros("0", (2, 1, 3, 4, 5), dtype=np.float32)
+    # changed reconstruction settings: recomputed despite resume
+    mark_t0()
+    changed_settings = settings.PhaseSettings()
+    changed_settings.apply_inverse.regularization_strength = 0.1
+    _, changed_config, _ = _phase_inputs(tmp_path, name="changed", recon_settings=changed_settings)
+    result = _reconstruct(position_path, tf_path, changed_config, result_path, resume=True)
+    assert not np.any(result[0] == 123.0)
 
-    apply_inverse_to_zyx_and_save(lambda czyx: czyx, input_xa, output_path, ["BF"], t_idx=1, verbose=False)
+    # a transfer function recomputed with other settings: recomputed despite resume
+    _reconstruct(position_path, tf_path, config_path, result_path)
+    mark_t0()
+    other_tf_settings = settings.PhaseSettings()
+    other_tf_settings.transfer_function.wavelength_illumination = 0.6
+    _, _, other_tf = _phase_inputs(tmp_path, name="other_tf", tf_settings=other_tf_settings)
+    result = _reconstruct(position_path, other_tf, config_path, result_path, resume=True)
+    assert not np.any(result[0] == 123.0)
 
-    assert len(reads) == 1
-    with open_ome_zarr(output_path) as output:
-        np.testing.assert_array_equal(output["0"][1], 1)
+
+def test_apply_inv_tf_resume_on_v04_output_recomputes_and_says_so(tmp_path, capsys):
+    position_path, config_path, tf_path = _phase_inputs(tmp_path, version="0.4")
+    result_path = tmp_path / "out.zarr"
+    first = _reconstruct(position_path, tf_path, config_path, result_path)
+    with open_ome_zarr(result_path / "0" / "0" / "0", mode="r+") as result:
+        result["0"][0] = 123.0
+    capsys.readouterr()
+
+    resumed = _reconstruct(position_path, tf_path, config_path, result_path, resume=True)
+
+    assert "OME-Zarr v0.5" in capsys.readouterr().out
+    np.testing.assert_array_equal(resumed, first)

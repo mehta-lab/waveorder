@@ -119,5 +119,25 @@ class ReconstructionSettings(MyBaseModel):
         )
 
     @property
+    def provenance_key(self) -> str:
+        """Top-level zattrs key under which a reconstruction records these settings.
+
+        One key per reconstruction, named for what it reconstructs, so several
+        reconstructions written into one plate each keep their own entry, beside
+        the ``biahub-<step>`` keys of the other processing steps:
+        ``waveorder-Phase3D``, ``waveorder-GFP_Density3D``,
+        ``waveorder-Birefringence`` (Retardance, Orientation, Transmittance and
+        Depolarization), and ``waveorder-Birefringence,Phase3D`` (which also
+        covers the joint-deconvolution channels).
+        """
+        parts = ["Birefringence"] if self.birefringence is not None else []
+        parts += [
+            name
+            for name in self.output_channel_names
+            if name in ("Phase2D", "Phase3D") or name.endswith(("_Density2D", "_Density3D"))
+        ]
+        return "waveorder-" + ",".join(parts)
+
+    @property
     def output_z_is_singleton(self) -> bool:
         return self.reconstruction_dimension == 2
