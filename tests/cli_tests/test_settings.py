@@ -173,3 +173,30 @@ def test_negative_yx_pixel_size_rejected():
     """Negative spacings are rejected."""
     with pytest.raises(ValidationError):
         phase.TransferFunctionSettings(yx_pixel_size={"y": -0.3, "x": 0.25})
+
+
+@pytest.mark.parametrize(
+    "kwargs, expected",
+    [
+        (dict(input_channel_names=["BF"], phase=settings.PhaseSettings()), "waveorder-Phase3D"),
+        (
+            dict(input_channel_names=["BF"], phase=settings.PhaseSettings(), reconstruction_dimension=2),
+            "waveorder-Phase2D",
+        ),
+        (
+            dict(input_channel_names=[f"State{i}" for i in range(4)], birefringence=settings.BirefringenceSettings()),
+            "waveorder-Birefringence",
+        ),
+        (
+            dict(
+                input_channel_names=[f"State{i}" for i in range(4)],
+                birefringence=settings.BirefringenceSettings(),
+                phase=settings.PhaseSettings(),
+            ),
+            "waveorder-Birefringence,Phase3D",
+        ),
+        (dict(input_channel_names=["GFP"], fluorescence=settings.FluorescenceSettings()), "waveorder-GFP_Density3D"),
+    ],
+)
+def test_provenance_key(kwargs, expected):
+    assert settings.ReconstructionSettings(**kwargs).provenance_key == expected

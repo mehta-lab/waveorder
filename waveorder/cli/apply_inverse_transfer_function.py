@@ -205,6 +205,17 @@ def get_reconstruction_output_metadata(
     }
 
 
+def get_reconstruction_provenance(settings) -> dict:
+    """Provenance to record on each output position, as ``create_empty_plate(extra_metadata=...)``.
+
+    One top-level key per reconstruction (``settings.provenance_key``, e.g.
+    ``waveorder-Phase3D``), so a reconstruction appending channels to a plate
+    overwrites only its own entry. Recorded once, at plate creation, like the
+    ``biahub-<step>`` keys of the other processing steps.
+    """
+    return {settings.provenance_key: settings.model_dump()}
+
+
 def apply_inverse_transfer_function_single_position(
     input_position_dirpath: Path,
     transfer_function_dirpath: Path,
@@ -222,6 +233,9 @@ def apply_inverse_transfer_function_single_position(
     configs can write different channel groups into one plate. With
     ``resume=True``, timepoints a previous interrupted run already finished
     are skipped, unless the settings or the transfer function changed since.
+
+    Writes no metadata: the output plate's creator records the settings (see
+    `get_reconstruction_provenance`).
     """
 
     # Deferred imports for fast CLI help
@@ -414,13 +428,6 @@ def apply_inverse_transfer_function_single_position(
         **apply_inverse_args,
     )
 
-    # Save metadata at position level, keyed by output channel names
-    with open_ome_zarr(output_position_dirpath, mode="r+") as output_dataset:
-        waveorder_meta = dict(output_dataset.zattrs.get("waveorder", {}))
-        channel_key = ",".join(output_channel_names)
-        waveorder_meta[channel_key] = settings.model_dump()
-        output_dataset.zattrs["waveorder"] = waveorder_meta
-
     if verbose:
         echo_headline(f"Closing {output_position_dirpath}\n")
 
@@ -439,10 +446,12 @@ def apply_inverse_transfer_function_cli(
     from iohub import open_ome_zarr
     from iohub.ngff.utils import create_empty_plate
 
+    from waveorder.cli.settings import ReconstructionSettings
     from waveorder.cli.utils import (
         generate_valid_position_key,
         is_single_position_store,
     )
+    from waveorder.io import utils
 
     # Prepare output store
     output_metadata = get_reconstruction_output_metadata(
@@ -469,6 +478,7 @@ def apply_inverse_transfer_function_cli(
         store_path=output_dirpath,
         position_keys=position_keys,
         **output_metadata,
+        extra_metadata=get_reconstruction_provenance(utils.yaml_to_model(config_filepath, ReconstructionSettings)),
     )
 
     if plate_metadata:

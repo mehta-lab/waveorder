@@ -188,11 +188,11 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
         assert dataset.channel_names[-1] == "GFP_Density3D"
         assert dataset.channel_names[-2] == "Depolarization"
 
-        # Check that both reconstructions have separate metadata entries (#206)
+        # Each reconstruction keeps its own top-level provenance key (#206)
         position = dataset["0/0/0"]
-        waveorder_meta = dict(position.zattrs["waveorder"])
-        assert "Retardance,Orientation,Transmittance,Depolarization" in waveorder_meta
-        assert "GFP_Density3D" in waveorder_meta
+        assert position.zattrs["waveorder-Birefringence"] == biref_settings.model_dump()
+        assert position.zattrs["waveorder-GFP_Density3D"] == fluor_settings.model_dump()
+        assert "waveorder" not in position.zattrs
 
 
 def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
