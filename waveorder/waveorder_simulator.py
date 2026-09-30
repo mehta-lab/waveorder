@@ -109,7 +109,7 @@ class waveorder_microscopy_simulator:
 
         self.Hz_det = (
             generate_propagation_kernel(
-                torch.tensor(self.frr),
+                torch.as_tensor(self.frr),
                 torch.tensor(self.Pupil_support),
                 self.lambda_illu,
                 torch.tensor(self.z_defocus),
