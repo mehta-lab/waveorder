@@ -92,13 +92,9 @@ def test_generate_example_settings(pytestconfig):
         "birefringence_3d.yml": settings.ReconstructionSettings(
             birefringence=settings.BirefringenceSettings(),
         ),
-        # The 3D phase example carries the auto_regularization block, so it is the
-        # one to copy for a regularization_strength chosen from the data.
         "phase_3d.yml": settings.ReconstructionSettings(
             input_channel_names=["Brightfield"],
-            phase=phase.Settings(
-                apply_inverse=phase.ApplyInverseSettings(auto_regularization=AutoRegularizationSettings())
-            ),
+            phase=settings.PhaseSettings(),
         ),
         "phase_2d.yml": settings.ReconstructionSettings(
             input_channel_names=["Brightfield"],
@@ -125,6 +121,46 @@ def test_generate_example_settings(pytestconfig):
         utils.model_to_commented_yaml(settings_obj, config_path)
         settings_roundtrip = utils.yaml_to_model(config_path, settings.ReconstructionSettings)
         assert settings_obj.model_dump() == settings_roundtrip.model_dump()
+
+
+def _uncomment_block(text, field):
+    """Turn a generated ``field: null`` plus its commented-out fields into the live block."""
+    out, inside = [], False
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        indent = line[: len(line) - len(stripped)]
+        if stripped.startswith(f"{field}: null"):
+            out.append(f"{indent}{field}:")
+            inside = True
+            continue
+        if inside and stripped.startswith("# or, instead of null:"):
+            continue
+        if inside and stripped.startswith("#   "):
+            out.append(indent + stripped[2:])
+            continue
+        inside = False
+        out.append(line)
+    return "\n".join(out) + "\n"
+
+
+def test_generated_config_shows_a_null_block_commented_out(tmp_path):
+    """An off-by-default Optional[Model] block is shown, commented out, with its defaults.
+
+    The example configs leave auto_regularization off; a reader should still see
+    how to turn it on, and uncommenting what is shown must produce the live block.
+    """
+    path = tmp_path / "phase_3d.yml"
+    utils.model_to_commented_yaml(
+        settings.ReconstructionSettings(input_channel_names=["BF"], phase=settings.PhaseSettings()), path
+    )
+    text = path.read_text()
+    assert "auto_regularization: null" in text
+    assert "#   rule: otsu_cnr" in text
+    assert "#   search_min: -6.0" in text
+
+    path.write_text(_uncomment_block(text, "auto_regularization"))
+    parsed = utils.yaml_to_model(path, settings.ReconstructionSettings)
+    assert parsed.phase.apply_inverse.auto_regularization == AutoRegularizationSettings()
 
 
 def test_phase_yx_pixel_size_scalar_form():

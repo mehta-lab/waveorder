@@ -134,8 +134,53 @@ def _collect_field_descriptions(model, prefix=""):
     return descriptions
 
 
-def _add_yaml_comments(yaml_str, descriptions, comment_column=44):
-    """Add inline comments to YAML lines from a {dotted.path: description} map."""
+def _optional_model_type(annotation):
+    """The BaseModel class inside an ``Optional[Model]`` annotation, else None."""
+    import types
+    import typing
+
+    from pydantic import BaseModel
+
+    origin = typing.get_origin(annotation)
+    candidates = typing.get_args(annotation) if origin in (typing.Union, types.UnionType) else (annotation,)
+    for candidate in candidates:
+        if isinstance(candidate, type) and issubclass(candidate, BaseModel):
+            return candidate
+    return None
+
+
+def _collect_null_blocks(model, prefix=""):
+    """{dotted.path: default instance} for every ``Optional[Model]`` field that is None.
+
+    A config shows such a block as ``field: null`` followed by the block's fields
+    commented out, so a reader can see how to turn it on without it being on.
+    """
+    from pydantic import BaseModel, ValidationError
+
+    blocks = {}
+    for name, field_info in model.__class__.model_fields.items():
+        path = f"{prefix}.{name}" if prefix else name
+        value = getattr(model, name)
+        if isinstance(value, BaseModel):
+            blocks.update(_collect_null_blocks(value, path))
+        elif value is None:
+            model_type = _optional_model_type(field_info.annotation)
+            if model_type is not None:
+                try:
+                    blocks[path] = model_type()
+                except ValidationError:
+                    continue  # no usable defaults, so nothing to show
+    return blocks
+
+
+def _add_yaml_comments(yaml_str, descriptions, comment_column=44, null_blocks=None):
+    """Add inline comments to YAML lines from a {dotted.path: description} map.
+
+    ``null_blocks`` maps a dotted path whose value is ``null`` to a default model
+    instance; its fields are written beneath that line, commented out and indented
+    as the block's children would be, so uncommenting them turns the block on.
+    """
+    null_blocks = null_blocks or {}
     lines = yaml_str.splitlines()
     result = []
     path_stack = []  # [(indent_level, key)]
@@ -148,8 +193,10 @@ def _add_yaml_comments(yaml_str, descriptions, comment_column=44):
 
         indent = len(line) - len(stripped)
 
+        block = None
         if ":" in stripped:
-            key = stripped.split(":")[0].strip()
+            key, _, value = stripped.partition(":")
+            key = key.strip()
 
             # Pop entries at same or deeper indent
             while path_stack and path_stack[-1][0] >= indent:
@@ -162,8 +209,22 @@ def _add_yaml_comments(yaml_str, descriptions, comment_column=44):
             if desc:
                 padding = max(1, comment_column - len(line))
                 line = line + " " * padding + "# " + desc
+            if value.strip() == "null":
+                block = null_blocks.get(field_path)
 
         result.append(line)
+
+        if block is not None:
+            prefix = " " * indent + "# "
+            result.append(prefix + "or, instead of null:")
+            block_yaml = yaml.dump(block.model_dump(), default_flow_style=False, sort_keys=False)
+            block_text = _add_yaml_comments(
+                block_yaml,
+                _collect_field_descriptions(block),
+                comment_column - len(prefix) - 2,
+                _collect_null_blocks(block),
+            )
+            result.extend(prefix + "  " + block_line for block_line in block_text.splitlines())
 
     return "\n".join(result) + "\n"
 
@@ -180,7 +241,8 @@ def model_to_commented_yaml(model: MyBaseModel, yaml_path: Path, comment_column:
     yaml_str = yaml.dump(clean_model_dict, default_flow_style=False, sort_keys=False)
 
     descriptions = _collect_field_descriptions(model)
-    commented_yaml = _add_yaml_comments(yaml_str, descriptions, comment_column)
+    null_blocks = _collect_null_blocks(model)
+    commented_yaml = _add_yaml_comments(yaml_str, descriptions, comment_column, null_blocks)
 
     with open(yaml_path, "w") as f:
         f.write(commented_yaml)
