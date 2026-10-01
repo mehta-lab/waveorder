@@ -28,7 +28,9 @@ this was developed against:
   out-of-band data, so the residual floors well above zero (2-15% of ``||y||``
   on those volumes). One curve was a clean single-corner L; one had three bends,
   where the corner finder falls back to the midpoint of the two most prominent;
-  one was nearly a straight line in log-log, where there is no corner to find.
+  one bent between two steep arms with no flat arm at all, so the corner it
+  reports is not the corner of an L. The fallbacks land in the interior of the
+  sweep, so such a pick looks plausible without being well founded.
 - The ``otsu_cnr`` pick shifts with the scoring crop and, less strongly, with
   the sweep endpoints.
 
