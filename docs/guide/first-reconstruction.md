@@ -132,6 +132,10 @@ Write a small set of draft configuration files from your Stage 2 answers
   `reconstruction_dimension: 2` and `3`.
 - For 2D reconstructions, start with autofocus by making the focus offset
   optimizable: `z_focus_offset: {init: 0, lr: 0.1}`.
+- Start with a relatively small regularization parameter (for example
+  `regularization_strength: 1e-3`). Draft reconstructions should look sharp
+  but somewhat noisy. Regularization can be increased as the last step of the
+  workflow, after the forward model parameters are settled.
 
 Run these 2-4 draft reconstructions and open them in napari alongside the raw
 data:
@@ -160,14 +164,23 @@ problems you see. Common problems include:
 - "shadow-cast" labelfree contrast (in-focus structures look bright on one
   side and dark on the other)
 
-Based on what you see, run manually chosen parameter sweeps. Aim for about
-five reconstructions per sweep, viewed side by side. If your favorite is at
-the edge of the sweep, redo the sweep centered on it; if the step between
-neighboring reconstructions is too large, run a refined sweep.
+Order matters: tune the forward model first, and the regularization parameter
+last. Keep the regularization parameter relatively small while you sweep the
+forward model parameters (focus offset, z padding, illumination NA, tilt
+angles), and choose the forward model settings that give the fewest
+reconstruction artifacts: the least ringing and the sharpest reconstruction.
+A small-regularization reconstruction looks noisy, and that is expected at
+this stage. After you have found a reasonable estimate of the forward model
+parameters, the last step of the workflow is to increase the regularization
+parameter until you find an acceptable reconstruction.
 
-Suggestions for each symptom:
+Run manually chosen parameter sweeps. Aim for about five reconstructions per
+sweep, viewed side by side. If your favorite is at the edge of the sweep, redo
+the sweep centered on it; if the step between neighboring reconstructions is
+too large, run a refined sweep.
 
-- Too noisy or too smooth: sweep `regularization_strength` over decades.
+Suggestions for each symptom, forward model first and regularization last:
+
 - 2D reconstruction slightly defocused: sweep `z_focus_offset` to check
   whether autofocus is failing.
 - Top-to-bottom wrapping: increase `z_padding`.
@@ -180,6 +193,9 @@ Suggestions for each symptom:
   iterations of `tilt_angle_azimuth` and `tilt_angle_zenith` optimization.
 - Sweep any uncertain parameters to search for model mismatch, and note which
   sweeps result in improvements.
+- Too noisy, once the forward model is settled: increase
+  `regularization_strength` over decades until you find an acceptable
+  reconstruction.
 
 Keep sweeping until you reach a reconstruction that is an improvement compared
 to your raw data, and iterate until you are satisfied and see no further

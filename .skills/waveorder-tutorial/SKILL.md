@@ -275,6 +275,10 @@ Write configs into `1-draft-recon/` from the Stage 2 answers (templates:
   or misbehaves, fall back to a plain `z_focus_offset: 0` and sweep it in
   Stage 4.)
 - Keep `tilt_angle_zenith` and `tilt_angle_azimuth` at 0.0 for drafts.
+- Start with a relatively **small** `regularization_strength` (for example
+  1e-3). Draft reconstructions should look sharp but somewhat noisy; that is
+  expected. Regularization is increased as the *last* step of Stage 4, after
+  the forward model parameters are settled.
 - **Fluorescence:** start with `Tikhonov`. Mention that `RL` and `RLGC`
   (Richardson-Lucy) exist for 3D fluorescence once the basics work.
 
@@ -313,12 +317,22 @@ describe what they see and any problems**. Common problems to name for them:
 - **"shadow-cast" labelfree contrast** (in-focus structures look bright on
   one side and dark on the other, like DIC)
 
+**Order matters: tune the forward model first, regularization last.** Keep
+`regularization_strength` relatively small while sweeping the forward model
+parameters (`z_focus_offset`, `z_padding`, `numerical_aperture_illumination`,
+tilt angles), and choose the forward model settings that give the fewest
+reconstruction artifacts: the least ringing and the sharpest structures. A
+small-regularization reconstruction looks noisy; that is expected at this
+stage. Only after a reasonable forward model estimate is in hand, finish by
+increasing `regularization_strength` until the user finds an acceptable
+reconstruction.
+
 Based on their feedback, run manually chosen sweeps with `scripts/sweep.py`.
 Aim for **about 5 reconstructions per sweep**, opened side by side:
 
 ```bash
 python scripts/sweep.py -i 0-conversion/data.zarr -c best.yml \
-    --param regularization_strength --values 1e-4 1e-3 1e-2 1e-1 1e0 \
+    --param numerical_aperture_illumination --values 0.3 0.35 0.4 0.45 0.5 \
     --outdir 2-manual-sweep
 ```
 
@@ -329,15 +343,15 @@ Sweep rules of thumb:
 - If the step between neighbors is too coarse, run a refined sweep between
   the two best values.
 
-Symptom-to-sweep map:
+Symptom-to-sweep map (forward model first, regularization last):
 
-- **Too noisy or too smooth:** sweep `regularization_strength` over decades.
 - **2D reconstruction looks defocused:** sweep `z_focus_offset` to check
   whether autofocus failed.
 - **Top-to-bottom wrapping:** increase `z_padding` (try ~a quarter to half
   the Z stack).
 - **Ringing (labelfree):** sweep `numerical_aperture_illumination`; if
-  ringing persists at a good noise level, try `reconstruction_algorithm: TV`.
+  ringing persists after the forward model is settled, try
+  `reconstruction_algorithm: TV`.
 - **Tilted point spread function:** sweep both tilt parameters at once and
   show the user the 2D sweep on two napari sliders:
 
@@ -353,6 +367,9 @@ Symptom-to-sweep map:
   (coarse azimuth first, then zenith, then refine).
 - **Uncertain metadata:** sweep any parameter the user was unsure about in
   Stage 2 to search for model mismatch. Which sweeps produce improvements?
+- **Too noisy (last step, after the forward model is settled):** increase
+  `regularization_strength` over decades (e.g. 1e-4 to 1e0) until the user
+  finds an acceptable reconstruction; if it turns too smooth, step back down.
 
 Keep sweeping until the user reaches a reconstruction that is an improvement
 over the raw data, and iterate until they are satisfied and see no further

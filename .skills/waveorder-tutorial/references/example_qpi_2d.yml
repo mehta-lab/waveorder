@@ -17,6 +17,6 @@ phase:
     invert_phase_contrast: false            # try both; pick correct density sign
   apply_inverse:
     reconstruction_algorithm: Tikhonov
-    regularization_strength: 0.01
+    regularization_strength: 0.001        # start small; raise last, after the forward model is tuned
     TV_rho_strength: 0.001
     TV_iterations: 1

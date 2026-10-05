@@ -35,7 +35,7 @@ phase:
     invert_phase_contrast: false         # TRY BOTH; see density-sign test below
   apply_inverse:
     reconstruction_algorithm: Tikhonov   # Tikhonov (fast) or TV (edge-preserving)
-    regularization_strength: 0.001       # main noise/sharpness dial
+    regularization_strength: 0.001       # keep small until the forward model is tuned; raise last
     TV_rho_strength: 0.001               # TV only: ADMM rho
     TV_iterations: 1                     # TV only: ADMM iterations
 ```
@@ -91,20 +91,28 @@ deconvolution.
 
 ## Which knobs to sweep
 
+Tune the forward model first, regularization last. Keep
+`regularization_strength` relatively small (e.g. 1e-3) while sweeping the
+forward model knobs, and pick the forward model settings with the fewest
+reconstruction artifacts: the least ringing and the sharpest structures. A
+small-regularization reconstruction looks noisy; that is expected while the
+forward model is being tuned.
+
 | symptom                        | knob                                        |
 |--------------------------------|---------------------------------------------|
-| grainy / noisy                 | raise `regularization_strength`             |
-| over-smoothed / lost detail    | lower `regularization_strength`             |
-| ringing / halos at edges       | sweep `numerical_aperture_illumination`; try `TV` |
 | wrong density sign (phase)     | flip `invert_phase_contrast`                |
 | 2D output slightly defocused   | sweep `z_focus_offset`                      |
 | top/bottom Z slices similar    | increase `z_padding`                        |
+| ringing / halos at edges       | sweep `numerical_aperture_illumination`; try `TV` |
 | PSF drifts sideways vs focus   | sweep `tilt_angle_azimuth` + `tilt_angle_zenith` together |
 | shadow-cast in-focus contrast  | large tilt; iterate azimuth then zenith     |
+| grainy / noisy (last step)     | raise `regularization_strength`             |
+| over-smoothed / lost detail    | lower `regularization_strength`             |
 
-`regularization_strength` is best swept over decades (1e-4 ... 1e0). Pick the
-"elbow": the smallest value that removes noise/ringing without softening real
-structures.
+The last step of the workflow: with the forward model settled, increase
+`regularization_strength` over decades (1e-4 ... 1e0) until an acceptable
+reconstruction is found. Pick the smallest value that removes the noise
+without softening real structures.
 
 ## Auto-tuning (`optimization:` block)
 
