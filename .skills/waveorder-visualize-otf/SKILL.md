@@ -1,5 +1,5 @@
 ---
-name: visualize-otf-from-config
+name: waveorder-visualize-otf
 description: Compute a waveorder transfer function (OTF) from a reconstruction config and open it in napari. Use when someone wants to inspect/visualize the transfer function or OTF for a config, check how NA / wavelength / pixel-size choices shape the transfer function, or debug a config before reconstructing. Runs `wo compute-tf` then `wo view`.
 ---
 
@@ -17,7 +17,7 @@ in napari. Exactly two CLI calls.
   `wo compute-tf` needs it only to read the **array shape**; the values are not
   used, so any dataset with the right ZYX shape works.
 
-If the user gave a `/visualize-otf-from-config <config> <input>` argument, use it.
+If the user gave a `/waveorder-visualize-otf <config> <input>` argument, use it.
 Otherwise ask for the config path and the input position path.
 
 ## The two calls
