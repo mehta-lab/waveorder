@@ -210,6 +210,7 @@ def _run_auto_regularization(settings, input_position_dirpath, config_filepath):
         z_padding=block.transfer_function.z_padding,
         crop=(y0, x0, size),
         apodization_rolloff=block.apply_inverse.apodization_rolloff,
+        keep_scored_slices=auto_settings.plot_path is not None,
         # No full-frame peak is passed: |H|^2max is set by the optics and the pixel
         # size, not by the frame size, so the crop's own peak is the same number.
         # Reading it back off the full transfer function differed by under 0.01
@@ -217,7 +218,10 @@ def _run_auto_regularization(settings, input_position_dirpath, config_filepath):
     )
     autoreg.warn_all(result)
 
-    scored_z = f", z={result.scored_z_index}" if result.scored_z_index is not None else ""
+    scored_z = ""
+    if result.scored_z_index is not None:
+        role = "scored on" if result.rule == "otsu_cnr" else "shown at"
+        scored_z = f", {role} most structured slice z={result.scored_z_index}"
     click.echo(
         click.style(
             f"    regularization_strength = {result.regularization_strength:.4g}\n"
@@ -233,6 +237,14 @@ def _run_auto_regularization(settings, input_position_dirpath, config_filepath):
         report_path.parent.mkdir(parents=True, exist_ok=True)
         report_path.write_text(json.dumps(result.to_dict(), indent=2))
         print(f"Auto-regularization report saved to {report_path}")
+
+    if auto_settings.plot_path is not None:
+        plot_path = Path(auto_settings.plot_path)
+        plot_path.parent.mkdir(parents=True, exist_ok=True)
+        autoreg.save_sweep_montage(
+            result, plot_path, title=f"{'/'.join(Path(input_position_dirpath).parts[-4:])}   t={t_idx}"
+        )
+        print(f"Auto-regularization sweep montage saved to {plot_path}")
 
     # Freeze the pick into a sibling config, so the reconstruction that follows is
     # reproducible without re-running the sweep.

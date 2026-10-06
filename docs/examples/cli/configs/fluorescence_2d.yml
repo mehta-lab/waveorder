@@ -28,6 +28,7 @@ fluorescence:
     #   num_samples: 25                     # regularization strengths to try
     #   search_scale: relative              # 'relative' reads the search bounds as log10(lambda / |H|^2max); 'absolute' as log10(lambda)
     #   report_path: null                   # write the full sweep (scores, norms, chosen index) to this JSON path; null = no report
+    #   plot_path: null                     # write a montage of the sweep (the scored crop at every strength, pick framed) to this PNG path; null = no plot
     rl: null                                # Richardson-Lucy knobs; only valid with reconstruction_algorithm 'RL'/'RLGC', and filled with defaults if omitted there
     # or, instead of null:
     #   iterations: 25                      # maximum RL / RLGC iterations

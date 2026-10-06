@@ -383,6 +383,7 @@ def test_settings_defaults_and_validation():
     assert settings.rule == "otsu_cnr"
     assert settings.search_scale == "relative"
     assert settings.report_path is None
+    assert settings.plot_path is None
 
     with pytest.raises(ValidationError, match="search_min must be less than search_max"):
         AutoRegularizationSettings(search_min=2.0, search_max=-6.0)
@@ -397,11 +398,14 @@ def test_settings_defaults_and_validation():
 # --- select_regularization ---
 
 
-def _select(rule="otsu_cnr", zyx_shape=(12, 64, 64), z_padding=0, **kwargs):
+def _select(rule="otsu_cnr", zyx_shape=(12, 64, 64), z_padding=0, keep_scored_slices=False, **kwargs):
     data = _measurement(zyx_shape)
     real_tf, _ = _phase_tfs(zyx_shape, z_padding)
     settings = AutoRegularizationSettings(rule=rule, num_samples=7, **kwargs)
-    return data, real_tf, autoreg.select_regularization(data, real_tf, settings, contrast="phase", z_padding=z_padding)
+    result = autoreg.select_regularization(
+        data, real_tf, settings, contrast="phase", z_padding=z_padding, keep_scored_slices=keep_scored_slices
+    )
+    return data, real_tf, result
 
 
 @pytest.mark.parametrize("rule", ["otsu_cnr", "l_curve"])
@@ -416,12 +420,40 @@ def test_select_regularization_returns_a_swept_value(rule):
     assert result.regularization_strengths[0] <= result.regularization_strength
     assert result.regularization_strength <= result.regularization_strengths[-1]
 
+    assert result.scored_slices is None
     if rule == "otsu_cnr":
         assert len(result.scores) == 7 and len(result.residual_norms) == 0
         assert 0 <= result.scored_z_index < 12
     else:
         assert len(result.residual_norms) == 7 and len(result.scores) == 0
         assert result.scored_z_index is None
+
+
+@pytest.mark.parametrize("rule", ["otsu_cnr", "l_curve"])
+@pytest.mark.parametrize("z_padding", [0, 2])
+def test_scored_slices_are_the_swept_reconstructions(rule, z_padding):
+    """keep_scored_slices records slice scored_z_index of each reconstruction, unpadded."""
+    data, real_tf, result = _select(rule, z_padding=z_padding, keep_scored_slices=True)
+
+    assert result.scored_slices.shape == (7, 64, 64)
+    assert 0 <= result.scored_z_index < 12
+    np.testing.assert_array_equal(result.raw_slice, data[result.scored_z_index].numpy())
+    for i, strength in enumerate(result.regularization_strengths):
+        expected = _sweep_one(data, real_tf, "phase", z_padding, float(strength))[result.scored_z_index]
+        np.testing.assert_allclose(result.scored_slices[i], expected.numpy(), rtol=1e-5, atol=1e-6)
+
+
+@pytest.mark.parametrize("rule", ["otsu_cnr", "l_curve"])
+def test_sweep_montage_is_written(tmp_path, rule):
+    _, _, result = _select(rule, keep_scored_slices=True)
+
+    path = tmp_path / "sweep.png"
+    autoreg.save_sweep_montage(result, path, title="phantom")
+    assert path.stat().st_size > 0
+
+    _, _, without = _select(rule)
+    with pytest.raises(ValueError, match="keep_scored_slices"):
+        autoreg.save_sweep_montage(without, tmp_path / "none.png")
 
 
 def test_relative_scale_anchors_to_the_transfer_function_peak():
@@ -498,3 +530,7 @@ def test_result_serializes_for_the_report(tmp_path):
     assert loaded["crop"] == {"y0": 0, "x0": 0, "size": 0}
     assert loaded["scored_z_index"] is None
     assert len(loaded["residual_norms"]) == 7
+
+    # Kept slices are for the montage, not the report.
+    _, _, with_slices = _select("l_curve", keep_scored_slices=True)
+    assert "scored_slices" not in json.loads(json.dumps(with_slices.to_dict()))

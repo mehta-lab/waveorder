@@ -11,6 +11,7 @@ from waveorder.optim.autoreg import (
     AutoRegularizationIgnoredWarning,
     AutoRegularizationSettings,
     AutoRegularizationWarning,
+    save_sweep_montage,
     select_crop,
     select_regularization,
 )
@@ -35,6 +36,7 @@ __all__ = [
     "extract_optimizable_params",
     "has_optimizable_params",
     "optimize_reconstruction",
+    "save_sweep_montage",
     "select_crop",
     "select_regularization",
 ]

@@ -576,6 +576,7 @@ def test_auto_regularization_cli(tmp_path):
     input_path = tmp_path / "autoreg_input.zarr"
     output_path = tmp_path / "autoreg_output.zarr"
     report_path = tmp_path / "autoreg_report.json"
+    plot_path = tmp_path / "autoreg_sweep.png"
 
     # Create input dataset with a single channel, structured so the metrics have
     # something to score: on featureless noise every rule pins to a sweep edge.
@@ -598,6 +599,7 @@ def test_auto_regularization_cli(tmp_path):
         search_min=-4.0,
         search_max=2.0,
         report_path=str(report_path),
+        plot_path=str(plot_path),
     )
     config_path = tmp_path / "autoreg.yml"
     utils.model_to_yaml(recon_settings, config_path)
@@ -633,3 +635,5 @@ def test_auto_regularization_cli(tmp_path):
     report = json.loads(report_path.read_text())
     assert report["regularization_strength"] == pytest.approx(resolved.phase.apply_inverse.regularization_strength)
     assert report["regularization_strengths"][report["index"]] == pytest.approx(report["regularization_strength"])
+
+    assert plot_path.stat().st_size > 0

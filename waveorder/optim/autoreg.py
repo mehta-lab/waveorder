@@ -123,6 +123,10 @@ class AutoRegularizationSettings(BaseModel):
         default=None,
         description="write the full sweep (scores, norms, chosen index) to this JSON path; null = no report",
     )
+    plot_path: Optional[str] = Field(
+        default=None,
+        description="write a montage of the sweep (the scored crop at every strength, pick framed) to this PNG path; null = no plot",
+    )
 
     @model_validator(mode="after")
     def _validate_search(self):
@@ -164,8 +168,17 @@ class AutoRegResult:
     warnings : list[str]
         Non-fatal problems found while selecting, e.g. a pick on the sweep edge.
     scored_z_index : int or None
-        The z slice (of the unpadded volume) that ``otsu_cnr`` scored every
-        reconstruction on; ``None`` when the rule was ``l_curve``.
+        The z slice (of the unpadded volume) with the most structure across the
+        sweep. ``otsu_cnr`` scores every reconstruction on it. ``l_curve`` scores
+        whole volumes and records it only when ``scored_slices`` were kept, as
+        the slice they were taken at; otherwise ``None``.
+    scored_slices : np.ndarray or None
+        ``(N, Y, X)`` slice ``scored_z_index`` of every swept reconstruction, kept
+        only when :func:`select_regularization` was asked to; what
+        :func:`save_sweep_montage` draws. Not part of :meth:`to_dict`.
+    raw_slice : np.ndarray or None
+        ``(Y, X)`` slice ``scored_z_index`` of the raw measurement crop, kept with
+        ``scored_slices`` so the montage can show what was reconstructed.
     """
 
     regularization_strength: float
@@ -180,9 +193,11 @@ class AutoRegResult:
     solution_norms: np.ndarray = field(default_factory=lambda: np.array([]))
     warnings: list[str] = field(default_factory=list)
     scored_z_index: Optional[int] = None
+    scored_slices: Optional[np.ndarray] = None
+    raw_slice: Optional[np.ndarray] = None
 
     def to_dict(self) -> dict:
-        """JSON-serializable view, for ``report_path``."""
+        """JSON-serializable view, for ``report_path``. Leaves out the kept slices."""
         return {
             "rule": self.rule,
             "regularization_strength": self.regularization_strength,
@@ -331,6 +346,17 @@ def _slice_statistics(volume: Tensor, window_size: int = OTSU_WINDOW_SIZE) -> tu
     return cnr, spread
 
 
+def _most_structured_slice(slice_spread: Tensor) -> int:
+    """The z slice whose local-variance spread is largest, averaged over the sweep.
+
+    Parameters
+    ----------
+    slice_spread : Tensor
+        ``(N, Z)`` per-slice spread from :func:`_slice_statistics`, one row per strength.
+    """
+    return int(torch.argmax(slice_spread.mean(dim=0)))
+
+
 def _shared_slice_scores(slice_cnr: Tensor, slice_spread: Tensor) -> tuple[Tensor, int]:
     """Read every strength's score off the one z slice with the most structure.
 
@@ -344,7 +370,7 @@ def _shared_slice_scores(slice_cnr: Tensor, slice_spread: Tensor) -> tuple[Tenso
     tuple[Tensor, int]
         ``(N,)`` scores on that slice, and the slice index.
     """
-    best_z = int(torch.argmax(slice_spread.mean(dim=0)))
+    best_z = _most_structured_slice(slice_spread)
     return slice_cnr[:, best_z], best_z
 
 
@@ -414,28 +440,23 @@ def compute_l_curve_norms(
     return residual_norms, solution_norms
 
 
-def find_l_curve_corner(residual_norms: np.ndarray, solution_norms: np.ndarray) -> int:
-    """Index of the L-curve corner, by curvature on range-normalized log axes.
+def l_curve_curvature(residual_norms: np.ndarray, solution_norms: np.ndarray) -> np.ndarray:
+    """``|kappa|`` along the sweep: the quantity :func:`find_l_curve_corner` peaks on.
 
-    Both log axes are scaled to ``[0, 1]`` first so curvature is
-    scale-independent and the two bends of an L become comparably sharp
-    (Hansen 1992). The bends have opposite signed curvature, so peaks are
-    sought in ``|kappa|``: with two prominent peaks the midpoint between them is
-    returned, with one the centre of its plateau.
+    Both log axes are scaled to ``[0, 1]`` and lightly smoothed first, so the
+    curvature is scale-independent and the two bends of an L become comparably
+    sharp (Hansen 1992).
 
     Parameters
     ----------
     residual_norms, solution_norms : np.ndarray
-        ``(N,)`` arrays from :func:`compute_l_curve_norms`.
+        ``(N,)`` arrays from :func:`compute_l_curve_norms`, ``N >= 2``.
 
     Returns
     -------
-    int
-        Index into the sweep.
+    np.ndarray
+        ``(N,)`` absolute curvature.
     """
-    if len(residual_norms) < 3:
-        return 0
-
     x_raw = np.log(residual_norms)
     y_raw = np.log(solution_norms)
 
@@ -451,7 +472,30 @@ def find_l_curve_corner(residual_norms: np.ndarray, solution_norms: np.ndarray) 
     ddx, ddy = np.gradient(dx, t), np.gradient(dy, t)
 
     denominator = np.maximum((dx**2 + dy**2) ** 1.5, 1e-12)
-    abs_curvature = np.abs((dx * ddy - dy * ddx) / denominator)
+    return np.abs((dx * ddy - dy * ddx) / denominator)
+
+
+def find_l_curve_corner(residual_norms: np.ndarray, solution_norms: np.ndarray) -> int:
+    """Index of the L-curve corner, by curvature on range-normalized log axes.
+
+    The bends of an L have opposite signed curvature, so peaks are sought in
+    ``|kappa|`` (:func:`l_curve_curvature`): with two prominent peaks the
+    midpoint between them is returned, with one the centre of its plateau.
+
+    Parameters
+    ----------
+    residual_norms, solution_norms : np.ndarray
+        ``(N,)`` arrays from :func:`compute_l_curve_norms`.
+
+    Returns
+    -------
+    int
+        Index into the sweep.
+    """
+    if len(residual_norms) < 3:
+        return 0
+
+    abs_curvature = l_curve_curvature(residual_norms, solution_norms)
 
     max_abs_curv = np.max(abs_curvature)
     if max_abs_curv < 1e-12:
@@ -607,6 +651,7 @@ def select_regularization(
     z_padding: int = 0,
     crop: tuple[int, int, int] = (0, 0, 0),
     apodization_rolloff: float = 0.0,
+    keep_scored_slices: bool = False,
 ) -> AutoRegResult:
     """Sweep regularization strengths and pick one.
 
@@ -633,6 +678,11 @@ def select_regularization(
     apodization_rolloff : float
         Passed through to the inverse filter, so the sweep scores the same
         reconstruction the model will produce. By default 0.0 (no apodization).
+    keep_scored_slices : bool
+        Also record slice ``scored_z_index`` of every swept reconstruction in
+        ``result.scored_slices``, for :func:`save_sweep_montage`. Costs a second
+        pass over the strengths, since that slice is not known until the sweep
+        has been scored; the sweep is never held in memory. By default False.
 
     Returns
     -------
@@ -668,19 +718,23 @@ def select_regularization(
     # whole sweep's: at 25 strengths, a 256x256 crop 2000 slices deep would
     # otherwise hold 13 GB of reconstructions alone.
     measurement_fft = torch.fft.fftn(measurement, dim=(-3, -2, -1))
+
+    def _reconstruct(strength: float) -> Tensor:
+        return torch.real(
+            torch.fft.ifftn(
+                measurement_fft * _inverse_filter(transfer_function, strength, apodization_rolloff),
+                dim=(-3, -2, -1),
+            )
+        )
+
     slice_cnr: list[Tensor] = []
     slice_spread: list[Tensor] = []
     residuals: list[float] = []
     solutions: list[float] = []
     for strength in strengths:
-        recon = torch.real(
-            torch.fft.ifftn(
-                measurement_fft * _inverse_filter(transfer_function, float(strength), apodization_rolloff),
-                dim=(-3, -2, -1),
-            )
-        )
+        recon = _reconstruct(float(strength))
+        unpadded = recon[z_padding : recon.shape[0] - z_padding] if z_padding else recon
         if settings.rule == "otsu_cnr":
-            unpadded = recon[z_padding : recon.shape[0] - z_padding] if z_padding else recon
             cnr, spread = _slice_statistics(unpadded, OTSU_WINDOW_SIZE)
             slice_cnr.append(cnr)
             slice_spread.append(spread)
@@ -688,7 +742,11 @@ def select_regularization(
             residual, solution = compute_l_curve_norms(measurement, transfer_function, recon.unsqueeze(0))
             residuals.append(residual[0])
             solutions.append(solution[0])
-        del recon
+            if keep_scored_slices:
+                # l_curve scores whole volumes; the montage still wants one slice,
+                # chosen the way otsu_cnr chooses its own.
+                slice_spread.append(_local_variance(unpadded.unsqueeze(0), OTSU_WINDOW_SIZE)[0].var(dim=(-2, -1)))
+        del recon, unpadded
 
     scores = np.array([])
     scored_z_index = None
@@ -700,6 +758,16 @@ def select_regularization(
         index = int(np.argmax(scores))
     else:
         index = find_l_curve_corner(residual_norms, solution_norms)
+        if keep_scored_slices:
+            scored_z_index = _most_structured_slice(torch.stack(slice_spread))
+
+    scored_slices = raw_slice = None
+    if keep_scored_slices:
+        # A second pass rather than holding the sweep: the slice to keep is not
+        # known until every strength has been scored.
+        z = scored_z_index + z_padding
+        scored_slices = np.stack([_reconstruct(float(strength))[z].cpu().numpy() for strength in strengths])
+        raw_slice = zyx_data[scored_z_index].detach().cpu().numpy()
 
     if index in (0, len(powers) - 1):
         edge = "lower" if index == 0 else "upper"
@@ -722,7 +790,135 @@ def select_regularization(
         solution_norms=solution_norms,
         warnings=messages,
         scored_z_index=scored_z_index,
+        scored_slices=scored_slices,
+        raw_slice=raw_slice,
     )
+
+
+def save_sweep_montage(result: AutoRegResult, path, title: Optional[str] = None) -> None:
+    """Write a PNG of the sweep: the scored slice at every strength, the pick framed.
+
+    A header row shows the raw measurement crop and the objective against the
+    sweep with the pick marked; beneath it, one cell per strength, each stretched
+    to its own 1st-99th percentiles and labelled with its ``lambda / |H|^2max``
+    and its score (``otsu_cnr``) or curvature (``|kappa|``, what ``l_curve``
+    peaks on). Meant for checking a pick by eye, which the caveats in this
+    module's docstring say is worth doing.
+
+    Parameters
+    ----------
+    result : AutoRegResult
+        From :func:`select_regularization` with ``keep_scored_slices=True``.
+    path : path-like
+        PNG to write.
+    title : str, optional
+        A first line for the figure title, e.g. the dataset.
+
+    Raises
+    ------
+    ValueError
+        If ``result.scored_slices`` is ``None``.
+    """
+    if result.scored_slices is None:
+        raise ValueError("no slices to draw: call select_regularization(..., keep_scored_slices=True)")
+
+    # Imported here so the sweep itself never depends on matplotlib. A bare
+    # Figure writes PNGs without pyplot, so no global backend is touched.
+    from matplotlib.figure import Figure
+    from matplotlib.lines import Line2D
+
+    pick, grey = "#0a7", "0.6"
+    title_pt, cell_pt, overlay_pt, panel_pt = 13, 11, 10.5, 10
+    powers = np.log10(result.regularization_strengths / result.transfer_function_peak_squared)
+    n = len(powers)
+    if result.rule == "otsu_cnr":
+        objective, objective_name = result.scores, "otsu_cnr"
+        objective_long = "otsu_cnr: Otsu contrast-to-noise ratio"
+    else:
+        objective, objective_name = l_curve_curvature(result.residual_norms, result.solution_norms), "$|\\kappa|$"
+        objective_long = "l_curve: curvature $|\\kappa|$ of the L-curve"
+
+    cell, gap, band, side, bottom, top = 2.0, 0.12, 0.34, 0.2, 0.2, 1.0
+    cols = int(np.ceil(np.sqrt(n)))
+    rows = int(np.ceil(n / cols))
+    width = 2 * side + cols * cell + (cols - 1) * gap
+    height = bottom + (rows + 1) * (cell + band) + rows * gap + top
+    fig = Figure(figsize=(width, height), dpi=150)
+
+    def _axes(row, col, colspan=1, inset=(0.0, 0.0)):
+        # Row 0 is the header; inset keeps inches free inside the slot for tick labels.
+        x0 = side + col * (cell + gap) + inset[0]
+        y0 = height - top - (row + 1) * (cell + band) - row * gap + inset[1]
+        w = colspan * cell + (colspan - 1) * gap - inset[0]
+        return fig.add_axes([x0 / width, y0 / height, w / width, (cell - inset[1]) / height])
+
+    def _show(ax, image, label, color="0.15", weight="normal"):
+        ax.imshow(image, cmap="gray", vmin=np.percentile(image, 1), vmax=np.percentile(image, 99))
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title(label, fontsize=cell_pt, pad=4, color=color, fontweight=weight)
+
+    if result.raw_slice is not None:
+        ax = _axes(0, 0)
+        _show(ax, result.raw_slice, f"raw measurement, z={result.scored_z_index}")
+        for spine in ax.spines.values():
+            spine.set(color=grey, linewidth=0.8)
+
+    ax = _axes(0, 1, colspan=cols - 1, inset=(0.68, 0.52))
+    ax.plot(powers, objective, "-o", ms=4, lw=1.3, color="0.35")
+    ax.axvline(powers[result.index], color=pick, ls="--", lw=1.5, label="pick")
+    ax.plot([powers[result.index]], [objective[result.index]], "o", ms=8, color=pick)
+    ax.set_xlabel("$\\log_{10}(\\lambda/|H|^2_{max})$", fontsize=panel_pt)
+    ax.set_ylabel(objective_name, fontsize=panel_pt)
+    ax.tick_params(labelsize=panel_pt - 1)
+    ax.grid(alpha=0.3)
+    ax.set_title(objective_long, fontsize=panel_pt + 1, pad=5)
+    ax.legend(
+        handles=[Line2D([], [], marker="s", ls="none", ms=10, mfc="none", mec=pick, mew=3, label="pick")],
+        fontsize=panel_pt,
+        frameon=False,
+        loc="upper right" if result.index < n / 2 else "upper left",
+    )
+
+    for i in range(n):
+        ax = _axes(1 + i // cols, i % cols)
+        chosen = i == result.index
+        _show(
+            ax,
+            result.scored_slices[i],
+            f"$\\lambda/|H|^2_{{max}} = 10^{{{powers[i]:+.2f}}}$",
+            color=pick if chosen else "0.15",
+            weight="bold" if chosen else "normal",
+        )
+        for spine in ax.spines.values():
+            spine.set(color=pick if chosen else grey, linewidth=4 if chosen else 0.8)
+        ax.text(
+            0.03,
+            0.03,
+            f"{objective_name} {objective[i]:.3g}",
+            transform=ax.transAxes,
+            ha="left",
+            va="bottom",
+            fontsize=overlay_pt,
+            color="w",
+            fontweight="bold",
+            bbox=dict(boxstyle="round,pad=0.25", fc="black", ec="none", alpha=0.6),
+        )
+
+    y0, x0, size = result.crop
+    edge = result.index in (0, n - 1)
+    lines = [] if title is None else [title]
+    lines.append(
+        f"auto_regularization: rule {result.rule}, pick $\\lambda$ = {result.regularization_strength:.4g} "
+        f"($\\lambda/|H|^2_{{max}} = 10^{{{powers[result.index]:+.2f}}}$), index {result.index} of {n}"
+    )
+    slice_role = "where otsu_cnr scores" if result.rule == "otsu_cnr" else "(l_curve scores the whole volume)"
+    lines.append(
+        f"crop {size}$\\times${size} at (y={y0}, x={x0}), most structured slice z={result.scored_z_index} {slice_role}"
+        + ("   $\\cdot$   pick at the edge of the sweep: widen the range" if edge else "")
+    )
+    fig.text(0.5, 1 - 0.15 / height, "\n".join(lines), ha="center", va="top", fontsize=title_pt, linespacing=1.4)
+    fig.savefig(path, facecolor="w")
 
 
 def warn_all(result: AutoRegResult) -> None:
