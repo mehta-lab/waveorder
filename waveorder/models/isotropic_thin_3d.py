@@ -10,6 +10,7 @@ from torch import Tensor
 from waveorder import optics, sampling, util
 from waveorder._pixel_size import YXPixelSize
 from waveorder.filter import apply_filter_bank
+from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 
 
 def generate_test_phantom(
@@ -426,31 +427,20 @@ def apply_inverse_transfer_function(
         U, S, Vh = singular_system
         batched_ss = S.ndim == 4  # (B, 2, Vy, Vx)
 
-        if apodization_rolloff > 0:
-            window = sampling.raised_cosine_window(S.shape[-2], apodization_rolloff, device=S.device)[
-                :, None
-            ] * sampling.raised_cosine_window(S.shape[-1], apodization_rolloff, device=S.device)
-        else:
-            window = None
+        S_reg = tikhonov_regularized_inverse_filter(S, regularization_strength, apodization_rolloff=apodization_rolloff)
 
         if not batched_ss:
             # Shared singular system: compute inverse filter once
-            S_reg = S / (S**2 + regularization_strength)
             sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
-            if window is not None:
-                sfyx_inverse_filter = sfyx_inverse_filter * window
             results = []
             for b in range(zyx.shape[0]):
                 results.append(apply_filter_bank(sfyx_inverse_filter, zyx[b]))
             output = torch.stack(results, dim=0)  # (B, 2, Y, X)
         else:
             # Per-tile singular system: compute inverse filter per tile
-            S_reg = S / (S**2 + regularization_strength)
             results = []
             for b in range(zyx.shape[0]):
                 filt_b = torch.einsum("sj...,j...,jf...->fs...", U[b], S_reg[b], Vh[b])
-                if window is not None:
-                    filt_b = filt_b * window
                 results.append(apply_filter_bank(filt_b, zyx[b]))
             output = torch.stack(results, dim=0)  # (B, 2, Y, X)
 
