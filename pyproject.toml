@@ -129,7 +129,7 @@ source = "uv-dynamic-versioning"
 # apply-inv-tf's --resume relies on czbiohub-sf/iohub#476, which syncs a unit's
 # shards before recording it as done. Drop this pin for a PyPI floor once iohub
 # releases it; iohub>=0.3.11 above already has the process_single_position API.
-iohub = { git = "https://github.com/czbiohub-sf/iohub", rev = "ac4433985dcdf02603c395c3d51fffc4883a3c9a" }
+iohub = { git = "https://github.com/czbiohub-sf/iohub", rev = "b7bc648fc375c708161ed620b99fbb75317ecdcd" }
 
 [tool.uv-dynamic-versioning]
 vcs = "git"
