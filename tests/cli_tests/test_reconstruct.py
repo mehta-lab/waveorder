@@ -784,6 +784,34 @@ def test_apply_inv_tf_resume(tmp_path):
     assert not np.any(result[0] == 123.0)
 
 
+def test_apply_inv_tf_resume_ignores_time_selection_in_transfer_function(tmp_path):
+    """`reconstruct` recomputes the transfer function from the full config, so a
+    transfer function computed for another time selection must not invalidate
+    finished timepoints."""
+    position_path, config_path, tf_path = _phase_inputs(tmp_path)
+    result_path = tmp_path / "out.zarr"
+    _reconstruct(position_path, tf_path, config_path, result_path)
+    with open_ome_zarr(result_path / "0" / "0" / "0", mode="r+") as result:
+        result["0"][0] = 123.0
+
+    subset_config_path = tmp_path / "subset.yml"
+    subset_config = utils.yaml_to_model(config_path, settings.ReconstructionSettings)
+    subset_config.time_indices = [1, 2]
+    utils.model_to_yaml(subset_config, subset_config_path)
+    subset_tf_path = tmp_path / "subset_tf.zarr"
+    CliRunner().invoke(
+        cli,
+        ["compute-tf", "-i", str(position_path), "-c", str(subset_config_path), "-o", str(subset_tf_path)],
+        catch_exceptions=False,
+    )
+    with open_ome_zarr(subset_tf_path) as tf_dataset:
+        assert "time_indices" not in tf_dataset.zattrs["settings"]
+        assert "input_channel_names" not in tf_dataset.zattrs["settings"]
+
+    resumed = _reconstruct(position_path, subset_tf_path, config_path, result_path, resume=True)
+    np.testing.assert_array_equal(resumed[0], 123.0)
+
+
 def test_apply_inv_tf_resume_on_v04_output_recomputes_and_says_so(tmp_path, capsys):
     position_path, config_path, tf_path = _phase_inputs(tmp_path, version="0.4")
     result_path = tmp_path / "out.zarr"
