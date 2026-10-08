@@ -79,8 +79,10 @@ def apply_inverse_to_zyx_and_save(
     if verbose:
         click.echo(f"Reconstructing t={t_idx}")
 
-    # Extract CZYX xarray slice
-    czyx_slice = input_data.isel(t=t_idx).sel(c=input_channel_names)
+    # Extract CZYX xarray slice. Load it once: input_data is dask-backed, so
+    # every `.values` (the check below, then the model) would otherwise
+    # re-read and decompress the volume from the store.
+    czyx_slice = input_data.isel(t=t_idx).sel(c=input_channel_names).load()
 
     # Check if all values are zeros or NaN
     if _check_nan_n_zeros(czyx_slice.values):
