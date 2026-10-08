@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import warnings
+from collections.abc import Mapping
 from typing import Literal, Optional
 
 import numpy as np
@@ -338,7 +339,7 @@ def compute_transfer_function(
 
 def apply_inverse_transfer_function(
     czyx_data: xr.DataArray | list[xr.DataArray],
-    transfer_function: xr.Dataset,
+    transfer_function: xr.Dataset | Mapping[str, torch.Tensor],
     recon_dim: Literal[2, 3],
     settings: Settings = None,
     fluor_channel_name: str = "",
@@ -352,8 +353,10 @@ def apply_inverse_transfer_function(
         Input CZYX fluorescence data. When a list is provided, tiles are
         stacked into a batch for efficient GPU processing and the result
         is returned as a list of xr.DataArrays.
-    transfer_function : xr.Dataset
-        Transfer function from ``compute_transfer_function``.
+    transfer_function : xr.Dataset or Mapping[str, torch.Tensor]
+        Transfer function from ``compute_transfer_function``, or a mapping
+        of the same variable names to tensors, which are used without
+        copying.
     recon_dim : {2, 3}
         Reconstruction dimensionality.
     settings : Settings, optional
