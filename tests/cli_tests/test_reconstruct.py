@@ -637,6 +637,8 @@ def test_auto_regularization_cli(tmp_path):
     assert report["regularization_strengths"][report["index"]] == pytest.approx(report["regularization_strength"])
 
     assert plot_path.stat().st_size > 0
+
+
 def test_apply_inv_tf_process_pool_matches_serial(tmp_path):
     """Pool workers load the transfer function themselves; the result must
     match the serial path, which loads it in-process."""
