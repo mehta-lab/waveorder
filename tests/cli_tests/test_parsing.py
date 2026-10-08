@@ -1,10 +1,15 @@
 """Tests for CLI path parsing with zarr v3 structures."""
 
+from contextlib import nullcontext
+
 import numpy as np
 import pytest
+from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
+from typer.main import get_command
 
+from waveorder.cli.main import app
 from waveorder.cli.parsing import _validate_and_process_paths
 
 
@@ -39,11 +44,45 @@ def test_validate_paths_filters_zarr_json_from_glob(tmp_path):
 
     # Verify zarr.json files are in glob results
     assert len(zarr_jsons) > 0, "zarr.json files should be in glob results"
+    # Plate roots expand to their position directories.
+    root_result = _validate_and_process_paths([plate_path])
+    assert root_result == [plate_path / "A" / "1" / "0"]
 
     # Call the parsing function with glob results
-    result = _validate_and_process_paths(None, None, [str(p) for p in glob_paths])
+    result = _validate_and_process_paths([str(p) for p in glob_paths])
 
     # Only the position directory should remain
     assert len(result) == 1
     assert result[0].name == "0"
     assert result[0].is_dir()
+
+
+@pytest.mark.parametrize("form", ["repeated", "shell-expanded"])
+def test_input_option_accepts_repeated_and_greedy_paths(tmp_path, monkeypatch, form):
+    input_paths = [tmp_path / "position-1", tmp_path / "position-2"]
+    for path in input_paths:
+        path.mkdir()
+    config_path = tmp_path / "config.yml"
+    config_path.touch()
+
+    monkeypatch.setattr(
+        "iohub.ngff.open_ome_zarr",
+        lambda *args, **kwargs: nullcontext(object()),
+    )
+
+    command = get_command(app).commands["reconstruct"]
+    received = {}
+    command.callback = lambda **kwargs: received.update(kwargs)
+    input_args = (
+        ["-i", str(input_paths[0]), "-i", str(input_paths[1])]
+        if form == "repeated"
+        else ["-i", *(str(path) for path in input_paths)]
+    )
+
+    result = CliRunner().invoke(
+        command,
+        [*input_args, "-c", str(config_path), "-o", str(tmp_path / "output.zarr")],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert received["input_position_dirpaths"] == input_paths

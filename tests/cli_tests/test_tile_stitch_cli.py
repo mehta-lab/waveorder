@@ -7,10 +7,10 @@ from pathlib import Path
 import numpy as np
 import pytest
 import yaml
-from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
+from typer.testing import CliRunner
 
-from waveorder.cli.main import cli
+from waveorder.cli.main import app
 
 
 @pytest.fixture
@@ -48,14 +48,14 @@ def tile_stitch_config(tmp_path: Path) -> Path:
 def test_cli_help_lists_tile_stitch():
     """``wo --help`` lists the tile-stitch subcommand."""
     runner = CliRunner()
-    result = runner.invoke(cli, ["--help"])
+    result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
     assert "tile-stitch" in result.output
 
 
 def test_cli_subcommand_help_runs():
     runner = CliRunner()
-    result = runner.invoke(cli, ["tile-stitch", "--help"])
+    result = runner.invoke(app, ["tile-stitch", "--help"])
     assert result.exit_code == 0
     assert "Single-process tiled reconstruction" in result.output
 
@@ -65,7 +65,7 @@ def test_cli_smoke_writes_output(phantom_input: Path, tile_stitch_config: Path, 
     output_path = tmp_path / "output.zarr"
     runner = CliRunner()
     result = runner.invoke(
-        cli,
+        app,
         [
             "tile-stitch",
             "-i",

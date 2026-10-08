@@ -1,31 +1,24 @@
 from pathlib import Path
 
-import click
+import typer
 
 from waveorder.cli.parsing import (
-    config_filepath,
-    input_position_dirpaths,
-    output_dirpath,
-    processes_option,
-    unique_id,
-    write_config_scale_to_output,
+    ConfigFilepath,
+    InputPositionDirpaths,
+    OutputDirpath,
+    ProcessesOption,
+    UniqueId,
+    WriteConfigScaleToOutput,
 )
 
 
-@click.command("reconstruct", no_args_is_help=True)
-@input_position_dirpaths()
-@config_filepath()
-@output_dirpath()
-@processes_option(default=1)
-@unique_id()
-@write_config_scale_to_output()
 def _reconstruct_cli(
-    input_position_dirpaths,
-    config_filepath,
-    output_dirpath,
-    num_processes,
-    unique_id,
-    write_config_scale_to_output,
+    input_position_dirpaths: InputPositionDirpaths,
+    config_filepath: ConfigFilepath,
+    output_dirpath: OutputDirpath,
+    num_processes: ProcessesOption = 1,
+    unique_id: UniqueId = "",
+    write_config_scale_to_output: WriteConfigScaleToOutput = False,
 ):
     """
     Reconstruct a dataset using a configuration file. This is a
@@ -46,7 +39,7 @@ def _reconstruct_cli(
     Example:
       \033[92mwo rec -i ./input.zarr/*/*/* -c ./config.yml -o ./output.zarr\033[0m
     """
-    click.echo(click.style("Starting reconstruction...", fg="green"))
+    typer.echo(typer.style("Starting reconstruction...", fg=typer.colors.GREEN))
 
     # Deferred imports: these pull in torch, iohub, numpy, etc.
     # Only loaded when the command runs, keeping wo rec -h fast.

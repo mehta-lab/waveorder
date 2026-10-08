@@ -111,9 +111,9 @@ def test_cli_examples(example, tmp_path, monkeypatch):
     import shlex
     import shutil
 
-    from click.testing import CliRunner
+    from typer.testing import CliRunner
 
-    from waveorder.cli.main import cli
+    from waveorder.cli.main import app
 
     shutil.copytree(example.parent / "configs", tmp_path / "configs")
     monkeypatch.chdir(tmp_path)
@@ -138,5 +138,5 @@ def test_cli_examples(example, tmp_path, monkeypatch):
             continue
         # Strip leading "wo " and split into args
         args = shlex.split(cmd.removeprefix("wo "))
-        result = runner.invoke(cli, args)
+        result = runner.invoke(app, args)
         assert result.exit_code == 0, f"Command '{cmd}' failed:\n{result.output}"
