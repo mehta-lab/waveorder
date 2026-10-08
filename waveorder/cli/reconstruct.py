@@ -6,7 +6,7 @@ from waveorder.cli.parsing import (
     config_filepath,
     input_position_dirpaths,
     output_dirpath,
-    processes_option,
+    threads_option,
     unique_id,
     write_config_scale_to_output,
 )
@@ -16,14 +16,14 @@ from waveorder.cli.parsing import (
 @input_position_dirpaths()
 @config_filepath()
 @output_dirpath()
-@processes_option(default=1)
+@threads_option(default=1)
 @unique_id()
 @write_config_scale_to_output()
 def _reconstruct_cli(
     input_position_dirpaths,
     config_filepath,
     output_dirpath,
-    num_processes,
+    num_threads,
     unique_id,
     write_config_scale_to_output,
 ):
@@ -78,7 +78,7 @@ def _reconstruct_cli(
         transfer_function_path,
         config_filepath,
         output_dirpath,
-        num_processes,
+        num_threads,
         write_config_scale_to_output,
     )
 
