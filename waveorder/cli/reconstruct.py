@@ -45,6 +45,7 @@ def _reconstruct_cli(
     \b
     Example:
       \033[92mwo rec -i ./input.zarr/*/*/* -c ./config.yml -o ./output.zarr\033[0m
+      \033[92mwo rec -i ./input.ome.tif_folder -c ./config.yml -o ./output.zarr\033[0m
     """
     click.echo(click.style("Starting reconstruction...", fg="green"))
 

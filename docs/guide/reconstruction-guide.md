@@ -4,7 +4,7 @@
 
 ## Preparing your data
 
-`waveorder` is compatible with OME-Zarr, a chunked next generation file format with an [open specification](https://ngff.openmicroscopy.org/0.4/). All acquisitions completed with the `waveorder` plugin will be automatically converted to `.zarr` format, and existing data can be converted using `iohub`'s `convert` utility.
+`waveorder` is compatible with OME-Zarr, a chunked next generation file format with an [open specification](https://ngff.openmicroscopy.org/0.4/). All acquisitions completed with the `waveorder` plugin will be automatically converted to `.zarr` format, and existing data can be converted using `iohub`'s `convert` utility. `.ome-tif` are supported for input data.
 
 Inside a `waveorder` environment, convert a Micro-Manager TIFF sequence, OME-TIFF, or pycromanager NDTiff dataset with
 ```
@@ -12,6 +12,8 @@ iohub convert `
     -i ./dataset/ `
     -o ./dataset.zarr
 ```
+
+
 
 ## How can I use `waveorder`'s CLI to perform reconstructions?
 `waveorder`'s CLI is summarized in the following figure:

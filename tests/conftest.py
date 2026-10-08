@@ -1,12 +1,19 @@
 import os
+import shutil
+import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
 import torch
 import xarray as xr
 from iohub.ngff import open_ome_zarr
+from platformdirs import user_data_dir
+from wget import download
 
 from waveorder.cli import settings
+
+_MM_OME_TIFF_ZIP_URL = "https://zenodo.org/record/6983916/files/waveOrder_test_data.zip"
 
 
 @pytest.fixture
@@ -82,6 +89,34 @@ def birefringence_phase_recon_settings_function(tmp_path):
         channel_names=[f"State{i}" for i in range(4)],
     )
     yield recon_settings, dataset
+
+
+@pytest.fixture(scope="session")
+def mm_ome_tiff_dir():
+    """Return path to a small Micro-Manager OME-TIFF dataset for CLI/GUI tests.
+
+    Downloads ``waveOrder_test_data.zip`` (~26 MB) from Zenodo on first use
+    and caches it under ``platformdirs.user_data_dir``. Returns the path to
+    a 1t x 3c x 5z x 128 x 128 MMStack OME-TIFF folder (Cy5, DAPI, FITC).
+    """
+    cache_dir = Path(user_data_dir("waveorder-test-data-v1"))
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    archive = cache_dir / "waveOrder_test_data.zip"
+    extracted = cache_dir / "MM20_ome-tiffs"
+    if not extracted.exists():
+        if not archive.exists():
+            print(
+                f"Downloading MM OME-TIFF test data to {cache_dir} (~26 MB)...",
+                file=sys.stderr,
+            )
+            download(_MM_OME_TIFF_ZIP_URL, out=str(archive))
+        shutil.unpack_archive(archive, extract_dir=cache_dir)
+
+    dataset_dir = extracted / "mm2.0-20201209_1t_5z_3c_512k_1"
+    if not dataset_dir.is_dir():
+        pytest.skip(f"Expected MM ome-tiff dataset not found at {dataset_dir}")
+    return dataset_dir
 
 
 @pytest.fixture(scope="function")
