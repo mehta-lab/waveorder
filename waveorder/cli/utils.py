@@ -31,6 +31,19 @@ def generate_valid_position_key(index: int) -> tuple[str, str, str]:
     return (row, column, field)
 
 
+def read_zyx_shapes(position_paths: list[Path]) -> list[tuple[int, ...]]:
+    """Read the ZYX shape of each position, in the order it was given.
+
+    A transfer function is only valid for the ZYX shape it was computed from,
+    so callers use these shapes to decide which positions can share one.
+    """
+    shapes = []
+    for position_path in position_paths:
+        with open_ome_zarr(str(position_path), layout="fov", mode="r") as position_dataset:
+            shapes.append(tuple(position_dataset.data.shape[-3:]))  # ZYX
+    return shapes
+
+
 def is_single_position_store(position_path: Path) -> bool:
     """Check if a position path is from a single-position store (not HCS plate).
 
@@ -79,8 +92,10 @@ def apply_inverse_to_zyx_and_save(
     if verbose:
         click.echo(f"Reconstructing t={t_idx}")
 
-    # Extract CZYX xarray slice
-    czyx_slice = input_data.isel(t=t_idx).sel(c=input_channel_names)
+    # Extract CZYX xarray slice. Load it once: input_data is dask-backed, so
+    # every `.values` (the check below, then the model) would otherwise
+    # re-read and decompress the volume from the store.
+    czyx_slice = input_data.isel(t=t_idx).sel(c=input_channel_names).load()
 
     # Check if all values are zeros or NaN
     if _check_nan_n_zeros(czyx_slice.values):
