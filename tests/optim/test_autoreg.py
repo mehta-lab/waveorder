@@ -16,6 +16,7 @@ from pydantic import ValidationError
 from waveorder.models import isotropic_fluorescent_thick_3d, phase_thick_3d
 from waveorder.optim import autoreg
 from waveorder.optim.autoreg import AutoRegularizationSettings
+from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 
 PHASE_TF_KWARGS = dict(
     yx_pixel_size=0.15,
@@ -55,7 +56,7 @@ def _sweep_one(data, tf, contrast, z_padding, strength, apodization_rolloff=0.0)
     spectrum = torch.fft.fftn(measurement, dim=(-3, -2, -1))
     recon = torch.real(
         torch.fft.ifftn(
-            spectrum * autoreg._inverse_filter(tf, strength, apodization_rolloff),
+            spectrum * tikhonov_regularized_inverse_filter(tf, strength, apodization_rolloff=apodization_rolloff),
             dim=(-3, -2, -1),
         )
     )
