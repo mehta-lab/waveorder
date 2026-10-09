@@ -51,7 +51,7 @@ from scipy.ndimage import uniform_filter1d
 from scipy.signal import find_peaks
 from torch import Tensor
 
-from waveorder import sampling, util
+from waveorder import util
 from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 
 # Fixed rather than exposed as settings: these are implementation choices of the
@@ -590,24 +590,6 @@ def select_crop(zyx_data: Tensor, crop_size: int = CROP_SIZE) -> tuple[int, int,
     return int(y_starts[flat // len(x_starts)]), int(x_starts[flat % len(x_starts)]), size
 
 
-def _inverse_filter(transfer_function: Tensor, strength: float, apodization_rolloff: float) -> Tensor:
-    """Build the inverse filter the 3D models build, apodization included.
-
-    Kept in step with ``phase_thick_3d`` and ``isotropic_fluorescent_thick_3d``:
-    the sweep has to score the reconstruction that will actually be produced, and
-    ``apodization_rolloff`` reshapes the filter after regularization.
-    """
-    inverse_filter = tikhonov_regularized_inverse_filter(transfer_function, strength)
-    if apodization_rolloff > 0:
-        window = sampling.raised_cosine_window(
-            inverse_filter.shape[-2], apodization_rolloff, device=inverse_filter.device
-        )[:, None] * sampling.raised_cosine_window(
-            inverse_filter.shape[-1], apodization_rolloff, device=inverse_filter.device
-        )
-        inverse_filter = inverse_filter * window
-    return inverse_filter
-
-
 # --- the sweep ---
 
 
@@ -722,7 +704,10 @@ def select_regularization(
     def _reconstruct(strength: float) -> Tensor:
         return torch.real(
             torch.fft.ifftn(
-                measurement_fft * _inverse_filter(transfer_function, strength, apodization_rolloff),
+                measurement_fft
+                * tikhonov_regularized_inverse_filter(
+                    transfer_function, strength, apodization_rolloff=apodization_rolloff
+                ),
                 dim=(-3, -2, -1),
             )
         )
