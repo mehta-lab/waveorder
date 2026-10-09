@@ -96,6 +96,21 @@ def raised_cosine_window(size, rolloff, device=None):
     return window
 
 
+def apply_transverse_apodization(fourier_filter: torch.Tensor, rolloff: float) -> torch.Tensor:
+    """Apply a raised-cosine window to the final Y/X axes in unshifted FFT order.
+
+    ``rolloff`` is a fraction between 0 and 1. Zero returns the input tensor
+    unchanged, without allocation. Positive rolloff returns a new tensor,
+    preserving leading axes and leaving the input untouched.
+    """
+    if rolloff > 0:
+        window = raised_cosine_window(fourier_filter.shape[-2], rolloff, device=fourier_filter.device)[
+            :, None
+        ] * raised_cosine_window(fourier_filter.shape[-1], rolloff, device=fourier_filter.device)
+        return fourier_filter * window
+    return fourier_filter
+
+
 def nd_fourier_central_cuboid(source, target_shape):
     """Central cuboid of an N-D Fourier transform.
 
