@@ -1347,3 +1347,50 @@ def unit_conversion_from_scattering_potential_to_permittivity(SP_array, lambda_0
         raise ValueError("Unsupported option for imaging dimension. imaging_mode must be 2D-phase, 2D-ret or 3D")
 
     return P_array
+
+
+def _tilted_pupil_geometry(fxx, fyy, wavelength, index_of_refraction_media, slope=4.0):
+    """Fixed Ewald-sphere coordinates and transverse roll-off."""
+    K = index_of_refraction_media / wavelength
+    with torch.no_grad():
+        df = torch.min(torch.abs(fxx[0, 1] - fxx[0, 0]), torch.abs(fyy[1, 0] - fyy[0, 0]))
+        pixel_slope = slope / df
+        fz_sq = K**2 - fxx**2 - fyy**2
+        inside_sphere = (fz_sq >= 0).to(fxx.dtype)
+        fz = torch.sqrt(torch.clamp(fz_sq, min=0.0))
+    return K, pixel_slope, fz, inside_sphere
+
+
+def _tilted_pupil_from_geometry(fxx, fyy, NA, n, tilt_angle_zenith, tilt_angle_azimuth, geometry):
+    K, pixel_slope, fz, inside_sphere = geometry
+    NA = torch.as_tensor(NA, dtype=torch.float32, device=fxx.device)
+    tilt_angle_zenith = torch.as_tensor(tilt_angle_zenith, dtype=torch.float32, device=fxx.device)
+    tilt_angle_azimuth = torch.as_tensor(tilt_angle_azimuth, dtype=torch.float32, device=fxx.device)
+    cos_alpha_max = torch.sqrt(torch.clamp(1 - (NA / n) ** 2, min=0.0))
+
+    # Tilt direction unit vector
+    sx = torch.sin(tilt_angle_zenith) * torch.cos(tilt_angle_azimuth)
+    sy = torch.sin(tilt_angle_zenith) * torch.sin(tilt_angle_azimuth)
+    sz = torch.cos(tilt_angle_zenith)
+
+    # Dot product of frequency vector with tilt direction
+    dot = fxx * sx + fyy * sy + fz * sz
+    threshold = K * cos_alpha_max
+
+    pupil = torch.sigmoid(pixel_slope * (dot - threshold)) * inside_sphere
+
+    return pupil
+
+
+def _greens_function_from_geometry(pupil_support, oblique_factor, carrier):
+
+    # Mask with pupil_support to zero out frequencies outside the pupil.
+    # The safe_denom avoids division by zero where oblique_factor is 0.
+    safe_denom = oblique_factor + (1 - pupil_support) + 1e-15
+    greens_function_z = -1j / 4 / np.pi * pupil_support[None, :, :] * carrier / safe_denom[None, :, :]
+
+    return greens_function_z
+
+
+def _wotf_axial_window(z_size, device):
+    return torch.fft.ifftshift(torch.hann_window(z_size, periodic=False, device=device))
