@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Literal, Union
 
 import numpy as np
@@ -286,7 +287,7 @@ def compute_transfer_function(
 
 def apply_inverse_transfer_function(
     czyx_data: xr.DataArray | list[xr.DataArray],
-    transfer_function: xr.Dataset,
+    transfer_function: xr.Dataset | Mapping[str, torch.Tensor],
     recon_dim: Literal[2, 3],
     settings: Settings = None,
     device: str | torch.device | None = None,
@@ -299,8 +300,10 @@ def apply_inverse_transfer_function(
         Input CZYX brightfield data. When a list is provided, tiles are
         stacked into a batch for efficient processing and the result
         is returned as a list of xr.DataArrays.
-    transfer_function : xr.Dataset
-        Transfer function from ``compute_transfer_function``.
+    transfer_function : xr.Dataset or Mapping[str, torch.Tensor]
+        Transfer function from ``compute_transfer_function``, or a mapping
+        of the same variable names to tensors, which are used without
+        copying.
     recon_dim : {2, 3}
         Reconstruction dimensionality.
     settings : Settings, optional
@@ -334,7 +337,7 @@ def apply_inverse_transfer_function(
         _, output = isotropic_thin_3d.apply_inverse_transfer_function(
             zyx_tensor,
             (U.to(device), S.to(device), Vh.to(device)),
-            **settings.apply_inverse.model_dump(),
+            **settings.apply_inverse.to_model_kwargs(),
         )
     # [phase only, 3]
     elif recon_dim == 3:
@@ -343,7 +346,7 @@ def apply_inverse_transfer_function(
             _to_tensor(transfer_function, "real_potential_transfer_function").to(device),
             _to_tensor(transfer_function, "imaginary_potential_transfer_function").to(device),
             z_padding=settings.transfer_function.z_padding,
-            **settings.apply_inverse.model_dump(),
+            **settings.apply_inverse.to_model_kwargs(),
         )
 
     # Wrap output tensor(s) back into xr.DataArray(s)

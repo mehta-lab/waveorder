@@ -6,6 +6,10 @@ from waveorder._pixel_size import YXPixelSize
 from waveorder.api import birefringence, fluorescence, phase
 from waveorder.cli import settings
 from waveorder.io import utils
+from waveorder.optim.autoreg import (
+    AutoRegularizationIgnoredWarning,
+    AutoRegularizationSettings,
+)
 
 
 def test_reconstruction_settings():
@@ -119,6 +123,46 @@ def test_generate_example_settings(pytestconfig):
         assert settings_obj.model_dump() == settings_roundtrip.model_dump()
 
 
+def _uncomment_block(text, field):
+    """Turn a generated ``field: null`` plus its commented-out fields into the live block."""
+    out, inside = [], False
+    for line in text.splitlines():
+        stripped = line.lstrip()
+        indent = line[: len(line) - len(stripped)]
+        if stripped.startswith(f"{field}: null"):
+            out.append(f"{indent}{field}:")
+            inside = True
+            continue
+        if inside and stripped.startswith("# or, instead of null:"):
+            continue
+        if inside and stripped.startswith("#   "):
+            out.append(indent + stripped[2:])
+            continue
+        inside = False
+        out.append(line)
+    return "\n".join(out) + "\n"
+
+
+def test_generated_config_shows_a_null_block_commented_out(tmp_path):
+    """An off-by-default Optional[Model] block is shown, commented out, with its defaults.
+
+    The example configs leave auto_regularization off; a reader should still see
+    how to turn it on, and uncommenting what is shown must produce the live block.
+    """
+    path = tmp_path / "phase_3d.yml"
+    utils.model_to_commented_yaml(
+        settings.ReconstructionSettings(input_channel_names=["BF"], phase=settings.PhaseSettings()), path
+    )
+    text = path.read_text()
+    assert "auto_regularization: null" in text
+    assert "#   rule: otsu_cnr" in text
+    assert "#   search_min: -6.0" in text
+
+    path.write_text(_uncomment_block(text, "auto_regularization"))
+    parsed = utils.yaml_to_model(path, settings.ReconstructionSettings)
+    assert parsed.phase.apply_inverse.auto_regularization == AutoRegularizationSettings()
+
+
 def test_phase_yx_pixel_size_scalar_form():
     """The legacy scalar form parses into an isotropic YXPixelSize."""
     tf = phase.TransferFunctionSettings(yx_pixel_size=0.3)
@@ -173,3 +217,104 @@ def test_negative_yx_pixel_size_rejected():
     """Negative spacings are rejected."""
     with pytest.raises(ValidationError):
         phase.TransferFunctionSettings(yx_pixel_size={"y": -0.3, "x": 0.25})
+
+
+# --- auto_regularization ---
+
+
+def _auto_reg_config(**overrides):
+    config = {
+        "input_channel_names": ["Brightfield"],
+        "reconstruction_dimension": 3,
+        "phase": {
+            "apply_inverse": {
+                "reconstruction_algorithm": "Tikhonov",
+                "auto_regularization": {"rule": "otsu_cnr"},
+            }
+        },
+    }
+    config.update(overrides)
+    return config
+
+
+def test_auto_regularization_defaults_to_absent():
+    """A config that does not ask for a sweep does not get one."""
+    s = settings.PhaseSettings()
+    assert s.apply_inverse.auto_regularization is None
+    assert settings.FluorescenceSettings().apply_inverse.auto_regularization is None
+
+
+def test_auto_regularization_parses():
+    s = settings.ReconstructionSettings(**_auto_reg_config())
+    auto = s.phase.apply_inverse.auto_regularization
+    assert auto.rule == "otsu_cnr"
+    assert auto.search_scale == "relative"
+    assert auto.num_samples == 25
+
+
+def test_auto_regularization_is_not_a_model_kwarg():
+    """It is resolved into regularization_strength before the model is called."""
+    s = settings.ReconstructionSettings(**_auto_reg_config())
+    assert "auto_regularization" not in s.phase.apply_inverse.to_model_kwargs()
+
+    fluo = fluorescence.ApplyInverseSettings(auto_regularization={"rule": "l_curve"})
+    assert "auto_regularization" not in fluo.to_model_kwargs()
+
+
+def test_auto_regularization_requires_tikhonov():
+    """Dropped with a warning, like the 'rl' block, because the plugin always submits one."""
+    with pytest.warns(AutoRegularizationIgnoredWarning, match="not 'Tikhonov'"):
+        s = phase.ApplyInverseSettings(
+            reconstruction_algorithm="TV",
+            auto_regularization={"rule": "otsu_cnr"},
+        )
+    assert s.auto_regularization is None
+
+
+def test_auto_regularization_dropped_for_2d():
+    """The thin models regularize a singular system, which the sweep cannot drive."""
+    with pytest.warns(AutoRegularizationIgnoredWarning, match="reconstruction_dimension is 2"):
+        s = settings.ReconstructionSettings(**_auto_reg_config(reconstruction_dimension=2))
+    assert s.phase.apply_inverse.auto_regularization is None
+
+
+def test_auto_regularization_dropped_alongside_birefringence():
+    """A joint reconstruction shares regularization_strength with the vector system."""
+    config = _auto_reg_config(input_channel_names=[f"State{i}" for i in range(4)])
+    config["birefringence"] = settings.BirefringenceSettings().model_dump()
+    with pytest.warns(AutoRegularizationIgnoredWarning, match="birefringence reconstruction"):
+        s = settings.ReconstructionSettings(**config)
+    assert s.phase.apply_inverse.auto_regularization is None
+
+
+def test_auto_regularization_survives_a_plugin_shaped_submission():
+    """A populated block alongside a 2D reconstruction warns and is dropped, not rejected.
+
+    Older versions of the napari plugin unwrapped every Optional[Model] field and
+    submitted a full auto_regularization dict whether or not the user touched it,
+    and a config copied from the 3D phase example carries one too. Rejecting a
+    block on its presence alone would break those, so these must warn rather than raise.
+    """
+    plugin_submission = _auto_reg_config(reconstruction_dimension=2)
+    plugin_submission["phase"]["apply_inverse"]["auto_regularization"] = AutoRegularizationSettings().model_dump()
+
+    with pytest.warns(AutoRegularizationIgnoredWarning):
+        s = settings.ReconstructionSettings(**plugin_submission)
+
+    assert s.phase.apply_inverse.auto_regularization is None
+    assert s.reconstruction_dimension == 2
+
+
+def test_auto_regularization_yaml_roundtrip(tmp_path):
+    s = settings.ReconstructionSettings(**_auto_reg_config())
+    s.phase.apply_inverse.auto_regularization.rule = "l_curve"
+    s.phase.apply_inverse.auto_regularization.num_samples = 11
+
+    path = tmp_path / "autoreg.yml"
+    utils.model_to_yaml(s, path)
+    parsed = yaml.safe_load(path.read_text())["phase"]["apply_inverse"]["auto_regularization"]
+    assert parsed["rule"] == "l_curve"
+    assert parsed["num_samples"] == 11
+
+    reparsed = utils.yaml_to_model(path, settings.ReconstructionSettings)
+    assert reparsed.phase.apply_inverse.auto_regularization.rule == "l_curve"

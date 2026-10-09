@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import warnings
-from typing import Literal, Union
+from typing import Literal, Optional, Union
 
 from pydantic import (
     BaseModel,
@@ -19,6 +19,10 @@ from pydantic import (
 
 from waveorder._pixel_size import YXPixelSize
 from waveorder.optim._types import OptimizableFloat
+from waveorder.optim.autoreg import (
+    AutoRegularizationIgnoredWarning,
+    AutoRegularizationSettings,
+)
 
 
 def _float_val(v) -> float:
@@ -124,6 +128,9 @@ class OptimizableFourierTransferFunctionSettings(FourierTransferFunctionSettings
 
 
 class FourierApplyInverseSettings(MyBaseModel):
+    # Only the Fourier filters live here, so a phase or birefringence config that
+    # asks for "RL"/"RLGC" is rejected while parsing rather than deep in the
+    # reconstruction. Fluorescence widens this in its own ApplyInverseSettings.
     reconstruction_algorithm: Literal["Tikhonov", "TV"] = Field(
         default="Tikhonov",
         description="'Tikhonov' or 'TV' regularization",
@@ -131,3 +138,47 @@ class FourierApplyInverseSettings(MyBaseModel):
     regularization_strength: NonNegativeFloat = Field(default=1e-3, description="strength of regularization")
     TV_rho_strength: PositiveFloat = Field(default=1e-3, description="ADMM rho parameter for TV regularization")
     TV_iterations: NonNegativeInt = Field(default=1, description="ADMM iterations for TV regularization")
+    apodization_rolloff: float = Field(
+        default=0.0,
+        ge=0.0,
+        le=1.0,
+        description="raised-cosine roll-off fraction applied to the inverse filter at the "
+        "transverse Nyquist edge; suppresses checkerboard artifacts when the optical band "
+        "limit exceeds the sampling Nyquist frequency. Must be between 0 and 1 (0 = off); "
+        "if you see checkerboarding artifacts, start with 0.25",
+    )
+    auto_regularization: Optional[AutoRegularizationSettings] = Field(
+        default=None,
+        description="choose regularization_strength from the data; 3D Tikhonov only",
+    )
+
+    @model_validator(mode="after")
+    def _auto_regularization_matches_algorithm(self):
+        """Auto-regularization only means anything for the Tikhonov filter.
+
+        Dropped rather than rejected, for the same reason as fluorescence's 'rl'
+        block: a block can arrive alongside an algorithm it does not apply to,
+        from a copied config or an older GUI, and the algorithm is the user's
+        actual choice.
+        """
+        if self.auto_regularization is not None and self.reconstruction_algorithm != "Tikhonov":
+            warnings.warn(
+                f"ignoring 'auto_regularization' settings: reconstruction_algorithm is "
+                f"{self.reconstruction_algorithm!r}, not 'Tikhonov'",
+                AutoRegularizationIgnoredWarning,
+            )
+            self.auto_regularization = None
+        return self
+
+    def to_model_kwargs(self) -> dict:
+        """Flatten to the keyword arguments of ``apply_inverse_transfer_function``.
+
+        The config groups related knobs into blocks so a YAML only carries the
+        ones its algorithm reads; the model functions take one flat signature.
+        This is the seam between the two.
+        """
+        kwargs = self.model_dump()
+        # Consumed before the reconstruction, by the caller that resolves it into
+        # regularization_strength; not a parameter of the model functions.
+        kwargs.pop("auto_regularization", None)
+        return kwargs

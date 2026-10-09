@@ -222,3 +222,54 @@ def test_birefringence_and_phase_2d(make_czyx):
     ]
     assert list(result.coords["c"].values) == expected_channels
     assert result.sizes["z"] == 1
+
+
+# --- Apodization rolloff through the config layer ---
+
+
+@pytest.mark.parametrize("recon_dim", [2, 3])
+def test_phase_apodization_rolloff(make_czyx, recon_dim):
+    def settings_with(rolloff):
+        return phase.Settings(
+            transfer_function=phase.TransferFunctionSettings(
+                wavelength_illumination=0.532,
+                yx_pixel_size=6.5 / 20,
+                z_pixel_size=2.0,
+                numerical_aperture_illumination=0.5,
+                numerical_aperture_detection=1.2,
+                index_of_refraction_media=1.3,
+            ),
+            apply_inverse=phase.ApplyInverseSettings(
+                regularization_strength=1e-3,
+                apodization_rolloff=rolloff,
+            ),
+        )
+
+    data = make_czyx()
+    hard = phase.reconstruct(data, recon_dim=recon_dim, settings=settings_with(0.0))
+    apod = phase.reconstruct(data, recon_dim=recon_dim, settings=settings_with(0.25))
+
+    assert np.all(np.isfinite(apod.values))
+    assert not np.allclose(hard.values, apod.values)
+    # apodized output has no content at the transverse Nyquist frequency
+    spectrum = np.abs(np.fft.fft2(apod.values[0, apod.sizes["z"] // 2]))
+    ny = spectrum.shape[-2] // 2
+    hard_spectrum = np.abs(np.fft.fft2(hard.values[0, hard.sizes["z"] // 2]))
+    assert spectrum[ny, :].max() < 1e-3 * hard_spectrum[ny, :].max()
+
+
+def test_fluorescence_apodization_rolloff_parses(make_czyx):
+    settings = fluorescence.Settings(
+        transfer_function=fluorescence.TransferFunctionSettings(
+            yx_pixel_size=6.5 / 20,
+            z_pixel_size=2.0,
+            wavelength_emission=0.507,
+            numerical_aperture_detection=1.2,
+            index_of_refraction_media=1.3,
+        ),
+        apply_inverse=fluorescence.ApplyInverseSettings(apodization_rolloff=0.25),
+    )
+    assert settings.apply_inverse.to_model_kwargs()["apodization_rolloff"] == 0.25
+
+    result = fluorescence.reconstruct(make_czyx(), recon_dim=3, settings=settings)
+    assert np.all(np.isfinite(result.values))

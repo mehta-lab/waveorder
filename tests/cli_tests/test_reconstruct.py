@@ -1,3 +1,4 @@
+import json
 import warnings
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -18,6 +19,7 @@ from waveorder.cli.apply_inverse_transfer_function import (
 )
 from waveorder.cli.main import cli
 from waveorder.io import utils
+from waveorder.optim.autoreg import AutoRegularizationSettings
 
 input_scale = [1, 2, 3, 4, 5]
 # Setup options
@@ -567,6 +569,148 @@ def test_warn_pixel_size_mismatch_isotropic_silent_when_equal():
         warnings.simplefilter("always")
         _warn_pixel_size_mismatch(input_scale, config_pixel_sizes)
     assert all("Input pixel sizes" not in str(w.message) for w in record)
+
+
+def test_auto_regularization_cli(tmp_path):
+    """Smoke test: reconstruct with auto_regularization sweeps then reconstructs."""
+    input_path = tmp_path / "autoreg_input.zarr"
+    output_path = tmp_path / "autoreg_output.zarr"
+    report_path = tmp_path / "autoreg_report.json"
+    plot_path = tmp_path / "autoreg_sweep.png"
+
+    # Create input dataset with a single channel, structured so the metrics have
+    # something to score: on featureless noise every rule pins to a sweep edge.
+    channel_names = ["Brightfield"]
+    dataset = open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=channel_names)
+    position = dataset.create_position("0", "0", "0")
+    data = np.random.default_rng(0).normal(1000, 20, size=(1, 1, 6, 32, 32)).astype(np.float32)
+    data[..., 10:22, 10:22] += 300
+    position.create_image("0", data, transform=[TransformationMeta(type="scale", scale=input_scale)])
+    dataset.close()
+
+    recon_settings = settings.ReconstructionSettings(
+        input_channel_names=channel_names,
+        time_indices=0,
+        reconstruction_dimension=3,
+        phase=settings.PhaseSettings(),
+    )
+    recon_settings.phase.apply_inverse.auto_regularization = AutoRegularizationSettings(
+        num_samples=5,
+        search_min=-4.0,
+        search_max=2.0,
+        report_path=str(report_path),
+        plot_path=str(plot_path),
+    )
+    config_path = tmp_path / "autoreg.yml"
+    utils.model_to_yaml(recon_settings, config_path)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        cli,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    assert output_path.exists()
+
+    # The pick is frozen into regularization_strength and the block is spent, so
+    # rerunning the resolved config reproduces the run without sweeping again.
+    resolved_config = config_path.with_name("autoreg_autoreg.yml")
+    assert resolved_config.exists()
+    resolved = utils.yaml_to_model(resolved_config, settings.ReconstructionSettings)
+    assert resolved.phase.apply_inverse.auto_regularization is None
+    assert resolved.phase.apply_inverse.regularization_strength != (
+        settings.PhaseSettings().apply_inverse.regularization_strength
+    )
+
+    # A report that disagreed with the config would be worse than no report.
+    report = json.loads(report_path.read_text())
+    assert report["regularization_strength"] == pytest.approx(resolved.phase.apply_inverse.regularization_strength)
+    assert report["regularization_strengths"][report["index"]] == pytest.approx(report["regularization_strength"])
+
+    assert plot_path.stat().st_size > 0
+
+
+def test_apply_inv_tf_process_pool_matches_serial(tmp_path):
+    """Pool workers load the transfer function themselves; the result must
+    match the serial path, which loads it in-process."""
+    input_path = tmp_path / "input.zarr"
+    config_path = tmp_path / "phase.yml"
+    tf_path = tmp_path / "tf.zarr"
+
+    with open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=["BF"]) as dataset:
+        position = dataset.create_position("0", "0", "0")
+        position.create_image(
+            "0",
+            np.random.default_rng(0).uniform(1, 100, size=(3, 1, 6, 8, 10)).astype(np.float32),
+            transform=[TransformationMeta(type="scale", scale=[1, 1, 0.25, 0.1, 0.1])],
+        )
+    utils.model_to_yaml(
+        settings.ReconstructionSettings(
+            input_channel_names=["BF"],
+            reconstruction_dimension=3,
+            phase=settings.PhaseSettings(),
+        ),
+        config_path,
+    )
+    CliRunner().invoke(
+        cli,
+        ["compute-tf", "-i", str(input_path / "0" / "0" / "0"), "-c", str(config_path), "-o", str(tf_path)],
+        catch_exceptions=False,
+    )
+
+    results = {}
+    for num_processes in (1, 2):
+        result_path = tmp_path / f"result_{num_processes}.zarr"
+        apply_inverse_transfer_function_cli(
+            [input_path / "0" / "0" / "0"], tf_path, config_path, result_path, num_processes
+        )
+        with open_ome_zarr(result_path / "0" / "0" / "0") as result:
+            results[num_processes] = result["0"][:]
+
+    assert np.any(results[1] != 0)
+    np.testing.assert_array_equal(results[2], results[1])
+
+
+def test_apply_inverse_to_zyx_and_save_reads_input_once(tmp_path):
+    """The NaN/zero check and the model both need the slice's values; a
+    dask-backed input must be read from the store only once."""
+    import dask.array as da
+    import xarray as xr
+
+    from waveorder.cli.utils import apply_inverse_to_zyx_and_save
+
+    reads = []
+
+    def count_reads(block):
+        if block.size:
+            reads.append(block.shape)
+        return block
+
+    data = da.from_array(np.ones((2, 1, 3, 4, 5), dtype=np.float32), chunks=(1, 1, 3, 4, 5))
+    data = data.map_blocks(count_reads, meta=np.array((), dtype=np.float32))
+    input_xa = xr.DataArray(
+        data,
+        dims=("t", "c", "z", "y", "x"),
+        coords={"t": [0.0, 1.0], "c": ["BF"], "z": np.arange(3.0), "y": np.arange(4.0), "x": np.arange(5.0)},
+    )
+    output_path = tmp_path / "out.zarr"
+    with open_ome_zarr(output_path, layout="fov", mode="w", channel_names=["BF"]) as output:
+        output.create_zeros("0", (2, 1, 3, 4, 5), dtype=np.float32)
+
+    apply_inverse_to_zyx_and_save(lambda czyx: czyx, input_xa, output_path, ["BF"], t_idx=1, verbose=False)
+
+    assert len(reads) == 1
+    with open_ome_zarr(output_path) as output:
+        np.testing.assert_array_equal(output["0"][1], 1)
 
 
 def _write_mixed_shape_plate(input_path, shapes):

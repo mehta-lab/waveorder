@@ -6,6 +6,7 @@
    individually for stable code.
 """
 
+from collections.abc import Mapping
 from typing import Literal, Optional
 
 import numpy as np
@@ -341,7 +342,7 @@ def compute_transfer_function(
 
 def apply_inverse_transfer_function(
     czyx_data: xr.DataArray,
-    transfer_function: xr.Dataset,
+    transfer_function: xr.Dataset | Mapping[str, torch.Tensor],
     recon_dim: Literal[2, 3],
     settings_biref: birefringence.Settings,
     settings_phase: phase.Settings,
@@ -353,8 +354,10 @@ def apply_inverse_transfer_function(
     ----------
     czyx_data : xr.DataArray
         Input CZYX polarization data.
-    transfer_function : xr.Dataset
-        Transfer function from ``compute_transfer_function``.
+    transfer_function : xr.Dataset or Mapping[str, torch.Tensor]
+        Transfer function from ``compute_transfer_function``, or a mapping
+        of the same variable names to tensors, which are used without
+        copying.
     recon_dim : {2, 3}
         Reconstruction dimensionality.
     settings_biref : birefringence.Settings
@@ -406,7 +409,7 @@ def apply_inverse_transfer_function(
         ) = isotropic_thin_3d.apply_inverse_transfer_function(
             brightfield_3d,
             _to_singular_system(transfer_function, "vector_singular_system"),
-            **settings_phase.apply_inverse.model_dump(),
+            **settings_phase.apply_inverse.to_model_kwargs(),
         )
 
         retardance = radians_to_nanometers(reconstructed_parameters_2d[0], wavelength)
@@ -430,7 +433,7 @@ def apply_inverse_transfer_function(
             _to_tensor(transfer_function, "real_potential_transfer_function"),
             _to_tensor(transfer_function, "imaginary_potential_transfer_function"),
             z_padding=settings_phase.transfer_function.z_padding,
-            **settings_phase.apply_inverse.model_dump(),
+            **settings_phase.apply_inverse.to_model_kwargs(),
         )
 
         retardance = radians_to_nanometers(reconstructed_parameters_3d[0], wavelength)
@@ -444,7 +447,7 @@ def apply_inverse_transfer_function(
             szyx_data=stokes,
             singular_system=_to_singular_system(transfer_function, "vector_singular_system"),
             intensity_to_stokes_matrix=None,
-            **settings_phase.apply_inverse.model_dump(),
+            **settings_phase.apply_inverse.to_model_kwargs(),
         )
 
         new_ret = (joint_recon_params[1] ** 2 + joint_recon_params[2] ** 2) ** (0.5)
