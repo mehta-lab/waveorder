@@ -85,9 +85,10 @@ fluorescence:
 ```
 
 `RL` (Richardson-Lucy) and `RLGC` (RL with automatic stopping) are available
-for 3D fluorescence deconvolution; they take an `rl:` sub-block for iteration
-settings. Start with `Tikhonov`, then trial RL/RLGC if the user wants sharper
-deconvolution.
+**only for 3D fluorescence reconstructions** (`reconstruction_dimension: 3`);
+they are not valid for 2D fluorescence or phase. They take an `rl:` sub-block
+for iteration settings. Start with `Tikhonov`, then trial RL/RLGC if the user
+wants sharper deconvolution.
 
 ## Which knobs to sweep
 

@@ -281,7 +281,9 @@ Write configs into `1-draft-recon/` from the Stage 2 answers (templates:
   expected. Regularization is increased as the *last* step of Stage 4, after
   the forward model parameters are settled.
 - **Fluorescence:** start with `Tikhonov`. Mention that `RL` and `RLGC`
-  (Richardson-Lucy) exist for 3D fluorescence once the basics work.
+  (Richardson-Lucy) exist once the basics work; they apply **only to 3D
+  fluorescence reconstructions** (`reconstruction_dimension: 3`), not to 2D
+  fluorescence or to phase.
 
 ### Run and decide
 
