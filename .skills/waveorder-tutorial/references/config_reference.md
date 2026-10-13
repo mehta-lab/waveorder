@@ -76,19 +76,29 @@ fluorescence:
     tilt_angle_zenith: 0.0
     tilt_angle_azimuth: 0.0
     wavelength_emission: 0.532           # µm (emission, not excitation)
-    confocal_pinhole_diameter: null      # null = widefield; else diameter
+    confocal_pinhole_diameter: null      # 3D only; null = widefield; µm, demagnified
   apply_inverse:
-    reconstruction_algorithm: Tikhonov   # Tikhonov, TV, RL, RLGC
+    reconstruction_algorithm: Tikhonov   # Tikhonov, TV; 3D only: RL, RLGC
     regularization_strength: 0.001
     TV_rho_strength: 0.001
     TV_iterations: 1
 ```
 
-`RL` (Richardson-Lucy) and `RLGC` (RL with automatic stopping) are available
-**only for 3D fluorescence reconstructions** (`reconstruction_dimension: 3`);
-they are not valid for 2D fluorescence or phase. They take an `rl:` sub-block
-for iteration settings. Start with `Tikhonov`, then trial RL/RLGC if the user
-wants sharper deconvolution.
+### Fluorescence options valid only in 3D
+
+Two fluorescence options require `reconstruction_dimension: 3`:
+
+- **`confocal_pinhole_diameter`**: `null` computes a widefield transfer
+  function. A number computes a confocal transfer function, with the
+  detection PSF weighted by the pinhole aperture; give the pinhole diameter
+  projected into sample space (demagnified), in micrometers. A 2D
+  fluorescence reconstruction raises `NotImplementedError` if a pinhole is
+  set: reconstruct confocal data in 3D, or set `null` to fall back to the
+  widefield model.
+- **`reconstruction_algorithm: RL` or `RLGC`** (Richardson-Lucy; RLGC stops
+  automatically): not valid for 2D fluorescence or phase. They take an `rl:`
+  sub-block for iteration settings. Start with `Tikhonov`, then trial
+  RL/RLGC if the user wants sharper deconvolution.
 
 ## Which knobs to sweep
 

@@ -104,7 +104,12 @@ and the index of refraction of the immersion media.
 
 All of these parameters are reasonably forgiving, and the tuning stages below
 will catch meaningful mismatches. For fluorescence, also note the modality:
-widefield, confocal (record the pinhole diameter), iSIM, or light sheet.
+widefield, confocal, iSIM, or light sheet. For confocal, record the pinhole
+diameter projected into sample space (demagnified), in micrometers; waveorder
+models the pinhole only in 3D fluorescence reconstructions, so reconstruct
+confocal data in 3D or fall back to the widefield model. iSIM and light sheet
+are not modeled explicitly; the widefield model with the effective NA is a
+workable approximation.
 
 ### Reconstruction dimension: 2D or 3D?
 

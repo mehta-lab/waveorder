@@ -213,9 +213,14 @@ These parameters are reasonably forgiving; best guesses are fine to start,
 and Stages 4 and 5 will catch meaningful mismatches.
 
 **Ask (fluorescence only):** "Widefield, confocal, iSIM, or light sheet?"
-- Widefield: `confocal_pinhole_diameter: null`.
-- Confocal: set `confocal_pinhole_diameter`.
-- iSIM / light sheet: not modeled explicitly; the widefield model with the
+- **Widefield:** `confocal_pinhole_diameter: null`.
+- **Confocal:** set `confocal_pinhole_diameter` to the pinhole diameter
+  projected into sample space (demagnified), in µm. Confocal modeling is
+  implemented **only for 3D fluorescence reconstructions**
+  (`reconstruction_dimension: 3`); a 2D reconstruction with a pinhole set
+  will fail. Reconstruct confocal data in 3D, or set `null` and accept the
+  widefield approximation.
+- **iSIM / light sheet:** not modeled explicitly; the widefield model with the
   effective NA is a workable approximation. Say so honestly.
 
 ### 2f. Reconstruction dimension: 2D or 3D?
