@@ -45,15 +45,16 @@ layers, which is exactly what's needed to judge focus, density sign, noise, and
 ringing. A flat PNG can't support that and would defeat the point.
 
 `wo view` starts napari's event loop and **blocks the terminal until the window
-is closed**. So when *you* (the assistant) launch it, run it in the background
-so the session isn't stuck:
+is closed**. So when *you* (the assistant) launch it, start it with your
+environment's long-running process facility: it must not block further commands
+and must not inherit interactive stdin. If only a POSIX shell is available:
 
 ```bash
-wo view ./data.zarr ./recon.zarr &      # background; napari opens for the user
+wo view ./data.zarr ./recon.zarr </dev/null &      # napari opens for the user
 ```
 
-(With the Bash tool, use `run_in_background: true`.) Then tell the user the
-napari window is open, describe what to look for, and **ask them what they
+Confirm the process does not exit immediately, then tell the user the napari
+window is open, describe what to look for, and **ask them what they
 observe**. Do not try to see the result yourself. Reconstructions come back
 squeezed so 2D results (single Z) display correctly, and grid view is enabled
 so input and output sit side by side.

@@ -27,7 +27,7 @@ Otherwise ask for the config path and the input position path.
 wo compute-tf -i <input.zarr>/0/0/0 -c <config.yml> -o ./otf.zarr
 
 # 2. Open it in napari (backgrounded so it doesn't block)
-wo view ./otf.zarr &
+wo view ./otf.zarr </dev/null &
 ```
 
 Notes:
@@ -41,9 +41,11 @@ Notes:
   shows that (e.g. the absorption and phase transfer functions for 2D phase)
   rather than the raw singular vectors.
 - `wo view` starts napari's event loop and **blocks the terminal until closed**.
-  When you run it, launch it in the background (`&`, or the Bash tool's
-  `run_in_background: true`), tell the user the window is open, and let them
-  inspect it. Do not render a static PNG.
+  Start it with your environment's long-running process facility; it must not
+  block further commands or inherit interactive stdin (in a plain POSIX shell:
+  `wo view ./otf.zarr </dev/null &`). Confirm the process does not exit
+  immediately, tell the user the window is open, and let them inspect it. Do
+  not render a static PNG.
 - If `wo` isn't on PATH, prefix both calls with `uv run` from the repo.
 
 That's it: report the `./otf.zarr` path and that napari is open.
