@@ -16,6 +16,11 @@ Examples
 
     uv run to_omezarr.py arr.npy ./data.zarr \
         --channel-name GFP --axes CZYX --yx-pixel-size 0.1 --z-pixel-size 0.25
+
+    # Anisotropic lateral pixels: give y and x separately
+    uv run to_omezarr.py stack.tif ./data.zarr \
+        --channel-name Brightfield --axes ZYX \
+        --y-pixel-size 0.1 --x-pixel-size 0.12 --z-pixel-size 0.25
 """
 
 import argparse
@@ -63,9 +68,14 @@ def main() -> None:
     p.add_argument("output", type=Path, help="output .zarr path")
     p.add_argument("--axes", default="ZYX", help="axis order of the input (subset of TCZYX)")
     p.add_argument("--channel-name", action="append", default=None, help="channel name (repeat per channel)")
-    p.add_argument("--yx-pixel-size", type=float, default=0.1, help="lateral pixel size (µm)")
+    p.add_argument("--yx-pixel-size", type=float, default=0.1, help="isotropic lateral pixel size (µm)")
+    p.add_argument("--y-pixel-size", type=float, default=None, help="y pixel size (µm); overrides --yx-pixel-size")
+    p.add_argument("--x-pixel-size", type=float, default=None, help="x pixel size (µm); overrides --yx-pixel-size")
     p.add_argument("--z-pixel-size", type=float, default=1.0, help="axial pixel size (µm)")
     args = p.parse_args()
+
+    y_pixel_size = args.y_pixel_size if args.y_pixel_size is not None else args.yx_pixel_size
+    x_pixel_size = args.x_pixel_size if args.x_pixel_size is not None else args.yx_pixel_size
 
     arr = _to_tczyx(_load(args.input), args.axes)
     n_channels = arr.shape[1]
@@ -81,7 +91,7 @@ def main() -> None:
         transform=[
             TransformationMeta(
                 type="scale",
-                scale=[1, 1, args.z_pixel_size, args.yx_pixel_size, args.yx_pixel_size],
+                scale=[1, 1, args.z_pixel_size, y_pixel_size, x_pixel_size],
             )
         ],
     )
