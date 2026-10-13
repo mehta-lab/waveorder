@@ -1,3 +1,7 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["requests"]
+# ///
 """Download the QPI-from-defocus sample dataset for the tutorial.
 
 Fetches ``recOrder_session.zip`` from zenodo (the dataset used by the
@@ -11,7 +15,7 @@ config lives at ``references/example_qpi_2d.yml``.
 
 Examples
 --------
-    python get_example_data.py
+    uv run get_example_data.py
 """
 
 import argparse

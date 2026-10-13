@@ -19,7 +19,7 @@ no conversion is needed. Route by input format:
 path directly and skip conversion:
 
 ```bash
-python scripts/get_example_data.py            # ~10 MB
+uv run scripts/get_example_data.py            # ~10 MB
 ```
 
 The stack is a single `BF` brightfield channel with 11 defocus slices
@@ -56,7 +56,7 @@ Ask the user to **paste the path to their TIFF** (a single file, or a folder
 of tiles). Then convert with `scripts/to_omezarr.py`:
 
 ```bash
-python scripts/to_omezarr.py <TIFF_PATH> ./data.zarr \
+uv run scripts/to_omezarr.py <TIFF_PATH> ./data.zarr \
     --channel-name Brightfield --axes ZYX \
     --yx-pixel-size 0.1 --z-pixel-size 0.25
 ```
@@ -80,7 +80,7 @@ For a plain zarr array, point the converter at the array directory and pass
 `.npy` first (`np.save("arr.npy", arr)`), then:
 
 ```bash
-python scripts/to_omezarr.py arr.npy ./data.zarr \
+uv run scripts/to_omezarr.py arr.npy ./data.zarr \
     --channel-name GFP --axes CZYX \
     --yx-pixel-size 0.1 --z-pixel-size 0.25
 ```
@@ -93,7 +93,7 @@ interest (tutorial Stage 2b). Have the user find the unit in napari
 from the status bar. Then:
 
 ```bash
-python scripts/crop_roi.py -i ./data.zarr -o ./roi.zarr \
+uv run scripts/crop_roi.py -i ./data.zarr -o ./roi.zarr \
     --y 800:1312 --x 900:1412        # optionally --z 5:25, --t 0:1
 ```
 

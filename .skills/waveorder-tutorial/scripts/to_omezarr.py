@@ -1,3 +1,7 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["iohub", "numpy", "tifffile", "zarr"]
+# ///
 """Convert a TIFF / .npy / plain-zarr array into a viewable OME-Zarr.
 
 Writes an HCS OME-Zarr (``.../0/0/0``) with a TCZYX array, named channels, and a
@@ -6,11 +10,11 @@ pixel-size scale transform, so it can be read by ``wo rec`` and shown by
 
 Examples
 --------
-    python to_omezarr.py stack.tif ./data.zarr \
+    uv run to_omezarr.py stack.tif ./data.zarr \
         --channel-name Brightfield --axes ZYX \
         --yx-pixel-size 0.1 --z-pixel-size 0.25
 
-    python to_omezarr.py arr.npy ./data.zarr \
+    uv run to_omezarr.py arr.npy ./data.zarr \
         --channel-name GFP --axes CZYX --yx-pixel-size 0.1 --z-pixel-size 0.25
 """
 

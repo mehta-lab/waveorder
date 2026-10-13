@@ -1,3 +1,7 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["iohub", "napari[pyqt6]", "numpy", "pyyaml"]
+# ///
 """Sweep one or two config parameters, reconstruct each value, and view results.
 
 Writes one config per value (or per value pair) into an output folder, runs
@@ -8,14 +12,14 @@ napari layer with the two parameters on two sliders.
 
 Examples
 --------
-    python sweep.py -i ./data.zarr -c ./config.yml \
+    uv run sweep.py -i ./data.zarr -c ./config.yml \
         --param regularization_strength --values 1e-4 1e-3 1e-2 1e-1
 
-    python sweep.py -i ./data.zarr -c ./config.yml \
+    uv run sweep.py -i ./data.zarr -c ./config.yml \
         --param tilt_angle_azimuth --values 0 1.57 3.14 4.71 \
         --param2 tilt_angle_zenith --values2 0.05 0.1 0.2
 
-    python sweep.py -i ./data.zarr -c ./config.yml \
+    uv run sweep.py -i ./data.zarr -c ./config.yml \
         --param reconstruction_algorithm --values Tikhonov TV --no-view
 """
 

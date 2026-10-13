@@ -108,7 +108,7 @@ python -c "import napari; print(napari.__version__)"
   `uv pip install "napari[pyqt6]"`.
 - Confirm `wo --help` lists `reconstruct`, `view`, `simulate` before moving on.
 - **No data of their own?** Offer the QPI-from-defocus sample:
-  `python scripts/get_example_data.py` downloads a small OME-Zarr (a single
+  `uv run scripts/get_example_data.py` downloads a small OME-Zarr (a single
   `BF` brightfield defocus stack). Its Stage 2 answers are pre-filled in
   `references/example_qpi_2d.yml` (channel `BF`, labelfree, yx 0.325 µm,
   z 2.0 µm, n 1.0, wavelength 0.532 µm, NA det 0.55, NA ill 0.4, 2D), so with
@@ -331,7 +331,7 @@ Based on their feedback, run manually chosen sweeps with `scripts/sweep.py`.
 Aim for **about 5 reconstructions per sweep**, opened side by side:
 
 ```bash
-python scripts/sweep.py -i 0-conversion/data.zarr -c best.yml \
+uv run scripts/sweep.py -i 0-conversion/data.zarr -c best.yml \
     --param numerical_aperture_illumination --values 0.3 0.35 0.4 0.45 0.5 \
     --outdir 2-manual-sweep
 ```
@@ -356,7 +356,7 @@ Symptom-to-sweep map (forward model first, regularization last):
   show the user the 2D sweep on two napari sliders:
 
   ```bash
-  python scripts/sweep.py -i 0-conversion/data.zarr -c best.yml \
+  uv run scripts/sweep.py -i 0-conversion/data.zarr -c best.yml \
       --param tilt_angle_azimuth --values 0 1.57 3.14 4.71 \
       --param2 tilt_angle_zenith --values2 0.05 0.1 0.2 \
       --outdir 2-manual-sweep

@@ -1,3 +1,7 @@
+# /// script
+# requires-python = ">=3.12"
+# dependencies = ["iohub"]
+# ///
 """Crop an OME-Zarr position to a small ROI for fast iteration.
 
 Reads one position of an HCS OME-Zarr, slices the TCZYX array with the given
@@ -6,9 +10,9 @@ channel names and pixel scale. Omitted axes are kept whole.
 
 Examples
 --------
-    python crop_roi.py -i ./data.zarr -o ./roi.zarr --y 800:1312 --x 900:1412
+    uv run crop_roi.py -i ./data.zarr -o ./roi.zarr --y 800:1312 --x 900:1412
 
-    python crop_roi.py -i ./data.zarr -o ./roi.zarr \
+    uv run crop_roi.py -i ./data.zarr -o ./roi.zarr \
         --t 0:1 --z 5:25 --y 0:512 --x 0:512 --position 0/0/0
 """
 
