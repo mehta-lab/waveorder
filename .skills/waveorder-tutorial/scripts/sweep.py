@@ -58,13 +58,13 @@ def _set_nested(cfg: dict, param: str, value) -> bool:
 
 
 def _coerce(value: str):
-    """Best-effort str to number, leaving non-numeric strings as-is."""
+    """Parse a CLI value: numbers become numeric, the rest is YAML (null, bools, strings)."""
     for cast in (int, float):
         try:
             return cast(value)
         except ValueError:
             continue
-    return value
+    return yaml.safe_load(value)
 
 
 def _tag(value: str) -> str:
