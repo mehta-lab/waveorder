@@ -68,10 +68,10 @@ uv run scripts/to_omezarr.py <TIFF_PATH> ./data.zarr \
 - Pixel sizes are in micrometers; they set the scale transform used by napari
   and by the reconstruction's optical model.
 
-An OME-TIFF usually already encodes axes and scale; the script reads them when
-present, and the flags override. For a **folder of tiles**, stitch or pick one
-tile first; `wo tile-stitch` (`wo ts`) handles multi-position mosaics once
-each tile is an OME-Zarr position.
+The script does not read OME-XML metadata, so the axes and pixel sizes must be
+given explicitly (the pixel-size flags are required). For a **folder of
+tiles**, stitch or pick one tile first; `wo tile-stitch` (`wo ts`) handles
+multi-position mosaics once each tile is an OME-Zarr position.
 
 ## Case 4: in-memory / `.npy` array or plain (non-OME) zarr
 
