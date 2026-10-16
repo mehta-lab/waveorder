@@ -540,7 +540,7 @@ class waveorder_microscopy:
             # generate defocus kernel based on Pupil function and z_defocus
             self.Hz_det_2D = (
                 generate_propagation_kernel(
-                    torch.tensor(self.frr),
+                    torch.as_tensor(self.frr),
                     torch.tensor(self.Pupil_support),
                     self.lambda_illu,
                     torch.tensor(self.z_defocus),
@@ -580,7 +580,7 @@ class waveorder_microscopy:
                 z = ifftshift((np.r_[0 : self.N_defocus_3D] - self.N_defocus_3D // 2) * self.psz)
             self.Hz_det_3D = (
                 generate_propagation_kernel(
-                    torch.tensor(self.frr),
+                    torch.as_tensor(self.frr),
                     torch.tensor(self.Pupil_support),
                     self.lambda_illu,
                     torch.tensor(z),
@@ -590,7 +590,7 @@ class waveorder_microscopy:
             )
             self.G_fun_z_3D = (
                 generate_greens_function_z(
-                    torch.tensor(self.frr),
+                    torch.as_tensor(self.frr),
                     torch.tensor(self.Pupil_support),
                     self.lambda_illu,
                     torch.tensor(z),
@@ -772,7 +772,7 @@ class waveorder_microscopy:
         if self.N_pattern == 1:
             for i in range(self.N_defocus):
                 Hu_temp, Hp_temp = compute_weak_object_transfer_function_2d(
-                    torch.tensor(self.Source),
+                    torch.as_tensor(self.Source),
                     torch.tensor(self.Pupil_obj * self.Hz_det_2D[:, :, i]),
                 )
                 self.Hu[:, :, i] = Hu_temp.numpy()
@@ -781,7 +781,7 @@ class waveorder_microscopy:
             for i, j in itertools.product(range(self.N_defocus), range(self.N_pattern)):
                 idx = i * self.N_pattern + j
                 Hu_temp, Hp_temp = compute_weak_object_transfer_function_2d(
-                    torch.tensor(self.Source[j]),
+                    torch.as_tensor(self.Source[j]),
                     torch.tensor(self.Pupil_obj * self.Hz_det_2D[idx, :, :]),
                 )
                 self.Hu[:, :, idx] = Hu_temp.numpy()
@@ -903,7 +903,7 @@ class waveorder_microscopy:
         # generate dyadic Green's tensor
         G_fun_z = (
             generate_greens_function_z(
-                torch.tensor(self.frr),
+                torch.as_tensor(self.frr),
                 torch.tensor(self.Pupil_support),
                 self.lambda_illu,
                 torch.tensor(self.z_defocus),
@@ -1241,7 +1241,7 @@ class waveorder_microscopy:
             z = ifftshift((np.r_[0:N_defocus] - N_defocus // 2) * psz)
         G_fun_z = (
             generate_greens_function_z(
-                torch.tensor(self.frr),
+                torch.as_tensor(self.frr),
                 torch.tensor(self.Pupil_support),
                 self.lambda_illu,
                 torch.tensor(z),

@@ -97,3 +97,29 @@ def test_reconstruct():
     assert phase.shape == yx_shape
     assert np.all(np.isfinite(absorption.numpy()))
     assert np.all(np.isfinite(phase.numpy()))
+
+
+def test_reconstruct_apodization_rolloff_smoke():
+    """Inverse-filter apodization runs and zeroes the output Nyquist content."""
+    yx_shape = (32, 32)
+    z_position_list = [-1.0, 0.0, 1.0]
+    zyx_data = torch.rand((len(z_position_list),) + yx_shape)
+
+    kwargs = dict(
+        yx_pixel_size=0.325,
+        z_position_list=z_position_list,
+        wavelength_illumination=0.45,
+        index_of_refraction_media=1.0,
+        numerical_aperture_illumination=0.4,
+        numerical_aperture_detection=0.55,
+    )
+    _, phase_hard = isotropic_thin_3d.reconstruct(zyx_data, **kwargs)
+    _, phase_apod = isotropic_thin_3d.reconstruct(zyx_data, apodization_rolloff=0.25, **kwargs)
+
+    assert phase_apod.shape == yx_shape
+    assert np.all(np.isfinite(phase_apod.numpy()))
+
+    # apodized output has (numerically) no content at the Nyquist frequency
+    nyquist_row_apod = np.abs(np.fft.fft2(phase_apod.numpy())[16, :])
+    nyquist_row_hard = np.abs(np.fft.fft2(phase_hard.numpy())[16, :])
+    assert nyquist_row_apod.max() < 1e-3 * nyquist_row_hard.max()

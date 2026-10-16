@@ -9,6 +9,7 @@ from torch import Tensor
 from waveorder import optics, sampling, util
 from waveorder._pixel_size import YXPixelSize
 from waveorder.filter import apply_filter_bank
+from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 
 
 def generate_test_phantom(
@@ -284,6 +285,7 @@ def apply_inverse_transfer_function(
     rl_bp_beta: float | None = None,
     rl_bp_order: int = 8,
     rl_bp_resolution_mode: Literal["fwhm", "fwhm_over_sqrt2"] = "fwhm",
+    apodization_rolloff: float = 0.0,
 ) -> Tensor:
     """Reconstruct fluorescence density from zyx_data and singular system.
 
@@ -318,6 +320,14 @@ def apply_inverse_transfer_function(
         Butterworth order for the RL back projector (3D only), by default 8
     rl_bp_resolution_mode : str, optional
         Cutoff-frequency rule for the RL back projector (3D only), by default "fwhm"
+    apodization_rolloff : float, optional
+        Raised-cosine roll-off fraction applied to the inverse filter at
+        the transverse Nyquist edge. Suppresses Nyquist-rate checkerboard
+        artifacts in the reconstruction when the optical band limit
+        exceeds the sampling Nyquist frequency. By default 0.0
+        (no apodization, previous behavior). Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25.
 
     Returns
     -------
@@ -335,7 +345,7 @@ def apply_inverse_transfer_function(
 
     if reconstruction_algorithm == "Tikhonov":
         U, S, Vh = singular_system
-        S_reg = S / (S**2 + regularization_strength)
+        S_reg = tikhonov_regularized_inverse_filter(S, regularization_strength, apodization_rolloff=apodization_rolloff)
         sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
 
         results = []
@@ -363,6 +373,7 @@ def reconstruct(
     regularization_strength: float = 1e-3,
     TV_rho_strength: float = 1e-3,
     TV_iterations: int = 10,
+    apodization_rolloff: float = 0.0,
 ) -> Tensor:
     """Reconstruct 2D fluorescence density from a defocus stack.
 
@@ -388,6 +399,13 @@ def reconstruct(
         TV-specific regularization parameter, by default 1e-3
     TV_iterations : int, optional
         TV-specific number of iterations, by default 10
+    apodization_rolloff : float, optional
+        Raised-cosine roll-off fraction applied to the inverse filter at
+        the transverse Nyquist edge, by default 0.0 (no apodization).
+        Suppresses Nyquist-rate checkerboard artifacts. Must be
+        between 0 and 1; if you see checkerboarding artifacts, start
+        with 0.25. See
+        ``apply_inverse_transfer_function``.
 
     Returns
     -------
@@ -410,4 +428,5 @@ def reconstruct(
         regularization_strength=regularization_strength,
         TV_rho_strength=TV_rho_strength,
         TV_iterations=TV_iterations,
+        apodization_rolloff=apodization_rolloff,
     )

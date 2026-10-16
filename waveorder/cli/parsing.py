@@ -39,7 +39,7 @@ def input_position_dirpaths() -> Callable:
             type=tuple,
             required=True,
             callback=_validate_and_process_paths,
-            help="List of paths to input positions, each with the same TCZYX shape. Supports wildcards e.g. 'input.zarr/*/*/*'.",
+            help="List of paths to input positions. Supports wildcards e.g. 'input.zarr/*/*/*'.",
         )(f)
 
     return decorator
@@ -118,6 +118,22 @@ def write_config_scale_to_output() -> Callable:
             is_flag=True,
             default=False,
             help="Write the reconstruction config's pixel sizes to the output zarr instead of copying from the input.",
+        )(f)
+
+    return decorator
+
+
+def resume_option() -> Callable:
+    def decorator(f: Callable) -> Callable:
+        return click.option(
+            "--resume",
+            is_flag=True,
+            default=False,
+            help=(
+                "Skip timepoints that an interrupted previous run into the same output already finished. "
+                "Changed reconstruction settings or a recomputed transfer function are detected and "
+                "recomputed; changed input data is not. Needs an OME-Zarr v0.5 output."
+            ),
         )(f)
 
     return decorator

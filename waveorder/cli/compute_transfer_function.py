@@ -191,8 +191,10 @@ def compute_transfer_function_cli(
             tf_ds = fluorescence.compute_transfer_function(czyx_data, recon_dim, settings.fluorescence)
             _write_fluorescence_tf(output_dataset, tf_ds, recon_dim)
 
-    # Write settings to metadata
-    output_dataset.zattrs["settings"] = settings.model_dump()
+    # Write settings to metadata. `time_indices` and `input_channel_names`
+    # select which data is reconstructed, not how the transfer function is
+    # computed
+    output_dataset.zattrs["settings"] = settings.model_dump(exclude={"time_indices", "input_channel_names"})
 
     echo_headline(f"Closing {output_dirpath}\n")
     output_dataset.close()
