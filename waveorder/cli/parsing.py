@@ -8,18 +8,13 @@ INPUT_PATHS_HELP = "List of paths to input positions. Supports wildcards e.g. 'i
 
 def _validate_and_process_paths(value: list[Path]) -> list[Path]:
     # Deferred imports keep command help independent of the scientific stack.
-    from iohub.ngff import Plate, open_ome_zarr
+    from iohub.cli import expand_position_dirpaths
     from natsort import natsorted
 
-    input_paths = [Path(path) for path in natsorted(value) if Path(path).is_dir()]
-    expanded_paths = []
-    for path in input_paths:
-        with open_ome_zarr(path, mode="r") as dataset:
-            if isinstance(dataset, Plate):
-                expanded_paths.extend(path / position_key for position_key, _ in dataset.positions())
-            else:
-                expanded_paths.append(path)
-    return expanded_paths
+    # Expands plates and quoted globs, skips file matches (e.g. zarr.json), and
+    # raises BadParameter when nothing is left. Sorting first keeps the input
+    # order, which sets the output keys for single-position stores.
+    return expand_position_dirpaths([str(path) for path in natsorted(value)])
 
 
 InputPositionDirpaths = Annotated[

@@ -86,3 +86,21 @@ def test_input_option_accepts_repeated_and_greedy_paths(tmp_path, monkeypatch, f
 
     assert result.exit_code == 0, result.output
     assert received["input_position_dirpaths"] == input_paths
+
+
+def test_input_option_rejects_paths_that_match_nothing(tmp_path):
+    config_path = tmp_path / "config.yml"
+    config_path.touch()
+
+    command = get_command(app).commands["reconstruct"]
+    received = {}
+    command.callback = lambda **kwargs: received.update(kwargs)
+
+    result = CliRunner().invoke(
+        command,
+        ["-i", str(tmp_path / "missing.zarr"), "-c", str(config_path), "-o", str(tmp_path / "output.zarr")],
+    )
+
+    assert result.exit_code == 2, result.output
+    assert "No positions matched" in result.output
+    assert received == {}
