@@ -2,6 +2,8 @@ import inspect
 import logging
 import os
 import warnings
+from importlib.metadata import version
+from typing import Annotated
 
 import typer
 from iohub.cli import OptionEatAll
@@ -68,6 +70,23 @@ app = typer.Typer(
     context_settings={"help_option_names": ["-h", "--help"]},
     pretty_exceptions_enable=False,
 )
+
+
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"waveorder {version('waveorder')}")
+        raise typer.Exit()
+
+
+@app.callback()
+def _main(
+    show_version: Annotated[
+        bool | None,
+        typer.Option("--version", callback=_version_callback, is_eager=True, help="Show the version and exit."),
+    ] = None,
+) -> None:
+    pass
+
 
 _COMMANDS = {
     "reconstruct": (_reconstruct_cli, "rec"),
