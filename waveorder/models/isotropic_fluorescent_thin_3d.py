@@ -9,6 +9,7 @@ from torch import Tensor
 from waveorder import optics, sampling, util
 from waveorder._pixel_size import YXPixelSize
 from waveorder.filter import apply_filter_bank
+from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 
 
 def generate_test_phantom(
@@ -344,16 +345,8 @@ def apply_inverse_transfer_function(
 
     if reconstruction_algorithm == "Tikhonov":
         U, S, Vh = singular_system
-        S_reg = S / (S**2 + regularization_strength)
+        S_reg = tikhonov_regularized_inverse_filter(S, regularization_strength, apodization_rolloff=apodization_rolloff)
         sfyx_inverse_filter = torch.einsum("sj...,j...,jf...->fs...", U, S_reg, Vh)
-
-        if apodization_rolloff > 0:
-            window = sampling.raised_cosine_window(
-                sfyx_inverse_filter.shape[-2], apodization_rolloff, device=sfyx_inverse_filter.device
-            )[:, None] * sampling.raised_cosine_window(
-                sfyx_inverse_filter.shape[-1], apodization_rolloff, device=sfyx_inverse_filter.device
-            )
-            sfyx_inverse_filter = sfyx_inverse_filter * window
 
         results = []
         for b in range(zyx_data.shape[0]):

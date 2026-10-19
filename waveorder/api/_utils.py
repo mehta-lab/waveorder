@@ -1,5 +1,6 @@
 """Shared helpers for the API layer."""
 
+from collections.abc import Mapping
 from typing import Literal
 
 import numpy as np
@@ -32,15 +33,25 @@ def _named_dataarray(array, name):
     return xr.DataArray(array, dims=dims)
 
 
-def _to_tensor(ds: xr.Dataset, key: str) -> torch.Tensor:
-    """Extract a variable from an xr.Dataset as a torch.Tensor."""
-    return torch.from_numpy(ds[key].values.copy())
+def _to_tensor(ds: xr.Dataset | Mapping[str, torch.Tensor], key: str) -> torch.Tensor:
+    """Extract a variable from an xr.Dataset as a torch.Tensor.
+
+    ``ds`` may instead map names to tensors that are already converted;
+    those are returned as-is. Neither form is copied: an xr.Dataset variable
+    is wrapped with ``torch.from_numpy``, sharing its memory. That is safe
+    because the apply-inverse models never modify a transfer function in
+    place, and it avoids copying the transfer function on every call.
+    """
+    value = ds[key]
+    if isinstance(value, torch.Tensor):
+        return value
+    return torch.from_numpy(value.values)
 
 
 def _to_singular_system(
-    ds: xr.Dataset, prefix: str = "singular_system"
+    ds: xr.Dataset | Mapping[str, torch.Tensor], prefix: str = "singular_system"
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    """Extract (U, S, Vh) singular system tuple from an xr.Dataset."""
+    """Extract (U, S, Vh) singular system tuple from an xr.Dataset or tensor mapping."""
     return (
         _to_tensor(ds, f"{prefix}_U"),
         _to_tensor(ds, f"{prefix}_S"),

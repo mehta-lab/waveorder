@@ -8,6 +8,7 @@ from torch.nn.functional import avg_pool3d
 from waveorder import optics, sampling, stokes, util
 from waveorder._pixel_size import YXPixelSize
 from waveorder.filter import apply_filter_bank
+from waveorder.reconstruct import tikhonov_regularized_inverse_filter
 from waveorder.visuals.napari_visuals import add_transfer_function_to_viewer
 
 
@@ -287,18 +288,8 @@ def apply_inverse_transfer_function(
 ):
     # Key computation
     U, S, Vh = singular_system
-    S_reg = S / (S**2 + regularization_strength)
+    S_reg = tikhonov_regularized_inverse_filter(S, regularization_strength, apodization_rolloff=apodization_rolloff)
     sfzyx_inverse_filter = torch.einsum("sjzyx,jzyx,jfzyx->sfzyx", U, S_reg, Vh)
-
-    if apodization_rolloff > 0:
-        # Raised-cosine roll-off of the inverse filter at the transverse
-        # Nyquist edge; suppresses Nyquist-rate checkerboard artifacts.
-        window = sampling.raised_cosine_window(
-            sfzyx_inverse_filter.shape[-2], apodization_rolloff, device=sfzyx_inverse_filter.device
-        )[:, None] * sampling.raised_cosine_window(
-            sfzyx_inverse_filter.shape[-1], apodization_rolloff, device=sfzyx_inverse_filter.device
-        )
-        sfzyx_inverse_filter = sfzyx_inverse_filter * window
 
     fzyx_recon = apply_filter_bank(sfzyx_inverse_filter, szyx_data)
 

@@ -1,5 +1,6 @@
 import math
 import warnings
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal
 
@@ -11,6 +12,7 @@ from waveorder.cli.parsing import (
     InputPositionDirpaths,
     OutputDirpath,
     ProcessesOption,
+    ResumeOption,
     TransferFunctionDirpath,
     WriteConfigScaleToOutput,
 )
@@ -22,28 +24,27 @@ def _check_background_consistency(background_shape, data_shape, input_channel_na
         raise ValueError(f"Background shape {background_shape} does not match data shape {data_cyx_shape}")
 
 
-def _load_transfer_function_dataset(
+def _load_transfer_function(
     transfer_function_dataset,
     recon_biref: bool,
     recon_phase: bool,
     recon_fluo: bool,
     recon_dim: Literal[2, 3],
-):
-    """Load transfer function arrays from a zarr store into an xr.Dataset.
+) -> dict:
+    """Load transfer function arrays from a zarr store as torch tensors.
 
-    Returns an xr.Dataset with the same variable names as produced by
-    compute_transfer_function, so it can be passed directly to
-    apply_inverse functions.
+    Returns a dict keyed by the variable names produced by
+    compute_transfer_function. The apply_inverse API functions accept it in
+    place of compute_transfer_function's xr.Dataset and use the tensors
+    without copying them.
     """
 
     # Deferred imports for fast CLI help
     import numpy as np
-    import xarray as xr
-
-    from waveorder.api._utils import _named_dataarray
+    import torch
 
     def _load(key, idx):
-        return _named_dataarray(np.array(transfer_function_dataset[key][idx]), key)
+        return torch.from_numpy(np.array(transfer_function_dataset[key][idx]))
 
     variables = {}
 
@@ -79,7 +80,7 @@ def _load_transfer_function_dataset(
         elif recon_dim == 3:
             variables["optical_transfer_function"] = _load("optical_transfer_function", (0, 0))
 
-    return xr.Dataset(variables)
+    return variables
 
 
 class PixelSizeMismatchWarning(UserWarning):
@@ -165,9 +166,9 @@ def get_reconstruction_output_metadata(
     plate_metadata = {}
     input_version = "0.4"
     try:
-        input_plate = open_ome_zarr(position_path.parent.parent.parent, mode="r")
-        input_version = input_plate.version
-        plate_metadata = dict(input_plate.zattrs)
+        with open_ome_zarr(position_path.parent.parent.parent, mode="r") as input_plate:
+            input_version = input_plate.version
+            plate_metadata = dict(input_plate.zattrs)
         # In v0.5 (zarr v3), OME metadata is nested inside an "ome" key
         if "ome" in plate_metadata:
             plate_metadata.pop("ome")
@@ -176,16 +177,15 @@ def get_reconstruction_output_metadata(
     except (RuntimeError, FileNotFoundError):
         warnings.warn("Position is not part of a plate...no plate metadata will be copied.")
 
-    # Load the first position to infer dataset information
-    input_dataset = open_ome_zarr(str(position_path), mode="r")
-    T, _, Z, Y, X = input_dataset.data.shape
+    with open_ome_zarr(str(position_path), mode="r") as input_dataset:
+        T, _, Z, Y, X = input_dataset.data.shape
+        scale = input_dataset.scale
 
     settings = utils.yaml_to_model(config_path, ReconstructionSettings)
 
     channel_names = settings.output_channel_names
     output_z_shape = 1 if settings.output_z_is_singleton else Z
 
-    scale = input_dataset.scale
     config_pixel_sizes = _get_config_pixel_sizes(settings)
     if config_pixel_sizes is not None:
         if write_config_scale_to_output:
@@ -205,6 +205,17 @@ def get_reconstruction_output_metadata(
     }
 
 
+def get_reconstruction_provenance(settings) -> dict:
+    """Provenance to record on each output position, as ``create_empty_plate(extra_metadata=...)``.
+
+    One top-level key per reconstruction (``settings.provenance_key``, e.g.
+    ``waveorder-Phase3D``), so a reconstruction appending channels to a plate
+    overwrites only its own entry. Recorded once, at plate creation, like the
+    ``biahub-<step>`` keys of the other processing steps.
+    """
+    return {settings.provenance_key: settings.model_dump()}
+
+
 def apply_inverse_transfer_function_single_position(
     input_position_dirpath: Path,
     transfer_function_dirpath: Path,
@@ -213,15 +224,24 @@ def apply_inverse_transfer_function_single_position(
     num_processes,
     output_channel_names: list[str],
     verbose: bool = True,
+    resume: bool = False,
 ) -> None:
+    """Reconstruct one position, one timepoint per task, through iohub.
+
+    Timepoints and channels are addressed by index: channels are resolved by
+    name, in config order, against the input and output stores, so several
+    configs can write different channel groups into one plate. With
+    ``resume=True``, timepoints a previous interrupted run already finished
+    are skipped, unless the settings or the transfer function changed since.
+
+    Writes no metadata: the output plate's creator records the settings (see
+    `get_reconstruction_provenance`).
+    """
 
     # Deferred imports for fast CLI help
-    from concurrent.futures import ProcessPoolExecutor, as_completed
-    from functools import partial
-
     import numpy as np
-    import torch.multiprocessing as mp
     from iohub import open_ome_zarr
+    from iohub.ngff.utils import process_single_position
 
     from waveorder.api import (
         birefringence,
@@ -232,7 +252,8 @@ def apply_inverse_transfer_function_single_position(
     from waveorder.cli.printing import echo_headline, echo_settings
     from waveorder.cli.settings import ReconstructionSettings
     from waveorder.cli.utils import (
-        apply_inverse_to_zyx_and_save,
+        apply_inverse_czyx,
+        reconstruction_fingerprint,
         resolve_time_indices,
     )
     from waveorder.io import utils
@@ -243,9 +264,9 @@ def apply_inverse_transfer_function_single_position(
     # Load datasets
     transfer_function_dataset = open_ome_zarr(transfer_function_dirpath)
     input_dataset = open_ome_zarr(input_position_dirpath)
-    output_dataset = open_ome_zarr(output_position_dirpath, mode="r+")
 
-    # Get input data as xarray
+    # Input coordinates, for labeling each volume iohub hands the model (the
+    # data itself is read by iohub, once per timepoint)
     input_xa = input_dataset.to_xarray()
 
     # Load config file
@@ -273,13 +294,30 @@ def apply_inverse_transfer_function_single_position(
     recon_fluo = settings.fluorescence is not None
     recon_dim = settings.reconstruction_dimension
 
-    # Load transfer function as xr.Dataset
-    tf_dataset = _load_transfer_function_dataset(
+    # Load the transfer function once, as torch tensors, and pass it with
+    # every timepoint's task. iohub's process pool pickles each task's
+    # arguments, but importing torch registers pickling reductions (from
+    # torch.multiprocessing) that move a CPU tensor into shared memory and send
+    # a handle to it instead of its data: every worker maps this one copy, and
+    # nothing large goes through the worker pipes. This relies on them being
+    # torch tensors -- numpy arrays (or an xr.Dataset of them) pickle by value,
+    # which re-sent the whole transfer function (~2-3 GB in 3D) for every
+    # timepoint.
+    transfer_function = _load_transfer_function(
         transfer_function_dataset,
         recon_biref,
         recon_phase,
         recon_fluo,
         recon_dim,
+    )
+
+    # Fingerprint what determines the output, so resuming after a settings
+    # change or a recomputed transfer function recomputes instead of reusing
+    # stale timepoints. Read before closing the transfer function dataset.
+    resume_token = reconstruction_fingerprint(
+        settings,
+        dict(transfer_function_dataset.zattrs.get("settings", {})),
+        transfer_function,
     )
 
     # Close transfer function dataset early (no longer needed)
@@ -306,7 +344,7 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = birefringence.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
+            "transfer_function": transfer_function,
             "recon_dim": recon_dim,
             "settings": settings.birefringence,
             "cyx_no_sample_data": cyx_no_sample_data,
@@ -319,7 +357,7 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = phase.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
+            "transfer_function": transfer_function,
             "recon_dim": recon_dim,
             "settings": settings.phase,
         }
@@ -332,7 +370,7 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = birefringence_and_phase.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
+            "transfer_function": transfer_function,
             "recon_dim": recon_dim,
             "settings_biref": settings.birefringence,
             "settings_phase": settings.phase,
@@ -346,83 +384,162 @@ def apply_inverse_transfer_function_single_position(
 
         apply_inverse_model_function = fluorescence.apply_inverse_transfer_function
         apply_inverse_args = {
-            "transfer_function": tf_dataset,
+            "transfer_function": transfer_function,
             "recon_dim": recon_dim,
             "settings": settings.fluorescence,
             "fluor_channel_name": settings.input_channel_names[0],
         }
 
-    # Make the partial function for apply inverse
-    partial_apply_inverse_to_zyx_and_save = partial(
-        apply_inverse_to_zyx_and_save,
-        apply_inverse_model_function,
-        input_xa,
-        output_position_dirpath,
-        settings.input_channel_names,
-        verbose=verbose,
+    # Label each CZYX volume with the input's own coordinates, taken once here
+    czyx_coords = {
+        "c": ("c", settings.input_channel_names),
+        **{dim: (dim, input_xa.coords[dim].values, dict(input_xa.coords[dim].attrs)) for dim in ("z", "y", "x")},
+    }
+
+    # Channels by name, in config order, as one group, so the model receives
+    # all input channels in one CZYX and writes the channels it owns -- not
+    # necessarily the plate's first ones
+    input_channel_indices = [[input_dataset.channel_names.index(name) for name in settings.input_channel_names]]
+    with open_ome_zarr(output_position_dirpath, mode="r") as output_dataset:
+        output_channel_indices = [[output_dataset.channel_names.index(name) for name in output_channel_names]]
+        if resume and output_dataset.version == "0.4":
+            # iohub also warns, but the CLI silences UserWarnings
+            typer.echo(
+                "resume was requested, but progress can only be tracked in an OME-Zarr v0.5 output; "
+                "recomputing every timepoint."
+            )
+    input_dataset.close()
+
+    # The output plate has the input's full T, so input and output timepoints
+    # share indices, whatever the input's time coordinates
+    process_single_position(
+        apply_inverse_czyx,
+        input_position_path=input_position_dirpath,
+        output_position_path=output_position_dirpath,
+        input_channel_indices=input_channel_indices,
+        output_channel_indices=output_channel_indices,
+        input_time_indices=time_indices,
+        output_time_indices=time_indices,
+        num_workers=num_processes,
+        resume=resume,
+        resume_token=resume_token,
+        model_function=apply_inverse_model_function,
+        czyx_coords=czyx_coords,
         **apply_inverse_args,
     )
-
-    # Multiprocessing logic
-    if num_processes > 1:
-        if verbose:
-            typer.echo(f"\nStarting multiprocess pool with {num_processes} processes")
-        # NOTE: spawn (not fork) — tensorstore runs internal C++ threads
-        # that are not fork-safe, so a forked worker can deadlock or
-        # segfault before our code runs. See google/tensorstore#61.
-        # NOTE: ProcessPoolExecutor (not mp.Pool) so silent worker death
-        # (e.g. cgroup OOM-kill) surfaces as BrokenProcessPool instead
-        # of hanging indefinitely on pool.starmap.
-        context = mp.get_context("spawn")
-        with ProcessPoolExecutor(max_workers=num_processes, mp_context=context) as p:
-            futures = [p.submit(partial_apply_inverse_to_zyx_and_save, t_idx) for t_idx in time_indices]
-            for fut in as_completed(futures):
-                fut.result()
-    else:
-        for t_idx in time_indices:
-            partial_apply_inverse_to_zyx_and_save(t_idx)
-
-    # Save metadata at position level, keyed by output channel names
-    waveorder_meta = dict(output_dataset.zattrs.get("waveorder", {}))
-    channel_key = ",".join(output_channel_names)
-    waveorder_meta[channel_key] = settings.model_dump()
-    output_dataset.zattrs["waveorder"] = waveorder_meta
 
     if verbose:
         echo_headline(f"Closing {output_position_dirpath}\n")
 
-    output_dataset.close()
-    input_dataset.close()
+
+def _check_uniform_zyx_shapes(input_position_dirpaths: list[Path]) -> None:
+    """Raise if the positions do not all share one ZYX shape.
+
+    A transfer function is only valid for the ZYX shape it was computed from,
+    so a single transfer function cannot cover positions of mixed shapes.
+    """
+    # Deferred import for fast CLI help
+    from waveorder.cli.utils import read_zyx_shapes
+
+    positions_by_zyx_shape: dict[tuple[int, ...], list[Path]] = {}
+    for zyx_shape, position_dirpath in zip(
+        read_zyx_shapes(input_position_dirpaths), input_position_dirpaths, strict=True
+    ):
+        positions_by_zyx_shape.setdefault(zyx_shape, []).append(position_dirpath)
+
+    if len(positions_by_zyx_shape) == 1:
+        return
+
+    max_listed = 3
+    detail_lines = []
+    for zyx_shape, position_dirpaths in positions_by_zyx_shape.items():
+        listed = ", ".join(str(dirpath) for dirpath in position_dirpaths[:max_listed])
+        if len(position_dirpaths) > max_listed:
+            listed += f", and {len(position_dirpaths) - max_listed} more"
+        detail_lines.append(f"  ZYX {zyx_shape}: {listed}")
+    detail = "\n".join(detail_lines)
+
+    typer.echo(
+        "Error: apply-inv-tf applies one transfer function to every position, so all "
+        "positions must have the same ZYX shape, but the input positions have "
+        f"{len(positions_by_zyx_shape)} different shapes:\n{detail}\n"
+        "Use `waveorder reconstruct`, which computes a transfer function for "
+        "each distinct shape, or run apply-inv-tf once per shape.",
+        err=True,
+    )
+    raise typer.Exit(code=1)
+
+
+def _resolve_transfer_function_dirpaths(
+    transfer_function_dirpaths: str | Path | Mapping[tuple[int, ...], Path],
+    input_position_dirpaths: list[Path],
+) -> list[Path]:
+    """Return one transfer function dirpath per input position.
+
+    A single dirpath is reused for every position, which is only valid when the
+    positions share a ZYX shape. A mapping selects the transfer function by
+    each position's ZYX shape.
+    """
+    # Deferred import for fast CLI help
+    from waveorder.cli.utils import read_zyx_shapes
+
+    if isinstance(transfer_function_dirpaths, (str, Path)):
+        _check_uniform_zyx_shapes(input_position_dirpaths)
+        return [Path(transfer_function_dirpaths)] * len(input_position_dirpaths)
+
+    zyx_shapes = read_zyx_shapes(input_position_dirpaths)
+    missing_shapes = set(zyx_shapes) - transfer_function_dirpaths.keys()
+    if missing_shapes:
+        raise ValueError(
+            "No transfer function was provided for ZYX shape(s): " + ", ".join(map(str, sorted(missing_shapes)))
+        )
+    return [Path(transfer_function_dirpaths[zyx_shape]) for zyx_shape in zyx_shapes]
 
 
 def apply_inverse_transfer_function_cli(
     input_position_dirpaths: list[Path],
-    transfer_function_dirpath: Path,
+    transfer_function_dirpath: str | Path | Mapping[tuple[int, ...], Path],
     config_filepath: Path,
     output_dirpath: Path,
     num_processes,
     write_config_scale_to_output: bool = False,
+    resume: bool = False,
 ) -> None:
+    """Reconstruct every position in ``input_position_dirpaths``.
+
+    ``transfer_function_dirpath`` is either a single transfer function, which
+    requires every position to share one ZYX shape, or a mapping from ZYX
+    shapes to transfer functions.
+    """
     # Deferred imports for fast CLI help
     import torch
     from iohub import open_ome_zarr
     from iohub.ngff.utils import create_empty_plate
 
+    from waveorder.cli.settings import ReconstructionSettings
     from waveorder.cli.utils import (
         generate_valid_position_key,
         is_single_position_store,
     )
+    from waveorder.io import utils
 
-    # Prepare output store
-    output_metadata = get_reconstruction_output_metadata(
-        input_position_dirpaths[0], config_filepath, write_config_scale_to_output
+    per_position_transfer_function_dirpaths = _resolve_transfer_function_dirpaths(
+        transfer_function_dirpath, input_position_dirpaths
     )
+
+    # Positions may differ in shape and scale, so each gets its own metadata.
+    output_metadatas = [
+        get_reconstruction_output_metadata(position_dirpath, config_filepath, write_config_scale_to_output)
+        for position_dirpath in input_position_dirpaths
+    ]
 
     # `plate_metadata` is not a `create_empty_plate` parameter; write it to
     # the plate's zattrs after creation. `output_metadata["version"]` is read
     # from the input plate by `get_reconstruction_output_metadata`, so the
     # output preserves the input's OME-Zarr version.
-    plate_metadata = output_metadata.pop("plate_metadata", {})
+    plate_metadata = output_metadatas[0].pop("plate_metadata", {})
+    for output_metadata in output_metadatas[1:]:
+        output_metadata.pop("plate_metadata", None)
 
     # Generate position keys - use valid HCS keys for single-position stores
     position_keys = []
@@ -434,11 +551,17 @@ def apply_inverse_transfer_function_cli(
             position_key = input_path.parts[-3:]
         position_keys.append(position_key)
 
-    create_empty_plate(
-        store_path=output_dirpath,
-        position_keys=position_keys,
-        **output_metadata,
-    )
+    # Every position gets the same provenance, recorded before any timepoint runs.
+    provenance = get_reconstruction_provenance(utils.yaml_to_model(config_filepath, ReconstructionSettings))
+
+    # `create_empty_plate` allocates one shape and scale per call.
+    for position_key, output_metadata in zip(position_keys, output_metadatas, strict=True):
+        create_empty_plate(
+            store_path=output_dirpath,
+            position_keys=[position_key],
+            **output_metadata,
+            extra_metadata=provenance,
+        )
 
     if plate_metadata:
         with open_ome_zarr(str(output_dirpath), mode="r+") as output_plate:
@@ -450,22 +573,21 @@ def apply_inverse_transfer_function_cli(
         torch.set_num_interop_threads(1)
 
     # Loop through positions
-    for i, input_position_dirpath in enumerate(input_position_dirpaths):
-        # Use the same position key generation logic
-        if is_single_position_store(input_position_dirpath):
-            position_key = generate_valid_position_key(i)
-        else:
-            position_key = input_position_dirpath.parts[-3:]
-
-        output_position_path = output_dirpath / Path(*position_key)
-
+    for input_position_dirpath, tf_dirpath, position_key, output_metadata in zip(
+        input_position_dirpaths,
+        per_position_transfer_function_dirpaths,
+        position_keys,
+        output_metadatas,
+        strict=True,
+    ):
         apply_inverse_transfer_function_single_position(
             input_position_dirpath,
-            transfer_function_dirpath,
+            tf_dirpath,
             config_filepath,
-            output_position_path,
+            output_dirpath / Path(*position_key),
             num_processes,
             output_metadata["channel_names"],
+            resume=resume,
         )
 
 
@@ -476,11 +598,16 @@ def _apply_inverse_transfer_function_cli(
     output_dirpath: OutputDirpath,
     num_processes: ProcessesOption = 1,
     write_config_scale_to_output: WriteConfigScaleToOutput = False,
+    resume: ResumeOption = False,
 ) -> None:
     """Apply an inverse transfer function to a dataset.
 
     Applies a transfer function to all positions in the list
-    `input-position-dirpaths`, so all positions must have the same TCZYX shape.
+    `input-position-dirpaths`. A transfer function is only valid for the ZYX
+    shape it was computed from, so this command errors out unless all
+    positions have the same ZYX shape. To reconstruct positions of mixed
+    shapes, use `waveorder reconstruct`, which computes a transfer function
+    for each distinct shape.
 
     \b
     Example:
@@ -493,4 +620,5 @@ def _apply_inverse_transfer_function_cli(
         output_dirpath,
         num_processes,
         write_config_scale_to_output,
+        resume,
     )

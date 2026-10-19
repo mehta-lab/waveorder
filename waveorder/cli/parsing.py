@@ -3,9 +3,7 @@ from typing import Annotated
 
 import typer
 
-INPUT_PATHS_HELP = (
-    "List of paths to input positions, each with the same TCZYX shape. Supports wildcards e.g. 'input.zarr/*/*/*'."
-)
+INPUT_PATHS_HELP = "List of paths to input positions. Supports wildcards e.g. 'input.zarr/*/*/*'."
 
 
 def _validate_and_process_paths(value: list[Path]) -> list[Path]:
@@ -86,5 +84,16 @@ ProcessesOption = Annotated[
         "-j",
         callback=check_processes_option,
         help="Number of processes to run in parallel.",
+    ),
+]
+ResumeOption = Annotated[
+    bool,
+    typer.Option(
+        "--resume",
+        help=(
+            "Skip timepoints that an interrupted previous run into the same output already finished. "
+            "Changed reconstruction settings or a recomputed transfer function are detected and "
+            "recomputed; changed input data is not. Needs an OME-Zarr v0.5 output."
+        ),
     ),
 ]

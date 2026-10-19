@@ -53,7 +53,7 @@ def test_stokes_recon(device):
                 s012 = stokes.stokes012_after_ar(*ar)
                 ar1 = stokes.estimate_ar_from_stokes012(*s012)
                 for i in range(3):
-                    tt.assert_close(torch.tensor(ar[i]), ar1[i])
+                    tt.assert_close(torch.as_tensor(ar[i]), ar1[i])
 
                 # Test attenuating depolarizing retarder (adr) functions
                 for depolarization in torch.arange(1e-3, 1, 0.1, device=device):
@@ -67,7 +67,7 @@ def test_stokes_recon(device):
                     adr1 = stokes.estimate_adr_from_stokes(*s0123)
 
                     for i in range(4):
-                        tt.assert_close(torch.tensor(adr[i]), adr1[i])
+                        tt.assert_close(torch.as_tensor(adr[i]), adr1[i])
 
 
 def test_stokes_after_adr_usage():
@@ -128,6 +128,21 @@ def test_copying(device):
     M = stokes.mueller_from_stokes(a, b, c, d)
     M[0, 0, 0] = -1  # modify the output
     assert a[0] == 1
+
+
+def test_gradients_reach_copied_outputs():
+    """s0 and transmittance are copies of an input, so they must not detach."""
+    ones = torch.ones((2, 2))
+
+    transmittance = torch.ones((2, 2), requires_grad=True)
+    s0, _, _, _ = stokes.stokes_after_adr(ones, ones, transmittance, ones)
+    s0.sum().backward()
+    assert transmittance.grad is not None
+
+    s0_input = torch.ones((2, 2), requires_grad=True)
+    _, _, estimated, _ = stokes.estimate_adr_from_stokes(s0_input, ones, ones, ones)
+    estimated.sum().backward()
+    assert s0_input.grad is not None
 
 
 @pytest.mark.parametrize(*_DEVICE)

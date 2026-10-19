@@ -1,3 +1,4 @@
+import warnings
 from typing import Any, List, Literal, Optional, Union
 
 from pydantic import Field, NonNegativeInt, PositiveInt, model_validator
@@ -15,6 +16,7 @@ from waveorder.api.fluorescence import (  # noqa: F401
     Settings as FluorescenceSettings,
 )
 from waveorder.api.phase import Settings as PhaseSettings  # noqa: F401
+from waveorder.optim.autoreg import AutoRegularizationIgnoredWarning
 from waveorder.optim.losses import MidbandPowerLossSettings, _LossBaseModel
 
 _LOSS_TYPE_MAP = {
@@ -104,6 +106,49 @@ class ReconstructionSettings(MyBaseModel):
                 f"reconstruction_dimension 3; it is not implemented for thin (2D) fluorescence."
             )
 
+        # Auto-regularization sweeps a single Tikhonov filter H*/(|H|^2 + lambda),
+        # so it is only defined where the reconstruction is that filter. Both
+        # limits are settled here, while parsing, rather than after the transfer
+        # function has been computed.
+        #
+        # Dropped rather than rejected, like the 'rl' block and unlike the
+        # reconstruction_algorithm checks above. The difference is what the guard
+        # keys on: a block's mere presence is weak evidence of intent, since a
+        # config copied from the 3D phase example, or submitted by an older GUI
+        # that populated every Optional[Model] field, carries one regardless. A
+        # leaf field like reconstruction_algorithm is the user's actual choice
+        # and can raise.
+        for name in ("phase", "fluorescence"):
+            block = getattr(self, name)
+            if block is None or block.apply_inverse.auto_regularization is None:
+                continue
+
+            reason = None
+            if self.reconstruction_dimension == 2:
+                reason = (
+                    "reconstruction_dimension is 2; thin reconstructions regularize a "
+                    "singular system rather than a single transfer function"
+                )
+            elif self.birefringence is not None:
+                # A joint birefringence + phase reconstruction feeds one
+                # regularization_strength to both the phase filter and the vector
+                # singular system, so a value chosen from the phase filter alone
+                # would silently retune the birefringence too.
+                reason = (
+                    "a birefringence reconstruction is also configured, and it shares "
+                    "regularization_strength between the phase filter and the vector "
+                    "singular system"
+                )
+
+            if reason is not None:
+                warnings.warn(
+                    f"ignoring {name}.apply_inverse.auto_regularization: {reason}. "
+                    f"regularization_strength = "
+                    f"{block.apply_inverse.regularization_strength} will be used as given.",
+                    AutoRegularizationIgnoredWarning,
+                )
+                block.apply_inverse.auto_regularization = None
+
         return self
 
     @property
@@ -117,6 +162,26 @@ class ReconstructionSettings(MyBaseModel):
             recon_dim=self.reconstruction_dimension,
             fluor_channel_name=self.input_channel_names[0],
         )
+
+    @property
+    def provenance_key(self) -> str:
+        """Top-level zattrs key under which a reconstruction records these settings.
+
+        One key per reconstruction, named for what it reconstructs, so several
+        reconstructions written into one plate each keep their own entry, beside
+        the ``biahub-<step>`` keys of the other processing steps:
+        ``waveorder-Phase3D``, ``waveorder-GFP_Density3D``,
+        ``waveorder-Birefringence`` (Retardance, Orientation, Transmittance and
+        Depolarization), and ``waveorder-Birefringence,Phase3D`` (which also
+        covers the joint-deconvolution channels).
+        """
+        parts = ["Birefringence"] if self.birefringence is not None else []
+        parts += [
+            name
+            for name in self.output_channel_names
+            if name in ("Phase2D", "Phase3D") or name.endswith(("_Density2D", "_Density3D"))
+        ]
+        return "waveorder-" + ",".join(parts)
 
     @property
     def output_z_is_singleton(self) -> bool:

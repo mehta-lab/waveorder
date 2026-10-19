@@ -258,7 +258,7 @@ def test_phase_apodization_rolloff(make_czyx, recon_dim):
     assert spectrum[ny, :].max() < 1e-3 * hard_spectrum[ny, :].max()
 
 
-def test_fluorescence_apodization_rolloff_parses(make_czyx):
+def test_fluorescence_apodization_rolloff(make_czyx):
     settings = fluorescence.Settings(
         transfer_function=fluorescence.TransferFunctionSettings(
             yx_pixel_size=6.5 / 20,
@@ -269,7 +269,12 @@ def test_fluorescence_apodization_rolloff_parses(make_czyx):
         ),
         apply_inverse=fluorescence.ApplyInverseSettings(apodization_rolloff=0.25),
     )
-    assert settings.apply_inverse.to_model_kwargs()["apodization_rolloff"] == 0.25
+    data = make_czyx()
+    apod = fluorescence.reconstruct(data, recon_dim=3, settings=settings)
+    settings.apply_inverse.apodization_rolloff = 0.0
+    hard = fluorescence.reconstruct(data, recon_dim=3, settings=settings)
 
-    result = fluorescence.reconstruct(make_czyx(), recon_dim=3, settings=settings)
-    assert np.all(np.isfinite(result.values))
+    spectrum = np.abs(np.fft.fft2(apod.values[0, apod.sizes["z"] // 2]))
+    hard_spectrum = np.abs(np.fft.fft2(hard.values[0, hard.sizes["z"] // 2]))
+    ny = spectrum.shape[-2] // 2
+    assert spectrum[ny, :].max() < 1e-3 * hard_spectrum[ny, :].max()

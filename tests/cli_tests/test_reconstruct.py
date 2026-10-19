@@ -1,3 +1,4 @@
+import json
 import warnings
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -18,6 +19,7 @@ from waveorder.cli.apply_inverse_transfer_function import (
 )
 from waveorder.cli.main import app
 from waveorder.io import utils
+from waveorder.optim.autoreg import AutoRegularizationSettings
 
 input_scale = [1, 2, 3, 4, 5]
 # Setup options
@@ -188,11 +190,11 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
         assert dataset.channel_names[-1] == "GFP_Density3D"
         assert dataset.channel_names[-2] == "Depolarization"
 
-        # Check that both reconstructions have separate metadata entries (#206)
+        # Each reconstruction keeps its own top-level provenance key (#206)
         position = dataset["0/0/0"]
-        waveorder_meta = dict(position.zattrs["waveorder"])
-        assert "Retardance,Orientation,Transmittance,Depolarization" in waveorder_meta
-        assert "GFP_Density3D" in waveorder_meta
+        assert position.zattrs["waveorder-Birefringence"] == biref_settings.model_dump()
+        assert position.zattrs["waveorder-GFP_Density3D"] == fluor_settings.model_dump()
+        assert "waveorder" not in position.zattrs
 
 
 def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
@@ -350,6 +352,7 @@ def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
             Path(tmp_config_yml),
             Path(result_path),
             1,
+            False,
             False,
         )
         assert result_inv.exit_code == 0
@@ -568,3 +571,460 @@ def test_warn_pixel_size_mismatch_isotropic_silent_when_equal():
         warnings.simplefilter("always")
         _warn_pixel_size_mismatch(input_scale, config_pixel_sizes)
     assert all("Input pixel sizes" not in str(w.message) for w in record)
+
+
+def test_auto_regularization_cli(tmp_path):
+    """Smoke test: reconstruct with auto_regularization sweeps then reconstructs."""
+    input_path = tmp_path / "autoreg_input.zarr"
+    output_path = tmp_path / "autoreg_output.zarr"
+    report_path = tmp_path / "autoreg_report.json"
+    plot_path = tmp_path / "autoreg_sweep.png"
+
+    # Create input dataset with a single channel, structured so the metrics have
+    # something to score: on featureless noise every rule pins to a sweep edge.
+    channel_names = ["Brightfield"]
+    dataset = open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=channel_names)
+    position = dataset.create_position("0", "0", "0")
+    data = np.random.default_rng(0).normal(1000, 20, size=(1, 1, 6, 32, 32)).astype(np.float32)
+    data[..., 10:22, 10:22] += 300
+    position.create_image("0", data, transform=[TransformationMeta(type="scale", scale=input_scale)])
+    dataset.close()
+
+    recon_settings = settings.ReconstructionSettings(
+        input_channel_names=channel_names,
+        time_indices=0,
+        reconstruction_dimension=3,
+        phase=settings.PhaseSettings(),
+    )
+    recon_settings.phase.apply_inverse.auto_regularization = AutoRegularizationSettings(
+        num_samples=5,
+        search_min=-4.0,
+        search_max=2.0,
+        report_path=str(report_path),
+        plot_path=str(plot_path),
+    )
+    config_path = tmp_path / "autoreg.yml"
+    utils.model_to_yaml(recon_settings, config_path)
+
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "reconstruct",
+            "-i",
+            str(input_path / "0" / "0" / "0"),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    assert output_path.exists()
+
+    # The pick is frozen into regularization_strength and the block is spent, so
+    # rerunning the resolved config reproduces the run without sweeping again.
+    resolved_config = config_path.with_name("autoreg_autoreg.yml")
+    assert resolved_config.exists()
+    resolved = utils.yaml_to_model(resolved_config, settings.ReconstructionSettings)
+    assert resolved.phase.apply_inverse.auto_regularization is None
+    assert resolved.phase.apply_inverse.regularization_strength != (
+        settings.PhaseSettings().apply_inverse.regularization_strength
+    )
+
+    # A report that disagreed with the config would be worse than no report.
+    report = json.loads(report_path.read_text())
+    assert report["regularization_strength"] == pytest.approx(resolved.phase.apply_inverse.regularization_strength)
+    assert report["regularization_strengths"][report["index"]] == pytest.approx(report["regularization_strength"])
+
+    assert plot_path.stat().st_size > 0
+
+
+def _phase_inputs(
+    tmp_path,
+    data=None,
+    transform=None,
+    version="0.5",
+    name="input",
+    recon_settings=None,
+    tf_settings=None,
+):
+    """Write a one-position BF plate, a 3D phase config, and its transfer function.
+
+    ``tf_settings`` computes the transfer function from a different config than
+    the one returned, to fake a recomputed transfer function.
+    """
+    input_path = tmp_path / f"{name}.zarr"
+    if data is None:
+        data = np.random.default_rng(0).uniform(1, 100, size=(3, 1, 6, 8, 10)).astype(np.float32)
+    if transform is None:
+        transform = [TransformationMeta(type="scale", scale=[1, 1, 0.25, 0.1, 0.1])]
+    with open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=["BF"], version=version) as dataset:
+        dataset.create_position("0", "0", "0").create_image("0", data, transform=transform)
+
+    def write_config(path, phase_settings):
+        utils.model_to_yaml(
+            settings.ReconstructionSettings(
+                input_channel_names=["BF"], reconstruction_dimension=3, phase=phase_settings
+            ),
+            path,
+        )
+        return path
+
+    config_path = write_config(tmp_path / f"{name}.yml", recon_settings or settings.PhaseSettings())
+    tf_config_path = config_path if tf_settings is None else write_config(tmp_path / f"{name}_tf.yml", tf_settings)
+    tf_path = tmp_path / f"{name}_tf.zarr"
+    CliRunner().invoke(
+        app,
+        ["compute-tf", "-i", str(input_path / "0" / "0" / "0"), "-c", str(tf_config_path), "-o", str(tf_path)],
+        catch_exceptions=False,
+    )
+    return input_path / "0" / "0" / "0", config_path, tf_path
+
+
+def _reconstruct(position_path, tf_path, config_path, result_path, num_processes=1, resume=False):
+    apply_inverse_transfer_function_cli(
+        [position_path], tf_path, config_path, result_path, num_processes, resume=resume
+    )
+    with open_ome_zarr(result_path / "0" / "0" / "0") as result:
+        return result["0"][:]
+
+
+def test_apply_inv_tf_process_pool_matches_serial(tmp_path):
+    """Pool workers receive the transfer function as shared tensors; the result
+    must match the serial path."""
+    position_path, config_path, tf_path = _phase_inputs(tmp_path)
+
+    serial = _reconstruct(position_path, tf_path, config_path, tmp_path / "serial.zarr", num_processes=1)
+    pooled = _reconstruct(position_path, tf_path, config_path, tmp_path / "pooled.zarr", num_processes=2)
+
+    assert np.any(serial != 0)
+    np.testing.assert_array_equal(pooled, serial)
+
+
+def test_apply_inverse_czyx_labels_the_volume_for_the_model():
+    import xarray as xr
+
+    from waveorder.cli.utils import apply_inverse_czyx
+
+    czyx = np.arange(2 * 3 * 4 * 5, dtype=np.float32).reshape(2, 3, 4, 5)
+    coords = {
+        "c": ("c", ["a", "b"]),
+        "z": ("z", np.arange(3) * 0.5, {"units": "micrometer"}),
+        "y": ("y", np.arange(4) * 0.1, {}),
+        "x": ("x", np.arange(5) * 0.1, {}),
+    }
+    seen = {}
+
+    def model_function(czyx_data, scale):
+        seen["type"] = type(czyx_data)
+        seen["c"] = list(czyx_data.coords["c"].values)
+        seen["z_units"] = czyx_data.coords["z"].attrs["units"]
+        return czyx_data * scale
+
+    result = apply_inverse_czyx(czyx, model_function, coords, scale=2.0)
+
+    assert isinstance(result, np.ndarray)
+    np.testing.assert_array_equal(result, czyx * 2)
+    assert seen == {"type": xr.DataArray, "c": ["a", "b"], "z_units": "micrometer"}
+
+
+def test_apply_inv_tf_writes_its_channels_by_name(tmp_path):
+    """Output channels are looked up by name, so a config writing into a plate
+    whose first channel belongs to another config leaves that channel alone."""
+    from iohub.ngff.utils import create_empty_plate
+
+    from waveorder.cli.apply_inverse_transfer_function import apply_inverse_transfer_function_single_position
+
+    position_path, config_path, tf_path = _phase_inputs(tmp_path)
+    reference = _reconstruct(position_path, tf_path, config_path, tmp_path / "reference.zarr")
+
+    shared_path = tmp_path / "shared.zarr"
+    create_empty_plate(
+        store_path=shared_path,
+        position_keys=[("0", "0", "0")],
+        channel_names=["Other", "Phase3D"],
+        shape=(3, 2, 6, 8, 10),
+        scale=(1, 1, 0.25, 0.1, 0.1),
+    )
+    apply_inverse_transfer_function_single_position(
+        position_path, tf_path, config_path, shared_path / "0" / "0" / "0", 1, ["Phase3D"]
+    )
+
+    with open_ome_zarr(shared_path / "0" / "0" / "0") as shared:
+        np.testing.assert_array_equal(shared["0"][:, 0], 0)
+        np.testing.assert_array_equal(shared["0"][:, 1], reference[:, 0])
+
+
+def test_apply_inv_tf_addresses_timepoints_by_index(tmp_path):
+    """A time_indices subset lands on the same indices in the output, even when
+    the input's time axis carries a translation (which the old coordinate
+    round-trip turned into a shifted index)."""
+    data = np.random.default_rng(1).uniform(1, 100, size=(3, 1, 6, 8, 10)).astype(np.float32)
+    reference_path, config_path, tf_path = _phase_inputs(tmp_path, data=data, name="reference")
+    reference = _reconstruct(reference_path, tf_path, config_path, tmp_path / "reference_out.zarr")
+
+    translated_path, translated_config, translated_tf = _phase_inputs(
+        tmp_path,
+        data=data,
+        name="translated",
+        transform=[
+            TransformationMeta(type="scale", scale=[2.0, 1, 0.25, 0.1, 0.1]),
+            TransformationMeta(type="translation", translation=[5.0, 0, 0, 0, 0]),
+        ],
+    )
+    config = utils.yaml_to_model(translated_config, settings.ReconstructionSettings)
+    config.time_indices = [1, 2]
+    utils.model_to_yaml(config, translated_config)
+
+    result = _reconstruct(translated_path, translated_tf, translated_config, tmp_path / "translated_out.zarr")
+
+    np.testing.assert_array_equal(result[0], 0)
+    np.testing.assert_array_equal(result[1:], reference[1:])
+
+
+def test_apply_inv_tf_skips_a_timepoint_with_a_blank_channel(tmp_path):
+    """iohub's rule: a timepoint is skipped when any input channel is all zeros
+    or NaNs, not only when all of them are."""
+    input_path = tmp_path / "input.zarr"
+    channel_names = [f"State{i}" for i in range(4)]
+    data = np.random.default_rng(2).uniform(1, 100, size=(2, 4, 4, 8, 10)).astype(np.float32)
+    data[1, 2] = 0  # t=1: one blank polarization state, signal in the others
+    with open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=channel_names) as dataset:
+        dataset.create_position("0", "0", "0").create_image("0", data)
+    config_path = tmp_path / "biref.yml"
+    utils.model_to_yaml(
+        settings.ReconstructionSettings(
+            input_channel_names=channel_names,
+            reconstruction_dimension=3,
+            birefringence=settings.BirefringenceSettings(),
+        ),
+        config_path,
+    )
+    tf_path = tmp_path / "tf.zarr"
+    position_path = input_path / "0" / "0" / "0"
+    CliRunner().invoke(
+        app,
+        ["compute-tf", "-i", str(position_path), "-c", str(config_path), "-o", str(tf_path)],
+        catch_exceptions=False,
+    )
+
+    result = _reconstruct(position_path, tf_path, config_path, tmp_path / "out.zarr")
+
+    assert np.any(result[0] != 0)
+    np.testing.assert_array_equal(result[1], 0)
+
+
+def test_apply_inv_tf_resume(tmp_path):
+    """resume skips finished timepoints, and recomputes after a settings change
+    or a recomputed transfer function."""
+    position_path, config_path, tf_path = _phase_inputs(tmp_path)
+    result_path = tmp_path / "out.zarr"
+    first = _reconstruct(position_path, tf_path, config_path, result_path)
+
+    def mark_t0():
+        with open_ome_zarr(result_path / "0" / "0" / "0", mode="r+") as result:
+            result["0"][0] = 123.0
+
+    # unchanged inputs: every timepoint is already finished
+    mark_t0()
+    resumed = _reconstruct(position_path, tf_path, config_path, result_path, resume=True)
+    np.testing.assert_array_equal(resumed[0], 123.0)
+    np.testing.assert_array_equal(resumed[1:], first[1:])
+
+    # without resume, everything is recomputed
+    recomputed = _reconstruct(position_path, tf_path, config_path, result_path, resume=False)
+    np.testing.assert_array_equal(recomputed, first)
+
+    # changed reconstruction settings: recomputed despite resume
+    mark_t0()
+    changed_settings = settings.PhaseSettings()
+    changed_settings.apply_inverse.regularization_strength = 0.1
+    _, changed_config, _ = _phase_inputs(tmp_path, name="changed", recon_settings=changed_settings)
+    result = _reconstruct(position_path, tf_path, changed_config, result_path, resume=True)
+    assert not np.any(result[0] == 123.0)
+
+    # a transfer function recomputed with other settings: recomputed despite resume
+    _reconstruct(position_path, tf_path, config_path, result_path)
+    mark_t0()
+    other_tf_settings = settings.PhaseSettings()
+    other_tf_settings.transfer_function.wavelength_illumination = 0.6
+    _, _, other_tf = _phase_inputs(tmp_path, name="other_tf", tf_settings=other_tf_settings)
+    result = _reconstruct(position_path, other_tf, config_path, result_path, resume=True)
+    assert not np.any(result[0] == 123.0)
+
+
+def test_apply_inv_tf_resume_ignores_time_selection_in_transfer_function(tmp_path):
+    """`reconstruct` recomputes the transfer function from the full config, so a
+    transfer function computed for another time selection must not invalidate
+    finished timepoints."""
+    position_path, config_path, tf_path = _phase_inputs(tmp_path)
+    result_path = tmp_path / "out.zarr"
+    _reconstruct(position_path, tf_path, config_path, result_path)
+    with open_ome_zarr(result_path / "0" / "0" / "0", mode="r+") as result:
+        result["0"][0] = 123.0
+
+    subset_config_path = tmp_path / "subset.yml"
+    subset_config = utils.yaml_to_model(config_path, settings.ReconstructionSettings)
+    subset_config.time_indices = [1, 2]
+    utils.model_to_yaml(subset_config, subset_config_path)
+    subset_tf_path = tmp_path / "subset_tf.zarr"
+    CliRunner().invoke(
+        app,
+        ["compute-tf", "-i", str(position_path), "-c", str(subset_config_path), "-o", str(subset_tf_path)],
+        catch_exceptions=False,
+    )
+    with open_ome_zarr(subset_tf_path) as tf_dataset:
+        assert "time_indices" not in tf_dataset.zattrs["settings"]
+        assert "input_channel_names" not in tf_dataset.zattrs["settings"]
+
+    resumed = _reconstruct(position_path, subset_tf_path, config_path, result_path, resume=True)
+    np.testing.assert_array_equal(resumed[0], 123.0)
+
+
+def test_apply_inv_tf_resume_on_v04_output_recomputes_and_says_so(tmp_path, capsys):
+    position_path, config_path, tf_path = _phase_inputs(tmp_path, version="0.4")
+    result_path = tmp_path / "out.zarr"
+    first = _reconstruct(position_path, tf_path, config_path, result_path)
+    with open_ome_zarr(result_path / "0" / "0" / "0", mode="r+") as result:
+        result["0"][0] = 123.0
+    capsys.readouterr()
+
+    resumed = _reconstruct(position_path, tf_path, config_path, result_path, resume=True)
+
+    assert "OME-Zarr v0.5" in capsys.readouterr().out
+    np.testing.assert_array_equal(resumed, first)
+
+
+def _write_mixed_shape_plate(input_path, shapes):
+    """Write an HCS plate whose positions have the given TCZYX shapes."""
+    plate = open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=["GFP"])
+    rng = np.random.default_rng(0)
+    for position_key, shape in shapes.items():
+        position = plate.create_position(*position_key)
+        position.create_image(
+            "0",
+            rng.random(shape).astype(np.float32),
+            transform=[TransformationMeta(type="scale", scale=(1, 1, 0.25, 0.1, 0.1))],
+        )
+    plate.close()
+
+
+def _write_fluorescence_config(config_path):
+    recon_settings = settings.ReconstructionSettings(
+        input_channel_names=["GFP"],
+        time_indices="all",
+        reconstruction_dimension=3,
+        fluorescence=settings.FluorescenceSettings(),
+    )
+    utils.model_to_yaml(recon_settings, config_path)
+
+
+def test_reconstruct_fovs_with_different_zyx_shapes(tmp_path):
+    """Each distinct ZYX shape gets its own transfer function and output shape."""
+    input_path = tmp_path / "input.zarr"
+    config_path = tmp_path / "config.yml"
+    output_path = tmp_path / "output.zarr"
+
+    # "A/1/0" and "B/1/0" share a shape, so only two transfer functions are needed.
+    shapes = {
+        ("A", "1", "0"): (2, 1, 6, 32, 32),
+        ("A", "2", "0"): (2, 1, 6, 48, 48),
+        ("B", "1", "0"): (2, 1, 6, 32, 32),
+    }
+    _write_mixed_shape_plate(input_path, shapes)
+    _write_fluorescence_config(config_path)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "reconstruct",
+            "-i",
+            *[str(input_path / Path(*position_key)) for position_key in shapes],
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+
+    with open_ome_zarr(output_path) as output_plate:
+        for position_key, shape in shapes.items():
+            reconstructed = output_plate["/".join(position_key)]["0"]
+            assert reconstructed.shape[2:] == shape[2:]
+            assert not np.all(reconstructed[:] == 0)
+
+    transfer_functions = sorted(p.name for p in tmp_path.glob("transfer_function_*.zarr"))
+    assert transfer_functions == [
+        "transfer_function_config_6x32x32.zarr",
+        "transfer_function_config_6x48x48.zarr",
+    ]
+
+
+def test_reconstruct_uniform_shape_keeps_unsuffixed_transfer_function_name(tmp_path):
+    """A single ZYX shape still writes the plain transfer_function_<config>.zarr."""
+    input_path = tmp_path / "input.zarr"
+    config_path = tmp_path / "config.yml"
+    output_path = tmp_path / "output.zarr"
+
+    shapes = {
+        ("A", "1", "0"): (1, 1, 6, 32, 32),
+        ("A", "2", "0"): (1, 1, 6, 32, 32),
+    }
+    _write_mixed_shape_plate(input_path, shapes)
+    _write_fluorescence_config(config_path)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "reconstruct",
+            "-i",
+            *[str(input_path / Path(*position_key)) for position_key in shapes],
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert [p.name for p in tmp_path.glob("transfer_function_*.zarr")] == ["transfer_function_config.zarr"]
+
+
+def test_apply_inv_tf_rejects_fovs_with_different_zyx_shapes(tmp_path):
+    """apply-inv-tf holds one transfer function, so mixed shapes must error early."""
+    input_path = tmp_path / "input.zarr"
+    config_path = tmp_path / "config.yml"
+    tf_path = tmp_path / "tf.zarr"
+    output_path = tmp_path / "output.zarr"
+
+    shapes = {
+        ("A", "1", "0"): (1, 1, 6, 32, 32),
+        ("A", "2", "0"): (1, 1, 6, 48, 48),
+    }
+    _write_mixed_shape_plate(input_path, shapes)
+    _write_fluorescence_config(config_path)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "apply-inv-tf",
+            "-i",
+            *[str(input_path / Path(*position_key)) for position_key in shapes],
+            "-t",
+            str(tf_path),
+            "-c",
+            str(config_path),
+            "-o",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "all positions must have the same ZYX shape" in result.output
+    assert "Use `waveorder reconstruct`" in result.output
+    assert not output_path.exists()

@@ -1341,8 +1341,8 @@ wheels = [
 
 [[package]]
 name = "iohub"
-version = "0.3.12.dev8+a686cd2"
-source = { git = "https://github.com/czbiohub-sf/iohub?branch=main#a686cd2b94436ea2aad00c75cb67a9a06f4b551d" }
+version = "0.3.12.dev15+b7bc648"
+source = { git = "https://github.com/czbiohub-sf/iohub?rev=b7bc648fc375c708161ed620b99fbb75317ecdcd#b7bc648fc375c708161ed620b99fbb75317ecdcd" }
 dependencies = [
     { name = "blosc2" },
     { name = "dask", extra = ["array"] },
@@ -2402,7 +2402,7 @@ wheels = [
 
 [[package]]
 name = "nd2"
-version = "0.11.3"
+version = "0.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dask", extra = ["array"] },
@@ -2412,9 +2412,9 @@ dependencies = [
     { name = "resource-backed-dask-array" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e3/e7/2bf7dcb2c011aad251d7041ff592c8ceab30fa6d5c40b654434f0e25e5ba/nd2-0.11.3.tar.gz", hash = "sha256:c153fccee87ef3df27accd18cf813502ceb19289de266a61cc29a5346c43fc91", size = 880585, upload-time = "2026-03-27T19:55:35.165Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8a/6b/c05758b86f9db17ecabea12891f8f9bff9ced2724d73e70f8db56b164437/nd2-0.12.0.tar.gz", hash = "sha256:f161acb508a44c40b58968838c5772cbff9f067375640aadee8bc468c1315c72", size = 895618, upload-time = "2026-09-29T09:23:48.557Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/79/51/4f3af9658395bf5549b424b8620df790ba60513d0c093222a55ec5cbb720/nd2-0.11.3-py3-none-any.whl", hash = "sha256:5cf735dc02bb7b8fb400f657f8c04e73f51c28c1032c644a7746948c13be38f9", size = 102111, upload-time = "2026-03-27T19:55:33.398Z" },
+    { url = "https://files.pythonhosted.org/packages/48/9b/debfb07b514bcd32c906dae96c69e178200f9f70bf1e6c1b315e271c76b6/nd2-0.12.0-py3-none-any.whl", hash = "sha256:463db5956c51a4319871edae3b6fde88ede8e0c804316da86a07fdf9ac986e2b", size = 107583, upload-time = "2026-09-29T09:23:47Z" },
 ]
 
 [[package]]
@@ -4466,14 +4466,14 @@ wheels = [
 
 [[package]]
 name = "tifffile"
-version = "2026.9.9"
+version = "2026.6.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/28/52/fdf44e2de6ccd641d4b21eec7a875f5b1c3e28e8108032b4e5da63839db9/tifffile-2026.9.9.tar.gz", hash = "sha256:5e5a0dfa16e6376bf062bc46e21b896fbfe895fcb47559af9c64b9b2d77bb4a0", size = 442579, upload-time = "2026-09-08T23:28:11.069Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b7/38/5e2ecef5af2f4fd4a89bb8d6240de9458bab4d51a4cbd97aeb3a0cd618e2/tifffile-2026.6.1.tar.gz", hash = "sha256:626c892c0e899d959b9438e7c0e1491dc154a7fead1f1f37a991724a50eceba9", size = 429694, upload-time = "2026-05-31T23:57:12.165Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/bc/699eecd5f5829e28939e8dc22aeff0a65b8d37af80a4f6543d26e1184ad2/tifffile-2026.9.9-py3-none-any.whl", hash = "sha256:f7e48417d8e83a559349f8fe6c1e302afd57e564276124bab84111129f43925a", size = 273280, upload-time = "2026-09-08T23:28:09.706Z" },
+    { url = "https://files.pythonhosted.org/packages/81/59/208f71d70ddc6184f79b8c6d87d46eb7d7b12c19186a817dec9c9c3f3693/tifffile-2026.6.1-py3-none-any.whl", hash = "sha256:0d7382d2769b855b81ce358528e2b40c16d48aa39031746efa81215205332a8d", size = 267108, upload-time = "2026-05-31T23:57:10.597Z" },
 ]
 
 [[package]]
@@ -4620,7 +4620,7 @@ wheels = [
 
 [[package]]
 name = "typer"
-version = "0.27.2"
+version = "0.27.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "annotated-doc" },
@@ -4628,9 +4628,9 @@ dependencies = [
     { name = "rich" },
     { name = "shellingham" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/16/f7/57713ba479fd405eb76de31404b2c744c289e336b2d999511ebf51e496f7/typer-0.27.2.tar.gz", hash = "sha256:269b7eb9d3c202ca84b4bc9618cb04ebb43d3d4d1e567e4c768607232c05f945", size = 204045, upload-time = "2026-08-28T10:26:55.046Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/03/51/d33db42cc72ffd8c30777547b42d01f0cbf9d95a770457698d0174b3ed71/typer-0.27.3.tar.gz", hash = "sha256:d0396f770a560ab1b0a8504e13b5f254b728cedb05c61cf0359e944e50ce8901", size = 205303, upload-time = "2026-10-06T17:24:16.61Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/dc/bf/205d0004930ede8f542fb58f601526fccf4ae7626075ca1e6c4de5d3d652/typer-0.27.2-py3-none-any.whl", hash = "sha256:b3a5fc4342d5fc8fda8fc3010b1cf117e9249aab7fae800c2eff62fd3842d97d", size = 123130, upload-time = "2026-08-28T10:26:53.752Z" },
+    { url = "https://files.pythonhosted.org/packages/07/ea/2e31b67051e91a133189e9c000c222502ddc6969856416de0d095de4c0b0/typer-0.27.3-py3-none-any.whl", hash = "sha256:e50022f28b82a86313e54501317a1db64bf8f8d036ff8cfe5ca7e47675454aff", size = 123312, upload-time = "2026-10-06T17:24:15.054Z" },
 ]
 
 [[package]]
@@ -4829,7 +4829,7 @@ test = [
 requires-dist = [
     { name = "colorspacious", specifier = ">=1.1.2" },
     { name = "importlib-metadata" },
-    { name = "iohub", git = "https://github.com/czbiohub-sf/iohub?branch=main" },
+    { name = "iohub", git = "https://github.com/czbiohub-sf/iohub?rev=b7bc648fc375c708161ed620b99fbb75317ecdcd" },
     { name = "ipywidgets", specifier = ">=7.5.1" },
     { name = "jupyter", marker = "extra == 'all'" },
     { name = "jupyter", marker = "extra == 'visual'" },

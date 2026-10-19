@@ -44,7 +44,7 @@ dependencies = [
   "typer>=0.27.2",
   "colorspacious>=1.1.2",
   "importlib-metadata",
-  "iohub",
+  "iohub>=0.3.11",
   "ipywidgets>=7.5.1",
   "matplotlib>=3.1.1",
   "natsort>=7.1.1",
@@ -121,11 +121,15 @@ waveorder = "waveorder:napari.yaml"
 [tool.hatch.metadata]
 allow-direct-references = true
 
-[tool.uv.sources]
-iohub = { git = "https://github.com/czbiohub-sf/iohub", branch = "main" }
-
 [tool.hatch.version]
 source = "uv-dynamic-versioning"
+
+[tool.uv.sources]
+# apply-inv-tf's --resume relies on czbiohub-sf/iohub#476, which syncs a unit's
+# shards before recording it as done, and the CLI uses iohub.cli.OptionEatAll
+# (Typer). Drop this pin for a PyPI floor once iohub releases both;
+# iohub>=0.3.11 above already has the process_single_position API.
+iohub = { git = "https://github.com/czbiohub-sf/iohub", rev = "b7bc648fc375c708161ed620b99fbb75317ecdcd" }
 
 [tool.uv-dynamic-versioning]
 vcs = "git"

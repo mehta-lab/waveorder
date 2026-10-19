@@ -436,15 +436,9 @@ def apply_inverse_transfer_function(
 
     # Reconstruct
     if reconstruction_algorithm == "Tikhonov":
-        inverse_filter = tikhonov_regularized_inverse_filter(effective_transfer_function, regularization_strength)
-
-        if apodization_rolloff > 0:
-            window = sampling.raised_cosine_window(
-                inverse_filter.shape[-2], apodization_rolloff, device=inverse_filter.device
-            )[:, None] * sampling.raised_cosine_window(
-                inverse_filter.shape[-1], apodization_rolloff, device=inverse_filter.device
-            )
-            inverse_filter = inverse_filter * window
+        inverse_filter = tikhonov_regularized_inverse_filter(
+            effective_transfer_function, regularization_strength, apodization_rolloff=apodization_rolloff
+        )
 
         # Batched FFT multiply: inverse_filter (Z,Y,X) broadcasts over B
         zyx_fft = torch.fft.fftn(zyx, dim=(-3, -2, -1))
