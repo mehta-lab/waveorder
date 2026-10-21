@@ -1,0 +1,81 @@
+{
+  "skill_name": "waveorder-tutorial",
+  "evals": [
+    {
+      "id": 1,
+      "name": "no-data-sample-qpi",
+      "prompt": "I want to try waveorder but I don't have any data yet. Can you show me what it does?",
+      "expected_output": "Gives the Stage 1 context briefly, checks the install, offers the QPI-defocus sample, saves get_example_data.py and the example config into a working folder outside the skill folder, runs a 2D phase reconstruction, opens raw and result in napari without blocking, and asks the user what they see.",
+      "files": [],
+      "expectations": [
+        "The agent explains that a first reconstruction takes a couple of hours of tuning, or that it works best on weakly scattering samples, before running anything.",
+        "The agent checks that `wo` is installed, or offers the `uvx --from \"waveorder[all]\"` fallback, before reconstructing.",
+        "The agent saves get_example_data.py into a working folder, not into the skill folder, and runs it from there.",
+        "The agent writes the YAML block from references/example_qpi_2d.md to a config file and passes that file to `wo rec`.",
+        "The agent launches `wo view` so it does not block further commands, for example backgrounded with stdin from /dev/null.",
+        "The agent does not render a PNG, matplotlib figure, or screenshot of the result.",
+        "The agent asks the user what they observe in napari instead of judging the result itself."
+      ]
+    },
+    {
+      "id": 2,
+      "name": "2d-qpi-bare-tiff",
+      "prompt": "I have a brightfield z-stack at ~/data/cells_bf.tif, 15 slices, taken on a 20x 0.55 NA objective. The cells are a thin monolayer. I want a phase image.",
+      "expected_output": "Works one stage at a time: confirms dimensions, contrast type, voxel size, and imaging conditions with the user, recommends 2D for a thin sample, converts the TIFF with to_omezarr.py using explicit axes and pixel sizes, and drafts two 2D phase configs that differ only in invert_phase_contrast, with an optimizable z_focus_offset.",
+      "files": [],
+      "expectations": [
+        "The agent asks for, or derives with the user, the yx pixel size and z step instead of assuming them.",
+        "The agent asks for the condenser (illumination) NA and the immersion medium, or states the guesses it uses for them.",
+        "The agent does not ask every Stage 2 question in a single message.",
+        "The agent converts with to_omezarr.py and passes --axes ZYX, a --channel-name, and explicit pixel sizes.",
+        "The agent recommends `reconstruction_dimension: 2` because the sample is thin.",
+        "The agent drafts two configs, one with `invert_phase_contrast: true` and one with `false`.",
+        "The draft 2D configs make `z_focus_offset` optimizable with an `init`/`lr` pair.",
+        "The drafts start with a small `regularization_strength`, around 1e-3."
+      ]
+    },
+    {
+      "id": 3,
+      "name": "3d-confocal-fluorescence",
+      "prompt": "I have a 3D confocal GFP stack of an organoid, already in OME-Zarr at ~/data/organoid.zarr. 63x 1.4 NA oil, emission around 510 nm. Can waveorder deconvolve it?",
+      "expected_output": "Confirms the data is suitable, keeps the OME-Zarr as is, recommends a 3D fluorescence reconstruction because confocal modeling requires 3D, asks for the demagnified pinhole diameter, starts with Tikhonov, and mentions RL/RLGC as later options valid only in 3D.",
+      "files": [],
+      "expectations": [
+        "The agent does not convert the data and verifies it with `wo view` instead.",
+        "The agent uses a `fluorescence:` block with `wavelength_emission` near 0.51 µm and does not set an illumination NA.",
+        "The agent sets `index_of_refraction_media` near 1.47 or 1.52 for oil immersion.",
+        "The agent states that confocal modeling requires `reconstruction_dimension: 3`.",
+        "The agent asks for the pinhole diameter projected into sample space, or explains the widefield fallback of `confocal_pinhole_diameter: null`.",
+        "The agent starts with `reconstruction_algorithm: Tikhonov` and mentions RL or RLGC only as a later option for 3D."
+      ]
+    },
+    {
+      "id": 4,
+      "name": "yx-only-input",
+      "prompt": "Here's a single brightfield image, ~/data/snapshot.png. Reconstruct the phase with waveorder.",
+      "expected_output": "Inspects the input, finds it has no Z dimension, and explains that waveorder needs a defocus stack, without attempting a reconstruction.",
+      "files": [],
+      "expectations": [
+        "The agent checks the image's dimensions before proposing a reconstruction.",
+        "The agent explains that waveorder does not support 2D YX inputs and needs multiple Z slices.",
+        "The agent does not run `wo rec` or write a config for this input.",
+        "The agent suggests acquiring a defocus stack or offers the example sample instead."
+      ]
+    },
+    {
+      "id": 5,
+      "name": "tuning-ringing-and-noise",
+      "prompt": "My 3D phase reconstruction from the draft config has ripples around the cell edges and it's noisier than the raw data. What should I change?",
+      "expected_output": "Tunes the forward model first: sweeps numerical_aperture_illumination with about five values side by side using sweep.py while keeping regularization small, and raises regularization_strength only after the forward model is settled.",
+      "files": [],
+      "expectations": [
+        "The agent names the ripples as ringing and the noise as a regularization issue.",
+        "The agent addresses ringing before noise, by sweeping `numerical_aperture_illumination`.",
+        "The agent keeps `regularization_strength` small while sweeping the forward model.",
+        "The sweep uses about five values and runs through a saved copy of sweep.py.",
+        "The agent proposes increasing `regularization_strength` over decades only as the last step.",
+        "The agent opens the sweep results in napari and asks the user which looks best."
+      ]
+    }
+  ]
+}

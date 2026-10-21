@@ -48,7 +48,9 @@ def _to_tczyx(arr: np.ndarray, axes: str) -> np.ndarray:
     """Reorder/expand an array with the given axis labels into TCZYX."""
     axes = axes.upper()
     if len(axes) != arr.ndim:
-        raise ValueError(f"--axes {axes!r} has {len(axes)} labels but array has {arr.ndim} dims")
+        raise ValueError(
+            f"--axes {axes!r} has {len(axes)} labels but array has {arr.ndim} dims"
+        )
     if set(axes) - set("TCZYX"):
         raise ValueError(f"--axes may only contain T, C, Z, Y, X; got {axes!r}")
 
@@ -63,19 +65,49 @@ def _to_tczyx(arr: np.ndarray, axes: str) -> np.ndarray:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("input", type=Path, help="input .tif/.tiff/.npy or plain zarr dir")
     p.add_argument("output", type=Path, help="output .zarr path")
-    p.add_argument("--axes", default="ZYX", help="axis order of the input (subset of TCZYX)")
-    p.add_argument("--channel-name", action="append", default=None, help="channel name (repeat per channel)")
-    p.add_argument("--yx-pixel-size", type=float, default=None, help="isotropic lateral pixel size (µm)")
-    p.add_argument("--y-pixel-size", type=float, default=None, help="y pixel size (µm); overrides --yx-pixel-size")
-    p.add_argument("--x-pixel-size", type=float, default=None, help="x pixel size (µm); overrides --yx-pixel-size")
-    p.add_argument("--z-pixel-size", type=float, required=True, help="axial pixel size (µm)")
+    p.add_argument(
+        "--axes", default="ZYX", help="axis order of the input (subset of TCZYX)"
+    )
+    p.add_argument(
+        "--channel-name",
+        action="append",
+        default=None,
+        help="channel name (repeat per channel)",
+    )
+    p.add_argument(
+        "--yx-pixel-size",
+        type=float,
+        default=None,
+        help="isotropic lateral pixel size (µm)",
+    )
+    p.add_argument(
+        "--y-pixel-size",
+        type=float,
+        default=None,
+        help="y pixel size (µm); overrides --yx-pixel-size",
+    )
+    p.add_argument(
+        "--x-pixel-size",
+        type=float,
+        default=None,
+        help="x pixel size (µm); overrides --yx-pixel-size",
+    )
+    p.add_argument(
+        "--z-pixel-size", type=float, required=True, help="axial pixel size (µm)"
+    )
     args = p.parse_args()
 
-    y_pixel_size = args.y_pixel_size if args.y_pixel_size is not None else args.yx_pixel_size
-    x_pixel_size = args.x_pixel_size if args.x_pixel_size is not None else args.yx_pixel_size
+    y_pixel_size = (
+        args.y_pixel_size if args.y_pixel_size is not None else args.yx_pixel_size
+    )
+    x_pixel_size = (
+        args.x_pixel_size if args.x_pixel_size is not None else args.yx_pixel_size
+    )
     if y_pixel_size is None or x_pixel_size is None:
         p.error("pass --yx-pixel-size, or both --y-pixel-size and --x-pixel-size")
 

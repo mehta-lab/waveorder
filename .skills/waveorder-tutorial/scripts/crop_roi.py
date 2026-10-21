@@ -43,10 +43,16 @@ def _parse_range(spec: str | None) -> slice:
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("-i", "--input", required=True, type=Path, help="input HCS OME-Zarr")
     p.add_argument("-o", "--output", required=True, type=Path, help="output .zarr path")
-    p.add_argument("--position", default=None, help="position path like 0/0/0 (default: first found)")
+    p.add_argument(
+        "--position",
+        default=None,
+        help="position path like 0/0/0 (default: first found)",
+    )
     p.add_argument("--t", default=None, help="time range start:stop")
     p.add_argument("--c", default=None, help="channel index range start:stop")
     p.add_argument("--z", default=None, help="z range start:stop")
@@ -62,7 +68,7 @@ def main() -> None:
     else:
         position = args.position
 
-    src = open_ome_zarr(args.input / position, mode="r")
+    src = open_ome_zarr(args.input / position, layout="fov", mode="r")
     slices = tuple(_parse_range(s) for s in (args.t, args.c, args.z, args.y, args.x))
     cropped = src.data[slices]
     c_slice = slices[1]
@@ -71,7 +77,9 @@ def main() -> None:
 
     ds = open_ome_zarr(args.output, layout="hcs", mode="w", channel_names=list(names))
     pos = ds.create_position("0", "0", "0")
-    pos.create_image("0", cropped, transform=[TransformationMeta(type="scale", scale=list(scale))])
+    pos.create_image(
+        "0", cropped, transform=[TransformationMeta(type="scale", scale=list(scale))]
+    )
     ds.close()
 
     print(f"Wrote {args.output}  shape TCZYX={cropped.shape}  channels={list(names)}")

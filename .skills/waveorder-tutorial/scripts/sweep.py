@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["iohub", "napari[pyqt6]", "numpy", "pyyaml"]
+# dependencies = ["iohub", "napari[pyqt6]", "numpy", "pyyaml", "waveorder[all]"]
 # ///
 """Sweep one or two config parameters, reconstruct each value, and view results.
 
@@ -25,7 +25,6 @@ Examples
 
 import argparse
 import itertools
-import shutil
 import subprocess
 from pathlib import Path
 
@@ -33,13 +32,6 @@ import napari
 import numpy as np
 import yaml
 from iohub.ngff import open_ome_zarr
-
-
-def _wo_cmd() -> list[str]:
-    """Return the invocation prefix for the waveorder CLI."""
-    if shutil.which("wo"):
-        return ["wo"]
-    return ["uv", "run", "wo"]
 
 
 def _set_nested(cfg: dict, param: str, value) -> bool:
@@ -75,11 +67,13 @@ def _tag(value: str) -> str:
 def _load_recon(path: str) -> np.ndarray:
     """Load the first position of a reconstruction as a squeezed array."""
     positions = sorted(q for q in Path(path).glob("*/*/*") if q.is_dir())
-    pos = open_ome_zarr(positions[0], mode="r")
+    pos = open_ome_zarr(positions[0], layout="fov", mode="r")
     return np.asarray(pos.data).squeeze()
 
 
-def _view_grid(outputs: list[list[str]], p1: str, v1: list[str], p2: str, v2: list[str]) -> None:
+def _view_grid(
+    outputs: list[list[str]], p1: str, v1: list[str], p2: str, v2: list[str]
+) -> None:
     """Open a 2-parameter sweep as one napari layer with the parameters on two sliders."""
     stack = np.stack([np.stack([_load_recon(o) for o in row]) for row in outputs])
     viewer = napari.Viewer()
@@ -92,13 +86,19 @@ def _view_grid(outputs: list[list[str]], p1: str, v1: list[str], p2: str, v2: li
 
 
 def main() -> None:
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p = argparse.ArgumentParser(
+        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     p.add_argument("-i", "--input", required=True, type=Path, help="input OME-Zarr")
     p.add_argument("-c", "--config", required=True, type=Path, help="base config .yml")
-    p.add_argument("--param", default="regularization_strength", help="parameter name to sweep")
+    p.add_argument(
+        "--param", default="regularization_strength", help="parameter name to sweep"
+    )
     p.add_argument("--values", nargs="+", required=True, help="values to sweep over")
     p.add_argument("--param2", default=None, help="second parameter for a grid sweep")
-    p.add_argument("--values2", nargs="+", default=None, help="values for the second parameter")
+    p.add_argument(
+        "--values2", nargs="+", default=None, help="values for the second parameter"
+    )
     p.add_argument("--outdir", type=Path, default=Path("sweep"), help="output folder")
     p.add_argument("--no-view", action="store_true", help="skip launching napari")
     args = p.parse_args()
@@ -107,15 +107,17 @@ def main() -> None:
         raise SystemExit("--param2 and --values2 must be given together")
 
     args.outdir.mkdir(parents=True, exist_ok=True)
-    wo = _wo_cmd()
+    wo = ["wo"]
     # Expand HCS positions here; subprocess does not run a shell to glob.
     positions = [str(q) for q in sorted(args.input.glob("*/*/*")) if q.is_dir()]
     if not positions:
         raise SystemExit(f"no positions found under {args.input}/*/*/*")
 
     values2 = args.values2 or [None]
-    outputs = [[None] * len(values2) for _ in args.values]
-    for (i, raw1), (j, raw2) in itertools.product(enumerate(args.values), enumerate(values2)):
+    outputs = [[""] * len(values2) for _ in args.values]
+    for (i, raw1), (j, raw2) in itertools.product(
+        enumerate(args.values), enumerate(values2)
+    ):
         cfg = yaml.safe_load(args.config.read_text())  # fresh copy
         label = f"{args.param}_{_tag(raw1)}"
         if not _set_nested(cfg, args.param, _coerce(raw1)):
@@ -130,7 +132,10 @@ def main() -> None:
         cfg_path.write_text(yaml.safe_dump(cfg, sort_keys=False))
 
         print(f"\n=== {label} -> {out_path} ===")
-        subprocess.run(wo + ["rec", "-i", *positions, "-c", str(cfg_path), "-o", str(out_path)], check=True)
+        subprocess.run(
+            wo + ["rec", "-i", *positions, "-c", str(cfg_path), "-o", str(out_path)],
+            check=True,
+        )
         outputs[i][j] = str(out_path)
 
     flat = [o for row in outputs for o in row]
