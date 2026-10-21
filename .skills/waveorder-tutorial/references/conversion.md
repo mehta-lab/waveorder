@@ -19,16 +19,18 @@ its path directly and skip conversion. Save the script to the working folder,
 then:
 
 ```bash
-uv run get_example_data.py            # ~10 MB
+uv run get_example_data.py            # ~24 MB download
 ```
 
 The stack is a single `BF` brightfield channel with 11 defocus slices
 (yx = 0.325 µm, z = 2.0 µm), imaged in air. Reconstruct **2D phase** from it
-with the config in `references/example_qpi_2d.md`, saved as `config.yml`:
+with the draft config in `references/example_qpi_2d.md` (both
+`invert_phase_contrast` copies, as Stage 3 describes):
 
 ```bash
-wo rec -i <raw_data.zarr>/0/0/0 -c config.yml -o ./qpi_2d_recon.zarr
-wo view <raw_data.zarr> ./qpi_2d_recon.zarr
+wo rec -i <raw_data.zarr>/0/0/0 -c invert_false.yml -o ./invert_false.zarr
+wo rec -i <raw_data.zarr>/0/0/0 -c invert_true.yml -o ./invert_true.zarr
+wo view <raw_data.zarr> ./invert_false.zarr ./invert_true.zarr </dev/null &
 ```
 
 ## Case 1: OME-Zarr (preferred)
@@ -87,19 +89,23 @@ uv run to_omezarr.py arr.npy ./data.zarr \
 
 ## Cropping an ROI
 
-To iterate quickly, crop the converted store down to one biological unit of
-interest (tutorial Stage 2b). Have the user find the unit in napari
-(`wo view ./data.zarr &`), hover the cursor over it, and read the coordinates
-from the status bar. Then:
+Stages 3 and 4 always run on `roi.zarr`: one position and one time point of
+the converted store, cropped further to one biological unit of interest when
+that is much smaller than the FOV (tutorial Stage 2b). For a spatial crop,
+have the user find the unit in napari (`wo view ./data.zarr </dev/null &`),
+hover the cursor over it, and read the coordinates from the status bar. Then:
 
 ```bash
-uv run crop_roi.py -i ./data.zarr -o ./roi.zarr \
-    --y 800:1312 --x 900:1412        # optionally --z 5:25, --t 0:1
+uv run crop_roi.py -i ./data.zarr --position 0/0/0 -o ./roi.zarr \
+    --t 0:1 --y 800:1312 --x 900:1412        # optionally --z 5:25
 ```
 
-Ranges are `start:stop` in voxels; omitted axes are kept whole. Channel names
-and pixel scale carry over. Verify with `wo view ./roi.zarr &` and iterate on
-the bounds until the user confirms the unit is captured.
+`-i` takes the plate root (with `--position`, default the first position) or
+a position path such as `./data.zarr/0/0/0`. Ranges are `start:stop` in
+voxels; omitted axes are kept whole, so always pass `--t` to keep one time
+point. Channel names and pixel scale carry over. Verify with
+`wo view ./roi.zarr </dev/null &` and iterate on the bounds until the user
+confirms the unit is captured.
 
 ## Sanity checks
 

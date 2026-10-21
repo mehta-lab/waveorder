@@ -11,7 +11,7 @@
         "The agent explains that a first reconstruction takes a couple of hours of tuning, or that it works best on weakly scattering samples, before running anything.",
         "The agent checks that `wo` is installed, or offers the `uvx --from \"waveorder[all]\"` fallback, before reconstructing.",
         "The agent saves get_example_data.py into a working folder, not into the skill folder, and runs it from there.",
-        "The agent writes the YAML block from references/example_qpi_2d.md to a config file and passes that file to `wo rec`.",
+        "The agent writes the YAML block from references/example_qpi_2d.md as two draft configs that differ only in `invert_phase_contrast`, and reconstructs both.",
         "The agent launches `wo view` so it does not block further commands, for example backgrounded with stdin from /dev/null.",
         "The agent does not render a PNG, matplotlib figure, or screenshot of the result.",
         "The agent asks the user what they observe in napari instead of judging the result itself."
@@ -43,7 +43,7 @@
       "expectations": [
         "The agent does not convert the data and verifies it with `wo view` instead.",
         "The agent uses a `fluorescence:` block with `wavelength_emission` near 0.51 µm and does not set an illumination NA.",
-        "The agent sets `index_of_refraction_media` near 1.47 or 1.52 for oil immersion.",
+        "The agent sets `index_of_refraction_media` near 1.515 for oil immersion, not 1.47.",
         "The agent states that confocal modeling requires `reconstruction_dimension: 3`.",
         "The agent asks for the pinhole diameter projected into sample space, or explains the widefield fallback of `confocal_pinhole_diameter: null`.",
         "The agent starts with `reconstruction_algorithm: Tikhonov` and mentions RL or RLGC only as a later option for 3D."
@@ -72,9 +72,34 @@
         "The agent names the ripples as ringing and the noise as a regularization issue.",
         "The agent addresses ringing before noise, by sweeping `numerical_aperture_illumination`.",
         "The agent keeps `regularization_strength` small while sweeping the forward model.",
-        "The sweep uses about five values and runs through a saved copy of sweep.py.",
+        "The sweep uses about five values, runs on `roi.zarr` rather than the full dataset, and runs through a saved copy of sweep.py.",
         "The agent proposes increasing `regularization_strength` over decades only as the last step.",
         "The agent opens the sweep results in napari and asks the user which looks best."
+      ]
+    },
+    {
+      "id": 6,
+      "name": "multi-position-timelapse-roi",
+      "prompt": "I have a time-lapse of brightfield z-stacks in OME-Zarr at ~/data/plate.zarr: 12 positions, 40 time points, each 21 x 2048 x 2048. Cells are about 300 x 300 pixels. Help me get a first phase reconstruction.",
+      "expected_output": "Plans Stage 2b to tune on one position and one time point cropped around one cell, writes that crop to roi.zarr with crop_roi.py, and runs drafts and sweeps on roi.zarr instead of the full plate.",
+      "files": [],
+      "expectations": [
+        "The agent picks one position and one time point to tune on before drafting configs.",
+        "The agent plans a spatial crop because one cell is much smaller than half the FOV.",
+        "The agent writes the crop with crop_roi.py, passing `--t` so only one time point is kept.",
+        "Draft reconstructions and sweeps use `roi.zarr`, not the full `plate.zarr`."
+      ]
+    },
+    {
+      "id": 7,
+      "name": "chat-only-client",
+      "prompt": "I'm in a chat window without a terminal. Can you reconstruct the phase of my brightfield stack with waveorder?",
+      "expected_output": "Explains that the skill runs `wo`, uv, and napari on the user's own computer, so it needs a client that can run local shell commands, and stops instead of narrating the workflow.",
+      "files": [],
+      "expectations": [
+        "The agent says the workflow needs a local shell, uv, and a display for napari.",
+        "The agent does not pretend to run commands or describe results it cannot produce.",
+        "The agent suggests a client that can run local commands, such as a coding agent in a terminal."
       ]
     }
   ]

@@ -27,7 +27,7 @@ phase:
     z_pixel_size: 0.25                   # µm
     z_padding: 0                         # z slices padded for axial boundaries
     z_focus_offset: 0                    # (sweepable/optimizable) focus slice offset
-    index_of_refraction_media: 1.3       # 1.0 air / 1.33 water / 1.47 oil
+    index_of_refraction_media: 1.3       # 1.0 air / 1.33 water / 1.47 glycerol / 1.515 oil
     numerical_aperture_detection: 1.2    # objective NA (must be <= media RI)
     numerical_aperture_illumination: 0.9 # condenser NA (must be <= media RI)
     tilt_angle_zenith: 0.0               # radians; keep 0 unless shadow-cast contrast

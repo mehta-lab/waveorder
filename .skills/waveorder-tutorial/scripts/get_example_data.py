@@ -9,9 +9,9 @@ brightfield defocus stack. It is already an **OME-Zarr**, so it plugs straight
 into ``wo view`` / ``wo rec`` with no conversion.
 
 The stack is a single ``BF`` channel, 11 defocus slices (yx = 0.325 µm,
-z = 2.0 µm), ideal for a **2D phase-from-defocus** reconstruction. A ready-made
-config is in the skill's ``references/example_qpi_2d.md``; save its YAML block
-as ``config.yml``.
+z = 2.0 µm), ideal for a **2D phase-from-defocus** reconstruction. The draft
+config is in the skill's ``references/example_qpi_2d.md``; save it as
+``invert_false.yml`` and ``invert_true.yml``.
 
 Examples
 --------
@@ -20,6 +20,7 @@ Examples
 
 import argparse
 import io
+import tempfile
 import zipfile
 from pathlib import Path
 
@@ -38,11 +39,16 @@ def main() -> None:
     session_dir = data_dir / "recOrder_session"
 
     if not session_dir.exists():
-        print("Downloading QPI-defocus sample from zenodo (~10 MB)...")
-        resp = requests.get(URL)
+        print("Downloading QPI-defocus sample from zenodo (~24 MB)...")
+        resp = requests.get(URL, timeout=(10, 300))
         resp.raise_for_status()
-        with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
-            z.extractall(session_dir)
+        # Unzip next to the target and rename when complete, so an interrupted
+        # run never leaves a partial folder that later runs treat as done.
+        with tempfile.TemporaryDirectory(dir=data_dir) as tmp:
+            staged = Path(tmp) / "recOrder_session"
+            with zipfile.ZipFile(io.BytesIO(resp.content)) as z:
+                z.extractall(staged)
+            staged.rename(session_dir)
 
     raw_path = session_dir / "recOrder_session" / "phase_snap_0" / "raw_data.zarr"
     if not raw_path.exists():
@@ -53,9 +59,10 @@ def main() -> None:
     print(
         "Already an OME-Zarr, so skip conversion (Stage 3, Case 1); channel 'BF', dim 2D."
     )
-    print("\n2D phase-from-defocus reconstruction:")
-    print(f"  wo rec -i {raw_path}/0/0/0 -c config.yml -o ./qpi_2d_recon.zarr")
-    print(f"  wo view {raw_path} ./qpi_2d_recon.zarr")
+    print("\n2D phase-from-defocus drafts (both invert_phase_contrast copies):")
+    for name in ("invert_false", "invert_true"):
+        print(f"  wo rec -i {raw_path}/0/0/0 -c {name}.yml -o ./{name}.zarr")
+    print(f"  wo view {raw_path} ./invert_false.zarr ./invert_true.zarr </dev/null &")
 
 
 if __name__ == "__main__":

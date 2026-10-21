@@ -10,28 +10,35 @@ sweep opens all results side by side with ``wo view``. A two-parameter sweep
 (``--param2``/``--values2``) stacks the grid of reconstructions into a single
 napari layer with the two parameters on two sliders.
 
+napari starts in its own background process with no stdin, so this script
+exits once the reconstructions are done and the viewer is up; the viewer's
+PID and log path are printed. ``-i`` takes an HCS plate root or a single
+position path (``.../0/0/0``).
+
 Examples
 --------
-    uv run sweep.py -i ./data.zarr -c ./config.yml \
+    uv run sweep.py -i ./roi.zarr -c ./config.yml \
         --param regularization_strength --values 1e-4 1e-3 1e-2 1e-1
 
-    uv run sweep.py -i ./data.zarr -c ./config.yml \
+    uv run sweep.py -i ./roi.zarr -c ./config.yml \
         --param tilt_angle_azimuth --values 0 1.57 3.14 4.71 \
         --param2 tilt_angle_zenith --values2 0.05 0.1 0.2
 
-    uv run sweep.py -i ./data.zarr -c ./config.yml \
+    uv run sweep.py -i ./roi.zarr/0/0/0 -c ./config.yml \
         --param reconstruction_algorithm --values Tikhonov TV --no-view
 """
 
 import argparse
 import itertools
+import json
 import subprocess
+import sys
 from pathlib import Path
 
 import napari
 import numpy as np
 import yaml
-from iohub.ngff import open_ome_zarr
+from iohub.ngff import Position, open_ome_zarr
 
 
 def _set_nested(cfg: dict, param: str, value) -> bool:
@@ -64,32 +71,58 @@ def _tag(value: str) -> str:
     return str(value).replace(".", "p").replace("-", "m")
 
 
+def _positions(path: Path) -> list[str]:
+    """Return the position paths of an HCS plate root, or ``path`` if it is one position."""
+    with open_ome_zarr(path, mode="r") as node:
+        if isinstance(node, Position):
+            return [str(path)]
+    return [str(q) for q in sorted(path.glob("*/*/*")) if q.is_dir()]
+
+
 def _load_recon(path: str) -> np.ndarray:
     """Load the first position of a reconstruction as a squeezed array."""
-    positions = sorted(q for q in Path(path).glob("*/*/*") if q.is_dir())
-    pos = open_ome_zarr(positions[0], layout="fov", mode="r")
+    pos = open_ome_zarr(_positions(Path(path))[0], layout="fov", mode="r")
     return np.asarray(pos.data).squeeze()
 
 
-def _view_grid(
-    outputs: list[list[str]], p1: str, v1: list[str], p2: str, v2: list[str]
-) -> None:
+def _show_grid(spec_path: Path) -> None:
     """Open a 2-parameter sweep as one napari layer with the parameters on two sliders."""
-    stack = np.stack([np.stack([_load_recon(o) for o in row]) for row in outputs])
+    spec = json.loads(spec_path.read_text())
+    stack = np.stack(
+        [np.stack([_load_recon(o) for o in row]) for row in spec["outputs"]]
+    )
     viewer = napari.Viewer()
-    viewer.add_image(stack, name=f"{p1} x {p2} sweep")
-    viewer.dims.set_axis_label(0, p1)
-    viewer.dims.set_axis_label(1, p2)
-    print(f"slider 0: {p1} = {v1}")
-    print(f"slider 1: {p2} = {v2}")
+    viewer.add_image(stack, name=f"{spec['p1']} x {spec['p2']} sweep")
+    viewer.dims.set_axis_label(0, spec["p1"])
+    viewer.dims.set_axis_label(1, spec["p2"])
     napari.run()
+
+
+def _launch(cmd: list[str], log_path: Path) -> None:
+    """Start a viewer detached from this process, with no stdin, and report its PID."""
+    with log_path.open("w") as log:
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.DEVNULL,
+            stdout=log,
+            stderr=subprocess.STDOUT,
+            start_new_session=True,
+        )
+    print(f"napari started in the background: PID {proc.pid}, log {log_path}")
+    print("Ask the user what they see; this script does not wait for the window.")
 
 
 def main() -> None:
     p = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    p.add_argument("-i", "--input", required=True, type=Path, help="input OME-Zarr")
+    p.add_argument(
+        "-i",
+        "--input",
+        required=True,
+        type=Path,
+        help="HCS plate root (data.zarr) or one position (data.zarr/0/0/0)",
+    )
     p.add_argument("-c", "--config", required=True, type=Path, help="base config .yml")
     p.add_argument(
         "--param", default="regularization_strength", help="parameter name to sweep"
@@ -108,10 +141,9 @@ def main() -> None:
 
     args.outdir.mkdir(parents=True, exist_ok=True)
     wo = ["wo"]
-    # Expand HCS positions here; subprocess does not run a shell to glob.
-    positions = [str(q) for q in sorted(args.input.glob("*/*/*")) if q.is_dir()]
+    positions = _positions(args.input)
     if not positions:
-        raise SystemExit(f"no positions found under {args.input}/*/*/*")
+        raise SystemExit(f"no positions found in {args.input}")
 
     values2 = args.values2 or [None]
     outputs = [[""] * len(values2) for _ in args.values]
@@ -146,12 +178,21 @@ def main() -> None:
     if args.no_view:
         print("\nView with:\n  " + " ".join(wo + ["view", *flat]))
     elif args.param2 is not None:
-        print("\nOpening 2-parameter sweep in napari (two sliders)...")
-        _view_grid(outputs, args.param, args.values, args.param2, args.values2)
+        spec_path = args.outdir / "sweep_grid.json"
+        spec = {"outputs": outputs, "p1": args.param, "p2": args.param2}
+        spec_path.write_text(json.dumps(spec))
+        print(f"\nslider 0: {args.param} = {args.values}")
+        print(f"slider 1: {args.param2} = {args.values2}")
+        _launch(
+            [sys.executable, sys.argv[0], "--show-grid", str(spec_path)],
+            args.outdir / "napari.log",
+        )
     else:
-        print("\nOpening in napari (grid view)...")
-        subprocess.run(wo + ["view", *flat])
+        _launch(wo + ["view", *flat], args.outdir / "napari.log")
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) == 3 and sys.argv[1] == "--show-grid":
+        _show_grid(Path(sys.argv[2]))
+    else:
+        main()
