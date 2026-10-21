@@ -1,0 +1,11 @@
+# Biohub MCP serves byte-identical copies of these skills from the
+# evolutionaryscale monorepo, whose hooks must pass unchanged, so format
+# them the way that repository does.
+extend = "../pyproject.toml"
+line-length = 88
+
+[format]
+skip-magic-trailing-comma = true
+
+[lint.isort]
+split-on-trailing-comma = false

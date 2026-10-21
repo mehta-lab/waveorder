@@ -1,8 +1,8 @@
 # waveorder config reference
 
 A reconstruction config is a YAML file: top-level keys plus one of the
-`phase:` / `fluorescence:` blocks. Copy a starting template from the repo:
-`docs/examples/cli/configs/{phase,fluorescence}_{2d,3d}.yml`.
+`phase:` / `fluorescence:` blocks. Build a starting config from the blocks
+below; for the QPI-defocus sample, use `example_qpi_2d.md`.
 
 ## Top level
 
@@ -167,5 +167,3 @@ Method semantics that matter in practice:
   `grid_search` with `lr` set to a coarse step wide enough to bracket the
   plausible range (e.g. `init: 0, lr: 1.0, grid_points: 11` covers -5 to +5
   slices), then rerun with `adam` starting from the grid winner to refine.
-
-Full working example: `docs/examples/optimization/phase_2d_optimized.yml`.

@@ -1,6 +1,6 @@
 ---
 name: waveorder-tutorial
-description: Interactively walk a user through their first waveorder reconstruction, from raw imaging data to a tuned result. Use when someone has microscopy data (TIFF, zarr, or array) and wants to reconstruct phase (brightfield) or deconvolved fluorescence, or asks to "try waveorder", "reconstruct my data", or "set up a waveorder config". Guides suitability, install, data and metadata identification, OME-Zarr conversion, contrast and dimension choice, draft reconstructions, manual parameter sweeps, automatic tuning, and scaling up.
+description: Interactively walk a user through their first waveorder reconstruction, from raw imaging data to a tuned result. Use when someone has microscopy data (TIFF, zarr, or array) and wants to reconstruct phase (brightfield) or deconvolved fluorescence, or asks to "try waveorder", "reconstruct my data", or "set up a waveorder config". Guides suitability, install, data and metadata identification, OME-Zarr conversion, contrast and dimension choice, draft reconstructions, manual parameter sweeps, automatic tuning, and scaling up. Not for only viewing the transfer function of a config, which waveorder-visualize-otf covers.
 ---
 
 # waveorder first-reconstruction tutorial
@@ -12,13 +12,15 @@ dump every question at once. Go one stage at a time and adapt to what the user
 reports. A first reconstruction typically takes a couple of hours of manual
 tuning; say so up front and pace the session accordingly.
 
-The paired human-readable version of this workflow lives at
-`docs/guide/first-reconstruction.md`. Keep your guidance consistent with it.
+Supporting material ships with this skill. Paths below are relative to the
+skill folder; when the skill is served over MCP, read each file as
+`skill://waveorder-tutorial/<path>`. Before running a script or using a
+reference config, save a copy into the session's working folder (see
+"Organize the work"), never into the skill folder, and run it from there.
 
-Supporting material in this skill:
 - `references/conversion.md` - turning TIFF / zarr / array into OME-Zarr
 - `references/config_reference.md` - every config knob, sweeps, and auto-tuning
-- `references/example_qpi_2d.yml` - ready config for the QPI-defocus sample
+- `references/example_qpi_2d.md` - ready config for the QPI-defocus sample
 - `scripts/get_example_data.py` - fetch the QPI-defocus sample OME-Zarr
 - `scripts/to_omezarr.py` - converter (TIFF/npy/array to viewable OME-Zarr)
 - `scripts/crop_roi.py` - crop an OME-Zarr position to a small ROI
@@ -34,7 +36,8 @@ The CLI entrypoint is `wo` (alias for `waveorder`). Key subcommands:
 - `wo tile-stitch` (`wo ts`) - stitch multi-position mosaics
 
 Input paths use the glob `input.zarr/*/*/*` to expand HCS plate positions.
-If plain `wo` isn't on PATH, prefix commands with `uv run` from the repo.
+If `wo` isn't installed, run it without installing via
+`uvx --from "waveorder[all]" wo <subcommand> ...`.
 
 ## Viewing convention: always napari, never PNGs
 
@@ -109,11 +112,12 @@ python -c "import napari; print(napari.__version__)"
   `uv pip install "napari[pyqt6]"`.
 - Confirm `wo --help` lists `reconstruct`, `view`, `simulate` before moving on.
 - **No data of their own?** Offer the QPI-from-defocus sample:
-  `uv run scripts/get_example_data.py` downloads a small OME-Zarr (a single
-  `BF` brightfield defocus stack). Its Stage 2 answers are pre-filled in
-  `references/example_qpi_2d.yml` (channel `BF`, labelfree, yx 0.325 µm,
-  z 2.0 µm, n 1.0, wavelength 0.532 µm, NA det 0.55, NA ill 0.4, 2D), so with
-  the sample you can move quickly through Stage 2 confirming each value.
+  save `scripts/get_example_data.py` and run `uv run get_example_data.py`; it
+  downloads a small OME-Zarr (a single `BF` brightfield defocus stack). Its
+  Stage 2 answers are pre-filled in `references/example_qpi_2d.md` (channel
+  `BF`, labelfree, yx 0.325 µm, z 2.0 µm, n 1.0, wavelength 0.532 µm, NA det
+  0.55, NA ill 0.4, 2D), so with the sample you can move quickly through
+  Stage 2 confirming each value.
 
 ---
 
@@ -259,9 +263,9 @@ moves through focus.
 
 ### Draft configs
 
-Write configs into `1-draft-recon/` from the Stage 2 answers (templates:
-`docs/examples/cli/configs/{phase,fluorescence}_{2d,3d}.yml`; every knob:
-`references/config_reference.md`).
+Write configs into `1-draft-recon/` from the Stage 2 answers (templates: the
+`phase:` and `fluorescence:` blocks in `references/config_reference.md`,
+which also lists every knob).
 
 - **Labelfree:** start with **two** configs, `invert_phase_contrast: true`
   and `false`. This knob is hard to set from theory; we decide it by looking.
@@ -339,7 +343,7 @@ Based on their feedback, run manually chosen sweeps with `scripts/sweep.py`.
 Aim for **about 5 reconstructions per sweep**, opened side by side:
 
 ```bash
-uv run scripts/sweep.py -i 0-conversion/data.zarr -c best.yml \
+uv run sweep.py -i 0-conversion/data.zarr -c best.yml \
     --param numerical_aperture_illumination --values 0.3 0.35 0.4 0.45 0.5 \
     --outdir 2-manual-sweep
 ```
@@ -364,7 +368,7 @@ Symptom-to-sweep map (forward model first, regularization last):
   show the user the 2D sweep on two napari sliders:
 
   ```bash
-  uv run scripts/sweep.py -i 0-conversion/data.zarr -c best.yml \
+  uv run sweep.py -i 0-conversion/data.zarr -c best.yml \
       --param tilt_angle_azimuth --values 0 1.57 3.14 4.71 \
       --param2 tilt_angle_zenith --values2 0.05 0.1 0.2 \
       --outdir 2-manual-sweep

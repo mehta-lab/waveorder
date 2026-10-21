@@ -1,0 +1,43 @@
+{
+  "skill_name": "waveorder-visualize-otf",
+  "evals": [
+    {
+      "id": 1,
+      "name": "config-and-input-given",
+      "prompt": "Show me the transfer function for ~/recon/phase_3d.yml using the data at ~/data/cells.zarr/0/0/0.",
+      "expected_output": "Runs `wo compute-tf` with the given input position and config, writes ./otf.zarr, opens it with `wo view` without blocking, and reports the path.",
+      "files": [],
+      "expectations": [
+        "The agent runs `wo compute-tf -i ~/data/cells.zarr/0/0/0 -c ~/recon/phase_3d.yml -o` with an output zarr path.",
+        "The agent does not use a nonexistent `calc-tf` subcommand.",
+        "The agent launches `wo view` on the transfer function so it does not block further commands.",
+        "The agent does not render a PNG or matplotlib figure of the transfer function.",
+        "The agent reports the output zarr path and that napari is open."
+      ]
+    },
+    {
+      "id": 2,
+      "name": "missing-inputs",
+      "prompt": "I want to see how changing the condenser NA changes the OTF for my phase config.",
+      "expected_output": "Asks for the config path and an input position path before running anything, and explains that the input is only used for its ZYX shape.",
+      "files": [],
+      "expectations": [
+        "The agent asks for the config path and the input position path.",
+        "The agent explains that `wo compute-tf` reads only the array shape from the input.",
+        "The agent does not run `wo compute-tf` before it has both paths."
+      ]
+    },
+    {
+      "id": 3,
+      "name": "2d-singular-system",
+      "prompt": "Compute and show the OTF for my 2D phase config ~/recon/phase_2d.yml with ~/data/bf.zarr/0/0/0. Why does it look different from the 3D one?",
+      "expected_output": "Runs the two calls, then explains that 2D reconstructions store a singular system (U, S, Vh) that `wo view` combines back into the absorption and phase transfer functions.",
+      "files": [],
+      "expectations": [
+        "The agent runs `wo compute-tf` and then `wo view` on the result.",
+        "The agent explains that a 2D transfer function is stored as a singular system that `wo view` reconstructs as H = U diag(S) Vh.",
+        "The agent mentions that the 2D phase view shows absorption and phase transfer functions."
+      ]
+    }
+  ]
+}

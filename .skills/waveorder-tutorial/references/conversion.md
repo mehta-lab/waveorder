@@ -14,20 +14,20 @@ no conversion is needed. Route by input format:
 ## Example data (no data of your own)
 
 `scripts/get_example_data.py` downloads the **QPI-from-defocus** sample
-(`recOrder_session.zip` from zenodo, the dataset behind
-`docs/examples/demos/QPI_defocus`). It is already an **OME-Zarr**, so use its
-path directly and skip conversion:
+(`recOrder_session.zip` from zenodo). It is already an **OME-Zarr**, so use
+its path directly and skip conversion. Save the script to the working folder,
+then:
 
 ```bash
-uv run scripts/get_example_data.py            # ~10 MB
+uv run get_example_data.py            # ~10 MB
 ```
 
 The stack is a single `BF` brightfield channel with 11 defocus slices
 (yx = 0.325 µm, z = 2.0 µm), imaged in air. Reconstruct **2D phase** from it
-with `references/example_qpi_2d.yml`:
+with the config in `references/example_qpi_2d.md`, saved as `config.yml`:
 
 ```bash
-wo rec -i <raw_data.zarr>/0/0/0 -c references/example_qpi_2d.yml -o ./qpi_2d_recon.zarr
+wo rec -i <raw_data.zarr>/0/0/0 -c config.yml -o ./qpi_2d_recon.zarr
 wo view <raw_data.zarr> ./qpi_2d_recon.zarr
 ```
 
@@ -56,7 +56,7 @@ Ask the user to **paste the path to their TIFF** (a single file, or a folder
 of tiles). Then convert with `scripts/to_omezarr.py`:
 
 ```bash
-uv run scripts/to_omezarr.py <TIFF_PATH> ./data.zarr \
+uv run to_omezarr.py <TIFF_PATH> ./data.zarr \
     --channel-name Brightfield --axes ZYX \
     --yx-pixel-size 0.1 --z-pixel-size 0.25
 ```
@@ -80,7 +80,7 @@ For a plain zarr array, point the converter at the array directory and pass
 `.npy` first (`np.save("arr.npy", arr)`), then:
 
 ```bash
-uv run scripts/to_omezarr.py arr.npy ./data.zarr \
+uv run to_omezarr.py arr.npy ./data.zarr \
     --channel-name GFP --axes CZYX \
     --yx-pixel-size 0.1 --z-pixel-size 0.25
 ```
@@ -93,7 +93,7 @@ interest (tutorial Stage 2b). Have the user find the unit in napari
 from the status bar. Then:
 
 ```bash
-uv run scripts/crop_roi.py -i ./data.zarr -o ./roi.zarr \
+uv run crop_roi.py -i ./data.zarr -o ./roi.zarr \
     --y 800:1312 --x 900:1412        # optionally --z 5:25, --t 0:1
 ```
 

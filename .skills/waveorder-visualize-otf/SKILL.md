@@ -1,6 +1,6 @@
 ---
 name: waveorder-visualize-otf
-description: Compute a waveorder transfer function (OTF) from a reconstruction config and open it in napari. Use when someone wants to inspect/visualize the transfer function or OTF for a config, check how NA / wavelength / pixel-size choices shape the transfer function, or debug a config before reconstructing. Runs `wo compute-tf` then `wo view`.
+description: Compute a waveorder transfer function (OTF) from a reconstruction config and open it in napari. Use when someone wants to inspect/visualize the transfer function or OTF for a config, check how NA / wavelength / pixel-size choices shape the transfer function, or debug a config before reconstructing. Runs `wo compute-tf` then `wo view`. Not for reconstructing data, which waveorder-tutorial covers.
 ---
 
 # Visualize the OTF from a config
@@ -46,6 +46,7 @@ Notes:
   `wo view ./otf.zarr </dev/null &`). Confirm the process does not exit
   immediately, tell the user the window is open, and let them inspect it. Do
   not render a static PNG.
-- If `wo` isn't on PATH, prefix both calls with `uv run` from the repo.
+- If `wo` isn't installed, run both calls without installing via
+  `uvx --from "waveorder[all]" wo ...`.
 
 That's it: report the `./otf.zarr` path and that napari is open.

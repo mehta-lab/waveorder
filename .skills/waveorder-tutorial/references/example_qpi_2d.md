@@ -1,3 +1,10 @@
+# Example config: 2D phase from the QPI-defocus sample
+
+A ready config for the sample that `scripts/get_example_data.py` downloads.
+Save the YAML block below as `config.yml` in the working folder, then pass it
+to `wo rec -c config.yml`.
+
+```yaml
 input_channel_names:                        # matches the 'BF' channel in the sample
 - BF
 time_indices: all
@@ -20,3 +27,4 @@ phase:
     regularization_strength: 0.001        # start small; raise last, after the forward model is tuned
     TV_rho_strength: 0.001
     TV_iterations: 1
+```
