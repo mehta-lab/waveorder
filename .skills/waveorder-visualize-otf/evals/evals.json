@@ -5,10 +5,10 @@
       "id": 1,
       "name": "config-and-input-given",
       "prompt": "Show me the transfer function for ~/recon/phase_3d.yml using the data at ~/data/cells.zarr/0/0/0.",
-      "expected_output": "Runs `wo compute-tf` with the given input position and config, writes ./otf.zarr, opens it with `wo view` without blocking, and reports the path.",
+      "expected_output": "Runs `wo compute-tf` with the given input position and config, writes ./phase_3d_otf.zarr, opens it with `wo view` without blocking, and reports the path.",
       "files": [],
       "expectations": [
-        "The agent runs `wo compute-tf -i ~/data/cells.zarr/0/0/0 -c ~/recon/phase_3d.yml -o` with an output zarr path.",
+        "The agent runs `wo compute-tf -i ~/data/cells.zarr/0/0/0 -c ~/recon/phase_3d.yml -o` with an output named after the config, such as `./phase_3d_otf.zarr`.",
         "The agent does not use a nonexistent `calc-tf` subcommand.",
         "The agent launches `wo view` on the transfer function so it does not block further commands.",
         "The agent does not render a PNG or matplotlib figure of the transfer function.",

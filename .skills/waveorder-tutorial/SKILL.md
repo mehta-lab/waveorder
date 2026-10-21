@@ -1,6 +1,6 @@
 ---
 name: waveorder-tutorial
-description: Interactively walk a user through their first waveorder reconstruction, from raw imaging data to a tuned result. Use when someone has microscopy data (TIFF, zarr, or array) and wants to reconstruct phase (brightfield) or deconvolved fluorescence, or asks to "try waveorder", "reconstruct my data", or "set up a waveorder config". Guides suitability, install, data and metadata identification, OME-Zarr conversion, contrast and dimension choice, draft reconstructions, manual parameter sweeps, automatic tuning, and scaling up. Not for only viewing the transfer function of a config, which waveorder-visualize-otf covers.
+description: Interactively walk a user through their first waveorder reconstruction on their own computer, from raw imaging data to a tuned result. Use when someone has microscopy data (TIFF, zarr, or array) and wants to reconstruct phase (brightfield) or deconvolved fluorescence, or asks to "try waveorder", "reconstruct my data", or "set up a waveorder config". Guides suitability, install, data and metadata identification, OME-Zarr conversion, contrast and dimension choice, draft reconstructions, manual parameter sweeps, automatic tuning, and scaling up. Needs a client that can run shell commands on the user's machine, with uv and a display for napari. Not for only viewing the transfer function of a config, which waveorder-visualize-otf covers.
 ---
 
 # waveorder first-reconstruction tutorial
@@ -11,6 +11,11 @@ wait for answers, run the commands, and interpret the results together. Do not
 dump every question at once. Go one stage at a time and adapt to what the user
 reports. A first reconstruction typically takes a couple of hours of manual
 tuning; say so up front and pace the session accordingly.
+
+**Requirements.** Every command in this skill runs on the user's own computer:
+the agent needs a local shell, `uv` (https://docs.astral.sh/uv/), and a
+display for napari. A chat-only client that cannot run commands cannot follow
+this skill; say so and stop rather than describing the steps.
 
 Supporting material ships with this skill. Paths below are relative to the
 skill folder; when the skill is served over MCP, read each file as
@@ -68,7 +73,7 @@ Create a working folder for the session and keep stages separated:
 
 ```
 waveorder-tutorial/
-├── 0-conversion/       # converted OME-Zarr + ROI crops
+├── 0-conversion/       # data.zarr (converted) + roi.zarr (one position, one time point)
 ├── 1-draft-recon/      # draft configs + reconstructions
 ├── 2-manual-sweep/     # manual parameter sweeps
 └── 3-automated-sweeps/ # auto-tuning trials
@@ -155,24 +160,29 @@ check) and reconcile with their description. Then branch:
 ### 2b. Minimum representative input
 
 We want a minimal dataset so we can iterate quickly on initial
-reconstructions.
+reconstructions. Every draft and sweep in Stages 3 and 4 runs on
+`0-conversion/roi.zarr`: **one position, one time point**, cropped to one
+biological unit when that is much smaller than the FOV. A five-value sweep on
+the full dataset would be five full reconstructions.
 
 **Ask:** "What are the smallest (C), Z, Y, X that contain one biological unit
 of interest? For example, if you are imaging single cells that fit within
 Z = 10, Y = 512, X = 512 voxels, then 10 x 512 x 512 is representative."
+Also ask which position and time point to tune on (default: the first of
+each).
 
-- If the representative size is **less than half a single FOV**: walk the user
-  through ROI selection in napari. Open the data (`wo view <path> &`), ask
-  them to hover the cursor over one biological unit of interest and read the
-  coordinates from napari's status bar (bottom left), then crop with
-  `scripts/crop_roi.py` (see `references/conversion.md`). Iterate until they
-  confirm the crop contains the unit.
-- If the representative size is **more than half a FOV**: skip ROI selection
-  and use a single FOV.
+- If the representative size is **less than half a single FOV**: plan a
+  spatial ROI. After conversion (Stage 3), open the data
+  (`wo view 0-conversion/data.zarr </dev/null &`), ask the user to hover the
+  cursor over one biological unit of interest and read the coordinates from
+  napari's status bar (bottom left).
+- If the representative size is **more than half a FOV**: keep the full FOV
+  of that one position and time point.
 - Estimate the ROI's memory footprint (voxels x 4 bytes, times a few for
-  intermediates) against available RAM (`free -g`). If the ROI would fill
-  more than ~20% of available RAM, continue but warn: iteration might be
-  slow; suggest more RAM, a smaller ROI, or patience.
+  intermediates) against available RAM (`free -g` on Linux;
+  `sysctl -n hw.memsize` on macOS, in bytes). If the ROI would fill more than
+  ~20% of available RAM, continue but warn: iteration might be slow; suggest
+  more RAM, a smaller ROI, or patience.
 
 ### 2c. Contrast type of each channel
 
@@ -211,7 +221,8 @@ group:
 - **Wavelength:** labelfree uses the illumination wavelength; fluorescence
   uses the emission wavelength. If unknown or broadband, suggest 0.5 µm.
 - **Index of refraction of the immersion media:** 1.0 air, ~1.33 water,
-  ~1.47 oil.
+  ~1.515 immersion oil (~1.47 glycerol). NA detection cannot exceed this
+  index.
 
 These parameters are reasonably forgiving; best guesses are fine to start,
 and Stages 4 and 5 will catch meaningful mismatches.
@@ -249,17 +260,21 @@ In other words, is your sample thin compared to the depth of field?"
 waveorder reads OME-Zarr (HCS layout, TCZYX, named channels, pixel-size
 scale). Convert into `0-conversion/`:
 
-- **Already OME-Zarr:** no conversion; confirm with `wo view`.
+- **Already OME-Zarr:** no conversion; confirm with `wo view`, and crop
+  `roi.zarr` (below) straight from the user's store.
 - **Micro-Manager TIFF dataset:** the `iohub` package (installed with
   waveorder) provides reliable CLI conversion:
   `iohub convert -i <mm_tiff_dir> -o 0-conversion/data.zarr`.
 - **Bare TIFF / npy / plain zarr:** `scripts/to_omezarr.py` with `--axes`,
   `--channel-name`, and the Stage 2d pixel sizes.
-- **ROI crop (from 2b):** `scripts/crop_roi.py` on the converted store.
+- **Always write `roi.zarr` (from 2b):** run `scripts/crop_roi.py` on the
+  converted store with the chosen position and `--t <t>:<t+1>`, plus the
+  `--z/--y/--x` bounds when 2b called for a spatial ROI:
+  `uv run crop_roi.py -i 0-conversion/data.zarr --position 0/0/0 --t 0:1 -o 0-conversion/roi.zarr`.
 
 Details and flags: `references/conversion.md`. Always verify with
-`wo view 0-conversion/data.zarr &`: correct channel names, and scrolling Z
-moves through focus.
+`wo view 0-conversion/roi.zarr </dev/null &`: correct channel names, the
+biological unit is inside the crop, and scrolling Z moves through focus.
 
 ### Draft configs
 
@@ -297,8 +312,8 @@ which also lists every knob).
 ### Run and decide
 
 ```bash
-wo rec -i 0-conversion/data.zarr/*/*/* -c 1-draft-recon/<cfg>.yml -o 1-draft-recon/<name>.zarr
-wo view 0-conversion/data.zarr 1-draft-recon/*.zarr &
+wo rec -i 0-conversion/roi.zarr/*/*/* -c 1-draft-recon/<cfg>.yml -o 1-draft-recon/<name>.zarr
+wo view 0-conversion/roi.zarr 1-draft-recon/*.zarr </dev/null &
 ```
 
 Run the 2-4 drafts, open them together with the raw data, and decide with the
@@ -339,11 +354,13 @@ stage. Only after a reasonable forward model estimate is in hand, finish by
 increasing `regularization_strength` until the user finds an acceptable
 reconstruction.
 
-Based on their feedback, run manually chosen sweeps with `scripts/sweep.py`.
-Aim for **about 5 reconstructions per sweep**, opened side by side:
+Based on their feedback, run manually chosen sweeps with `scripts/sweep.py`
+on `roi.zarr`. Aim for **about 5 reconstructions per sweep**, opened side by
+side. The script reconstructs each value, starts napari in the background,
+and returns, so you can then ask the user which result looks best:
 
 ```bash
-uv run sweep.py -i 0-conversion/data.zarr -c best.yml \
+uv run sweep.py -i 0-conversion/roi.zarr -c best.yml \
     --param numerical_aperture_illumination --values 0.3 0.35 0.4 0.45 0.5 \
     --outdir 2-manual-sweep
 ```
@@ -368,7 +385,7 @@ Symptom-to-sweep map (forward model first, regularization last):
   show the user the 2D sweep on two napari sliders:
 
   ```bash
-  uv run sweep.py -i 0-conversion/data.zarr -c best.yml \
+  uv run sweep.py -i 0-conversion/roi.zarr -c best.yml \
       --param tilt_angle_azimuth --values 0 1.57 3.14 4.71 \
       --param2 tilt_angle_zenith --values2 0.05 0.1 0.2 \
       --outdir 2-manual-sweep
@@ -392,8 +409,8 @@ consistent improvements. Save the winning config.
 ## Stage 5: Automatically refined reconstructions
 
 First test generalization: run the manually tuned config on **other time
-points, positions, or other ROIs within the FOV** and view the results with
-the user.
+points, positions, or other ROIs** of `0-conversion/data.zarr` (crop them
+with `crop_roi.py` the same way) and view the results with the user.
 
 - If they look good everywhere: **skip auto-tuning** and go to Stage 6.
 - If some fail: walk the user through the Stage 4 inspection on a failed case

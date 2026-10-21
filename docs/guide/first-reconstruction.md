@@ -100,7 +100,8 @@ and the index of refraction of the immersion media.
 - Labelfree wavelength is the illumination wavelength; fluorescence wavelength
   is the emission wavelength. If you don't know or you used a broadband
   source, 0.5 µm is a reasonable guess.
-- Index of refraction: 1.0 for air, about 1.33 for water, about 1.47 for oil.
+- Index of refraction: 1.0 for air, about 1.33 for water, about 1.515 for
+  immersion oil (about 1.47 for glycerol). The detection NA cannot exceed it.
 
 All of these parameters are reasonably forgiving, and the tuning stages below
 will catch meaningful mismatches. For fluorescence, also note the modality:
@@ -126,7 +127,10 @@ waveorder) provides reliable conversion from Micro-Manager datasets via
 `iohub convert -i <dataset> -o data.zarr`; the tutorial skill includes scripts
 for bare TIFFs, numpy arrays, and plain zarr arrays. Organize your work into
 subfolders like `0-conversion`, `1-draft-recon`, `2-manual-sweep`, and
-`3-automated-sweeps`.
+`3-automated-sweeps`. Then crop one position and one time point, plus a
+region around one biological unit when it is much smaller than the field of
+view, into `0-conversion/roi.zarr`. Run every draft and sweep in Stages 3 and
+4 on that crop, so a five-value sweep stays fast.
 
 Write a small set of draft configuration files from your Stage 2 answers
 (templates live in `docs/examples/cli/configs/`):
@@ -146,8 +150,8 @@ Run these 2-4 draft reconstructions and open them in napari alongside the raw
 data:
 
 ```bash
-wo rec -i 0-conversion/data.zarr/*/*/* -c 1-draft-recon/config.yml -o 1-draft-recon/recon.zarr
-wo view 0-conversion/data.zarr 1-draft-recon/*.zarr
+wo rec -i 0-conversion/roi.zarr/*/*/* -c 1-draft-recon/config.yml -o 1-draft-recon/recon.zarr
+wo view 0-conversion/roi.zarr 1-draft-recon/*.zarr
 ```
 
 Decide `invert_phase_contrast` by choosing the reconstruction that sets
