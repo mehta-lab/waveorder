@@ -47,6 +47,10 @@ The input `-i` flag always accepts a list of inputs, either explicitly e.g. `-i 
 
 The `waveorder compute-tf` command accepts a list of inputs, but it only computes the transfer function for the first position in the list. The `apply-inv-tf` command accepts a list of inputs and applies the same transfer function to all of the inputs, which requires that all positions contain arrays with matching TCZYX shapes.
 
+## Transfer function precision
+
+Transfer functions are stored as `float32` by default. Set `transfer_function_dtype: float16` to store them as `float16`, which halves the bytes before compression. Complex arrays are stored as interleaved (real, imaginary) pairs along X, and `apply-inv-tf` and `waveorder view` convert them back to `complex64` when they load them, so the reconstruction itself still runs in single precision. `compute-tf` stops with an error if a value exceeds float16's maximum of 65504.
+
 ## What types of reconstructions are supported?
 See `/waveorder/examples/` for a list of example configuration files.
 

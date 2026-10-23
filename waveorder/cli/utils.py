@@ -62,6 +62,41 @@ def is_single_position_store(position_path: Path) -> bool:
         return True  # Not a plate structure
 
 
+# numpy and zarr have no complex32, so a float16 transfer function store keeps
+# each complex array as interleaved (real, imag) float16 pairs along X, and
+# lists those arrays' names under this position attribute.
+FLOAT16_COMPLEX_ARRAYS = "float16_complex_arrays"
+
+
+def cast_float16(arr: np.ndarray, what: str) -> np.ndarray:
+    """Cast to float16, refusing values float16 would turn into inf.
+
+    Complex arrays become interleaved (real, imag) pairs along the last axis,
+    which `read_transfer_function_array` undoes.
+    """
+    if np.iscomplexobj(arr):
+        arr = np.ascontiguousarray(arr).view(arr.real.dtype)
+    peak = float(np.nanmax(np.abs(arr)))
+    if peak > float(np.finfo(np.float16).max):
+        raise ValueError(
+            f"{what} reaches |value| = {peak:.6g}, beyond float16's maximum of 65504; use float32 for it instead."
+        )
+    return arr.astype(np.float16)
+
+
+def read_transfer_function_array(array, index, complex_arrays: list[str], name: str) -> np.ndarray:
+    """Read ``array[index]`` from a transfer function store, upcasting a float16 store.
+
+    ``complex_arrays`` is the store's ``FLOAT16_COMPLEX_ARRAYS`` attribute.
+    ``index`` must leave the last axis whole.
+    """
+    arr = np.asarray(array[index])
+    if arr.dtype != np.float16:
+        return arr
+    arr = arr.astype(np.float32)
+    return arr.view(np.complex64) if name in complex_arrays else arr
+
+
 def apply_inverse_czyx(
     czyx: np.ndarray,
     model_function,

@@ -5,6 +5,7 @@ input_channel_names:                        # names of input channels in the dat
 - State3
 time_indices: all                           # time points to reconstruct
 reconstruction_dimension: 3                 # 2 for thin samples, 3 for thick
+transfer_function_dtype: float32            # precision of the stored transfer function; float16 halves storage and is upcast when loaded
 birefringence:
   transfer_function:
     swing: 0.1                              # swing of the liquid crystal (0 to 1)
