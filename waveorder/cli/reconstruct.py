@@ -1,34 +1,26 @@
 from pathlib import Path
 
-import click
+import typer
 
 from waveorder.cli.parsing import (
-    config_filepath,
-    input_position_dirpaths,
-    output_dirpath,
-    processes_option,
-    resume_option,
-    unique_id,
-    write_config_scale_to_output,
+    ConfigFilepath,
+    InputPositionDirpaths,
+    OutputDirpath,
+    ProcessesOption,
+    ResumeOption,
+    UniqueId,
+    WriteConfigScaleToOutput,
 )
 
 
-@click.command("reconstruct", no_args_is_help=True)
-@input_position_dirpaths()
-@config_filepath()
-@output_dirpath()
-@processes_option(default=1)
-@unique_id()
-@write_config_scale_to_output()
-@resume_option()
 def _reconstruct_cli(
-    input_position_dirpaths,
-    config_filepath,
-    output_dirpath,
-    num_processes,
-    unique_id,
-    write_config_scale_to_output,
-    resume,
+    input_position_dirpaths: InputPositionDirpaths,
+    config_filepath: ConfigFilepath,
+    output_dirpath: OutputDirpath,
+    num_processes: ProcessesOption = 1,
+    unique_id: UniqueId = "",
+    write_config_scale_to_output: WriteConfigScaleToOutput = False,
+    resume: ResumeOption = False,
 ):
     """
     Reconstruct a dataset using a configuration file. This is a
@@ -53,7 +45,7 @@ def _reconstruct_cli(
     Example:
       \033[92mwo rec -i ./input.zarr/*/*/* -c ./config.yml -o ./output.zarr\033[0m
     """
-    click.echo(click.style("Starting reconstruction...", fg="green"))
+    typer.echo(typer.style("Starting reconstruction...", fg=typer.colors.GREEN))
 
     # Deferred imports: these pull in torch, iohub, numpy, etc.
     # Only loaded when the command runs, keeping wo rec -h fast.
@@ -78,8 +70,8 @@ def _reconstruct_cli(
         first_position_by_zyx_shape.setdefault(zyx_shape, input_position_dirpath)
 
     if len(first_position_by_zyx_shape) > 1:
-        click.echo(
-            click.style(
+        typer.echo(
+            typer.style(
                 f"Found {len(first_position_by_zyx_shape)} distinct ZYX shapes across "
                 f"{len(input_position_dirpaths)} positions: computing one transfer "
                 "function per shape.",
@@ -243,8 +235,8 @@ def _run_auto_regularization(settings, input_position_dirpath, config_filepath):
     if result.scored_z_index is not None:
         role = "scored on" if result.rule == "otsu_cnr" else "shown at"
         scored_z = f", {role} most structured slice z={result.scored_z_index}"
-    click.echo(
-        click.style(
+    typer.echo(
+        typer.style(
             f"    regularization_strength = {result.regularization_strength:.4g}\n"
             f"    lambda / |H|^2max       = {result.lambda_over_h2max:.4g}\n"
             f"    sweep index             = {result.index} of {len(result.regularization_strengths)}\n"

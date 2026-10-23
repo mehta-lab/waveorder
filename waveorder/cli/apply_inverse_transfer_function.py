@@ -4,17 +4,17 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Literal
 
-import click
+import typer
 
 from waveorder._pixel_size import YXPixelSize
 from waveorder.cli.parsing import (
-    config_filepath,
-    input_position_dirpaths,
-    output_dirpath,
-    processes_option,
-    resume_option,
-    transfer_function_dirpath,
-    write_config_scale_to_output,
+    ConfigFilepath,
+    InputPositionDirpaths,
+    OutputDirpath,
+    ProcessesOption,
+    ResumeOption,
+    TransferFunctionDirpath,
+    WriteConfigScaleToOutput,
 )
 
 
@@ -404,7 +404,7 @@ def apply_inverse_transfer_function_single_position(
         output_channel_indices = [[output_dataset.channel_names.index(name) for name in output_channel_names]]
         if resume and output_dataset.version == "0.4":
             # iohub also warns, but the CLI silences UserWarnings
-            click.echo(
+            typer.echo(
                 "resume was requested, but progress can only be tracked in an OME-Zarr v0.5 output; "
                 "recomputing every timepoint."
             )
@@ -459,13 +459,15 @@ def _check_uniform_zyx_shapes(input_position_dirpaths: list[Path]) -> None:
         detail_lines.append(f"  ZYX {zyx_shape}: {listed}")
     detail = "\n".join(detail_lines)
 
-    raise click.ClickException(
-        "apply-inv-tf applies one transfer function to every position, so all "
+    typer.echo(
+        "Error: apply-inv-tf applies one transfer function to every position, so all "
         "positions must have the same ZYX shape, but the input positions have "
         f"{len(positions_by_zyx_shape)} different shapes:\n{detail}\n"
         "Use `waveorder reconstruct`, which computes a transfer function for "
-        "each distinct shape, or run apply-inv-tf once per shape."
+        "each distinct shape, or run apply-inv-tf once per shape.",
+        err=True,
     )
+    raise typer.Exit(code=1)
 
 
 def _resolve_transfer_function_dirpaths(
@@ -589,22 +591,14 @@ def apply_inverse_transfer_function_cli(
         )
 
 
-@click.command("apply-inv-tf", no_args_is_help=True)
-@input_position_dirpaths()
-@transfer_function_dirpath()
-@config_filepath()
-@output_dirpath()
-@processes_option(default=1)
-@write_config_scale_to_output()
-@resume_option()
 def _apply_inverse_transfer_function_cli(
-    input_position_dirpaths: list[Path],
-    transfer_function_dirpath: Path,
-    config_filepath: Path,
-    output_dirpath: Path,
-    num_processes,
-    write_config_scale_to_output: bool,
-    resume: bool,
+    input_position_dirpaths: InputPositionDirpaths,
+    transfer_function_dirpath: TransferFunctionDirpath,
+    config_filepath: ConfigFilepath,
+    output_dirpath: OutputDirpath,
+    num_processes: ProcessesOption = 1,
+    write_config_scale_to_output: WriteConfigScaleToOutput = False,
+    resume: ResumeOption = False,
 ) -> None:
     """Apply an inverse transfer function to a dataset.
 
