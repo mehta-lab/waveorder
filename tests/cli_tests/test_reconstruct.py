@@ -6,9 +6,9 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
-from click.testing import CliRunner
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
+from typer.testing import CliRunner
 
 from waveorder._pixel_size import YXPixelSize
 from waveorder.api import fluorescence as fluorescence_api
@@ -17,7 +17,7 @@ from waveorder.cli.apply_inverse_transfer_function import (
     _warn_pixel_size_mismatch,
     apply_inverse_transfer_function_cli,
 )
-from waveorder.cli.main import cli
+from waveorder.cli.main import app
 from waveorder.io import utils
 from waveorder.optim.autoreg import AutoRegularizationSettings
 
@@ -85,7 +85,7 @@ def test_reconstruct(tmp_input_path_zarr):
         runner = CliRunner()
         tf_path = input_path.with_name(f"tf_{i}.zarr")
         runner.invoke(
-            cli,
+            app,
             [
                 "compute-tf",
                 "-i",
@@ -147,7 +147,7 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
 
     runner = CliRunner()
     runner.invoke(
-        cli,
+        app,
         [
             "reconstruct",
             "-i",
@@ -168,7 +168,7 @@ def test_append_channel_reconstruction(tmp_input_path_zarr):
 
     # Append fluorescence reconstruction
     runner.invoke(
-        cli,
+        app,
         [
             "reconstruct",
             "-i",
@@ -233,7 +233,7 @@ def test_fluorescence_2d_reconstruction(tmp_input_path_zarr):
     # Run 2D fluorescence reconstruction
     runner = CliRunner()
     runner.invoke(
-        cli,
+        app,
         [
             "reconstruct",
             "-i",
@@ -289,7 +289,7 @@ def test_optimization_cli(tmp_path):
 
     runner = CliRunner()
     result = runner.invoke(
-        cli,
+        app,
         [
             "reconstruct",
             "-i",
@@ -331,6 +331,7 @@ def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
             "apply-inv-tf",
             "-i",
             str(input_path),
+            str(input_path),
             "-t",
             str(tf_path),
             "-c",
@@ -341,12 +342,12 @@ def test_cli_apply_inv_tf_mock(tmp_input_path_zarr):
             str(1),
         ]
         result_inv = runner.invoke(
-            cli,
+            app,
             cmd,
             catch_exceptions=False,
         )
         mock.assert_called_with(
-            [input_path],
+            [input_path, input_path],
             Path(tf_path),
             Path(tmp_config_yml),
             Path(result_path),
@@ -425,7 +426,7 @@ def test_pixel_size_mismatch_warning(tmp_path):
     with _warnings.catch_warnings(record=True) as caught:
         _warnings.simplefilter("always")
         runner.invoke(
-            cli,
+            app,
             [
                 "reconstruct",
                 "-i",
@@ -471,7 +472,7 @@ def test_write_config_scale_to_output(tmp_path):
 
     runner = CliRunner()
     runner.invoke(
-        cli,
+        app,
         [
             "reconstruct",
             "-i",
@@ -541,7 +542,7 @@ def test_write_config_scale_to_output_anisotropic(tmp_path):
 
     runner = CliRunner()
     runner.invoke(
-        cli,
+        app,
         [
             "reconstruct",
             "-i",
@@ -607,7 +608,7 @@ def test_auto_regularization_cli(tmp_path):
 
     runner = CliRunner()
     result = runner.invoke(
-        cli,
+        app,
         [
             "reconstruct",
             "-i",
@@ -675,7 +676,7 @@ def _phase_inputs(
     tf_config_path = config_path if tf_settings is None else write_config(tmp_path / f"{name}_tf.yml", tf_settings)
     tf_path = tmp_path / f"{name}_tf.zarr"
     CliRunner().invoke(
-        cli,
+        app,
         ["compute-tf", "-i", str(input_path / "0" / "0" / "0"), "-c", str(tf_config_path), "-o", str(tf_path)],
         catch_exceptions=False,
     )
@@ -804,7 +805,7 @@ def test_apply_inv_tf_skips_a_timepoint_with_a_blank_channel(tmp_path):
     tf_path = tmp_path / "tf.zarr"
     position_path = input_path / "0" / "0" / "0"
     CliRunner().invoke(
-        cli,
+        app,
         ["compute-tf", "-i", str(position_path), "-c", str(config_path), "-o", str(tf_path)],
         catch_exceptions=False,
     )
@@ -870,7 +871,7 @@ def test_apply_inv_tf_resume_ignores_time_selection_in_transfer_function(tmp_pat
     utils.model_to_yaml(subset_config, subset_config_path)
     subset_tf_path = tmp_path / "subset_tf.zarr"
     CliRunner().invoke(
-        cli,
+        app,
         ["compute-tf", "-i", str(position_path), "-c", str(subset_config_path), "-o", str(subset_tf_path)],
         catch_exceptions=False,
     )
@@ -936,7 +937,7 @@ def test_reconstruct_fovs_with_different_zyx_shapes(tmp_path):
     _write_fluorescence_config(config_path)
 
     result = CliRunner().invoke(
-        cli,
+        app,
         [
             "reconstruct",
             "-i",
@@ -977,7 +978,7 @@ def test_reconstruct_uniform_shape_keeps_unsuffixed_transfer_function_name(tmp_p
     _write_fluorescence_config(config_path)
 
     result = CliRunner().invoke(
-        cli,
+        app,
         [
             "reconstruct",
             "-i",
@@ -1009,7 +1010,7 @@ def test_apply_inv_tf_rejects_fovs_with_different_zyx_shapes(tmp_path):
     _write_fluorescence_config(config_path)
 
     result = CliRunner().invoke(
-        cli,
+        app,
         [
             "apply-inv-tf",
             "-i",

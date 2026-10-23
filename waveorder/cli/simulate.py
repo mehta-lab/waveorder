@@ -1,14 +1,11 @@
 from pathlib import Path
 
-import click
+import typer
 
-from waveorder.cli.parsing import config_filepath, output_dirpath
+from waveorder.cli.parsing import ConfigFilepath, OutputDirpath
 
 
-@click.command("simulate", no_args_is_help=True)
-@config_filepath()
-@output_dirpath()
-def _simulate_cli(config_filepath: Path, output_dirpath: Path):
+def _simulate_cli(config_filepath: ConfigFilepath, output_dirpath: OutputDirpath):
     """Simulate phantom data matching a configuration file.
 
     Writes a single zarr with both the ground-truth phantom and
@@ -18,7 +15,7 @@ def _simulate_cli(config_filepath: Path, output_dirpath: Path):
     Example:
       \033[92mwo sim -c ./phase.yml -o ./phase.zarr\033[0m
     """
-    click.echo(click.style("Starting simulation...", fg="green"))
+    typer.echo(typer.style("Starting simulation...", fg=typer.colors.GREEN))
 
     # Deferred imports: these pull in torch, iohub, numpy, etc.
     # Only loaded when the command runs, keeping wo sim -h fast.
@@ -95,7 +92,7 @@ def _simulate_cli(config_filepath: Path, output_dirpath: Path):
             channel_name=settings.input_channel_names[0],
         )
     else:
-        raise click.UsageError("Config must contain birefringence, phase, or fluorescence settings")
+        raise typer.BadParameter("Config must contain birefringence, phase, or fluorescence settings")
 
     czyx = xr.concat([phantom, data], dim="c")
     _write_czyx(czyx, output_dirpath)

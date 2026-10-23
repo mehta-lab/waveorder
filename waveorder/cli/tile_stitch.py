@@ -13,13 +13,14 @@ package, which orchestrates the same primitives over a dask cluster.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Annotated
 
-import click
+import typer
 
 from waveorder.cli.parsing import (
-    config_filepath,
-    input_position_dirpaths,
-    output_dirpath,
+    ConfigFilepath,
+    InputPositionDirpaths,
+    OutputDirpath,
 )
 
 
@@ -59,7 +60,7 @@ def tile_stitch_cli(
     available = list(input_dataset.channel_names)
     missing = [c for c in requested_channels if c not in available]
     if missing:
-        raise click.UsageError(
+        raise ValueError(
             f"recon.input_channel_names={requested_channels} not all present in dataset channels {available}: missing {missing}"
         )
 
@@ -71,7 +72,7 @@ def tile_stitch_cli(
     else:
         time_idxs = list(requested_t)
     if len(time_idxs) != 1:
-        raise click.UsageError(
+        raise ValueError(
             f"wo tile-stitch processes one timepoint at a time; recon.time_indices selected {len(time_idxs)}"
         )
     timepoint = time_idxs[0]
@@ -109,21 +110,17 @@ def tile_stitch_cli(
     )
 
 
-@click.command("tile-stitch", no_args_is_help=True)
-@input_position_dirpaths()
-@config_filepath()
-@output_dirpath()
-@click.option(
-    "--device",
-    type=str,
-    default=None,
-    help='Override ``recon.device`` from the YAML ("cpu", "cuda", "mps", ...).',
-)
 def _tile_stitch_cli(
-    input_position_dirpaths: list[Path],
-    config_filepath: Path,
-    output_dirpath: Path,
-    device: str | None,
+    input_position_dirpaths: InputPositionDirpaths,
+    config_filepath: ConfigFilepath,
+    output_dirpath: OutputDirpath,
+    device: Annotated[
+        str | None,
+        typer.Option(
+            "--device",
+            help='Override ``recon.device`` from the YAML ("cpu", "cuda", "mps", ...).',
+        ),
+    ] = None,
 ) -> None:
     """Single-process tiled reconstruction.
 
@@ -142,9 +139,12 @@ def _tile_stitch_cli(
     Example:
       \033[92mwo tile-stitch -i ./input.zarr/0/0/0 -c ./tile_stitch.yml -o ./output.zarr\033[0m
     """
-    tile_stitch_cli(
-        input_position_dirpaths[0],
-        config_filepath,
-        output_dirpath,
-        device=device,
-    )
+    try:
+        tile_stitch_cli(
+            input_position_dirpaths[0],
+            config_filepath,
+            output_dirpath,
+            device=device,
+        )
+    except ValueError as exc:
+        raise typer.BadParameter(str(exc)) from exc
