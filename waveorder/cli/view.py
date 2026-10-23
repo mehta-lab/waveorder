@@ -36,17 +36,23 @@ def _open_transfer_function(viewer, path, prefix=""):
     import numpy as np
     import zarr
 
+    from waveorder.cli.utils import FLOAT16_COMPLEX_ARRAYS, read_transfer_function_array
+
     root = zarr.open(path, mode="r")
     names = list(root.keys())
+    complex_arrays = root.attrs.get(FLOAT16_COMPLEX_ARRAYS, [])
+
+    def read(name):
+        return read_transfer_function_array(root[name], ..., complex_arrays, name)
 
     svd_components = {"singular_system_U", "singular_system_S", "singular_system_Vh"}
     if svd_components.issubset(names):
         # Reconstruct the transfer function from the singular system.
         # Stored shapes: U (1, s, k, Vy, Vx), S (1, 1, k, Vy, Vx),
         # Vh (1, k, Z, Vy, Vx). H[s, z] = sum_k U[s, k] * S[k] * Vh[k, z].
-        U = np.asarray(root["singular_system_U"])[0]  # (s, k, Vy, Vx)
-        S = np.asarray(root["singular_system_S"])[0, 0]  # (k, Vy, Vx)
-        Vh = np.asarray(root["singular_system_Vh"])[0]  # (k, Z, Vy, Vx)
+        U = read("singular_system_U")[0]  # (s, k, Vy, Vx)
+        S = read("singular_system_S")[0, 0]  # (k, Vy, Vx)
+        Vh = read("singular_system_Vh")[0]  # (k, Z, Vy, Vx)
         H = np.einsum("skyx,kyx,kzyx->szyx", U, S.astype(U.dtype), Vh)  # (s, Z, Vy, Vx)
 
         # Name the output transfer functions by object type.
@@ -64,11 +70,11 @@ def _open_transfer_function(viewer, path, prefix=""):
         for name in names:
             if name.startswith("singular_system_"):
                 continue
-            _add_transfer_function_image(viewer, f"{prefix}{name}", np.asarray(root[name]))
+            _add_transfer_function_image(viewer, f"{prefix}{name}", read(name))
         return
 
     for name in names:
-        _add_transfer_function_image(viewer, f"{prefix}{name}", np.asarray(root[name]))
+        _add_transfer_function_image(viewer, f"{prefix}{name}", read(name))
 
 
 def _is_transfer_function(path):

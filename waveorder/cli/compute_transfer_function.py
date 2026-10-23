@@ -18,72 +18,55 @@ def _write_birefringence_tf(dataset, tf_ds):
 # i.e. one ZYX volume per chunk for a standard TCZYX array).
 
 
-def _write_phase_tf(dataset, tf_ds, recon_dim):
+def _create_tf_image(dataset, name, data, float16=False):
+    """Write one transfer function array, as float16 if asked to.
+
+    A complex array stored as float16 is listed under FLOAT16_COMPLEX_ARRAYS, so
+    loaders know to rebuild it from its interleaved (real, imag) pairs.
+    """
+    import numpy as np
+
+    from waveorder.cli.utils import FLOAT16_COMPLEX_ARRAYS, cast_float16
+
+    if float16:
+        if np.iscomplexobj(data):
+            dataset.zattrs[FLOAT16_COMPLEX_ARRAYS] = [*dataset.zattrs.get(FLOAT16_COMPLEX_ARRAYS, []), name]
+        data = cast_float16(data, f"transfer function array {name}")
+    dataset.create_image(name, data)
+
+
+def _write_phase_tf(dataset, tf_ds, recon_dim, float16=False):
     """Write phase TF arrays to zarr."""
     if recon_dim == 2:
-        dataset.create_image(
-            "singular_system_U",
-            tf_ds["singular_system_U"].values[None],
-        )
-        dataset.create_image(
-            "singular_system_S",
-            tf_ds["singular_system_S"].values[None, None],
-        )
-        dataset.create_image(
-            "singular_system_Vh",
-            tf_ds["singular_system_Vh"].values[None],
-        )
+        _create_tf_image(dataset, "singular_system_U", tf_ds["singular_system_U"].values[None], float16)
+        _create_tf_image(dataset, "singular_system_S", tf_ds["singular_system_S"].values[None, None], float16)
+        _create_tf_image(dataset, "singular_system_Vh", tf_ds["singular_system_Vh"].values[None], float16)
     elif recon_dim == 3:
-        dataset.create_image(
-            "real_potential_transfer_function",
-            tf_ds["real_potential_transfer_function"].values[None, None, ...],
-        )
-        dataset.create_image(
-            "imaginary_potential_transfer_function",
-            tf_ds["imaginary_potential_transfer_function"].values[None, None, ...],
-        )
+        for name in ("real_potential_transfer_function", "imaginary_potential_transfer_function"):
+            _create_tf_image(dataset, name, tf_ds[name].values[None, None, ...], float16)
 
 
-def _write_fluorescence_tf(dataset, tf_ds, recon_dim):
+def _write_fluorescence_tf(dataset, tf_ds, recon_dim, float16=False):
     """Write fluorescence TF arrays to zarr."""
     if recon_dim == 2:
-        dataset.create_image(
-            "singular_system_U",
-            tf_ds["singular_system_U"].values[None, ...],
-        )
-        dataset.create_image(
-            "singular_system_S",
-            tf_ds["singular_system_S"].values[None, None, ...],
-        )
-        dataset.create_image(
-            "singular_system_Vh",
-            tf_ds["singular_system_Vh"].values[None, ...],
-        )
+        _create_tf_image(dataset, "singular_system_U", tf_ds["singular_system_U"].values[None, ...], float16)
+        _create_tf_image(dataset, "singular_system_S", tf_ds["singular_system_S"].values[None, None, ...], float16)
+        _create_tf_image(dataset, "singular_system_Vh", tf_ds["singular_system_Vh"].values[None, ...], float16)
     elif recon_dim == 3:
-        dataset.create_image(
-            "optical_transfer_function",
-            tf_ds["optical_transfer_function"].values[None, None, ...],
+        _create_tf_image(
+            dataset, "optical_transfer_function", tf_ds["optical_transfer_function"].values[None, None, ...], float16
         )
 
 
-def _write_vector_birefringence_tf(dataset, tf_ds):
+def _write_vector_birefringence_tf(dataset, tf_ds, float16=False):
     """Write vector birefringence TF arrays to zarr."""
     # Add dummy channels needed by iohub for additional images
     for i in range(3):
         dataset.append_channel(f"ch{i}")
 
-    dataset.create_image(
-        "vector_singular_system_U",
-        tf_ds["vector_singular_system_U"].values,
-    )
-    dataset.create_image(
-        "vector_singular_system_S",
-        tf_ds["vector_singular_system_S"].values[None],
-    )
-    dataset.create_image(
-        "vector_singular_system_Vh",
-        tf_ds["vector_singular_system_Vh"].values,
-    )
+    _create_tf_image(dataset, "vector_singular_system_U", tf_ds["vector_singular_system_U"].values, float16)
+    _create_tf_image(dataset, "vector_singular_system_S", tf_ds["vector_singular_system_S"].values[None], float16)
+    _create_tf_image(dataset, "vector_singular_system_Vh", tf_ds["vector_singular_system_Vh"].values, float16)
 
 
 def compute_transfer_function_cli(
@@ -129,6 +112,7 @@ def compute_transfer_function_cli(
     czyx_data = input_dataset.to_xarray().isel(t=0)
 
     recon_dim = settings.reconstruction_dimension
+    float16 = settings.transfer_function_dtype == "float16"
 
     # Prepare output dataset
     num_channels = 2 if recon_dim == 2 else 1
@@ -158,12 +142,12 @@ def compute_transfer_function_cli(
 
         # Write phase TFs (only for 3D; 2D phase uses vector singular system)
         if recon_dim == 3:
-            _write_phase_tf(output_dataset, tf_ds, recon_dim)
+            _write_phase_tf(output_dataset, tf_ds, recon_dim, float16)
 
         echo_headline(
             f"Downsampling transfer function in X and Y by {int(np.ceil(np.sqrt(np.array(zyx_shape).prod() / 1e7)))}x"
         )
-        _write_vector_birefringence_tf(output_dataset, tf_ds)
+        _write_vector_birefringence_tf(output_dataset, tf_ds, float16)
 
     else:
         if settings.birefringence is not None:
@@ -182,14 +166,14 @@ def compute_transfer_function_cli(
             echo_settings(settings.phase.transfer_function)
 
             tf_ds = phase.compute_transfer_function(czyx_data, recon_dim, settings.phase)
-            _write_phase_tf(output_dataset, tf_ds, recon_dim)
+            _write_phase_tf(output_dataset, tf_ds, recon_dim, float16)
 
         if settings.fluorescence is not None:
             echo_headline("Generating fluorescence transfer function with settings:")
             echo_settings(settings.fluorescence.transfer_function)
 
             tf_ds = fluorescence.compute_transfer_function(czyx_data, recon_dim, settings.fluorescence)
-            _write_fluorescence_tf(output_dataset, tf_ds, recon_dim)
+            _write_fluorescence_tf(output_dataset, tf_ds, recon_dim, float16)
 
     # Write settings to metadata. `time_indices` and `input_channel_names`
     # select which data is reconstructed, not how the transfer function is
