@@ -84,12 +84,13 @@ def _is_transfer_function(path):
 
 
 def _open_ome_zarr(viewer, path, prefix=""):
-    """Open an OME-Zarr, squeezing singleton dims so 2D results always appear."""
+    """Open an OME-Zarr plate or single FOV, squeezing singleton dims so 2D results always appear."""
     import numpy as np
-    from iohub.ngff import open_ome_zarr
+    from iohub.ngff import Position, open_ome_zarr
 
     plate = open_ome_zarr(path, mode="r")
-    positions = list(plate.positions())
+    # `wo tile-stitch` writes a single position
+    positions = [("0", plate)] if isinstance(plate, Position) else list(plate.positions())
     multi_position = len(positions) > 1
 
     for position_key, position in positions:

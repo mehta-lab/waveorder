@@ -41,6 +41,12 @@ waveorder apply-inv-tf
 ```
 Computing the transfer function is typically the most expensive part of the reconstruction, so saving a transfer function then applying it to many datasets can save time.
 
+## Tiled reconstruction
+
+`waveorder tile-stitch` reconstructs a position in overlapping tiles and blends them back into one volume, so each tile's transfer function is the size of a tile rather than the whole field. Its config has `tile` and `blend` sections, and the usual reconstruction settings go under `recon`. [`tile_stitch_phase_3d.sh`](../examples/cli/tile_stitch_phase_3d.sh) simulates a phase dataset and reconstructs it with [`configs/tile-stitch_phase_3d.yml`](../examples/cli/configs/tile-stitch_phase_3d.yml).
+
+A 3D reconstruction has to list `z` in `tile.tile_size`, because the transfer function takes its shape from `tile_size`. Set it to the full depth to tile only in Y and X. `tile-stitch` reconstructs one timepoint per run, and `--device` overrides `recon.device`. To spread tiles across workers, see [biahub](https://github.com/czbiohub-sf/biahub).
+
 ## Input options
 
 The input `-i` flag always accepts a list of inputs, either explicitly e.g. `-i ./data.zarr/A/1/0 ./data.zarr/A/2/0` or through wildcards `-i ./data.zarr/*/*/*`. The positions in a high-content screening `.zarr` store are organized into `/row/col/fov` folders, so `./input.zarr/*/*/*` creates a list of all positions in a dataset.

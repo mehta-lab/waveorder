@@ -3,7 +3,7 @@ import yaml
 from pydantic import ValidationError
 
 from waveorder._pixel_size import YXPixelSize
-from waveorder.api import birefringence, fluorescence, phase
+from waveorder.api import birefringence, fluorescence, phase, tile_stitch
 from waveorder.cli import settings
 from waveorder.io import utils
 from waveorder.optim.autoreg import (
@@ -114,12 +114,26 @@ def test_generate_example_settings(pytestconfig):
             birefringence=settings.BirefringenceSettings(),
             phase=settings.PhaseSettings(),
         ),
+        # `wo tile-stitch` takes exactly one timepoint. A 3D reconstruction lists
+        # z in tile_size, because the transfer function takes its shape from
+        # tile_size; z: 100 is the full depth that `wo sim` writes, so only y and
+        # x are tiled. The recon block matches phase_3d.yml, so
+        # tile_stitch_phase_3d.sh can simulate with that config.
+        "tile-stitch_phase_3d.yml": tile_stitch.TileStitchSettings(
+            tile=tile_stitch.TileSettings(tile_size={"z": 100, "y": 128, "x": 128}, overlap={"y": 64, "x": 64}),
+            blend=tile_stitch.BlendSettings(kind="gaussian_mean", sigma_fraction=0.125),
+            recon=settings.ReconstructionSettings(
+                input_channel_names=["Brightfield"],
+                time_indices=0,
+                phase=settings.PhaseSettings(),
+            ),
+        ),
     }
 
     for file_name, settings_obj in configs.items():
         config_path = example_path / file_name
         utils.model_to_commented_yaml(settings_obj, config_path)
-        settings_roundtrip = utils.yaml_to_model(config_path, settings.ReconstructionSettings)
+        settings_roundtrip = utils.yaml_to_model(config_path, type(settings_obj))
         assert settings_obj.model_dump() == settings_roundtrip.model_dump()
 
 
