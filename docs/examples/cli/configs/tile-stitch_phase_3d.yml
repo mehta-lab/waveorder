@@ -1,103 +1,17 @@
-schema_version: '1'                         # schema version of this settings document (bumped on breaking changes)
-tile:                                       # spatial tiling geometry (tile_size, overlap)
-  tile_size:                                # per-dimension input tile size in pixels (e.g. {'y': 512, 'x': 512})
-    z: 100
-    y: 128
-    x: 128
-  overlap:                                  # per-dimension tile overlap in pixels; dims absent default to 0
-    y: 64
-    x: 64
-blend:                                      # overlap-blend reduction kernel selection
-  kind: gaussian_mean                       # reduction kernel used to combine overlapping tile contributions
-  sigma_fraction: 0.125                     # Gaussian σ as a fraction of each tile axis (kind='gaussian_mean' only); default 1/8 applied at build time when None
-  accumulator_dtype: float32                # dtype used for the running sum during tree reduction; fp32 matches input precision, fp64 reduces accumulation error at extreme N_contributors
-recon:                                      # full ``wo rec`` reconstruction settings (channels, dims, modality block)
-  input_channel_names:                      # names of input channels in the dataset
-  - Brightfield
-  time_indices: 0                           # time points to reconstruct
-  reconstruction_dimension: 3               # 2 for thin samples, 3 for thick
-  device: null                              # compute device: null=cpu, auto, cuda:0, mps, etc.
-  birefringence: null
-  # or, instead of null:
-  #   transfer_function:
-  #     swing: 0.1                          # swing of the liquid crystal (0 to 1)
-  #   apply_inverse:
-  #     wavelength_illumination: 0.532      # illumination wavelength in micrometers
-  #     background_path: ''                 # path to background zarr (empty = no background)
-  #     remove_estimated_background: false  # estimate and remove background
-  #     flip_orientation: false             # flip the orientation angle
-  #     rotate_orientation: false           # rotate orientation by 90 degrees
+tile:
+  tile_size: {z: 100, y: 128, x: 128}  # per-dim tile size in pixels; z is the full stack depth, so only y and x are tiled
+  overlap: {y: 64, x: 64}              # must be < tile_size; missing dims = 0
+blend: {kind: gaussian_mean, sigma_fraction: 0.125}
+recon:                                 # same schema as `wo rec`
+  input_channel_names: [Brightfield]
+  time_indices: 0                      # tile-stitch runs one timepoint
+  reconstruction_dimension: 3
   phase:
     transfer_function:
-      wavelength_illumination: 0.532        # illumination wavelength in micrometers
-      yx_pixel_size: 0.1                    # lateral pixel size in micrometers; scalar for isotropic, or {y, x} mapping for anisotropic
-      z_pixel_size: 0.25                    # axial pixel size in micrometers
-      z_padding: 0                          # z slices to pad for axial boundary effects
-      z_focus_offset: 0                     # (optimizable) offset from center slice in slice units
-      index_of_refraction_media: 1.3        # refractive index of imaging media
-      numerical_aperture_detection: 1.2     # (optimizable) detection objective numerical aperture
-      tilt_angle_zenith: 0.0                # (optimizable) illumination tilt zenith angle in radians
-      tilt_angle_azimuth: 0.0               # (optimizable) illumination tilt azimuth angle in radians
-      numerical_aperture_illumination: 0.9  # (optimizable) condenser numerical aperture
-      invert_phase_contrast: false          # invert contrast for positive/negative phase
-    apply_inverse:
-      reconstruction_algorithm: Tikhonov    # 'Tikhonov' or 'TV' regularization
-      regularization_strength: 0.001        # strength of regularization
-      TV_rho_strength: 0.001                # ADMM rho parameter for TV regularization
-      TV_iterations: 1                      # ADMM iterations for TV regularization
-      apodization_rolloff: 0.0              # raised-cosine roll-off fraction applied to the inverse filter at the transverse Nyquist edge; suppresses checkerboard artifacts when the optical band limit exceeds the sampling Nyquist frequency. Must be between 0 and 1 (0 = off); if you see checkerboarding artifacts, start with 0.25
-      auto_regularization: null             # choose regularization_strength from the data; 3D Tikhonov only
-      # or, instead of null:
-      #   rule: otsu_cnr                    # 'otsu_cnr' maximizes local-variance contrast; 'l_curve' finds the trade-off corner
-      #   search_min: -6.0                  # lower log10 bound of the sweep, interpreted per search_scale
-      #   search_max: 2.0                   # upper log10 bound of the sweep, interpreted per search_scale
-      #   num_samples: 25                   # regularization strengths to try
-      #   search_scale: relative            # 'relative' reads the search bounds as log10(lambda / |H|^2max); 'absolute' as log10(lambda)
-      #   report_path: null                 # write the full sweep (scores, norms, chosen index) to this JSON path; null = no report
-      #   plot_path: null                   # write a montage of the sweep (the scored crop at every strength, pick framed) to this PNG path; null = no plot
-  fluorescence: null
-  # or, instead of null:
-  #   transfer_function:
-  #     yx_pixel_size: 0.1                  # lateral pixel size in micrometers; scalar for isotropic, or {y, x} mapping for anisotropic
-  #     z_pixel_size: 0.25                  # axial pixel size in micrometers
-  #     z_padding: 0                        # z slices to pad for axial boundary effects
-  #     z_focus_offset: 0                   # (optimizable) offset from center slice in slice units
-  #     index_of_refraction_media: 1.3      # refractive index of imaging media
-  #     numerical_aperture_detection: 1.2   # (optimizable) detection objective numerical aperture
-  #     tilt_angle_zenith: 0.0              # (optimizable) illumination tilt zenith angle in radians
-  #     tilt_angle_azimuth: 0.0             # (optimizable) illumination tilt azimuth angle in radians
-  #     wavelength_emission: 0.532          # emission wavelength in micrometers
-  #     confocal_pinhole_diameter: null     # confocal pinhole diameter (null = widefield)
-  #   apply_inverse:
-  #     reconstruction_algorithm: Tikhonov  # 'Tikhonov'/'TV' filters or 'RL'/'RLGC' iterative deconvolution
-  #     regularization_strength: 0.001      # strength of regularization
-  #     TV_rho_strength: 0.001              # ADMM rho parameter for TV regularization
-  #     TV_iterations: 1                    # ADMM iterations for TV regularization
-  #     apodization_rolloff: 0.0            # raised-cosine roll-off fraction applied to the inverse filter at the transverse Nyquist edge; suppresses checkerboard artifacts when the optical band limit exceeds the sampling Nyquist frequency. Must be between 0 and 1 (0 = off); if you see checkerboarding artifacts, start with 0.25
-  #     auto_regularization: null           # choose regularization_strength from the data; 3D Tikhonov only
-  #     # or, instead of null:
-  #     #   rule: otsu_cnr                  # 'otsu_cnr' maximizes local-variance contrast; 'l_curve' finds the trade-off corner
-  #     #   search_min: -6.0                # lower log10 bound of the sweep, interpreted per search_scale
-  #     #   search_max: 2.0                 # upper log10 bound of the sweep, interpreted per search_scale
-  #     #   num_samples: 25                 # regularization strengths to try
-  #     #   search_scale: relative          # 'relative' reads the search bounds as log10(lambda / |H|^2max); 'absolute' as log10(lambda)
-  #     #   report_path: null               # write the full sweep (scores, norms, chosen index) to this JSON path; null = no report
-  #     #   plot_path: null                 # write a montage of the sweep (the scored crop at every strength, pick framed) to this PNG path; null = no plot
-  #     rl: null                            # Richardson-Lucy knobs; only valid with reconstruction_algorithm 'RL'/'RLGC', and filled with defaults if omitted there
-  #     # or, instead of null:
-  #     #   iterations: 25                  # maximum RL / RLGC iterations
-  #     #   background: 0.0                 # constant background folded into the RL / RLGC Poisson forward model
-  #     #   stopping_tolerance: null        # relative-change early-stop threshold (null = run all iterations)
-  #     #   back_projector: matched         # 'matched' is the matched transpose (classic RL); the unmatched 'gaussian'/'butterworth'/'wiener'/'wiener_butterworth' converge in far fewer iterations but are supported for 'RL' only, not 'RLGC'
-  #     #   bp_alpha: null                  # Wiener regularization for the 'wiener'/'wiener_butterworth' back projectors (null = matched cutoff gain squared); lower inverts harder, converging in fewer iterations but amplifying noise
-  #     #   bp_beta: null                   # cutoff gain for the 'butterworth'/'wiener_butterworth' back projectors (null = matched cutoff gain); lower suppresses harder past the resolution limit
-  optimization: null
-  # or, instead of null:
-  #   max_iterations: 10                    # maximum optimizer steps (ignored by grid_search)
-  #   method: adam                          # optimizer method: adam, lbfgs, nelder_mead, grid_search
-  #   convergence_tol: null                 # early stopping tolerance
-  #   convergence_patience: 5               # patience for early stopping
-  #   use_gradients: null                   # auto-detect from method if null
-  #   grid_points: 7                        # grid points per parameter (grid_search only)
-  #   loss: {}                              # loss function configuration
-  #   log_dir: null                         # TensorBoard log directory (null = no logging)
+      wavelength_illumination: 0.532
+      yx_pixel_size: 0.1
+      z_pixel_size: 0.25
+      index_of_refraction_media: 1.3
+      numerical_aperture_detection: 1.2
+      numerical_aperture_illumination: 0.9
+    apply_inverse: {reconstruction_algorithm: Tikhonov, regularization_strength: 1.0e-3}
