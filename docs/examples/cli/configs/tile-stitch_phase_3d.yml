@@ -1,0 +1,17 @@
+tile:
+  tile_size: {z: 100, y: 128, x: 128}  # per-dim tile size in pixels; z is the full stack depth, so only y and x are tiled
+  overlap: {y: 64, x: 64}              # must be < tile_size; missing dims = 0
+blend: {kind: gaussian_mean, sigma_fraction: 0.125}
+recon:                                 # same schema as `wo rec`
+  input_channel_names: [Brightfield]
+  time_indices: 0                      # tile-stitch runs one timepoint
+  reconstruction_dimension: 3
+  phase:
+    transfer_function:
+      wavelength_illumination: 0.532
+      yx_pixel_size: 0.1
+      z_pixel_size: 0.25
+      index_of_refraction_media: 1.3
+      numerical_aperture_detection: 1.2
+      numerical_aperture_illumination: 0.9
+    apply_inverse: {reconstruction_algorithm: Tikhonov, regularization_strength: 1.0e-3}
