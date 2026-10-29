@@ -1,5 +1,7 @@
 # WaveOrder Benchmarks
 
+![Benchmark datasets: raw inputs (top) and reconstructions (bottom)](benchmark_datasets.png)
+
 Tracks reconstruction quality and performance. Synthetic cases
 generate a phantom, simulate a measurement, reconstruct via `wo rec`, and
 score against ground truth. Real cases require access to the Biohub HPC and
