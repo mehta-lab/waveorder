@@ -152,6 +152,7 @@ def run(
                 metrics = run_hpc_case(
                     input_path=case.input,
                     position=case.position,
+                    cli=case.cli,
                     recon_config=recon_config,
                     case_dir=case_dir,
                     save_all=save_all,

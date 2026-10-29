@@ -198,6 +198,40 @@ cases:
     reference:
       image_quality.midband_power: {min: 4.5e4}
 
+  # --- Neuromast straight/oblique comparison (mantis, 52 hpf) ---
+  # Same registered 4-channel input: straight epi-illumination vs
+  # oblique light-sheet brightfield phase, plus a tiled (wo tile-stitch)
+  # variant of the oblique case covering the tiled reconstruction path.
+
+  neuromast_epi_phase_3d:
+    type: hpc
+    input: /hpc/projects/waveorder/neuromast-mantis/2025_07_21_straight_oblique_comparison/2-register/register.zarr
+    position: 0/0/0
+    config: ../configs/neuromast_epi_phase_3d.yml
+    overrides:
+      time_indices: 0  # input has 24 timepoints
+    reference:
+      image_quality.midband_power: {min: 8.0e2}
+
+  neuromast_ls_phase_3d:
+    type: hpc
+    input: /hpc/projects/waveorder/neuromast-mantis/2025_07_21_straight_oblique_comparison/2-register/register.zarr
+    position: 0/0/0
+    config: ../configs/neuromast_ls_phase_3d.yml
+    overrides:
+      time_indices: 0
+    reference:
+      image_quality.midband_power: {min: 5.5e2}
+
+  neuromast_tile_phase_3d:
+    type: hpc
+    cli: tile-stitch
+    input: /hpc/projects/waveorder/neuromast-mantis/2025_07_21_straight_oblique_comparison/2-register/register.zarr
+    position: 0/0/0
+    config: ../configs/neuromast_tile_phase_3d.yml
+    reference:
+      image_quality.midband_power: {min: 6.0e2}
+
   # --- Mantis v1 (neuromast, oblique label-free) ---
   # Mantis v2 shares this config structure but its deskewed intermediate
   # stores were deleted after assembly; add a cached deskewed crop later.
