@@ -195,6 +195,8 @@ cases:
     input: /hpc/projects/waveorder/a549-hummingbird/2025-08-04-reconstructions/0-zarr/data.zarr
     position: 0/2/000000
     config: ../configs/a549_fluor_3d.yml
+    reference:
+      image_quality.midband_power: {min: 2.5e5}
 
   # --- Neuromast straight/oblique comparison (mantis, 52 hpf) ---
   # Position 0/1/0 has the best-centered rosette of the three FOVs.
