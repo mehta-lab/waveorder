@@ -93,6 +93,8 @@ cases:
     input: /hpc/projects/icd.fast.ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
     position: A/1/029029
     config: ../configs/ops_pheno_phase_3d.yml
+    reference:
+      image_quality.midband_power: {min: 3.0e2}
 
   ops_track_phase_2d:
     type: hpc
@@ -101,6 +103,8 @@ cases:
     config: ../configs/ops_track_phase_2d.yml
     overrides:
       time_indices: 0  # input has 2 timepoints
+    reference:
+      image_quality.midband_power: {min: 2.0e2}
 
   ops_track_phase_3d:
     type: hpc
@@ -109,6 +113,8 @@ cases:
     config: ../configs/ops_track_phase_3d.yml
     overrides:
       time_indices: 0
+    reference:
+      image_quality.midband_power: {min: 1.7e2}
 
   ops_fluor_gfp:
     type: hpc
@@ -121,6 +127,8 @@ cases:
       y: [768, 1280]
       x: [768, 1280]
     config: ../configs/ops_fluor_gfp.yml
+    reference:
+      image_quality.midband_power: {min: 4.5e4}
 
   # --- Birefringence (kazansky polarization target, mantis) ---
   # Joint birefringence + phase settings; metrics optics come from the
@@ -131,6 +139,8 @@ cases:
     input: /hpc/projects/waveorder/kazansky-mantis/0-zarr/pm_kazansky_test_1.zarr
     position: 0/0/0
     config: ../configs/kazansky_birefringence_3d.yml
+    reference:
+      image_quality.midband_power: {min: 7.0e2}
 
   # --- Curated phase/fluorescence variety (/hpc/projects/waveorder/) ---
 
@@ -139,24 +149,32 @@ cases:
     input: /hpc/projects/waveorder/a549-hummingbird/2025-08-04-reconstructions/0-zarr/data.zarr
     position: 0/2/000000
     config: ../configs/a549_phase_2d.yml
+    reference:
+      image_quality.midband_power: {min: 9.0e1}
 
   a549_phase_3d:
     type: hpc
     input: /hpc/projects/waveorder/a549-hummingbird/2025-08-04-reconstructions/0-zarr/data.zarr
     position: 0/2/000000
     config: ../configs/a549_phase_3d.yml
+    reference:
+      image_quality.midband_power: {min: 2.5e2}
 
   cardiomyocyte_phase_3d:
     type: hpc
     input: /hpc/projects/waveorder/cardiomyocytes-falcon/1-preprocessing/polarization-averaged-measurements.zarr
     position: 0/0/0
     config: ../configs/cardiomyocyte_phase_3d.yml
+    reference:
+      image_quality.midband_power: {min: 7.0e1}
 
   zebrafish_daxi_phase_3d:
     type: hpc
     input: /hpc/projects/waveorder/zebrafish-daxi/1-rois/cropped_rois.zarr
     position: 0/0/eye
     config: ../configs/zebrafish_daxi_phase_3d.yml
+    reference:
+      image_quality.midband_power: {min: 5.0e1}
 
   # --- Infected cells (EV71 iGluta neurons, 2025-07-17) ---
 
@@ -167,6 +185,8 @@ cases:
     config: ../configs/ev71_phase_3d.yml
     overrides:
       time_indices: 0  # input has 36 timepoints
+    reference:
+      image_quality.midband_power: {min: 6.0e2}
 
   ev71_fluor_fitc_3d:
     type: hpc
@@ -175,6 +195,8 @@ cases:
     config: ../configs/ev71_fluor_fitc_3d.yml
     overrides:
       time_indices: 0
+    reference:
+      image_quality.midband_power: {min: 4.5e4}
 
   # --- Mantis v1 (neuromast, oblique label-free) ---
   # Mantis v2 shares this config structure but its deskewed intermediate
@@ -187,3 +209,5 @@ cases:
     config: ../configs/mantis_v1_neuromast_phase_3d.yml
     overrides:
       time_indices: 0  # input has 278 timepoints
+    reference:
+      image_quality.midband_power: {min: 3.8e1}
