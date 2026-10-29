@@ -1,0 +1,22 @@
+# Verbatim copy of /hpc/projects/waveorder/zebrafish-daxi/2-reconstruct/phase.yml
+# zebrafish-daxi: 760 nm brightfield phase 3D on DaXi light sheet.
+input_channel_names:
+- camera 22500102 Side A @ 780nm
+time_indices: all
+reconstruction_dimension: 3
+phase:
+  transfer_function:
+    wavelength_illumination: 0.76
+    yx_pixel_size: 0.1842
+    z_pixel_size: 1.019
+    z_padding: 10
+    z_focus_offset: 0
+    index_of_refraction_media: 1.3
+    numerical_aperture_detection: 1.1
+    numerical_aperture_illumination: 0.8
+    invert_phase_contrast: false
+  apply_inverse:
+    reconstruction_algorithm: Tikhonov
+    regularization_strength: 0.01
+    TV_rho_strength: 0.001
+    TV_iterations: 1

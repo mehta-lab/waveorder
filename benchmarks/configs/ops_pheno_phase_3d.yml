@@ -1,0 +1,20 @@
+# Verbatim copy of /hpc/projects/icd.fast.ops/configs/phase_config_pheno.yaml
+# OPS production: phenotyping phase 3D at 20x (asymmetric NA, z_padding 5).
+input_channel_names: ["BF"]
+time_indices: 'all'
+reconstruction_dimension: 3
+phase:
+  transfer_function:
+    wavelength_illumination: 0.450
+    yx_pixel_size: 0.325
+    z_pixel_size: 2.0
+    z_padding: 5
+    index_of_refraction_media: 1.0
+    numerical_aperture_detection: 0.55
+    numerical_aperture_illumination: 0.4
+    invert_phase_contrast: false
+  apply_inverse:
+    reconstruction_algorithm: Tikhonov
+    regularization_strength: 0.001
+    TV_rho_strength: 0.001
+    TV_iterations: 1
