@@ -188,17 +188,16 @@ cases:
     reference:
       image_quality.midband_power: {min: 6.0e2}
 
-  ev71_fluor_3d:
+  # a549 FITC replaces the EV71 FITC decon case: the EV71 FITC channel is
+  # near background level (~70 counts of signal) in every position/timepoint.
+  a549_fluor_3d:
     type: hpc
-    input: /hpc/projects/comp.micro/infected_cell_imaging/Neurons/2025_07_17_iGluta_EV71/0-convert/convert.zarr
-    position: B/2/0
-    config: ../configs/ev71_fluor_3d.yml
-    overrides:
-      time_indices: 0
-    reference:
-      image_quality.midband_power: {min: 4.5e4}
+    input: /hpc/projects/waveorder/a549-hummingbird/2025-08-04-reconstructions/0-zarr/data.zarr
+    position: 0/2/000000
+    config: ../configs/a549_fluor_3d.yml
 
   # --- Neuromast straight/oblique comparison (mantis, 52 hpf) ---
+  # Position 0/1/0 has the best-centered rosette of the three FOVs.
   # Same registered 4-channel input: straight epi-illumination vs
   # oblique light-sheet brightfield phase, plus a tiled (wo tile-stitch)
   # variant of the oblique case covering the tiled reconstruction path.
@@ -206,7 +205,7 @@ cases:
   neuromast_epi_phase_3d:
     type: hpc
     input: /hpc/projects/waveorder/neuromast-mantis/2025_07_21_straight_oblique_comparison/2-register/register.zarr
-    position: 0/0/0
+    position: 0/1/0
     config: ../configs/neuromast_epi_phase_3d.yml
     overrides:
       time_indices: 0  # input has 24 timepoints
@@ -216,7 +215,7 @@ cases:
   neuromast_ls_phase_3d:
     type: hpc
     input: /hpc/projects/waveorder/neuromast-mantis/2025_07_21_straight_oblique_comparison/2-register/register.zarr
-    position: 0/0/0
+    position: 0/1/0
     config: ../configs/neuromast_ls_phase_3d.yml
     overrides:
       time_indices: 0
@@ -227,7 +226,7 @@ cases:
     type: hpc
     cli: tile-stitch
     input: /hpc/projects/waveorder/neuromast-mantis/2025_07_21_straight_oblique_comparison/2-register/register.zarr
-    position: 0/0/0
+    position: 0/1/0
     config: ../configs/neuromast_tile_phase_3d.yml
     reference:
       image_quality.midband_power: {min: 6.0e2}
