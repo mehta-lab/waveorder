@@ -114,6 +114,12 @@ cases:
     type: hpc
     input: /hpc/projects/icd.fast.ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
     position: A/1/029029
+    crop:
+      # Full-FOV fluorescence 3D peaks at ~302 GB RSS for this
+      # 7x2048x2048 input (measured 2026-10-28), a memory pathology in
+      # the fluorescence path worth fixing in the 4.0 refactor.
+      y: [768, 1280]
+      x: [768, 1280]
     config: ../configs/ops_fluor_gfp.yml
 
   # --- Birefringence (kazansky polarization target, mantis) ---
