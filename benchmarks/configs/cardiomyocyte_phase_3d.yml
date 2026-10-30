@@ -1,0 +1,22 @@
+# Verbatim copy of /hpc/projects/waveorder/cardiomyocytes-falcon/2-reconstruct/phase.yml
+# cardiomyocytes-falcon: high-NA (1.47/1.4 oil) phase 3D from pattern-averaged measurements.
+input_channel_names:
+- Pattern_8
+time_indices: all
+reconstruction_dimension: 3
+phase:
+  transfer_function:
+    wavelength_illumination: 0.532
+    yx_pixel_size: 0.069
+    z_pixel_size: 0.25
+    z_padding: 10
+    z_focus_offset: 0
+    index_of_refraction_media: 1.518
+    numerical_aperture_detection: 1.47
+    numerical_aperture_illumination: 1.4
+    invert_phase_contrast: false
+  apply_inverse:
+    reconstruction_algorithm: Tikhonov
+    regularization_strength: 0.001
+    TV_rho_strength: 0.001
+    TV_iterations: 1

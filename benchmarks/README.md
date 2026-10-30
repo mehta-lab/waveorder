@@ -1,5 +1,10 @@
 # WaveOrder Benchmarks
 
+![Benchmark datasets: raw inputs (top) and reconstructions (bottom)](benchmark_datasets.png)
+
+Regenerate the figure from any `wo bm run --scope all --save-all` run
+with `python benchmarks/make_thumbnails.py [RUN_DIR] [OUT_PNG]`.
+
 Tracks reconstruction quality and performance. Synthetic cases
 generate a phantom, simulate a measurement, reconstruct via `wo rec`, and
 score against ground truth. Real cases require access to the Biohub HPC and
@@ -54,6 +59,20 @@ and the venv is active.
    For HPC: `type: hpc`, plus `input` (path to an OME-Zarr) and `position`.
 
 3. `wo bm run --scope synthetic` to run it.
+
+## Regression workflow (wo-4.0)
+
+The suite gates the 4.0 refactor. Every case has a `reference` bound
+pinned from a known-good baseline, so a single run red-flags collapsed
+or missing reconstructions. For finer-grained comparisons:
+
+1. Baseline the target branch: `sbatch benchmarks/run_regression.sbatch`
+   (writes to the shared `/hpc/projects/waveorder/benchmarks`).
+2. Run the same command from your feature branch checkout.
+3. `wo bm compare` diffs the two newest runs metric-by-metric.
+
+Keep runs on Intel nodes (the sbatch script pins `--constraint=intel`)
+so baselines stay hardware-comparable.
 
 ## Custom experiments
 

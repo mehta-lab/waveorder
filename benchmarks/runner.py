@@ -32,6 +32,7 @@ from benchmarks.config import (
     ReferenceBound,
     SimulationConfig,
     infer_modality,
+    recon_block,
 )
 from benchmarks.metrics import compute_metrics
 from benchmarks.simulate import (
@@ -89,9 +90,13 @@ def _sim_kwargs(modality: str, tf_settings: dict) -> dict:
     return {k: v for k, v in tf_settings.items() if k in _SIM_KWARGS[modality]}
 
 
-def _wo_rec_argv(position_path: Path, config_path: Path, recon_path: Path) -> list[str]:
-    """Build the ``wo rec`` argv list shared by subprocess exec and cli_command.sh."""
-    return ["wo", "rec", "-i", str(position_path), "-c", str(config_path), "-o", str(recon_path)]
+def _wo_rec_argv(position_path: Path, config_path: Path, recon_path: Path, cli: str = "rec") -> list[str]:
+    """Build the ``wo <cli>`` argv list shared by subprocess exec and cli_command.sh.
+
+    ``cli`` is ``"rec"`` or ``"tile-stitch"``; both take the same
+    ``-i/-c/-o`` flags.
+    """
+    return ["wo", cli, "-i", str(position_path), "-c", str(config_path), "-o", str(recon_path)]
 
 
 def _run_wo_rec(argv: list[str]) -> None:
@@ -204,8 +209,12 @@ def _read_zarr(path: Path) -> torch.Tensor:
     Tensor
         Volume as (Z, Y, X) or (C, Z, Y, X) float32 tensor.
     """
-    dataset = open_ome_zarr(path, layout="hcs", mode="r")
-    position = list(dataset.positions())[0][1]
+    dataset = open_ome_zarr(path, layout="auto", mode="r")
+    # wo rec writes an HCS plate; wo tile-stitch writes a single position.
+    try:
+        position = list(dataset.positions())[0][1]
+    except AttributeError:
+        position = dataset
     data = torch.tensor(np.array(position["0"][0]), dtype=torch.float32)
     dataset.close()
     return data
@@ -217,20 +226,21 @@ def _run_and_measure(
     case_dir: Path,
     tt: TimingTree,
     ground_truth: torch.Tensor | None = None,
+    cli: str = "rec",
 ) -> dict:
-    """Write config, shell out to ``wo rec``, read output, compute metrics.
+    """Write config, shell out to ``wo rec``/``wo tile-stitch``, read output, compute metrics.
 
     Must be called from inside a ``with tt.time("total"):`` block — it
     adds ``reconstruct`` and ``metrics`` sub-timings.
     """
     modality = infer_modality(recon_config)
-    tf_settings = recon_config.get(modality, {}).get("transfer_function", {})
+    tf_settings = recon_block(recon_config).get(modality, {}).get("transfer_function", {})
 
     config_path = case_dir / "config.yml"
     config_path.write_text(yaml.dump(recon_config, default_flow_style=False))
 
     recon_path = case_dir / "reconstruction.zarr"
-    argv = _wo_rec_argv(position_path, config_path, recon_path)
+    argv = _wo_rec_argv(position_path, config_path, recon_path, cli=cli)
     (case_dir / "cli_command.sh").write_text(f"#!/bin/bash\n{shlex.join(argv)}\n")
 
     with tt.time("reconstruct"):
@@ -637,6 +647,7 @@ def run_hpc_case(
     save_all: bool = False,
     reference: dict[str, ReferenceBound] | None = None,
     crop: CropConfig | None = None,
+    cli: str = "rec",
 ) -> dict:
     """Run a single HPC benchmark case on existing data via ``wo rec``.
 
@@ -681,6 +692,7 @@ def run_hpc_case(
             recon_config=recon_config,
             case_dir=case_dir,
             tt=tt,
+            cli=cli,
         )
         ref_check = check_reference(case_dir, metrics, reference)
         if ref_check is not None:

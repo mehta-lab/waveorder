@@ -1,0 +1,22 @@
+# Verbatim copy of /hpc/projects/waveorder/a549-hummingbird/2025-08-04-reconstructions/2-reconstruct/FITC3d.yml
+# a549-hummingbird FITC fluorescence deconvolution 3D (hummingbird widefield).
+# Note: wavelength_emission 0.630 is as-shipped in the production config even
+# though FITC emits ~0.52 um (TXR3d.yml uses 0.620); kept verbatim.
+input_channel_names:
+- FITC
+time_indices: 0
+reconstruction_dimension: 3
+fluorescence:
+  transfer_function:
+    yx_pixel_size: 0.325
+    z_pixel_size: 1.5
+    z_padding: 0
+    z_focus_offset: -1
+    index_of_refraction_media: 1.0
+    numerical_aperture_detection: 0.55
+    wavelength_emission: 0.630
+  apply_inverse:
+    reconstruction_algorithm: Tikhonov
+    regularization_strength: 0.005
+    TV_rho_strength: 0.001
+    TV_iterations: 1
