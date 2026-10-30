@@ -57,6 +57,20 @@ and the venv is active.
 
 3. `wo bm run --scope synthetic` to run it.
 
+## Regression workflow (wo-4.0)
+
+The suite gates the 4.0 refactor. Every case has a `reference` bound
+pinned from a known-good baseline, so a single run red-flags collapsed
+or missing reconstructions. For finer-grained comparisons:
+
+1. Baseline the target branch: `sbatch benchmarks/run_regression.sbatch`
+   (writes to the shared `/hpc/projects/waveorder/benchmarks`).
+2. Run the same command from your feature branch checkout.
+3. `wo bm compare` diffs the two newest runs metric-by-metric.
+
+Keep runs on Intel nodes (the sbatch script pins `--constraint=intel`)
+so baselines stay hardware-comparable.
+
 ## Custom experiments
 
 Point `-e` at any experiment YAML:
