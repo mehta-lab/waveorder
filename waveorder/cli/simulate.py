@@ -8,8 +8,13 @@ from waveorder.cli.parsing import ConfigFilepath, OutputDirpath
 def _simulate_cli(config_filepath: ConfigFilepath, output_dirpath: OutputDirpath):
     """Simulate phantom data matching a configuration file.
 
-    Writes a single zarr with both the ground-truth phantom and
+    For a 3.x configuration (or a 4.0 configuration without a `simulate`
+    block), writes a single zarr with both the ground-truth phantom and
     simulated measurement as separate channels.
+
+    A 4.0 configuration with a `simulate: {seed, shape}` block describes the
+    true imaging system (design section 5) and writes three stores into the
+    output directory: `data.zarr`, `object.zarr`, and `tf.zarr`.
 
     \b
     Example:
@@ -21,6 +26,7 @@ def _simulate_cli(config_filepath: ConfigFilepath, output_dirpath: OutputDirpath
     # Only loaded when the command runs, keeping wo sim -h fast.
     import numpy as np
     import xarray as xr
+    import yaml
     from iohub.ngff import open_ome_zarr
     from iohub.ngff.models import TransformationMeta
 
@@ -31,8 +37,19 @@ def _simulate_cli(config_filepath: ConfigFilepath, output_dirpath: OutputDirpath
         phase,
     )
     from waveorder.cli.printing import echo_headline
-    from waveorder.cli.settings import ReconstructionSettings
-    from waveorder.io import utils
+    from waveorder.config.loader import load_reconstruction_settings, load_v4_config
+    from waveorder.config.migrate import detect_version
+    from waveorder.config.simulate import run_simulation
+
+    with open(config_filepath) as f:
+        raw = yaml.safe_load(f)
+    if detect_version(raw) >= 4 and raw.get("simulate") is not None:
+        cfg = load_v4_config(config_filepath)
+        truth = run_simulation(cfg, output_dirpath)
+        echo_headline(f"Wrote data.zarr, object.zarr, tf.zarr to {output_dirpath}")
+        for name, value in truth.items():
+            print(f"    true {name:16s} {value:+.4f} waves")
+        return
 
     def _write_czyx(czyx: xr.DataArray, path: Path):
         """Write a CZYX xr.DataArray to an HCS OME-Zarr."""
@@ -59,7 +76,7 @@ def _simulate_cli(config_filepath: ConfigFilepath, output_dirpath: OutputDirpath
         position["0"][0] = czyx.values
         dataset.close()
 
-    settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
+    settings = load_reconstruction_settings(config_filepath)
 
     recon_dim = settings.reconstruction_dimension
 

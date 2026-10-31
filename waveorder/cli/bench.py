@@ -157,6 +157,11 @@ def run(
                     save_all=save_all,
                     reference=case.reference,
                     crop=case.crop,
+                    # Forward-compatible with the expanded suite
+                    # (bench/expand-hpc-cases), whose cases may select the
+                    # tile-stitch CLI; absent there, run_hpc_case defaults
+                    # to "rec".
+                    **({"cli": case.cli} if getattr(case, "cli", None) is not None else {}),
                 )
 
             results[case_name] = metrics
