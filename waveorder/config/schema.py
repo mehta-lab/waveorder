@@ -117,7 +117,10 @@ class PixelSize(V4BaseModel):
 class DataSettings(V4BaseModel):
     """The ``data`` block: which data *g* is reconstructed and its sampling."""
 
-    input_channel_names: list[str] = Field(description="channel names in the input zarr")
+    input_channel_names: list[str] = Field(
+        default_factory=lambda: ["simulated"],
+        description="channel names in the input zarr (defaults only make sense for simulate)",
+    )
     time_indices: Union[NonNegativeInt, list[NonNegativeInt], Literal["all"]] = Field(
         default="all", description="time points to reconstruct"
     )
@@ -324,8 +327,37 @@ class WeightAuto(V4BaseModel):
     auto: LegacyAutoWeight
 
 
+class GaussianSpectrumSource(V4BaseModel):
+    """Gaussian random field with a power-law spectrum (simulation only)."""
+
+    exponent: float = Field(default=2.0, description="power-spectrum decay exponent")
+
+
+class PhantomSource(V4BaseModel):
+    kind: str
+
+
+class FromReconSource(V4BaseModel):
+    path: str
+
+
+class SourceGaussianSpectrum(V4BaseModel):
+    gaussian_spectrum: GaussianSpectrumSource
+
+
+class SourcePhantom(V4BaseModel):
+    phantom: PhantomSource
+
+
+class SourceFromRecon(V4BaseModel):
+    from_recon: FromReconSource
+
+
+Source = Union[SourceGaussianSpectrum, SourcePhantom, SourceFromRecon]
+
+
 class ObjectSettings(V4BaseModel):
-    """The ``object`` block: the prior on *f*."""
+    """The ``object`` block: the prior on *f* (or its ``source`` in a simulation)."""
 
     dimension: Literal[2, 3] = Field(default=3, description="3 | 2 (thin object, a single plane)")
     prior: Prior = "tikhonov"
@@ -333,6 +365,9 @@ class ObjectSettings(V4BaseModel):
         default=1e-3, description="regularization weight lambda, or auto"
     )
     constraints: list[Literal["nonneg"]] = Field(default_factory=list)
+    source: Optional[Source] = Field(
+        default=None, description="the true object of a simulation configuration (design section 5)"
+    )
 
 
 # --- noise -----------------------------------------------------------------
@@ -344,11 +379,17 @@ class DarkFrames(V4BaseModel):
 
 class GaussianNoise(V4BaseModel):
     sigma: Union[PositiveFloat, Literal["estimate"], DarkFrames] = 1.0
+    snr_db: Optional[float] = Field(
+        default=None, description="simulation only: sets sigma from the clean signal's power"
+    )
 
 
 class PoissonNoise(V4BaseModel):
     gain: PositiveFloat = 1.0
     offset: float = 0.0
+    photons: Optional[PositiveFloat] = Field(
+        default=None, description="simulation only: mean photons per voxel of the clean signal"
+    )
 
 
 class PoissonGaussianNoise(V4BaseModel):
