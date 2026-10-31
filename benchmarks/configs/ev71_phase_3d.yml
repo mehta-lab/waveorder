@@ -1,0 +1,21 @@
+# Verbatim copy of /hpc/projects/comp.micro/infected_cell_imaging/Neurons/2025_07_17_iGluta_EV71/1-reconstruct/phase.yaml
+# EV71-infected iGluta neurons: phase 3D.
+input_channel_names:
+  - BF
+time_indices: all
+reconstruction_dimension: 3
+phase:
+  transfer_function:
+    wavelength_illumination: 0.532
+    yx_pixel_size: 0.325
+    z_pixel_size: 1.0
+    z_padding: 0
+    index_of_refraction_media: 1.0
+    numerical_aperture_detection: 0.55
+    numerical_aperture_illumination: 0.4
+    invert_phase_contrast: false
+  apply_inverse:
+    reconstruction_algorithm: Tikhonov
+    regularization_strength: 0.005
+    TV_rho_strength: 0.001
+    TV_iterations: 1

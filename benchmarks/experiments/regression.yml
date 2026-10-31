@@ -84,3 +84,165 @@ cases:
       parameter.z_focus_offset:     {min: -0.25, max: 0.25}
       parameter.tilt_angle_zenith:  {min: -0.1,  max: 0.1}
       parameter.tilt_angle_azimuth: {min: -3.14, max: 3.14}
+
+  # --- OPS production flavors (configs copied verbatim from
+  # /hpc/projects/icd.fast.ops/configs/, shared across all OPS runs) ---
+
+  ops_pheno_phase_3d:
+    type: hpc
+    input: /hpc/projects/icd.fast.ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
+    position: A/1/029029
+    config: ../configs/ops_pheno_phase_3d.yml
+    reference:
+      image_quality.midband_power: {min: 3.0e2}
+
+  ops_track_phase_2d:
+    type: hpc
+    input: /hpc/projects/icd.fast.ops/ops0105_20260106/0-convert/live_imaging/tracking_symlink.zarr
+    position: A/1/007014
+    config: ../configs/ops_track_phase_2d.yml
+    overrides:
+      time_indices: 0  # input has 2 timepoints
+    reference:
+      image_quality.midband_power: {min: 2.0e2}
+
+  ops_track_phase_3d:
+    type: hpc
+    input: /hpc/projects/icd.fast.ops/ops0105_20260106/0-convert/live_imaging/tracking_symlink.zarr
+    position: A/1/007014
+    config: ../configs/ops_track_phase_3d.yml
+    overrides:
+      time_indices: 0
+    reference:
+      image_quality.midband_power: {min: 1.7e2}
+
+  ops_fluor_gfp:
+    type: hpc
+    input: /hpc/projects/icd.fast.ops/ops0105_20260106/0-convert/live_imaging/phenotyping_transform.zarr
+    position: A/1/029029
+    crop:
+      # Full-FOV fluorescence 3D peaks at ~302 GB RSS for this
+      # 7x2048x2048 input (measured 2026-10-28), a memory pathology in
+      # the fluorescence path worth fixing in the 4.0 refactor.
+      y: [768, 1280]
+      x: [768, 1280]
+    config: ../configs/ops_fluor_gfp.yml
+    reference:
+      image_quality.midband_power: {min: 4.5e4}
+
+  # --- Birefringence (kazansky polarization target, mantis) ---
+  # Joint birefringence + phase settings; metrics optics come from the
+  # phase block, and channel 0 (Retardance) is scored.
+
+  kazansky_birefringence_3d:
+    type: hpc
+    input: /hpc/projects/waveorder/kazansky-mantis/0-zarr/pm_kazansky_test_1.zarr
+    position: 0/0/0
+    config: ../configs/kazansky_birefringence_3d.yml
+    reference:
+      image_quality.midband_power: {min: 7.0e2}
+
+  # --- Curated phase/fluorescence variety (/hpc/projects/waveorder/) ---
+
+  a549_phase_2d:
+    type: hpc
+    input: /hpc/projects/waveorder/a549-hummingbird/2025-08-04-reconstructions/0-zarr/data.zarr
+    position: 0/2/000000
+    config: ../configs/a549_phase_2d.yml
+    reference:
+      image_quality.midband_power: {min: 9.0e1}
+
+  a549_phase_3d:
+    type: hpc
+    input: /hpc/projects/waveorder/a549-hummingbird/2025-08-04-reconstructions/0-zarr/data.zarr
+    position: 0/2/000000
+    config: ../configs/a549_phase_3d.yml
+    reference:
+      image_quality.midband_power: {min: 2.5e2}
+
+  cardiomyocyte_phase_3d:
+    type: hpc
+    input: /hpc/projects/waveorder/cardiomyocytes-falcon/1-preprocessing/polarization-averaged-measurements.zarr
+    position: 0/0/0
+    config: ../configs/cardiomyocyte_phase_3d.yml
+    reference:
+      image_quality.midband_power: {min: 7.0e1}
+
+  zebrafish_daxi_phase_3d:
+    type: hpc
+    input: /hpc/projects/waveorder/zebrafish-daxi/1-rois/cropped_rois.zarr
+    position: 0/0/eye
+    config: ../configs/zebrafish_daxi_phase_3d.yml
+    reference:
+      image_quality.midband_power: {min: 5.0e1}
+
+  # --- Infected cells (EV71 iGluta neurons, 2025-07-17) ---
+
+  ev71_phase_3d:
+    type: hpc
+    input: /hpc/projects/comp.micro/infected_cell_imaging/Neurons/2025_07_17_iGluta_EV71/0-convert/convert.zarr
+    position: B/2/0
+    config: ../configs/ev71_phase_3d.yml
+    overrides:
+      time_indices: 0  # input has 36 timepoints
+    reference:
+      image_quality.midband_power: {min: 6.0e2}
+
+  # a549 FITC replaces the EV71 FITC decon case: the EV71 FITC channel is
+  # near background level (~70 counts of signal) in every position/timepoint.
+  a549_fluor_3d:
+    type: hpc
+    input: /hpc/projects/waveorder/a549-hummingbird/2025-08-04-reconstructions/0-zarr/data.zarr
+    position: 0/2/000000
+    config: ../configs/a549_fluor_3d.yml
+    reference:
+      image_quality.midband_power: {min: 2.5e5}
+
+  # --- Neuromast straight/oblique comparison (mantis, 52 hpf) ---
+  # Position 0/1/0 has the best-centered rosette of the three FOVs.
+  # Same registered 4-channel input: straight epi-illumination vs
+  # oblique light-sheet brightfield phase, plus a tiled (wo tile-stitch)
+  # variant of the oblique case covering the tiled reconstruction path.
+
+  neuromast_epi_phase_3d:
+    type: hpc
+    input: /hpc/projects/waveorder/neuromast-mantis/2025_07_21_straight_oblique_comparison/2-register/register.zarr
+    position: 0/1/0
+    config: ../configs/neuromast_epi_phase_3d.yml
+    overrides:
+      time_indices: 0  # input has 24 timepoints
+    reference:
+      image_quality.midband_power: {min: 8.0e2}
+
+  neuromast_ls_phase_3d:
+    type: hpc
+    input: /hpc/projects/waveorder/neuromast-mantis/2025_07_21_straight_oblique_comparison/2-register/register.zarr
+    position: 0/1/0
+    config: ../configs/neuromast_ls_phase_3d.yml
+    overrides:
+      time_indices: 0
+    reference:
+      image_quality.midband_power: {min: 5.5e2}
+
+  neuromast_tile_phase_3d:
+    type: hpc
+    cli: tile-stitch
+    input: /hpc/projects/waveorder/neuromast-mantis/2025_07_21_straight_oblique_comparison/2-register/register.zarr
+    position: 0/1/0
+    config: ../configs/neuromast_tile_phase_3d.yml
+    reference:
+      image_quality.midband_power: {min: 6.0e2}
+
+  # --- Mantis v1 (neuromast, oblique label-free) ---
+  # Mantis v2 shares this config structure but its deskewed intermediate
+  # stores were deleted after assembly; add a cached deskewed crop later.
+
+  mantis_v1_neuromast_phase_3d:
+    type: hpc
+    input: /hpc/projects/tlg2_mantis/2025_11_05_52hpf_cldnb-she-myo6b/0-convert/2025_11_05_52hpf_cldnb-she-myo6b_symlink/2025_11_05_52hpf_cldnb-she-myo6b_labelfree_1.zarr
+    position: 0/1/000000
+    config: ../configs/mantis_v1_neuromast_phase_3d.yml
+    overrides:
+      time_indices: 0  # input has 278 timepoints
+    reference:
+      image_quality.midband_power: {min: 3.8e1}

@@ -152,6 +152,7 @@ class CaseConfig(BaseModel):
     model_config = ConfigDict(extra="allow")
 
     type: Literal["synthetic", "hpc"] = "synthetic"
+    cli: Literal["rec", "tile-stitch"] = "rec"
     phantom: PhantomConfig | None = None
     config: str | None = None
     overrides: dict[str, Any] | None = None
@@ -257,9 +258,18 @@ def resolve_recon_config(case: CaseConfig, experiment_dir: Path) -> dict:
     return config
 
 
+def recon_block(recon_config: dict) -> dict:
+    """Return the ``wo rec``-schema block of a config.
+
+    Plain ``wo rec`` configs are the block themselves; ``wo tile-stitch``
+    configs nest it under ``recon``.
+    """
+    return recon_config.get("recon", recon_config)
+
+
 def infer_modality(recon_config: dict) -> str:
     """Return ``"phase"`` if the recon config has a phase block, else ``"fluorescence"``."""
-    return "phase" if "phase" in recon_config else "fluorescence"
+    return "phase" if "phase" in recon_block(recon_config) else "fluorescence"
 
 
 def _deep_set(d: dict, keys: list[str], value: Any):

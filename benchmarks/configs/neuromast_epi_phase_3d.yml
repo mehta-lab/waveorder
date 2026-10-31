@@ -1,0 +1,22 @@
+# Verbatim copy of /hpc/projects/waveorder/neuromast-mantis/2025_07_21_straight_oblique_comparison/3-recon/nominal/epi-bf.yml
+# Neuromast (mantis, 52 hpf): straight epi-illumination brightfield phase 3D.
+input_channel_names:
+- Epi-BF
+time_indices: all
+reconstruction_dimension: 3
+phase:
+  transfer_function:
+    wavelength_illumination: 0.530
+    yx_pixel_size: 0.069
+    z_pixel_size: 0.4
+    z_padding: 25
+    z_focus_offset: 0
+    index_of_refraction_media: 1.4
+    numerical_aperture_detection: 1.35
+    numerical_aperture_illumination: 0.52
+    invert_phase_contrast: false
+  apply_inverse:
+    reconstruction_algorithm: Tikhonov
+    regularization_strength: 0.001
+    TV_rho_strength: 0.001
+    TV_iterations: 1
