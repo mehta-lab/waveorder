@@ -235,7 +235,7 @@ def _require_legacy_supported(cfg: schema.V4Config) -> None:
         raise unsupported("imaging_system.field_dependence: tiled")
     detection = cfg.imaging_system.detection
     if detection.pupil_aberrations is not None:
-        raise unsupported("imaging_system.detection.pupil_aberrations")
+        raise unsupported("imaging_system.detection.pupil_aberrations (estimate them with 'wo calibrate-tf')")
     if detection.pinhole == "point" or (
         isinstance(detection.pinhole, schema.Pinhole) and detection.pinhole.diameter_au is not None
     ):
