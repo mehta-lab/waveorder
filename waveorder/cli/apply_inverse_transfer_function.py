@@ -159,8 +159,7 @@ def get_reconstruction_output_metadata(
     import numpy as np
     from iohub import open_ome_zarr
 
-    from waveorder.cli.settings import ReconstructionSettings
-    from waveorder.io import utils
+    from waveorder.config.loader import load_reconstruction_settings
 
     # Get non-OME-Zarr plate-level metadata if it's available
     plate_metadata = {}
@@ -181,7 +180,7 @@ def get_reconstruction_output_metadata(
         T, _, Z, Y, X = input_dataset.data.shape
         scale = input_dataset.scale
 
-    settings = utils.yaml_to_model(config_path, ReconstructionSettings)
+    settings = load_reconstruction_settings(config_path)
 
     channel_names = settings.output_channel_names
     output_z_shape = 1 if settings.output_z_is_singleton else Z
@@ -250,12 +249,12 @@ def apply_inverse_transfer_function_single_position(
         phase,
     )
     from waveorder.cli.printing import echo_headline, echo_settings
-    from waveorder.cli.settings import ReconstructionSettings
     from waveorder.cli.utils import (
         apply_inverse_czyx,
         reconstruction_fingerprint,
         resolve_time_indices,
     )
+    from waveorder.config.loader import load_reconstruction_settings
     from waveorder.io import utils
 
     if verbose:
@@ -270,7 +269,7 @@ def apply_inverse_transfer_function_single_position(
     input_xa = input_dataset.to_xarray()
 
     # Load config file
-    settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
+    settings = load_reconstruction_settings(config_filepath)
 
     # Check input channel names
     if not set(settings.input_channel_names).issubset(input_dataset.channel_names):
@@ -516,12 +515,11 @@ def apply_inverse_transfer_function_cli(
     from iohub import open_ome_zarr
     from iohub.ngff.utils import create_empty_plate
 
-    from waveorder.cli.settings import ReconstructionSettings
     from waveorder.cli.utils import (
         generate_valid_position_key,
         is_single_position_store,
     )
-    from waveorder.io import utils
+    from waveorder.config.loader import load_reconstruction_settings
 
     per_position_transfer_function_dirpaths = _resolve_transfer_function_dirpaths(
         transfer_function_dirpath, input_position_dirpaths
@@ -552,7 +550,7 @@ def apply_inverse_transfer_function_cli(
         position_keys.append(position_key)
 
     # Every position gets the same provenance, recorded before any timepoint runs.
-    provenance = get_reconstruction_provenance(utils.yaml_to_model(config_filepath, ReconstructionSettings))
+    provenance = get_reconstruction_provenance(load_reconstruction_settings(config_filepath))
 
     # `create_empty_plate` allocates one shape and scale per call.
     for position_key, output_metadata in zip(position_keys, output_metadatas, strict=True):

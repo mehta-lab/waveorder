@@ -21,6 +21,7 @@ from waveorder.cli.apply_inverse_transfer_function import _apply_inverse_transfe
 from waveorder.cli.bench import benchmark
 from waveorder.cli.compute_transfer_function import _compute_transfer_function_cli
 from waveorder.cli.gui_widget import gui
+from waveorder.cli.migrate_config import _migrate_config_cli
 from waveorder.cli.reconstruct import _reconstruct_cli
 from waveorder.cli.simulate import _simulate_cli
 from waveorder.cli.tile_stitch import _tile_stitch_cli
@@ -94,6 +95,7 @@ _COMMANDS = {
     "apply-inverse-transfer-function": (_apply_inverse_transfer_function_cli, "apply-inv-tf"),
     "tile-stitch": (_tile_stitch_cli, "ts"),
     "simulate": (_simulate_cli, "sim"),
+    "migrate-config": (_migrate_config_cli, "mc"),
     "view": (_view_cli, "v"),
     "interactive": (gui, "gui"),
 }

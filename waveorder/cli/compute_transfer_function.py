@@ -104,11 +104,10 @@ def compute_transfer_function_cli(
         phase,
     )
     from waveorder.cli.printing import echo_headline, echo_settings
-    from waveorder.cli.settings import ReconstructionSettings
-    from waveorder.io import utils
+    from waveorder.config.loader import load_reconstruction_settings
 
     # Load config file
-    settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
+    settings = load_reconstruction_settings(config_filepath)
 
     echo_headline(f"Generating transfer functions and storing in {output_dirpath}\n")
 

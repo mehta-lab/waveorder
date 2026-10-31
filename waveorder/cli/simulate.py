@@ -31,8 +31,7 @@ def _simulate_cli(config_filepath: ConfigFilepath, output_dirpath: OutputDirpath
         phase,
     )
     from waveorder.cli.printing import echo_headline
-    from waveorder.cli.settings import ReconstructionSettings
-    from waveorder.io import utils
+    from waveorder.config.loader import load_reconstruction_settings
 
     def _write_czyx(czyx: xr.DataArray, path: Path):
         """Write a CZYX xr.DataArray to an HCS OME-Zarr."""
@@ -59,7 +58,7 @@ def _simulate_cli(config_filepath: ConfigFilepath, output_dirpath: OutputDirpath
         position["0"][0] = czyx.values
         dataset.close()
 
-    settings = utils.yaml_to_model(config_filepath, ReconstructionSettings)
+    settings = load_reconstruction_settings(config_filepath)
 
     recon_dim = settings.reconstruction_dimension
 
