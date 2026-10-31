@@ -10,6 +10,11 @@ This package holds the numerics behind ``calibrate-tf``:
   related calibration scores.
 """
 
+from waveorder.calibrate.evidence_search import (
+    EvidenceCalibrationResult,
+    gcv_score,
+    run_evidence_calibration,
+)
 from waveorder.calibrate.run import (
     CalibrationResult,
     build_recovery_settings,
@@ -40,7 +45,10 @@ from waveorder.calibrate.zernike_names import (
 __all__ = [
     "NAMED_TERMS",
     "CalibrationResult",
+    "EvidenceCalibrationResult",
     "TransferFunctionStore",
+    "gcv_score",
+    "run_evidence_calibration",
     "build_recovery_settings",
     "calibration_penalty",
     "read_tf_zarr",

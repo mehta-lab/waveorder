@@ -27,6 +27,7 @@ def calibrate_transfer_function_cli(
     import yaml
     from iohub.ngff import open_ome_zarr
 
+    from waveorder.calibrate.evidence_search import run_evidence_calibration
     from waveorder.calibrate.run import (
         run_zernike_calibration,
         zernike_calibration_requested,
@@ -80,17 +81,50 @@ def calibrate_transfer_function_cli(
     finally:
         input_dataset.close()
 
-    result = run_zernike_calibration(cfg, zyx_data)
+    calibration = cfg.solver.calibration
+    score = calibration.score if calibration is not None else "evidence"
+    extra_provenance = {}
+    score_arrays = {}
+    covariance = None
+    if score in ("evidence", "gcv"):
+        evidence_result = run_evidence_calibration(cfg, zyx_data)
+        parameters = evidence_result.parameters
+        parameter_names = evidence_result.parameter_names
+        covariance = evidence_result.parameters_covariance
+        tile_grid = {
+            "size_yx": [int(zyx_data.shape[1]), int(zyx_data.shape[2])],
+            "overlap_yx": [0, 0],
+            "centers_yx": [[0.0, 0.0]],
+        }
+        extra_provenance = {
+            "best_score": evidence_result.best_score,
+            "noise_sigma": evidence_result.noise_sigma,
+            "weight": evidence_result.weight,
+        }
+        wants = cfg.outputs if cfg.outputs != "all" else ["score_trace", "score_grid"]
+        if "score_trace" in wants and evidence_result.score_trace:
+            score_arrays["score_trace"] = np.asarray(evidence_result.score_trace)
+        if "score_grid" in wants and evidence_result.score_grid is not None:
+            score_arrays["score_grid"] = evidence_result.score_grid
+        final_loss = evidence_result.best_score
+    elif score == "sharpness":
+        sharpness_result = run_zernike_calibration(cfg, zyx_data)
+        parameters = sharpness_result.parameters
+        parameter_names = sharpness_result.parameter_names
+        tile_grid = sharpness_result.tile_grid
+        final_loss = sharpness_result.loss_history[-1]
+    else:
+        raise NotImplementedError(f"score: {score} is not implemented in calibrate-tf")
 
     # Shift-invariant stores always carry the transfer function; tiled stores
     # only on request, and are otherwise regenerated per tile at apply time.
     transfer_function = None
-    n_tiles = result.parameters.shape[0]
+    n_tiles = parameters.shape[0]
     wants_tf = cfg.outputs == "all" or "transfer_function" in cfg.outputs
     if n_tiles == 1 and wants_tf:
         detection = cfg.imaging_system.detection
         yx = cfg.data.pixel_size.yx
-        coefficients = {name_to_noll(name): value for name, value in zip(result.parameter_names, result.parameters[0])}
+        coefficients = {name_to_noll(name): value for name, value in zip(parameter_names, parameters[0])}
         transfer_function = (
             fluorescence_otf(
                 zyx_shape=zyx_data.shape,
@@ -113,24 +147,26 @@ def calibrate_transfer_function_cli(
         "kind": "refined",
         "sources": [str(input_position_dirpath)],
         "config_hash": hashlib.sha256(config_text.encode()).hexdigest(),
-        "score": "sharpness",
+        "score": score,
         "time_index": int(t_index),
+        **extra_provenance,
     }
     write_tf_zarr(
         output_dirpath,
-        parameters=result.parameters,
-        parameter_names=result.parameter_names,
-        tile_grid=result.tile_grid,
+        parameters=parameters,
+        parameter_names=parameter_names,
+        tile_grid=tile_grid,
         provenance=provenance,
+        parameters_covariance=covariance,
         transfer_function=transfer_function,
+        extra_arrays=score_arrays,
     )
 
     echo_headline(
-        f"Estimated {len(result.parameter_names)} parameters on {n_tiles} tile(s); "
-        f"final loss {result.loss_history[-1]:.4g}"
+        f"Estimated {len(parameter_names)} parameters on {n_tiles} tile(s); final {score} score {final_loss:.4g}"
     )
     if n_tiles == 1:
-        for name, value in zip(result.parameter_names, result.parameters[0]):
+        for name, value in zip(parameter_names, parameters[0]):
             print(f"    {name:16s} {value:+.4f} waves")
     echo_headline(f"Wrote {output_dirpath}")
 

@@ -50,6 +50,7 @@ def write_tf_zarr(
     provenance: dict[str, Any] | None = None,
     parameters_covariance: np.ndarray | None = None,
     transfer_function: np.ndarray | None = None,
+    extra_arrays: dict[str, np.ndarray] | None = None,
 ) -> None:
     """Write a ``tf.zarr`` store.
 
@@ -72,6 +73,10 @@ def write_tf_zarr(
     transfer_function : ndarray, optional
         ``[Z, Y, X]`` (shift-invariant) or ``[N_tiles, Z, Y, X]`` (tiled,
         chunked one tile per chunk).
+    extra_arrays : dict, optional
+        Additional named arrays, e.g. ``score_trace`` (per gradient
+        iteration) and ``score_grid`` (one row per evaluated point:
+        parameter coordinates followed by the score).
     """
     parameters = np.asarray(parameters, dtype=np.float64)
     if parameters.ndim != 2:
@@ -108,6 +113,10 @@ def write_tf_zarr(
             chunks=chunks,
         )
         tf_array[:] = transfer_function
+
+    for name, array in (extra_arrays or {}).items():
+        array = np.asarray(array)
+        group.create_array(name, shape=array.shape, dtype=str(array.dtype))[:] = array
 
     group.attrs["parameter_names"] = list(parameter_names)
     group.attrs["tile_grid"] = tile_grid
