@@ -10,6 +10,12 @@ This package holds the numerics behind ``calibrate-tf``:
   related calibration scores.
 """
 
+from waveorder.calibrate.run import (
+    CalibrationResult,
+    build_recovery_settings,
+    run_zernike_calibration,
+    zernike_calibration_requested,
+)
 from waveorder.calibrate.scores import (
     calibration_penalty,
     whittle_evidence,
@@ -17,6 +23,11 @@ from waveorder.calibrate.scores import (
 from waveorder.calibrate.synthesis import (
     fluorescence_otf,
     fluorescence_psf,
+)
+from waveorder.calibrate.tfzarr import (
+    TransferFunctionStore,
+    read_tf_zarr,
+    write_tf_zarr,
 )
 from waveorder.calibrate.zernike_names import (
     NAMED_TERMS,
@@ -28,7 +39,14 @@ from waveorder.calibrate.zernike_names import (
 
 __all__ = [
     "NAMED_TERMS",
+    "CalibrationResult",
+    "TransferFunctionStore",
+    "build_recovery_settings",
     "calibration_penalty",
+    "read_tf_zarr",
+    "run_zernike_calibration",
+    "write_tf_zarr",
+    "zernike_calibration_requested",
     "fluorescence_otf",
     "fluorescence_psf",
     "name_to_noll",

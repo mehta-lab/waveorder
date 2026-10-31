@@ -19,6 +19,7 @@ logging.getLogger("iohub").setLevel(logging.ERROR)
 
 from waveorder.cli.apply_inverse_transfer_function import _apply_inverse_transfer_function_cli
 from waveorder.cli.bench import benchmark
+from waveorder.cli.calibrate_tf import _calibrate_tf_cli
 from waveorder.cli.compute_transfer_function import _compute_transfer_function_cli
 from waveorder.cli.gui_widget import gui
 from waveorder.cli.migrate_config import _migrate_config_cli
@@ -93,6 +94,7 @@ _COMMANDS = {
     "reconstruct": (_reconstruct_cli, "rec"),
     "compute-transfer-function": (_compute_transfer_function_cli, "compute-tf"),
     "apply-inverse-transfer-function": (_apply_inverse_transfer_function_cli, "apply-inv-tf"),
+    "calibrate-transfer-function": (_calibrate_tf_cli, "calibrate-tf"),
     "tile-stitch": (_tile_stitch_cli, "ts"),
     "simulate": (_simulate_cli, "sim"),
     "migrate-config": (_migrate_config_cli, "mc"),
@@ -106,6 +108,7 @@ for name, (command, alias) in _COMMANDS.items():
         "reconstruct",
         "compute-transfer-function",
         "apply-inverse-transfer-function",
+        "calibrate-transfer-function",
         "tile-stitch",
     }:
         command_options["cls"] = _InputPathsCommand
