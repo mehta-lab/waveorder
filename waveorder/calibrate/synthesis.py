@@ -6,8 +6,11 @@ named Zernike aberrations::
     P(nu) = P0(nu) * exp(i 2 pi sum_j c_j Z_j(nu)),
     h(z, y, x) = | IFFT2[ P(nu) exp(i 2 pi z n_z(nu)) ] |^2,
 
-with the Zernike coefficients ``c_j`` in waves (orthonormal Noll
-normalization; see :mod:`waveorder.calibrate.zernike_names`). This mirrors
+with the Zernike coefficients ``c_j`` in **waves** (orthonormal Noll
+normalization; see :mod:`waveorder.calibrate.zernike_names`). If your
+coefficients are in radians of pupil phase (the cross-track exchange
+currency of the 2026-10-30 sprint), divide by ``2 * pi`` before calling
+in here. This mirrors
 :func:`waveorder.models.shift_variant_fluorescent_3d.calculate_psf_at_field_position`
 but takes the coefficients directly and preserves torch autograd through the
 coefficients, the detection NA (via the sigmoid pupil edge) and the focus

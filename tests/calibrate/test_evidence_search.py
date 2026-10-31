@@ -123,6 +123,72 @@ def test_sigma_estimate_and_weight_auto(synthetic_data):
     assert np.isfinite(result.weight) and result.weight > 0
 
 
+def _store(values: dict[str, float], variances: dict[str, float] | None = None):
+    from waveorder.calibrate.tfzarr import TransferFunctionStore
+
+    names = list(values)
+    covariance = np.zeros((1, len(names), len(names)))
+    if variances is not None:
+        covariance[0] = np.diag([variances[name] for name in names])
+    return TransferFunctionStore(
+        parameters=np.array([[values[name] for name in names]]),
+        parameter_names=names,
+        tile_grid={},
+        parameters_covariance=covariance,
+    )
+
+
+def test_init_store_sets_start_without_prior(synthetic_data):
+    config = _config(search=[{"gradient": {"max_iter": 1}}])
+    init = _store({"astigmatism_0": 0.3, "coma_x": -0.2})
+    result = run_evidence_calibration(config, synthetic_data, init_store=init)
+    # One Adam step (lr 0.01) cannot move far from the --init start.
+    np.testing.assert_allclose(result.parameters[0], [0.3, -0.2], atol=0.02)
+
+
+def test_prior_covariance_overrides_tolerances(synthetic_data):
+    # A tight -t covariance pins the estimate near the prior center even
+    # though the configuration's own tolerance (0.2) would let it move.
+    prior = _store(
+        {"astigmatism_0": 0.3, "coma_x": -0.1},
+        variances={"astigmatism_0": 1e-8, "coma_x": 1e-8},
+    )
+    result = run_evidence_calibration(_config(), synthetic_data, prior_store=prior)
+    np.testing.assert_allclose(result.parameters[0], [0.3, -0.1], atol=0.02)
+
+
+def test_zero_covariance_moves_center_only(synthetic_data):
+    # An all-zero covariance (e.g. from simulate) carries no uncertainty:
+    # the config tolerances stay in force, only the start/center moves.
+    prior = _store({"astigmatism_0": 0.3, "coma_x": -0.1})
+    result = run_evidence_calibration(_config(), synthetic_data, prior_store=prior)
+    assert _twin_error(result.parameters[0], result.parameter_names) < 0.06
+
+
+def test_sequential_calibration(synthetic_data):
+    """Design case 12: -t yesterday's tf_hat.zarr as today's prior."""
+    from waveorder.calibrate.tfzarr import TransferFunctionStore
+
+    first = run_evidence_calibration(_config(), synthetic_data)
+    store = TransferFunctionStore(
+        parameters=first.parameters,
+        parameter_names=first.parameter_names,
+        tile_grid={},
+        parameters_covariance=first.parameters_covariance,
+    )
+
+    otf_truth = fluorescence_otf(ZYX_SHAPE, zernike_coefficients=TRUTH, **OPTICS)
+    generator = torch.Generator().manual_seed(7)
+    f = torch.randn(ZYX_SHAPE, generator=generator) * (SIGMA / LAM**0.5)
+    second_data = torch.real(torch.fft.ifftn(torch.fft.fftn(f) * otf_truth))
+    second_data = (second_data + torch.randn(ZYX_SHAPE, generator=generator) * SIGMA).numpy()
+
+    second = run_evidence_calibration(_config(), second_data, prior_store=store)
+    assert _twin_error(second.parameters[0], second.parameter_names) < 0.05
+    # Two volumes carry more information than one: the posterior tightens.
+    assert np.trace(second.parameters_covariance[0]) < np.trace(first.parameters_covariance[0]) * 1.5
+
+
 def test_gcv_score_matches_definition():
     otf = fluorescence_otf(ZYX_SHAPE, **OPTICS)
     g = torch.randn(ZYX_SHAPE, generator=torch.Generator().manual_seed(2))

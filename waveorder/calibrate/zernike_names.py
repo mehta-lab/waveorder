@@ -7,6 +7,12 @@ Convention (fixed for WaveOrder 4.0, see the design document section 4.4):
   normalization, so a coefficient is the RMS wavefront error of its term.
 * Coefficients are in **waves** of pupil phase: the pupil is
   ``P0 * exp(i 2 pi sum_j c_j Z_j)``.
+
+  .. warning:: UNIT CONVERSION. Some collaborating pipelines (e.g. the
+     blind-deconvolution track) exchange Zernike coefficients in
+     **radians** of pupil phase: ``c_radians = 2 * pi * c_waves``. Every
+     function in :mod:`waveorder.calibrate` takes and returns **waves**;
+     convert explicitly at the boundary and never mix the two silently.
 * The pupil azimuth ``theta = atan2(f_y, f_x)`` is zero along the +x
   frequency axis, matching :func:`waveorder.zernike.make_pupil_grid`.
 * Named terms: ``defocus`` (Noll 4), ``astigmatism_45`` (5, the

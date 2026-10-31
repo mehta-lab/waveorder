@@ -26,6 +26,7 @@ import torch
 
 from waveorder.calibrate.scores import whittle_evidence
 from waveorder.calibrate.synthesis import fluorescence_otf
+from waveorder.calibrate.tfzarr import TransferFunctionStore
 from waveorder.calibrate.zernike_names import name_to_noll, noll_indices_up_to_order, noll_to_name
 from waveorder.config.schema import (
     FreeParameter,
@@ -164,6 +165,8 @@ def run_evidence_calibration(
     cfg: V4Config,
     zyx_data: np.ndarray | torch.Tensor,
     gradient_lr: float = 0.01,
+    prior_store: TransferFunctionStore | None = None,
+    init_store: TransferFunctionStore | None = None,
 ) -> EvidenceCalibrationResult:
     """Estimate free pupil-aberration parameters by evidence or GCV.
 
@@ -177,6 +180,16 @@ def run_evidence_calibration(
         3D fluorescence stack ``(Z, Y, X)``.
     gradient_lr : float
         Adam step size for the gradient stage, in waves.
+    prior_store : TransferFunctionStore, optional
+        A ``tf.zarr`` passed with ``-t``: its ``parameters`` move the prior
+        center (and the search start), and a non-zero
+        ``parameters_covariance`` replaces the configuration's tolerances
+        with a correlated Gaussian prior for the parameters it covers
+        (design document section 3).
+    init_store : TransferFunctionStore, optional
+        A ``tf.zarr`` passed with ``--init``: sets the starting point only,
+        without touching the prior. Takes precedence over ``prior_store``
+        for initialization.
 
     Returns
     -------
@@ -195,6 +208,40 @@ def run_evidence_calibration(
     specs = build_parameter_specs(cfg)
     names = [spec.name for spec in specs]
     nominals = torch.tensor([spec.nominal for spec in specs], dtype=torch.float64)
+
+    # -t: move the prior center (and start) to the store's parameters; a
+    # non-zero covariance replaces the per-parameter tolerances with a
+    # correlated Gaussian prior for the parameters it covers. An all-zero
+    # covariance block (e.g. from simulate) carries no uncertainty
+    # information and leaves the configuration's tolerances in force.
+    name_to_index = {name: i for i, name in enumerate(names)}
+    covered: list[int] = []
+    prior_precision: torch.Tensor | None = None
+    if prior_store is not None:
+        if prior_store.n_tiles != 1:
+            raise NotImplementedError("a tiled tf.zarr prior (-t) is not supported on the evidence path yet")
+        store_indices = []
+        for store_index, store_name in enumerate(prior_store.parameter_names):
+            index = name_to_index.get(store_name)
+            if index is not None:
+                nominals[index] = float(prior_store.parameters[0, store_index])
+                store_indices.append(store_index)
+                covered.append(index)
+        if covered and prior_store.parameters_covariance is not None:
+            block = prior_store.parameters_covariance[0][np.ix_(store_indices, store_indices)]
+            if np.any(block):
+                prior_precision = torch.linalg.inv(torch.as_tensor(block, dtype=torch.float64))
+    covariance_covered = covered if prior_precision is not None else []
+    covered_set = set(covariance_covered)
+
+    start = nominals.clone()
+    if init_store is not None:
+        if init_store.n_tiles != 1:
+            raise NotImplementedError("a tiled --init store is not supported on the evidence path yet")
+        for store_index, store_name in enumerate(init_store.parameter_names):
+            index = name_to_index.get(store_name)
+            if index is not None:
+                start[index] = float(init_store.parameters[0, store_index])
 
     detection = system.detection
     if detection.wavelength is None:
@@ -254,8 +301,13 @@ def run_evidence_calibration(
             data_term = gcv_score(data_fft, otf, torch.exp(log_weight))
         penalty = torch.zeros((), dtype=torch.float64)
         for i, spec in enumerate(specs):
+            if i in covered_set:
+                continue  # covered by the -t covariance's matrix term below
             if spec.tolerance != "free":
-                penalty = penalty + (values[i] - spec.nominal) ** 2 / (2.0 * spec.tolerance**2)
+                penalty = penalty + (values[i] - nominals[i]) ** 2 / (2.0 * spec.tolerance**2)
+        if prior_precision is not None:
+            residual = values[covariance_covered] - nominals[covariance_covered]
+            penalty = penalty + 0.5 * residual @ prior_precision @ residual
         return data_term + penalty
 
     def clamp(values: torch.Tensor) -> torch.Tensor:
@@ -265,7 +317,7 @@ def run_evidence_calibration(
                 clamped[i] = clamped[i].clamp(spec.bounds[0], spec.bounds[1])
         return clamped
 
-    current = nominals.clone()
+    current = start.clone()
     log_sigma = torch.tensor(math.log(sigma0), dtype=torch.float64)
     log_weight = torch.tensor(math.log(weight0), dtype=torch.float64)
     score_trace: list[float] = []
