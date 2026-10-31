@@ -199,3 +199,28 @@ def test_gcv_score_matches_definition():
     n = g_fft.numel()
     expected = ((torch.abs(g_fft) ** 2) * shrink**2).sum() / ((shrink.sum() / n) ** 2)
     assert torch.allclose(gcv_score(g_fft, otf, lam), expected)
+
+
+def test_singular_prior_covariance_rejected(synthetic_data):
+    singular = _store(
+        {"astigmatism_0": 0.3, "coma_x": -0.1},
+        variances={"astigmatism_0": 1e-8, "coma_x": 0.0},  # zero-variance row
+    )
+    # Force the non-zero branch: one finite variance, one zero -> singular.
+    singular.parameters_covariance[0, 0, 0] = 1e-8
+    with pytest.raises(ValueError, match="singular"):
+        run_evidence_calibration(_config(), synthetic_data, prior_store=singular)
+
+
+def test_grid_range_centers_on_prior_center(synthetic_data):
+    # A -t prior (zero covariance -> tolerances kept) moves the grid's
+    # center: with the config tolerance 0.2, the grid spans the prior
+    # center +/- 0.4, so the best grid point tracks the prior center.
+    prior = _store({"astigmatism_0": 0.5, "coma_x": 0.5})
+    config = _config(search=[{"grid": {"points": 3}}])
+    result = run_evidence_calibration(_config(search=[{"grid": {"points": 3}}]), synthetic_data)
+    moved = run_evidence_calibration(config, synthetic_data, prior_store=prior)
+    # Without the prior the 3-point grid centered at 0 cannot reach 0.5.
+    assert abs(result.parameters[0, 0]) <= 0.4 + 1e-9
+    # With the prior the grid includes points around 0.5.
+    assert moved.parameters[0, 0] >= 0.1 - 1e-9

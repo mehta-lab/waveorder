@@ -148,14 +148,19 @@ def _fixed_coefficients(cfg: V4Config, estimated: list[ParameterSpec]) -> dict[i
     return fixed
 
 
-def _stage_ranges(specs: list[ParameterSpec]) -> list[tuple[float, float]]:
-    """Grid range per parameter: bounds, else nominal +/- 2 tolerance."""
+def _stage_ranges(specs: list[ParameterSpec], centers: torch.Tensor) -> list[tuple[float, float]]:
+    """Grid range per parameter: bounds, else center +/- 2 tolerance.
+
+    ``centers`` are the (possibly ``-t``-moved) prior centers, so a grid
+    stage after a ``-t`` prior searches around the prior parameters rather
+    than the configuration's nominal values.
+    """
     ranges = []
-    for spec in specs:
+    for spec, center in zip(specs, centers.tolist()):
         if spec.bounds is not None:
             ranges.append(spec.bounds)
         elif spec.tolerance != "free":
-            ranges.append((spec.nominal - 2.0 * spec.tolerance, spec.nominal + 2.0 * spec.tolerance))
+            ranges.append((center - 2.0 * spec.tolerance, center + 2.0 * spec.tolerance))
         else:
             raise ValueError(f"grid/random stage needs bounds for 'free' parameter {spec.name!r}")
     return ranges
@@ -194,6 +199,20 @@ def run_evidence_calibration(
     Returns
     -------
     EvidenceCalibrationResult
+
+    Notes
+    -----
+    The evidence score drops the DC (k = 0) term (``exclude_dc=True``):
+    real data carries a constant background the Tikhonov prior does not
+    model, so the reported score differs from the exact ``-log p(g | H)``
+    by the DC term. Scores are comparable across candidate systems on the
+    same data.
+
+    ``parameters_covariance`` is the inverse Hessian of the total score at
+    the optimum with ``sigma`` and ``lambda`` held fixed at their final
+    values (a profile-curvature approximation); when ``sigma: estimate``
+    or ``weight: auto`` is active the true marginal covariance is somewhat
+    wider.
     """
     system = cfg.imaging_system
     if system.contrast != "fluorescence":
@@ -230,7 +249,15 @@ def run_evidence_calibration(
         if covered and prior_store.parameters_covariance is not None:
             block = prior_store.parameters_covariance[0][np.ix_(store_indices, store_indices)]
             if np.any(block):
-                prior_precision = torch.linalg.inv(torch.as_tensor(block, dtype=torch.float64))
+                block_tensor = torch.as_tensor(block, dtype=torch.float64)
+                try:
+                    prior_precision = torch.linalg.inv(block_tensor)
+                except torch.linalg.LinAlgError as error:
+                    raise ValueError(
+                        f"the -t parameters_covariance block over {len(store_indices)} covered "
+                        f"parameters is singular and cannot serve as a Gaussian prior; "
+                        f"re-estimate it, or drop the singular parameters from the store"
+                    ) from error
     covariance_covered = covered if prior_precision is not None else []
     covered_set = set(covariance_covered)
 
@@ -362,7 +389,7 @@ def run_evidence_calibration(
     stages = calibration.search if calibration is not None else [SearchGradient.model_validate({"gradient": {}})]
     for stage in stages:
         if isinstance(stage, SearchGrid):
-            ranges = _stage_ranges(specs)
+            ranges = _stage_ranges(specs, nominals)
             points = stage.grid.points
             axes = []
             for spec, (lo, hi) in zip(specs, ranges):
@@ -381,7 +408,7 @@ def run_evidence_calibration(
             score_grid = np.asarray(rows)
         elif isinstance(stage, SearchRandom):
             generator = torch.Generator().manual_seed(stage.random.seed)
-            ranges = _stage_ranges(specs)
+            ranges = _stage_ranges(specs, nominals)
             best = (current, float(total_score(current, log_sigma, log_weight)))
             with torch.no_grad():
                 for _ in range(stage.random.samples):
@@ -429,7 +456,8 @@ def run_evidence_calibration(
 
     best_score = float(total_score(current, log_sigma, log_weight))
 
-    # Laplace covariance: inverse Hessian of the total score at the optimum.
+    # Laplace covariance: inverse Hessian of the total score at the optimum,
+    # with sigma and lambda held fixed (profile curvature; see Notes above).
     def score_of(values: torch.Tensor) -> torch.Tensor:
         return total_score(values, log_sigma, log_weight)
 

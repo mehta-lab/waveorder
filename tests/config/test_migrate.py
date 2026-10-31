@@ -218,3 +218,30 @@ def test_auto_regularization_maps_to_weight_auto():
     assert cfg.object.weight.auto.num_samples == 11
     round_tripped = v4_to_legacy(cfg)
     assert round_tripped.model_dump() == ReconstructionSettings(**raw).model_dump()
+
+
+def test_detect_version_rejects_empty_file():
+    with pytest.raises(ValueError, match="mapping"):
+        detect_version(None)
+
+
+def test_free_parameters_without_calibration_fail_loudly():
+    """A 4.0 config with tolerances but no calibration block must not silently
+    run the 3.x sharpness optimizer (the design default score is evidence)."""
+    from waveorder.config import NotRunnableInLegacyError
+
+    raw = {
+        "version": 4,
+        "data": {"input_channel_names": ["BF"], "pixel_size": {"yx": 0.1, "z": 0.25}},
+        "imaging_system": {
+            "contrast": "phase",
+            "detection": {"numerical_aperture": {"nominal": 1.2, "tolerance": "free"}},
+            "illumination": {"wavelength": 0.532, "numerical_aperture": 0.9},
+        },
+    }
+    with pytest.raises(NotRunnableInLegacyError, match="solver.calibration"):
+        v4_to_legacy(V4Config(**raw))
+    # An explicit sharpness block selects the 3.x optimizer path.
+    raw["solver"] = {"calibration": {"score": "sharpness", "search": [{"gradient": {"max_iter": 10}}]}}
+    legacy = v4_to_legacy(V4Config(**raw))
+    assert legacy.phase.transfer_function.numerical_aperture_detection.is_optimizable

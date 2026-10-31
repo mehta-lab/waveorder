@@ -41,7 +41,7 @@ from pydantic import (
 )
 
 from waveorder._pixel_size import YXPixelSize
-from waveorder.calibrate.zernike_names import validate_zernike_name
+from waveorder.calibrate.zernike_names import noll_indices_up_to_order, validate_zernike_name
 
 
 class V4BaseModel(BaseModel):
@@ -280,6 +280,13 @@ class TikhonovSpectralPrior(V4BaseModel):
 
 class BeadsPrior(V4BaseModel):
     diameter: PositiveFloat = Field(description="bead diameter in um; sparse spheres at unknown positions")
+    snr_threshold: PositiveFloat = Field(
+        default=6.0,
+        description="initial detection threshold in robust noise units (median + snr_threshold * 1.4826 * MAD); "
+        "detection relaxes adaptively down to half this value before failing",
+    )
+    max_beads: PositiveInt = Field(default=50, description="fit at most this many beads, brightest first")
+    min_separation: PositiveInt = Field(default=5, description="non-maximum suppression window in voxels")
 
 
 class DenoiserPrior(V4BaseModel):
@@ -426,6 +433,10 @@ class NoiseModel(V4BaseModel):
 
 
 class Padding(V4BaseModel):
+    # Default 0 preserves 3.x behavior exactly (3.x z_padding defaults to 0).
+    # The design document's section 2 text says "padding: {z: 5, yx: 0}",
+    # which contradicts its own defaults-reproduce-3.x requirement; the
+    # deviation is documented in PR #592.
     z: NonNegativeInt = Field(default=0, description="z slices to pad for axial boundary effects")
     yx: Union[NonNegativeInt, tuple[NonNegativeInt, NonNegativeInt]] = Field(
         default=0, description="transverse padding in pixels; number or [y, x]"
@@ -610,7 +621,21 @@ class V4Config(V4BaseModel):
         anything_estimated = len(params) > 0
         calibration = self.solver.calibration
 
+        if isinstance(self.object.prior, PriorBeads) and not anything_estimated:
+            raise ValueError("object.prior: beads requires a free imaging-system parameter (beads are for calibration)")
+
         if calibration is not None and anything_estimated:
+            if (
+                calibration.score == "sharpness"
+                and self.imaging_system.field_dependence != "shift_invariant"
+                and all(p.tolerance == "free" for p in params.values())
+            ):
+                warnings.warn(
+                    "tiled field dependence with every tolerance 'free' and score: sharpness "
+                    "estimates each tile independently with no prior; expect overfitting on "
+                    "low-signal tiles.",
+                    UserWarning,
+                )
             if calibration.score == "evidence":
                 prior_ok = self.object.prior in ("tikhonov",) or isinstance(
                     self.object.prior, (PriorTikhonovSpectral, PriorBeads)
@@ -626,6 +651,23 @@ class V4Config(V4BaseModel):
                         raise ValueError(
                             f"a grid or random search stage requires bounds for parameters with a "
                             f"'free' tolerance; missing bounds on: {unbounded}"
+                        )
+                if isinstance(stage, SearchGrid):
+                    points = stage.grid.points
+                    count = 1
+                    for name in params:
+                        n = points if isinstance(points, int) else points.get(name, 7)
+                        if name.endswith(".zernike_up_to_order"):
+                            shorthand = self.imaging_system.detection.pupil_aberrations.zernike_up_to_order
+                            count *= n ** len(noll_indices_up_to_order(shorthand.order))
+                        else:
+                            count *= n
+                    if count > 10_000:
+                        warnings.warn(
+                            f"the grid search stage evaluates {count} points over "
+                            f"{len(params)} parameters; consider fewer points per "
+                            f"parameter or a random stage.",
+                            UserWarning,
                         )
                 if (
                     isinstance(stage, SearchGradient)

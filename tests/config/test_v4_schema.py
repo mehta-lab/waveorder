@@ -203,3 +203,28 @@ def test_extra_fields_rejected():
     raw["imaging_system"]["detection"]["numerical_apertur"] = 1.0
     with pytest.raises(ValueError):
         V4Config(**raw)
+
+
+def test_beads_prior_requires_a_free_parameter():
+    raw = yaml.safe_load(EXAMPLE_4_3)
+    raw["imaging_system"]["detection"]["numerical_aperture"] = 1.2
+    raw["imaging_system"]["detection"].pop("pupil_aberrations")
+    with pytest.raises(ValueError, match="beads"):
+        V4Config(**raw)
+
+
+def test_grid_point_count_warning():
+    raw = yaml.safe_load(EXAMPLE_4_3)
+    raw["imaging_system"]["detection"]["pupil_aberrations"] = {"zernike_up_to_order": {"order": 4, "tolerance": 0.05}}
+    raw["solver"]["calibration"]["search"] = [{"grid": {"points": 7}}]
+    with pytest.warns(UserWarning, match="grid search stage evaluates"):
+        V4Config(**raw)  # 7^13 points (12 Zernikes + free NA)
+
+
+def test_tiled_all_free_sharpness_warning():
+    raw = yaml.safe_load(EXAMPLE_4_3)
+    raw["imaging_system"]["field_dependence"] = {"tiled": {"size_yx": [64, 64]}}
+    raw["solver"]["calibration"] = {"score": "sharpness", "search": [{"gradient": {"max_iter": 10}}]}
+    raw["object"] = {"prior": "tikhonov", "weight": 1e-3}
+    with pytest.warns(UserWarning, match="overfitting"):
+        V4Config(**raw)

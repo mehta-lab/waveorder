@@ -135,10 +135,11 @@ def fluorescence_psf(
     Returns
     -------
     Tensor
-        Real PSF, shape ``(Z, Y, X)``, sum-normalized to 1, with the focal
-        plane at index ``Z // 2`` after ``fftshift`` along z (the array is
-        returned in FFT order along z, matching the shift-variant model:
-        the in-focus slice is at index 0).
+        Real PSF, shape ``(Z, Y, X)``, sum-normalized to 1, in FFT order on
+        every axis (matching the shift-variant model): the in-focus slice
+        is at index 0 along z and the peak sits at ``[0, 0, 0]``, so
+        ``fftn(psf)`` is a phase-ramp-free convolution kernel. Apply
+        ``torch.fft.fftshift`` for a center-origin view.
     """
     z_total, _, _ = zyx_shape
     yx_shape = zyx_shape[1:]

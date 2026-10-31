@@ -22,6 +22,7 @@ factor, so subpixel positions are exact.
 from __future__ import annotations
 
 import math
+import warnings
 from dataclasses import dataclass
 
 import numpy as np
@@ -94,6 +95,7 @@ def detect_beads(
     max_beads: int = 50,
     min_separation: int = 5,
     snr_threshold: float = 6.0,
+    adaptive: bool = True,
 ) -> torch.Tensor:
     """Initial bead positions: local maxima well above the background.
 
@@ -106,7 +108,10 @@ def detect_beads(
     min_separation : int
         Non-maximum suppression window in voxels.
     snr_threshold : float
-        Peaks must exceed ``median + snr_threshold * MAD``.
+        Peaks must exceed ``median + snr_threshold * 1.4826 * MAD``.
+    adaptive : bool
+        When nothing clears ``snr_threshold``, relax it down to half its
+        value (with a warning) before giving up.
 
     Returns
     -------
@@ -115,15 +120,32 @@ def detect_beads(
     """
     median = zyx_data.median()
     mad = (zyx_data - median).abs().median().clamp(min=1e-12)
-    threshold = median + snr_threshold * 1.4826 * mad
 
     kernel = 2 * (min_separation // 2) + 1
     pooled = functional.max_pool3d(zyx_data[None, None], kernel_size=kernel, stride=1, padding=kernel // 2)[0, 0]
-    peaks = (zyx_data == pooled) & (zyx_data > threshold)
-    positions = peaks.nonzero()
+    is_local_max = zyx_data == pooled
+
+    thresholds = [snr_threshold]
+    if adaptive:
+        thresholds += [0.75 * snr_threshold, 0.5 * snr_threshold]
+    positions = torch.zeros((0, 3), dtype=torch.int64)
+    for i, candidate_snr in enumerate(thresholds):
+        threshold = median + candidate_snr * 1.4826 * mad
+        positions = (is_local_max & (zyx_data > threshold)).nonzero()
+        if positions.shape[0] > 0:
+            if i > 0:
+                warnings.warn(
+                    f"no beads above median + {snr_threshold:g} * 1.4826 * MAD; relaxed the "
+                    f"detection threshold to {candidate_snr:g} robust noise units. Set "
+                    f"object.prior.beads.snr_threshold to control this.",
+                    UserWarning,
+                )
+            break
     if positions.shape[0] == 0:
         raise ValueError(
-            f"no beads found above median + {snr_threshold} * MAD; check the channel, or lower the threshold"
+            f"no beads found above median + {thresholds[-1]:g} * 1.4826 * MAD. Lower "
+            f"object.prior.beads.snr_threshold (currently {snr_threshold:g}), check "
+            f"data.input_channel_names, or verify the volume contains beads."
         )
     intensities = zyx_data[positions[:, 0], positions[:, 1], positions[:, 2]]
     order = torch.argsort(intensities, descending=True)[:max_beads]
@@ -134,7 +156,7 @@ def run_bead_calibration(
     cfg: V4Config,
     zyx_data: np.ndarray | torch.Tensor,
     gradient_lr: float = 0.01,
-    max_beads: int = 50,
+    max_beads: int | None = None,
 ) -> BeadCalibrationResult:
     """Fit free imaging-system parameters to a bead volume.
 
@@ -148,8 +170,9 @@ def run_bead_calibration(
     gradient_lr : float
         Adam step size for the imaging-system parameters (waves). Bead
         positions use ``10 x`` this (voxels move faster than waves).
-    max_beads : int
-        At most this many beads are fit.
+    max_beads : int, optional
+        At most this many beads are fit; None reads
+        ``object.prior.beads.max_beads``.
 
     Returns
     -------
@@ -192,7 +215,13 @@ def run_bead_calibration(
     form_factor = sphere_form_factor(zyx_shape, yx_pixel_size, z_pixel_size, cfg.object.prior.beads.diameter)
 
     # Initialization from the data.
-    peak_positions = detect_beads(data, max_beads=max_beads)
+    beads_prior = cfg.object.prior.beads
+    peak_positions = detect_beads(
+        data,
+        max_beads=max_beads if max_beads is not None else beads_prior.max_beads,
+        min_separation=beads_prior.min_separation,
+        snr_threshold=beads_prior.snr_threshold,
+    )
     background0 = float(data.median())
     amplitudes0 = (data[peak_positions[:, 0], peak_positions[:, 1], peak_positions[:, 2]] - background0).clamp(min=1e-6)
 

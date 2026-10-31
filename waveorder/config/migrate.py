@@ -42,6 +42,8 @@ class NotRunnableInLegacyError(ValueError):
 
 def detect_version(raw: dict) -> int:
     """Schema version of a raw configuration dict; 3 when ``version`` is absent."""
+    if not isinstance(raw, dict):
+        raise ValueError(f"configuration must be a YAML mapping, got {type(raw).__name__} (empty file?)")
     return int(raw.get("version", 3))
 
 
@@ -233,6 +235,16 @@ def _require_legacy_supported(cfg: schema.V4Config) -> None:
 
     if cfg.imaging_system.field_dependence != "shift_invariant":
         raise unsupported("imaging_system.field_dependence: tiled")
+    # Free parameters with no calibration block would silently fall through
+    # to the 3.x sharpness optimizer, although the design's default score is
+    # evidence. Fail loudly instead of guessing the user's intent.
+    if schema.free_parameters(cfg.imaging_system) and cfg.solver.calibration is None:
+        raise NotRunnableInLegacyError(
+            "imaging_system has free parameters (tolerances) but no solver.calibration "
+            "block. The 4.0 default score (evidence) runs through 'wo calibrate-tf'; to "
+            "use the 3.x sharpness optimizer through 'wo reconstruct', add "
+            "solver.calibration: {score: sharpness, search: [{gradient: {max_iter: N}}]}."
+        )
     detection = cfg.imaging_system.detection
     if detection.pupil_aberrations is not None:
         raise unsupported("imaging_system.detection.pupil_aberrations (estimate them with 'wo calibrate-tf')")

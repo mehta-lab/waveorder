@@ -119,3 +119,28 @@ def test_bead_calibration_cli(tmp_path, bead_volume):
     assert store.parameter_names == ["astigmatism_0"]
     assert abs(store.parameters[0, 0] - TRUTH["astigmatism_0"]) < 0.06
     assert store.parameters_covariance[0, 0, 0] > 0
+
+
+def test_detect_beads_adaptive_relaxation(bead_volume):
+    # A deliberately strict threshold finds nothing at first; the adaptive
+    # fallback relaxes it (with a warning) instead of crashing.
+    scaled = torch.as_tensor(bead_volume)
+    strict = 1e6
+    with pytest.raises(ValueError, match="snr_threshold"):
+        detect_beads(scaled, snr_threshold=strict, adaptive=False)
+    # Moderate SNR: pick a threshold ~1.5x the actual peak SNR so only the
+    # relaxed pass finds the beads.
+    median = scaled.median()
+    mad = (scaled - median).abs().median()
+    peak_snr = float((scaled.max() - median) / (1.4826 * mad))
+    with pytest.warns(UserWarning, match="relaxed"):
+        positions = detect_beads(scaled, snr_threshold=1.5 * peak_snr)
+    assert positions.shape[0] >= 1
+
+
+def test_bead_detection_knobs_from_config(bead_volume):
+    config = _bead_config(max_iter=1)
+    config.object.prior.beads.snr_threshold = 3.0
+    config.object.prior.beads.max_beads = 2
+    result = run_bead_calibration(config, bead_volume)
+    assert result.positions_zyx.shape[0] == 2

@@ -102,6 +102,9 @@ def calibrate_transfer_function_cli(
         t_index = resolve_time_indices(cfg.data.time_indices, input_dataset.data.shape[0])[0]
         czyx = input_dataset.to_xarray().isel(t=t_index).sel(c=cfg.data.input_channel_names)
         zyx_data = np.asarray(czyx.values[0], dtype=np.float32)
+        print(
+            f"    calibrating on t={t_index} (first requested time index), channel {cfg.data.input_channel_names[0]!r}"
+        )
     finally:
         input_dataset.close()
 
