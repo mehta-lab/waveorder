@@ -8,6 +8,11 @@ Every CLI verb loads its configuration through
 * a configuration without ``version`` is 3.x: it runs as before, and (when
   it is migratable) the 4.0 equivalent is printed once per process with a
   deprecation warning, per the 4.0 design document section 2.
+
+Sunset policy (design document section 2): 3.x configurations are accepted
+with the deprecation warning for two releases (4.0 and 4.1); after that
+they are rejected with a message pointing to ``waveorder migrate-config``.
+Birefringence configurations stay 3.x this release and are exempt.
 """
 
 from __future__ import annotations
@@ -78,8 +83,9 @@ def _warn_once_about_3x(settings: ReconstructionSettings, config_path: str) -> N
         # Birefringence configurations stay 3.x in this release; no warning.
         return
     warnings.warn(
-        f"{config_path} is a 3.x configuration; it still runs, but will be rejected in a "
-        f"future release. Convert it with: waveorder migrate-config {config_path}",
+        f"{config_path} is a 3.x configuration; it still runs, but 3.x acceptance ends "
+        f"two releases from now (after 4.1), when it will be rejected. Convert it with: "
+        f"waveorder migrate-config {config_path}",
         DeprecationWarning,
         stacklevel=3,
     )
