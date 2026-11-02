@@ -20,6 +20,9 @@ Label-agnostic computational microscopy of architectural order.
 
 Our goal is to enable modular and user-friendly implementations of computational microscopy methods for dynamic imaging across the scales of organelles, cells, and tissues.
 
+> **Project status:** Active development. waveorder is beta software, and its
+> APIs may change between releases.
+
 
 The framework is described in the following [preprint](https://arxiv.org/abs/2412.09775).
 
@@ -229,3 +232,14 @@ cd waveorder
 pip install -e .[all]
 python ./docs/examples/models/phase_thick_3d.py
 ```
+
+## Community
+
+Read the [contributing guide](CONTRIBUTING.md) before proposing a change.
+Participation in waveorder is governed by the
+[Contributor Covenant Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Security
+
+Do not report security vulnerabilities in public issues. Follow our
+[security policy](SECURITY.md) to report them privately.
