@@ -5,9 +5,18 @@ from pathlib import Path
 import pytest
 import yaml
 
+from tests.config.repo_configs import (
+    ALL_CONFIG_PATHS,
+    BIREFRINGENCE_CONFIG_PATHS,
+    CONFIG_DIRS,
+    MIGRATABLE_CONFIG_PATHS,
+    REPO_ROOT,
+    TILE_STITCH_CONFIG_PATHS,
+)
 from waveorder.cli.settings import ReconstructionSettings
 from waveorder.config import (
     MigrationError,
+    NotRunnableInLegacyError,
     detect_version,
     migrate_3x_dict,
     v4_to_legacy,
@@ -15,26 +24,31 @@ from waveorder.config import (
 )
 from waveorder.config.schema import V4Config
 
-REPO_ROOT = Path(__file__).parent.parent.parent
-
-# Every 3.x phase / fluorescence configuration in the repository.
-MIGRATABLE_CONFIG_PATHS = sorted(
-    [
-        *(REPO_ROOT / "docs/examples/cli/configs").glob("*.yml"),
-        *(REPO_ROOT / "benchmarks/configs").glob("*.yml"),
-        *(REPO_ROOT / "docs/examples/optimization").glob("*.yml"),
-    ]
-)
-MIGRATABLE_CONFIG_PATHS = [
-    p for p in MIGRATABLE_CONFIG_PATHS if "birefringence" not in p.name and "tile-stitch" not in p.name
-]
-
-BIREFRINGENCE_CONFIG_PATHS = sorted((REPO_ROOT / "docs/examples/cli/configs").glob("birefringence*.yml"))
-
 
 def _load(path: Path) -> dict:
     with open(path) as f:
         return yaml.safe_load(f)
+
+
+def test_every_repo_config_is_listed():
+    """Guard: every configuration YAML in docs/ and benchmarks/ is covered.
+
+    A new configuration directory (or a renamed one) must be added to
+    ``tests.config.repo_configs`` so the migration and end-to-end
+    equivalence tests pick it up. Experiment YAMLs describe benchmark
+    cases, not reconstructions, and are exempt.
+    """
+    for config_dir in CONFIG_DIRS:
+        assert list(config_dir.glob("*.yml")), f"{config_dir} is empty or missing"
+    found = {
+        path
+        for root in (REPO_ROOT / "docs", REPO_ROOT / "benchmarks")
+        for path in root.rglob("*.yml")
+        if "experiments" not in path.parts
+    }
+    assert found == set(ALL_CONFIG_PATHS)
+    covered = set(MIGRATABLE_CONFIG_PATHS) | set(BIREFRINGENCE_CONFIG_PATHS) | set(TILE_STITCH_CONFIG_PATHS)
+    assert covered == set(ALL_CONFIG_PATHS)
 
 
 def test_version_detection():
@@ -228,8 +242,6 @@ def test_detect_version_rejects_empty_file():
 def test_free_parameters_without_calibration_fail_loudly():
     """A 4.0 config with tolerances but no calibration block must not silently
     run the 3.x sharpness optimizer (the design default score is evidence)."""
-    from waveorder.config import NotRunnableInLegacyError
-
     raw = {
         "version": 4,
         "data": {"input_channel_names": ["BF"], "pixel_size": {"yx": 0.1, "z": 0.25}},
