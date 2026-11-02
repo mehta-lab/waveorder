@@ -2,11 +2,17 @@
 
 import shutil
 
+import numpy as np
 import pytest
 import yaml
 
 from benchmarks.config import ExperimentConfig, PhantomConfig, load_experiment
-from benchmarks.runner import _build_phantom, run_synthetic_case
+from benchmarks.runner import (
+    _build_phantom,
+    _migrate_config_for_execution,
+    _read_zarr,
+    run_synthetic_case,
+)
 
 
 class TestPhantomConfig:
@@ -208,3 +214,58 @@ class TestRunSyntheticCase:
         assert "image_quality" in metrics
         assert "with_phantom" in metrics
         assert (case_dir / "cli_command.sh").exists()
+
+
+def test_migrate_helper_skips_configs_that_stay_3x(tmp_path, pytestconfig):
+    """Birefringence and already-4.0 configurations run unmigrated."""
+    birefringence = pytestconfig.rootpath / "docs" / "examples" / "cli" / "configs" / "birefringence_3d.yml"
+    config_path = tmp_path / "config.yml"
+    config_path.write_text(birefringence.read_text())
+    assert _migrate_config_for_execution(config_path) is None
+
+    config_path.write_text(yaml.dump({"version": 4}))
+    assert _migrate_config_for_execution(config_path) is None
+
+
+@pytest.mark.skipif(not shutil.which("wo"), reason="wo CLI not installed")
+class TestMigratedConfigMode:
+    """``--migrate-configs``: the design section 2 regression mode."""
+
+    def test_migrated_config_reproduces_reconstruction(self, tmp_path):
+        phantom_config = PhantomConfig(
+            function="single_bead",
+            shape=(16, 32, 32),
+            pixel_sizes=(0.25, 0.1, 0.1),
+            bead_radius_um=1.0,
+            fluorescence_intensity=1.0,
+        )
+        recon_config = {
+            "reconstruction_dimension": 3,
+            "input_channel_names": ["GFP"],
+            "fluorescence": {
+                "transfer_function": {
+                    "yx_pixel_size": 0.1,
+                    "z_pixel_size": 0.25,
+                    "wavelength_emission": 0.532,
+                    "index_of_refraction_media": 1.3,
+                    "numerical_aperture_detection": 1.2,
+                },
+            },
+        }
+
+        results = {}
+        for label, migrate in (("plain", False), ("migrated", True)):
+            case_dir = tmp_path / label
+            metrics = run_synthetic_case(
+                phantom_config,
+                recon_config,
+                case_dir,
+                modality="fluorescence",
+                migrate_config=migrate,
+            )
+            results[label] = (metrics, _read_zarr(case_dir / "reconstruction.zarr"))
+
+        assert results["migrated"][0]["config_migrated"] is True
+        assert "config_migrated" not in results["plain"][0]
+        assert (tmp_path / "migrated" / "config_v4.yml").exists()
+        np.testing.assert_array_equal(results["plain"][1].numpy(), results["migrated"][1].numpy())

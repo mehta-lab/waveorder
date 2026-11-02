@@ -78,6 +78,18 @@ def run(
             ),
         ),
     ] = False,
+    migrate_configs: Annotated[
+        bool,
+        typer.Option(
+            "--migrate-configs",
+            help=(
+                "Migrate each 3.x case configuration with 'wo migrate-config' "
+                "and reconstruct from the 4.0 file (design document section 2 "
+                "regression mode). Configurations that intentionally stay 3.x "
+                "(birefringence) run unmigrated."
+            ),
+        ),
+    ] = False,
 ):
     """Run benchmark cases.
 
@@ -111,6 +123,7 @@ def run(
     n_skipped_hpc = len(exp.cases) - len(selected)
 
     metadata = collect_metadata()
+    metadata["migrate_configs"] = migrate_configs
 
     timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
     run_name = f"{timestamp}_{exp.name}"
@@ -147,6 +160,8 @@ def run(
                     reference=case.reference,
                     simulation=case.simulation,
                     recovery=case.recovery,
+                    # Forward-compatible with runners that predate the flag.
+                    **({"migrate_config": True} if migrate_configs else {}),
                 )
             elif case.type == "hpc":
                 metrics = run_hpc_case(
@@ -162,6 +177,8 @@ def run(
                     # tile-stitch CLI; absent there, run_hpc_case defaults
                     # to "rec".
                     **({"cli": case.cli} if getattr(case, "cli", None) is not None else {}),
+                    # Forward-compatible with runners that predate the flag.
+                    **({"migrate_config": True} if migrate_configs else {}),
                 )
 
             results[case_name] = metrics

@@ -41,6 +41,7 @@ from benchmarks.simulate import (
 )
 from benchmarks.utils import TimingTree
 from waveorder import phantoms
+from waveorder.config.migrate import MigrationError, detect_version, migrate_3x_dict
 
 _PHANTOM_FUNCTIONS = {
     "single_bead": phantoms.single_bead,
@@ -92,6 +93,47 @@ def _sim_kwargs(modality: str, tf_settings: dict) -> dict:
 def _wo_rec_argv(position_path: Path, config_path: Path, recon_path: Path) -> list[str]:
     """Build the ``wo rec`` argv list shared by subprocess exec and cli_command.sh."""
     return ["wo", "rec", "-i", str(position_path), "-c", str(config_path), "-o", str(recon_path)]
+
+
+MIGRATED_CONFIG_FILENAME = "config_v4.yml"
+
+
+def _migrate_config_for_execution(config_path: Path) -> Path | None:
+    """Migrate a written 3.x ``config.yml`` to 4.0 via ``wo migrate-config``.
+
+    Parameters
+    ----------
+    config_path : Path
+        The case's ``config.yml``, already written to disk.
+
+    Returns
+    -------
+    Path or None
+        Path to the migrated 4.0 configuration, or None when the case
+        should run unmigrated: the configuration is already 4.0, or it is
+        one that intentionally stays 3.x this release (birefringence).
+
+    Raises
+    ------
+    RuntimeError
+        If the configuration is migratable but ``wo migrate-config`` fails.
+    """
+    raw = yaml.safe_load(config_path.read_text())
+    if detect_version(raw) >= 4:
+        return None
+    try:
+        migrate_3x_dict(raw)
+    except MigrationError:
+        return None
+    migrated_path = config_path.with_name(MIGRATED_CONFIG_FILENAME)
+    result = subprocess.run(
+        ["wo", "migrate-config", str(config_path), "-o", str(migrated_path)],
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(f"wo migrate-config failed:\n{result.stderr}")
+    return migrated_path
 
 
 def _run_wo_rec(argv: list[str]) -> None:
@@ -217,11 +259,15 @@ def _run_and_measure(
     case_dir: Path,
     tt: TimingTree,
     ground_truth: torch.Tensor | None = None,
+    migrate_config: bool = False,
 ) -> dict:
     """Write config, shell out to ``wo rec``, read output, compute metrics.
 
     Must be called from inside a ``with tt.time("total"):`` block — it
-    adds ``reconstruct`` and ``metrics`` sub-timings.
+    adds ``reconstruct`` and ``metrics`` sub-timings. With
+    ``migrate_config=True`` the 3.x configuration is first converted with
+    ``wo migrate-config`` and the reconstruction runs from the 4.0 file;
+    metrics gain a ``config_migrated`` flag.
     """
     modality = infer_modality(recon_config)
     tf_settings = recon_config.get(modality, {}).get("transfer_function", {})
@@ -229,8 +275,16 @@ def _run_and_measure(
     config_path = case_dir / "config.yml"
     config_path.write_text(yaml.dump(recon_config, default_flow_style=False))
 
+    exec_config_path = config_path
+    migrated = False
+    if migrate_config:
+        migrated_path = _migrate_config_for_execution(config_path)
+        if migrated_path is not None:
+            exec_config_path = migrated_path
+            migrated = True
+
     recon_path = case_dir / "reconstruction.zarr"
-    argv = _wo_rec_argv(position_path, config_path, recon_path)
+    argv = _wo_rec_argv(position_path, exec_config_path, recon_path)
     (case_dir / "cli_command.sh").write_text(f"#!/bin/bash\n{shlex.join(argv)}\n")
 
     with tt.time("reconstruct"):
@@ -241,13 +295,16 @@ def _run_and_measure(
         while recon_data.ndim > 3:
             recon_data = recon_data[0]
         NA_det, wavelength, pixel_size = _extract_optics(tf_settings)
-        return compute_metrics(
+        metrics = compute_metrics(
             recon_data,
             NA_det=NA_det,
             wavelength=wavelength,
             pixel_size=pixel_size,
             phantom=ground_truth,
         )
+    if migrate_config:
+        metrics["config_migrated"] = migrated
+    return metrics
 
 
 def _finalize_case(case_dir: Path, tt: TimingTree, metrics: dict, save_all: bool) -> None:
@@ -386,6 +443,7 @@ def run_synthetic_case(
     reference: dict[str, ReferenceBound] | None = None,
     simulation: SimulationConfig | None = None,
     recovery: RecoveryConfig | None = None,
+    migrate_config: bool = False,
 ) -> dict:
     """Run a single synthetic benchmark case via ``wo rec``.
 
@@ -404,6 +462,11 @@ def run_synthetic_case(
         function zarrs are deleted and ``simulated.zarr`` /
         ``reconstruction.zarr`` larger than
         :data:`SIZE_LIMIT_BYTES` are deleted after metrics are computed.
+    migrate_config : bool
+        Migrate a 3.x configuration with ``wo migrate-config`` and
+        reconstruct from the 4.0 file (design document section 2
+        regression mode). Configurations that intentionally stay 3.x
+        (birefringence) run unmigrated.
 
     Returns
     -------
@@ -473,6 +536,7 @@ def run_synthetic_case(
                 case_dir=case_dir,
                 tt=tt,
                 ground_truth=ground_truth,
+                migrate_config=migrate_config,
             )
         ref_check = check_reference(case_dir, metrics, reference)
         if ref_check is not None:
@@ -637,6 +701,7 @@ def run_hpc_case(
     save_all: bool = False,
     reference: dict[str, ReferenceBound] | None = None,
     crop: CropConfig | None = None,
+    migrate_config: bool = False,
 ) -> dict:
     """Run a single HPC benchmark case on existing data via ``wo rec``.
 
@@ -655,11 +720,16 @@ def run_hpc_case(
         transfer function zarr is deleted and ``reconstruction.zarr``
         is deleted if it exceeds :data:`SIZE_LIMIT_BYTES` after metrics
         are computed.
-    reference_parameters : dict, optional
-        Per-parameter expected values + tolerances for the optimizer.
+    reference : dict, optional
+        Min/max bounds on metrics and optimizer parameters.
     crop : CropConfig, optional
         If given, crop the input to this bbox before reconstructing.
         Speeds up iteration on large FOVs.
+    migrate_config : bool
+        Migrate a 3.x configuration with ``wo migrate-config`` and
+        reconstruct from the 4.0 file (design document section 2
+        regression mode). Configurations that intentionally stay 3.x
+        (birefringence) run unmigrated.
 
     Returns
     -------
@@ -681,6 +751,7 @@ def run_hpc_case(
             recon_config=recon_config,
             case_dir=case_dir,
             tt=tt,
+            migrate_config=migrate_config,
         )
         ref_check = check_reference(case_dir, metrics, reference)
         if ref_check is not None:
