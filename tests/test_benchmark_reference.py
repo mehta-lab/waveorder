@@ -63,7 +63,7 @@ _METRICS = {
 }
 
 
-def _write_optimized_config(case_dir: Path, tf_values: dict):
+def _write_optimized_config(case_dir: Path, tf_values: dict, filename: str = "config_optimized.yml"):
     cfg = {
         "reconstruction_dimension": 2,
         "input_channel_names": ["BF"],
@@ -81,7 +81,7 @@ def _write_optimized_config(case_dir: Path, tf_values: dict):
         },
     }
     case_dir.mkdir(parents=True, exist_ok=True)
-    (case_dir / "config_optimized.yml").write_text(yaml.dump(cfg))
+    (case_dir / filename).write_text(yaml.dump(cfg))
 
 
 class TestMetricChecks:
@@ -137,6 +137,13 @@ class TestParameterChecks:
         result = check_reference(tmp_path, {}, refs)
         assert result["all_pass"] is False
         assert result["per_ref"]["parameter.z_focus_offset"]["pass"] is False
+
+    def test_migrated_mode_filename_accepted(self, tmp_path):
+        """In migrated-config mode the optimizer writes config_v4_optimized.yml."""
+        _write_optimized_config(tmp_path, {"z_focus_offset": -0.05}, filename="config_v4_optimized.yml")
+        refs = {"parameter.z_focus_offset": ReferenceBound(min=-0.25, max=0.25)}
+        result = check_reference(tmp_path, {}, refs)
+        assert result["all_pass"] is True
 
     def test_raises_when_no_optimized_config(self, tmp_path):
         refs = {"parameter.z_focus_offset": ReferenceBound(min=-0.25, max=0.25)}

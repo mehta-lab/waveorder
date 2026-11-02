@@ -366,9 +366,16 @@ PARAMETER_PREFIX = "parameter."
 def _load_optimized_parameters(case_dir: Path) -> dict[str, float]:
     """Return optimized ``{param_name: value}`` from config_optimized.yml.
 
-    Raises ValueError if the file is missing or has no transfer_function.
+    In migrated-config mode the reconstruction runs from ``config_v4.yml``,
+    so the optimizer writes ``config_v4_optimized.yml`` instead; both names
+    are accepted. Raises ValueError if the file is missing or has no
+    transfer_function.
     """
     optimized_path = case_dir / "config_optimized.yml"
+    if not optimized_path.exists():
+        migrated_optimized = case_dir / "config_v4_optimized.yml"
+        if migrated_optimized.exists():
+            optimized_path = migrated_optimized
     if not optimized_path.exists():
         raise ValueError(
             f"reference includes parameter.* keys for case '{case_dir.name}' "
