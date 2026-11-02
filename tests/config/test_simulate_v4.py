@@ -6,6 +6,7 @@ import yaml
 from iohub.ngff import open_ome_zarr
 from typer.testing import CliRunner
 
+from waveorder.calibrate.evidence_search import run_evidence_calibration
 from waveorder.calibrate.tfzarr import read_tf_zarr
 from waveorder.cli.main import app
 from waveorder.config.schema import V4Config
@@ -96,8 +97,6 @@ def test_calibration_closure_on_simulated_data(tmp_path):
     truth = run_simulation(_config(), tmp_path / "sim")
     with open_ome_zarr(tmp_path / "sim" / "data.zarr" / "0" / "0" / "0") as data:
         zyx = np.asarray(data.data[0, 0])
-
-    from waveorder.calibrate.evidence_search import run_evidence_calibration
 
     recon_raw = yaml.safe_load(yaml.safe_dump(SIM_RAW))
     recon_raw.pop("simulate")

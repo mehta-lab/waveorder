@@ -10,6 +10,7 @@ from waveorder.calibrate.evidence_search import (
     run_evidence_calibration,
 )
 from waveorder.calibrate.synthesis import fluorescence_otf
+from waveorder.calibrate.tfzarr import TransferFunctionStore
 from waveorder.config.schema import V4Config
 
 ZYX_SHAPE = (16, 32, 32)
@@ -124,8 +125,6 @@ def test_sigma_estimate_and_weight_auto(synthetic_data):
 
 
 def _store(values: dict[str, float], variances: dict[str, float] | None = None):
-    from waveorder.calibrate.tfzarr import TransferFunctionStore
-
     names = list(values)
     covariance = np.zeros((1, len(names), len(names)))
     if variances is not None:
@@ -167,8 +166,6 @@ def test_zero_covariance_moves_center_only(synthetic_data):
 
 def test_sequential_calibration(synthetic_data):
     """Design case 12: -t yesterday's tf_hat.zarr as today's prior."""
-    from waveorder.calibrate.tfzarr import TransferFunctionStore
-
     first = run_evidence_calibration(_config(), synthetic_data)
     store = TransferFunctionStore(
         parameters=first.parameters,

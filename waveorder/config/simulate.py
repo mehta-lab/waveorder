@@ -19,6 +19,8 @@ from pathlib import Path
 
 import numpy as np
 import torch
+from iohub.ngff import open_ome_zarr
+from iohub.ngff.models import TransformationMeta
 
 from waveorder.calibrate.synthesis import fluorescence_otf
 from waveorder.calibrate.tfzarr import write_tf_zarr
@@ -76,9 +78,6 @@ def _gaussian_spectrum_object(
 
 def _write_position(path: Path, zyx: np.ndarray, channel_name: str, scale_zyx: tuple[float, float, float]) -> None:
     """Write one TCZYX = (1, 1, Z, Y, X) volume as a single-position HCS store."""
-    from iohub.ngff import open_ome_zarr
-    from iohub.ngff.models import TransformationMeta
-
     dataset = open_ome_zarr(path, layout="hcs", mode="w", channel_names=[channel_name])
     position = dataset.create_position("0", "0", "0")
     position.create_image(
