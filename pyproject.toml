@@ -7,7 +7,7 @@ name = "waveorder"
 description = "Wave-optical simulations and deconvolution of optical properties"
 readme = "README.md"
 requires-python = ">=3.12"
-license = { file = "LICENSE" }
+license = { file = "LICENSE.md" }
 authors = [{ name = "CZ Biohub SF", email = "compmicro@czbiohub.org" }]
 maintainers = [
   { name = "Talon Chandler", email = "talon.chandler@czbiohub.org" },
