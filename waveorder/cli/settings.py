@@ -70,6 +70,10 @@ class ReconstructionSettings(MyBaseModel):
     )
     reconstruction_dimension: Literal[2, 3] = Field(default=3, description="2 for thin samples, 3 for thick")
     device: Optional[str] = Field(default=None, description="compute device: null=cpu, auto, cuda:0, mps, etc.")
+    transfer_function_dtype: Literal["float32", "float16"] = Field(
+        default="float32",
+        description="precision of the stored transfer function; float16 halves storage and is upcast when loaded",
+    )
     birefringence: Optional[BirefringenceSettings] = None
     phase: Optional[PhaseSettings] = None
     fluorescence: Optional[FluorescenceSettings] = None

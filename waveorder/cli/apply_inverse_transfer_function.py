@@ -36,15 +36,18 @@ def _load_transfer_function(
     Returns a dict keyed by the variable names produced by
     compute_transfer_function. The apply_inverse API functions accept it in
     place of compute_transfer_function's xr.Dataset and use the tensors
-    without copying them.
+    without copying them. A float16 store is upcast to float32/complex64.
     """
 
     # Deferred imports for fast CLI help
-    import numpy as np
     import torch
 
+    from waveorder.cli.utils import FLOAT16_COMPLEX_ARRAYS, read_transfer_function_array
+
+    complex_arrays = transfer_function_dataset.zattrs.get(FLOAT16_COMPLEX_ARRAYS, [])
+
     def _load(key, idx):
-        return torch.from_numpy(np.array(transfer_function_dataset[key][idx]))
+        return torch.from_numpy(read_transfer_function_array(transfer_function_dataset[key], idx, complex_arrays, key))
 
     variables = {}
 

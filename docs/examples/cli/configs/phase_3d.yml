@@ -2,6 +2,7 @@ input_channel_names:                        # names of input channels in the dat
 - Brightfield
 time_indices: all                           # time points to reconstruct
 reconstruction_dimension: 3                 # 2 for thin samples, 3 for thick
+transfer_function_dtype: float32            # precision of the stored transfer function; float16 halves storage and is upcast when loaded
 phase:
   transfer_function:
     wavelength_illumination: 0.532          # illumination wavelength in micrometers
