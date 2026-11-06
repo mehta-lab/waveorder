@@ -335,7 +335,9 @@ def apply_inverse_transfer_function_single_position(
                 settings.input_channel_names,
             )
 
-    # Prepare the apply_inverse_model_function and its arguments
+    # Prepare the apply_inverse_model_function and its arguments. The phase and
+    # fluorescence models run on the config's `device`; the birefringence models
+    # run on the CPU only.
 
     # [biref only]
     if recon_biref and (not recon_phase):
@@ -360,6 +362,7 @@ def apply_inverse_transfer_function_single_position(
             "transfer_function": transfer_function,
             "recon_dim": recon_dim,
             "settings": settings.phase,
+            "device": settings.device,
         }
 
     # [biref and phase]
@@ -388,6 +391,7 @@ def apply_inverse_transfer_function_single_position(
             "recon_dim": recon_dim,
             "settings": settings.fluorescence,
             "fluor_channel_name": settings.input_channel_names[0],
+            "device": settings.device,
         }
 
     # Label each CZYX volume with the input's own coordinates, taken once here

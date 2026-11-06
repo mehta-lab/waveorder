@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 import numpy as np
 import pytest
+import torch
 from iohub.ngff import open_ome_zarr
 from iohub.ngff.models import TransformationMeta
 from typer.testing import CliRunner
@@ -701,6 +702,55 @@ def test_apply_inv_tf_process_pool_matches_serial(tmp_path):
 
     assert np.any(serial != 0)
     np.testing.assert_array_equal(pooled, serial)
+
+
+@pytest.mark.gpu
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA device required")
+@pytest.mark.parametrize(
+    "contrast",
+    [
+        {"phase": settings.PhaseSettings()},
+        {
+            "fluorescence": settings.FluorescenceSettings(
+                apply_inverse={"reconstruction_algorithm": "RL", "rl": {"iterations": 5}}
+            )
+        },
+    ],
+    ids=["phase", "fluorescence"],
+)
+def test_apply_inv_tf_runs_on_the_config_device(tmp_path, contrast):
+    """`device: cuda` reconstructs on the GPU, to the CPU's result."""
+    input_path = tmp_path / "input.zarr"
+    data = np.random.default_rng(0).uniform(1, 100, size=(2, 1, 6, 16, 16)).astype(np.float32)
+    with open_ome_zarr(input_path, layout="hcs", mode="w", channel_names=["C"]) as dataset:
+        dataset.create_position("0", "0", "0").create_image(
+            "0", data, transform=[TransformationMeta(type="scale", scale=[1, 1, 0.25, 0.1, 0.1])]
+        )
+    position_path = input_path / "0" / "0" / "0"
+    tf_path = tmp_path / "tf.zarr"
+    volumes, peak_gpu_bytes = {}, {}
+    for device in ("cpu", "cuda"):
+        config_path = tmp_path / f"{device}.yml"
+        utils.model_to_yaml(
+            settings.ReconstructionSettings(
+                input_channel_names=["C"], reconstruction_dimension=3, device=device, **contrast
+            ),
+            config_path,
+        )
+        if not tf_path.exists():
+            CliRunner().invoke(
+                app,
+                ["compute-tf", "-i", str(position_path), "-c", str(config_path), "-o", str(tf_path)],
+                catch_exceptions=False,
+            )
+        torch.cuda.reset_peak_memory_stats()
+        volumes[device] = _reconstruct(position_path, tf_path, config_path, tmp_path / f"{device}.zarr")
+        peak_gpu_bytes[device] = torch.cuda.max_memory_allocated()
+
+    assert peak_gpu_bytes["cpu"] == 0
+    assert peak_gpu_bytes["cuda"] > 0
+    assert np.any(volumes["cpu"] != 0)
+    np.testing.assert_allclose(volumes["cuda"], volumes["cpu"], rtol=1e-4, atol=1e-5)
 
 
 def test_apply_inverse_czyx_labels_the_volume_for_the_model():
